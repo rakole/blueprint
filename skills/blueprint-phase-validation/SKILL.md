@@ -91,6 +91,8 @@ Load the shared validation inputs first, then load only the command-specific inp
 - `blueprint_artifact_list`
 - `blueprint_config_get`
 - `blueprint_artifact_validate`
+- `blueprint_artifact_report_authoring_context`
+- `blueprint_artifact_report_validate_model`
 - `blueprint_artifact_report_write`
 - `blueprint_state_load`
 - `blueprint_state_update`
@@ -108,14 +110,16 @@ Load the shared validation inputs first, then load only the command-specific inp
 - `blueprint_phase_validation_validate_model`: for `phase.verification` and `phase.uat`, validate the structured model against the narrowed task schema and use the returned diagnostics plus `renderPreview` before persistence.
 - `blueprint_phase_validation_write`: pass numeric `phase`, artifact enum `verification` or `uat`, and exactly one of full artifact `content` or a structured `model`. For `/blu-validate-phase` and `/blu-verify-work`, pass the same validated structured model with `authoringMode: "model-only"` and do not use Markdown fallback. Both validation modes require saved summaries, and `uat` also requires an existing verification artifact. Model writes reject model-owned identity keys, copied contract examples, missing required ledgers, unsupported fields, and invalid field types before rendering. Use returned `path`, `summaryPaths`, `written`, and `status` as authoritative. Only describe the artifact as persisted when `written` is `true`; report `reused` or `invalid` outcomes explicitly.
 - `blueprint_artifact_contract_read`: read canonical authoring templates, validation metadata, and optional `modelContract` metadata by contract id such as `phase.verification` or `phase.uat` instead of relying on copied prompt-local templates.
-- `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. Use the returned `path` as authoritative.
+- `blueprint_artifact_report_authoring_context`: for `report.add-tests`, read this before authoring so the base schema, runtime task schema, completed summaries, pending plans, dependency plans, validation/UAT evidence paths, and allowed next actions are explicit.
+- `blueprint_artifact_report_validate_model`: for `report.add-tests`, validate the structured model against the narrowed task schema and use the returned diagnostics plus `renderPreview` before persistence.
+- `blueprint_artifact_report_write`: pass a bare report name such as `add-tests-3`, not `.blueprint/reports/add-tests-3.md`. For `report.add-tests`, pass the same validated structured `model`; Markdown content fallback is not supported. Use the returned `path` as authoritative.
 - `blueprint_artifact_validate`: run after every validation or UAT write so the persisted artifact is checked before the next state update is written.
 
 ## Canonical Validation Contracts
 
 - For `XX-VERIFICATION.md`, use `blueprint_phase_validation_authoring_context`, `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`, then `blueprint_phase_validation_validate_model` before `/blu-validate-phase` persistence. Persist the same structured `model` with `authoringMode: "model-only"` for validate-phase, never Markdown fallback.
 - For `XX-UAT.md`, use `blueprint_phase_validation_authoring_context`, `blueprint_artifact_contract_read` with `artifactId: "phase.uat"`, then `blueprint_phase_validation_validate_model` before persistence. Persist the same structured `model` with `authoringMode: "model-only"`, never Markdown fallback.
-- For `.blueprint/reports/add-tests-<phase>.md`, use `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` and normalize the final report draft to the returned `authoringTemplate`.
+- For `.blueprint/reports/add-tests-<phase>.md`, use `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"`, then `blueprint_artifact_report_authoring_context` and `blueprint_artifact_report_validate_model` so the final structured model is schema-first and narrowed to current summaries, validation/UAT evidence, pending plans, dependency plans, and next actions.
 - Keep each contract's locked markers and required section names unchanged.
 - Keep summary references in the contract-defined evidence sections.
 - Allow extra top-level headings only when the contract policy says they are supported.
@@ -155,8 +159,8 @@ Load the shared validation inputs first, then load only the command-specific inp
 ### `add-tests`
 
 1. Resolve the target phase and require saved execution summaries before generating or updating tests.
-2. Read summary artifacts plus any existing `XX-VERIFICATION.md` or `XX-UAT.md` so test generation is grounded in saved implementation evidence and explicit gaps.
-3. Require at least one validation or UAT artifact before proceeding. Route to `/blu-validate-phase` when both are missing.
+2. Read summary artifacts plus any existing `XX-VERIFICATION.md` or `XX-UAT.md`, then read `blueprint_artifact_report_authoring_context` for `add-tests-<phase>` before mutation so test generation is grounded in saved implementation evidence plus valid current validation or UAT evidence.
+3. Require `blueprint_artifact_report_authoring_context.status: "ready"` and a non-empty `validationEvidencePaths` inventory before proceeding. Route to `/blu-validate-phase` when the report authoring context is invalid, validation evidence is missing, or only stale/malformed validation files exist.
 4. Load `references/add-tests-runtime-contract.md` and follow it for stage mapping, classification gates, test-plan approval, RED/GREEN-style execution behavior, artifact authoring, subagent use, no-subagent fallback, retry behavior, and output quality.
 5. Keep repo mutation narrow: honor explicit user scope first, otherwise derive a focused test scope from completed summaries, saved gaps, and existing repo test conventions.
 6. Build a file-by-file classification table before writing. Read each candidate file and classify it as `Unit / TDD`, `Integration / API`, `E2E / UI`, or `Skip` with concrete reasons; do not classify from filename alone.
@@ -170,10 +174,10 @@ Load the shared validation inputs first, then load only the command-specific inp
 14. When suitable subagents are unavailable or unnecessary, use the no-subagent fallback from the runtime contract: process one summary and candidate area at a time, compress carry-forward classification and execution rows, then draft from the final table.
 15. Never substitute browser, web-search-only, shell-only, or generic agents for Blueprint code/workflow analysis agents.
 16. Read `blueprint_phase_validation_authoring_context` and `blueprint_artifact_contract_read` for `phase.verification`, build a structured verification evidence payload, call `blueprint_phase_validation_render`, and persist verification notes only when `readyToWrite: true`.
-17. Read `blueprint_artifact_contract_read` for `report.add-tests`, normalize the durable report to `contract.authoringTemplate`, and include approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification status, report status, remaining gaps, and next safe action.
+17. Read `blueprint_artifact_contract_read` for `report.add-tests`, then read `blueprint_artifact_report_authoring_context`, author a structured `report.add-tests` model against the returned `taskSchema`, validate it with `blueprint_artifact_report_validate_model`, and include approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification status, report status, remaining gaps, and next safe action.
 18. Persist updated verification notes through `blueprint_phase_validation_write` with the `verification` artifact and preserve the existing artifact as the baseline when it already exists. Keep the reported verification status aligned with the tool-owned `written` and `status` result.
-19. Persist the durable non-phase report through `blueprint_artifact_report_write` using the bare canonical `add-tests-<phase>` report naming pattern, not a `.blueprint/reports/...` path. Keep the reported report status aligned with the tool-owned `written` and `status` result.
-20. If validation or report writes are rejected, repair the draft against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
+19. Persist the durable non-phase report through `blueprint_artifact_report_write` using the same validated model and bare canonical `add-tests-<phase>` report naming pattern, not Markdown content and not a `.blueprint/reports/...` path. Keep the reported report status aligned with the tool-owned `written` and `status` result.
+20. If validation, report model validation, or report writes are rejected, repair the model against the canonical contract and retry once before stopping with explicit issues and suggested repairs.
 21. Update `STATE.md` with the test-generation result and the next safe implemented action. Prefer `/blu-code-review <phase>` when review evidence is still missing, otherwise fall back to `/blu-progress`.
 
 ## Non-Negotiables

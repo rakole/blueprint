@@ -5,7 +5,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactList, blueprintArtifactReportWrite } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactList,
+  blueprintArtifactReportAuthoringContext,
+  blueprintArtifactReportWrite
+} from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhasePlanIndex,
@@ -511,6 +515,104 @@ function validAddTestsReportContent(): string {
 `;
 }
 
+async function validAddTestsReportModel(repoPath: string): Promise<Record<string, unknown>> {
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const summaryEvidence = Object.fromEntries(
+    context.completedSummaries.map((summary) => [
+      summary.path,
+      {
+        planId: summary.planId,
+        linkedPlanPath: summary.linkedPlanPath,
+        summaryStatus: "COMPLETED",
+        targetedVerification: summary.targetedVerification,
+        coverageNote: "Lifecycle pilot add-tests coverage is grounded in this completed summary."
+      }
+    ])
+  );
+
+  return {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    coverageGoal: [
+      "Add focused lifecycle pilot integration coverage for the saved add-tests flow."
+    ],
+    evidenceUsed: [
+      ...context.completedSummaries.map((summary) => summary.path),
+      ...context.validationEvidencePaths
+    ],
+    summaryEvidence,
+    pendingPlans: [],
+    dependencyPlans: [],
+    classification: [
+      {
+        target: "tests/lifecycle-pilot-integration.test.ts",
+        category: "Integration / API",
+        reason: "Existing integration coverage exercises Blueprint lifecycle persistence."
+      }
+    ],
+    testPlan: [
+      {
+        target: "tests/lifecycle-pilot-integration.test.ts",
+        scenario: "Verify add-tests report persistence after lifecycle completion.",
+        expectedAssertion: "The report appears in artifact inventory without changing completion.",
+        command: "npm test -- tests/lifecycle-pilot-integration.test.ts"
+      }
+    ],
+    testsAddedOrUpdated: [
+      {
+        path: "tests/lifecycle-pilot-integration.test.ts",
+        summary: "Recorded add-tests report-backed lifecycle completion coverage."
+      }
+    ],
+    targetedCommands: [
+      {
+        command: "npm test -- tests/lifecycle-pilot-integration.test.ts",
+        result: "pass",
+        evidence: "The lifecycle pilot integration test exits 0."
+      }
+    ],
+    resultCounts: {
+      generated: 1,
+      passing: 1,
+      failing: 0,
+      blocked: 0
+    },
+    bugsOrBlockers: [
+      {
+        item: "none",
+        evidence: "none",
+        status: "NONE"
+      }
+    ],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    remainingGaps: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUpFixes: ["none"],
+    verificationWrite: {
+      status: "written",
+      evidence: ".blueprint/phases/03-lifecycle-pilot/03-VERIFICATION.md updated through MCP."
+    },
+    nextSafeAction: context.allowedNextActions[0] ?? "/blu-progress"
+  };
+}
+
 async function completeLifecycle(repoPath: string) {
   const plan = await blueprintPhasePlanWrite({
     cwd: repoPath,
@@ -670,7 +772,7 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
   const reportWrite = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "add-tests-3",
-    content: validAddTestsReportContent()
+    model: await validAddTestsReportModel(repoPath)
   });
   const verificationUpdate = await blueprintPhaseValidationWrite({
     cwd: repoPath,

@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import * as z from "zod/v4";
 
 import {
@@ -289,6 +290,15 @@ type ArtifactReportWriteArgs = {
   overwrite?: boolean;
 };
 
+type ArtifactReportAuthoringContextArgs = {
+  cwd?: string;
+  reportName: string;
+};
+
+type ArtifactReportValidateModelArgs = ArtifactReportAuthoringContextArgs & {
+  model: unknown;
+};
+
 type ArtifactSummaryDigestSection = {
   artifact: string;
   title: string;
@@ -320,6 +330,110 @@ type ArtifactReportWriteResult = {
   overwritten: boolean;
   status: "created" | "updated" | "reused" | "invalid";
   issues: string[];
+  warnings: string[];
+};
+
+type AddTestsReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type AddTestsReportReadiness = "ready-for-routing" | "not-ready-for-routing" | "blocked";
+type AddTestsReportCompletionState = "complete" | "pending" | "blocked";
+type AddTestsCommandResult = "pass" | "fail" | "blocked" | "not-run";
+type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
+type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
+
+type AddTestsReportModel = {
+  status: AddTestsReportStatus;
+  readiness: AddTestsReportReadiness;
+  completionState: AddTestsReportCompletionState;
+  coverageGoal: string[];
+  evidenceUsed: string[];
+  summaryEvidence: Record<
+    string,
+    {
+      planId: string;
+      linkedPlanPath: string;
+      summaryStatus: "COMPLETED";
+      targetedVerification: string[];
+      coverageNote: string;
+    }
+  >;
+  pendingPlans: Array<{ planId: string; path: string; reason: string }>;
+  dependencyPlans: Array<{ planId: string; path: string; status: "satisfied"; evidence: string }>;
+  classification: Array<{ target: string; category: string; reason: string }>;
+  testPlan: Array<{
+    target: string;
+    scenario: string;
+    expectedAssertion: string;
+    command: string;
+  }>;
+  testsAddedOrUpdated: Array<{ path: string; summary: string }>;
+  targetedCommands: Array<{ command: string; result: AddTestsCommandResult; evidence: string }>;
+  resultCounts: { generated: number; passing: number; failing: number; blocked: number };
+  bugsOrBlockers: Array<{ item: string; evidence: string; status: AddTestsBugStatus }>;
+  manualOrDeferredWork: Array<{
+    item: string;
+    reason: string;
+    followUp: string;
+    status: AddTestsManualStatus;
+  }>;
+  remainingGaps: Array<{ gap: string; evidence: string; repair: string; status: AddTestsGapStatus }>;
+  followUpFixes: string[];
+  verificationWrite: { status: AddTestsVerificationWriteStatus; evidence: string };
+  nextSafeAction: string;
+};
+
+type AddTestsReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+
+type AddTestsReportDiagnostic = {
+  source: AddTestsReportDiagnosticSource;
+  path: string;
+  code: string;
+  message: string;
+  context: Record<string, unknown>;
+  suggestion: string;
+};
+
+type AddTestsReportAuthoringContextResult = {
+  status: "ready" | "invalid";
+  reportName: string;
+  path: string;
+  phase: {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+  } | null;
+  completedSummaries: Array<{
+    planId: string;
+    path: string;
+    linkedPlanPath: string;
+    targetedVerification: string[];
+  }>;
+  pendingPlans: Array<{ planId: string; path: string; reason: string }>;
+  dependencyPlans: Array<{ planId: string; path: string }>;
+  validationEvidencePaths: string[];
+  allowedNextActions: string[];
+  schemaPath: string | null;
+  baseSchema: Record<string, unknown> | null;
+  taskSchema: Record<string, unknown> | null;
+  modelOnly: true;
+  prerequisiteBlockers: string[];
+  reason: string | null;
+  warnings: string[];
+};
+
+type AddTestsReportValidateModelResult = {
+  status: "valid" | "invalid";
+  valid: boolean;
+  reportName: string;
+  path: string;
+  phase: AddTestsReportAuthoringContextResult["phase"];
+  schemaPath: string | null;
+  taskSchema: Record<string, unknown> | null;
+  diagnostics: AddTestsReportDiagnostic[];
+  normalizedModel: AddTestsReportModel | null;
+  renderPreview: string | null;
   warnings: string[];
 };
 
@@ -1719,6 +1833,15 @@ const artifactReportWriteInputSchema = {
   content: z.string().optional(),
   model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional()
+};
+const artifactReportAuthoringContextInputSchema = {
+  cwd: z.string().optional(),
+  reportName: z.string()
+};
+const artifactReportValidateModelInputSchema = {
+  cwd: z.string().optional(),
+  reportName: z.string(),
+  model: z.record(z.string(), z.unknown())
 };
 const artifactCodebaseWriteInputSchema = {
   cwd: z.string().optional(),
@@ -7793,6 +7916,1314 @@ function artifactReportWriteInvalidResult(
   };
 }
 
+function createArtifactAjvValidator(): Ajv2020 {
+  return new Ajv2020({
+    allErrors: true,
+    allowUnionTypes: true,
+    strict: false
+  });
+}
+
+function cloneJsonObject<T extends Record<string, unknown>>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function asJsonObject(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function getJsonObjectProperty(
+  object: Record<string, unknown> | null,
+  propertyName: string
+): Record<string, unknown> | null {
+  const value = object?.[propertyName];
+
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function allowOnlyEmptyArray(schema: Record<string, unknown> | null): void {
+  if (!schema) {
+    return;
+  }
+
+  schema.minItems = 0;
+  schema.maxItems = 0;
+  schema.items = false;
+  delete schema.allOf;
+}
+
+function exactArrayContains(value: string): Record<string, unknown> {
+  return {
+    contains: { const: value },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+
+function exactObjectPropertyContains(
+  propertyName: string,
+  value: string
+): Record<string, unknown> {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+
+function setArrayEnum(
+  schema: Record<string, unknown> | null,
+  values: string[]
+): void {
+  if (!schema) {
+    return;
+  }
+
+  if (values.length === 0) {
+    allowOnlyEmptyArray(schema);
+    return;
+  }
+
+  schema.minItems = values.length;
+  schema.maxItems = values.length;
+  schema.uniqueItems = true;
+  schema.items = { type: "string", enum: values };
+  schema.allOf = values.map(exactArrayContains);
+}
+
+function addTestsDiagnostic(args: AddTestsReportDiagnostic): AddTestsReportDiagnostic {
+  return args;
+}
+
+function formatAddTestsReportDiagnostic(diagnostic: AddTestsReportDiagnostic): string {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
+function ajvPathToAddTestsReportModelPath(instancePath: string): string {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+
+  return `model${instancePath
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => {
+      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+    })
+    .join("")}`;
+}
+
+function schemaDiagnosticFromAddTestsReportAjvError(
+  error: ErrorObject
+): AddTestsReportDiagnostic {
+  const missingProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "missingProperty" in error.params &&
+    typeof error.params.missingProperty === "string"
+      ? error.params.missingProperty
+      : null;
+  const additionalProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "additionalProperty" in error.params &&
+    typeof error.params.additionalProperty === "string"
+      ? error.params.additionalProperty
+      : null;
+  const basePath = ajvPathToAddTestsReportModelPath(error.instancePath);
+  const pathValue =
+    missingProperty !== null
+      ? `${basePath}.${missingProperty}`
+      : additionalProperty !== null
+        ? `${basePath}.${additionalProperty}`
+        : basePath;
+
+  return addTestsDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error.keyword}`,
+    message: error.message ?? "Model does not match the report.add-tests task schema.",
+    context: {
+      keyword: error.keyword,
+      params: error.params,
+      schemaPath: error.schemaPath
+    },
+    suggestion:
+      missingProperty !== null
+        ? `Add required field ${missingProperty}.`
+        : additionalProperty !== null
+          ? `Remove unsupported field ${additionalProperty}.`
+          : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context."
+  });
+}
+
+function collectModelStringEntries(
+  value: unknown,
+  pathValue = "model"
+): Array<{ path: string; value: string }> {
+  if (typeof value === "string") {
+    return [{ path: pathValue, value }];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      collectModelStringEntries(item, `${pathValue}[${index}]`)
+    );
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).flatMap(([key, item]) =>
+      collectModelStringEntries(item, `${pathValue}.${key}`)
+    );
+  }
+
+  return [];
+}
+
+function hasModelPlaceholderLanguage(value: string): boolean {
+  return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
+    value
+  );
+}
+
+function isGenericNoneValue(value: string): boolean {
+  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
+}
+
+function parseAddTestsReportPhase(reportName: string): string | null {
+  const normalized = normalizeReportSlug(reportName);
+  const match = normalized.match(/^add-tests-(\d+(?:\.\d+)?)$/);
+
+  return match ? normalizePhaseNumber(match[1]) : null;
+}
+
+function canonicalAddTestsReportName(phaseNumber: string): string {
+  return `add-tests-${phaseNumber}`;
+}
+
+async function resolveAddTestsReportPhase(
+  projectRoot: string,
+  reportName: string
+): Promise<AddTestsReportAuthoringContextResult["phase"]> {
+  const phaseNumber = parseAddTestsReportPhase(reportName);
+
+  if (!phaseNumber) {
+    return null;
+  }
+
+  const phasePrefix = formatPhasePrefix(phaseNumber);
+  const phaseRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
+  const directories = await listImmediateDirectories(phaseRoot);
+  const phaseDirName = directories.find((directory) => {
+    const match = directory.match(/^(\d+(?:\.\d+)?)(?:-|$)/);
+
+    return match ? normalizePhaseNumber(match[1]) === phaseNumber : false;
+  });
+
+  if (!phaseDirName) {
+    return null;
+  }
+
+  return {
+    phaseNumber,
+    phasePrefix,
+    phaseName: slugToTitle(phaseDirName.replace(/^\d+(?:\.\d+)?-?/, "")),
+    phaseDir: `${BLUEPRINT_PHASES_PATH}/${phaseDirName}`
+  };
+}
+
+function extractSummaryTargetedVerification(content: string): string[] {
+  return extractMarkdownTableRows(extractMarkdownSection(content, "Verification"))
+    .map((row) => row[0]?.trim() ?? "")
+    .filter((value) => value.length > 0 && value !== "none");
+}
+
+function extractSummaryDependencyPlanRows(content: string): Array<{
+  planId: string;
+  path: string;
+}> {
+  return extractMarkdownTableRows(extractMarkdownSection(content, "Dependency Plans")).flatMap(
+    (row) => {
+      const planCell = row[0]?.trim() ?? "";
+      const match = planCell.match(/^(\d{2,})\s+\(([^)]+)\)$/);
+
+      return match ? [{ planId: match[1], path: match[2] }] : [];
+    }
+  );
+}
+
+async function collectValidAddTestsValidationEvidencePaths(args: {
+  projectRoot: string;
+  phaseFiles: string[];
+  summaryPaths: string[];
+}): Promise<{
+  paths: string[];
+  warnings: string[];
+}> {
+  const paths: string[] = [];
+  const warnings: string[] = [];
+
+  for (const artifactPath of args.phaseFiles
+    .filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md"))
+    .sort((left, right) => left.localeCompare(right))) {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const validation = artifactPath.endsWith("-VERIFICATION.md")
+      ? validateVerificationArtifactContent(raw, args.summaryPaths)
+      : validateUatArtifactContent(raw, args.summaryPaths, {
+          requireReadyVerificationEvidence: true
+        });
+
+    if (validation.valid) {
+      paths.push(artifactPath);
+      continue;
+    }
+
+    warnings.push(
+      `${artifactPath}: invalid validation evidence is ignored for report.add-tests prerequisites.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+
+  return { paths, warnings };
+}
+
+function phasePlanPathFromSummaryPath(summaryPath: string): string {
+  return summaryPath.replace(/-SUMMARY\.md$/, "-PLAN.md");
+}
+
+async function collectAddTestsReportContext(
+  projectRoot: string,
+  reportName: string
+): Promise<{
+  phase: AddTestsReportAuthoringContextResult["phase"];
+  completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: AddTestsReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: AddTestsReportAuthoringContextResult["dependencyPlans"];
+  validationEvidencePaths: string[];
+  reviewPath: string | null;
+  blockers: string[];
+  warnings: string[];
+}> {
+  const phase = await resolveAddTestsReportPhase(projectRoot, reportName);
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+
+  if (!parseAddTestsReportPhase(reportName)) {
+    blockers.push(
+      `report.add-tests model writes require reportName to use the exact add-tests-<phase> pattern; received "${reportName}".`
+    );
+  }
+
+  const parsedPhase = parseAddTestsReportPhase(reportName);
+  if (parsedPhase && normalizeReportSlug(reportName) !== canonicalAddTestsReportName(parsedPhase)) {
+    blockers.push(
+      `report.add-tests model writes require canonical reportName ${canonicalAddTestsReportName(parsedPhase)}; received "${reportName}".`
+    );
+  }
+
+  if (!phase) {
+    blockers.push(`Could not resolve a Blueprint phase directory for reportName "${reportName}".`);
+    return {
+      phase,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      reviewPath: null,
+      blockers,
+      warnings
+    };
+  }
+
+  const phaseDirAbs = resolveBlueprintPath(projectRoot, phase.phaseDir);
+  const entries = await fs.readdir(phaseDirAbs).catch(() => []);
+  const phaseFiles = entries.map((entry) => `${phase.phaseDir}/${entry}`);
+  const planPaths = phaseFiles
+    .filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry))
+    .sort((left, right) => left.localeCompare(right));
+  const completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"] = [];
+  const dependencyPlanMap = new Map<string, { planId: string; path: string }>();
+
+  for (const summaryPath of phaseFiles
+    .filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry))
+    .sort((left, right) => left.localeCompare(right))) {
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
+    const linkedPlanPath = extractSummaryPlanReference(content) ?? phasePlanPathFromSummaryPath(summaryPath);
+    const linkedPlanExists = await pathExists(resolveBlueprintPath(projectRoot, linkedPlanPath));
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: linkedPlanExists ? linkedPlanPath : null,
+      requirePlanMarker: true
+    });
+
+    warnings.push(...validation.warnings.map((warning) => `${summaryPath}: ${warning}`));
+    if (!validation.valid) {
+      warnings.push(...validation.issues.map((issue) => `${summaryPath}: ${issue}`));
+      continue;
+    }
+
+    if (extractSummaryStatus(content) !== "COMPLETED") {
+      continue;
+    }
+
+    const planIdMatch = summaryPath.match(/-(\d{2,})-SUMMARY\.md$/);
+    const planId = planIdMatch?.[1] ?? "";
+
+    completedSummaries.push({
+      planId,
+      path: summaryPath,
+      linkedPlanPath,
+      targetedVerification: extractSummaryTargetedVerification(content)
+    });
+
+    for (const dependency of extractSummaryDependencyPlanRows(content)) {
+      dependencyPlanMap.set(`${dependency.planId}:${dependency.path}`, dependency);
+    }
+  }
+
+  const completedPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
+  const pendingPlans = planPaths
+    .flatMap((planPath) => {
+      const planId = planPath.match(/-(\d{2,})-PLAN\.md$/)?.[1];
+
+      return planId && !completedPlanIds.has(planId)
+        ? [
+            {
+              planId,
+              path: planPath,
+              reason: "No valid completed summary exists for this plan."
+            }
+          ]
+        : [];
+    });
+  const validationEvidence = await collectValidAddTestsValidationEvidencePaths({
+    projectRoot,
+    phaseFiles,
+    summaryPaths: completedSummaries.map((summary) => summary.path)
+  });
+  warnings.push(...validationEvidence.warnings);
+  const validationEvidencePaths = validationEvidence.paths;
+  const reviewPath = phaseFiles.find((entry) => entry.endsWith("-REVIEW.md")) ?? null;
+
+  if (completedSummaries.length === 0) {
+    blockers.push(
+      `${phase.phaseDir}: report.add-tests requires at least one valid COMPLETED execution summary.`
+    );
+  }
+
+  if (validationEvidencePaths.length === 0) {
+    blockers.push(
+      `${phase.phaseDir}: report.add-tests requires existing verification or UAT evidence before test generation can be reported.`
+    );
+  }
+
+  return {
+    phase,
+    completedSummaries,
+    pendingPlans,
+    dependencyPlans: [...dependencyPlanMap.values()].sort((left, right) =>
+      left.planId.localeCompare(right.planId)
+    ),
+    validationEvidencePaths,
+    reviewPath,
+    blockers,
+    warnings
+  };
+}
+
+async function buildAddTestsAllowedNextActions(args: {
+  phaseNumber: string;
+  reviewPath: string | null;
+}): Promise<{
+  completedAction: string;
+  partialAction: string;
+  blockedAction: string;
+  allowedActions: string[];
+}> {
+  const completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  const partialAction = "/blu-progress";
+  const blockedAction = "/blu-progress";
+
+  return {
+    completedAction,
+    partialAction,
+    blockedAction,
+    allowedActions: [...new Set([completedAction, partialAction, blockedAction])]
+  };
+}
+
+function buildAddTestsReportTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: AddTestsReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: AddTestsReportAuthoringContextResult["dependencyPlans"];
+  validationEvidencePaths: string[];
+  completedAction: string;
+  partialAction: string;
+  blockedAction: string;
+  allowedActions: string[];
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const summaryPaths = args.completedSummaries.map((summary) => summary.path);
+  const evidencePaths = [...summaryPaths, ...args.validationEvidencePaths];
+
+  if (properties) {
+    setArrayEnum(getJsonObjectProperty(properties, "evidenceUsed"), evidencePaths);
+
+    const summaryEvidence = getJsonObjectProperty(properties, "summaryEvidence");
+    if (summaryEvidence) {
+      summaryEvidence.required = summaryPaths;
+      summaryEvidence.minProperties = summaryPaths.length;
+      summaryEvidence.maxProperties = summaryPaths.length;
+      summaryEvidence.propertyNames =
+        summaryPaths.length > 0 ? { enum: summaryPaths } : { not: {} };
+      summaryEvidence.properties = Object.fromEntries(
+        args.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "planId",
+              "linkedPlanPath",
+              "summaryStatus",
+              "targetedVerification",
+              "coverageNote"
+            ],
+            properties: {
+              planId: { const: summary.planId },
+              linkedPlanPath: { const: summary.linkedPlanPath },
+              summaryStatus: { const: "COMPLETED" },
+              targetedVerification: {
+                type: "array",
+                minItems: summary.targetedVerification.length,
+                maxItems: summary.targetedVerification.length,
+                uniqueItems: true,
+                items:
+                  summary.targetedVerification.length > 0
+                    ? { type: "string", enum: summary.targetedVerification }
+                    : false,
+                allOf: summary.targetedVerification.map(exactArrayContains)
+              },
+              coverageNote: {
+                $ref: "#/$defs/tableCellString"
+              }
+            }
+          }
+        ])
+      );
+      const additionalProperties = getJsonObjectProperty(summaryEvidence, "additionalProperties");
+      const additionalPropertiesProperties = additionalProperties
+        ? getJsonObjectProperty(additionalProperties, "properties")
+        : null;
+      const linkedPlanPath = additionalPropertiesProperties
+        ? getJsonObjectProperty(additionalPropertiesProperties, "linkedPlanPath")
+        : null;
+      const planId = additionalPropertiesProperties
+        ? getJsonObjectProperty(additionalPropertiesProperties, "planId")
+        : null;
+      if (linkedPlanPath) {
+        linkedPlanPath.enum = args.completedSummaries.map((summary) => summary.linkedPlanPath);
+      }
+      if (planId) {
+        planId.enum = args.completedSummaries.map((summary) => summary.planId);
+      }
+    }
+
+    const pendingPlans = getJsonObjectProperty(properties, "pendingPlans");
+    if (args.pendingPlans.length === 0) {
+      allowOnlyEmptyArray(pendingPlans);
+    } else if (pendingPlans) {
+      pendingPlans.minItems = args.pendingPlans.length;
+      pendingPlans.maxItems = args.pendingPlans.length;
+      const items = getJsonObjectProperty(pendingPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const planId = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+      if (planId) {
+        planId.enum = args.pendingPlans.map((plan) => plan.planId);
+      }
+      if (pathProperty) {
+        pathProperty.enum = args.pendingPlans.map((plan) => plan.path);
+      }
+      pendingPlans.allOf = args.pendingPlans.map((plan) =>
+        exactObjectPropertyContains("planId", plan.planId)
+      );
+    }
+
+    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
+    if (args.dependencyPlans.length === 0) {
+      allowOnlyEmptyArray(dependencyPlans);
+    } else if (dependencyPlans) {
+      dependencyPlans.minItems = args.dependencyPlans.length;
+      dependencyPlans.maxItems = args.dependencyPlans.length;
+      const items = getJsonObjectProperty(dependencyPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const planId = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+      if (planId) {
+        planId.enum = args.dependencyPlans.map((plan) => plan.planId);
+      }
+      if (pathProperty) {
+        pathProperty.enum = args.dependencyPlans.map((plan) => plan.path);
+      }
+      dependencyPlans.allOf = args.dependencyPlans.map((plan) => ({
+        contains: {
+          type: "object",
+          required: ["planId", "path", "status"],
+          properties: {
+            planId: { const: plan.planId },
+            path: { const: plan.path },
+            status: { const: "satisfied" }
+          }
+        },
+        minContains: 1,
+        maxContains: 1
+      }));
+    }
+
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.completedAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.partialAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.blockedAction }
+        }
+      }
+    }
+  ];
+
+  schema["x-blueprint-runtimeContext"] = {
+    completedSummaryPaths: summaryPaths,
+    validationEvidencePaths: args.validationEvidencePaths,
+    pendingPlans: args.pendingPlans,
+    dependencyPlans: args.dependencyPlans,
+    completedAction: args.completedAction,
+    partialAction: args.partialAction,
+    blockedAction: args.blockedAction,
+    allowedActions: args.allowedActions,
+    upstreamContext: {
+      completedSummaryPaths: "required upstream context",
+      validationEvidencePaths: "required upstream context",
+      pendingPlans: "optional empty context",
+      dependencyPlans: "optional empty context"
+    }
+  };
+
+  return schema;
+}
+
+async function addTestsReportModelSchemas(args: {
+  contract: ReturnType<typeof readArtifactContract>;
+  contextData: Awaited<ReturnType<typeof collectAddTestsReportContext>>;
+}): Promise<{
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+  allowedNextActions: string[];
+}> {
+  const modelContract = args.contract.modelContract;
+
+  if (!modelContract) {
+    throw new Error("report.add-tests does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("report.add-tests modelContract does not expose a schemaPath.");
+  }
+  if (!args.contextData.phase) {
+    throw new Error("report.add-tests cannot build a task schema without a resolved phase.");
+  }
+
+  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const allowedNextActions = await buildAddTestsAllowedNextActions({
+    phaseNumber: args.contextData.phase.phaseNumber,
+    reviewPath: args.contextData.reviewPath
+  });
+  const taskSchema = buildAddTestsReportTaskSchema({
+    baseSchema,
+    completedSummaries: args.contextData.completedSummaries,
+    pendingPlans: args.contextData.pendingPlans,
+    dependencyPlans: args.contextData.dependencyPlans,
+    validationEvidencePaths: args.contextData.validationEvidencePaths,
+    ...allowedNextActions
+  });
+
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema,
+    allowedNextActions: allowedNextActions.allowedActions
+  };
+}
+
+export async function blueprintArtifactReportAuthoringContext(
+  args: ArtifactReportAuthoringContextArgs
+): Promise<AddTestsReportAuthoringContextResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const pathValue = buildBlueprintReportPath(args.reportName);
+  const contractId = resolveReportContractId(args.reportName);
+
+  if (contractId !== "report.add-tests") {
+    return {
+      status: "invalid",
+      reportName: normalizeReportSlug(args.reportName),
+      path: pathValue,
+      phase: null,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      allowedNextActions: [],
+      schemaPath: null,
+      baseSchema: null,
+      taskSchema: null,
+      modelOnly: true,
+      prerequisiteBlockers: [
+        `blueprint_artifact_report_authoring_context currently supports report.add-tests only; ${args.reportName} is not an add-tests report.`
+      ],
+      reason: "Unsupported report contract for schema-first report authoring.",
+      warnings: []
+    };
+  }
+
+  const contract = readArtifactContract("report.add-tests");
+  const contextData = await collectAddTestsReportContext(projectRoot, args.reportName);
+  const schemas =
+    contextData.blockers.length === 0
+      ? await addTestsReportModelSchemas({ contract, contextData })
+      : null;
+
+  return {
+    status: contextData.blockers.length === 0 ? "ready" : "invalid",
+    reportName: normalizeReportSlug(args.reportName),
+    path: pathValue,
+    phase: contextData.phase,
+    completedSummaries: contextData.completedSummaries,
+    pendingPlans: contextData.pendingPlans,
+    dependencyPlans: contextData.dependencyPlans,
+    validationEvidencePaths: contextData.validationEvidencePaths,
+    allowedNextActions: schemas?.allowedNextActions ?? [],
+    schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
+    baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
+    taskSchema: schemas?.taskSchema ?? null,
+    modelOnly: true,
+    prerequisiteBlockers: contextData.blockers,
+    reason: contextData.blockers.length > 0 ? contextData.blockers.join(" ") : null,
+    warnings: contextData.warnings
+  };
+}
+
+function normalizeStringArray(value: unknown): string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value.map((item) => item.trim())
+    : null;
+}
+
+function normalizeAddTestsReportModel(model: Record<string, unknown>): AddTestsReportModel | null {
+  const coverageGoal = normalizeStringArray(model.coverageGoal);
+  const evidenceUsed = normalizeStringArray(model.evidenceUsed);
+  const followUpFixes = normalizeStringArray(model.followUpFixes);
+  const summaryEvidence = asJsonObject(model.summaryEvidence);
+  const resultCounts = asJsonObject(model.resultCounts);
+  const verificationWrite = asJsonObject(model.verificationWrite);
+
+  if (
+    typeof model.status !== "string" ||
+    typeof model.readiness !== "string" ||
+    typeof model.completionState !== "string" ||
+    coverageGoal === null ||
+    evidenceUsed === null ||
+    followUpFixes === null ||
+    !summaryEvidence ||
+    !resultCounts ||
+    !verificationWrite ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizeRows = <T>(
+    value: unknown,
+    mapper: (row: Record<string, unknown>) => T | null
+  ): T[] | null => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    const rows = value.map((row) => {
+      const rowObject = asJsonObject(row);
+
+      return rowObject ? mapper(rowObject) : null;
+    });
+
+    return rows.some((row) => row === null) ? null : rows as T[];
+  };
+  const normalizedSummaryEvidence: AddTestsReportModel["summaryEvidence"] = {};
+  for (const [summaryPath, entry] of Object.entries(summaryEvidence)) {
+    const entryObject = asJsonObject(entry);
+    const targetedVerification = normalizeStringArray(entryObject?.targetedVerification);
+    if (
+      !entryObject ||
+      typeof entryObject.planId !== "string" ||
+      typeof entryObject.linkedPlanPath !== "string" ||
+      typeof entryObject.summaryStatus !== "string" ||
+      targetedVerification === null ||
+      typeof entryObject.coverageNote !== "string"
+    ) {
+      return null;
+    }
+
+    normalizedSummaryEvidence[summaryPath.trim()] = {
+      planId: entryObject.planId.trim(),
+      linkedPlanPath: entryObject.linkedPlanPath.trim(),
+      summaryStatus: entryObject.summaryStatus as "COMPLETED",
+      targetedVerification,
+      coverageNote: entryObject.coverageNote.trim()
+    };
+  }
+
+  const pendingPlans = normalizeRows(model.pendingPlans, (row) =>
+    typeof row.planId === "string" && typeof row.path === "string" && typeof row.reason === "string"
+      ? { planId: row.planId.trim(), path: row.path.trim(), reason: row.reason.trim() }
+      : null
+  );
+  const dependencyPlans = normalizeRows(model.dependencyPlans, (row) =>
+    typeof row.planId === "string" &&
+    typeof row.path === "string" &&
+    typeof row.status === "string" &&
+    typeof row.evidence === "string"
+      ? {
+          planId: row.planId.trim(),
+          path: row.path.trim(),
+          status: row.status as "satisfied",
+          evidence: row.evidence.trim()
+        }
+      : null
+  );
+  const classification = normalizeRows(model.classification, (row) =>
+    typeof row.target === "string" && typeof row.category === "string" && typeof row.reason === "string"
+      ? { target: row.target.trim(), category: row.category.trim(), reason: row.reason.trim() }
+      : null
+  );
+  const testPlan = normalizeRows(model.testPlan, (row) =>
+    typeof row.target === "string" &&
+    typeof row.scenario === "string" &&
+    typeof row.expectedAssertion === "string" &&
+    typeof row.command === "string"
+      ? {
+          target: row.target.trim(),
+          scenario: row.scenario.trim(),
+          expectedAssertion: row.expectedAssertion.trim(),
+          command: row.command.trim()
+        }
+      : null
+  );
+  const testsAddedOrUpdated = normalizeRows(model.testsAddedOrUpdated, (row) =>
+    typeof row.path === "string" && typeof row.summary === "string"
+      ? { path: row.path.trim(), summary: row.summary.trim() }
+      : null
+  );
+  const targetedCommands = normalizeRows(model.targetedCommands, (row) =>
+    typeof row.command === "string" && typeof row.result === "string" && typeof row.evidence === "string"
+      ? {
+          command: row.command.trim(),
+          result: row.result as AddTestsCommandResult,
+          evidence: row.evidence.trim()
+        }
+      : null
+  );
+  const bugsOrBlockers = normalizeRows(model.bugsOrBlockers, (row) =>
+    typeof row.item === "string" && typeof row.evidence === "string" && typeof row.status === "string"
+      ? {
+          item: row.item.trim(),
+          evidence: row.evidence.trim(),
+          status: row.status as AddTestsBugStatus
+        }
+      : null
+  );
+  const manualOrDeferredWork = normalizeRows(model.manualOrDeferredWork, (row) =>
+    typeof row.item === "string" &&
+    typeof row.reason === "string" &&
+    typeof row.followUp === "string" &&
+    typeof row.status === "string"
+      ? {
+          item: row.item.trim(),
+          reason: row.reason.trim(),
+          followUp: row.followUp.trim(),
+          status: row.status as AddTestsManualStatus
+        }
+      : null
+  );
+  const remainingGaps = normalizeRows(model.remainingGaps, (row) =>
+    typeof row.gap === "string" &&
+    typeof row.evidence === "string" &&
+    typeof row.repair === "string" &&
+    typeof row.status === "string"
+      ? {
+          gap: row.gap.trim(),
+          evidence: row.evidence.trim(),
+          repair: row.repair.trim(),
+          status: row.status as AddTestsGapStatus
+        }
+      : null
+  );
+
+  if (
+    pendingPlans === null ||
+    dependencyPlans === null ||
+    classification === null ||
+    testPlan === null ||
+    testsAddedOrUpdated === null ||
+    targetedCommands === null ||
+    bugsOrBlockers === null ||
+    manualOrDeferredWork === null ||
+    remainingGaps === null ||
+    typeof resultCounts.generated !== "number" ||
+    typeof resultCounts.passing !== "number" ||
+    typeof resultCounts.failing !== "number" ||
+    typeof resultCounts.blocked !== "number" ||
+    typeof verificationWrite.status !== "string" ||
+    typeof verificationWrite.evidence !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    status: model.status as AddTestsReportStatus,
+    readiness: model.readiness as AddTestsReportReadiness,
+    completionState: model.completionState as AddTestsReportCompletionState,
+    coverageGoal,
+    evidenceUsed,
+    summaryEvidence: normalizedSummaryEvidence,
+    pendingPlans,
+    dependencyPlans,
+    classification,
+    testPlan,
+    testsAddedOrUpdated,
+    targetedCommands,
+    resultCounts: {
+      generated: resultCounts.generated,
+      passing: resultCounts.passing,
+      failing: resultCounts.failing,
+      blocked: resultCounts.blocked
+    },
+    bugsOrBlockers,
+    manualOrDeferredWork,
+    remainingGaps,
+    followUpFixes,
+    verificationWrite: {
+      status: verificationWrite.status as AddTestsVerificationWriteStatus,
+      evidence: verificationWrite.evidence.trim()
+    },
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+
+function addTestsReportResidualDiagnostics(
+  model: Record<string, unknown>,
+  modelContract: ReturnType<typeof readArtifactContract>["modelContract"]
+): AddTestsReportDiagnostic[] {
+  const diagnostics: AddTestsReportDiagnostic[] = [];
+
+  if (!modelContract) {
+    return [
+      addTestsDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "report.add-tests does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live report.add-tests artifact contract before authoring."
+      })
+    ];
+  }
+
+  const stringEntries = collectModelStringEntries(model);
+  const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
+    stringEntries.some((entry) => entry.value.includes(signal))
+  );
+
+  for (const signal of leakedSignals) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Add-tests report model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase summaries and test run."
+      })
+    );
+  }
+
+  for (const entry of stringEntries) {
+    if (hasModelPlaceholderLanguage(entry.value)) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.placeholder",
+          message: `Add-tests report model contains placeholder language: ${entry.value}.`,
+          context: { value: entry.value },
+          suggestion: "Replace placeholder language with concrete test-generation evidence."
+        })
+      );
+    }
+
+    if (
+      isGenericNoneValue(entry.value) &&
+      /^(?:model\.coverageGoal|model\.classification|model\.testPlan|model\.targetedCommands|model\.summaryEvidence)/.test(
+        entry.path
+      )
+    ) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.generic_text",
+          message: "Add-tests report model must use concrete evidence instead of generic none.",
+          context: { value: entry.value },
+          suggestion: "Replace the generic value with a summary path, target file, command, or explicit blocker."
+        })
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+function markdownCell(value: unknown): string {
+  return String(value ?? "none")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n/g, " ")
+    .replace(/\|/g, "\\|")
+    .trim() || "none";
+}
+
+function renderBulletList(items: string[] | undefined, fallback = "none"): string {
+  const normalized = (items ?? [])
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return (normalized.length > 0 ? normalized : [fallback])
+    .map((item) => `- ${item}`)
+    .join("\n");
+}
+
+function renderMarkdownTable(headers: string[], rows: string[][]): string {
+  const separator = headers.map(() => "---");
+  const renderedRows = rows.length > 0 ? rows : [headers.map(() => "none")];
+
+  return [headers, separator, ...renderedRows]
+    .map((row) => `| ${row.map(markdownCell).join(" | ")} |`)
+    .join("\n");
+}
+
+function renderAddTestsReportModelContent(args: {
+  model: AddTestsReportModel;
+  context: AddTestsReportAuthoringContextResult;
+}): string {
+  const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
+    ([summaryPath, entry]) => [
+      summaryPath,
+      `${entry.planId} (${entry.linkedPlanPath})`,
+      entry.summaryStatus,
+      entry.targetedVerification.join("; "),
+      entry.coverageNote
+    ]
+  );
+  const pendingPlanRows = args.model.pendingPlans.map((row) => [
+    row.planId,
+    row.path,
+    row.reason
+  ]);
+  const dependencyRows = args.model.dependencyPlans.map((row) => [
+    row.planId,
+    row.path,
+    row.status,
+    row.evidence
+  ]);
+  const classificationRows = args.model.classification.map((row) => [
+    row.target,
+    row.category,
+    row.reason,
+    args.model.testPlan.find((plan) => plan.target === row.target)?.scenario ?? "see test plan"
+  ]);
+
+  return `# Add Tests Report
+
+**Status:** ${args.model.status}
+**Readiness:** ${args.model.readiness}
+**Completion State:** ${args.model.completionState}
+**Report:** \`${args.context.path}\`
+**Next Safe Action:** ${args.model.nextSafeAction}
+
+## Coverage Goal
+
+${renderBulletList(args.model.coverageGoal)}
+
+## Evidence Used
+
+${renderBulletList(args.model.evidenceUsed)}
+
+### Summary Evidence
+
+${renderMarkdownTable(
+  ["Summary", "Linked Plan", "Status", "Targeted Verification", "Coverage Note"],
+  summaryEvidenceRows
+)}
+
+### Pending Plans
+
+${renderMarkdownTable(
+  ["Plan", "Path", "Reason"],
+  pendingPlanRows
+)}
+
+### Dependency Plans
+
+${renderMarkdownTable(
+  ["Plan", "Path", "Status", "Evidence"],
+  dependencyRows
+)}
+
+## Classification And Test Plan
+
+${renderMarkdownTable(
+  ["Surface", "Classification", "Reason", "Planned Test"],
+  classificationRows
+)}
+
+${renderMarkdownTable(
+  ["Target", "Scenario", "Expected Assertion", "Command"],
+  args.model.testPlan.map((row) => [
+    row.target,
+    row.scenario,
+    row.expectedAssertion,
+    row.command
+  ])
+)}
+
+## Tests Added Or Updated
+
+${renderMarkdownTable(
+  ["Path", "Summary"],
+  args.model.testsAddedOrUpdated.map((row) => [row.path, row.summary])
+)}
+
+${renderMarkdownTable(
+  ["Command", "Result", "Evidence"],
+  args.model.targetedCommands.map((row) => [row.command, row.result, row.evidence])
+)}
+
+- Result counts: generated ${args.model.resultCounts.generated}, passing ${args.model.resultCounts.passing}, failing ${args.model.resultCounts.failing}, blocked ${args.model.resultCounts.blocked}.
+
+${renderMarkdownTable(
+  ["Item", "Evidence", "Status"],
+  args.model.bugsOrBlockers.map((row) => [row.item, row.evidence, row.status])
+)}
+
+## Remaining Gaps
+
+${renderMarkdownTable(
+  ["Item", "Reason", "Follow-Up", "Status"],
+  args.model.manualOrDeferredWork.map((row) => [
+    row.item,
+    row.reason,
+    row.followUp,
+    row.status
+  ])
+)}
+
+${renderMarkdownTable(
+  ["Gap", "Evidence", "Repair", "Status"],
+  args.model.remainingGaps.map((row) => [
+    row.gap,
+    row.evidence,
+    row.repair,
+    row.status
+  ])
+)}
+
+- Verification write status: ${args.model.verificationWrite.status} - ${args.model.verificationWrite.evidence}
+- Report write status: pending MCP write for ${args.context.path}
+
+## Follow-Up Fixes
+
+${renderBulletList(args.model.followUpFixes)}
+
+## Next Safe Action
+
+- ${args.model.nextSafeAction}
+`;
+}
+
+export async function blueprintArtifactReportValidateModel(
+  args: ArtifactReportValidateModelArgs
+): Promise<AddTestsReportValidateModelResult> {
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: args.cwd,
+    reportName: args.reportName
+  });
+  const diagnostics: AddTestsReportDiagnostic[] = context.prerequisiteBlockers.map((message) =>
+    addTestsDiagnostic({
+      source: "scope",
+      path: "report.add-tests",
+      code: "scope.prerequisite_blocker",
+      message,
+      context: { reportName: context.reportName, phase: context.phase?.phaseNumber ?? null },
+      suggestion: "Repair required completed summary and validation/UAT context before authoring report.add-tests."
+    })
+  );
+  const modelObject = asJsonObject(args.model);
+
+  if (!modelObject) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Add-tests report model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches taskSchema."
+      })
+    );
+  }
+
+  if (!context.taskSchema) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "scope",
+        path: "taskSchema",
+        code: "contract.missing_schema",
+        message: "report.add-tests did not expose a runtime task schema.",
+        context: {},
+        suggestion: "Read the live report.add-tests authoring context before writing."
+      })
+    );
+  }
+
+  let normalizedModel: AddTestsReportModel | null = null;
+
+  if (modelObject && context.taskSchema) {
+    const validate = createArtifactAjvValidator().compile(context.taskSchema);
+    const schemaValid = validate(modelObject);
+
+    if (!schemaValid) {
+      diagnostics.push(
+        ...(validate.errors ?? []).map(schemaDiagnosticFromAddTestsReportAjvError)
+      );
+    }
+
+    diagnostics.push(
+      ...addTestsReportResidualDiagnostics(
+        modelObject,
+        readArtifactContract("report.add-tests").modelContract
+      )
+    );
+
+    if (schemaValid) {
+      normalizedModel = normalizeAddTestsReportModel(modelObject);
+    }
+  }
+
+  let renderPreview: string | null = null;
+
+  if (diagnostics.length === 0 && normalizedModel) {
+    const rendered = renderAddTestsReportModelContent({
+      model: normalizedModel,
+      context
+    });
+    const validation = validateReportArtifactContent(rendered, context.reportName);
+
+    for (const issue of validation.issues) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue,
+          context: {},
+          suggestion:
+            "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
+        })
+      );
+    }
+
+    if (validation.valid) {
+      renderPreview = rendered;
+    }
+  }
+
+  return {
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    reportName: context.reportName,
+    path: context.path,
+    phase: context.phase,
+    schemaPath: context.schemaPath,
+    taskSchema: context.taskSchema,
+    diagnostics,
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+      ? null
+      : normalizedModel,
+    renderPreview,
+    warnings: context.warnings
+  };
+}
+
 function reportModelWriteIssues(reportName: string): string[] {
   const contractId = resolveReportContractId(reportName);
 
@@ -7837,6 +9268,7 @@ export async function blueprintArtifactReportWrite(
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
+  const contractId = resolveReportContractId(args.reportName);
 
   if (hasContent === hasModel) {
     return artifactReportWriteInvalidResult(pathValue, [
@@ -7844,8 +9276,80 @@ export async function blueprintArtifactReportWrite(
     ]);
   }
 
+  if (contractId === "report.add-tests" && hasContent) {
+    return artifactReportWriteInvalidResult(pathValue, [
+      "report.add-tests is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write."
+    ]);
+  }
+
   if (hasModel) {
-    return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
+    if (contractId !== "report.add-tests") {
+      return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
+    }
+
+    const modelValidation = await blueprintArtifactReportValidateModel({
+      cwd: projectRoot,
+      reportName: args.reportName,
+      model: args.model
+    });
+
+    if (!modelValidation.valid || !modelValidation.renderPreview) {
+      return artifactReportWriteInvalidResult(
+        pathValue,
+        modelValidation.diagnostics.map(formatAddTestsReportDiagnostic),
+        modelValidation.warnings
+      );
+    }
+
+    const normalizedContent = modelValidation.renderPreview.endsWith("\n")
+      ? modelValidation.renderPreview
+      : `${modelValidation.renderPreview}\n`;
+    const exists = await pathExists(absolutePath);
+    const warnings = [...modelValidation.warnings];
+
+    if (exists) {
+      const existingContent = await fs.readFile(absolutePath, "utf8");
+
+      if (existingContent === normalizedContent) {
+        warnings.push("Preserved existing report because the model-rendered content was unchanged.");
+
+        return {
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "reused",
+          issues: [],
+          warnings
+        };
+      }
+
+      if (!(args.overwrite ?? false)) {
+        throw new Error(
+          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
+    }
+
+    warnings.push(
+      ...await writeTextFile(absolutePath, normalizedContent, {
+        label: pathValue
+      })
+    );
+
+    if (exists) {
+      warnings.push(`Replaced existing report: ${pathValue}`);
+    }
+
+    return {
+      path: pathValue,
+      written: true,
+      created: !exists,
+      overwritten: exists,
+      status: exists ? "updated" : "created",
+      issues: [],
+      warnings
+    };
   }
 
   const content = args.content ?? "";
@@ -8078,9 +9582,25 @@ export const artifactToolDefinitions = [
       blueprintArtifactSummaryDigest(args as ArtifactSummaryDigestArgs)
   },
   {
+    name: "blueprint_artifact_report_authoring_context",
+    description:
+      "Return the schema-first report.add-tests authoring context, including the base model schema and runtime-narrowed task schema for the selected add-tests report.",
+    inputSchema: artifactReportAuthoringContextInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintArtifactReportAuthoringContext(args as ArtifactReportAuthoringContextArgs)
+  },
+  {
+    name: "blueprint_artifact_report_validate_model",
+    description:
+      "Validate a structured report.add-tests model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
+    inputSchema: artifactReportValidateModelInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintArtifactReportValidateModel(args as ArtifactReportValidateModelArgs)
+  },
+  {
     name: "blueprint_artifact_report_write",
     description:
-      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection.",
+      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests is model-only and rejects Markdown content fallback.",
     inputSchema: artifactReportWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportWrite(args as ArtifactReportWriteArgs)

@@ -14289,6 +14289,830 @@ var require_dist = __commonJS({
   }
 });
 
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
+var require_dynamicAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicAnchor = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var compile_1 = require_compile();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicAnchor",
+      schemaType: "string",
+      code: (cxt) => dynamicAnchor(cxt, cxt.schema)
+    };
+    function dynamicAnchor(cxt, anchor) {
+      const { gen, it } = cxt;
+      it.schemaEnv.root.dynamicAnchors[anchor] = true;
+      const v = (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`;
+      const validate = it.errSchemaPath === "#" ? it.validateName : _getValidate(cxt);
+      gen.if((0, codegen_1._)`!${v}`, () => gen.assign(v, validate));
+    }
+    exports.dynamicAnchor = dynamicAnchor;
+    function _getValidate(cxt) {
+      const { schemaEnv, schema, self } = cxt.it;
+      const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
+      const { schemaId } = self.opts;
+      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
+      compile_1.compileSchema.call(self, sch);
+      return (0, ref_1.getValidate)(cxt, sch);
+    }
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
+var require_dynamicRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.dynamicRef = void 0;
+    var codegen_1 = require_codegen();
+    var names_1 = require_names();
+    var ref_1 = require_ref();
+    var def = {
+      keyword: "$dynamicRef",
+      schemaType: "string",
+      code: (cxt) => dynamicRef(cxt, cxt.schema)
+    };
+    function dynamicRef(cxt, ref) {
+      const { gen, keyword, it } = cxt;
+      if (ref[0] !== "#")
+        throw new Error(`"${keyword}" only supports hash fragment reference`);
+      const anchor = ref.slice(1);
+      if (it.allErrors) {
+        _dynamicRef();
+      } else {
+        const valid = gen.let("valid", false);
+        _dynamicRef(valid);
+        cxt.ok(valid);
+      }
+      function _dynamicRef(valid) {
+        if (it.schemaEnv.root.dynamicAnchors[anchor]) {
+          const v = gen.let("_v", (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`);
+          gen.if(v, _callRef(v, valid), _callRef(it.validateName, valid));
+        } else {
+          _callRef(it.validateName, valid)();
+        }
+      }
+      function _callRef(validate, valid) {
+        return valid ? () => gen.block(() => {
+          (0, ref_1.callRef)(cxt, validate);
+          gen.let(valid, true);
+        }) : () => (0, ref_1.callRef)(cxt, validate);
+      }
+    }
+    exports.dynamicRef = dynamicRef;
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
+var require_recursiveAnchor = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var util_1 = require_util();
+    var def = {
+      keyword: "$recursiveAnchor",
+      schemaType: "boolean",
+      code(cxt) {
+        if (cxt.schema)
+          (0, dynamicAnchor_1.dynamicAnchor)(cxt, "");
+        else
+          (0, util_1.checkStrictMode)(cxt.it, "$recursiveAnchor: false is ignored");
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
+var require_recursiveRef = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicRef_1 = require_dynamicRef();
+    var def = {
+      keyword: "$recursiveRef",
+      schemaType: "string",
+      code: (cxt) => (0, dynamicRef_1.dynamicRef)(cxt, cxt.schema)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/dynamic/index.js
+var require_dynamic = __commonJS({
+  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dynamicAnchor_1 = require_dynamicAnchor();
+    var dynamicRef_1 = require_dynamicRef();
+    var recursiveAnchor_1 = require_recursiveAnchor();
+    var recursiveRef_1 = require_recursiveRef();
+    var dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
+    exports.default = dynamic;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
+var require_dependentRequired = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentRequired",
+      type: "object",
+      schemaType: "object",
+      error: dependencies_1.error,
+      code: (cxt) => (0, dependencies_1.validatePropertyDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
+var require_dependentSchemas = __commonJS({
+  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependencies_1 = require_dependencies();
+    var def = {
+      keyword: "dependentSchemas",
+      type: "object",
+      schemaType: "object",
+      code: (cxt) => (0, dependencies_1.validateSchemaDeps)(cxt)
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/validation/limitContains.js
+var require_limitContains = __commonJS({
+  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var util_1 = require_util();
+    var def = {
+      keyword: ["maxContains", "minContains"],
+      type: "array",
+      schemaType: "number",
+      code({ keyword, parentSchema, it }) {
+        if (parentSchema.contains === void 0) {
+          (0, util_1.checkStrictMode)(it, `"${keyword}" without "contains" is ignored`);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/next.js
+var require_next = __commonJS({
+  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var dependentRequired_1 = require_dependentRequired();
+    var dependentSchemas_1 = require_dependentSchemas();
+    var limitContains_1 = require_limitContains();
+    var next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
+    exports.default = next;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
+var require_unevaluatedProperties = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var names_1 = require_names();
+    var error2 = {
+      message: "must NOT have unevaluated properties",
+      params: ({ params }) => (0, codegen_1._)`{unevaluatedProperty: ${params.unevaluatedProperty}}`
+    };
+    var def = {
+      keyword: "unevaluatedProperties",
+      type: "object",
+      schemaType: ["boolean", "object"],
+      trackErrors: true,
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, errsCount, it } = cxt;
+        if (!errsCount)
+          throw new Error("ajv implementation error");
+        const { allErrors, props } = it;
+        if (props instanceof codegen_1.Name) {
+          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
+        } else if (props !== true) {
+          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
+        }
+        it.props = true;
+        cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
+        function unevaluatedPropCode(key) {
+          if (schema === false) {
+            cxt.setParams({ unevaluatedProperty: key });
+            cxt.error();
+            if (!allErrors)
+              gen.break();
+            return;
+          }
+          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
+            const valid = gen.name("valid");
+            cxt.subschema({
+              keyword: "unevaluatedProperties",
+              dataProp: key,
+              dataPropType: util_1.Type.Str
+            }, valid);
+            if (!allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          }
+        }
+        function unevaluatedDynamic(evaluatedProps, key) {
+          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
+        }
+        function unevaluatedStatic(evaluatedProps, key) {
+          const ps = [];
+          for (const p in evaluatedProps) {
+            if (evaluatedProps[p] === true)
+              ps.push((0, codegen_1._)`${key} !== ${p}`);
+          }
+          return (0, codegen_1.and)(...ps);
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
+var require_unevaluatedItems = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var codegen_1 = require_codegen();
+    var util_1 = require_util();
+    var error2 = {
+      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
+      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
+    };
+    var def = {
+      keyword: "unevaluatedItems",
+      type: "array",
+      schemaType: ["boolean", "object"],
+      error: error2,
+      code(cxt) {
+        const { gen, schema, data, it } = cxt;
+        const items = it.items || 0;
+        if (items === true)
+          return;
+        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
+        if (schema === false) {
+          cxt.setParams({ len: items });
+          cxt.fail((0, codegen_1._)`${len} > ${items}`);
+        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
+          const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
+          gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
+          cxt.ok(valid);
+        }
+        it.items = true;
+        function validateItems(valid, from) {
+          gen.forRange("i", from, len, (i) => {
+            cxt.subschema({ keyword: "unevaluatedItems", dataProp: i, dataPropType: util_1.Type.Num }, valid);
+            if (!it.allErrors)
+              gen.if((0, codegen_1.not)(valid), () => gen.break());
+          });
+        }
+      }
+    };
+    exports.default = def;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/unevaluated/index.js
+var require_unevaluated = __commonJS({
+  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var unevaluatedProperties_1 = require_unevaluatedProperties();
+    var unevaluatedItems_1 = require_unevaluatedItems();
+    var unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
+    exports.default = unevaluated;
+  }
+});
+
+// node_modules/ajv/dist/vocabularies/draft2020.js
+var require_draft2020 = __commonJS({
+  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var core_1 = require_core2();
+    var validation_1 = require_validation();
+    var applicator_1 = require_applicator();
+    var dynamic_1 = require_dynamic();
+    var next_1 = require_next();
+    var unevaluated_1 = require_unevaluated();
+    var format_1 = require_format2();
+    var metadata_1 = require_metadata();
+    var draft2020Vocabularies = [
+      dynamic_1.default,
+      core_1.default,
+      validation_1.default,
+      (0, applicator_1.default)(true),
+      format_1.default,
+      metadata_1.metadataVocabulary,
+      metadata_1.contentVocabulary,
+      next_1.default,
+      unevaluated_1.default
+    ];
+    exports.default = draft2020Vocabularies;
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
+var require_schema = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/schema",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true,
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
+        "https://json-schema.org/draft/2020-12/vocab/validation": true,
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core and Validation specifications meta-schema",
+      allOf: [
+        { $ref: "meta/core" },
+        { $ref: "meta/applicator" },
+        { $ref: "meta/unevaluated" },
+        { $ref: "meta/validation" },
+        { $ref: "meta/meta-data" },
+        { $ref: "meta/format-annotation" },
+        { $ref: "meta/content" }
+      ],
+      type: ["object", "boolean"],
+      $comment: "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.",
+      properties: {
+        definitions: {
+          $comment: '"definitions" has been replaced by "$defs".',
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          deprecated: true,
+          default: {}
+        },
+        dependencies: {
+          $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.',
+          type: "object",
+          additionalProperties: {
+            anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }]
+          },
+          deprecated: true,
+          default: {}
+        },
+        $recursiveAnchor: {
+          $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".',
+          $ref: "meta/core#/$defs/anchorString",
+          deprecated: true
+        },
+        $recursiveRef: {
+          $comment: '"$recursiveRef" has been replaced by "$dynamicRef".',
+          $ref: "meta/core#/$defs/uriReferenceString",
+          deprecated: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
+var require_applicator2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/applicator",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/applicator": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        prefixItems: { $ref: "#/$defs/schemaArray" },
+        items: { $dynamicRef: "#meta" },
+        contains: { $dynamicRef: "#meta" },
+        additionalProperties: { $dynamicRef: "#meta" },
+        properties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        patternProperties: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          propertyNames: { format: "regex" },
+          default: {}
+        },
+        dependentSchemas: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" },
+          default: {}
+        },
+        propertyNames: { $dynamicRef: "#meta" },
+        if: { $dynamicRef: "#meta" },
+        then: { $dynamicRef: "#meta" },
+        else: { $dynamicRef: "#meta" },
+        allOf: { $ref: "#/$defs/schemaArray" },
+        anyOf: { $ref: "#/$defs/schemaArray" },
+        oneOf: { $ref: "#/$defs/schemaArray" },
+        not: { $dynamicRef: "#meta" }
+      },
+      $defs: {
+        schemaArray: {
+          type: "array",
+          minItems: 1,
+          items: { $dynamicRef: "#meta" }
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
+var require_unevaluated2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Unevaluated applicator vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        unevaluatedItems: { $dynamicRef: "#meta" },
+        unevaluatedProperties: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
+var require_content = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/content",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/content": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Content vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        contentEncoding: { type: "string" },
+        contentMediaType: { type: "string" },
+        contentSchema: { $dynamicRef: "#meta" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
+var require_core3 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/core",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/core": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Core vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        $id: {
+          $ref: "#/$defs/uriReferenceString",
+          $comment: "Non-empty fragments not allowed.",
+          pattern: "^[^#]*#?$"
+        },
+        $schema: { $ref: "#/$defs/uriString" },
+        $ref: { $ref: "#/$defs/uriReferenceString" },
+        $anchor: { $ref: "#/$defs/anchorString" },
+        $dynamicRef: { $ref: "#/$defs/uriReferenceString" },
+        $dynamicAnchor: { $ref: "#/$defs/anchorString" },
+        $vocabulary: {
+          type: "object",
+          propertyNames: { $ref: "#/$defs/uriString" },
+          additionalProperties: {
+            type: "boolean"
+          }
+        },
+        $comment: {
+          type: "string"
+        },
+        $defs: {
+          type: "object",
+          additionalProperties: { $dynamicRef: "#meta" }
+        }
+      },
+      $defs: {
+        anchorString: {
+          type: "string",
+          pattern: "^[A-Za-z_][-A-Za-z0-9._]*$"
+        },
+        uriString: {
+          type: "string",
+          format: "uri"
+        },
+        uriReferenceString: {
+          type: "string",
+          format: "uri-reference"
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
+var require_format_annotation = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Format vocabulary meta-schema for annotation results",
+      type: ["object", "boolean"],
+      properties: {
+        format: { type: "string" }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
+var require_meta_data = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/meta-data": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Meta-data vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        title: {
+          type: "string"
+        },
+        description: {
+          type: "string"
+        },
+        default: true,
+        deprecated: {
+          type: "boolean",
+          default: false
+        },
+        readOnly: {
+          type: "boolean",
+          default: false
+        },
+        writeOnly: {
+          type: "boolean",
+          default: false
+        },
+        examples: {
+          type: "array",
+          items: true
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
+var require_validation2 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
+    module.exports = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://json-schema.org/draft/2020-12/meta/validation",
+      $vocabulary: {
+        "https://json-schema.org/draft/2020-12/vocab/validation": true
+      },
+      $dynamicAnchor: "meta",
+      title: "Validation vocabulary meta-schema",
+      type: ["object", "boolean"],
+      properties: {
+        type: {
+          anyOf: [
+            { $ref: "#/$defs/simpleTypes" },
+            {
+              type: "array",
+              items: { $ref: "#/$defs/simpleTypes" },
+              minItems: 1,
+              uniqueItems: true
+            }
+          ]
+        },
+        const: true,
+        enum: {
+          type: "array",
+          items: true
+        },
+        multipleOf: {
+          type: "number",
+          exclusiveMinimum: 0
+        },
+        maximum: {
+          type: "number"
+        },
+        exclusiveMaximum: {
+          type: "number"
+        },
+        minimum: {
+          type: "number"
+        },
+        exclusiveMinimum: {
+          type: "number"
+        },
+        maxLength: { $ref: "#/$defs/nonNegativeInteger" },
+        minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        pattern: {
+          type: "string",
+          format: "regex"
+        },
+        maxItems: { $ref: "#/$defs/nonNegativeInteger" },
+        minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        uniqueItems: {
+          type: "boolean",
+          default: false
+        },
+        maxContains: { $ref: "#/$defs/nonNegativeInteger" },
+        minContains: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 1
+        },
+        maxProperties: { $ref: "#/$defs/nonNegativeInteger" },
+        minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
+        required: { $ref: "#/$defs/stringArray" },
+        dependentRequired: {
+          type: "object",
+          additionalProperties: {
+            $ref: "#/$defs/stringArray"
+          }
+        }
+      },
+      $defs: {
+        nonNegativeInteger: {
+          type: "integer",
+          minimum: 0
+        },
+        nonNegativeIntegerDefault0: {
+          $ref: "#/$defs/nonNegativeInteger",
+          default: 0
+        },
+        simpleTypes: {
+          enum: ["array", "boolean", "integer", "null", "number", "object", "string"]
+        },
+        stringArray: {
+          type: "array",
+          items: { type: "string" },
+          uniqueItems: true,
+          default: []
+        }
+      }
+    };
+  }
+});
+
+// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
+var require_json_schema_2020_12 = __commonJS({
+  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var metaSchema = require_schema();
+    var applicator = require_applicator2();
+    var unevaluated = require_unevaluated2();
+    var content = require_content();
+    var core = require_core3();
+    var format = require_format_annotation();
+    var metadata = require_meta_data();
+    var validation = require_validation2();
+    var META_SUPPORT_DATA = ["/properties"];
+    function addMetaSchema2020($data) {
+      ;
+      [
+        metaSchema,
+        applicator,
+        unevaluated,
+        content,
+        core,
+        with$data(this, format),
+        metadata,
+        with$data(this, validation)
+      ].forEach((sch) => this.addMetaSchema(sch, void 0, false));
+      return this;
+      function with$data(ajv, sch) {
+        return $data ? ajv.$dataMetaSchema(sch, META_SUPPORT_DATA) : sch;
+      }
+    }
+    exports.default = addMetaSchema2020;
+  }
+});
+
+// node_modules/ajv/dist/2020.js
+var require__ = __commonJS({
+  "node_modules/ajv/dist/2020.js"(exports, module) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
+    var core_1 = require_core();
+    var draft2020_1 = require_draft2020();
+    var discriminator_1 = require_discriminator();
+    var json_schema_2020_12_1 = require_json_schema_2020_12();
+    var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
+    var Ajv20205 = class extends core_1.default {
+      constructor(opts = {}) {
+        super({
+          ...opts,
+          dynamicRef: true,
+          next: true,
+          unevaluated: true
+        });
+      }
+      _addVocabularies() {
+        super._addVocabularies();
+        draft2020_1.default.forEach((v) => this.addVocabulary(v));
+        if (this.opts.discriminator)
+          this.addKeyword(discriminator_1.default);
+      }
+      _addDefaultMetaSchema() {
+        super._addDefaultMetaSchema();
+        const { $data, meta: meta3 } = this.opts;
+        if (!meta3)
+          return;
+        json_schema_2020_12_1.default.call(this, $data);
+        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
+      }
+      defaultMeta() {
+        return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
+      }
+    };
+    exports.Ajv2020 = Ajv20205;
+    module.exports = exports = Ajv20205;
+    module.exports.Ajv2020 = Ajv20205;
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = Ajv20205;
+    var validate_1 = require_validate();
+    Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
+      return validate_1.KeywordCxt;
+    } });
+    var codegen_1 = require_codegen();
+    Object.defineProperty(exports, "_", { enumerable: true, get: function() {
+      return codegen_1._;
+    } });
+    Object.defineProperty(exports, "str", { enumerable: true, get: function() {
+      return codegen_1.str;
+    } });
+    Object.defineProperty(exports, "stringify", { enumerable: true, get: function() {
+      return codegen_1.stringify;
+    } });
+    Object.defineProperty(exports, "nil", { enumerable: true, get: function() {
+      return codegen_1.nil;
+    } });
+    Object.defineProperty(exports, "Name", { enumerable: true, get: function() {
+      return codegen_1.Name;
+    } });
+    Object.defineProperty(exports, "CodeGen", { enumerable: true, get: function() {
+      return codegen_1.CodeGen;
+    } });
+    var validation_error_1 = require_validation_error();
+    Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function() {
+      return validation_error_1.default;
+    } });
+    var ref_error_1 = require_ref_error();
+    Object.defineProperty(exports, "MissingRefError", { enumerable: true, get: function() {
+      return ref_error_1.default;
+    } });
+  }
+});
+
 // src/mcp/artifact-contracts/index.ts
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -16089,7 +16913,7 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, PEER_REVIEW_MODEL_SCHEMA_FILE, PEER_REVIEW_MODEL_SCHEMA_PATH, PEER_REVIEW_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, UI_REVIEW_MODEL_SCHEMA_FILE, UI_REVIEW_MODEL_SCHEMA_PATH, UI_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, PHASE_SUMMARY_MODEL_SCHEMA_FILE, PHASE_SUMMARY_MODEL_SCHEMA_PATH, PHASE_SUMMARY_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, PEER_REVIEW_MODEL_SCHEMA_FILE, PEER_REVIEW_MODEL_SCHEMA_PATH, PEER_REVIEW_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, UI_REVIEW_MODEL_SCHEMA_FILE, UI_REVIEW_MODEL_SCHEMA_PATH, UI_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, ADD_TESTS_REPORT_MODEL_SCHEMA_FILE, ADD_TESTS_REPORT_MODEL_SCHEMA_PATH, ADD_TESTS_REPORT_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
@@ -16925,6 +17749,129 @@ var init_artifact_contracts = __esm({
         "Clarified the install wording.",
         "The user requested a documentation-only quick fix.",
         "Confirmed the updated sentence is present."
+      ]
+    };
+    ADD_TESTS_REPORT_MODEL_SCHEMA_FILE = "report.add-tests.model.schema.json";
+    ADD_TESTS_REPORT_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/report.add-tests.model.schema.json";
+    ADD_TESTS_REPORT_MODEL_CONTRACT = {
+      schemaId: "blueprint.report.add-tests.model",
+      schemaVersion: "1.0.0",
+      schemaPath: ADD_TESTS_REPORT_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(ADD_TESTS_REPORT_MODEL_SCHEMA_FILE),
+      qualityRules: [
+        "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, reportName, reportPath, path, content, or rendered headings; MCP owns report identity and Markdown rendering.",
+        "Author against the runtime-narrowed taskSchema for the exact add-tests report name so completed summaries, validation or UAT evidence paths, linked plans, pending plans, dependency rows, and nextSafeAction stay deterministic.",
+        "COMPLETED add-tests reports require every targeted command to pass, no pending plan rows, exact none sentinel rows for bugs or blockers, manual or deferred work, remaining gaps, and follow-up fixes, plus a written or reused verification update.",
+        "PARTIAL add-tests reports require at least one non-passing targeted command or blocker count, at least one concrete gap route, and a non-ready next action.",
+        "BLOCKED add-tests reports require a blocked or not-run targeted command, at least one blocked gap, a manual or deferred blocker row, and a blocked verification write status.",
+        "Use concrete saved-summary, verification or UAT, test-plan, command, and changed-test evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+      ],
+      contextBindings: [
+        "phase, phasePrefix, phaseName, phaseDir, canonical report name, and report path come from the add-tests reportName plus Blueprint phase inventory.",
+        "Completed summary paths, linked plan paths, summary statuses, targeted verification rows, pending plans, and dependency-plan rows come from the live phase summary and plan inventory.",
+        "At least one validation or UAT artifact is required upstream context; missing validation evidence blocks authoring before the model can invent coverage.",
+        "Allowed nextSafeAction values come from the current phase, implemented command catalog, and whether code-review evidence already exists."
+      ],
+      renderedHeadings: [
+        "Coverage Goal",
+        "Evidence Used",
+        "Classification And Test Plan",
+        "Tests Added Or Updated",
+        "Remaining Gaps",
+        "Next Safe Action"
+      ],
+      minimalValidExample: {
+        status: "COMPLETED",
+        readiness: "ready-for-routing",
+        completionState: "complete",
+        coverageGoal: [
+          "Cover the completed phase behavior described by the saved summary and verification evidence."
+        ],
+        evidenceUsed: [
+          ".blueprint/phases/03-example/03-01-SUMMARY.md",
+          ".blueprint/phases/03-example/03-VERIFICATION.md"
+        ],
+        summaryEvidence: {
+          ".blueprint/phases/03-example/03-01-SUMMARY.md": {
+            planId: "01",
+            linkedPlanPath: ".blueprint/phases/03-example/03-01-PLAN.md",
+            summaryStatus: "COMPLETED",
+            targetedVerification: ["npm test -- tests/example.test.ts exits 0"],
+            coverageNote: "The generated test covers the saved acceptance criterion."
+          }
+        },
+        pendingPlans: [],
+        dependencyPlans: [],
+        classification: [
+          {
+            target: "tests/example.test.ts",
+            category: "Unit / TDD",
+            reason: "Existing nearby tests cover this deterministic behavior."
+          }
+        ],
+        testPlan: [
+          {
+            target: "tests/example.test.ts",
+            scenario: "Verify the completed behavior from the saved summary.",
+            expectedAssertion: "The focused command exits successfully.",
+            command: "npm test -- tests/example.test.ts"
+          }
+        ],
+        testsAddedOrUpdated: [
+          {
+            path: "tests/example.test.ts",
+            summary: "Added focused coverage for the completed summary behavior."
+          }
+        ],
+        targetedCommands: [
+          {
+            command: "npm test -- tests/example.test.ts",
+            result: "pass",
+            evidence: "The focused command exited 0."
+          }
+        ],
+        resultCounts: {
+          generated: 1,
+          passing: 1,
+          failing: 0,
+          blocked: 0
+        },
+        bugsOrBlockers: [
+          {
+            item: "none",
+            evidence: "none",
+            status: "NONE"
+          }
+        ],
+        manualOrDeferredWork: [
+          {
+            item: "none",
+            reason: "none",
+            followUp: "none",
+            status: "NONE"
+          }
+        ],
+        remainingGaps: [
+          {
+            gap: "none",
+            evidence: "none",
+            repair: "none",
+            status: "NONE"
+          }
+        ],
+        followUpFixes: ["none"],
+        verificationWrite: {
+          status: "written",
+          evidence: ".blueprint/phases/03-example/03-VERIFICATION.md updated through MCP."
+        },
+        nextSafeAction: "/blu-code-review 3"
+      },
+      exampleLeakageSignals: [
+        "Cover the completed phase behavior described by the saved summary and verification evidence.",
+        "The generated test covers the saved acceptance criterion.",
+        "Existing nearby tests cover this deterministic behavior.",
+        "Verify the completed behavior from the saved summary.",
+        "The focused command exited 0."
       ]
     };
     IMPACT_REPORT_MODEL_SCHEMA_FILE = "report.impact.model.schema.json";
@@ -18413,13 +19360,22 @@ var init_artifact_contracts = __esm({
         canonicalName: "Add Tests Report",
         canonicalFilePattern: ".blueprint/reports/add-tests-<phase>.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Coverage Goal", "Evidence Used", "Tests Added Or Updated", "Remaining Gaps", "Next Safe Action"],
+        requiredHeadings: [
+          "Coverage Goal",
+          "Evidence Used",
+          "Classification And Test Plan",
+          "Tests Added Or Updated",
+          "Remaining Gaps",
+          "Next Safe Action"
+        ],
         lockedMarkers: [],
         placeholderSignals: [],
         notes: [
           "Add-tests reports stay phase-scoped even though they live under reports/.",
+          "Add-tests reports are model-authored and rendered by blueprint_artifact_report_write; Markdown content fallback is not supported for this report family.",
           "Authoring guidance expects the approved classification, test plan, targeted command result, generated/passing/failing/blocked counts, bugs or blockers, verification write status, and report write status to stay visible under the canonical headings."
         ],
+        modelContract: ADD_TESTS_REPORT_MODEL_CONTRACT,
         renderScaffoldTemplate: renderAddTestsTemplate,
         renderAuthoringTemplate: renderAddTestsTemplate
       },
@@ -24417,6 +25373,991 @@ function artifactReportWriteInvalidResult(pathValue, issues, warnings = []) {
     warnings
   };
 }
+function createArtifactAjvValidator() {
+  return new import__.Ajv2020({
+    allErrors: true,
+    allowUnionTypes: true,
+    strict: false
+  });
+}
+function cloneJsonObject2(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function asJsonObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function getJsonObjectProperty(object3, propertyName) {
+  const value = object3?.[propertyName];
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function allowOnlyEmptyArray(schema) {
+  if (!schema) {
+    return;
+  }
+  schema.minItems = 0;
+  schema.maxItems = 0;
+  schema.items = false;
+  delete schema.allOf;
+}
+function exactArrayContains(value) {
+  return {
+    contains: { const: value },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+function exactObjectPropertyContains(propertyName, value) {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+function setArrayEnum(schema, values) {
+  if (!schema) {
+    return;
+  }
+  if (values.length === 0) {
+    allowOnlyEmptyArray(schema);
+    return;
+  }
+  schema.minItems = values.length;
+  schema.maxItems = values.length;
+  schema.uniqueItems = true;
+  schema.items = { type: "string", enum: values };
+  schema.allOf = values.map(exactArrayContains);
+}
+function addTestsDiagnostic(args) {
+  return args;
+}
+function formatAddTestsReportDiagnostic(diagnostic) {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+function ajvPathToAddTestsReportModelPath(instancePath) {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+  return `model${instancePath.split("/").filter((segment) => segment.length > 0).map((segment) => {
+    const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+    return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+  }).join("")}`;
+}
+function schemaDiagnosticFromAddTestsReportAjvError(error2) {
+  const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+  const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+  const basePath = ajvPathToAddTestsReportModelPath(error2.instancePath);
+  const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  return addTestsDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error2.keyword}`,
+    message: error2.message ?? "Model does not match the report.add-tests task schema.",
+    context: {
+      keyword: error2.keyword,
+      params: error2.params,
+      schemaPath: error2.schemaPath
+    },
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context."
+  });
+}
+function collectModelStringEntries(value, pathValue = "model") {
+  if (typeof value === "string") {
+    return [{ path: pathValue, value }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap(
+      (item, index) => collectModelStringEntries(item, `${pathValue}[${index}]`)
+    );
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).flatMap(
+      ([key, item]) => collectModelStringEntries(item, `${pathValue}.${key}`)
+    );
+  }
+  return [];
+}
+function hasModelPlaceholderLanguage(value) {
+  return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
+    value
+  );
+}
+function isGenericNoneValue(value) {
+  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
+}
+function parseAddTestsReportPhase(reportName2) {
+  const normalized = normalizeReportSlug(reportName2);
+  const match = normalized.match(/^add-tests-(\d+(?:\.\d+)?)$/);
+  return match ? normalizePhaseNumber(match[1]) : null;
+}
+function canonicalAddTestsReportName(phaseNumber) {
+  return `add-tests-${phaseNumber}`;
+}
+async function resolveAddTestsReportPhase(projectRoot, reportName2) {
+  const phaseNumber = parseAddTestsReportPhase(reportName2);
+  if (!phaseNumber) {
+    return null;
+  }
+  const phasePrefix2 = formatPhasePrefix(phaseNumber);
+  const phaseRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
+  const directories = await listImmediateDirectories(phaseRoot);
+  const phaseDirName = directories.find((directory) => {
+    const match = directory.match(/^(\d+(?:\.\d+)?)(?:-|$)/);
+    return match ? normalizePhaseNumber(match[1]) === phaseNumber : false;
+  });
+  if (!phaseDirName) {
+    return null;
+  }
+  return {
+    phaseNumber,
+    phasePrefix: phasePrefix2,
+    phaseName: slugToTitle(phaseDirName.replace(/^\d+(?:\.\d+)?-?/, "")),
+    phaseDir: `${BLUEPRINT_PHASES_PATH}/${phaseDirName}`
+  };
+}
+function extractSummaryTargetedVerification(content) {
+  return extractMarkdownTableRows(extractMarkdownSection(content, "Verification")).map((row) => row[0]?.trim() ?? "").filter((value) => value.length > 0 && value !== "none");
+}
+function extractSummaryDependencyPlanRows(content) {
+  return extractMarkdownTableRows(extractMarkdownSection(content, "Dependency Plans")).flatMap(
+    (row) => {
+      const planCell = row[0]?.trim() ?? "";
+      const match = planCell.match(/^(\d{2,})\s+\(([^)]+)\)$/);
+      return match ? [{ planId: match[1], path: match[2] }] : [];
+    }
+  );
+}
+async function collectValidAddTestsValidationEvidencePaths(args) {
+  const paths = [];
+  const warnings = [];
+  for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md")).sort((left, right) => left.localeCompare(right))) {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths) : validateUatArtifactContent(raw, args.summaryPaths, {
+      requireReadyVerificationEvidence: true
+    });
+    if (validation.valid) {
+      paths.push(artifactPath);
+      continue;
+    }
+    warnings.push(
+      `${artifactPath}: invalid validation evidence is ignored for report.add-tests prerequisites.`
+    );
+    warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+  return { paths, warnings };
+}
+function phasePlanPathFromSummaryPath(summaryPath2) {
+  return summaryPath2.replace(/-SUMMARY\.md$/, "-PLAN.md");
+}
+async function collectAddTestsReportContext(projectRoot, reportName2) {
+  const phase = await resolveAddTestsReportPhase(projectRoot, reportName2);
+  const blockers = [];
+  const warnings = [];
+  if (!parseAddTestsReportPhase(reportName2)) {
+    blockers.push(
+      `report.add-tests model writes require reportName to use the exact add-tests-<phase> pattern; received "${reportName2}".`
+    );
+  }
+  const parsedPhase = parseAddTestsReportPhase(reportName2);
+  if (parsedPhase && normalizeReportSlug(reportName2) !== canonicalAddTestsReportName(parsedPhase)) {
+    blockers.push(
+      `report.add-tests model writes require canonical reportName ${canonicalAddTestsReportName(parsedPhase)}; received "${reportName2}".`
+    );
+  }
+  if (!phase) {
+    blockers.push(`Could not resolve a Blueprint phase directory for reportName "${reportName2}".`);
+    return {
+      phase,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      reviewPath: null,
+      blockers,
+      warnings
+    };
+  }
+  const phaseDirAbs = resolveBlueprintPath(projectRoot, phase.phaseDir);
+  const entries = await fs.readdir(phaseDirAbs).catch(() => []);
+  const phaseFiles = entries.map((entry) => `${phase.phaseDir}/${entry}`);
+  const planPaths = phaseFiles.filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry)).sort((left, right) => left.localeCompare(right));
+  const completedSummaries = [];
+  const dependencyPlanMap = /* @__PURE__ */ new Map();
+  for (const summaryPath2 of phaseFiles.filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry)).sort((left, right) => left.localeCompare(right))) {
+    const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const linkedPlanPath = extractSummaryPlanReference(content) ?? phasePlanPathFromSummaryPath(summaryPath2);
+    const linkedPlanExists = await pathExists(resolveBlueprintPath(projectRoot, linkedPlanPath));
+    const validation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: linkedPlanExists ? linkedPlanPath : null,
+      requirePlanMarker: true
+    });
+    warnings.push(...validation.warnings.map((warning) => `${summaryPath2}: ${warning}`));
+    if (!validation.valid) {
+      warnings.push(...validation.issues.map((issue2) => `${summaryPath2}: ${issue2}`));
+      continue;
+    }
+    if (extractSummaryStatus(content) !== "COMPLETED") {
+      continue;
+    }
+    const planIdMatch = summaryPath2.match(/-(\d{2,})-SUMMARY\.md$/);
+    const planId2 = planIdMatch?.[1] ?? "";
+    completedSummaries.push({
+      planId: planId2,
+      path: summaryPath2,
+      linkedPlanPath,
+      targetedVerification: extractSummaryTargetedVerification(content)
+    });
+    for (const dependency of extractSummaryDependencyPlanRows(content)) {
+      dependencyPlanMap.set(`${dependency.planId}:${dependency.path}`, dependency);
+    }
+  }
+  const completedPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
+  const pendingPlans = planPaths.flatMap((planPath) => {
+    const planId2 = planPath.match(/-(\d{2,})-PLAN\.md$/)?.[1];
+    return planId2 && !completedPlanIds.has(planId2) ? [
+      {
+        planId: planId2,
+        path: planPath,
+        reason: "No valid completed summary exists for this plan."
+      }
+    ] : [];
+  });
+  const validationEvidence = await collectValidAddTestsValidationEvidencePaths({
+    projectRoot,
+    phaseFiles,
+    summaryPaths: completedSummaries.map((summary) => summary.path)
+  });
+  warnings.push(...validationEvidence.warnings);
+  const validationEvidencePaths = validationEvidence.paths;
+  const reviewPath = phaseFiles.find((entry) => entry.endsWith("-REVIEW.md")) ?? null;
+  if (completedSummaries.length === 0) {
+    blockers.push(
+      `${phase.phaseDir}: report.add-tests requires at least one valid COMPLETED execution summary.`
+    );
+  }
+  if (validationEvidencePaths.length === 0) {
+    blockers.push(
+      `${phase.phaseDir}: report.add-tests requires existing verification or UAT evidence before test generation can be reported.`
+    );
+  }
+  return {
+    phase,
+    completedSummaries,
+    pendingPlans,
+    dependencyPlans: [...dependencyPlanMap.values()].sort(
+      (left, right) => left.planId.localeCompare(right.planId)
+    ),
+    validationEvidencePaths,
+    reviewPath,
+    blockers,
+    warnings
+  };
+}
+async function buildAddTestsAllowedNextActions(args) {
+  const completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  const partialAction = "/blu-progress";
+  const blockedAction = "/blu-progress";
+  return {
+    completedAction,
+    partialAction,
+    blockedAction,
+    allowedActions: [.../* @__PURE__ */ new Set([completedAction, partialAction, blockedAction])]
+  };
+}
+function buildAddTestsReportTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const summaryPaths = args.completedSummaries.map((summary) => summary.path);
+  const evidencePaths = [...summaryPaths, ...args.validationEvidencePaths];
+  if (properties) {
+    setArrayEnum(getJsonObjectProperty(properties, "evidenceUsed"), evidencePaths);
+    const summaryEvidence = getJsonObjectProperty(properties, "summaryEvidence");
+    if (summaryEvidence) {
+      summaryEvidence.required = summaryPaths;
+      summaryEvidence.minProperties = summaryPaths.length;
+      summaryEvidence.maxProperties = summaryPaths.length;
+      summaryEvidence.propertyNames = summaryPaths.length > 0 ? { enum: summaryPaths } : { not: {} };
+      summaryEvidence.properties = Object.fromEntries(
+        args.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "planId",
+              "linkedPlanPath",
+              "summaryStatus",
+              "targetedVerification",
+              "coverageNote"
+            ],
+            properties: {
+              planId: { const: summary.planId },
+              linkedPlanPath: { const: summary.linkedPlanPath },
+              summaryStatus: { const: "COMPLETED" },
+              targetedVerification: {
+                type: "array",
+                minItems: summary.targetedVerification.length,
+                maxItems: summary.targetedVerification.length,
+                uniqueItems: true,
+                items: summary.targetedVerification.length > 0 ? { type: "string", enum: summary.targetedVerification } : false,
+                allOf: summary.targetedVerification.map(exactArrayContains)
+              },
+              coverageNote: {
+                $ref: "#/$defs/tableCellString"
+              }
+            }
+          }
+        ])
+      );
+      const additionalProperties = getJsonObjectProperty(summaryEvidence, "additionalProperties");
+      const additionalPropertiesProperties = additionalProperties ? getJsonObjectProperty(additionalProperties, "properties") : null;
+      const linkedPlanPath = additionalPropertiesProperties ? getJsonObjectProperty(additionalPropertiesProperties, "linkedPlanPath") : null;
+      const planId2 = additionalPropertiesProperties ? getJsonObjectProperty(additionalPropertiesProperties, "planId") : null;
+      if (linkedPlanPath) {
+        linkedPlanPath.enum = args.completedSummaries.map((summary) => summary.linkedPlanPath);
+      }
+      if (planId2) {
+        planId2.enum = args.completedSummaries.map((summary) => summary.planId);
+      }
+    }
+    const pendingPlans = getJsonObjectProperty(properties, "pendingPlans");
+    if (args.pendingPlans.length === 0) {
+      allowOnlyEmptyArray(pendingPlans);
+    } else if (pendingPlans) {
+      pendingPlans.minItems = args.pendingPlans.length;
+      pendingPlans.maxItems = args.pendingPlans.length;
+      const items = getJsonObjectProperty(pendingPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+      if (planId2) {
+        planId2.enum = args.pendingPlans.map((plan) => plan.planId);
+      }
+      if (pathProperty) {
+        pathProperty.enum = args.pendingPlans.map((plan) => plan.path);
+      }
+      pendingPlans.allOf = args.pendingPlans.map(
+        (plan) => exactObjectPropertyContains("planId", plan.planId)
+      );
+    }
+    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
+    if (args.dependencyPlans.length === 0) {
+      allowOnlyEmptyArray(dependencyPlans);
+    } else if (dependencyPlans) {
+      dependencyPlans.minItems = args.dependencyPlans.length;
+      dependencyPlans.maxItems = args.dependencyPlans.length;
+      const items = getJsonObjectProperty(dependencyPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+      if (planId2) {
+        planId2.enum = args.dependencyPlans.map((plan) => plan.planId);
+      }
+      if (pathProperty) {
+        pathProperty.enum = args.dependencyPlans.map((plan) => plan.path);
+      }
+      dependencyPlans.allOf = args.dependencyPlans.map((plan) => ({
+        contains: {
+          type: "object",
+          required: ["planId", "path", "status"],
+          properties: {
+            planId: { const: plan.planId },
+            path: { const: plan.path },
+            status: { const: "satisfied" }
+          }
+        },
+        minContains: 1,
+        maxContains: 1
+      }));
+    }
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.completedAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.partialAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.blockedAction }
+        }
+      }
+    }
+  ];
+  schema["x-blueprint-runtimeContext"] = {
+    completedSummaryPaths: summaryPaths,
+    validationEvidencePaths: args.validationEvidencePaths,
+    pendingPlans: args.pendingPlans,
+    dependencyPlans: args.dependencyPlans,
+    completedAction: args.completedAction,
+    partialAction: args.partialAction,
+    blockedAction: args.blockedAction,
+    allowedActions: args.allowedActions,
+    upstreamContext: {
+      completedSummaryPaths: "required upstream context",
+      validationEvidencePaths: "required upstream context",
+      pendingPlans: "optional empty context",
+      dependencyPlans: "optional empty context"
+    }
+  };
+  return schema;
+}
+async function addTestsReportModelSchemas(args) {
+  const modelContract = args.contract.modelContract;
+  if (!modelContract) {
+    throw new Error("report.add-tests does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("report.add-tests modelContract does not expose a schemaPath.");
+  }
+  if (!args.contextData.phase) {
+    throw new Error("report.add-tests cannot build a task schema without a resolved phase.");
+  }
+  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const allowedNextActions = await buildAddTestsAllowedNextActions({
+    phaseNumber: args.contextData.phase.phaseNumber,
+    reviewPath: args.contextData.reviewPath
+  });
+  const taskSchema = buildAddTestsReportTaskSchema({
+    baseSchema,
+    completedSummaries: args.contextData.completedSummaries,
+    pendingPlans: args.contextData.pendingPlans,
+    dependencyPlans: args.contextData.dependencyPlans,
+    validationEvidencePaths: args.contextData.validationEvidencePaths,
+    ...allowedNextActions
+  });
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema,
+    allowedNextActions: allowedNextActions.allowedActions
+  };
+}
+async function blueprintArtifactReportAuthoringContext(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const pathValue = buildBlueprintReportPath(args.reportName);
+  const contractId = resolveReportContractId(args.reportName);
+  if (contractId !== "report.add-tests") {
+    return {
+      status: "invalid",
+      reportName: normalizeReportSlug(args.reportName),
+      path: pathValue,
+      phase: null,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      allowedNextActions: [],
+      schemaPath: null,
+      baseSchema: null,
+      taskSchema: null,
+      modelOnly: true,
+      prerequisiteBlockers: [
+        `blueprint_artifact_report_authoring_context currently supports report.add-tests only; ${args.reportName} is not an add-tests report.`
+      ],
+      reason: "Unsupported report contract for schema-first report authoring.",
+      warnings: []
+    };
+  }
+  const contract = readArtifactContract("report.add-tests");
+  const contextData = await collectAddTestsReportContext(projectRoot, args.reportName);
+  const schemas = contextData.blockers.length === 0 ? await addTestsReportModelSchemas({ contract, contextData }) : null;
+  return {
+    status: contextData.blockers.length === 0 ? "ready" : "invalid",
+    reportName: normalizeReportSlug(args.reportName),
+    path: pathValue,
+    phase: contextData.phase,
+    completedSummaries: contextData.completedSummaries,
+    pendingPlans: contextData.pendingPlans,
+    dependencyPlans: contextData.dependencyPlans,
+    validationEvidencePaths: contextData.validationEvidencePaths,
+    allowedNextActions: schemas?.allowedNextActions ?? [],
+    schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
+    baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject2(contract.modelContract.jsonSchema) : null),
+    taskSchema: schemas?.taskSchema ?? null,
+    modelOnly: true,
+    prerequisiteBlockers: contextData.blockers,
+    reason: contextData.blockers.length > 0 ? contextData.blockers.join(" ") : null,
+    warnings: contextData.warnings
+  };
+}
+function normalizeStringArray(value) {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value.map((item) => item.trim()) : null;
+}
+function normalizeAddTestsReportModel(model) {
+  const coverageGoal = normalizeStringArray(model.coverageGoal);
+  const evidenceUsed = normalizeStringArray(model.evidenceUsed);
+  const followUpFixes = normalizeStringArray(model.followUpFixes);
+  const summaryEvidence = asJsonObject(model.summaryEvidence);
+  const resultCounts = asJsonObject(model.resultCounts);
+  const verificationWrite = asJsonObject(model.verificationWrite);
+  if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || coverageGoal === null || evidenceUsed === null || followUpFixes === null || !summaryEvidence || !resultCounts || !verificationWrite || typeof model.nextSafeAction !== "string") {
+    return null;
+  }
+  const normalizeRows = (value, mapper) => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+    const rows = value.map((row) => {
+      const rowObject = asJsonObject(row);
+      return rowObject ? mapper(rowObject) : null;
+    });
+    return rows.some((row) => row === null) ? null : rows;
+  };
+  const normalizedSummaryEvidence = {};
+  for (const [summaryPath2, entry] of Object.entries(summaryEvidence)) {
+    const entryObject = asJsonObject(entry);
+    const targetedVerification = normalizeStringArray(entryObject?.targetedVerification);
+    if (!entryObject || typeof entryObject.planId !== "string" || typeof entryObject.linkedPlanPath !== "string" || typeof entryObject.summaryStatus !== "string" || targetedVerification === null || typeof entryObject.coverageNote !== "string") {
+      return null;
+    }
+    normalizedSummaryEvidence[summaryPath2.trim()] = {
+      planId: entryObject.planId.trim(),
+      linkedPlanPath: entryObject.linkedPlanPath.trim(),
+      summaryStatus: entryObject.summaryStatus,
+      targetedVerification,
+      coverageNote: entryObject.coverageNote.trim()
+    };
+  }
+  const pendingPlans = normalizeRows(
+    model.pendingPlans,
+    (row) => typeof row.planId === "string" && typeof row.path === "string" && typeof row.reason === "string" ? { planId: row.planId.trim(), path: row.path.trim(), reason: row.reason.trim() } : null
+  );
+  const dependencyPlans = normalizeRows(
+    model.dependencyPlans,
+    (row) => typeof row.planId === "string" && typeof row.path === "string" && typeof row.status === "string" && typeof row.evidence === "string" ? {
+      planId: row.planId.trim(),
+      path: row.path.trim(),
+      status: row.status,
+      evidence: row.evidence.trim()
+    } : null
+  );
+  const classification = normalizeRows(
+    model.classification,
+    (row) => typeof row.target === "string" && typeof row.category === "string" && typeof row.reason === "string" ? { target: row.target.trim(), category: row.category.trim(), reason: row.reason.trim() } : null
+  );
+  const testPlan = normalizeRows(
+    model.testPlan,
+    (row) => typeof row.target === "string" && typeof row.scenario === "string" && typeof row.expectedAssertion === "string" && typeof row.command === "string" ? {
+      target: row.target.trim(),
+      scenario: row.scenario.trim(),
+      expectedAssertion: row.expectedAssertion.trim(),
+      command: row.command.trim()
+    } : null
+  );
+  const testsAddedOrUpdated = normalizeRows(
+    model.testsAddedOrUpdated,
+    (row) => typeof row.path === "string" && typeof row.summary === "string" ? { path: row.path.trim(), summary: row.summary.trim() } : null
+  );
+  const targetedCommands = normalizeRows(
+    model.targetedCommands,
+    (row) => typeof row.command === "string" && typeof row.result === "string" && typeof row.evidence === "string" ? {
+      command: row.command.trim(),
+      result: row.result,
+      evidence: row.evidence.trim()
+    } : null
+  );
+  const bugsOrBlockers = normalizeRows(
+    model.bugsOrBlockers,
+    (row) => typeof row.item === "string" && typeof row.evidence === "string" && typeof row.status === "string" ? {
+      item: row.item.trim(),
+      evidence: row.evidence.trim(),
+      status: row.status
+    } : null
+  );
+  const manualOrDeferredWork = normalizeRows(
+    model.manualOrDeferredWork,
+    (row) => typeof row.item === "string" && typeof row.reason === "string" && typeof row.followUp === "string" && typeof row.status === "string" ? {
+      item: row.item.trim(),
+      reason: row.reason.trim(),
+      followUp: row.followUp.trim(),
+      status: row.status
+    } : null
+  );
+  const remainingGaps = normalizeRows(
+    model.remainingGaps,
+    (row) => typeof row.gap === "string" && typeof row.evidence === "string" && typeof row.repair === "string" && typeof row.status === "string" ? {
+      gap: row.gap.trim(),
+      evidence: row.evidence.trim(),
+      repair: row.repair.trim(),
+      status: row.status
+    } : null
+  );
+  if (pendingPlans === null || dependencyPlans === null || classification === null || testPlan === null || testsAddedOrUpdated === null || targetedCommands === null || bugsOrBlockers === null || manualOrDeferredWork === null || remainingGaps === null || typeof resultCounts.generated !== "number" || typeof resultCounts.passing !== "number" || typeof resultCounts.failing !== "number" || typeof resultCounts.blocked !== "number" || typeof verificationWrite.status !== "string" || typeof verificationWrite.evidence !== "string") {
+    return null;
+  }
+  return {
+    status: model.status,
+    readiness: model.readiness,
+    completionState: model.completionState,
+    coverageGoal,
+    evidenceUsed,
+    summaryEvidence: normalizedSummaryEvidence,
+    pendingPlans,
+    dependencyPlans,
+    classification,
+    testPlan,
+    testsAddedOrUpdated,
+    targetedCommands,
+    resultCounts: {
+      generated: resultCounts.generated,
+      passing: resultCounts.passing,
+      failing: resultCounts.failing,
+      blocked: resultCounts.blocked
+    },
+    bugsOrBlockers,
+    manualOrDeferredWork,
+    remainingGaps,
+    followUpFixes,
+    verificationWrite: {
+      status: verificationWrite.status,
+      evidence: verificationWrite.evidence.trim()
+    },
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+function addTestsReportResidualDiagnostics(model, modelContract) {
+  const diagnostics = [];
+  if (!modelContract) {
+    return [
+      addTestsDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "report.add-tests does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live report.add-tests artifact contract before authoring."
+      })
+    ];
+  }
+  const stringEntries = collectModelStringEntries(model);
+  const leakedSignals = modelContract.exampleLeakageSignals.filter(
+    (signal) => stringEntries.some((entry) => entry.value.includes(signal))
+  );
+  for (const signal of leakedSignals) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Add-tests report model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase summaries and test run."
+      })
+    );
+  }
+  for (const entry of stringEntries) {
+    if (hasModelPlaceholderLanguage(entry.value)) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.placeholder",
+          message: `Add-tests report model contains placeholder language: ${entry.value}.`,
+          context: { value: entry.value },
+          suggestion: "Replace placeholder language with concrete test-generation evidence."
+        })
+      );
+    }
+    if (isGenericNoneValue(entry.value) && /^(?:model\.coverageGoal|model\.classification|model\.testPlan|model\.targetedCommands|model\.summaryEvidence)/.test(
+      entry.path
+    )) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.generic_text",
+          message: "Add-tests report model must use concrete evidence instead of generic none.",
+          context: { value: entry.value },
+          suggestion: "Replace the generic value with a summary path, target file, command, or explicit blocker."
+        })
+      );
+    }
+  }
+  return diagnostics;
+}
+function markdownCell(value) {
+  return String(value ?? "none").replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, " ").replace(/\|/g, "\\|").trim() || "none";
+}
+function renderBulletList(items, fallback = "none") {
+  const normalized = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
+  return (normalized.length > 0 ? normalized : [fallback]).map((item) => `- ${item}`).join("\n");
+}
+function renderMarkdownTable(headers, rows) {
+  const separator = headers.map(() => "---");
+  const renderedRows = rows.length > 0 ? rows : [headers.map(() => "none")];
+  return [headers, separator, ...renderedRows].map((row) => `| ${row.map(markdownCell).join(" | ")} |`).join("\n");
+}
+function renderAddTestsReportModelContent(args) {
+  const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
+    ([summaryPath2, entry]) => [
+      summaryPath2,
+      `${entry.planId} (${entry.linkedPlanPath})`,
+      entry.summaryStatus,
+      entry.targetedVerification.join("; "),
+      entry.coverageNote
+    ]
+  );
+  const pendingPlanRows = args.model.pendingPlans.map((row) => [
+    row.planId,
+    row.path,
+    row.reason
+  ]);
+  const dependencyRows = args.model.dependencyPlans.map((row) => [
+    row.planId,
+    row.path,
+    row.status,
+    row.evidence
+  ]);
+  const classificationRows = args.model.classification.map((row) => [
+    row.target,
+    row.category,
+    row.reason,
+    args.model.testPlan.find((plan) => plan.target === row.target)?.scenario ?? "see test plan"
+  ]);
+  return `# Add Tests Report
+
+**Status:** ${args.model.status}
+**Readiness:** ${args.model.readiness}
+**Completion State:** ${args.model.completionState}
+**Report:** \`${args.context.path}\`
+**Next Safe Action:** ${args.model.nextSafeAction}
+
+## Coverage Goal
+
+${renderBulletList(args.model.coverageGoal)}
+
+## Evidence Used
+
+${renderBulletList(args.model.evidenceUsed)}
+
+### Summary Evidence
+
+${renderMarkdownTable(
+    ["Summary", "Linked Plan", "Status", "Targeted Verification", "Coverage Note"],
+    summaryEvidenceRows
+  )}
+
+### Pending Plans
+
+${renderMarkdownTable(
+    ["Plan", "Path", "Reason"],
+    pendingPlanRows
+  )}
+
+### Dependency Plans
+
+${renderMarkdownTable(
+    ["Plan", "Path", "Status", "Evidence"],
+    dependencyRows
+  )}
+
+## Classification And Test Plan
+
+${renderMarkdownTable(
+    ["Surface", "Classification", "Reason", "Planned Test"],
+    classificationRows
+  )}
+
+${renderMarkdownTable(
+    ["Target", "Scenario", "Expected Assertion", "Command"],
+    args.model.testPlan.map((row) => [
+      row.target,
+      row.scenario,
+      row.expectedAssertion,
+      row.command
+    ])
+  )}
+
+## Tests Added Or Updated
+
+${renderMarkdownTable(
+    ["Path", "Summary"],
+    args.model.testsAddedOrUpdated.map((row) => [row.path, row.summary])
+  )}
+
+${renderMarkdownTable(
+    ["Command", "Result", "Evidence"],
+    args.model.targetedCommands.map((row) => [row.command, row.result, row.evidence])
+  )}
+
+- Result counts: generated ${args.model.resultCounts.generated}, passing ${args.model.resultCounts.passing}, failing ${args.model.resultCounts.failing}, blocked ${args.model.resultCounts.blocked}.
+
+${renderMarkdownTable(
+    ["Item", "Evidence", "Status"],
+    args.model.bugsOrBlockers.map((row) => [row.item, row.evidence, row.status])
+  )}
+
+## Remaining Gaps
+
+${renderMarkdownTable(
+    ["Item", "Reason", "Follow-Up", "Status"],
+    args.model.manualOrDeferredWork.map((row) => [
+      row.item,
+      row.reason,
+      row.followUp,
+      row.status
+    ])
+  )}
+
+${renderMarkdownTable(
+    ["Gap", "Evidence", "Repair", "Status"],
+    args.model.remainingGaps.map((row) => [
+      row.gap,
+      row.evidence,
+      row.repair,
+      row.status
+    ])
+  )}
+
+- Verification write status: ${args.model.verificationWrite.status} - ${args.model.verificationWrite.evidence}
+- Report write status: pending MCP write for ${args.context.path}
+
+## Follow-Up Fixes
+
+${renderBulletList(args.model.followUpFixes)}
+
+## Next Safe Action
+
+- ${args.model.nextSafeAction}
+`;
+}
+async function blueprintArtifactReportValidateModel(args) {
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: args.cwd,
+    reportName: args.reportName
+  });
+  const diagnostics = context.prerequisiteBlockers.map(
+    (message) => addTestsDiagnostic({
+      source: "scope",
+      path: "report.add-tests",
+      code: "scope.prerequisite_blocker",
+      message,
+      context: { reportName: context.reportName, phase: context.phase?.phaseNumber ?? null },
+      suggestion: "Repair required completed summary and validation/UAT context before authoring report.add-tests."
+    })
+  );
+  const modelObject = asJsonObject(args.model);
+  if (!modelObject) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "schema",
+        path: "model",
+        code: "schema.type",
+        message: "Add-tests report model must be a JSON object.",
+        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        suggestion: "Return a JSON object that matches taskSchema."
+      })
+    );
+  }
+  if (!context.taskSchema) {
+    diagnostics.push(
+      addTestsDiagnostic({
+        source: "scope",
+        path: "taskSchema",
+        code: "contract.missing_schema",
+        message: "report.add-tests did not expose a runtime task schema.",
+        context: {},
+        suggestion: "Read the live report.add-tests authoring context before writing."
+      })
+    );
+  }
+  let normalizedModel = null;
+  if (modelObject && context.taskSchema) {
+    const validate = createArtifactAjvValidator().compile(context.taskSchema);
+    const schemaValid = validate(modelObject);
+    if (!schemaValid) {
+      diagnostics.push(
+        ...(validate.errors ?? []).map(schemaDiagnosticFromAddTestsReportAjvError)
+      );
+    }
+    diagnostics.push(
+      ...addTestsReportResidualDiagnostics(
+        modelObject,
+        readArtifactContract("report.add-tests").modelContract
+      )
+    );
+    if (schemaValid) {
+      normalizedModel = normalizeAddTestsReportModel(modelObject);
+    }
+  }
+  let renderPreview = null;
+  if (diagnostics.length === 0 && normalizedModel) {
+    const rendered = renderAddTestsReportModelContent({
+      model: normalizedModel,
+      context
+    });
+    const validation = validateReportArtifactContent(rendered, context.reportName);
+    for (const issue2 of validation.issues) {
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "markdown",
+          path: "renderPreview",
+          code: "markdown.invalid_render",
+          message: issue2,
+          context: {},
+          suggestion: "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
+        })
+      );
+    }
+    if (validation.valid) {
+      renderPreview = rendered;
+    }
+  }
+  return {
+    status: diagnostics.length === 0 ? "valid" : "invalid",
+    valid: diagnostics.length === 0,
+    reportName: context.reportName,
+    path: context.path,
+    phase: context.phase,
+    schemaPath: context.schemaPath,
+    taskSchema: context.taskSchema,
+    diagnostics,
+    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    renderPreview,
+    warnings: context.warnings
+  };
+}
 function reportModelWriteIssues(reportName2) {
   const contractId = resolveReportContractId(reportName2);
   if (!contractId) {
@@ -24451,13 +26392,74 @@ async function blueprintArtifactReportWrite(args) {
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
+  const contractId = resolveReportContractId(args.reportName);
   if (hasContent === hasModel) {
     return artifactReportWriteInvalidResult(pathValue, [
       "Artifact report writes must supply exactly one of content or model."
     ]);
   }
+  if (contractId === "report.add-tests" && hasContent) {
+    return artifactReportWriteInvalidResult(pathValue, [
+      "report.add-tests is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write."
+    ]);
+  }
   if (hasModel) {
-    return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
+    if (contractId !== "report.add-tests") {
+      return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
+    }
+    const modelValidation = await blueprintArtifactReportValidateModel({
+      cwd: projectRoot,
+      reportName: args.reportName,
+      model: args.model
+    });
+    if (!modelValidation.valid || !modelValidation.renderPreview) {
+      return artifactReportWriteInvalidResult(
+        pathValue,
+        modelValidation.diagnostics.map(formatAddTestsReportDiagnostic),
+        modelValidation.warnings
+      );
+    }
+    const normalizedContent2 = modelValidation.renderPreview.endsWith("\n") ? modelValidation.renderPreview : `${modelValidation.renderPreview}
+`;
+    const exists2 = await pathExists(absolutePath);
+    const warnings2 = [...modelValidation.warnings];
+    if (exists2) {
+      const existingContent = await fs.readFile(absolutePath, "utf8");
+      if (existingContent === normalizedContent2) {
+        warnings2.push("Preserved existing report because the model-rendered content was unchanged.");
+        return {
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "reused",
+          issues: [],
+          warnings: warnings2
+        };
+      }
+      if (!(args.overwrite ?? false)) {
+        throw new Error(
+          `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
+        );
+      }
+    }
+    warnings2.push(
+      ...await writeTextFile(absolutePath, normalizedContent2, {
+        label: pathValue
+      })
+    );
+    if (exists2) {
+      warnings2.push(`Replaced existing report: ${pathValue}`);
+    }
+    return {
+      path: pathValue,
+      written: true,
+      created: !exists2,
+      overwritten: exists2,
+      status: exists2 ? "updated" : "created",
+      issues: [],
+      warnings: warnings2
+    };
   }
   const content = args.content ?? "";
   const normalizedContent = content.endsWith("\n") ? content : `${content}
@@ -24607,10 +26609,11 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var import__, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
+    import__ = __toESM(require__(), 1);
     init_v4();
     init_artifact_contracts();
     init_security();
@@ -24884,6 +26887,15 @@ var init_artifacts = __esm({
       model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional()
     };
+    artifactReportAuthoringContextInputSchema = {
+      cwd: string2().optional(),
+      reportName: string2()
+    };
+    artifactReportValidateModelInputSchema = {
+      cwd: string2().optional(),
+      reportName: string2(),
+      model: record(string2(), unknown())
+    };
     artifactCodebaseWriteInputSchema = {
       cwd: string2().optional(),
       artifactId: _enum(CODEBASE_ARTIFACT_CONTRACT_IDS),
@@ -25079,8 +27091,20 @@ var init_artifacts = __esm({
         handler: async (args) => blueprintArtifactSummaryDigest(args)
       },
       {
+        name: "blueprint_artifact_report_authoring_context",
+        description: "Return the schema-first report.add-tests authoring context, including the base model schema and runtime-narrowed task schema for the selected add-tests report.",
+        inputSchema: artifactReportAuthoringContextInputSchema,
+        handler: async (args) => blueprintArtifactReportAuthoringContext(args)
+      },
+      {
+        name: "blueprint_artifact_report_validate_model",
+        description: "Validate a structured report.add-tests model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
+        inputSchema: artifactReportValidateModelInputSchema,
+        handler: async (args) => blueprintArtifactReportValidateModel(args)
+      },
+      {
         name: "blueprint_artifact_report_write",
-        description: "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection.",
+        description: "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests is model-only and rejects Markdown content fallback.",
         inputSchema: artifactReportWriteInputSchema,
         handler: async (args) => blueprintArtifactReportWrite(args)
       }
@@ -25131,830 +27155,6 @@ var init_runtime_vocabulary = __esm({
     BLUEPRINT_SKILLS_DIRECTORY = "skills";
     BLUEPRINT_SKILL_ENTRY_FILE = "SKILL.md";
     BLUEPRINT_AGENTS_DIRECTORY = "agents";
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js
-var require_dynamicAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicAnchor.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.dynamicAnchor = void 0;
-    var codegen_1 = require_codegen();
-    var names_1 = require_names();
-    var compile_1 = require_compile();
-    var ref_1 = require_ref();
-    var def = {
-      keyword: "$dynamicAnchor",
-      schemaType: "string",
-      code: (cxt) => dynamicAnchor(cxt, cxt.schema)
-    };
-    function dynamicAnchor(cxt, anchor) {
-      const { gen, it } = cxt;
-      it.schemaEnv.root.dynamicAnchors[anchor] = true;
-      const v = (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`;
-      const validate = it.errSchemaPath === "#" ? it.validateName : _getValidate(cxt);
-      gen.if((0, codegen_1._)`!${v}`, () => gen.assign(v, validate));
-    }
-    exports.dynamicAnchor = dynamicAnchor;
-    function _getValidate(cxt) {
-      const { schemaEnv, schema, self } = cxt.it;
-      const { root, baseId, localRefs, meta: meta3 } = schemaEnv.root;
-      const { schemaId } = self.opts;
-      const sch = new compile_1.SchemaEnv({ schema, schemaId, root, baseId, localRefs, meta: meta3 });
-      compile_1.compileSchema.call(self, sch);
-      return (0, ref_1.getValidate)(cxt, sch);
-    }
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js
-var require_dynamicRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/dynamicRef.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.dynamicRef = void 0;
-    var codegen_1 = require_codegen();
-    var names_1 = require_names();
-    var ref_1 = require_ref();
-    var def = {
-      keyword: "$dynamicRef",
-      schemaType: "string",
-      code: (cxt) => dynamicRef(cxt, cxt.schema)
-    };
-    function dynamicRef(cxt, ref) {
-      const { gen, keyword, it } = cxt;
-      if (ref[0] !== "#")
-        throw new Error(`"${keyword}" only supports hash fragment reference`);
-      const anchor = ref.slice(1);
-      if (it.allErrors) {
-        _dynamicRef();
-      } else {
-        const valid = gen.let("valid", false);
-        _dynamicRef(valid);
-        cxt.ok(valid);
-      }
-      function _dynamicRef(valid) {
-        if (it.schemaEnv.root.dynamicAnchors[anchor]) {
-          const v = gen.let("_v", (0, codegen_1._)`${names_1.default.dynamicAnchors}${(0, codegen_1.getProperty)(anchor)}`);
-          gen.if(v, _callRef(v, valid), _callRef(it.validateName, valid));
-        } else {
-          _callRef(it.validateName, valid)();
-        }
-      }
-      function _callRef(validate, valid) {
-        return valid ? () => gen.block(() => {
-          (0, ref_1.callRef)(cxt, validate);
-          gen.let(valid, true);
-        }) : () => (0, ref_1.callRef)(cxt, validate);
-      }
-    }
-    exports.dynamicRef = dynamicRef;
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js
-var require_recursiveAnchor = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveAnchor.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicAnchor_1 = require_dynamicAnchor();
-    var util_1 = require_util();
-    var def = {
-      keyword: "$recursiveAnchor",
-      schemaType: "boolean",
-      code(cxt) {
-        if (cxt.schema)
-          (0, dynamicAnchor_1.dynamicAnchor)(cxt, "");
-        else
-          (0, util_1.checkStrictMode)(cxt.it, "$recursiveAnchor: false is ignored");
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js
-var require_recursiveRef = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/recursiveRef.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicRef_1 = require_dynamicRef();
-    var def = {
-      keyword: "$recursiveRef",
-      schemaType: "string",
-      code: (cxt) => (0, dynamicRef_1.dynamicRef)(cxt, cxt.schema)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/dynamic/index.js
-var require_dynamic = __commonJS({
-  "node_modules/ajv/dist/vocabularies/dynamic/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dynamicAnchor_1 = require_dynamicAnchor();
-    var dynamicRef_1 = require_dynamicRef();
-    var recursiveAnchor_1 = require_recursiveAnchor();
-    var recursiveRef_1 = require_recursiveRef();
-    var dynamic = [dynamicAnchor_1.default, dynamicRef_1.default, recursiveAnchor_1.default, recursiveRef_1.default];
-    exports.default = dynamic;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/validation/dependentRequired.js
-var require_dependentRequired = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/dependentRequired.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependencies_1 = require_dependencies();
-    var def = {
-      keyword: "dependentRequired",
-      type: "object",
-      schemaType: "object",
-      error: dependencies_1.error,
-      code: (cxt) => (0, dependencies_1.validatePropertyDeps)(cxt)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js
-var require_dependentSchemas = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependentSchemas.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependencies_1 = require_dependencies();
-    var def = {
-      keyword: "dependentSchemas",
-      type: "object",
-      schemaType: "object",
-      code: (cxt) => (0, dependencies_1.validateSchemaDeps)(cxt)
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/validation/limitContains.js
-var require_limitContains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitContains.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var util_1 = require_util();
-    var def = {
-      keyword: ["maxContains", "minContains"],
-      type: "array",
-      schemaType: "number",
-      code({ keyword, parentSchema, it }) {
-        if (parentSchema.contains === void 0) {
-          (0, util_1.checkStrictMode)(it, `"${keyword}" without "contains" is ignored`);
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/next.js
-var require_next = __commonJS({
-  "node_modules/ajv/dist/vocabularies/next.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var dependentRequired_1 = require_dependentRequired();
-    var dependentSchemas_1 = require_dependentSchemas();
-    var limitContains_1 = require_limitContains();
-    var next = [dependentRequired_1.default, dependentSchemas_1.default, limitContains_1.default];
-    exports.default = next;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js
-var require_unevaluatedProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedProperties.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var codegen_1 = require_codegen();
-    var util_1 = require_util();
-    var names_1 = require_names();
-    var error2 = {
-      message: "must NOT have unevaluated properties",
-      params: ({ params }) => (0, codegen_1._)`{unevaluatedProperty: ${params.unevaluatedProperty}}`
-    };
-    var def = {
-      keyword: "unevaluatedProperties",
-      type: "object",
-      schemaType: ["boolean", "object"],
-      trackErrors: true,
-      error: error2,
-      code(cxt) {
-        const { gen, schema, data, errsCount, it } = cxt;
-        if (!errsCount)
-          throw new Error("ajv implementation error");
-        const { allErrors, props } = it;
-        if (props instanceof codegen_1.Name) {
-          gen.if((0, codegen_1._)`${props} !== true`, () => gen.forIn("key", data, (key) => gen.if(unevaluatedDynamic(props, key), () => unevaluatedPropCode(key))));
-        } else if (props !== true) {
-          gen.forIn("key", data, (key) => props === void 0 ? unevaluatedPropCode(key) : gen.if(unevaluatedStatic(props, key), () => unevaluatedPropCode(key)));
-        }
-        it.props = true;
-        cxt.ok((0, codegen_1._)`${errsCount} === ${names_1.default.errors}`);
-        function unevaluatedPropCode(key) {
-          if (schema === false) {
-            cxt.setParams({ unevaluatedProperty: key });
-            cxt.error();
-            if (!allErrors)
-              gen.break();
-            return;
-          }
-          if (!(0, util_1.alwaysValidSchema)(it, schema)) {
-            const valid = gen.name("valid");
-            cxt.subschema({
-              keyword: "unevaluatedProperties",
-              dataProp: key,
-              dataPropType: util_1.Type.Str
-            }, valid);
-            if (!allErrors)
-              gen.if((0, codegen_1.not)(valid), () => gen.break());
-          }
-        }
-        function unevaluatedDynamic(evaluatedProps, key) {
-          return (0, codegen_1._)`!${evaluatedProps} || !${evaluatedProps}[${key}]`;
-        }
-        function unevaluatedStatic(evaluatedProps, key) {
-          const ps = [];
-          for (const p in evaluatedProps) {
-            if (evaluatedProps[p] === true)
-              ps.push((0, codegen_1._)`${key} !== ${p}`);
-          }
-          return (0, codegen_1.and)(...ps);
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js
-var require_unevaluatedItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/unevaluatedItems.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var codegen_1 = require_codegen();
-    var util_1 = require_util();
-    var error2 = {
-      message: ({ params: { len } }) => (0, codegen_1.str)`must NOT have more than ${len} items`,
-      params: ({ params: { len } }) => (0, codegen_1._)`{limit: ${len}}`
-    };
-    var def = {
-      keyword: "unevaluatedItems",
-      type: "array",
-      schemaType: ["boolean", "object"],
-      error: error2,
-      code(cxt) {
-        const { gen, schema, data, it } = cxt;
-        const items = it.items || 0;
-        if (items === true)
-          return;
-        const len = gen.const("len", (0, codegen_1._)`${data}.length`);
-        if (schema === false) {
-          cxt.setParams({ len: items });
-          cxt.fail((0, codegen_1._)`${len} > ${items}`);
-        } else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-          const valid = gen.var("valid", (0, codegen_1._)`${len} <= ${items}`);
-          gen.if((0, codegen_1.not)(valid), () => validateItems(valid, items));
-          cxt.ok(valid);
-        }
-        it.items = true;
-        function validateItems(valid, from) {
-          gen.forRange("i", from, len, (i) => {
-            cxt.subschema({ keyword: "unevaluatedItems", dataProp: i, dataPropType: util_1.Type.Num }, valid);
-            if (!it.allErrors)
-              gen.if((0, codegen_1.not)(valid), () => gen.break());
-          });
-        }
-      }
-    };
-    exports.default = def;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/unevaluated/index.js
-var require_unevaluated = __commonJS({
-  "node_modules/ajv/dist/vocabularies/unevaluated/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var unevaluatedProperties_1 = require_unevaluatedProperties();
-    var unevaluatedItems_1 = require_unevaluatedItems();
-    var unevaluated = [unevaluatedProperties_1.default, unevaluatedItems_1.default];
-    exports.default = unevaluated;
-  }
-});
-
-// node_modules/ajv/dist/vocabularies/draft2020.js
-var require_draft2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft2020.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var core_1 = require_core2();
-    var validation_1 = require_validation();
-    var applicator_1 = require_applicator();
-    var dynamic_1 = require_dynamic();
-    var next_1 = require_next();
-    var unevaluated_1 = require_unevaluated();
-    var format_1 = require_format2();
-    var metadata_1 = require_metadata();
-    var draft2020Vocabularies = [
-      dynamic_1.default,
-      core_1.default,
-      validation_1.default,
-      (0, applicator_1.default)(true),
-      format_1.default,
-      metadata_1.metadataVocabulary,
-      metadata_1.contentVocabulary,
-      next_1.default,
-      unevaluated_1.default
-    ];
-    exports.default = draft2020Vocabularies;
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/schema.json
-var require_schema = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/schema.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/schema",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/core": true,
-        "https://json-schema.org/draft/2020-12/vocab/applicator": true,
-        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true,
-        "https://json-schema.org/draft/2020-12/vocab/validation": true,
-        "https://json-schema.org/draft/2020-12/vocab/meta-data": true,
-        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true,
-        "https://json-schema.org/draft/2020-12/vocab/content": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Core and Validation specifications meta-schema",
-      allOf: [
-        { $ref: "meta/core" },
-        { $ref: "meta/applicator" },
-        { $ref: "meta/unevaluated" },
-        { $ref: "meta/validation" },
-        { $ref: "meta/meta-data" },
-        { $ref: "meta/format-annotation" },
-        { $ref: "meta/content" }
-      ],
-      type: ["object", "boolean"],
-      $comment: "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.",
-      properties: {
-        definitions: {
-          $comment: '"definitions" has been replaced by "$defs".',
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          deprecated: true,
-          default: {}
-        },
-        dependencies: {
-          $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.',
-          type: "object",
-          additionalProperties: {
-            anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }]
-          },
-          deprecated: true,
-          default: {}
-        },
-        $recursiveAnchor: {
-          $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".',
-          $ref: "meta/core#/$defs/anchorString",
-          deprecated: true
-        },
-        $recursiveRef: {
-          $comment: '"$recursiveRef" has been replaced by "$dynamicRef".',
-          $ref: "meta/core#/$defs/uriReferenceString",
-          deprecated: true
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json
-var require_applicator2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/applicator.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/applicator",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/applicator": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Applicator vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        prefixItems: { $ref: "#/$defs/schemaArray" },
-        items: { $dynamicRef: "#meta" },
-        contains: { $dynamicRef: "#meta" },
-        additionalProperties: { $dynamicRef: "#meta" },
-        properties: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          default: {}
-        },
-        patternProperties: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          propertyNames: { format: "regex" },
-          default: {}
-        },
-        dependentSchemas: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" },
-          default: {}
-        },
-        propertyNames: { $dynamicRef: "#meta" },
-        if: { $dynamicRef: "#meta" },
-        then: { $dynamicRef: "#meta" },
-        else: { $dynamicRef: "#meta" },
-        allOf: { $ref: "#/$defs/schemaArray" },
-        anyOf: { $ref: "#/$defs/schemaArray" },
-        oneOf: { $ref: "#/$defs/schemaArray" },
-        not: { $dynamicRef: "#meta" }
-      },
-      $defs: {
-        schemaArray: {
-          type: "array",
-          minItems: 1,
-          items: { $dynamicRef: "#meta" }
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json
-var require_unevaluated2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/unevaluated.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/unevaluated",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/unevaluated": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Unevaluated applicator vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        unevaluatedItems: { $dynamicRef: "#meta" },
-        unevaluatedProperties: { $dynamicRef: "#meta" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json
-var require_content = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/content.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/content",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/content": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Content vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        contentEncoding: { type: "string" },
-        contentMediaType: { type: "string" },
-        contentSchema: { $dynamicRef: "#meta" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json
-var require_core3 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/core.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/core",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/core": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Core vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        $id: {
-          $ref: "#/$defs/uriReferenceString",
-          $comment: "Non-empty fragments not allowed.",
-          pattern: "^[^#]*#?$"
-        },
-        $schema: { $ref: "#/$defs/uriString" },
-        $ref: { $ref: "#/$defs/uriReferenceString" },
-        $anchor: { $ref: "#/$defs/anchorString" },
-        $dynamicRef: { $ref: "#/$defs/uriReferenceString" },
-        $dynamicAnchor: { $ref: "#/$defs/anchorString" },
-        $vocabulary: {
-          type: "object",
-          propertyNames: { $ref: "#/$defs/uriString" },
-          additionalProperties: {
-            type: "boolean"
-          }
-        },
-        $comment: {
-          type: "string"
-        },
-        $defs: {
-          type: "object",
-          additionalProperties: { $dynamicRef: "#meta" }
-        }
-      },
-      $defs: {
-        anchorString: {
-          type: "string",
-          pattern: "^[A-Za-z_][-A-Za-z0-9._]*$"
-        },
-        uriString: {
-          type: "string",
-          format: "uri"
-        },
-        uriReferenceString: {
-          type: "string",
-          format: "uri-reference"
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json
-var require_format_annotation = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/format-annotation.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/format-annotation",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/format-annotation": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Format vocabulary meta-schema for annotation results",
-      type: ["object", "boolean"],
-      properties: {
-        format: { type: "string" }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json
-var require_meta_data = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/meta-data.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/meta-data",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/meta-data": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Meta-data vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        title: {
-          type: "string"
-        },
-        description: {
-          type: "string"
-        },
-        default: true,
-        deprecated: {
-          type: "boolean",
-          default: false
-        },
-        readOnly: {
-          type: "boolean",
-          default: false
-        },
-        writeOnly: {
-          type: "boolean",
-          default: false
-        },
-        examples: {
-          type: "array",
-          items: true
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json
-var require_validation2 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/meta/validation.json"(exports, module) {
-    module.exports = {
-      $schema: "https://json-schema.org/draft/2020-12/schema",
-      $id: "https://json-schema.org/draft/2020-12/meta/validation",
-      $vocabulary: {
-        "https://json-schema.org/draft/2020-12/vocab/validation": true
-      },
-      $dynamicAnchor: "meta",
-      title: "Validation vocabulary meta-schema",
-      type: ["object", "boolean"],
-      properties: {
-        type: {
-          anyOf: [
-            { $ref: "#/$defs/simpleTypes" },
-            {
-              type: "array",
-              items: { $ref: "#/$defs/simpleTypes" },
-              minItems: 1,
-              uniqueItems: true
-            }
-          ]
-        },
-        const: true,
-        enum: {
-          type: "array",
-          items: true
-        },
-        multipleOf: {
-          type: "number",
-          exclusiveMinimum: 0
-        },
-        maximum: {
-          type: "number"
-        },
-        exclusiveMaximum: {
-          type: "number"
-        },
-        minimum: {
-          type: "number"
-        },
-        exclusiveMinimum: {
-          type: "number"
-        },
-        maxLength: { $ref: "#/$defs/nonNegativeInteger" },
-        minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        pattern: {
-          type: "string",
-          format: "regex"
-        },
-        maxItems: { $ref: "#/$defs/nonNegativeInteger" },
-        minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        uniqueItems: {
-          type: "boolean",
-          default: false
-        },
-        maxContains: { $ref: "#/$defs/nonNegativeInteger" },
-        minContains: {
-          $ref: "#/$defs/nonNegativeInteger",
-          default: 1
-        },
-        maxProperties: { $ref: "#/$defs/nonNegativeInteger" },
-        minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" },
-        required: { $ref: "#/$defs/stringArray" },
-        dependentRequired: {
-          type: "object",
-          additionalProperties: {
-            $ref: "#/$defs/stringArray"
-          }
-        }
-      },
-      $defs: {
-        nonNegativeInteger: {
-          type: "integer",
-          minimum: 0
-        },
-        nonNegativeIntegerDefault0: {
-          $ref: "#/$defs/nonNegativeInteger",
-          default: 0
-        },
-        simpleTypes: {
-          enum: ["array", "boolean", "integer", "null", "number", "object", "string"]
-        },
-        stringArray: {
-          type: "array",
-          items: { type: "string" },
-          uniqueItems: true,
-          default: []
-        }
-      }
-    };
-  }
-});
-
-// node_modules/ajv/dist/refs/json-schema-2020-12/index.js
-var require_json_schema_2020_12 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-2020-12/index.js"(exports) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var metaSchema = require_schema();
-    var applicator = require_applicator2();
-    var unevaluated = require_unevaluated2();
-    var content = require_content();
-    var core = require_core3();
-    var format = require_format_annotation();
-    var metadata = require_meta_data();
-    var validation = require_validation2();
-    var META_SUPPORT_DATA = ["/properties"];
-    function addMetaSchema2020($data) {
-      ;
-      [
-        metaSchema,
-        applicator,
-        unevaluated,
-        content,
-        core,
-        with$data(this, format),
-        metadata,
-        with$data(this, validation)
-      ].forEach((sch) => this.addMetaSchema(sch, void 0, false));
-      return this;
-      function with$data(ajv, sch) {
-        return $data ? ajv.$dataMetaSchema(sch, META_SUPPORT_DATA) : sch;
-      }
-    }
-    exports.default = addMetaSchema2020;
-  }
-});
-
-// node_modules/ajv/dist/2020.js
-var require__ = __commonJS({
-  "node_modules/ajv/dist/2020.js"(exports, module) {
-    "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv2020 = void 0;
-    var core_1 = require_core();
-    var draft2020_1 = require_draft2020();
-    var discriminator_1 = require_discriminator();
-    var json_schema_2020_12_1 = require_json_schema_2020_12();
-    var META_SCHEMA_ID = "https://json-schema.org/draft/2020-12/schema";
-    var Ajv20204 = class extends core_1.default {
-      constructor(opts = {}) {
-        super({
-          ...opts,
-          dynamicRef: true,
-          next: true,
-          unevaluated: true
-        });
-      }
-      _addVocabularies() {
-        super._addVocabularies();
-        draft2020_1.default.forEach((v) => this.addVocabulary(v));
-        if (this.opts.discriminator)
-          this.addKeyword(discriminator_1.default);
-      }
-      _addDefaultMetaSchema() {
-        super._addDefaultMetaSchema();
-        const { $data, meta: meta3 } = this.opts;
-        if (!meta3)
-          return;
-        json_schema_2020_12_1.default.call(this, $data);
-        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
-      }
-      defaultMeta() {
-        return this.opts.defaultMeta = super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : void 0);
-      }
-    };
-    exports.Ajv2020 = Ajv20204;
-    module.exports = exports = Ajv20204;
-    module.exports.Ajv2020 = Ajv20204;
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.default = Ajv20204;
-    var validate_1 = require_validate();
-    Object.defineProperty(exports, "KeywordCxt", { enumerable: true, get: function() {
-      return validate_1.KeywordCxt;
-    } });
-    var codegen_1 = require_codegen();
-    Object.defineProperty(exports, "_", { enumerable: true, get: function() {
-      return codegen_1._;
-    } });
-    Object.defineProperty(exports, "str", { enumerable: true, get: function() {
-      return codegen_1.str;
-    } });
-    Object.defineProperty(exports, "stringify", { enumerable: true, get: function() {
-      return codegen_1.stringify;
-    } });
-    Object.defineProperty(exports, "nil", { enumerable: true, get: function() {
-      return codegen_1.nil;
-    } });
-    Object.defineProperty(exports, "Name", { enumerable: true, get: function() {
-      return codegen_1.Name;
-    } });
-    Object.defineProperty(exports, "CodeGen", { enumerable: true, get: function() {
-      return codegen_1.CodeGen;
-    } });
-    var validation_error_1 = require_validation_error();
-    Object.defineProperty(exports, "ValidationError", { enumerable: true, get: function() {
-      return validation_error_1.default;
-    } });
-    var ref_error_1 = require_ref_error();
-    Object.defineProperty(exports, "MissingRefError", { enumerable: true, get: function() {
-      return ref_error_1.default;
-    } });
   }
 });
 
@@ -29590,37 +30790,37 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
   };
 }
 function buildPhaseSummaryTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
   if (properties) {
-    const targetedVerification = getJsonObjectProperty(properties, "targetedVerification");
+    const targetedVerification = getJsonObjectProperty2(properties, "targetedVerification");
     if (targetedVerification) {
       targetedVerification.minItems = args.acceptanceCriteria.length;
       targetedVerification.maxItems = args.acceptanceCriteria.length;
       if (args.acceptanceCriteria.length === 0) {
         targetedVerification.maxItems = 0;
       }
-      const items = getJsonObjectProperty(targetedVerification, "items");
-      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
-      const check2 = itemProperties ? getJsonObjectProperty(itemProperties, "check") : null;
+      const items = getJsonObjectProperty2(targetedVerification, "items");
+      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
+      const check2 = itemProperties ? getJsonObjectProperty2(itemProperties, "check") : null;
       if (check2 && args.acceptanceCriteria.length > 0) {
         check2.enum = args.acceptanceCriteria;
       }
       targetedVerification.allOf = args.acceptanceCriteria.map(
-        (criterion) => exactObjectPropertyContains("check", criterion)
+        (criterion) => exactObjectPropertyContains2("check", criterion)
       );
     }
-    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
+    const dependencyPlans = getJsonObjectProperty2(properties, "dependencyPlans");
     if (dependencyPlans) {
       if (args.dependencyPlans.length === 0) {
-        allowOnlyEmptyArray(dependencyPlans);
+        allowOnlyEmptyArray2(dependencyPlans);
       } else {
         dependencyPlans.minItems = args.dependencyPlans.length;
         dependencyPlans.maxItems = args.dependencyPlans.length;
-        const items = getJsonObjectProperty(dependencyPlans, "items");
-        const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
-        const planId2 = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
-        const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
+        const items = getJsonObjectProperty2(dependencyPlans, "items");
+        const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
+        const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
+        const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
         if (planId2) {
           planId2.enum = args.dependencyPlans.map((dependency) => dependency.planId);
         }
@@ -29642,7 +30842,7 @@ function buildPhaseSummaryTaskSchema(args) {
         }));
       }
     }
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
@@ -29710,7 +30910,7 @@ async function phaseSummaryModelSchemas(args) {
   if (!modelContract.schemaPath) {
     throw new Error("phase.summary modelContract does not expose a schemaPath.");
   }
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(args.phaseNumber);
   const taskSchema = buildPhaseSummaryTaskSchema({
     baseSchema,
@@ -29745,7 +30945,7 @@ function normalizePhaseSummaryModel(model) {
     return null;
   }
   const normalizedVerification = targetedVerification.map((row) => {
-    const rowObject = asJsonObject(row);
+    const rowObject = asJsonObject2(row);
     return rowObject && typeof rowObject.check === "string" && typeof rowObject.command === "string" && typeof rowObject.result === "string" && typeof rowObject.evidence === "string" && typeof rowObject.notes === "string" ? {
       check: rowObject.check.trim(),
       command: rowObject.command.trim(),
@@ -29755,7 +30955,7 @@ function normalizePhaseSummaryModel(model) {
     } : null;
   });
   const normalizedDependencies = dependencyPlans.map((row) => {
-    const rowObject = asJsonObject(row);
+    const rowObject = asJsonObject2(row);
     return rowObject && typeof rowObject.planId === "string" && typeof rowObject.path === "string" && typeof rowObject.status === "string" && typeof rowObject.evidence === "string" ? {
       planId: rowObject.planId.trim(),
       path: rowObject.path.trim(),
@@ -29764,7 +30964,7 @@ function normalizePhaseSummaryModel(model) {
     } : null;
   });
   const normalizedManual = manualOrDeferredWork.map((row) => {
-    const rowObject = asJsonObject(row);
+    const rowObject = asJsonObject2(row);
     return rowObject && typeof rowObject.item === "string" && typeof rowObject.reason === "string" && typeof rowObject.followUp === "string" && typeof rowObject.status === "string" ? {
       item: rowObject.item.trim(),
       reason: rowObject.reason.trim(),
@@ -29773,7 +30973,7 @@ function normalizePhaseSummaryModel(model) {
     } : null;
   });
   const normalizedGaps = gapRoutes.map((row) => {
-    const rowObject = asJsonObject(row);
+    const rowObject = asJsonObject2(row);
     return rowObject && typeof rowObject.gap === "string" && typeof rowObject.evidence === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
       gap: rowObject.gap.trim(),
       evidence: rowObject.evidence.trim(),
@@ -29782,7 +30982,7 @@ function normalizePhaseSummaryModel(model) {
     } : null;
   });
   const normalizedEvidence = evidence.map((row) => {
-    const rowObject = asJsonObject(row);
+    const rowObject = asJsonObject2(row);
     return rowObject && typeof rowObject.kind === "string" && typeof rowObject.source === "string" && typeof rowObject.summary === "string" ? {
       kind: rowObject.kind,
       source: rowObject.source.trim(),
@@ -29821,7 +31021,7 @@ function phaseSummaryModelResidualDiagnostics(model, modelContract) {
       })
     ];
   }
-  const stringEntries = collectModelStringEntries(model);
+  const stringEntries = collectModelStringEntries2(model);
   const leakedSignals = modelContract.exampleLeakageSignals.filter(
     (signal) => stringEntries.some((entry) => entry.value.includes(signal))
   );
@@ -29850,7 +31050,7 @@ function phaseSummaryModelResidualDiagnostics(model, modelContract) {
         })
       );
     }
-    if (isGenericNoneValue(entry.value) && /^(?:model\.outcome|model\.changesMade|model\.targetedVerification|model\.evidence)/.test(
+    if (isGenericNoneValue2(entry.value) && /^(?:model\.outcome|model\.changesMade|model\.targetedVerification|model\.evidence)/.test(
       entry.path
     )) {
       diagnostics.push(
@@ -29890,7 +31090,7 @@ async function validatePhaseSummaryModelCommands(model) {
 function renderSummaryTable(headers, rows) {
   const separator = headers.map(() => "---");
   const renderedRows = rows.length > 0 ? rows : [headers.map(() => "none")];
-  return [headers, separator, ...renderedRows].map((row) => `| ${row.map(markdownCell).join(" | ")} |`).join("\n");
+  return [headers, separator, ...renderedRows].map((row) => `| ${row.map(markdownCell2).join(" | ")} |`).join("\n");
 }
 function renderPhaseSummaryModelContent(args) {
   const dependencyRows = args.model.dependencyPlans.length > 0 ? args.model.dependencyPlans.map((row) => [
@@ -29913,11 +31113,11 @@ function renderPhaseSummaryModelContent(args) {
 
 ## Outcome
 
-${renderBulletList(args.model.outcome)}
+${renderBulletList2(args.model.outcome)}
 
 ## Changes Made
 
-${renderBulletList(args.model.changesMade)}
+${renderBulletList2(args.model.changesMade)}
 
 ## Verification
 
@@ -29957,7 +31157,7 @@ ${renderSummaryTable(
 
 ## Follow-Ups
 
-${renderBulletList(args.model.followUps)}
+${renderBulletList2(args.model.followUps)}
 
 ## Evidence
 
@@ -30023,17 +31223,17 @@ function collectModelStringValues(value) {
   }
   return [];
 }
-function cloneJsonObject2(value) {
+function cloneJsonObject3(value) {
   return JSON.parse(JSON.stringify(value));
 }
-function asJsonObject(value) {
+function asJsonObject2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty(value, key) {
-  return asJsonObject(value[key]);
+function getJsonObjectProperty2(value, key) {
+  return asJsonObject2(value[key]);
 }
 function createAjvValidator() {
-  return new import__.Ajv2020({
+  return new import__2.Ajv2020({
     allErrors: true,
     strict: false,
     validateSchema: true
@@ -30094,7 +31294,7 @@ function schemaDiagnosticFromAjvError(error2) {
   });
 }
 function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema) {
-  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const runtimeContext = asJsonObject2(taskSchema["x-blueprint-runtimeContext"]);
   const knownRequirements = Array.isArray(runtimeContext?.knownRequirements) ? runtimeContext.knownRequirements.filter((value) => typeof value === "string") : [];
   const knownEvidenceArtifacts = Array.isArray(runtimeContext?.knownEvidenceArtifacts) ? runtimeContext.knownEvidenceArtifacts.filter(
     (value) => typeof value === "string"
@@ -30223,7 +31423,7 @@ function setArrayItemEnum(schema, values) {
   if (!schema || values.length === 0) {
     return;
   }
-  const items = getJsonObjectProperty(schema, "items");
+  const items = getJsonObjectProperty2(schema, "items");
   if (items) {
     items.enum = values;
   }
@@ -30234,14 +31434,14 @@ function setArrayMaxItems(schema, maxItems) {
   }
   schema.maxItems = maxItems;
 }
-function allowOnlyEmptyArray(schema) {
+function allowOnlyEmptyArray2(schema) {
   if (!schema) {
     return;
   }
   schema.minItems = 0;
   schema.maxItems = 0;
 }
-function exactObjectPropertyContains(propertyName, value) {
+function exactObjectPropertyContains2(propertyName, value) {
   return {
     contains: {
       type: "object",
@@ -30267,19 +31467,19 @@ function objectPropertyContainsAtLeast(propertyName, value) {
   };
 }
 function buildPhasePlanTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
-  const task = defs ? getJsonObjectProperty(defs, "task") : null;
-  const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
-  const requirementCoverageRow = defs ? getJsonObjectProperty(defs, "requirementCoverageRow") : null;
-  const requirementCoverageRowProperties = requirementCoverageRow ? getJsonObjectProperty(requirementCoverageRow, "properties") : null;
-  const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
-  const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty(evidenceCoverageRow, "properties") : null;
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
+  const defs = getJsonObjectProperty2(schema, "$defs");
+  const task = defs ? getJsonObjectProperty2(defs, "task") : null;
+  const taskProperties = task ? getJsonObjectProperty2(task, "properties") : null;
+  const requirementCoverageRow = defs ? getJsonObjectProperty2(defs, "requirementCoverageRow") : null;
+  const requirementCoverageRowProperties = requirementCoverageRow ? getJsonObjectProperty2(requirementCoverageRow, "properties") : null;
+  const evidenceCoverageRow = defs ? getJsonObjectProperty2(defs, "evidenceCoverageRow") : null;
+  const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty2(evidenceCoverageRow, "properties") : null;
   if (!properties) {
     return schema;
   }
-  const dependsOn = getJsonObjectProperty(properties, "dependsOn");
+  const dependsOn = getJsonObjectProperty2(properties, "dependsOn");
   if (dependsOn) {
     if (args.allowedDependencyPlanIds.length > 0) {
       setArrayItemEnum(dependsOn, args.allowedDependencyPlanIds);
@@ -30288,43 +31488,43 @@ function buildPhasePlanTaskSchema(args) {
     }
   }
   if (args.knownRequirements.length > 0) {
-    setArrayItemEnum(getJsonObjectProperty(properties, "requirements"), args.knownRequirements);
+    setArrayItemEnum(getJsonObjectProperty2(properties, "requirements"), args.knownRequirements);
     if (taskProperties) {
       setArrayItemEnum(
-        getJsonObjectProperty(taskProperties, "requirements"),
+        getJsonObjectProperty2(taskProperties, "requirements"),
         args.knownRequirements
       );
     }
-    const requirement = requirementCoverageRowProperties ? getJsonObjectProperty(requirementCoverageRowProperties, "requirement") : null;
+    const requirement = requirementCoverageRowProperties ? getJsonObjectProperty2(requirementCoverageRowProperties, "requirement") : null;
     if (requirement) {
       requirement.enum = args.knownRequirements;
     }
-    const requirementCoverage = getJsonObjectProperty(properties, "requirementCoverage");
+    const requirementCoverage = getJsonObjectProperty2(properties, "requirementCoverage");
     if (requirementCoverage) {
       requirementCoverage.allOf = args.knownRequirements.map(
-        (requirementId) => exactObjectPropertyContains("requirement", requirementId)
+        (requirementId) => exactObjectPropertyContains2("requirement", requirementId)
       );
     }
   } else {
-    setArrayMaxItems(getJsonObjectProperty(properties, "requirements"), 0);
+    setArrayMaxItems(getJsonObjectProperty2(properties, "requirements"), 0);
     if (taskProperties) {
-      setArrayMaxItems(getJsonObjectProperty(taskProperties, "requirements"), 0);
+      setArrayMaxItems(getJsonObjectProperty2(taskProperties, "requirements"), 0);
     }
-    setArrayMaxItems(getJsonObjectProperty(properties, "requirementCoverage"), 0);
+    setArrayMaxItems(getJsonObjectProperty2(properties, "requirementCoverage"), 0);
   }
   if (args.knownEvidenceArtifacts.length > 0) {
-    const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact") : null;
+    const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty2(evidenceCoverageRowProperties, "artifact") : null;
     if (artifact) {
       artifact.enum = args.knownEvidenceArtifacts;
     }
-    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
+    const evidenceCoverage = getJsonObjectProperty2(properties, "evidenceCoverage");
     if (evidenceCoverage) {
       evidenceCoverage.allOf = args.knownEvidenceArtifacts.map(
-        (artifactPath) => exactObjectPropertyContains("artifact", artifactPath)
+        (artifactPath) => exactObjectPropertyContains2("artifact", artifactPath)
       );
     }
   } else {
-    allowOnlyEmptyArray(getJsonObjectProperty(properties, "evidenceCoverage"));
+    allowOnlyEmptyArray2(getJsonObjectProperty2(properties, "evidenceCoverage"));
   }
   schema["x-blueprint-runtimeContext"] = {
     knownRequirements: args.knownRequirements,
@@ -30405,7 +31605,7 @@ async function resolvePhasePlanAuthoringContextData(args) {
     pathValue
   );
   const allowedDependencyPlanIds = existingIndex.plans.map((plan) => plan.planId).filter((existingPlanId) => existingPlanId !== planId2);
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const taskSchema = buildPhasePlanTaskSchema({
     baseSchema,
     knownRequirements,
@@ -30586,7 +31786,7 @@ function renderYamlList(items) {
   return items.map((item) => `  - ${quoteYamlScalar(item)}`).join("\n");
 }
 function renderMarkdownTableRows(rows) {
-  return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
+  return rows.map((row) => `| ${row.map((cell) => markdownCell2(cell)).join(" | ")} |`).join("\n");
 }
 function renderPhasePlanModelContent(model, resolved, planId2) {
   const acceptanceCriteria = uniquePreservingOrder(
@@ -30599,15 +31799,15 @@ function renderPhasePlanModelContent(model, resolved, planId2) {
 
 #### Read First
 
-${renderBulletList(task.readFirst)}
+${renderBulletList2(task.readFirst)}
 
 #### Action
 
-${renderBulletList(task.action)}
+${renderBulletList2(task.action)}
 
 #### Acceptance Criteria
 
-${renderBulletList(task.acceptanceCriteria)}`
+${renderBulletList2(task.acceptanceCriteria)}`
   ).join("\n\n");
   const verificationItems = model.verification.map(
     (item) => `${item.item} (${item.method}): ${item.evidence}`
@@ -30667,7 +31867,7 @@ ${model.goal}
 
 ## Scope
 
-${renderBulletList(model.scope)}
+${renderBulletList2(model.scope)}
 
 ## Tasks
 
@@ -30675,11 +31875,11 @@ ${taskSections}
 
 ## Verification
 
-${renderBulletList(verificationItems)}
+${renderBulletList2(verificationItems)}
 
 ## Must Haves
 
-${renderBulletList(model.mustHaves)}
+${renderBulletList2(model.mustHaves)}
 
 ## Requirement Coverage
 
@@ -30719,7 +31919,7 @@ async function validatePhasePlanModelWithContext(args) {
       suggestion: "Add roadmap requirements for the selected phase before authoring a phase.plan model."
     })
   );
-  const modelObject = asJsonObject(args.model);
+  const modelObject = asJsonObject2(args.model);
   if (!modelObject) {
     diagnostics.push(
       phasePlanDiagnostic({
@@ -30876,23 +32076,23 @@ function schemaDiagnosticFromPhaseValidationAjvError(error2) {
     suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
   });
 }
-function collectModelStringEntries(value, pathValue = "model") {
+function collectModelStringEntries2(value, pathValue = "model") {
   if (typeof value === "string") {
     return [{ path: pathValue, value }];
   }
   if (Array.isArray(value)) {
     return value.flatMap(
-      (item, index) => collectModelStringEntries(item, `${pathValue}[${index}]`)
+      (item, index) => collectModelStringEntries2(item, `${pathValue}[${index}]`)
     );
   }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).flatMap(
-      ([key, item]) => collectModelStringEntries(item, `${pathValue}.${key}`)
+      ([key, item]) => collectModelStringEntries2(item, `${pathValue}.${key}`)
     );
   }
   return [];
 }
-function isGenericNoneValue(value) {
+function isGenericNoneValue2(value) {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
 }
 function hasPhaseValidationPlaceholderLanguage(value) {
@@ -30932,10 +32132,10 @@ function exactStringArrayContains(value) {
   };
 }
 function buildPhaseVerificationTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
   if (properties) {
-    const evidenceReviewedSummaryPaths = getJsonObjectProperty(
+    const evidenceReviewedSummaryPaths = getJsonObjectProperty2(
       properties,
       "evidenceReviewedSummaryPaths"
     );
@@ -30950,7 +32150,7 @@ function buildPhaseVerificationTaskSchema(args) {
         delete evidenceReviewedSummaryPaths.allOf;
       }
     }
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
@@ -31066,7 +32266,7 @@ async function phaseVerificationModelSchemas(args) {
   if (!modelContract.schemaPath) {
     throw new Error("phase.verification modelContract does not expose a schemaPath.");
   }
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
   const taskSchema = buildPhaseVerificationTaskSchema({
     baseSchema,
@@ -31109,19 +32309,19 @@ async function buildPhaseUatAllowedNextActions(phaseNumber) {
   };
 }
 function buildPhaseUatTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
-  const testMatrixRow = defs ? getJsonObjectProperty(defs, "testMatrixRow") : null;
-  const testMatrixRowProperties = testMatrixRow ? getJsonObjectProperty(testMatrixRow, "properties") : null;
+  const schema = cloneJsonObject3(args.baseSchema);
+  const properties = getJsonObjectProperty2(schema, "properties");
+  const defs = getJsonObjectProperty2(schema, "$defs");
+  const testMatrixRow = defs ? getJsonObjectProperty2(defs, "testMatrixRow") : null;
+  const testMatrixRowProperties = testMatrixRow ? getJsonObjectProperty2(testMatrixRow, "properties") : null;
   const evidencePaths = uniquePreservingOrder([
     ...args.summaryPaths,
     ...args.verificationPath ? [args.verificationPath] : []
   ]);
   const requiredEvidencePaths = evidencePaths;
   if (properties) {
-    const testMatrix = getJsonObjectProperty(properties, "testMatrix");
-    const evidence = testMatrixRowProperties ? getJsonObjectProperty(testMatrixRowProperties, "evidence") : null;
+    const testMatrix = getJsonObjectProperty2(properties, "testMatrix");
+    const evidence = testMatrixRowProperties ? getJsonObjectProperty2(testMatrixRowProperties, "evidence") : null;
     if (requiredEvidencePaths.length > 0) {
       if (evidence) {
         evidence.enum = evidencePaths;
@@ -31132,9 +32332,9 @@ function buildPhaseUatTaskSchema(args) {
         );
       }
     } else {
-      allowOnlyEmptyArray(testMatrix);
+      allowOnlyEmptyArray2(testMatrix);
     }
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
@@ -31191,7 +32391,7 @@ async function phaseUatModelSchemas(args) {
   if (!modelContract.schemaPath) {
     throw new Error("phase.uat modelContract does not expose a schemaPath.");
   }
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const allowedNextActions = await buildPhaseUatAllowedNextActions(args.phaseNumber);
   const taskSchema = buildPhaseUatTaskSchema({
     baseSchema,
@@ -31221,7 +32421,7 @@ function phaseValidationResidualDiagnostics(model, modelContract, artifact) {
       })
     ];
   }
-  const modelStrings = collectModelStringEntries(model);
+  const modelStrings = collectModelStringEntries2(model);
   const leakedSignals = modelContract.exampleLeakageSignals.filter(
     (signal) => modelStrings.some((entry) => entry.value.includes(signal))
   );
@@ -31257,7 +32457,7 @@ function phaseValidationResidualDiagnostics(model, modelContract, artifact) {
       (pathPrefix) => candidate.path.startsWith(pathPrefix)
     )
   )) {
-    if (!isGenericNoneValue(entry.value)) {
+    if (!isGenericNoneValue2(entry.value)) {
       continue;
     }
     diagnostics.push(
@@ -31347,11 +32547,11 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
   }
   return { summaryPaths, evidence, warnings };
 }
-function markdownCell(value) {
+function markdownCell2(value) {
   const normalized = String(value ?? "").replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim();
   return normalized;
 }
-function renderBulletList(items, fallback = "none") {
+function renderBulletList2(items, fallback = "none") {
   const lines = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
   if (lines.length === 0) {
     return `- ${fallback}`;
@@ -31367,13 +32567,13 @@ function normalizeRenderList(value) {
 function renderVerificationContent(args, resolved, summaryPaths) {
   const evidenceReviewedSummaryPaths = args.evidenceReviewedSummaryPaths ?? summaryPaths;
   const requirementRows = (args.requirementCoverage ?? []).map(
-    (row) => `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(row.coverageState)} | ${markdownCell(row.notes)} |`
+    (row) => `| ${markdownCell2(row.requirement)} | ${markdownCell2(row.taskOrCheck)} | ${markdownCell2(row.evidence)} | ${markdownCell2(row.coverageState)} | ${markdownCell2(row.notes)} |`
   ).join("\n");
   const manualRows = (args.manualOrDeferredCoverage ?? []).length > 0 ? (args.manualOrDeferredCoverage ?? []).map(
-    (row) => `| ${markdownCell(row.item)} | ${markdownCell(row.whyManualOrDeferred)} | ${markdownCell(row.followUp)} | ${markdownCell(row.status)} |`
+    (row) => `| ${markdownCell2(row.item)} | ${markdownCell2(row.whyManualOrDeferred)} | ${markdownCell2(row.followUp)} | ${markdownCell2(row.status)} |`
   ).join("\n") : "| none | none | none | NONE |";
   const gapRows = (args.gapClassification ?? []).length > 0 ? (args.gapClassification ?? []).map(
-    (row) => `| ${markdownCell(row.gapClass)} | ${markdownCell(row.scope)} | ${markdownCell(row.evidence)} | ${markdownCell(row.repair)} |`
+    (row) => `| ${markdownCell2(row.gapClass)} | ${markdownCell2(row.scope)} | ${markdownCell2(row.evidence)} | ${markdownCell2(row.repair)} |`
   ).join("\n") : "| none | none | none | none |";
   return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Verification
 
@@ -31383,7 +32583,7 @@ function renderVerificationContent(args, resolved, summaryPaths) {
 
 ## Validation Summary
 
-${renderBulletList(normalizeRenderList(args.validationSummary))}
+${renderBulletList2(normalizeRenderList(args.validationSummary))}
 
 ## Requirement / Task Coverage
 
@@ -31393,11 +32593,11 @@ ${requirementRows}
 
 ## Evidence Reviewed
 
-${renderBulletList(evidenceReviewedSummaryPaths)}
+${renderBulletList2(evidenceReviewedSummaryPaths)}
 
 ## Test Infrastructure / Evidence Metadata
 
-${renderBulletList(args.evidenceMetadata)}
+${renderBulletList2(args.evidenceMetadata)}
 
 ## Manual-Only or Deferred Coverage
 
@@ -31419,11 +32619,11 @@ ${gapRows}
 
 ## Gaps Found
 
-${renderBulletList(args.gapsFound)}
+${renderBulletList2(args.gapsFound)}
 
 ## Suggested Repairs
 
-${renderBulletList(args.suggestedRepairs)}
+${renderBulletList2(args.suggestedRepairs)}
 
 ## Next Safe Action
 
@@ -31434,10 +32634,10 @@ function renderUatContent(args, resolved) {
   const currentTest = args.currentTest ?? {};
   const resultSummary = args.resultSummary ?? {};
   const testRows = (args.testMatrix ?? []).length > 0 ? (args.testMatrix ?? []).map(
-    (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+    (row, index) => `| ${markdownCell2(row.number ?? String(index + 1))} | ${markdownCell2(row.test)} | ${markdownCell2(row.expectedBehavior)} | ${markdownCell2(row.evidence)} | ${markdownCell2(row.result)} | ${markdownCell2(row.notes)} |`
   ).join("\n") : "";
   const structuredGapRows = (args.structuredGaps ?? []).length > 0 ? (args.structuredGaps ?? []).map(
-    (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+    (row) => `| ${markdownCell2(row.test)} | ${markdownCell2(row.truth)} | ${markdownCell2(row.status)} | ${markdownCell2(row.severity)} | ${markdownCell2(row.reason)} | ${markdownCell2(row.followUp)} |`
   ).join("\n") : "| none | none | none | none | none | none |";
   return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UAT
 
@@ -31447,11 +32647,11 @@ function renderUatContent(args, resolved) {
 
 ## UAT Summary
 
-${renderBulletList(args.uatSummary)}
+${renderBulletList2(args.uatSummary)}
 
 ## Session State
 
-${renderBulletList(args.sessionState)}
+${renderBulletList2(args.sessionState)}
 
 ## Current Test
 
@@ -31477,15 +32677,15 @@ ${testRows}
 
 ## Questions Asked
 
-${renderBulletList(args.questionsAsked)}
+${renderBulletList2(args.questionsAsked)}
 
 ## Observed Behavior
 
-${renderBulletList(args.observedBehavior)}
+${renderBulletList2(args.observedBehavior)}
 
 ## Unresolved Gaps
 
-${renderBulletList(args.unresolvedGaps)}
+${renderBulletList2(args.unresolvedGaps)}
 
 ## Structured Gaps
 
@@ -31495,7 +32695,7 @@ ${structuredGapRows}
 
 ## Follow-Up Fixes
 
-${renderBulletList(args.followUpFixes)}
+${renderBulletList2(args.followUpFixes)}
 
 ## Next Safe Action
 
@@ -31696,7 +32896,7 @@ async function blueprintPhaseValidationValidateModel(args) {
       suggestion: args.artifact === "verification" ? "Create valid completed execution summaries before authoring phase.verification evidence." : "Create valid completed execution summaries and ready verification evidence before authoring phase.uat evidence."
     })
   );
-  const modelObject = asJsonObject(args.model);
+  const modelObject = asJsonObject2(args.model);
   if (!modelObject) {
     diagnostics.push(
       phaseValidationDiagnostic({
@@ -34022,7 +35222,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
       acceptanceCriteria: [],
       allowedNextActions: [],
       schemaPath: null,
-      baseSchema: contract.modelContract ? cloneJsonObject2(contract.modelContract.jsonSchema) : null,
+      baseSchema: contract.modelContract ? cloneJsonObject3(contract.modelContract.jsonSchema) : null,
       taskSchema: null,
       modelOnly: true,
       prerequisiteBlockers: [reason],
@@ -34117,7 +35317,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     acceptanceCriteria,
     allowedNextActions: allowedNextActions.allowedActions,
     schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
-    baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject2(contract.modelContract.jsonSchema) : null),
+    baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject3(contract.modelContract.jsonSchema) : null),
     taskSchema: schemas?.taskSchema ?? null,
     modelOnly: true,
     prerequisiteBlockers: blockers,
@@ -34141,7 +35341,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
       suggestion: "Repair the selected saved plan and dependency inventory before authoring phase.summary evidence."
     })
   );
-  const modelObject = asJsonObject(args.model);
+  const modelObject = asJsonObject2(args.model);
   if (!modelObject) {
     diagnostics.push(
       phaseSummaryDiagnostic({
@@ -35104,11 +36304,11 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var import__, SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var import__2, SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
-    import__ = __toESM(require__(), 1);
+    import__2 = __toESM(require__(), 1);
     init_v4();
     init_artifact_contracts();
     init_command_paths();
@@ -35661,7 +36861,7 @@ var init_phase = __esm({
 import { promises as fs5 } from "node:fs";
 import path7 from "node:path";
 function createAjvValidator2() {
-  return new import__2.Ajv2020({
+  return new import__3.Ajv2020({
     allErrors: true,
     strict: false,
     validateSchema: true
@@ -35671,23 +36871,23 @@ function normalizeTextContent3(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
-function collectModelStringEntries2(value, pathValue = "model") {
+function collectModelStringEntries3(value, pathValue = "model") {
   if (typeof value === "string") {
     return [{ path: pathValue, value }];
   }
   if (Array.isArray(value)) {
     return value.flatMap(
-      (item, index) => collectModelStringEntries2(item, `${pathValue}[${index}]`)
+      (item, index) => collectModelStringEntries3(item, `${pathValue}[${index}]`)
     );
   }
   if (typeof value === "object" && value !== null) {
     return Object.entries(value).flatMap(
-      ([key, item]) => collectModelStringEntries2(item, `${pathValue}.${key}`)
+      ([key, item]) => collectModelStringEntries3(item, `${pathValue}.${key}`)
     );
   }
   return [];
 }
-function cloneJsonObject3(value) {
+function cloneJsonObject4(value) {
   return JSON.parse(JSON.stringify(value));
 }
 function modelDiagnostic(args) {
@@ -35717,14 +36917,14 @@ function countDiagnostics(diagnostics) {
 function formatReviewDiagnostic(diagnostic) {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
-function renderBulletList2(items, fallback = "none") {
+function renderBulletList3(items, fallback = "none") {
   const lines = items.map((item) => item.trim()).filter((item) => item.length > 0);
   if (lines.length === 0) {
     return `- ${fallback}`;
   }
   return lines.map((item) => `- ${item}`).join("\n");
 }
-function isGenericNoneValue2(value) {
+function isGenericNoneValue3(value) {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
 }
 function hasPlaceholderLanguage(value) {
@@ -35811,21 +37011,21 @@ function buildTaskLocationSchema(scopeFiles) {
     examples: scopeFiles.slice(0, 1).map((scopeFile) => `${scopeFile}:1`)
   };
 }
-function asJsonObject2(value) {
+function asJsonObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty2(value, key) {
-  return asJsonObject2(value[key]);
+function getJsonObjectProperty3(value, key) {
+  return asJsonObject3(value[key]);
 }
 function buildCodeReviewTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
-  const defs = getJsonObjectProperty2(schema, "$defs");
-  const finding = defs ? getJsonObjectProperty2(defs, "finding") : null;
-  const findingProperties = finding ? getJsonObjectProperty2(finding, "properties") : null;
-  const location = findingProperties ? getJsonObjectProperty2(findingProperties, "location") : null;
+  const schema = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema, "properties");
+  const defs = getJsonObjectProperty3(schema, "$defs");
+  const finding = defs ? getJsonObjectProperty3(defs, "finding") : null;
+  const findingProperties = finding ? getJsonObjectProperty3(finding, "properties") : null;
+  const location = findingProperties ? getJsonObjectProperty3(findingProperties, "location") : null;
   if (properties) {
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -35859,7 +37059,7 @@ async function buildCodeReviewAuthoringContext(args) {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
-  const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
+  const baseSchema = cloneJsonObject4(modelContract.jsonSchema);
   const taskSchema = buildCodeReviewTaskSchema({
     baseSchema,
     scopeFiles: args.files,
@@ -35929,17 +37129,17 @@ async function collectPeerReviewEvidenceArtifacts(args) {
   ]);
 }
 function buildPeerReviewTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
+  const schema = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema, "properties");
   if (properties) {
-    const planReviews = getJsonObjectProperty2(properties, "planReviews");
+    const planReviews = getJsonObjectProperty3(properties, "planReviews");
     if (planReviews) {
       planReviews.minItems = args.plans.length;
       planReviews.maxItems = args.plans.length;
-      const items = getJsonObjectProperty2(planReviews, "items");
-      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
-      const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
+      const items = getJsonObjectProperty3(planReviews, "items");
+      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
       if (planId2) {
         planId2.enum = args.plans.map((plan) => plan.planId);
       }
@@ -35959,7 +37159,7 @@ function buildPeerReviewTaskSchema(args) {
         maxContains: 1
       }));
     }
-    const evidenceCoverage = getJsonObjectProperty2(properties, "evidenceCoverage");
+    const evidenceCoverage = getJsonObjectProperty3(properties, "evidenceCoverage");
     if (evidenceCoverage) {
       evidenceCoverage.additionalProperties = false;
       evidenceCoverage.required = args.knownEvidenceArtifacts;
@@ -35970,7 +37170,7 @@ function buildPeerReviewTaskSchema(args) {
         ])
       );
     }
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -36038,7 +37238,7 @@ function buildPeerReviewTaskSchema(args) {
 async function buildPeerReviewAuthoringContext(args) {
   const contract = readArtifactContract("review.peer-review");
   const modelContract = contract.modelContract;
-  const baseSchema = modelContract ? cloneJsonObject3(modelContract.jsonSchema) : null;
+  const baseSchema = modelContract ? cloneJsonObject4(modelContract.jsonSchema) : null;
   const located = await blueprintPhaseLocate({
     cwd: args.projectRoot,
     phase: args.phase
@@ -36184,7 +37384,7 @@ async function buildPeerReviewAuthoringContext(args) {
     ])
   };
 }
-function allowOnlyEmptyArray2(schema) {
+function allowOnlyEmptyArray3(schema) {
   schema.minItems = 0;
   schema.maxItems = 0;
   delete schema.items;
@@ -36289,39 +37489,39 @@ function reviewFixEvidenceKindForSource(source) {
   return "other";
 }
 async function buildReviewFixTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
+  const schema = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema, "properties");
   if (properties) {
-    const status = getJsonObjectProperty2(properties, "status");
+    const status = getJsonObjectProperty3(properties, "status");
     if (status && !args.allowCompleted) {
       status.enum = ["PARTIAL", "BLOCKED"];
     }
-    const findingsAddressed = getJsonObjectProperty2(properties, "findingsAddressed");
+    const findingsAddressed = getJsonObjectProperty3(properties, "findingsAddressed");
     if (findingsAddressed) {
       findingsAddressed.minItems = args.selectedTargetIds.length;
       findingsAddressed.maxItems = args.selectedTargetIds.length;
-      const items = getJsonObjectProperty2(findingsAddressed, "items");
-      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-      const findingId = itemProperties ? getJsonObjectProperty2(itemProperties, "findingId") : null;
+      const items = getJsonObjectProperty3(findingsAddressed, "items");
+      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
+      const findingId = itemProperties ? getJsonObjectProperty3(itemProperties, "findingId") : null;
       if (findingId) {
         findingId.enum = args.selectedTargetIds;
       }
       findingsAddressed.allOf = args.selectedTargetIds.map(
-        (targetId) => exactObjectPropertyContains2("findingId", targetId)
+        (targetId) => exactObjectPropertyContains3("findingId", targetId)
       );
     }
-    const dependencyPlans = getJsonObjectProperty2(properties, "dependencyPlans");
+    const dependencyPlans = getJsonObjectProperty3(properties, "dependencyPlans");
     if (dependencyPlans) {
       if (args.dependencyPlans.length === 0) {
-        allowOnlyEmptyArray2(dependencyPlans);
+        allowOnlyEmptyArray3(dependencyPlans);
       } else {
         dependencyPlans.minItems = args.dependencyPlans.length;
         dependencyPlans.maxItems = args.dependencyPlans.length;
-        const items = getJsonObjectProperty2(dependencyPlans, "items");
-        const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-        const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
-        const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
-        const statusProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "status") : null;
+        const items = getJsonObjectProperty3(dependencyPlans, "items");
+        const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
+        const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+        const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
+        const statusProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "status") : null;
         const unsatisfiedDependencyIds = new Set(
           args.executionDebt.unsatisfiedDependencyPlans.map((dependency) => dependency.planId)
         );
@@ -36349,7 +37549,7 @@ async function buildReviewFixTaskSchema(args) {
         }));
       }
     }
-    const evidence = getJsonObjectProperty2(properties, "evidence");
+    const evidence = getJsonObjectProperty3(properties, "evidence");
     if (evidence) {
       evidence.minItems = args.knownEvidenceArtifacts.length;
       delete evidence.maxItems;
@@ -36364,7 +37564,7 @@ async function buildReviewFixTaskSchema(args) {
           (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "summary"
         )
       };
-      const items = getJsonObjectProperty2(evidence, "items");
+      const items = getJsonObjectProperty3(evidence, "items");
       if (items) {
         items.allOf = [
           ...Array.isArray(items.allOf) ? items.allOf : [],
@@ -36424,7 +37624,7 @@ async function buildReviewFixTaskSchema(args) {
         })
       );
     }
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -36491,7 +37691,7 @@ async function buildReviewFixAuthoringContext(args) {
     phase: args.phase
   });
   const modelContract = readArtifactContract("review.review-fix").modelContract;
-  const baseSchema = modelContract ? cloneJsonObject3(modelContract.jsonSchema) : null;
+  const baseSchema = modelContract ? cloneJsonObject4(modelContract.jsonSchema) : null;
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     const reason = located.reason ?? "Phase could not be resolved for review-fix authoring.";
     return {
@@ -36650,7 +37850,7 @@ async function buildReviewFixAuthoringContext(args) {
     phaseNumber,
     includeExecutionRepairAction: !allowCompleted
   });
-  const reviewFixBaseSchema = cloneJsonObject3(modelContract.jsonSchema);
+  const reviewFixBaseSchema = cloneJsonObject4(modelContract.jsonSchema);
   const taskSchema = hardBlockers.length === 0 && loaded.path ? await buildReviewFixTaskSchema({
     baseSchema: reviewFixBaseSchema,
     selectedTargetIds: selected.selectedTargetIds,
@@ -36705,7 +37905,7 @@ function uniqueSortedStrings2(values) {
 function uniqueOrderedStrings(values) {
   return [...new Set(values)];
 }
-function exactObjectPropertyContains2(propertyName, value) {
+function exactObjectPropertyContains3(propertyName, value) {
   return {
     contains: {
       type: "object",
@@ -36967,15 +38167,15 @@ function parseThreatFlagsFromSummaryContent(content, sourceSummary) {
   return flags;
 }
 function buildSecurityTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
-  const defs = getJsonObjectProperty2(schema, "$defs");
+  const schema = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema, "properties");
+  const defs = getJsonObjectProperty3(schema, "$defs");
   if (properties) {
-    const status = getJsonObjectProperty2(properties, "status");
+    const status = getJsonObjectProperty3(properties, "status");
     if (status && !args.allowCompleted) {
       status.enum = ["PARTIAL", "BLOCKED"];
     }
-    const evidenceCoverage = getJsonObjectProperty2(properties, "evidenceCoverage");
+    const evidenceCoverage = getJsonObjectProperty3(properties, "evidenceCoverage");
     if (evidenceCoverage) {
       evidenceCoverage.additionalProperties = false;
       evidenceCoverage.required = args.knownEvidenceArtifacts;
@@ -36986,35 +38186,35 @@ function buildSecurityTaskSchema(args) {
         ])
       );
     }
-    const threatRegister = getJsonObjectProperty2(properties, "threatRegister");
+    const threatRegister = getJsonObjectProperty3(properties, "threatRegister");
     if (threatRegister) {
       if (args.declaredThreats.length === 0) {
         Object.assign(threatRegister, exactArraySentinel({ $ref: "#/$defs/noThreatRow" }));
       } else {
         threatRegister.minItems = args.declaredThreats.length;
         threatRegister.maxItems = args.declaredThreats.length;
-        const items = getJsonObjectProperty2(threatRegister, "items");
+        const items = getJsonObjectProperty3(threatRegister, "items");
         const oneOf = Array.isArray(items?.oneOf) ? items.oneOf : null;
-        const realThreatRow = oneOf ? oneOf.find((candidate) => asJsonObject2(candidate)?.$ref === "#/$defs/threatRegisterRow") : null;
-        const threatRowSchema = asJsonObject2(realThreatRow);
-        const threatRow = threatRowSchema ? getJsonObjectProperty2(defs ?? {}, "threatRegisterRow") : getJsonObjectProperty2(defs ?? {}, "threatRegisterRow");
-        const threatProperties = threatRow ? getJsonObjectProperty2(threatRow, "properties") : null;
-        const threatId = threatProperties ? getJsonObjectProperty2(threatProperties, "threatId") : null;
+        const realThreatRow = oneOf ? oneOf.find((candidate) => asJsonObject3(candidate)?.$ref === "#/$defs/threatRegisterRow") : null;
+        const threatRowSchema = asJsonObject3(realThreatRow);
+        const threatRow = threatRowSchema ? getJsonObjectProperty3(defs ?? {}, "threatRegisterRow") : getJsonObjectProperty3(defs ?? {}, "threatRegisterRow");
+        const threatProperties = threatRow ? getJsonObjectProperty3(threatRow, "properties") : null;
+        const threatId = threatProperties ? getJsonObjectProperty3(threatProperties, "threatId") : null;
         if (threatId) {
           threatId.enum = args.declaredThreats.map((threat) => threat.threatId);
         }
         threatRegister.allOf = args.declaredThreats.map(
-          (threat) => exactObjectPropertyContains2("threatId", threat.threatId)
+          (threat) => exactObjectPropertyContains3("threatId", threat.threatId)
         );
       }
     }
-    const acceptedRisks = getJsonObjectProperty2(properties, "acceptedRisks");
-    const findings = getJsonObjectProperty2(properties, "findings");
+    const acceptedRisks = getJsonObjectProperty3(properties, "acceptedRisks");
+    const findings = getJsonObjectProperty3(properties, "findings");
     const threatIdEnum = args.declaredThreats.map((threat) => threat.threatId);
     for (const definitionName of ["acceptedRiskRow", "findingRow"]) {
-      const definition = getJsonObjectProperty2(defs ?? {}, definitionName);
-      const definitionProperties = definition ? getJsonObjectProperty2(definition, "properties") : null;
-      const threatId = definitionProperties ? getJsonObjectProperty2(definitionProperties, "threatId") : null;
+      const definition = getJsonObjectProperty3(defs ?? {}, definitionName);
+      const definitionProperties = definition ? getJsonObjectProperty3(definition, "properties") : null;
+      const threatId = definitionProperties ? getJsonObjectProperty3(definitionProperties, "threatId") : null;
       if (threatId && threatIdEnum.length > 0) {
         threatId.enum = definitionName === "findingRow" ? [...threatIdEnum, "unregistered"] : threatIdEnum;
       } else if (threatId && definitionName === "findingRow") {
@@ -37027,7 +38227,7 @@ function buildSecurityTaskSchema(args) {
     if (findings && threatIdEnum.length === 0) {
       findings.minItems = 1;
     }
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -37092,7 +38292,7 @@ async function buildSecurityAuthoringContext(args) {
     phase: args.phase
   });
   const modelContract = readArtifactContract("review.security").modelContract;
-  const baseSchema = modelContract ? cloneJsonObject3(modelContract.jsonSchema) : null;
+  const baseSchema = modelContract ? cloneJsonObject4(modelContract.jsonSchema) : null;
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     const reason = located.reason ?? "Phase could not be resolved for security authoring.";
     return {
@@ -37130,7 +38330,7 @@ async function buildSecurityAuthoringContext(args) {
     };
   }
   const phaseNumber = located.phaseNumber;
-  const securityBaseSchema = cloneJsonObject3(modelContract.jsonSchema);
+  const securityBaseSchema = cloneJsonObject4(modelContract.jsonSchema);
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
@@ -37305,10 +38505,10 @@ async function buildAllowedUiReviewNextActions(args) {
   };
 }
 function buildUiReviewTaskSchema(args) {
-  const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
+  const schema = cloneJsonObject4(args.baseSchema);
+  const properties = getJsonObjectProperty3(schema, "properties");
   if (properties) {
-    const verdict = getJsonObjectProperty2(properties, "verdict");
+    const verdict = getJsonObjectProperty3(properties, "verdict");
     if (verdict && !args.allowPass) {
       verdict.enum = ["FOLLOW_UP", "BLOCKED"];
     }
@@ -37324,14 +38524,14 @@ function buildUiReviewTaskSchema(args) {
         ])
       )
     };
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
-    const defs = getJsonObjectProperty2(schema, "$defs");
-    const auditTrail = defs ? getJsonObjectProperty2(defs, "auditTrail") : null;
-    const auditTrailProperties = auditTrail ? getJsonObjectProperty2(auditTrail, "properties") : null;
-    const existingReviewPosture = auditTrailProperties ? getJsonObjectProperty2(auditTrailProperties, "existingReviewPosture") : null;
+    const defs = getJsonObjectProperty3(schema, "$defs");
+    const auditTrail = defs ? getJsonObjectProperty3(defs, "auditTrail") : null;
+    const auditTrailProperties = auditTrail ? getJsonObjectProperty3(auditTrail, "properties") : null;
+    const existingReviewPosture = auditTrailProperties ? getJsonObjectProperty3(auditTrailProperties, "existingReviewPosture") : null;
     if (existingReviewPosture) {
       existingReviewPosture.enum = args.allowedExistingReviewPostures;
     }
@@ -37343,18 +38543,18 @@ function buildUiReviewTaskSchema(args) {
         pattern: "^(?:(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+:\\d+(?:-\\d+)?|screenshots?: [^\\r\\n|]+|visual observation: [^\\r\\n|]+|not supplied: [^\\r\\n|]+)$"
       }
     ];
-    const pillarScore = defs ? getJsonObjectProperty2(defs, "pillarScore") : null;
-    const pillarScoreProperties = pillarScore ? getJsonObjectProperty2(pillarScore, "properties") : null;
-    const pillarEvidence = pillarScoreProperties ? getJsonObjectProperty2(pillarScoreProperties, "evidence") : null;
+    const pillarScore = defs ? getJsonObjectProperty3(defs, "pillarScore") : null;
+    const pillarScoreProperties = pillarScore ? getJsonObjectProperty3(pillarScore, "properties") : null;
+    const pillarEvidence = pillarScoreProperties ? getJsonObjectProperty3(pillarScoreProperties, "evidence") : null;
     if (pillarEvidence) {
       delete pillarEvidence.$ref;
       pillarEvidence.anyOf = allowedEvidenceValues.map(
         (entry) => typeof entry === "string" ? { const: entry } : entry
       );
     }
-    const findingRow = defs ? getJsonObjectProperty2(defs, "findingRow") : null;
-    const findingRowProperties = findingRow ? getJsonObjectProperty2(findingRow, "properties") : null;
-    const findingEvidence = findingRowProperties ? getJsonObjectProperty2(findingRowProperties, "evidence") : null;
+    const findingRow = defs ? getJsonObjectProperty3(defs, "findingRow") : null;
+    const findingRowProperties = findingRow ? getJsonObjectProperty3(findingRow, "properties") : null;
+    const findingEvidence = findingRowProperties ? getJsonObjectProperty3(findingRowProperties, "evidence") : null;
     if (findingEvidence) {
       delete findingEvidence.$ref;
       findingEvidence.anyOf = allowedEvidenceValues.map(
@@ -37427,7 +38627,7 @@ async function buildUiReviewAuthoringContext(args) {
     phase: args.phase
   });
   const modelContract = readArtifactContract("review.ui-review").modelContract;
-  const baseSchema = modelContract ? cloneJsonObject3(modelContract.jsonSchema) : null;
+  const baseSchema = modelContract ? cloneJsonObject4(modelContract.jsonSchema) : null;
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     const reason = located.reason ?? "Phase could not be resolved for UI-review authoring.";
     return {
@@ -37555,7 +38755,7 @@ async function buildUiReviewAuthoringContext(args) {
     phaseNumber,
     artifacts
   });
-  const uiReviewBaseSchema = cloneJsonObject3(modelContract.jsonSchema);
+  const uiReviewBaseSchema = cloneJsonObject4(modelContract.jsonSchema);
   const taskSchema = blockers.length === 0 ? buildUiReviewTaskSchema({
     baseSchema: uiReviewBaseSchema,
     knownEvidenceArtifacts,
@@ -38187,19 +39387,19 @@ function renderCodeReviewModelContent(model, located, authoringContext) {
 - Depth: ${authoringContext.reviewMode.depth}
 - Scope source: ${authoringContext.reviewMode.source}
 - File count: ${authoringContext.files.length}
-${renderBulletList2(model.reviewSummary)}
+${renderBulletList3(model.reviewSummary)}
 
 ## Scope Reviewed
 
-${renderBulletList2(authoringContext.files)}
+${renderBulletList3(authoringContext.files)}
 
 ## Evidence Reviewed
 
-${renderBulletList2(evidenceReviewed)}
+${renderBulletList3(evidenceReviewed)}
 
 ## Positive Signals
 
-${renderBulletList2(model.positiveSignals)}
+${renderBulletList3(model.positiveSignals)}
 
 ## Severity Summary
 
@@ -38215,7 +39415,7 @@ ${findings.join("\n")}
 
 ## Follow-Ups
 
-${renderBulletList2(model.followUps)}
+${renderBulletList3(model.followUps)}
 
 ## Next Safe Action
 
@@ -38256,57 +39456,57 @@ function renderPeerReviewModelContent(model, located, authoringContext) {
 
 ## Review Summary
 
-${renderBulletList2(model.reviewSummary)}
+${renderBulletList3(model.reviewSummary)}
 
 ## Reviewer Coverage
 
-${renderMarkdownTable(["Reviewer", "Status", "Summary"], reviewerRows)}
+${renderMarkdownTable2(["Reviewer", "Status", "Summary"], reviewerRows)}
 
 ## Reviewer Results
 
-${renderBulletList2(completedReviewers.map((row) => `${row.reviewer}: ${row.summary}`))}
+${renderBulletList3(completedReviewers.map((row) => `${row.reviewer}: ${row.summary}`))}
 
 ## Plan Reviews
 
-${renderMarkdownTable(["Plan", "Goal Fit", "Summary"], planRows)}
+${renderMarkdownTable2(["Plan", "Goal Fit", "Summary"], planRows)}
 
 ## Findings
 
-${renderMarkdownTable(["Severity", "Source", "Evidence", "Recommendation", "Status"], findingRows)}
+${renderMarkdownTable2(["Severity", "Source", "Evidence", "Recommendation", "Status"], findingRows)}
 
 ## Consensus
 
-${renderBulletList2(model.consensus)}
+${renderBulletList3(model.consensus)}
 
 ## Disagreements
 
-${renderBulletList2(model.disagreements)}
+${renderBulletList3(model.disagreements)}
 
 ## Risk Assessment
 
-${renderMarkdownTable(["Level", "Summary"], [[model.riskAssessment.level, model.riskAssessment.summary]])}
+${renderMarkdownTable2(["Level", "Summary"], [[model.riskAssessment.level, model.riskAssessment.summary]])}
 
 ## Manual / Deferred Work
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Item", "Reason", "Follow-Up", "Status"],
     model.manualOrDeferredWork.map((row) => [row.item, row.reason, row.followUp, row.status])
   )}
 
 ## Gap / Repair Routes
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Gap", "Evidence", "Repair", "Status"],
     model.gapRoutes.map((row) => [row.gap, row.evidence, row.repair, row.status])
   )}
 
 ## Follow-Ups
 
-${renderBulletList2(model.followUps)}
+${renderBulletList3(model.followUps)}
 
 ## Evidence Reviewed
 
-${renderMarkdownTable(["Evidence", "Status", "Rationale"], evidenceRows)}
+${renderMarkdownTable2(["Evidence", "Status", "Rationale"], evidenceRows)}
 
 ## Next Safe Action
 
@@ -38316,7 +39516,7 @@ ${renderMarkdownTable(["Evidence", "Status", "Rationale"], evidenceRows)}
 function markdownTableCell(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\|/g, "\\|").trim();
 }
-function renderMarkdownTable(headers, rows) {
+function renderMarkdownTable2(headers, rows) {
   return [
     headers,
     headers.map(() => "---"),
@@ -38343,7 +39543,7 @@ function renderReviewFixModelContent(model, located, authoringContext) {
 
 ## Remediation Summary
 
-${renderBulletList2(model.remediationSummary)}
+${renderBulletList3(model.remediationSummary)}
 
 ## Findings Addressed
 
@@ -38351,21 +39551,21 @@ ${findingsRows.join("\n")}
 
 ## Changes Made
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["File", "Summary"],
     model.changesMade.map((row) => [row.file, row.summary])
   )}
 
 ## Verification
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Check", "Command", "Result", "Evidence"],
     model.verification.map((row) => [row.check, row.command, row.result, row.evidence])
   )}
 
 ## Dependency Plans
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Plan", "Status", "Evidence"],
     model.dependencyPlans.length > 0 ? model.dependencyPlans.map((row) => [
       `${row.planId} (${row.path})`,
@@ -38376,7 +39576,7 @@ ${renderMarkdownTable(
 
 ## Manual / Deferred Work
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Item", "Reason", "Follow-Up", "Status"],
     model.manualOrDeferredWork.map((row) => [
       row.item,
@@ -38388,18 +39588,18 @@ ${renderMarkdownTable(
 
 ## Gap / Repair Routes
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Gap", "Evidence", "Repair", "Status"],
     model.gapRoutes.map((row) => [row.gap, row.evidence, row.repair, row.status])
   )}
 
 ## Follow-Ups
 
-${renderBulletList2(model.followUps)}
+${renderBulletList3(model.followUps)}
 
 ## Evidence
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Kind", "Source", "Summary"],
     model.evidence.map((row) => [row.kind, row.source, row.summary])
   )}
@@ -38486,18 +39686,18 @@ function renderSecurityModelContent(model, located, authoringContext) {
 - Closed threats: ${counts.closed}
 - Accepted risks: ${counts.accepted}
 - Open threats: ${counts.open}
-${renderBulletList2(model.securitySummary)}
+${renderBulletList3(model.securitySummary)}
 
 ## Evidence Reviewed
 
-${renderBulletList2(renderSecurityEvidenceCoverage({
+${renderBulletList3(renderSecurityEvidenceCoverage({
     model,
     knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
   }))}
 
 ## Threat Register
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     [
       "Threat ID",
       "Source Plan",
@@ -38514,35 +39714,35 @@ ${renderMarkdownTable(
 
 ## Accepted Risks
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Threat ID", "Rationale", "Accepted By", "Accepted At", "Evidence"],
     acceptedRiskRows
   )}
 
 ## Findings
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Kind", "Severity", "Threat ID", "Status", "Evidence", "Recommendation"],
     findingRows
   )}
 
 ## Manual / Deferred Work
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Item", "Reason", "Follow-Up", "Status"],
     manualRows
   )}
 
 ## Gap / Repair Routes
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Gap", "Evidence", "Repair", "Status"],
     gapRows
   )}
 
 ## Follow-Ups
 
-${renderBulletList2(model.followUps)}
+${renderBulletList3(model.followUps)}
 
 ## Security Audit Trail
 
@@ -38567,7 +39767,7 @@ function renderUiReviewEvidenceCoverage(args) {
   const citedEvidence = uniqueOrderedStrings([
     ...args.model.pillarScores.map((row) => row.evidence),
     ...args.model.findings.map((row) => row.evidence)
-  ]).map((evidence) => evidence.trim()).filter((evidence) => evidence.length > 0).filter((evidence) => !isGenericNoneValue2(evidence)).filter((evidence) => !knownArtifacts.has(evidence)).map((evidence) => `${evidence} - cited by pillar or finding evidence.`);
+  ]).map((evidence) => evidence.trim()).filter((evidence) => evidence.length > 0).filter((evidence) => !isGenericNoneValue3(evidence)).filter((evidence) => !knownArtifacts.has(evidence)).map((evidence) => `${evidence} - cited by pillar or finding evidence.`);
   return [...artifactCoverage, ...citedEvidence];
 }
 function renderUiReviewModelContent(model, located, authoringContext) {
@@ -38599,18 +39799,18 @@ function renderUiReviewModelContent(model, located, authoringContext) {
 - Completed summaries: ${authoringContext.completedSummaries.length}
 - Pending plans: ${authoringContext.pendingPlans.length}
 - Lower-wave pending plans: ${authoringContext.lowerWavePendingPlanIds.length}
-${renderBulletList2(model.uiReviewSummary)}
+${renderBulletList3(model.uiReviewSummary)}
 
 ## Evidence Reviewed
 
-${renderBulletList2(renderUiReviewEvidenceCoverage({
+${renderBulletList3(renderUiReviewEvidenceCoverage({
     model,
     knownEvidenceArtifacts: authoringContext.knownEvidenceArtifacts
   }))}
 
 ## Pillar Scores
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Pillar", "Score", "Evidence", "Key Finding"],
     model.pillarScores.map((row) => [
       row.pillar,
@@ -38622,21 +39822,21 @@ ${renderMarkdownTable(
 
 ## Priority Fixes
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Priority", "Issue", "User Impact", "Repair", "Status"],
     priorityRows
   )}
 
 ## Findings
 
-${renderMarkdownTable(
+${renderMarkdownTable2(
     ["Pillar", "Severity", "Status", "Evidence", "User Impact", "Recommendation"],
     findingRows
   )}
 
 ## Follow-Ups
 
-${renderBulletList2(model.followUps)}
+${renderBulletList3(model.followUps)}
 
 ## Audit Trail
 
@@ -38680,14 +39880,14 @@ function schemaDiagnosticFromAjvError2(error2, artifact) {
     suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : artifact === "ui-review" ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context." : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
   });
 }
-function normalizeStringArray(value) {
+function normalizeStringArray2(value) {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     return null;
   }
   return value.map((item) => item.trim());
 }
 function normalizeCodeReviewFinding(finding) {
-  const findingObject = asJsonObject2(finding);
+  const findingObject = asJsonObject3(finding);
   if (!findingObject || typeof findingObject.severity !== "string" || typeof findingObject.disposition !== "string" || typeof findingObject.location !== "string" || typeof findingObject.evidence !== "string" || typeof findingObject.impact !== "string" || typeof findingObject.recommendation !== "string") {
     return null;
   }
@@ -38703,7 +39903,7 @@ function normalizeCodeReviewFinding(finding) {
 function normalizeEvidenceCoverage(evidenceCoverage) {
   const normalized = {};
   for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
-    const coverageObject = asJsonObject2(coverage);
+    const coverageObject = asJsonObject3(coverage);
     if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
       return null;
     }
@@ -38716,10 +39916,10 @@ function normalizeEvidenceCoverage(evidenceCoverage) {
 }
 function normalizeCodeReviewModel(model) {
   const findings = Array.isArray(model.findings) ? model.findings : null;
-  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
-  const reviewSummary = normalizeStringArray(model.reviewSummary);
-  const positiveSignals = normalizeStringArray(model.positiveSignals);
-  const followUps = normalizeStringArray(model.followUps);
+  const evidenceCoverage = asJsonObject3(model.evidenceCoverage);
+  const reviewSummary = normalizeStringArray2(model.reviewSummary);
+  const positiveSignals = normalizeStringArray2(model.positiveSignals);
+  const followUps = normalizeStringArray2(model.followUps);
   if (typeof model.verdict !== "string" || reviewSummary === null || positiveSignals === null || findings === null || evidenceCoverage === null || followUps === null || typeof model.nextSafeAction !== "string") {
     return null;
   }
@@ -38743,21 +39943,21 @@ function normalizeCodeReviewModelForResiduals(model) {
     const normalized = normalizeCodeReviewFinding(finding);
     return normalized ? [normalized] : [];
   }) : [];
-  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
+  const evidenceCoverage = asJsonObject3(model.evidenceCoverage);
   return {
     verdict: typeof model.verdict === "string" ? model.verdict : "",
-    reviewSummary: normalizeStringArray(model.reviewSummary) ?? [],
-    positiveSignals: normalizeStringArray(model.positiveSignals) ?? [],
+    reviewSummary: normalizeStringArray2(model.reviewSummary) ?? [],
+    positiveSignals: normalizeStringArray2(model.positiveSignals) ?? [],
     findings,
     evidenceCoverage: evidenceCoverage ? normalizeEvidenceCoverage(evidenceCoverage) ?? {} : {},
-    followUps: normalizeStringArray(model.followUps) ?? [],
+    followUps: normalizeStringArray2(model.followUps) ?? [],
     nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
 }
 function normalizePeerReviewEvidenceCoverage(evidenceCoverage) {
   const normalized = {};
   for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
-    const coverageObject = asJsonObject2(coverage);
+    const coverageObject = asJsonObject3(coverage);
     if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
       return null;
     }
@@ -38769,22 +39969,22 @@ function normalizePeerReviewEvidenceCoverage(evidenceCoverage) {
   return normalized;
 }
 function normalizePeerReviewModel(model) {
-  const reviewSummary = normalizeStringArray(model.reviewSummary);
+  const reviewSummary = normalizeStringArray2(model.reviewSummary);
   const reviewerCoverage = Array.isArray(model.reviewerCoverage) ? model.reviewerCoverage : null;
   const planReviews = Array.isArray(model.planReviews) ? model.planReviews : null;
   const findings = Array.isArray(model.findings) ? model.findings : null;
-  const consensus = normalizeStringArray(model.consensus);
-  const disagreements = normalizeStringArray(model.disagreements);
-  const riskAssessment = asJsonObject2(model.riskAssessment);
+  const consensus = normalizeStringArray2(model.consensus);
+  const disagreements = normalizeStringArray2(model.disagreements);
+  const riskAssessment = asJsonObject3(model.riskAssessment);
   const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork) ? model.manualOrDeferredWork : null;
   const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
-  const followUps = normalizeStringArray(model.followUps);
-  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
+  const followUps = normalizeStringArray2(model.followUps);
+  const evidenceCoverage = asJsonObject3(model.evidenceCoverage);
   if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || reviewSummary === null || reviewerCoverage === null || planReviews === null || findings === null || consensus === null || disagreements === null || !riskAssessment || typeof riskAssessment.level !== "string" || typeof riskAssessment.summary !== "string" || manualOrDeferredWork === null || gapRoutes === null || followUps === null || evidenceCoverage === null || typeof model.nextSafeAction !== "string") {
     return null;
   }
   const normalizedReviewerCoverage = reviewerCoverage.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.reviewer === "string" && typeof rowObject.status === "string" && typeof rowObject.summary === "string" ? {
       reviewer: rowObject.reviewer.trim(),
       status: rowObject.status,
@@ -38792,7 +39992,7 @@ function normalizePeerReviewModel(model) {
     } : null;
   });
   const normalizedPlanReviews = planReviews.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.planId === "string" && typeof rowObject.path === "string" && typeof rowObject.goalFit === "string" && typeof rowObject.summary === "string" ? {
       planId: rowObject.planId.trim(),
       path: rowObject.path.trim(),
@@ -38801,7 +40001,7 @@ function normalizePeerReviewModel(model) {
     } : null;
   });
   const normalizedFindings = findings.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.severity === "string" && typeof rowObject.source === "string" && typeof rowObject.evidence === "string" && typeof rowObject.recommendation === "string" && typeof rowObject.status === "string" ? {
       severity: rowObject.severity,
       source: rowObject.source.trim(),
@@ -38811,7 +40011,7 @@ function normalizePeerReviewModel(model) {
     } : null;
   });
   const normalizedManual = manualOrDeferredWork.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.item === "string" && typeof rowObject.reason === "string" && typeof rowObject.followUp === "string" && typeof rowObject.status === "string" ? {
       item: rowObject.item.trim(),
       reason: rowObject.reason.trim(),
@@ -38820,7 +40020,7 @@ function normalizePeerReviewModel(model) {
     } : null;
   });
   const normalizedGaps = gapRoutes.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.gap === "string" && typeof rowObject.evidence === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
       gap: rowObject.gap.trim(),
       evidence: rowObject.evidence.trim(),
@@ -38858,38 +40058,38 @@ function normalizePeerReviewModelForResiduals(model) {
     status: typeof model.status === "string" ? model.status : "",
     readiness: typeof model.readiness === "string" ? model.readiness : "",
     completionState: typeof model.completionState === "string" ? model.completionState : "",
-    reviewSummary: normalizeStringArray(model.reviewSummary) ?? [],
+    reviewSummary: normalizeStringArray2(model.reviewSummary) ?? [],
     reviewerCoverage: [],
     planReviews: [],
     findings: [],
-    consensus: normalizeStringArray(model.consensus) ?? [],
-    disagreements: normalizeStringArray(model.disagreements) ?? [],
+    consensus: normalizeStringArray2(model.consensus) ?? [],
+    disagreements: normalizeStringArray2(model.disagreements) ?? [],
     riskAssessment: {
       level: "LOW",
       summary: ""
     },
     manualOrDeferredWork: [],
     gapRoutes: [],
-    followUps: normalizeStringArray(model.followUps) ?? [],
+    followUps: normalizeStringArray2(model.followUps) ?? [],
     evidenceCoverage: {},
     nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
 }
 function normalizeReviewFixModel(model) {
-  const remediationSummary = normalizeStringArray(model.remediationSummary);
+  const remediationSummary = normalizeStringArray2(model.remediationSummary);
   const findingsAddressed = Array.isArray(model.findingsAddressed) ? model.findingsAddressed : null;
   const changesMade = Array.isArray(model.changesMade) ? model.changesMade : null;
   const verification = Array.isArray(model.verification) ? model.verification : null;
   const dependencyPlans = Array.isArray(model.dependencyPlans) ? model.dependencyPlans : null;
   const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork) ? model.manualOrDeferredWork : null;
   const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
-  const followUps = normalizeStringArray(model.followUps);
+  const followUps = normalizeStringArray2(model.followUps);
   const evidence = Array.isArray(model.evidence) ? model.evidence : null;
   if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || remediationSummary === null || findingsAddressed === null || changesMade === null || verification === null || dependencyPlans === null || manualOrDeferredWork === null || gapRoutes === null || followUps === null || evidence === null || typeof model.nextSafeAction !== "string") {
     return null;
   }
   const normalizedFindings = findingsAddressed.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.findingId === "string" && typeof rowObject.status === "string" && typeof rowObject.evidence === "string" && typeof rowObject.disposition === "string" ? {
       findingId: rowObject.findingId.trim(),
       status: rowObject.status,
@@ -38898,14 +40098,14 @@ function normalizeReviewFixModel(model) {
     } : null;
   });
   const normalizedChanges = changesMade.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.file === "string" && typeof rowObject.summary === "string" ? {
       file: rowObject.file.trim(),
       summary: rowObject.summary.trim()
     } : null;
   });
   const normalizedVerification = verification.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.check === "string" && typeof rowObject.command === "string" && typeof rowObject.result === "string" && typeof rowObject.evidence === "string" ? {
       check: rowObject.check.trim(),
       command: rowObject.command.trim(),
@@ -38914,7 +40114,7 @@ function normalizeReviewFixModel(model) {
     } : null;
   });
   const normalizedDependencies = dependencyPlans.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.planId === "string" && typeof rowObject.path === "string" && typeof rowObject.status === "string" && typeof rowObject.evidence === "string" ? {
       planId: rowObject.planId.trim(),
       path: rowObject.path.trim(),
@@ -38923,7 +40123,7 @@ function normalizeReviewFixModel(model) {
     } : null;
   });
   const normalizedManual = manualOrDeferredWork.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.item === "string" && typeof rowObject.reason === "string" && typeof rowObject.followUp === "string" && typeof rowObject.status === "string" ? {
       item: rowObject.item.trim(),
       reason: rowObject.reason.trim(),
@@ -38932,7 +40132,7 @@ function normalizeReviewFixModel(model) {
     } : null;
   });
   const normalizedGaps = gapRoutes.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.gap === "string" && typeof rowObject.evidence === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
       gap: rowObject.gap.trim(),
       evidence: rowObject.evidence.trim(),
@@ -38941,7 +40141,7 @@ function normalizeReviewFixModel(model) {
     } : null;
   });
   const normalizedEvidence = evidence.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.kind === "string" && typeof rowObject.source === "string" && typeof rowObject.summary === "string" ? {
       kind: rowObject.kind,
       source: rowObject.source.trim(),
@@ -38972,14 +40172,14 @@ function normalizeReviewFixModelForResiduals(model) {
     status: typeof model.status === "string" ? model.status : "PARTIAL",
     readiness: typeof model.readiness === "string" ? model.readiness : "not-ready-for-validation",
     completionState: typeof model.completionState === "string" ? model.completionState : "pending",
-    remediationSummary: normalizeStringArray(model.remediationSummary) ?? [],
+    remediationSummary: normalizeStringArray2(model.remediationSummary) ?? [],
     findingsAddressed: [],
     changesMade: [],
     verification: [],
     dependencyPlans: [],
     manualOrDeferredWork: [],
     gapRoutes: [],
-    followUps: normalizeStringArray(model.followUps) ?? [],
+    followUps: normalizeStringArray2(model.followUps) ?? [],
     evidence: [],
     nextSafeAction: typeof model.nextSafeAction === "string" ? model.nextSafeAction.trim() : ""
   };
@@ -38987,7 +40187,7 @@ function normalizeReviewFixModelForResiduals(model) {
 function normalizeSecurityEvidenceCoverage(evidenceCoverage) {
   const normalized = {};
   for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
-    const coverageObject = asJsonObject2(coverage);
+    const coverageObject = asJsonObject3(coverage);
     if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
       return null;
     }
@@ -38999,21 +40199,21 @@ function normalizeSecurityEvidenceCoverage(evidenceCoverage) {
   return normalized;
 }
 function normalizeSecurityModel(model) {
-  const securitySummary = normalizeStringArray(model.securitySummary);
-  const followUps = normalizeStringArray(model.followUps);
-  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
+  const securitySummary = normalizeStringArray2(model.securitySummary);
+  const followUps = normalizeStringArray2(model.followUps);
+  const evidenceCoverage = asJsonObject3(model.evidenceCoverage);
   const threatRegister = Array.isArray(model.threatRegister) ? model.threatRegister : null;
   const acceptedRisks = Array.isArray(model.acceptedRisks) ? model.acceptedRisks : null;
   const findings = Array.isArray(model.findings) ? model.findings : null;
   const manualOrDeferredWork = Array.isArray(model.manualOrDeferredWork) ? model.manualOrDeferredWork : null;
   const gapRoutes = Array.isArray(model.gapRoutes) ? model.gapRoutes : null;
-  const auditTrail = asJsonObject2(model.auditTrail);
+  const auditTrail = asJsonObject3(model.auditTrail);
   if (typeof model.status !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || securitySummary === null || evidenceCoverage === null || threatRegister === null || acceptedRisks === null || findings === null || manualOrDeferredWork === null || gapRoutes === null || followUps === null || !auditTrail || typeof auditTrail.auditDate !== "string" || typeof auditTrail.executionMode !== "string" || typeof auditTrail.overwriteGate !== "string" || typeof auditTrail.verifyOrAcceptDecision !== "string" || typeof auditTrail.pendingOpenThreatStatus !== "string" || typeof auditTrail.verifierNote !== "string" || typeof model.nextSafeAction !== "string") {
     return null;
   }
   const normalizedEvidenceCoverage = normalizeSecurityEvidenceCoverage(evidenceCoverage);
   const normalizedThreatRegister = threatRegister.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.threatId === "string" && typeof rowObject.status === "string" && typeof rowObject.evidence === "string" && typeof rowObject.verifierNote === "string" ? {
       threatId: rowObject.threatId.trim(),
       status: rowObject.status,
@@ -39022,7 +40222,7 @@ function normalizeSecurityModel(model) {
     } : null;
   });
   const normalizedAcceptedRisks = acceptedRisks.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.threatId === "string" && typeof rowObject.rationale === "string" && typeof rowObject.acceptedBy === "string" && typeof rowObject.acceptedAt === "string" && typeof rowObject.evidence === "string" ? {
       threatId: rowObject.threatId.trim(),
       rationale: rowObject.rationale.trim(),
@@ -39032,7 +40232,7 @@ function normalizeSecurityModel(model) {
     } : null;
   });
   const normalizedFindings = findings.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.kind === "string" && typeof rowObject.severity === "string" && typeof rowObject.threatId === "string" && typeof rowObject.evidence === "string" && typeof rowObject.recommendation === "string" && typeof rowObject.status === "string" ? {
       kind: rowObject.kind,
       severity: rowObject.severity,
@@ -39043,7 +40243,7 @@ function normalizeSecurityModel(model) {
     } : null;
   });
   const normalizedManual = manualOrDeferredWork.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.item === "string" && typeof rowObject.reason === "string" && typeof rowObject.followUp === "string" && typeof rowObject.status === "string" ? {
       item: rowObject.item.trim(),
       reason: rowObject.reason.trim(),
@@ -39052,7 +40252,7 @@ function normalizeSecurityModel(model) {
     } : null;
   });
   const normalizedGaps = gapRoutes.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.gap === "string" && typeof rowObject.evidence === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
       gap: rowObject.gap.trim(),
       evidence: rowObject.evidence.trim(),
@@ -39092,7 +40292,7 @@ function normalizeSecurityModelForResiduals(model) {
 function normalizeUiReviewEvidenceCoverage(evidenceCoverage) {
   const normalized = {};
   for (const [artifactPath, coverage] of Object.entries(evidenceCoverage)) {
-    const coverageObject = asJsonObject2(coverage);
+    const coverageObject = asJsonObject3(coverage);
     if (!coverageObject || typeof coverageObject.status !== "string" || typeof coverageObject.rationale !== "string") {
       return null;
     }
@@ -39104,19 +40304,19 @@ function normalizeUiReviewEvidenceCoverage(evidenceCoverage) {
   return normalized;
 }
 function normalizeUiReviewModel(model) {
-  const uiReviewSummary = normalizeStringArray(model.uiReviewSummary);
-  const evidenceCoverage = asJsonObject2(model.evidenceCoverage);
+  const uiReviewSummary = normalizeStringArray2(model.uiReviewSummary);
+  const evidenceCoverage = asJsonObject3(model.evidenceCoverage);
   const pillarScores = Array.isArray(model.pillarScores) ? model.pillarScores : null;
   const priorityFixes = Array.isArray(model.priorityFixes) ? model.priorityFixes : null;
   const findings = Array.isArray(model.findings) ? model.findings : null;
-  const followUps = normalizeStringArray(model.followUps);
-  const auditTrail = asJsonObject2(model.auditTrail);
+  const followUps = normalizeStringArray2(model.followUps);
+  const auditTrail = asJsonObject3(model.auditTrail);
   if (typeof model.verdict !== "string" || typeof model.readiness !== "string" || typeof model.completionState !== "string" || typeof model.overallScore !== "number" || uiReviewSummary === null || evidenceCoverage === null || pillarScores === null || priorityFixes === null || findings === null || followUps === null || !auditTrail || typeof auditTrail.auditDate !== "string" || typeof auditTrail.executionMode !== "string" || typeof auditTrail.existingReviewPosture !== "string" || typeof auditTrail.visualEvidence !== "string" || typeof auditTrail.auditorPath !== "string" || typeof auditTrail.scoreConsistencyNote !== "string" || typeof auditTrail.confidenceLimitations !== "string" || typeof model.nextSafeAction !== "string") {
     return null;
   }
   const normalizedEvidenceCoverage = normalizeUiReviewEvidenceCoverage(evidenceCoverage);
   const normalizedPillars = pillarScores.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.pillar === "string" && typeof rowObject.score === "number" && typeof rowObject.evidence === "string" && typeof rowObject.keyFinding === "string" ? {
       pillar: rowObject.pillar,
       score: rowObject.score,
@@ -39125,7 +40325,7 @@ function normalizeUiReviewModel(model) {
     } : null;
   });
   const normalizedPriorityFixes = priorityFixes.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.item === "string" && typeof rowObject.userImpact === "string" && typeof rowObject.repair === "string" && typeof rowObject.status === "string" ? {
       item: rowObject.item.trim(),
       userImpact: rowObject.userImpact.trim(),
@@ -39134,7 +40334,7 @@ function normalizeUiReviewModel(model) {
     } : null;
   });
   const normalizedFindings = findings.map((row) => {
-    const rowObject = asJsonObject2(row);
+    const rowObject = asJsonObject3(row);
     return rowObject && typeof rowObject.pillar === "string" && typeof rowObject.severity === "string" && typeof rowObject.evidence === "string" && typeof rowObject.userImpact === "string" && typeof rowObject.recommendation === "string" && typeof rowObject.status === "string" ? {
       pillar: rowObject.pillar,
       severity: rowObject.severity,
@@ -39201,7 +40401,7 @@ function addGenericValueDiagnostics(args) {
     ["positiveSignals", args.model.positiveSignals]
   ]) {
     values.forEach((value, index) => {
-      if (isGenericNoneValue2(value)) {
+      if (isGenericNoneValue3(value)) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -39215,7 +40415,7 @@ function addGenericValueDiagnostics(args) {
       }
     });
   }
-  if (args.model.findings.length > 0 && args.model.followUps.every((followUp) => isGenericNoneValue2(followUp))) {
+  if (args.model.findings.length > 0 && args.model.followUps.every((followUp) => isGenericNoneValue3(followUp))) {
     args.diagnostics.push(
       modelDiagnostic({
         source: "residual",
@@ -39229,7 +40429,7 @@ function addGenericValueDiagnostics(args) {
   }
   args.model.findings.forEach((finding, index) => {
     for (const field of ["evidence", "impact", "recommendation"]) {
-      if (isGenericNoneValue2(finding[field])) {
+      if (isGenericNoneValue3(finding[field])) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -39244,7 +40444,7 @@ function addGenericValueDiagnostics(args) {
     }
   });
   for (const [artifactPath, coverage] of Object.entries(args.model.evidenceCoverage)) {
-    if (isGenericNoneValue2(coverage.rationale)) {
+    if (isGenericNoneValue3(coverage.rationale)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39260,7 +40460,7 @@ function addGenericValueDiagnostics(args) {
 }
 function addPlaceholderDiagnostics(args) {
   const modelContract = readArtifactContract("review.code-review").modelContract;
-  const stringEntries = collectModelStringEntries2(args.model);
+  const stringEntries = collectModelStringEntries3(args.model);
   for (const entry of stringEntries) {
     if (hasPlaceholderLanguage(entry.value)) {
       args.diagnostics.push(
@@ -39604,7 +40804,7 @@ async function collectCodeReviewResidualDiagnostics(args) {
 async function collectPeerReviewResidualDiagnostics(args) {
   const diagnostics = [];
   const modelContract = readArtifactContract("review.peer-review").modelContract;
-  const stringEntries = collectModelStringEntries2(args.model);
+  const stringEntries = collectModelStringEntries3(args.model);
   for (const key of Object.keys(args.model)) {
     if (PEER_REVIEW_MODEL_IDENTITY_KEYS.has(key)) {
       diagnostics.push(
@@ -39719,7 +40919,7 @@ async function collectPeerReviewResidualDiagnostics(args) {
 }
 function addReviewFixPlaceholderDiagnostics(args) {
   const modelContract = readArtifactContract("review.review-fix").modelContract;
-  const stringEntries = collectModelStringEntries2(args.model);
+  const stringEntries = collectModelStringEntries3(args.model);
   for (const entry of stringEntries) {
     if (hasPlaceholderLanguage(entry.value)) {
       args.diagnostics.push(
@@ -39755,7 +40955,7 @@ function addReviewFixPlaceholderDiagnostics(args) {
 }
 function addReviewFixGenericValueDiagnostics(args) {
   args.model.remediationSummary.forEach((value, index) => {
-    if (isGenericNoneValue2(value)) {
+    if (isGenericNoneValue3(value)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39770,7 +40970,7 @@ function addReviewFixGenericValueDiagnostics(args) {
   });
   for (const [index, row] of args.model.findingsAddressed.entries()) {
     for (const field of ["evidence", "disposition"]) {
-      if (isGenericNoneValue2(row[field])) {
+      if (isGenericNoneValue3(row[field])) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -39788,7 +40988,7 @@ function addReviewFixGenericValueDiagnostics(args) {
     if (row.file === "none") {
       continue;
     }
-    if (isGenericNoneValue2(row.summary)) {
+    if (isGenericNoneValue3(row.summary)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39806,7 +41006,7 @@ function addReviewFixGenericValueDiagnostics(args) {
       continue;
     }
     for (const field of ["check", "command", "evidence"]) {
-      if (isGenericNoneValue2(row[field])) {
+      if (isGenericNoneValue3(row[field])) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -39821,7 +41021,7 @@ function addReviewFixGenericValueDiagnostics(args) {
     }
   }
   for (const [index, row] of args.model.evidence.entries()) {
-    if (isGenericNoneValue2(row.summary)) {
+    if (isGenericNoneValue3(row.summary)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39903,7 +41103,7 @@ async function collectReviewFixResidualDiagnostics(args) {
 }
 function addSecurityPlaceholderDiagnostics(args) {
   const modelContract = readArtifactContract("review.security").modelContract;
-  const stringEntries = collectModelStringEntries2(args.model);
+  const stringEntries = collectModelStringEntries3(args.model);
   for (const entry of stringEntries) {
     if (hasPlaceholderLanguage(entry.value)) {
       args.diagnostics.push(
@@ -39939,7 +41139,7 @@ function addSecurityPlaceholderDiagnostics(args) {
 }
 function addSecurityGenericValueDiagnostics(args) {
   args.model.securitySummary.forEach((value, index) => {
-    if (isGenericNoneValue2(value)) {
+    if (isGenericNoneValue3(value)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39953,7 +41153,7 @@ function addSecurityGenericValueDiagnostics(args) {
     }
   });
   for (const [artifactPath, coverage] of Object.entries(args.model.evidenceCoverage)) {
-    if (isGenericNoneValue2(coverage.rationale)) {
+    if (isGenericNoneValue3(coverage.rationale)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -39971,7 +41171,7 @@ function addSecurityGenericValueDiagnostics(args) {
       continue;
     }
     for (const field of ["evidence", "verifierNote"]) {
-      if (isGenericNoneValue2(row[field])) {
+      if (isGenericNoneValue3(row[field])) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -40155,7 +41355,7 @@ async function collectSecurityResidualDiagnostics(args) {
 }
 function addUiReviewPlaceholderDiagnostics(args) {
   const modelContract = readArtifactContract("review.ui-review").modelContract;
-  const stringEntries = collectModelStringEntries2(args.model);
+  const stringEntries = collectModelStringEntries3(args.model);
   for (const entry of stringEntries) {
     if (hasPlaceholderLanguage(entry.value)) {
       args.diagnostics.push(
@@ -40191,7 +41391,7 @@ function addUiReviewPlaceholderDiagnostics(args) {
 }
 function addUiReviewGenericValueDiagnostics(args) {
   args.model.uiReviewSummary.forEach((value, index) => {
-    if (isGenericNoneValue2(value)) {
+    if (isGenericNoneValue3(value)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -40205,7 +41405,7 @@ function addUiReviewGenericValueDiagnostics(args) {
     }
   });
   for (const [artifactPath, coverage] of Object.entries(args.model.evidenceCoverage)) {
-    if (isGenericNoneValue2(coverage.rationale)) {
+    if (isGenericNoneValue3(coverage.rationale)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -40219,7 +41419,7 @@ function addUiReviewGenericValueDiagnostics(args) {
     }
   }
   args.model.pillarScores.forEach((row, index) => {
-    if (isGenericNoneValue2(row.keyFinding)) {
+    if (isGenericNoneValue3(row.keyFinding)) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -40237,7 +41437,7 @@ function addUiReviewGenericValueDiagnostics(args) {
       return;
     }
     for (const field of ["evidence", "userImpact", "recommendation"]) {
-      if (isGenericNoneValue2(row[field])) {
+      if (isGenericNoneValue3(row[field])) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -41001,7 +42201,7 @@ async function blueprintReviewAuthoringContext(args) {
       files: scoped.files,
       reviewMode: scoped.reviewMode,
       schemaPath: null,
-      baseSchema: readArtifactContract("review.code-review").modelContract ? cloneJsonObject3(readArtifactContract("review.code-review").modelContract.jsonSchema) : null,
+      baseSchema: readArtifactContract("review.code-review").modelContract ? cloneJsonObject4(readArtifactContract("review.code-review").modelContract.jsonSchema) : null,
       taskSchema: null,
       modelOnly: true,
       authoringContext: null,
@@ -41081,7 +42281,7 @@ async function blueprintReviewValidateModel(args) {
       warnings: context.warnings
     };
   }
-  const modelObject = asJsonObject2(args.model);
+  const modelObject = asJsonObject3(args.model);
   const diagnostics = [];
   if (!modelObject) {
     const modelLabel = artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : artifact === "ui-review" ? "UI-review" : artifact === "peer-review" ? "Peer-review" : "Code-review";
@@ -41482,7 +42682,7 @@ async function blueprintReviewRecord(args) {
     if (args.artifact === "ui-review" && validation2.normalizedModel) {
       const uiModel = validation2.normalizedModel;
       uiReviewValidatedModel = uiModel;
-      const followUps2 = uiModel.followUps.filter((followUp) => !isGenericNoneValue2(followUp));
+      const followUps2 = uiModel.followUps.filter((followUp) => !isGenericNoneValue3(followUp));
       modelCountsOverride = {
         counts: {
           sections: countMarkdownSections(content),
@@ -41703,11 +42903,11 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__2, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__3, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise2, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
-    import__2 = __toESM(require__(), 1);
+    import__3 = __toESM(require__(), 1);
     init_v4();
     init_security();
     init_artifact_contracts();
@@ -46009,17 +47209,17 @@ function formatZodIssues(prefix, error2) {
     return `${prefix} ${issuePath}: ${issue2.message}`;
   });
 }
-function cloneJsonObject4(value) {
+function cloneJsonObject5(value) {
   return JSON.parse(JSON.stringify(value));
 }
 function createAjvValidator3() {
-  return new import__3.Ajv2020({
+  return new import__4.Ajv2020({
     allErrors: true,
     strict: false,
     allowUnionTypes: true
   });
 }
-function getJsonObjectProperty3(value, key) {
+function getJsonObjectProperty4(value, key) {
   const candidate = value?.[key];
   return isPlainObject6(candidate) ? candidate : null;
 }
@@ -46034,38 +47234,38 @@ function reportImpactBaseSchema() {
   if (!modelContract?.schemaPath) {
     throw new Error("report.impact modelContract does not expose a schemaPath.");
   }
-  return cloneJsonObject4(modelContract.jsonSchema);
+  return cloneJsonObject5(modelContract.jsonSchema);
 }
 function buildImpactReportTaskSchema(report, expectations = {}) {
   const schema = reportImpactBaseSchema();
-  const properties = getJsonObjectProperty3(schema, "properties");
-  const defs = getJsonObjectProperty3(schema, "$defs");
+  const properties = getJsonObjectProperty4(schema, "properties");
+  const defs = getJsonObjectProperty4(schema, "$defs");
   const expectedImpactId = expectations.impactId ?? report.impactId;
   const expectedScopeFingerprint = expectations.scopeFingerprint ?? report.scope.fingerprint;
   const expectedFiles = expectations.files ?? report.surfaces.map((surface) => surface.path).sort();
   if (properties) {
-    const impactId = getJsonObjectProperty3(properties, "impactId");
+    const impactId = getJsonObjectProperty4(properties, "impactId");
     if (impactId) {
       impactId.const = expectedImpactId;
     }
-    const files = getJsonObjectProperty3(properties, "files");
+    const files = getJsonObjectProperty4(properties, "files");
     if (files) {
       files.const = expectedFiles;
     }
-    const blockingFindings = getJsonObjectProperty3(properties, "blockingFindings");
+    const blockingFindings = getJsonObjectProperty4(properties, "blockingFindings");
     if (blockingFindings) {
       blockingFindings.const = report.findings.filter((finding) => finding.status === "BLOCK");
     }
-    const warningFindings = getJsonObjectProperty3(properties, "warningFindings");
+    const warningFindings = getJsonObjectProperty4(properties, "warningFindings");
     if (warningFindings) {
       warningFindings.const = report.findings.filter((finding) => finding.status === "WARN");
     }
   }
-  const scope = defs ? getJsonObjectProperty3(defs, "scope") : null;
-  const scopeProperties = scope ? getJsonObjectProperty3(scope, "properties") : null;
-  const fingerprint = scopeProperties ? getJsonObjectProperty3(scopeProperties, "fingerprint") : null;
-  const source = scopeProperties ? getJsonObjectProperty3(scopeProperties, "source") : null;
-  const description = scopeProperties ? getJsonObjectProperty3(scopeProperties, "description") : null;
+  const scope = defs ? getJsonObjectProperty4(defs, "scope") : null;
+  const scopeProperties = scope ? getJsonObjectProperty4(scope, "properties") : null;
+  const fingerprint = scopeProperties ? getJsonObjectProperty4(scopeProperties, "fingerprint") : null;
+  const source = scopeProperties ? getJsonObjectProperty4(scopeProperties, "source") : null;
+  const description = scopeProperties ? getJsonObjectProperty4(scopeProperties, "description") : null;
   if (fingerprint) {
     fingerprint.const = expectedScopeFingerprint;
   }
@@ -46077,9 +47277,9 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
   }
   const evidenceIds = report.evidence.map((evidence) => evidence.id);
   for (const definitionName of ["finding", "obligation", "unknown"]) {
-    const definition = defs ? getJsonObjectProperty3(defs, definitionName) : null;
-    const definitionProperties = definition ? getJsonObjectProperty3(definition, "properties") : null;
-    const evidenceRefs = definitionProperties ? getJsonObjectProperty3(definitionProperties, "evidenceRefs") : null;
+    const definition = defs ? getJsonObjectProperty4(defs, definitionName) : null;
+    const definitionProperties = definition ? getJsonObjectProperty4(definition, "properties") : null;
+    const evidenceRefs = definitionProperties ? getJsonObjectProperty4(definitionProperties, "evidenceRefs") : null;
     if (evidenceRefs) {
       evidenceRefs.items = {
         type: "string",
@@ -46087,12 +47287,12 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
       };
     }
   }
-  const ownership = defs ? getJsonObjectProperty3(defs, "ownership") : null;
-  const ownershipProperties = ownership ? getJsonObjectProperty3(ownership, "properties") : null;
-  const matches = ownershipProperties ? getJsonObjectProperty3(ownershipProperties, "matches") : null;
-  const matchItems = matches ? getJsonObjectProperty3(matches, "items") : null;
-  const matchProperties = matchItems ? getJsonObjectProperty3(matchItems, "properties") : null;
-  const matchEvidenceRefs = matchProperties ? getJsonObjectProperty3(matchProperties, "evidenceRefs") : null;
+  const ownership = defs ? getJsonObjectProperty4(defs, "ownership") : null;
+  const ownershipProperties = ownership ? getJsonObjectProperty4(ownership, "properties") : null;
+  const matches = ownershipProperties ? getJsonObjectProperty4(ownershipProperties, "matches") : null;
+  const matchItems = matches ? getJsonObjectProperty4(matches, "items") : null;
+  const matchProperties = matchItems ? getJsonObjectProperty4(matchItems, "properties") : null;
+  const matchEvidenceRefs = matchProperties ? getJsonObjectProperty4(matchProperties, "evidenceRefs") : null;
   if (matchEvidenceRefs) {
     matchEvidenceRefs.items = {
       type: "string",
@@ -50519,11 +51719,11 @@ async function blueprintImpactOutputRender(args = {}) {
     warnings: parsed.warnings
   };
 }
-var import__3, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync3, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
-    import__3 = __toESM(require__(), 1);
+    import__4 = __toESM(require__(), 1);
     init_v4();
     init_artifacts();
     init_config();

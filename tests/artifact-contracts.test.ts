@@ -104,12 +104,15 @@ Read the contract, then normalize before writing.
 `;
 }
 
-test("artifact contract read exposes structured model contracts for phase plan, phase summary, phase UAT, and quick run", async () => {
+test("artifact contract read exposes structured model contracts for phase plan, phase summary, phase UAT, quick run, and add-tests", async () => {
   const planContract = await blueprintArtifactContractRead({ artifactId: "phase.plan" });
   const summaryContract = await blueprintArtifactContractRead({ artifactId: "phase.summary" });
   const uatContract = await blueprintArtifactContractRead({ artifactId: "phase.uat" });
   const quickRunContract = await blueprintArtifactContractRead({
     artifactId: "report.quick-run"
+  });
+  const addTestsContract = await blueprintArtifactContractRead({
+    artifactId: "report.add-tests"
   });
   const listedContracts = await blueprintArtifactContractRead({});
   const listedPlanContract = listedContracts.contracts.find(
@@ -120,6 +123,9 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   );
   const listedQuickRunContract = listedContracts.contracts.find(
     (contract) => contract.id === "report.quick-run"
+  );
+  const listedAddTestsContract = listedContracts.contracts.find(
+    (contract) => contract.id === "report.add-tests"
   );
   const listedUatContract = listedContracts.contracts.find(
     (contract) => contract.id === "phase.uat"
@@ -220,6 +226,45 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   assert.equal(
     listedQuickRunContract?.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
+  );
+
+  assert.equal(
+    addTestsContract.contract.modelContract?.schemaId,
+    "blueprint.report.add-tests.model"
+  );
+  assert.equal(addTestsContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    addTestsContract.contract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/report.add-tests.model.schema.json"
+  );
+  assert.deepEqual(
+    (addTestsContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "coverageGoal"]
+  );
+  assert.ok(
+    addTestsContract.contract.modelContract?.renderedHeadings.includes(
+      "Classification And Test Plan"
+    )
+  );
+  assert.ok(
+    addTestsContract.contract.modelContract?.qualityRules.some((rule) =>
+      /COMPLETED add-tests reports require/i.test(rule)
+    )
+  );
+  assert.ok(
+    addTestsContract.contract.modelContract?.contextBindings.some((binding) =>
+      /validation or UAT artifact is required upstream context/i.test(binding)
+    )
+  );
+  const addTestsModelProperties = addTestsContract.contract.modelContract?.jsonSchema.properties as
+    | Record<string, unknown>
+    | undefined;
+  assert.equal(Boolean(addTestsModelProperties && "phase" in addTestsModelProperties), false);
+  assert.equal(Boolean(addTestsModelProperties && "reportPath" in addTestsModelProperties), false);
+  assert.ok(addTestsModelProperties && "summaryEvidence" in addTestsModelProperties);
+  assert.equal(
+    listedAddTestsContract?.modelContract?.schemaId,
+    "blueprint.report.add-tests.model"
   );
 });
 

@@ -5,7 +5,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactList,
+  blueprintArtifactReportAuthoringContext,
+  blueprintArtifactReportValidateModel,
+  blueprintArtifactReportWrite
+} from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseContext,
@@ -347,6 +352,162 @@ function validSummaryModel(
   };
 }
 
+type AddTestsReportContext = Awaited<ReturnType<typeof blueprintArtifactReportAuthoringContext>>;
+
+function validAddTestsReportModel(
+  context: AddTestsReportContext,
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" = "COMPLETED",
+  patch: Record<string, unknown> = {}
+): Record<string, unknown> {
+  const summaryEvidence = Object.fromEntries(
+    context.completedSummaries.map((summary) => [
+      summary.path,
+      {
+        planId: summary.planId,
+        linkedPlanPath: summary.linkedPlanPath,
+        summaryStatus: "COMPLETED",
+        targetedVerification: summary.targetedVerification.length > 0
+          ? summary.targetedVerification
+          : ["npm test -- tests/phase-planning-tools.test.ts exits 0"],
+        coverageNote: `Generated tests cover completed plan ${summary.planId}.`
+      }
+    ])
+  );
+  const isComplete = status === "COMPLETED";
+  const isBlocked = status === "BLOCKED";
+  const targetCommandResult = isComplete ? "pass" : isBlocked ? "blocked" : "fail";
+
+  return {
+    status,
+    readiness: isComplete
+      ? "ready-for-routing"
+      : isBlocked
+        ? "blocked"
+        : "not-ready-for-routing",
+    completionState: isComplete ? "complete" : isBlocked ? "blocked" : "pending",
+    coverageGoal: [
+      "Add focused coverage for the completed summary behavior and saved verification evidence."
+    ],
+    evidenceUsed: [
+      ...context.completedSummaries.map((summary) => summary.path),
+      ...context.validationEvidencePaths
+    ],
+    summaryEvidence,
+    pendingPlans: context.pendingPlans,
+    dependencyPlans: context.dependencyPlans.map((dependency) => ({
+      ...dependency,
+      status: "satisfied",
+      evidence: `Dependency plan ${dependency.planId} has completed summary coverage.`
+    })),
+    classification: [
+      {
+        target: "tests/phase-planning-tools.test.ts",
+        category: "Integration / API",
+        reason: "Existing tool-contract tests exercise the saved summary behavior."
+      }
+    ],
+    testPlan: [
+      {
+        target: "tests/phase-planning-tools.test.ts",
+        scenario: "Exercise the completed execute-phase summary flow.",
+        expectedAssertion: "The focused summary tooling test exits successfully.",
+        command: "npm test -- tests/phase-planning-tools.test.ts"
+      }
+    ],
+    testsAddedOrUpdated: [
+      {
+        path: "tests/phase-planning-tools.test.ts",
+        summary: isBlocked
+          ? "none"
+          : "Added focused summary tooling coverage for the saved evidence path."
+      }
+    ],
+    targetedCommands: [
+      {
+        command: "npm test -- tests/phase-planning-tools.test.ts",
+        result: targetCommandResult,
+        evidence: isComplete
+          ? "The focused summary tooling command passed."
+          : isBlocked
+            ? "The focused command could not run because a prerequisite was blocked."
+            : "The focused command still has a failing generated-test case."
+      }
+    ],
+    resultCounts: {
+      generated: isBlocked ? 0 : 1,
+      passing: isComplete ? 1 : 0,
+      failing: status === "PARTIAL" ? 1 : 0,
+      blocked: isBlocked ? 1 : 0
+    },
+    bugsOrBlockers: isComplete
+      ? [
+          {
+            item: "none",
+            evidence: "none",
+            status: "NONE"
+          }
+        ]
+      : [
+          {
+            item: isBlocked ? "Missing test prerequisite" : "Generated test still failing",
+            evidence: isBlocked
+              ? "The targeted command was blocked before execution."
+              : "The targeted command returned a failing result.",
+            status: isBlocked ? "BLOCKER" : "BUG"
+          }
+        ],
+    manualOrDeferredWork: isComplete
+      ? [
+          {
+            item: "none",
+            reason: "none",
+            followUp: "none",
+            status: "NONE"
+          }
+        ]
+      : [
+          {
+            item: isBlocked ? "Resolve missing prerequisite" : "Repair generated-test failure",
+            reason: isBlocked
+              ? "The test command could not run."
+              : "The generated test surfaced unresolved behavior.",
+            followUp: "/blu-progress",
+            status: isBlocked ? "MANUAL" : "DEFERRED"
+          }
+        ],
+    remainingGaps: isComplete
+      ? [
+          {
+            gap: "none",
+            evidence: "none",
+            repair: "none",
+            status: "NONE"
+          }
+        ]
+      : [
+          {
+            gap: isBlocked ? "Blocked test execution" : "Failing generated coverage",
+            evidence: isBlocked
+              ? "The targeted command did not run."
+              : "The targeted command failed.",
+            repair: isBlocked ? "Resolve the prerequisite." : "Repair the failing behavior or test.",
+            status: isBlocked ? "BLOCKED" : "OPEN"
+          }
+        ],
+    followUpFixes: isComplete ? ["none"] : [isBlocked ? "none" : "Repair the failing generated coverage."],
+    verificationWrite: {
+      status: isComplete ? "written" : isBlocked ? "blocked" : "invalid",
+      evidence: isComplete
+        ? ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md updated through MCP."
+        : isBlocked
+          ? "Verification write blocked by the missing prerequisite."
+          : "Verification write remains invalid until generated coverage passes."
+    },
+    nextSafeAction: isComplete ? "/blu-code-review 3" : "/blu-progress",
+    ...patch
+  };
+}
+
 function summaryWithUntouchedScaffoldSections(planId = "01"): string {
   return `# Phase 03: Phase Discovery - Summary ${planId}
 
@@ -376,17 +537,52 @@ function summaryWithUntouchedScaffoldSections(planId = "01"): string {
 }
 
 function validVerificationContent(summaryFile = "03-01-SUMMARY.md"): string {
+  const summaryPath = `.blueprint/phases/03-phase-discovery/${summaryFile}`;
+
   return `# Phase 03: Phase Discovery - Verification
 
-**Coverage:** Reviewed \`${summaryFile}\` for the completed execution plan.
+**Coverage:** Reviewed \`${summaryFile}\` and related saved summaries.
+**Gate State:** PASS
+**Sign-off:** validation lead
 
 ## Validation Summary
 
 - The validated feature set is ready for UAT.
 
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+| ADD-TESTS-01 | Confirm saved execution summaries exist | ${summaryPath} | PASS | Summary-backed coverage is present. |
+
 ## Evidence Reviewed
 
-- .blueprint/phases/03-phase-discovery/${summaryFile}
+- ${summaryPath}
+
+## Test Infrastructure / Evidence Metadata
+
+- Harness: node:test
+- Commands: npm test
+- Evidence type: saved execution summary
+- Test infrastructure status: available
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+| none | none | none | NONE |
+
+## Gate State
+
+- Gate: PASS
+- Sign-off: validation lead
+- Readiness: ready for UAT
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+| none | none | none | none |
 
 ## Gaps Found
 
@@ -399,6 +595,37 @@ function validVerificationContent(summaryFile = "03-01-SUMMARY.md"): string {
 ## Next Safe Action
 
 - Continue with \`/blu-verify-work 3\`.
+`;
+}
+
+function validAddTestsReportContent(): string {
+  return `# Add Tests Report
+
+## Coverage Goal
+
+- Focused coverage goal.
+
+## Evidence Used
+
+- .blueprint/phases/03-phase-discovery/03-01-SUMMARY.md
+
+## Classification And Test Plan
+
+| Surface | Classification | Reason | Planned Test |
+|---------|----------------|--------|--------------|
+| tests/phase-planning-tools.test.ts | Integration / API | Existing harness. | Focused summary test. |
+
+## Tests Added Or Updated
+
+- tests/phase-planning-tools.test.ts
+
+## Remaining Gaps
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
 `;
 }
 
@@ -940,6 +1167,412 @@ test("phase summary writer rejects markdown fallback and repo validation reports
   assert.equal(invalidRead.validation?.valid, false);
   assert.match(invalidRead.validation?.issues.join("\n") ?? "", /placeholder scaffold text|must start|locked marker/i);
   assert.match(rejected.issues.join("\n"), /model-only|content is invalid/i);
+});
+
+test("add-tests report authoring blocks missing required upstream validation context early", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: {}
+  });
+
+  assert.equal(context.status, "invalid");
+  assert.equal(context.taskSchema, null);
+  assert.match(context.reason ?? "", /verification or UAT/i);
+  assert.equal(validation.status, "invalid");
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /verification or UAT|runtime task schema/i
+  );
+});
+
+test("add-tests report authoring rejects invalid validation evidence and non-canonical report names", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    "# Broken Verification\n\n## Evidence Reviewed\n\n- none\n",
+    "utf8"
+  );
+
+  const invalidEvidence = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const nonCanonical = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-03"
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent("03-99-SUMMARY.md"),
+    "utf8"
+  );
+  const staleEvidence = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+
+  assert.equal(invalidEvidence.status, "invalid");
+  assert.match(invalidEvidence.reason ?? "", /verification or UAT/i);
+  assert.match(invalidEvidence.warnings.join("\n"), /invalid validation evidence is ignored/i);
+  assert.equal(nonCanonical.status, "invalid");
+  assert.match(nonCanonical.reason ?? "", /canonical reportName add-tests-3/i);
+  assert.equal(staleEvidence.status, "invalid");
+  assert.match(staleEvidence.reason ?? "", /verification or UAT/i);
+  assert.match(staleEvidence.warnings.join("\n"), /Missing: 03-01-SUMMARY\.md/i);
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  const canonicalContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const nonCanonicalWrite = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "add-tests-03",
+    model: validAddTestsReportModel(canonicalContext)
+  });
+  const nonCanonicalFileExists = await readFile(
+    path.join(repoPath, ".blueprint/reports/add-tests-03.md"),
+    "utf8"
+  )
+    .then(() => true)
+    .catch(() => false);
+
+  assert.equal(canonicalContext.status, "ready");
+  assert.equal(nonCanonicalWrite.status, "invalid");
+  assert.match(nonCanonicalWrite.issues.join("\n"), /canonical reportName add-tests-3/i);
+  assert.equal(nonCanonicalFileExists, false);
+});
+
+test("add-tests report model validates and writes with exact empty optional dependency context", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const taskSchemaText = JSON.stringify(context.taskSchema);
+  const model = validAddTestsReportModel(context);
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model
+  });
+  const markdownFallback = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    content: validAddTestsReportContent()
+  });
+  const write = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model
+  });
+  const reused = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model
+  });
+  const invalidDependency = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      dependencyPlans: [
+        {
+          planId: "99",
+          path: ".blueprint/phases/03-phase-discovery/03-99-PLAN.md",
+          status: "satisfied",
+          evidence: "Injected dependency evidence."
+        }
+      ]
+    })
+  });
+  const wrongLinkedPlan = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      summaryEvidence: Object.fromEntries(
+        context.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            planId: summary.planId,
+            linkedPlanPath: ".blueprint/phases/03-phase-discovery/03-99-PLAN.md",
+            summaryStatus: "COMPLETED",
+            targetedVerification: summary.targetedVerification,
+            coverageNote: "Injected mismatched linked plan evidence."
+          }
+        ])
+      )
+    })
+  });
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.dependencyPlans, []);
+  assert.match(taskSchemaText, /"dependencyPlans"/);
+  assert.match(taskSchemaText, /"maxItems":0/);
+  assert.equal(validation.status, "valid", validation.diagnostics.map((d) => d.message).join("\n"));
+  assert.match(validation.renderPreview ?? "", /## Classification And Test Plan/);
+  assert.equal(markdownFallback.status, "invalid");
+  assert.match(markdownFallback.issues.join("\n"), /model-only|Markdown content fallback/i);
+  assert.equal(write.status, "created");
+  assert.equal(write.path, ".blueprint/reports/add-tests-3.md");
+  assert.equal(reused.status, "reused");
+  assert.equal(invalidDependency.status, "invalid");
+  assert.match(
+    invalidDependency.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have more than 0 items/i
+  );
+  assert.equal(wrongLinkedPlan.status, "invalid");
+  assert.match(
+    wrongLinkedPlan.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to constant/i
+  );
+});
+
+test("add-tests report schema rejects unsupported fields, missing required fields, and unsafe rendered sinks", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const unsupported = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      reportPath: ".blueprint/reports/add-tests-3.md"
+    })
+  });
+  const missingModel = validAddTestsReportModel(context);
+  delete missingModel.evidenceUsed;
+  const missing = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: missingModel
+  });
+  const injected = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      targetedCommands: [
+        {
+          command: "npm test -- tests/phase-planning-tools.test.ts\n## Injected",
+          result: "pass",
+          evidence: "targeted output"
+        }
+      ]
+    })
+  });
+  const nestedExtraField = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      summaryEvidence: Object.fromEntries(
+        context.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            planId: summary.planId,
+            linkedPlanPath: summary.linkedPlanPath,
+            summaryStatus: "COMPLETED",
+            targetedVerification: summary.targetedVerification,
+            coverageNote: "Generated coverage stays linked to the summary.",
+            reportPath: ".blueprint/reports/add-tests-3.md"
+          }
+        ])
+      )
+    })
+  });
+  const nonStringCoverageNote = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      summaryEvidence: Object.fromEntries(
+        context.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            planId: summary.planId,
+            linkedPlanPath: summary.linkedPlanPath,
+            summaryStatus: "COMPLETED",
+            targetedVerification: summary.targetedVerification,
+            coverageNote: 42
+          }
+        ])
+      )
+    })
+  });
+
+  assert.equal(unsupported.status, "invalid");
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have additional properties/i
+  );
+  assert.equal(missing.status, "invalid");
+  assert.match(
+    missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must have required property 'evidenceUsed'/i
+  );
+  assert.equal(injected.status, "invalid");
+  assert.match(
+    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must match pattern/i
+  );
+  assert.equal(nestedExtraField.status, "invalid");
+  assert.match(
+    nestedExtraField.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have additional properties/i
+  );
+  assert.equal(nonStringCoverageNote.status, "invalid");
+  assert.match(
+    nonStringCoverageNote.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be string/i
+  );
+});
+
+test("add-tests report runtime narrowing rejects stale summaries and impossible completed pending-plan state", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+
+  const initialContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const staleModel = validAddTestsReportModel(initialContext);
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1).replace(
+      "tests/phase-planning-tools.test.ts exits 0",
+      "tests/execute-phase-summary-tools.test.ts exits 0"
+    ),
+    "utf8"
+  );
+
+  const pendingContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const staleValidation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: staleModel
+  });
+  const impossibleCompleted = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(pendingContext)
+  });
+  const partialWithPending = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(pendingContext, "PARTIAL")
+  });
+  const blockedInvalidVerificationWrite = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(pendingContext, "BLOCKED", {
+      verificationWrite: {
+        status: "invalid",
+        evidence: "Blocked reports must not use an invalid verification write status."
+      }
+    })
+  });
+
+  assert.equal(pendingContext.status, "ready");
+  assert.deepEqual(pendingContext.pendingPlans.map((plan) => plan.planId), ["02"]);
+  assert.equal(staleValidation.status, "invalid");
+  assert.match(
+    staleValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have fewer than 1 items|must have required property|must be equal to one of/i
+  );
+  assert.equal(impossibleCompleted.status, "invalid");
+  assert.match(
+    impossibleCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have more than 0 items/i
+  );
+  assert.equal(
+    partialWithPending.status,
+    "valid",
+    partialWithPending.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(blockedInvalidVerificationWrite.status, "invalid");
+  assert.match(
+    blockedInvalidVerificationWrite.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to constant/i
+  );
 });
 
 test("legacy concise raw summaries stay visible but cannot close execution debt", async (t) => {
