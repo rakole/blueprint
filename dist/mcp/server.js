@@ -35310,10 +35310,35 @@ async function buildAllowedSecurityNextActions(args) {
     ])
   };
 }
+function splitMarkdownTableRow(line) {
+  const trimmed = line.trim();
+  const withoutLeadingPipe = trimmed.startsWith("|") ? trimmed.slice(1) : trimmed;
+  const withoutOuterPipes = withoutLeadingPipe.endsWith("|") ? withoutLeadingPipe.slice(0, -1) : withoutLeadingPipe;
+  const cells = [];
+  let current = "";
+  for (let index = 0; index < withoutOuterPipes.length; index += 1) {
+    const char = withoutOuterPipes[index];
+    const next = withoutOuterPipes[index + 1];
+    if (char === "\\" && next === "|") {
+      current += "|";
+      index += 1;
+      continue;
+    }
+    if (char === "|") {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  cells.push(current.trim());
+  return cells;
+}
+function isMarkdownTableSeparatorRow(cells) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
 function parseMarkdownTableRows(section) {
-  return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("|")).map(
-    (line) => line.split("|").map((cell) => cell.trim()).slice(1, -1)
-  ).filter((cells) => cells.length > 0).filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+  return section.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("|")).map(splitMarkdownTableRow).filter((cells) => cells.length > 0).filter((cells) => !isMarkdownTableSeparatorRow(cells));
 }
 function normalizeThreatCell(value, fallback) {
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -35322,6 +35347,15 @@ function normalizeThreatCell(value, fallback) {
 function normalizeThreatId(value, fallback) {
   const normalized = value.trim().replace(/`/g, "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
   return normalized.length > 0 ? normalized : fallback;
+}
+function isThreatIdSentinel(value) {
+  const normalized = value.trim().replace(/^`+|`+$/g, "").replace(/\s+/g, " ");
+  return /^(?:none|n\/a|na)$/i.test(normalized);
+}
+function looksLikeExplicitThreatId(value) {
+  return /^[A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*$/.test(
+    value.trim().replace(/^`+|`+$/g, "")
+  );
 }
 function extractThreatModelContent(content) {
   const blockSections = [...content.matchAll(/<threat_model\b[^>]*>([\s\S]*?)<\/threat_model>/gi)].map((match) => match[1]?.trim() ?? "").filter((section) => section.length > 0);
@@ -35378,10 +35412,11 @@ function parseThreatRowsFromPlanContent(content, sourcePlan) {
       const mitigationIndex = findIndex([/^mitigation$/, /^control$/, /^evidence$/], 4);
       rows.forEach((row, index) => {
         const fallbackId = `T-${String(threats.length + index + 1).padStart(2, "0")}`;
-        const threatId = normalizeThreatId(row[threatIdIndex] ?? "", fallbackId);
-        if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+        const rawThreatId = row[threatIdIndex] ?? "";
+        if (isThreatIdSentinel(rawThreatId)) {
           return;
         }
+        const threatId = normalizeThreatId(rawThreatId, fallbackId);
         threats.push({
           threatId,
           sourcePlan,
@@ -35395,10 +35430,17 @@ function parseThreatRowsFromPlanContent(content, sourcePlan) {
     }
     const bullets = collectListItems(section);
     bullets.forEach((item, index) => {
+      const rawMatch = item.match(/^`?([^`:\-]+?)`?\s*[:\-]\s*(.+)$/);
+      if (rawMatch && isThreatIdSentinel(rawMatch[1])) {
+        return;
+      }
+      if (!rawMatch && isThreatIdSentinel(item)) {
+        return;
+      }
       const match = item.match(/^`?([A-Za-z0-9._-]+)`?\s*[:\-]\s*(.+)$/);
       const threatId = normalizeThreatId(match?.[1] ?? "", `T-${String(index + 1).padStart(2, "0")}`);
       const mitigation = normalizeThreatCell(match?.[2] ?? item, "No mitigation text found in the saved plan.");
-      if (/^(?:none|n\/a|na)$/i.test(threatId)) {
+      if (match && isThreatIdSentinel(match[1])) {
         return;
       }
       threats.push({
@@ -35412,6 +35454,77 @@ function parseThreatRowsFromPlanContent(content, sourcePlan) {
     });
   }
   return disambiguateDeclaredThreatIds(threats);
+}
+function normalizeMarkdownHeaderCell(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+function findHeaderIndex(headers, patterns) {
+  return headers.findIndex((header) => patterns.some((pattern) => pattern.test(header)));
+}
+function parsePotentialThreatFlagId(value, headerImpliesThreatId) {
+  const raw = value.trim();
+  if (raw.length === 0 || isThreatIdSentinel(raw)) {
+    return null;
+  }
+  if (!headerImpliesThreatId && !looksLikeExplicitThreatId(raw)) {
+    return null;
+  }
+  const normalized = normalizeThreatId(raw, "");
+  return normalized.length > 0 ? normalized : null;
+}
+function parseThreatFlagsFromSummaryContent(content, sourceSummary) {
+  const flags = [];
+  for (const section of extractMarkdownSectionContent(content, /^Threat Flags?$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+    if (tableRows.length > 0) {
+      const header = tableRows[0].map(normalizeMarkdownHeaderCell);
+      const hasHeader = header.some(
+        (cell) => /^(?:threat id|id|flag|finding|evidence|summary|description|status)$/.test(cell)
+      );
+      const rows = hasHeader ? tableRows.slice(1) : tableRows;
+      const threatIdIndex = hasHeader ? findHeaderIndex(header, [/^(?:threat )?id$/]) : -1;
+      const evidenceIndex = hasHeader ? findHeaderIndex(header, [/^flag$/, /^finding$/, /^evidence$/, /^summary$/, /^description$/, /^notes?$/]) : -1;
+      rows.forEach((row) => {
+        if (row.every((cell) => isPlaceholderReviewListItem(cell))) {
+          return;
+        }
+        const fallbackEvidence = row.filter((cell) => cell.trim().length > 0).join(" | ");
+        const evidence = normalizeThreatCell(
+          row[evidenceIndex >= 0 ? evidenceIndex : threatIdIndex >= 0 ? Math.min(threatIdIndex + 1, row.length - 1) : 0] ?? fallbackEvidence,
+          fallbackEvidence
+        );
+        const threatId = parsePotentialThreatFlagId(
+          threatIdIndex >= 0 ? row[threatIdIndex] ?? "" : row[0] ?? "",
+          threatIdIndex >= 0
+        );
+        if (evidence.length === 0 || isPlaceholderReviewListItem(evidence)) {
+          return;
+        }
+        flags.push({
+          flagId: `${sourceSummary}#TF-${String(flags.length + 1).padStart(2, "0")}`,
+          sourceSummary,
+          threatId,
+          evidence
+        });
+      });
+      continue;
+    }
+    for (const item of collectListItems(section)) {
+      if (isPlaceholderReviewListItem(item)) {
+        continue;
+      }
+      const match = item.match(/^`?([A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*)`?\s*[:\-]\s*(.+)$/) ?? item.match(/^(?:threat\s+)?`?([A-Za-z][A-Za-z0-9._-]*-\d[A-Za-z0-9._-]*)`?\s*[:\-]\s*(.+)$/i);
+      const threatId = match ? parsePotentialThreatFlagId(match[1], false) : null;
+      const evidence = normalizeThreatCell(match?.[2] ?? item, item);
+      flags.push({
+        flagId: `${sourceSummary}#TF-${String(flags.length + 1).padStart(2, "0")}`,
+        sourceSummary,
+        threatId,
+        evidence
+      });
+    }
+  }
+  return flags;
 }
 function buildSecurityTaskSchema(args) {
   const schema = cloneJsonObject3(args.baseSchema);
@@ -35464,6 +35577,8 @@ function buildSecurityTaskSchema(args) {
       const threatId = definitionProperties ? getJsonObjectProperty2(definitionProperties, "threatId") : null;
       if (threatId && threatIdEnum.length > 0) {
         threatId.enum = definitionName === "findingRow" ? [...threatIdEnum, "unregistered"] : threatIdEnum;
+      } else if (threatId && definitionName === "findingRow") {
+        threatId.enum = ["unregistered"];
       }
     }
     if (acceptedRisks && threatIdEnum.length === 0) {
@@ -35522,6 +35637,7 @@ function buildSecurityTaskSchema(args) {
   ];
   schema["x-blueprint-runtimeContext"] = {
     declaredThreats: args.declaredThreats,
+    summaryThreatFlags: args.summaryThreatFlags,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     completedNextSafeAction: args.completedNextSafeAction,
     partialNextSafeAction: args.partialNextSafeAction,
@@ -35668,12 +35784,14 @@ async function buildSecurityAuthoringContext(args) {
       (planRead) => planRead.path && planRead.content ? parseThreatRowsFromPlanContent(planRead.content, planRead.path) : []
     )
   );
+  const summaryThreatFlags = summaryReads.flatMap(
+    (summaryRead) => summaryRead.path && summaryRead.content ? parseThreatFlagsFromSummaryContent(summaryRead.content, summaryRead.path) : []
+  );
   const knownEvidenceArtifacts = uniqueSortedStrings2([
     ...planIndex.plans.map((plan) => plan.path),
     ...completedSummaries,
     ...artifacts.verification ? [artifacts.verification] : [],
-    ...artifacts.uat ? [artifacts.uat] : [],
-    ...artifacts.existingSecurity ? [artifacts.existingSecurity] : []
+    ...artifacts.uat ? [artifacts.uat] : []
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
     phaseNumber,
@@ -35682,6 +35800,7 @@ async function buildSecurityAuthoringContext(args) {
   const taskSchema = blockers.length === 0 ? buildSecurityTaskSchema({
     baseSchema: securityBaseSchema,
     declaredThreats,
+    summaryThreatFlags,
     knownEvidenceArtifacts,
     allowCompleted: declaredThreats.length > 0,
     ...allowedNextActions
@@ -35692,6 +35811,7 @@ async function buildSecurityAuthoringContext(args) {
     completedSummaries,
     pendingPlans: summaryIndex.pendingPlans,
     declaredThreats,
+    summaryThreatFlags,
     knownEvidenceArtifacts,
     existingSecurity: artifacts.existingSecurity,
     ...allowedNextActions,
@@ -35806,38 +35926,31 @@ function parseSecurityThreatRegisterFindings(content) {
   const findings = [];
   const seenSummaries = /* @__PURE__ */ new Set();
   for (const section of extractMarkdownSectionContent(content, /^Threat Register$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+    if (tableRows.length === 0) {
+      continue;
+    }
     let headers = null;
-    for (const line of section.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("|")) {
-        continue;
-      }
-      const cells = trimmed.split("|").map((cell) => cell.trim()).slice(1, -1);
+    for (const cells of tableRows) {
       if (cells.length < 4) {
         continue;
       }
-      if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) {
-        continue;
-      }
-      const normalizedCells = cells.map(
-        (cell) => cell.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
-      );
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
       if (headers === null && normalizedCells.some((cell) => cell === "threat id")) {
         headers = normalizedCells;
         continue;
       }
-      const findHeaderIndex = (patterns) => headers?.findIndex((header) => patterns.some((pattern) => pattern.test(header))) ?? -1;
-      const threatIdIndex = findHeaderIndex([/^threat id$/]);
-      const dispositionIndex = findHeaderIndex([/^disposition$/]);
-      const mitigationIndex = findHeaderIndex([/^mitigation$/]);
-      const statusIndex = findHeaderIndex([/^status$/]);
-      const evidenceIndex = findHeaderIndex([/^evidence(?: note)?$/, /^evidence .* note$/]);
+      const threatIdIndex = headers ? findHeaderIndex(headers, [/^threat id$/]) : -1;
+      const dispositionIndex = headers ? findHeaderIndex(headers, [/^disposition$/]) : -1;
+      const mitigationIndex = headers ? findHeaderIndex(headers, [/^mitigation$/]) : -1;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : -1;
+      const evidenceIndex = headers ? findHeaderIndex(headers, [/^evidence(?: note)?$/, /^evidence .* note$/]) : -1;
       const hasRichFallbackShape = cells.length >= 7;
       const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 0] ?? "";
       const disposition = cells[dispositionIndex >= 0 ? dispositionIndex : hasRichFallbackShape ? 3 : 1] ?? "";
       const mitigation = cells[mitigationIndex >= 0 ? mitigationIndex : hasRichFallbackShape ? 4 : -1] ?? "";
-      const status = cells[statusIndex >= 0 ? statusIndex : hasRichFallbackShape ? 5 : 2] ?? "";
-      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : hasRichFallbackShape ? 6 : 3] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : hasRichFallbackShape ? 6 : 2] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : hasRichFallbackShape ? 7 : 3] ?? "";
       if (threatId.length === 0 || threatId === "Threat ID" || !/\bopen\b/i.test(status)) {
         continue;
       }
@@ -35926,6 +36039,65 @@ function resolveFindingsHeadingPattern(artifact) {
   }
   return /^(findings?|security findings|risks?|gaps found|unresolved gaps)$/i;
 }
+function normalizeSecurityFindingSeverity(value) {
+  const normalized = value.toLowerCase();
+  return ["critical", "high", "medium", "low", "unknown"].includes(
+    normalized
+  ) ? normalized : "unknown";
+}
+function parseSecurityFindingsTableFindings(content) {
+  const findings = [];
+  const seenSummaries = /* @__PURE__ */ new Set();
+  for (const section of extractMarkdownSectionContent(content, /^Findings$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+    if (tableRows.length === 0) {
+      continue;
+    }
+    let headers = null;
+    for (const cells of tableRows) {
+      if (cells.length < 6) {
+        continue;
+      }
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
+      if (headers === null && normalizedCells.includes("kind") && normalizedCells.includes("severity")) {
+        headers = normalizedCells;
+        continue;
+      }
+      const kindIndex = headers ? findHeaderIndex(headers, [/^kind$/]) : 0;
+      const severityIndex = headers ? findHeaderIndex(headers, [/^severity$/]) : 1;
+      const threatIdIndex = headers ? findHeaderIndex(headers, [/^threat id$/]) : 2;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : 3;
+      const evidenceIndex = headers ? findHeaderIndex(headers, [/^evidence$/]) : 4;
+      const recommendationIndex = headers ? findHeaderIndex(headers, [/^recommendation$/]) : 5;
+      const kind = cells[kindIndex >= 0 ? kindIndex : 0] ?? "";
+      const severity = cells[severityIndex >= 0 ? severityIndex : 1] ?? "";
+      const threatId = cells[threatIdIndex >= 0 ? threatIdIndex : 2] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : 3] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : 4] ?? "";
+      const recommendation = cells[recommendationIndex >= 0 ? recommendationIndex : 5] ?? "";
+      if (kind === "none" && severity === "none" && threatId === "none" && status === "none" && evidence === "none" && recommendation === "none") {
+        continue;
+      }
+      if (kind.length === 0 || isPlaceholderReviewListItem(evidence)) {
+        continue;
+      }
+      const summary = normalizeFindingSummary(
+        kind === "open-threat" ? `Open threat ${threatId}: ${evidence}` : `${kind}${threatId && threatId !== "none" ? ` ${threatId}` : ""}: ${evidence}${recommendation && !isPlaceholderReviewListItem(recommendation) ? ` Recommendation: ${recommendation}` : ""}`
+      );
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: normalizeSecurityFindingSeverity(severity),
+        summary,
+        sourceSection: "Findings"
+      });
+    }
+  }
+  return findings;
+}
 function parseFindingsFromArtifact(content, artifact) {
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings = [];
@@ -35952,6 +36124,19 @@ function parseFindingsFromArtifact(content, artifact) {
     }
   }
   if (artifact === "security") {
+    for (const tableFinding of parseSecurityFindingsTableFindings(content)) {
+      if (seenSummaries.has(tableFinding.summary)) {
+        continue;
+      }
+      seenSummaries.add(tableFinding.summary);
+      severityCounts[tableFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: tableFinding.severity,
+        summary: tableFinding.summary,
+        sourceSection: tableFinding.sourceSection
+      });
+    }
     for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
       if (seenSummaries.has(threatFinding.summary)) {
         continue;
@@ -36978,6 +37163,21 @@ function addSecurityGenericValueDiagnostics(args) {
     }
   }
 }
+function normalizeThreatFlagMatchText(value) {
+  return value.toLowerCase().replace(/`/g, "").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+function securityFindingMentionsThreatFlag(finding, flag) {
+  const flagText = normalizeThreatFlagMatchText(flag.evidence);
+  const findingText = normalizeThreatFlagMatchText(
+    `${finding.evidence} ${finding.recommendation}`
+  );
+  return flagText.length > 0 && findingText.length > 0 && findingText.includes(flagText);
+}
+function securityThreatRegisterMentionsThreatFlag(row, flag) {
+  const flagText = normalizeThreatFlagMatchText(flag.evidence);
+  const rowText = normalizeThreatFlagMatchText(`${row.evidence} ${row.verifierNote}`);
+  return flagText.length > 0 && rowText.length > 0 && rowText.includes(flagText);
+}
 function addSecuritySemanticDiagnostics(args) {
   const declaredThreatIds = new Set(args.authoringContext.declaredThreats.map((threat) => threat.threatId));
   const openThreats = args.model.threatRegister.filter((row) => row.status === "open");
@@ -36991,6 +37191,7 @@ function addSecuritySemanticDiagnostics(args) {
     return !threatRow || threatRow.status !== "accepted";
   });
   const unknownThreatIds = args.model.threatRegister.filter((row) => row.threatId !== "none").map((row) => row.threatId).filter((threatId) => !declaredThreatIds.has(threatId));
+  const realFindings = args.model.findings.filter((row) => row.kind !== "none");
   if (unknownThreatIds.length > 0) {
     args.diagnostics.push(
       modelDiagnostic({
@@ -37003,6 +37204,47 @@ function addSecuritySemanticDiagnostics(args) {
       })
     );
   }
+  args.authoringContext.summaryThreatFlags.forEach((flag, index) => {
+    if (flag.threatId && declaredThreatIds.has(flag.threatId)) {
+      const hasThreatRegisterCoverage = args.model.threatRegister.some(
+        (row) => row.threatId === flag.threatId && row.status !== "none" && securityThreatRegisterMentionsThreatFlag(row, flag)
+      );
+      const hasFindingCoverage = realFindings.some(
+        (row) => securityFindingMentionsThreatFlag(row, flag)
+      );
+      if (!hasThreatRegisterCoverage && !hasFindingCoverage) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `authoringContext.summaryThreatFlags[${index}]`,
+            code: "residual.summary_threat_flag_uncovered",
+            message: `Summary threat flag ${flag.flagId} maps to declared threat ${flag.threatId} but is not covered by the security model.`,
+            context: { flag },
+            suggestion: "Cover the flag with the matching threatRegister row or a concrete security finding."
+          })
+        );
+      }
+      return;
+    }
+    const matchingUnregisteredFindings = realFindings.filter(
+      (row) => row.kind === "unregistered-flag" && row.threatId === "unregistered"
+    );
+    const hasExplicitCoverage = matchingUnregisteredFindings.some(
+      (row) => securityFindingMentionsThreatFlag(row, flag)
+    );
+    if (!hasExplicitCoverage) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: `authoringContext.summaryThreatFlags[${index}]`,
+          code: "residual.summary_threat_flag_uncovered",
+          message: `Summary threat flag ${flag.flagId} is not registered in saved plan threats and must be covered by an unregistered-flag finding.`,
+          context: { flag },
+          suggestion: "Add a findings row with kind unregistered-flag, threatId unregistered, concrete evidence, and a follow-up route."
+        })
+      );
+    }
+  });
   if (missingAcceptedRisks.length > 0) {
     args.diagnostics.push(
       modelDiagnostic({

@@ -24,6 +24,8 @@ type SecurePhaseRepoOptions = {
   extraPendingPlan?: boolean;
   extraCompletedPlan?: boolean;
   extraCompletedPlanThreatId?: string;
+  threatId?: string;
+  threatMitigation?: string;
 };
 
 function securityPlanContent(
@@ -31,14 +33,16 @@ function securityPlanContent(
   options: {
     planId?: string;
     threatId?: string;
+    mitigation?: string;
     threatModelFormat?: "heading" | "xml";
   } = {}
 ): string {
   const planId = options.planId ?? "01";
   const threatId = options.threatId ?? "T-01";
+  const mitigation = options.mitigation ?? "Persist security evidence through MCP review record.";
   const threatTable = `| Threat ID | Category | Component | Disposition | Mitigation |
 |-----------|----------|-----------|-------------|------------|
-| ${threatId} | Tampering | Review substrate | mitigate | Persist security evidence through MCP review record. |`;
+| ${threatId} | Tampering | Review substrate | mitigate | ${mitigation} |`;
   const threatModel = withThreatModel
     ? options.threatModelFormat === "xml"
       ? `
@@ -171,7 +175,9 @@ async function createSecurePhaseRepo(
     threatModelFormat = "heading",
     extraPendingPlan = false,
     extraCompletedPlan = false,
-    extraCompletedPlanThreatId = "T-01"
+    extraCompletedPlanThreatId = "T-01",
+    threatId = "T-01",
+    threatMitigation = "Persist security evidence through MCP review record."
   } = options;
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-secure-phase-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -225,7 +231,11 @@ async function createSecurePhaseRepo(
   if (withPlan) {
     await writeFile(
       path.join(phaseDir, "05-01-PLAN.md"),
-      securityPlanContent(withThreatModel, { threatModelFormat }),
+      securityPlanContent(withThreatModel, {
+        threatId,
+        mitigation: threatMitigation,
+        threatModelFormat
+      }),
       "utf8"
     );
   }
@@ -498,6 +508,156 @@ test("security authoring context parses explicit threat_model blocks", async (t)
   assert.equal(validation.status, "valid");
 });
 
+test("security validation requires completed summary threat flags to be covered", async (t) => {
+  const repoPath = await createSecurePhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-security-audit/05-01-SUMMARY.md"),
+    `${completedSecuritySummaryContent()}
+## Threat Flags
+
+- External webhook authentication was not represented in the saved threat model.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security"
+  });
+  const ignored = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createSecurityModel()
+  });
+  const unregisteredThreatFlagModel = (findingEvidence: string): Record<string, unknown> =>
+    createSecurityModel({
+      status: "PARTIAL",
+      readiness: "needs-follow-up",
+      completionState: "partial",
+      findings: [
+        {
+          kind: "unregistered-flag",
+          severity: "medium",
+          threatId: "unregistered",
+          evidence: findingEvidence,
+          recommendation: "Add a saved threat row or route a focused hardening follow-up.",
+          status: "follow-up"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "External webhook threat registration",
+          reason: "Completed summary raised an unregistered threat flag.",
+          followUp: "/blu-progress",
+          status: "DEFERRED"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Unregistered summary threat flag",
+          evidence: "External webhook authentication was not represented in the saved threat model.",
+          repair: "Add the threat to saved plan evidence or route hardening follow-up.",
+          status: "OPEN"
+        }
+      ],
+      followUps: ["Register or route the external webhook threat flag."],
+      auditTrail: {
+        auditDate: "2026-04-30",
+        executionMode: "inline",
+        overwriteGate: "not-needed",
+        verifyOrAcceptDecision: "none",
+        pendingOpenThreatStatus: "none",
+        verifierNote: "Unregistered summary flag is carried as a follow-up finding."
+      },
+      nextSafeAction: "/blu-progress"
+    });
+  const unrelatedFinding = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: unregisteredThreatFlagModel("A generic hardening review remains for a different surface.")
+  });
+  const covered = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: unregisteredThreatFlagModel(
+      "External webhook authentication was not represented in the saved threat model."
+    )
+  });
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(
+    context.authoringContext && "summaryThreatFlags" in context.authoringContext
+      ? context.authoringContext.summaryThreatFlags.map((flag) => flag.evidence)
+      : [],
+    ["External webhook authentication was not represented in the saved threat model."]
+  );
+  assert.equal(ignored.status, "invalid");
+  assert.match(
+    ignored.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /unregistered.*threat flag|summary threat flag/i
+  );
+  assert.equal(unrelatedFinding.status, "invalid");
+  assert.match(
+    unrelatedFinding.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /unregistered.*threat flag|summary threat flag/i
+  );
+  assert.equal(covered.status, "valid");
+});
+
+test("security validation requires declared summary threat flags to cite concrete flag evidence", async (t) => {
+  const repoPath = await createSecurePhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-security-audit/05-01-SUMMARY.md"),
+    `${completedSecuritySummaryContent()}
+## Threat Flags
+
+| Threat ID | Evidence |
+|-----------|----------|
+| T-01 | External webhook authentication drifted after execution. |
+`,
+    "utf8"
+  );
+
+  const ignored = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createSecurityModel()
+  });
+  const covered = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createSecurityModel({
+      threatRegister: [
+        {
+          threatId: "T-01",
+          status: "closed",
+          evidence: "External webhook authentication drifted after execution.",
+          verifierNote: "The summary threat flag was explicitly reconciled with saved mitigation evidence."
+        }
+      ]
+    })
+  });
+
+  assert.equal(ignored.status, "invalid");
+  assert.match(
+    ignored.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /maps to declared threat T-01|summary threat flag/i
+  );
+  assert.equal(covered.status, "valid");
+});
+
 test("security authoring context disambiguates duplicate threat ids across plans", async (t) => {
   const repoPath = await createSecurePhaseRepo({
     extraCompletedPlan: true,
@@ -762,6 +922,38 @@ test("security optional empty threat context is accepted only through the exact 
       ]
     })
   });
+  const inventedFindingThreat = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createNoThreatModelPartialModel({
+      findings: [
+        {
+          kind: "missing-control",
+          severity: "unknown",
+          threatId: "T-999",
+          evidence: "The linked plan did not declare a threat model.",
+          recommendation: "Add a saved threat model before claiming completed security coverage.",
+          status: "follow-up"
+        }
+      ]
+    })
+  });
+  const pendingPartialDecision = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createNoThreatModelPartialModel({
+      auditTrail: {
+        auditDate: "2026-04-30",
+        executionMode: "inline",
+        overwriteGate: "not-needed",
+        verifyOrAcceptDecision: "pending",
+        pendingOpenThreatStatus: "none",
+        verifierNote: "PARTIAL should route follow-up without holding a pending open-threat gate."
+      }
+    })
+  });
   const falseCompleted = await blueprintReviewValidateModel({
     cwd: repoPath,
     phase: "5",
@@ -782,11 +974,94 @@ test("security optional empty threat context is accepted only through the exact 
     inventedThreat.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /must NOT have more than 1 items|must be equal to constant|must match exactly one schema/i
   );
+  assert.equal(inventedFindingThreat.status, "invalid");
+  assert.match(
+    inventedFindingThreat.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of/i
+  );
+  assert.equal(pendingPartialDecision.status, "invalid");
+  assert.match(
+    pendingPartialDecision.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /allowed values|must be equal to one of/i
+  );
   assert.equal(falseCompleted.status, "invalid");
   assert.match(
     falseCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /allowed values|must be equal to one of/i
   );
+});
+
+test("security threat parser treats N/A threat rows and bullets as no declared threats", async (t) => {
+  const tableRepo = await createSecurePhaseRepo({ threatId: "N/A" });
+  const bulletRepo = await createSecurePhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(tableRepo), { recursive: true, force: true });
+    await rm(path.dirname(bulletRepo), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(bulletRepo, ".blueprint/phases/05-security-audit/05-01-PLAN.md"),
+    securityPlanContent(false).replace(
+      "## Tasks",
+      `## Threat Model
+
+- n/a: No saved threat model rows for this plan.
+
+## Tasks`
+    ),
+    "utf8"
+  );
+
+  for (const repoPath of [tableRepo, bulletRepo]) {
+    const context = await blueprintReviewAuthoringContext({
+      cwd: repoPath,
+      phase: "5",
+      artifact: "security"
+    });
+    const validation = await blueprintReviewValidateModel({
+      cwd: repoPath,
+      phase: "5",
+      artifact: "security",
+      model: createNoThreatModelPartialModel()
+    });
+
+    assert.equal(context.status, "ready");
+    assert.deepEqual(
+      context.authoringContext && "declaredThreats" in context.authoringContext
+        ? context.authoringContext.declaredThreats.map((threat) => threat.threatId)
+        : [],
+      []
+    );
+    assert.equal(validation.status, "valid");
+  }
+});
+
+test("security finding table rows are counted and loaded from persisted security artifacts", async (t) => {
+  const repoPath = await createSecurePhaseRepo({ withThreatModel: false });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const written = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createNoThreatModelPartialModel()
+  });
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security"
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.counts.findings, 1);
+  assert.equal(loaded.found, true);
+  assert.deepEqual(
+    loaded.findings.map((finding) => [finding.severity, finding.sourceSection]),
+    [["unknown", "Findings"]]
+  );
+  assert.match(loaded.findings[0]?.summary ?? "", /missing-control unregistered/i);
+  assert.match(loaded.findings[0]?.summary ?? "", /linked plan did not declare a threat model/i);
 });
 
 test("security writer rejects markdown fallback and preserves overwrite protection", async (t) => {
@@ -807,26 +1082,19 @@ test("security writer rejects markdown fallback and preserves overwrite protecti
     artifact: "security",
     model: createSecurityModel()
   });
+  const reused = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createSecurityModel()
+  });
 
   assert.equal(markdownRejected.status, "invalid");
   assert.match(markdownRejected.warnings.join("\n"), /model-only|content is invalid/i);
   assert.equal(created.status, "created");
+  assert.equal(reused.status, "reused");
   const changedModel = createSecurityModel({
-    securitySummary: ["Changed security model content requires overwrite confirmation."],
-    evidenceCoverage: {
-      ".blueprint/phases/05-security-audit/05-01-PLAN.md": {
-        status: "used",
-        rationale: "Plan 01 declared tampering risk for the review substrate."
-      },
-      ".blueprint/phases/05-security-audit/05-01-SUMMARY.md": {
-        status: "used",
-        rationale: "Summary 01 records MCP review persistence as delivered work."
-      },
-      ".blueprint/phases/05-security-audit/05-SECURITY.md": {
-        status: "used",
-        rationale: "Existing security artifact was reviewed before replacement."
-      }
-    }
+    securitySummary: ["Changed security model content requires overwrite confirmation."]
   });
   await assert.rejects(
     () =>
@@ -1051,6 +1319,83 @@ test("blueprint_review_record counts open threat-register rows as security findi
   assert.deepEqual(
     loaded.findings.map((finding) => [finding.id, finding.severity, finding.summary]),
     [["F-01", "unknown", "Open threat T-01: Missing saved mitigation evidence for the declared threat."]]
+  );
+});
+
+test("security threat-register parsing preserves escaped pipes before open threat status", async (t) => {
+  const repoPath = await createSecurePhaseRepo({
+    threatMitigation: "Persist review evidence across API\\|CLI boundaries."
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const written = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: createSecurityModel({
+      status: "BLOCKED",
+      readiness: "blocked",
+      completionState: "blocked",
+      threatRegister: [
+        {
+          threatId: "T-01",
+          status: "open",
+          evidence: "Missing saved mitigation evidence for the declared threat.",
+          verifierNote: "The verify-versus-accept decision remains pending."
+        }
+      ],
+      findings: [
+        {
+          kind: "open-threat",
+          severity: "unknown",
+          threatId: "T-01",
+          evidence: "Missing saved mitigation evidence for the declared threat.",
+          recommendation: "Verify the mitigation or explicitly accept the risk before routing onward.",
+          status: "open"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "Verify or accept T-01",
+          reason: "The declared mitigation is not proven.",
+          followUp: "Ask the user for verify-versus-accept decision.",
+          status: "MANUAL"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Open threat T-01",
+          evidence: "Missing saved mitigation evidence for the declared threat.",
+          repair: "Verify mitigation evidence or accept risk explicitly.",
+          status: "BLOCKED"
+        }
+      ],
+      followUps: ["Verify the mitigation or explicitly accept the risk."],
+      auditTrail: {
+        auditDate: "2026-04-30",
+        executionMode: "inline",
+        overwriteGate: "not-needed",
+        verifyOrAcceptDecision: "pending",
+        pendingOpenThreatStatus: "still-open",
+        verifierNote: "Open threat blocks next-step routing."
+      },
+      nextSafeAction: "Blocked: pending-open-threat"
+    })
+  });
+  const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security"
+  });
+
+  assert.match(saved, /API\\\|CLI/);
+  assert.equal(loaded.found, true);
+  assert.deepEqual(
+    loaded.findings.map((finding) => [finding.severity, finding.summary]),
+    [["unknown", "Open threat T-01: Missing saved mitigation evidence for the declared threat."]]
   );
 });
 
