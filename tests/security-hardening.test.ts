@@ -193,22 +193,22 @@ test("review persistence sanitizes hidden control characters and records the war
   const written = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
-    artifact: "peer-review",
-    content: `# Phase 05: Security Audit - Peer Reviews
+    artifact: "ui-review",
+    content: `# Phase 05: Security Audit - UI Review
 
-**Reviewers:** security-reviewer, implementation-reviewer
+**Verdict:** FOLLOW_UP
 
-## Review Summa\u200Bry
+## UI Review Summa\u200Bry
 
 - Hidden control text should be stripped before persistence.
 
-## Reviewer Results
+## Evidence Reviewed
 
-- security-reviewer: Hidden control text was sanitized before persistence.
+- .blueprint/phases/05-security-audit/05-UI-SPEC.md
 
-## Disagreements
+## Findings
 
-- none
+- Hidden control text was sanitized before persistence.
 
 ## Follow-Ups
 
@@ -228,5 +228,5 @@ test("review persistence sanitizes hidden control characters and records the war
     "utf8"
   );
   assert.doesNotMatch(saved, /\u200B/);
-  assert.match(saved, /## Review Summary/);
+  assert.match(saved, /## UI Review Summary/);
 });
