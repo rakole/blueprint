@@ -155,7 +155,7 @@
 - Produces a durable artifact for review, security, UI, or shipping work.
 - Non-trivial ui-review runs use the shared long-running-mutation posture with visible stage and status fields.
 - Grounds the audit in saved execution evidence and the UI contract when available.
-- Reads the canonical `review.ui-review` authoring template before drafting or repair.
+- Uses the schema-first `review.ui-review` model contract, narrowed task schema, and `blueprint_review_validate_model` before persistence or repair.
 - Produces scored six-pillar evidence, an overall `/24` score, and top priority fixes or explicit pass evidence.
 - Provides a capability-gated `blueprint-ui-auditor` path and a clear one-pillar-at-a-time no-subagent fallback.
 - Keeps the review stages, pending gate, execution mode, artifact status, findings posture, and next safe action explicit while the UI audit is in flight.

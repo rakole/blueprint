@@ -3872,7 +3872,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "UI Review",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-UI-REVIEW.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["UI Review Summary", "Evidence Reviewed", "Findings", "Follow-Ups", "Next Safe Action"],
+    requiredHeadings: [...UI_REVIEW_MODEL_CONTRACT.renderedHeadings],
     lockedMarkers: ["**Verdict:**"],
     placeholderSignals: ["PASS|FOLLOW_UP|BLOCKED"],
     notes: [

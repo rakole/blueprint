@@ -465,11 +465,22 @@ type UiReviewStructuredModel = {
 type UiReviewAuthoringContext = {
     phase: ReviewScopePhase;
     path: string;
+    completedPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
     completedSummaries: string[];
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+    }>;
     pendingPlans: string[];
     lowerWavePendingPlanIds: string[];
+    verification: string | null;
+    uat: string | null;
     knownEvidenceArtifacts: string[];
     existingUiReview: string | null;
+    optionalEvidenceArtifacts: string[];
     allowedExistingReviewPostures: UiReviewStructuredModel["auditTrail"]["existingReviewPosture"][];
     completedNextSafeAction: string;
     followUpNextSafeAction: string;
