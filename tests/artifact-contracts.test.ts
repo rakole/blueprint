@@ -104,8 +104,9 @@ Read the contract, then normalize before writing.
 `;
 }
 
-test("artifact contract read exposes structured model contracts for phase plan, phase UAT, and quick run", async () => {
+test("artifact contract read exposes structured model contracts for phase plan, phase summary, phase UAT, and quick run", async () => {
   const planContract = await blueprintArtifactContractRead({ artifactId: "phase.plan" });
+  const summaryContract = await blueprintArtifactContractRead({ artifactId: "phase.summary" });
   const uatContract = await blueprintArtifactContractRead({ artifactId: "phase.uat" });
   const quickRunContract = await blueprintArtifactContractRead({
     artifactId: "report.quick-run"
@@ -113,6 +114,9 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   const listedContracts = await blueprintArtifactContractRead({});
   const listedPlanContract = listedContracts.contracts.find(
     (contract) => contract.id === "phase.plan"
+  );
+  const listedSummaryContract = listedContracts.contracts.find(
+    (contract) => contract.id === "phase.summary"
   );
   const listedQuickRunContract = listedContracts.contracts.find(
     (contract) => contract.id === "report.quick-run"
@@ -167,6 +171,28 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   );
 
   assert.equal(
+    summaryContract.contract.modelContract?.schemaId,
+    "blueprint.phase.summary.model"
+  );
+  assert.equal(summaryContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    summaryContract.contract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json"
+  );
+  assert.deepEqual(
+    (summaryContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "outcome"]
+  );
+  assert.ok(
+    summaryContract.contract.modelContract?.renderedHeadings.includes("Gap / Repair Routes")
+  );
+  assert.ok(
+    summaryContract.contract.modelContract?.qualityRules.some((rule) =>
+      /COMPLETED summaries must prove/i.test(rule)
+    )
+  );
+
+  assert.equal(
     quickRunContract.contract.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
   );
@@ -187,6 +213,10 @@ test("artifact contract read exposes structured model contracts for phase plan, 
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
   assert.equal(listedUatContract?.modelContract?.schemaId, "blueprint.phase.uat.model");
+  assert.equal(
+    listedSummaryContract?.modelContract?.schemaId,
+    "blueprint.phase.summary.model"
+  );
   assert.equal(
     listedQuickRunContract?.modelContract?.schemaId,
     "blueprint.report.quick-run.model"
@@ -340,6 +370,17 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(uiContract.notes.join("\n"), /six UI dimensions/i);
   assert.match(summaryContract.notes.join("\n"), /`COMPLETED` is the only status that closes execution debt/);
   assert.match(summaryContract.notes.join("\n"), /`PARTIAL` and `BLOCKED` are truthful carry-forward evidence/);
+  assert.deepEqual(summaryContract.requiredHeadings, [
+    "Outcome",
+    "Changes Made",
+    "Verification",
+    "Dependency Plans",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence"
+  ]);
+  assert.match(summaryContract.authoringTemplate, /## Gap \/ Repair Routes/);
   assert.equal(impactContract.ownerTool, "blueprint_impact_report_write");
   assert.equal(impactContract.pathOwner, "blueprint_impact_report_write");
   assert.equal(impactContract.canonicalFilePattern, ".blueprint/impact/<impact-id>/IMPACT.md");

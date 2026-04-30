@@ -58,7 +58,7 @@ Contract notes:
 
 ## Structured Model Schema Assets
 
-Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model. For `phase.verification`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths and allowed next actions before `/blu-validate-phase` validates and writes the model. For `phase.uat`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths, ready verification evidence, and allowed next actions before `/blu-verify-work` validates and writes the model.
+Some artifact contracts expose a `modelContract.schemaPath` pointing at a JSON Schema asset under `src/mcp/artifact-contracts/schemas/`. For `phase.plan`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json`; `blueprint_phase_plan_authoring_context` narrows that base schema at runtime with exact roadmap requirement ids, saved evidence artifacts, and allowed dependency plan ids before `/blu-plan-phase` validates and writes the structured model. For `phase.summary`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json`; `blueprint_phase_summary_authoring_context` narrows it with the selected plan's exact acceptance checks, dependency plan inventory, linked plan path, summary path, and status-safe next actions before `/blu-execute-phase` validates and writes the model. For `phase.verification`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths and allowed next actions before `/blu-validate-phase` validates and writes the model. For `phase.uat`, the base schema lives at `src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json`; `blueprint_phase_validation_authoring_context` narrows it with exact completed summary paths, ready verification evidence, and allowed next actions before `/blu-verify-work` validates and writes the model.
 
 ## Core Top-Level Artifacts
 
@@ -318,10 +318,12 @@ Validation expectations:
 
 Validation expectations:
 - must start with an H1 title at the very top of the normalized artifact body
-- must include populated `## Outcome`, `## Changes Made`, `## Verification`, `## Follow-Ups`, and `## Evidence`
-- the locked `**Plan:**` and `**Status:**` markers remain required, but the scaffold placeholder values they carry are rejected by `blueprint_phase_summary_write`
+- model-rendered summaries include populated `## Outcome`, `## Changes Made`, `## Verification`, `## Dependency Plans`, `## Manual / Deferred Work`, `## Gap / Repair Routes`, `## Follow-Ups`, and `## Evidence`
+- the locked `**Plan:**` and `**Status:**` markers remain required, but the model must not author them; `blueprint_phase_summary_write` renders plan provenance from MCP args and rejects Markdown content fallback
 - the `**Plan:**` marker must match the linked `XX-YY-PLAN.md` path for the summary to count as valid execution evidence
-- scaffold-only placeholder text in `Changes Made`, `Verification`, `Follow-Ups`, and `Evidence` is rejected by `blueprint_phase_summary_write`
+- `COMPLETED` summaries require passing targeted verification, exact `none` sentinel rows for manual/deferred work and gap routes, and `/blu-validate-phase <phase>` as the next safe action
+- `PARTIAL` and `BLOCKED` summaries require concrete unresolved verification or repair evidence and remain pending execution debt
+- existing raw Markdown summaries may still be read and indexed for compatibility, but new writes are schema-first model writes
 
 ### `XX-DISCUSS-CHECKPOINT.json`
 

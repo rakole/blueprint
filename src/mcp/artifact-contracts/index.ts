@@ -1004,6 +1004,9 @@ function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
 
 **Plan:** \`${phasePrefix(context)}-${planId(context)}-PLAN.md\`
 **Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-validation|not-ready-for-validation|blocked
+**Completion State:** complete|pending|blocked
+**Next Safe Action:** /blu-validate-phase <phase>|/blu-execute-phase <phase>|/blu-progress
 
 ## Outcome
 
@@ -1015,7 +1018,27 @@ function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
 
 ## Verification
 
-- Command, test, or evidence that supports the reported outcome.
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| <acceptance criterion> | <targeted command> | pass|fail|blocked|not-run | <artifact, output, or repo evidence> | <note> |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
 
 ## Follow-Ups
 
@@ -1025,6 +1048,91 @@ function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
 
 - \`${summaryPath(context)}\` or other saved repo evidence if helpful.`;
 }
+
+const PHASE_SUMMARY_MODEL_SCHEMA_FILE = "phase.summary.model.schema.json";
+const PHASE_SUMMARY_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json";
+
+const PHASE_SUMMARY_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.phase.summary.model",
+  schemaVersion: "1.0.0",
+  schemaPath: PHASE_SUMMARY_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(PHASE_SUMMARY_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, planId, artifact, path, linkedPlanPath, content, or the rendered Plan marker; the write tool owns identity, plan linkage, and path derivation.",
+    "Author against the narrowed taskSchema returned by blueprint_phase_summary_authoring_context or blueprint_phase_summary_validate_model so acceptance checks, dependency plans, summary path, and status-safe next actions stay deterministic.",
+    "COMPLETED summaries must prove every targeted verification row passed, use exact none sentinel rows for manual/deferred work and gap routes, and route to /blu-validate-phase for the current phase.",
+    "PARTIAL and BLOCKED summaries must include at least one concrete gap or repair route, at least one non-pass targeted verification row, and a non-none follow-up.",
+    "Use concrete command, test, artifact, or repo-path evidence; do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, summary path, planId, and linkedPlanPath come from blueprint_phase_locate plus blueprint_phase_summary_write arguments.",
+    "The selected plan, acceptance criteria, dependency plan ids, dependency plan paths, files_modified, and read_first surfaces come from blueprint_phase_plan_read and blueprint_phase_plan_index.",
+    "Allowed nextSafeAction values come from the status truth table and the implemented command catalog.",
+    "Existing summary content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "Outcome",
+    "Changes Made",
+    "Verification",
+    "Dependency Plans",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-validation",
+    completionState: "complete",
+    outcome: [
+      "Executed the selected plan and recorded saved evidence for the acceptance checks."
+    ],
+    changesMade: [
+      "Updated the targeted runtime and test surfaces owned by the selected plan."
+    ],
+    targetedVerification: [
+      {
+        check: "npm test -- tests/execute-phase-summary-tools.test.ts exits 0",
+        command: "npm test -- tests/execute-phase-summary-tools.test.ts",
+        result: "pass",
+        evidence: "targeted test output",
+        notes: "The focused summary-tool regression slice passed."
+      }
+    ],
+    dependencyPlans: [],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    evidence: [
+      {
+        kind: "test",
+        source: "npm test -- tests/execute-phase-summary-tools.test.ts",
+        summary: "Focused execute-phase summary tooling tests passed."
+      }
+    ],
+    nextSafeAction: "/blu-validate-phase 3"
+  },
+  exampleLeakageSignals: [
+    "Executed the selected plan and recorded saved evidence for the acceptance checks.",
+    "Updated the targeted runtime and test surfaces owned by the selected plan.",
+    "Focused execute-phase summary tooling tests passed."
+  ]
+};
 
 function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Verification
@@ -2771,7 +2879,16 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Phase Summary",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-YY-SUMMARY.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Outcome", "Changes Made", "Verification", "Follow-Ups", "Evidence"],
+    requiredHeadings: [
+      "Outcome",
+      "Changes Made",
+      "Verification",
+      "Dependency Plans",
+      "Manual / Deferred Work",
+      "Gap / Repair Routes",
+      "Follow-Ups",
+      "Evidence"
+    ],
     lockedMarkers: ["**Plan:**", "**Status:**"],
     placeholderSignals: [
       "COMPLETED|PARTIAL|BLOCKED",
@@ -2784,9 +2901,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Summary artifacts stay linked to a saved plan and should remain grounded in completed work.",
       "The locked `Plan` and `Status` markers remain required, but scaffold placeholder values are rejected by write validation.",
+      "Structured model authoring is schema-first: runtime context supplies phase identity, plan id, linked plan path, summary path, dependency plans, acceptance criteria, and status-safe next actions.",
       "`COMPLETED` is the only status that closes execution debt; `PARTIAL` and `BLOCKED` are truthful carry-forward evidence and remain pending.",
       "Untouched scaffold prose in Changes Made, Verification, Follow-Ups, and Evidence is also rejected."
     ],
+    modelContract: PHASE_SUMMARY_MODEL_CONTRACT,
     renderScaffoldTemplate: renderSummaryTemplate,
     renderAuthoringTemplate: renderSummaryTemplate
   },

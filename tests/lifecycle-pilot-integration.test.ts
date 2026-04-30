@@ -298,6 +298,55 @@ function validSummaryContent(planId = "01"): string {
 `;
 }
 
+function validSummaryModel(planId = "01"): Record<string, unknown> {
+  return {
+    status: "COMPLETED",
+    readiness: "ready-for-validation",
+    completionState: "complete",
+    outcome: [
+      `Execution completed for lifecycle pilot plan ${planId} and produced durable lifecycle summary evidence.`
+    ],
+    changesMade: [
+      "Captured the lifecycle pilot completion in the saved summary artifact."
+    ],
+    targetedVerification: [
+      {
+        check: "tests/lifecycle-pilot-integration.test.ts exits 0",
+        command: "npx tsx --test tests/lifecycle-pilot-integration.test.ts",
+        result: "pass",
+        evidence: "The lifecycle integration test checks the saved handoff chain.",
+        notes: "The selected acceptance criterion passed."
+      }
+    ],
+    dependencyPlans: [],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    evidence: [
+      {
+        kind: "test",
+        source: "tests/lifecycle-pilot-integration.test.ts",
+        summary: "Lifecycle integration coverage exercised the saved handoff chain."
+      }
+    ],
+    nextSafeAction: "/blu-validate-phase 3"
+  };
+}
+
 function validVerificationContent(options: {
   summaryFile?: string;
   nextSafeAction?: string;
@@ -473,7 +522,7 @@ async function completeLifecycle(repoPath: string) {
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   const verification = await blueprintPhaseValidationWrite({
     cwd: repoPath,
@@ -524,7 +573,7 @@ test("lifecycle pilot integration tools stay registered and route the phase thro
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    content: validSummaryContent("01")
+    model: validSummaryModel("01")
   });
   const summaryRead = await blueprintPhaseSummaryRead({
     cwd: repoPath,
@@ -571,7 +620,10 @@ test("lifecycle pilot integration tools stay registered and route the phase thro
   assert.equal(summaryWrite.status, "created");
   assert.equal(summaryRead.found, true);
   assert.equal(summaryRead.validation?.valid, true);
-  assert.equal(summaryRead.metadata?.linkedPlanPath, "03-01-PLAN.md");
+  assert.equal(
+    summaryRead.metadata?.linkedPlanPath,
+    ".blueprint/phases/03-lifecycle-pilot/03-01-PLAN.md"
+  );
   assert.deepEqual(summaryIndex.completedPlans, ["01"]);
   assert.deepEqual(summaryIndex.pendingPlans, []);
   assert.match(afterSummaryStatus.nextAction, /\/blu-validate-phase 3/);

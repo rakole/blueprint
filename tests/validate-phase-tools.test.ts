@@ -27,6 +27,75 @@ import { blueprintStateLoad, blueprintStateUpdate } from "../src/mcp/tools/state
 
 type PhaseValidationRenderInput = Parameters<typeof blueprintPhaseValidationRender>[0];
 
+function validationSummaryContent(
+  planId: "01" | "02" = "01",
+  status: "COMPLETED" | "PARTIAL" = "COMPLETED"
+): string {
+  const isComplete = status === "COMPLETED";
+  const readiness = isComplete ? "ready-for-validation" : "not-ready-for-validation";
+  const completionState = isComplete ? "complete" : "pending";
+  const nextSafeAction = isComplete ? "/blu-validate-phase 3" : "/blu-execute-phase 3";
+  const verificationResult = isComplete ? "pass" : "fail";
+  const manualRow = isComplete
+    ? "| none | none | none | NONE |"
+    : "| Validation follow-up | Verification still needs repair. | /blu-execute-phase 3 | DEFERRED |";
+  const gapRow = isComplete
+    ? "| none | none | none | NONE |"
+    : "| Validation evidence incomplete | Targeted verification evidence is not passing. | Rerun execute-phase after repair. | OPEN |";
+  const followUp = isComplete ? "none" : "Repair and rerun the targeted verification.";
+
+  return `# Phase 03: Phase Discovery - Summary ${planId}
+
+**Plan:** \`03-${planId}-PLAN.md\`
+**Status:** ${status}
+**Readiness:** ${readiness}
+**Completion State:** ${completionState}
+**Next Safe Action:** ${nextSafeAction}
+
+## Outcome
+
+- Execution ${isComplete ? "finished" : "made partial progress"} and produced durable summary evidence.
+
+## Changes Made
+
+- Captured the validation-plan execution in the phase summary.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/validate-phase-tools.test.ts exits 0 | npx tsx --test tests/validate-phase-tools.test.ts | ${verificationResult} | Wrote the summary artifact at .blueprint/phases/03-phase-discovery/03-${planId}-SUMMARY.md. | The selected acceptance criterion ${isComplete ? "passed" : "remains unresolved"}. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+${manualRow}
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+${gapRow}
+
+## Follow-Ups
+
+- ${followUp}
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | .blueprint/phases/03-phase-discovery/03-${planId}-SUMMARY.md | Saved summary artifact. |
+`;
+}
+
 async function createValidationReadyRepo(): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-validate-phase-"));
   const repoPath = path.join(tempRoot, "repo");
@@ -243,31 +312,7 @@ Exercise validation routing.
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md\`
-`,
+    validationSummaryContent("01", "COMPLETED"),
     "utf8"
   );
   await writeFile(
@@ -329,31 +374,7 @@ Exercise invalid summary indexing.
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 02
-
-**Plan:** \`03-02-PLAN.md\`
-**Status:** PARTIAL
-
-## Outcome
-
-- Execution is still carrying forward follow-up evidence.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
-
-## Follow-Ups
-
-- Validate the incomplete summary does not close execution coverage.
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
-`,
+    validationSummaryContent("02", "PARTIAL"),
     "utf8"
   );
 
@@ -374,8 +395,11 @@ async function markValidationPlanCompleted(repoPath: string, planId: string): Pr
     ".blueprint/phases/03-phase-discovery",
     `03-${planId}-SUMMARY.md`
   );
-  const summaryRaw = await readFile(summaryPath, "utf8");
-  await writeFile(summaryPath, summaryRaw.replace("**Status:** PARTIAL", "**Status:** COMPLETED"), "utf8");
+  await writeFile(
+    summaryPath,
+    validationSummaryContent(planId === "02" ? "02" : "01", "COMPLETED"),
+    "utf8"
+  );
 }
 
 function renderVerificationArtifact(
@@ -2694,31 +2718,7 @@ test("validation tools reject orphan summaries when the matching plan artifact i
 
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 02
-
-**Plan:** \`03-02-PLAN.md\`
-**Status:** PARTIAL
-
-## Outcome
-
-- Execution is still carrying forward follow-up evidence.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
-
-## Follow-Ups
-
-- Validate the incomplete summary does not close execution coverage.
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
-`,
+    validationSummaryContent("02", "PARTIAL"),
     "utf8"
   );
   await rm(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"));
@@ -2738,31 +2738,7 @@ test("validation tools mark ROADMAP phase completion after UAT closes", async (t
 
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 02
-
-**Plan:** \`03-02-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
-`,
+    validationSummaryContent("02", "COMPLETED"),
     "utf8"
   );
   await writeFile(
@@ -3019,31 +2995,7 @@ test("validation tools do not complete the roadmap when UAT evidence is invalid"
 
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"),
-    `# Phase 03: Phase Discovery - Summary 02
-
-**Plan:** \`03-02-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced durable summary evidence.
-
-## Changes Made
-
-- Captured the completed validation-plan execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-phase-discovery/03-02-SUMMARY.md\`
-`,
+    validationSummaryContent("02", "COMPLETED"),
     "utf8"
   );
 

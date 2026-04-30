@@ -93,9 +93,16 @@ frontmatter for the invoking execution command.
 - `blueprint_phase_execution_targets`: use it as the deterministic read path
   for execute-phase target selection, lower-wave blockers, overwrite
   candidates, and overlap warnings.
+- `blueprint_phase_summary_authoring_context`: read it before summary drafting
+  so the model authoring contract is narrowed to the selected saved plan's
+  acceptance criteria, dependency plan inventory, linked plan path, summary
+  path, and status-safe next actions.
+- `blueprint_phase_summary_validate_model`: validate the structured summary
+  model and repair all diagnostics together before persistence.
 - `blueprint_phase_summary_write`: pass numeric `phase`, numeric `planId`, and
-  full summary content. The matching plan must already exist, and the returned
-  `path` plus `linkedPlanPath` are authoritative.
+  the same validated structured `model`. The matching plan must already exist,
+  Markdown content fallback is rejected, and the returned `path` plus
+  `linkedPlanPath` are authoritative.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and
   validation metadata by contract id instead of relying on copied prompt-local
   templates.
@@ -118,6 +125,8 @@ does not widen a command's tool scope.
 - `blueprint_phase_plan_read`
 - `blueprint_phase_summary_index`
 - `blueprint_phase_summary_read`
+- `blueprint_phase_summary_authoring_context`
+- `blueprint_phase_summary_validate_model`
 - `blueprint_phase_summary_write`
 - `blueprint_artifact_contract_read`
 - `blueprint_config_get`
@@ -178,9 +187,9 @@ handoff, and no report persistence.
 - Use `blueprint-executor` only for bounded plan work with disjoint write
   ownership. Use the single-agent fallback when agents are unavailable or
   unsafe.
-- Persist one summary per executed plan through MCP and treat valid `PARTIAL`
-  and `BLOCKED` summaries as durable carry-forward evidence rather than
-  completion.
+- Persist one schema-first summary model per executed plan through MCP and
+  treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward
+  evidence rather than completion.
 - Do not make a phase-level completion claim from execute-phase itself; that
   waits for `/blu-validate-phase`, and `/blu-verify-work` remains the verifier
   follow-up once validation evidence exists.

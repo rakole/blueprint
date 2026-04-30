@@ -29,6 +29,59 @@ type CodeReviewRepoOptions = {
   configPatch?: Record<string, unknown>;
 };
 
+function completedSummaryContent(): string {
+  return `# Phase 05: Code Review Scope - Summary 01
+
+**Plan:** \`05-01-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase 5
+
+## Outcome
+
+- Execution finished and produced a summary artifact.
+
+## Changes Made
+
+- Added the review-ready feature slice.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/code-review-slice.test.ts exits 0 | npx tsx --test tests/code-review-slice.test.ts | pass | Ran the saved summary tooling slice. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | .blueprint/phases/05-review-scope/05-01-SUMMARY.md | Saved summary artifact. |
+`;
+}
+
 async function createCodeReviewRepo(
   options: CodeReviewRepoOptions = {}
 ): Promise<string> {
@@ -417,31 +470,7 @@ Exercise code-review follow-up routing.
   );
   await writeFile(
     path.join(phaseDir, "05-01-SUMMARY.md"),
-    `# Phase 05: Code Review Scope - Summary 01
-
-**Plan:** \`05-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and produced a summary artifact.
-
-## Changes Made
-
-- Added the review-ready feature slice.
-
-## Verification
-
-- Ran the saved summary tooling slice.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/05-review-scope/05-01-SUMMARY.md\`
-`,
+    completedSummaryContent(),
     "utf8"
   );
   await writeFile(

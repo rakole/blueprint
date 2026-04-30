@@ -25,6 +25,65 @@ type MilestoneAuditReportArgs = {
   nextSafeAction: string;
 };
 
+function completedSummaryContent(args: {
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+}): string {
+  const summaryPath = `${args.phaseDir}/${args.phasePrefix}-01-SUMMARY.md`;
+
+  return `# Phase ${args.phasePrefix}: ${args.phaseName} - Summary 01
+
+**Plan:** \`${args.phasePrefix}-01-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase ${Number.parseInt(args.phasePrefix, 10)}
+
+## Outcome
+
+- Execution finished and left durable implementation evidence.
+
+## Changes Made
+
+- Captured the completed execution in the phase summary.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/audit-milestone-tools.test.ts exits 0 | npx tsx --test tests/audit-milestone-tools.test.ts | pass | Wrote the summary artifact at ${summaryPath}. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${summaryPath} | Saved summary artifact. |
+`;
+}
+
 function renderGapRows(gapIds: string[], surfacePrefix: string): string {
   const rows = gapIds.length > 0 ? gapIds : ["none"];
 
@@ -404,31 +463,11 @@ Preserve earlier milestone execution evidence.
   );
   await writeFile(
     path.join(priorPhaseDir, "03-01-SUMMARY.md"),
-    `# Phase 03: Execution - Summary 01
-
-**Plan:** \`03-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution completed and left durable evidence for the earlier milestone phase.
-
-## Changes Made
-
-- Captured the completed earlier-phase execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/03-execution/03-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "03",
+      phaseName: "Execution",
+      phaseDir: ".blueprint/phases/03-execution"
+    }),
     "utf8"
   );
   await writeFile(
@@ -618,31 +657,11 @@ Prepare the milestone for the final audit.
   );
   await writeFile(
     path.join(phaseDir, "04-01-SUMMARY.md"),
-    `# Phase 04: Release Readiness - Summary 01
-
-**Plan:** \`04-01-PLAN.md\`
-**Status:** COMPLETED
-
-## Outcome
-
-- Execution finished and left durable implementation evidence.
-
-## Changes Made
-
-- Captured the completed release-readiness execution in the phase summary.
-
-## Verification
-
-- Wrote the summary artifact at \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`.
-
-## Follow-Ups
-
-- none
-
-## Evidence
-
-- \`.blueprint/phases/04-release-readiness/04-01-SUMMARY.md\`
-`,
+    completedSummaryContent({
+      phasePrefix: "04",
+      phaseName: "Release Readiness",
+      phaseDir: ".blueprint/phases/04-release-readiness"
+    }),
     "utf8"
   );
   await writeFile(
