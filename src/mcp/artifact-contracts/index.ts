@@ -1448,9 +1448,9 @@ const REVIEW_FIX_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, sourceReviewPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
     "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so saved finding ids, evidence paths, dependency plans, and status-safe next actions stay deterministic.",
-    "COMPLETED review-fix models require every selected saved finding fixed, all verification rows passing, exact none sentinel rows for manual/deferred work and gap routes, followUps set to none, and the current phase validation next action.",
+    "COMPLETED review-fix models require every selected saved finding fixed, no live execution debt, all verification rows passing, exact none sentinel rows for manual/deferred work and gap routes, followUps set to none, and the current phase validation next action.",
     "PARTIAL review-fix models require concrete pending remediation or non-passing verification, at least one open or blocked gap route, and a concrete follow-up.",
-    "BLOCKED review-fix models require skipped or deferred selected findings, a blocked verification or not-run row, at least one blocked gap route, concrete blocker evidence, and the blocked next action.",
+    "BLOCKED review-fix models require skipped or deferred selected findings, a blocked verification or not-run row, either real changed-file rows or the exact no-change sentinel, at least one blocked gap route, concrete blocker evidence, and the blocked next action.",
     "Use concrete saved-review, plan, summary, changed-file, and verification evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
   ],
   contextBindings: [
