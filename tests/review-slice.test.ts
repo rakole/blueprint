@@ -703,7 +703,7 @@ test("peer-review lifecycle truth table keeps partial and blocked states resumab
       planReviews: [
         {
           planId: "01",
-          path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+          path: peerReviewPlanPath,
           goalFit: "needs-revision",
           summary: "The plan cannot proceed until at least one reviewer completes."
         }
@@ -760,7 +760,7 @@ test("peer-review lifecycle truth table keeps partial and blocked states resumab
       planReviews: [
         {
           planId: "01",
-          path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+          path: peerReviewPlanPath,
           goalFit: "blocked",
           summary: "Plan review is blocked on reviewer availability."
         }
@@ -784,13 +784,13 @@ test("peer-review lifecycle truth table keeps partial and blocked states resumab
       ],
       gapRoutes: [
         {
-          gap: "Reviewer coverage contradictory",
-          evidence: "BLOCKED state contains a completed reviewer row.",
-          repair: "Use PARTIAL when any reviewer completed or retry reviewer selection.",
+          gap: "Contradictory reviewer state",
+          evidence: "BLOCKED includes a completed reviewer.",
+          repair: "Use PARTIAL for partial fan-out or remove completed rows.",
           status: "BLOCKED"
         }
       ],
-      followUps: ["Retry reviewer selection."],
+      followUps: ["Retry peer review with a consistent reviewer state."],
       nextSafeAction: "/blu-review 3"
     })
   });

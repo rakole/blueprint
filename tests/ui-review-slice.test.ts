@@ -6,10 +6,14 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
-import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactList,
+  validateReviewArtifactContent
+} from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintReviewAuthoringContext,
+  blueprintReviewLoadFindings,
   blueprintReviewRecord,
   blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
@@ -85,12 +89,12 @@ async function createUiReviewRepo(): Promise<string> {
   return repoPath;
 }
 
-function uiReviewPlanContent(planId = "01", dependsOn: string[] = []): string {
+function uiReviewPlanContent(planId = "01", dependsOn: string[] = [], wave = 1): string {
   return `---
 phase: 6
 plan_id: "${planId}"
 title: "UI audit implementation"
-wave: 1
+wave: ${wave}
 status: planned
 objective: "Ship the dashboard UI surface for review."
 depends_on: [${dependsOn.map((dependency) => `"${dependency}"`).join(", ")}]
@@ -141,10 +145,10 @@ Ship the dashboard UI surface for review.
 `;
 }
 
-function validSummaryContent(): string {
-  return `# Phase 06: UI Audit - Summary 01
+function validSummaryContent(planId = "01"): string {
+  return `# Phase 06: UI Audit - Summary ${planId}
 
-**Plan:** \`06-01-PLAN.md\`
+**Plan:** \`06-${planId}-PLAN.md\`
 **Status:** COMPLETED
 **Readiness:** ready-for-validation
 **Completion State:** complete
@@ -190,7 +194,7 @@ function validSummaryContent(): string {
 
 | Kind | Source | Summary |
 |------|--------|---------|
-| test | npm test -- tests/ui-review-slice.test.ts | Targeted verification evidence for plan 01. |
+| test | npm test -- tests/ui-review-slice.test.ts | Targeted verification evidence for plan ${planId}. |
 `;
 }
 
@@ -355,11 +359,16 @@ test("review.ui-review contract template carries rich scoring guidance without c
 
   assert.equal(contract.ownerTool, "blueprint_review_record");
   assert.equal(contract.pathOwner, "blueprint_review_record");
-  assert.deepEqual(contract.requiredHeadings, [
+  const renderedHeadings = contract.modelContract?.renderedHeadings ?? [];
+  assert.deepEqual(contract.requiredHeadings, renderedHeadings);
+  assert.deepEqual(renderedHeadings, [
     "UI Review Summary",
     "Evidence Reviewed",
+    "Pillar Scores",
+    "Priority Fixes",
     "Findings",
     "Follow-Ups",
+    "Audit Trail",
     "Next Safe Action"
   ]);
   assert.match(contract.authoringTemplate, /## Pillar Scores/);
@@ -374,6 +383,40 @@ test("review.ui-review contract template carries rich scoring guidance without c
     "src/mcp/artifact-contracts/schemas/review.ui-review.model.schema.json"
   );
   assert.match(contract.modelContract?.qualityRules.join("\n") ?? "", /PASS[\s\S]*FOLLOW_UP[\s\S]*BLOCKED/);
+});
+
+test("review.ui-review validation rejects truncated markdown missing rendered model sections", () => {
+  const truncated = `# Phase 06: UI Audit - UI Review
+
+**Verdict:** FOLLOW_UP
+
+## UI Review Summary
+
+- Dashboard audit needs a follow-up.
+
+## Evidence Reviewed
+
+- .blueprint/phases/06-ui-audit/06-01-SUMMARY.md
+
+## Findings
+
+- Mobile spacing needs polish.
+
+## Follow-Ups
+
+- Tighten mobile spacing.
+
+## Next Safe Action
+
+- /blu-progress
+`;
+
+  const validation = validateReviewArtifactContent(truncated, "ui-review");
+
+  assert.equal(validation.valid, false);
+  assert.match(validation.issues.join("\n"), /Pillar Scores/);
+  assert.match(validation.issues.join("\n"), /Priority Fixes/);
+  assert.match(validation.issues.join("\n"), /Audit Trail/);
 });
 
 test("blueprint_review_record writes a model-authored phase-scoped UI review artifact with follow-up counts", async (t) => {
@@ -399,6 +442,19 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
     (context.authoringContext as { completedSummaries: string[] }).completedSummaries,
     [".blueprint/phases/06-ui-audit/06-01-SUMMARY.md"]
   );
+  assert.deepEqual(
+    (context.authoringContext as { completedPlans: Array<{ planId: string; path: string }> }).completedPlans,
+    [{ planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" }]
+  );
+  assert.deepEqual(
+    (context.authoringContext as { dependencyPlans: Array<{ planId: string; path: string }> }).dependencyPlans,
+    []
+  );
+  assert.equal((context.authoringContext as { verification: string | null }).verification, null);
+  assert.deepEqual(
+    (context.authoringContext as { optionalEvidenceArtifacts: string[] }).optionalEvidenceArtifacts,
+    []
+  );
   assert.equal(validation.status, "valid", JSON.stringify(validation.diagnostics, null, 2));
   assert.match(validation.renderPreview ?? "", /\*\*Verdict:\*\* FOLLOW_UP/);
   const impossibleNewArtifactPosture = await blueprintReviewValidateModel({
@@ -416,6 +472,25 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
   assert.match(
     impossibleNewArtifactPosture.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /must be equal to one of the allowed values/i
+  );
+  const newArtifactSelfCitation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: validUiReviewModel({
+      pillarScores: [
+        {
+          ...((validUiReviewModel().pillarScores as Record<string, unknown>[])[0]),
+          evidence: ".blueprint/phases/06-ui-audit/06-UI-REVIEW.md"
+        },
+        ...(validUiReviewModel().pillarScores as Record<string, unknown>[]).slice(1)
+      ]
+    })
+  });
+  assert.equal(newArtifactSelfCitation.status, "invalid");
+  assert.match(
+    newArtifactSelfCitation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must match a schema in anyOf/i
   );
 
   const written = await blueprintReviewRecord({
@@ -435,6 +510,19 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
 
   const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
   assert.match(saved, /\*\*Verdict:\*\* FOLLOW_UP/);
+  const loadedFindings = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review"
+  });
+  assert.equal(loadedFindings.found, true);
+  assert.equal(loadedFindings.findings.length, 1);
+  assert.equal(loadedFindings.severityCounts.medium, 1);
+  assert.match(loadedFindings.findings[0].summary, /Spacing OPEN/i);
+  assert.match(loadedFindings.findings[0].summary, /Mobile empty states are harder to scan/i);
+  assert.ok(
+    loadedFindings.followUps.includes("Tighten mobile empty-state spacing and affordance copy.")
+  );
 
   const postWriteContext = await blueprintReviewAuthoringContext({
     cwd: repoPath,
@@ -444,6 +532,7 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
   const postWriteAuthoringContext = postWriteContext.authoringContext as {
     existingUiReview: string | null;
     knownEvidenceArtifacts: string[];
+    optionalEvidenceArtifacts: string[];
   };
   assert.equal(
     postWriteAuthoringContext.existingUiReview,
@@ -455,29 +544,47 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
     ),
     "the overwritten UI review path must not be required as evidence because it would self-cite"
   );
-  const selfCitingPillarEvidence = await blueprintReviewValidateModel({
+  assert.deepEqual(postWriteAuthoringContext.optionalEvidenceArtifacts, [
+    ".blueprint/phases/06-ui-audit/06-UI-REVIEW.md"
+  ]);
+  const priorReviewCitationModel = validUiReviewModel({
+    uiReviewSummary: [
+      "The UI review rerun compared the prior UI review with the saved summary baseline and kept the 18/24 follow-up posture."
+    ],
+    pillarScores: [
+      {
+        ...((validUiReviewModel().pillarScores as Record<string, unknown>[])[0]),
+        evidence: ".blueprint/phases/06-ui-audit/06-UI-REVIEW.md"
+      },
+      ...(validUiReviewModel().pillarScores as Record<string, unknown>[]).slice(1)
+    ],
+    auditTrail: {
+      ...(validUiReviewModel().auditTrail as Record<string, unknown>),
+      existingReviewPosture: "overwrite-confirmed",
+      scoreConsistencyNote: "The rerun compared prior UI-review evidence and recomputed the same pillar total."
+    }
+  });
+  const priorReviewCitation = await blueprintReviewValidateModel({
     cwd: repoPath,
     phase: "6",
     artifact: "ui-review",
-    model: validUiReviewModel({
-      pillarScores: [
-        {
-          ...((validUiReviewModel().pillarScores as Record<string, unknown>[])[0]),
-          evidence: ".blueprint/phases/06-ui-audit/06-UI-REVIEW.md"
-        },
-        ...(validUiReviewModel().pillarScores as Record<string, unknown>[]).slice(1)
-      ],
-      auditTrail: {
-        ...(validUiReviewModel().auditTrail as Record<string, unknown>),
-        existingReviewPosture: "overwrite-confirmed"
-      }
-    })
+    model: priorReviewCitationModel
   });
-  assert.equal(selfCitingPillarEvidence.status, "invalid");
+  assert.equal(priorReviewCitation.status, "valid", JSON.stringify(priorReviewCitation.diagnostics, null, 2));
+  const priorOverwrite = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    overwrite: true,
+    model: priorReviewCitationModel
+  });
+  assert.equal(priorOverwrite.status, "updated");
+  const priorSaved = await readFile(path.join(repoPath, priorOverwrite.reportPath), "utf8");
   assert.match(
-    selfCitingPillarEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must match a schema in anyOf/i
+    priorSaved,
+    /## Evidence Reviewed[\s\S]*06-UI-REVIEW\.md - cited by pillar or finding evidence\./
   );
+  assert.doesNotMatch(priorSaved, /06-UI-REVIEW\.md - used:/);
 
   const impossibleExistingReviewPosture = await blueprintReviewValidateModel({
     cwd: repoPath,
@@ -553,6 +660,150 @@ test("blueprint_review_record writes a model-authored phase-scoped UI review art
   assert.ok(
     artifactList.artifacts.phases.includes(".blueprint/phases/06-ui-audit/06-UI-REVIEW.md")
   );
+});
+
+test("ui-review renders repo-line, screenshot, and visual-observation evidence in Evidence Reviewed", async (t) => {
+  const repoPath = await createUiReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const base = validUiReviewModel();
+  const model = validUiReviewModel({
+    pillarScores: (base.pillarScores as Record<string, unknown>[]).map((row, index) =>
+      index === 0
+        ? { ...row, evidence: "src/ui/dashboard.tsx:1" }
+        : index === 1
+          ? { ...row, evidence: "screenshot: dashboard-mobile.png" }
+          : row
+    ),
+    findings: (base.findings as Record<string, unknown>[]).map((row) => ({
+      ...row,
+      evidence: "visual observation: Mobile empty-state gaps collapse on narrow viewport"
+    }))
+  });
+
+  const written = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model
+  });
+  const saved = await readFile(path.join(repoPath, written.reportPath), "utf8");
+
+  assert.equal(written.status, "created");
+  assert.match(saved, /## Evidence Reviewed[\s\S]*src\/ui\/dashboard\.tsx:1 - cited by pillar or finding evidence\./);
+  assert.match(saved, /## Evidence Reviewed[\s\S]*screenshot: dashboard-mobile\.png - cited by pillar or finding evidence\./);
+  assert.match(saved, /## Evidence Reviewed[\s\S]*visual observation: Mobile empty-state gaps collapse on narrow viewport - cited by pillar or finding evidence\./);
+  assert.equal((saved.match(/06-UI-SPEC\.md - used:/g) ?? []).length, 1);
+});
+
+test("ui-review residual validation rejects fabricated repo-line evidence", async (t) => {
+  const repoPath = await createUiReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const withPillarEvidence = (evidence: string): Record<string, unknown> =>
+    validUiReviewModel({
+      pillarScores: [
+        {
+          ...((validUiReviewModel().pillarScores as Record<string, unknown>[])[0]),
+          evidence
+        },
+        ...(validUiReviewModel().pillarScores as Record<string, unknown>[]).slice(1)
+      ]
+    });
+  const withFindingEvidence = (evidence: string): Record<string, unknown> =>
+    validUiReviewModel({
+      findings: (validUiReviewModel().findings as Record<string, unknown>[]).map((row) => ({
+        ...row,
+        evidence
+      }))
+    });
+
+  const missingFile = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: withPillarEvidence("src/ui/missing.tsx:1")
+  });
+  const escapedPath = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: withPillarEvidence("../outside.tsx:1")
+  });
+  const outOfRange = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: withFindingEvidence("src/ui/dashboard.tsx:99")
+  });
+
+  assert.equal(missingFile.status, "invalid");
+  assert.match(
+    missingFile.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /file that does not exist/i
+  );
+  assert.equal(escapedPath.status, "invalid");
+  assert.match(
+    escapedPath.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /Path traversal is not allowed/i
+  );
+  assert.equal(outOfRange.status, "invalid");
+  assert.match(
+    outOfRange.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /line range exceeds/i
+  );
+});
+
+test("ui-review authoring context exposes plan dependency and verification provenance", async (t) => {
+  const repoPath = await createUiReviewRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/06-ui-audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(path.join(phaseDir, "06-02-PLAN.md"), uiReviewPlanContent("02", ["01"], 2), "utf8");
+  await writeFile(path.join(phaseDir, "06-02-SUMMARY.md"), validSummaryContent("02"), "utf8");
+  await writeFile(
+    path.join(phaseDir, "06-VERIFICATION.md"),
+    "# Phase 06: UI Audit - Verification\n\n## Verification Summary\n\n- Focused validation passed.\n",
+    "utf8"
+  );
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review"
+  });
+  assert.equal(context.status, "ready", context.reason ?? "");
+  assert.ok(context.taskSchema);
+  const authoringContext = context.authoringContext as {
+    completedPlans: Array<{ planId: string; path: string }>;
+    dependencyPlans: Array<{ planId: string; path: string }>;
+    verification: string | null;
+    knownEvidenceArtifacts: string[];
+  };
+  const runtimeContext = (context.taskSchema as Record<string, unknown>)["x-blueprint-runtimeContext"] as {
+    completedPlans: Array<{ planId: string; path: string }>;
+    dependencyPlans: Array<{ planId: string; path: string }>;
+    verificationArtifact: string | null;
+  };
+
+  assert.deepEqual(authoringContext.completedPlans, [
+    { planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" }
+  ]);
+  assert.deepEqual(authoringContext.dependencyPlans, [
+    { planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" }
+  ]);
+  assert.equal(authoringContext.verification, ".blueprint/phases/06-ui-audit/06-VERIFICATION.md");
+  assert.ok(
+    authoringContext.knownEvidenceArtifacts.includes(".blueprint/phases/06-ui-audit/06-VERIFICATION.md")
+  );
+  assert.deepEqual(runtimeContext.completedPlans, authoringContext.completedPlans);
+  assert.deepEqual(runtimeContext.dependencyPlans, authoringContext.dependencyPlans);
+  assert.equal(runtimeContext.verificationArtifact, authoringContext.verification);
 });
 
 test("ui-review rejects Markdown fallback for the model-only writer", async (t) => {
