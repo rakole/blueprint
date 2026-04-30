@@ -61,7 +61,10 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 
 - If `--no-write` is active, skip report writing and move directly to render.
 - Otherwise call `mcp_blueprint_blueprint_impact_report_write` with the
-  normalized report.
+  normalized report and expected analyzer context copied from
+  `blueprint_impact_analyze`: scope fingerprint, scope source, scope
+  description, resolved files, evidence ids and paths, finding ids, blocking
+  finding ids, and warning finding ids.
 - Persist only under `.blueprint/impact/<impact-id>/`.
 - Existing identical bundles may be reused. Existing changed bundles require
   explicit overwrite confirmation before retrying with overwrite enabled.
@@ -73,11 +76,11 @@ analysis stays evidence-backed, uncertainty-aware, and MCP-owned.
 - Report writer validation is authoritative for `blueprint.impact.report.v1`.
   It validates the structured payload against the `report.impact` JSON Schema,
   narrows the effective task schema to exact impact id, optional MCP-owned
-  expected scope fingerprint and expected files, evidence ids, and finding
-  projections, then runs residual
-  checks for rendered Markdown sections, placeholder rejection, unknown evidence
-  refs, confidence proof, reviewer/test/action provenance, and semantic status
-  consistency.
+  expected scope fingerprint/source/description and expected files, then checks
+  analyzer-owned evidence ids and paths, finding/projection ids, nested
+  expected-file scope, canonical report ordering, rendered Markdown sections,
+  placeholder rejection, unknown evidence refs, confidence proof,
+  reviewer/test/action provenance, and semantic status consistency.
 - If report writing returns invalid, repair the report model through the
   analysis or rendering inputs if possible and retry once through MCP. Do not
   bypass the failed write with raw filesystem edits.
