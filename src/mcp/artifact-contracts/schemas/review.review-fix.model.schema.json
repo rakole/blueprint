@@ -1,0 +1,784 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.review.review-fix.model",
+  "title": "Blueprint Review Fix Model",
+  "description": "Model-authored payload for review.review-fix. Runtime-owned phase identity, source review path, selected finding inventory, dependency plan inventory, evidence paths, report path, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "readiness",
+    "completionState",
+    "remediationSummary",
+    "findingsAddressed",
+    "changesMade",
+    "verification",
+    "dependencyPlans",
+    "manualOrDeferredWork",
+    "gapRoutes",
+    "followUps",
+    "evidence",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/status",
+      "description": "Overall remediation status for the selected saved review findings."
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness",
+      "description": "Routing readiness rendered in review-fix metadata."
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState",
+      "description": "Whether selected review-remediation debt is complete, pending, or blocked."
+    },
+    "remediationSummary": {
+      "type": "array",
+      "description": "Concrete summary bullets for the bounded remediation pass.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "findingsAddressed": {
+      "type": "array",
+      "description": "Rows for selected saved review findings or follow-up targets. The task schema narrows findingId to exact saved-review target ids and requires every selected id exactly once.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/findingAddressedRow"
+      }
+    },
+    "changesMade": {
+      "type": "array",
+      "description": "Repo file changes rendered into the Changes Made table, or the exact none sentinel when nothing could be safely changed.",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/changeRow"
+          },
+          {
+            "$ref": "#/$defs/noChangeRow"
+          }
+        ]
+      }
+    },
+    "verification": {
+      "type": "array",
+      "description": "Targeted verification rows rendered into the Verification table.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/verificationRow"
+      }
+    },
+    "dependencyPlans": {
+      "type": "array",
+      "description": "Dependency plan rows rendered into the Dependency Plans table. The task schema narrows this to exact live dependency plans, or the exact empty shape when no dependency plans exist.",
+      "items": {
+        "$ref": "#/$defs/dependencyPlanRow"
+      }
+    },
+    "manualOrDeferredWork": {
+      "type": "array",
+      "description": "Manual/deferred work rows, or the exact NONE sentinel for completed remediation.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/manualOrDeferredRow"
+      }
+    },
+    "gapRoutes": {
+      "type": "array",
+      "description": "Concrete gap or repair routes, or the exact NONE sentinel for completed remediation.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gapRouteRow"
+      }
+    },
+    "followUps": {
+      "type": "array",
+      "description": "Remaining review-fix follow-up bullets, or the exact single none sentinel for completed remediation.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Evidence ledger rows rendered into the Evidence table. The task schema requires exact source paths from the saved review and live execution inventory.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidenceRow"
+      }
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction",
+      "description": "One exact command string from authoringContext.allowedNextActions. The task schema narrows this by remediation status for the current phase."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-validation"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "findingsAddressed": {
+            "items": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "fixed"
+                }
+              }
+            }
+          },
+          "changesMade": {
+            "contains": {
+              "$ref": "#/$defs/changeRow"
+            },
+            "minContains": 1
+          },
+          "verification": {
+            "items": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "const": "pass"
+                }
+              }
+            }
+          },
+          "manualOrDeferredWork": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "gapRoutes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          },
+          "followUps": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "not-ready-for-validation"
+          },
+          "completionState": {
+            "const": "pending"
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "OPEN",
+                    "BLOCKED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        },
+        "anyOf": [
+          {
+            "properties": {
+              "findingsAddressed": {
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "deferred",
+                        "skipped"
+                      ]
+                    }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "verification": {
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "result"
+                  ],
+                  "properties": {
+                    "result": {
+                      "enum": [
+                        "fail",
+                        "blocked",
+                        "not-run"
+                      ]
+                    }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "findingsAddressed": {
+            "items": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "deferred",
+                    "skipped"
+                  ]
+                }
+              }
+            }
+          },
+          "changesMade": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noChangeRow"
+            }
+          },
+          "verification": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "enum": [
+                    "blocked",
+                    "not-run"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUps": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-validation",
+        "not-ready-for-validation",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "pending",
+        "blocked"
+      ]
+    },
+    "findingStatus": {
+      "type": "string",
+      "enum": [
+        "fixed",
+        "deferred",
+        "skipped"
+      ]
+    },
+    "verificationResult": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "blocked",
+        "not-run"
+      ]
+    },
+    "dependencyStatus": {
+      "type": "string",
+      "enum": [
+        "satisfied"
+      ]
+    },
+    "manualOrDeferredStatus": {
+      "type": "string",
+      "enum": [
+        "MANUAL",
+        "DEFERRED",
+        "NONE"
+      ]
+    },
+    "gapRouteStatus": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "BLOCKED",
+        "NONE"
+      ]
+    },
+    "evidenceKind": {
+      "type": "string",
+      "enum": [
+        "review",
+        "summary",
+        "plan",
+        "repo-path",
+        "command",
+        "test",
+        "other"
+      ]
+    },
+    "bulletString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line Markdown bullet text. CR/LF is rejected so a model value cannot inject extra list items or headings."
+    },
+    "tableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Non-empty single-line Markdown table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
+    },
+    "repoPathString": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+(?:\\.[A-Za-z0-9._-]+)?$",
+      "description": "Repo-relative path token without spaces, pipes, glob metacharacters, absolute prefixes, or line breaks."
+    },
+    "sourcePathString": {
+      "type": "string",
+      "pattern": "^(?:\\.blueprint|[A-Za-z0-9._-]+)(?:/[A-Za-z0-9._-]+)*(?:\\.[A-Za-z0-9._-]+)?$",
+      "description": "Evidence source path token suitable for a Markdown table cell."
+    },
+    "findingId": {
+      "type": "string",
+      "pattern": "^(?:F|FU)-\\d{2,}$",
+      "description": "Saved review target id. Runtime narrows this to exact ids from blueprint_review_load_findings."
+    },
+    "findingAddressedRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findingId",
+        "status",
+        "evidence",
+        "disposition"
+      ],
+      "properties": {
+        "findingId": {
+          "$ref": "#/$defs/findingId"
+        },
+        "status": {
+          "$ref": "#/$defs/findingStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "disposition": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "changeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "summary"
+      ],
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/repoPathString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "noChangeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "summary"
+      ],
+      "properties": {
+        "file": {
+          "const": "none"
+        },
+        "summary": {
+          "const": "none"
+        }
+      }
+    },
+    "verificationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check",
+        "command",
+        "result",
+        "evidence"
+      ],
+      "properties": {
+        "check": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "command": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "result": {
+          "$ref": "#/$defs/verificationResult"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "dependencyPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "planId": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+)?$"
+        },
+        "path": {
+          "$ref": "#/$defs/sourcePathString"
+        },
+        "status": {
+          "$ref": "#/$defs/dependencyStatus"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "manualOrDeferredRow": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/realManualOrDeferredRow"
+        },
+        {
+          "$ref": "#/$defs/noManualOrDeferredRow"
+        }
+      ]
+    },
+    "realManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "followUp": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "status": {
+          "enum": [
+            "MANUAL",
+            "DEFERRED"
+          ]
+        }
+      }
+    },
+    "noManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "reason",
+        "followUp",
+        "status"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "reason": {
+          "const": "none"
+        },
+        "followUp": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "gapRouteRow": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/realGapRouteRow"
+        },
+        {
+          "$ref": "#/$defs/noGapRouteRow"
+        }
+      ]
+    },
+    "realGapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "repair": {
+          "$ref": "#/$defs/tableCellString",
+          "not": {
+            "const": "none"
+          }
+        },
+        "status": {
+          "enum": [
+            "OPEN",
+            "BLOCKED"
+          ]
+        }
+      }
+    },
+    "noGapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "evidence",
+        "repair",
+        "status"
+      ],
+      "properties": {
+        "gap": {
+          "const": "none"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        }
+      }
+    },
+    "evidenceRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "summary"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/evidenceKind"
+        },
+        "source": {
+          "$ref": "#/$defs/sourcePathString"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^/blu-[a-z0-9-]+(?:\\s+[A-Za-z0-9._=-]+)*$",
+      "description": "Direct implemented Blueprint command token with optional simple arguments. The task schema narrows this to exact allowed commands."
+    }
+  }
+}

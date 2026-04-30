@@ -1006,10 +1006,11 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_artifact_contract_read",
     "blueprint_phase_locate",
+    "blueprint_review_authoring_context",
     "blueprint_review_load_findings",
     "blueprint_review_record",
+    "blueprint_review_validate_model",
     "blueprint_state_update"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);
@@ -1039,7 +1040,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
 
   assert.match(
     artifactSchema,
-    /### `XX-REVIEW-FIX\.md`[\s\S]*\*\*Status:\*\* APPLIED\|PARTIAL\|SKIPPED[\s\S]*## Findings Addressed[\s\S]*## Changes Made[\s\S]*## Verification[\s\S]*## Follow-Ups[\s\S]*## Next Safe Action/
+    /### `XX-REVIEW-FIX\.md`[\s\S]*\*\*Status:\*\* COMPLETED\|PARTIAL\|BLOCKED[\s\S]*\*\*Readiness:\*\* ready-for-validation\|not-ready-for-validation\|blocked[\s\S]*\*\*Completion State:\*\* complete\|pending\|blocked[\s\S]*## Remediation Summary[\s\S]*## Findings Addressed[\s\S]*## Changes Made[\s\S]*## Verification[\s\S]*## Dependency Plans[\s\S]*## Manual \/ Deferred Work[\s\S]*## Gap \/ Repair Routes[\s\S]*## Follow-Ups[\s\S]*## Evidence[\s\S]*## Next Safe Action/
   );
   assert.match(
     artifactSchema,
@@ -1091,8 +1092,9 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
 
   assert.match(
     runtimeReference,
-    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
   );
+  assert.match(runtimeReference, /author only a JSON model with `COMPLETED`, `PARTIAL`, or `BLOCKED` lifecycle status/);
   assert.match(
     runtimeReference,
     /No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./

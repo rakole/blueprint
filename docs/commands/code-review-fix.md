@@ -10,14 +10,14 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `code-review-fix` uses the shared long-running-mutation posture: resolve the target phase, read saved findings plus the canonical review-fix contract, decide the bounded remediation set and any overwrite or finding-selection gate, execute only the selected fixes, persist the durable remediation artifact through MCP, validate the bounded fix outcome, and route to the next safe implemented follow-up.
+- `code-review-fix` uses the shared long-running-mutation posture: resolve the target phase, read saved findings plus the schema-first review-fix authoring context, decide the bounded remediation set and any overwrite or finding-selection gate, execute only the selected fixes, validate the review-fix model, persist that same model through MCP, and route to the next safe implemented follow-up.
 - Keep the remediation posture explicit throughout the run: resolved scope must stay tied to the saved findings baseline plus the repo files implicated by those findings, pending gates stay limited to overwrite confirmation or finding-selection confirmation when those gates are triggered, execution mode should reflect whether the run stays inline or uses the reviewer subagent and whether the fix set came from explicit selection, `--all`, or bounded `--auto`, and live remediation plus verification status should come from the actual work instead of being invented after the fact.
 - Detailed runtime reference: `skills/blueprint-review/references/code-review-fix-runtime-contract.md`. The command manifest should stay thin enough to point at the `blueprint-review` skill and this local reference while still naming the required MCP tools.
 
 ## Purpose
 
 
-`code-review-fix` is Blueprint's bounded remediation command for issues already captured in a saved `XX-REVIEW.md`. Blueprint ships it as an evidence-backed long-running follow-up step: it loads the saved findings first, narrows the fix set to explicitly selected or high-confidence auto-selected findings, keeps the active remediation stage and pending gate visible while work is in flight, persists a durable `XX-REVIEW-FIX.md` summary through the shared review MCP tool, and updates `STATE.md` so follow-up routing stays inside implemented commands. It does not currently imply atomic git commits, branch creation, or a separate fixer-agent loop.
+`code-review-fix` is Blueprint's bounded remediation command for issues already captured in a saved `XX-REVIEW.md`. Blueprint ships it as an evidence-backed long-running follow-up step: it loads the saved findings first, narrows the fix set to explicitly selected or high-confidence auto-selected findings, keeps the active remediation stage and pending gate visible while work is in flight, validates a schema-first `review.review-fix` model, persists that same model through the shared review MCP tool, and updates `STATE.md` so follow-up routing stays inside implemented commands. It does not currently imply atomic git commits, branch creation, or a separate fixer-agent loop.
 
 
 ## Command Path And Examples
@@ -63,23 +63,27 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_review_load_findings` -> `{findings, severityCounts, followUps, path, warnings}`
-- `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings}`
+- `blueprint_review_authoring_context` -> `{status, phase, artifact, authoringContext, reason, warnings}`; pass `targetIds` when the run selected a subset
+- `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, normalizedModel, renderPreview, taskSchema}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Remediation Contract
 
 - Load the saved review baseline through `blueprint_review_load_findings` with `artifact: "code-review"` and treat the returned `findings`, `severityCounts`, and `followUps` as authoritative.
-- Read the canonical `review.review-fix` contract through `blueprint_artifact_contract_read` before drafting or updating `XX-REVIEW-FIX.md`, and use the returned template plus headings as the baseline instead of a copied prompt-local variant.
+- Read the `review.review-fix` authoring context through `blueprint_review_authoring_context` before drafting or updating `XX-REVIEW-FIX.md`, and use its base schema, narrowed `taskSchema`, locked markers, rendered headings, saved findings, phase execution plan/summary evidence, and dependency evidence as the baseline instead of a copied prompt-local variant.
+- When remediation is scoped to selected saved findings or follow-ups, pass the exact selected saved target ids as `targetIds` to `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`. Omit `targetIds` consistently only when the run covers the full saved baseline.
 - Do not recreate finding ids or severity from chat memory, current branch drift, or a second prompt-only review when the saved artifact already exists.
-- Keep the canonical `XX-REVIEW-FIX.md` structure intact, including the `## Findings Addressed` section required by the review-fix contract.
-- Persist the durable remediation summary through `blueprint_review_record` with `artifact: "review-fix"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW-FIX.md`.
+- Author `review.review-fix` as JSON only. Valid lifecycle statuses are `COMPLETED`, `PARTIAL`, and `BLOCKED`; locked markers are `Status`, `Readiness`, `Completion State`, and `Next Safe Action`.
+- Keep the rendered `XX-REVIEW-FIX.md` structure intact, including `## Remediation Summary`, `## Findings Addressed`, `## Changes Made`, `## Verification`, `## Dependency Plans`, `## Manual / Deferred Work`, `## Gap / Repair Routes`, `## Follow-Ups`, `## Evidence`, and `## Next Safe Action`.
+- Validate the model through `blueprint_review_validate_model`, repair returned diagnostics against the task schema once, and persist the same validated model through `blueprint_review_record` with `artifact: "review-fix"` and the same `targetIds` selection. Treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW-FIX.md`.
+- Markdown `content` fallback is invalid for `review.review-fix`.
 - Treat finding selection as an explicit gate before repo mutation unless the user already made the exact fix set explicit through `--all`, `--auto`, or a comparably narrow instruction.
 - Keep repo mutation bounded to the selected findings and the repo files directly implicated by the saved review evidence; route broader remediation to another implemented command instead of widening this command in place.
 - Treat `--auto` as bounded finding selection only. It may skip manual selection for a narrow, high-confidence saved finding set, but it does not authorize auto-fixer behavior, implicit commits, hidden iterative re-review, or an unbounded fixer loop.
 - When `blueprint-reviewer` is available and the saved review is broad or ambiguous, use it only for read-only reclassification of saved findings into fix/defer/skip recommendations. Browser, web, or search-only agents are not substitutes for codebase analysis.
 - When no suitable subagent is available, use the explicit single-agent fallback from the runtime contract: work one selected finding at a time, reread implicated source files, apply the minimal scoped change, verify the changed surface, record fixed/skipped/deferred evidence, and compress carry-forward context before moving to the next finding.
-- If `blueprint_review_record` rejects the review-fix body or reports missing required headings, repair against the canonical `review.review-fix` authoring template and retry once. If the retry still fails, stop with the MCP failure reason rather than writing `XX-REVIEW-FIX.md` by hand.
+- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the review-fix model, repair against the `review.review-fix` task schema once. If the retry still fails, stop with the MCP failure reason rather than writing `XX-REVIEW-FIX.md` by hand.
 
 
 ## Skills And Subagents
@@ -142,7 +146,7 @@
 - Preserve generated reports when verification or shell checks fail.
 - Fall back to `/blu-code-review <phase>` when the saved review baseline is missing or too weak.
 - Fall back to `/blu-progress` instead of guessing through an unclear remediation scope.
-- Preserve the drafted artifact body in the user-visible response when MCP write validation still fails after one template repair retry.
+- Preserve the model diagnostics in the user-visible response when validation or persistence still fails after one schema repair retry.
 
 
 ## Acceptance Criteria
@@ -159,7 +163,7 @@
 - Keeps the finding-selection gate explicit and bounded to the saved review evidence.
 - Keeps `--auto` bounded to finding selection instead of implying hidden git automation, auto-fixer behavior, implicit branches or commits, or iterative re-review.
 - Has a capability-gated read-only subagent path and an explicit one-finding-at-a-time fallback when no suitable subagent is available.
-- Repairs invalid review-fix artifact content against the canonical template once before stopping.
+- Repairs invalid review-fix models against the task schema once before stopping.
 
 
 ## Test Cases

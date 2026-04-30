@@ -620,53 +620,101 @@ Contract notes:
 
 Canonical source-of-truth note:
 - The runtime contract registry under `src/mcp/artifact-contracts/` is canonical. This section is the human-readable mirror of the `review.review-fix` contract and should stay aligned with it.
+- `/blu-code-review-fix` authors `review.review-fix` JSON first, validates it through `blueprint_review_validate_model`, and persists the same model through `blueprint_review_record`. When remediation is scoped to a subset, authoring, validation, and persistence must all receive the same selected saved target ids as `targetIds`. Markdown `content` fallback is invalid.
+
 Minimum expected structure:
-- `**Status:** APPLIED|PARTIAL|SKIPPED`
+- `**Status:** COMPLETED|PARTIAL|BLOCKED`
+- `**Readiness:** ready-for-validation|not-ready-for-validation|blocked`
+- `**Completion State:** complete|pending|blocked`
+- `**Next Safe Action:** /blu-validate-phase <phase>|/blu-code-review-fix <phase>|/blu-add-tests <phase>|/blu-progress`
+- `## Remediation Summary`
 - `## Findings Addressed`
 - `## Changes Made`
 - `## Verification`
+- `## Dependency Plans`
+- `## Manual / Deferred Work`
+- `## Gap / Repair Routes`
 - `## Follow-Ups`
+- `## Evidence`
 - `## Next Safe Action`
 
 Review-fix expectations:
 - must stay grounded in findings loaded from the saved `XX-REVIEW.md` baseline rather than a fresh prompt-only review
+- must use review authoring context from saved code-review findings plus phase execution plan, summary, and dependency evidence, preserving selected saved target ids through `targetIds`
 - should summarize only the selected remediation pass instead of restating every open issue in the phase
 - should capture concrete verification evidence for applied changes and keep unresolved work explicit
 - Blueprint-native review-fix behavior focuses on bounded remediation; it does not currently ship a real `blueprint-fixer` agent, atomic per-fix commits, or a GSD-style automated re-review loop.
-- invalid or incomplete review-fix content should be repaired against the canonical `review.review-fix` authoring template and retried once through `blueprint_review_record`; the command must not bypass MCP by writing the artifact directly
+- invalid or incomplete review-fix models should be repaired against the canonical `review.review-fix` task schema and retried once through `blueprint_review_validate_model`; the command must not bypass MCP by writing the artifact directly
 
 Exact persistence template:
 
 ```md
 # Phase XX: <Phase Name> - Review Fix
 
-**Status:** APPLIED|PARTIAL|SKIPPED
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-validation|not-ready-for-validation|blocked
+**Completion State:** complete|pending|blocked
+**Source Review:** .blueprint/phases/<phase-slug>/XX-REVIEW.md
+**Next Safe Action:** /blu-validate-phase <phase>|/blu-code-review-fix <phase>|/blu-add-tests <phase>|/blu-progress
+
+## Remediation Summary
+
+- Concrete summary of this bounded remediation pass.
 
 ## Findings Addressed
 
-- Finding id or summary addressed in this remediation pass.
+- Saved finding id and remediation disposition.
 
 ## Changes Made
 
-- Concrete remediation completed.
+| File | Summary |
+|------|---------|
+| path/to/file.ts | Concrete remediation completed. |
 
 ## Verification
 
-- Validation or test evidence for the applied fix, or `none`.
+| Check | Command | Result | Evidence |
+|-------|---------|--------|----------|
+| Focused check | npm test -- tests/example.test.ts | pass|fail|blocked|not-run | Validation or test evidence for the applied fix. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
 
 ## Follow-Ups
 
 - Remaining work, deferred item, or `none`.
 
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| review | .blueprint/phases/<phase-slug>/XX-REVIEW.md | Saved review findings baseline. |
+
 ## Next Safe Action
 
-- /blu-progress
+- /blu-validate-phase <phase>
 ```
 
 Contract notes:
-- Keep the `**Status:**` marker exactly as written.
-- Keep all required section names unchanged so `blueprint_review_record` continues to recognize the canonical review-fix artifact contract.
+- Keep the `**Status:**`, `**Readiness:**`, `**Completion State:**`, and `**Next Safe Action:**` markers exactly as written. `**Source Review:**` is MCP-owned rendered provenance, not a model-authored identity key.
+- Keep all required section names unchanged so `blueprint_review_record` continues to render the canonical review-fix artifact contract.
 - `## Findings Addressed` is the locked heading for remediation scope; do not rename it to `Findings Fixed`, `Resolved Findings`, or similar variants.
+- `COMPLETED` means selected saved findings were fixed and verified. `PARTIAL` and `BLOCKED` remain carry-forward remediation evidence.
 - If this document and the runtime registry ever drift, follow `src/mcp/artifact-contracts/` and repair this doc to match.
 
 ### `XX-SECURITY.md`

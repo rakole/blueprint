@@ -3,7 +3,8 @@
 This reference is the local runtime contract for `/blu-code-review-fix`.
 It repairs the retained GSD workflow's practical quality in Blueprint-native
 terms: MCP owns Blueprint state, the command stays thin, the skill orchestrates,
-agents do bounded analysis only, and repo mutation remains explicit and scoped.
+agents do bounded analysis only, review-fix persistence is schema-first and
+model-only, and repo mutation remains explicit and scoped.
 
 ## Stage Mapping
 
@@ -18,11 +19,18 @@ agents do bounded analysis only, and repo mutation remains explicit and scoped.
 
 - Load saved findings with `blueprint_review_load_findings` using
   `artifact: "code-review"`.
-- Read `review.review-fix` with `blueprint_artifact_contract_read` before any
-  review-fix artifact drafting, validation, or repair.
+- Read `review.review-fix` with `blueprint_review_authoring_context` before any
+  review-fix model drafting, validation, or repair.
 - Treat returned `findings`, `severityCounts`, `followUps`, `path`, and
   `warnings` as the remediation baseline. Do not infer findings from chat
   memory, unstaged git drift, or a new prompt-only review.
+- Treat the authoring context's saved code-review findings, phase execution
+  plan/summary evidence, dependency evidence, locked markers, rendered headings,
+  base schema, and narrowed `taskSchema` as the authoring baseline.
+- When remediation is intentionally scoped to selected saved findings or
+  follow-ups, pass those exact saved target ids as `targetIds` to
+  `blueprint_review_authoring_context` and reuse the same array for validation
+  and persistence. Omit `targetIds` consistently only for full-baseline runs.
 - If an existing `XX-REVIEW-FIX.md` is present, read it as prior remediation
   context and require explicit overwrite confirmation before replacing it.
 
@@ -35,6 +43,8 @@ agents do bounded analysis only, and repo mutation remains explicit and scoped.
   branch creation, a fixer agent, or iterative re-review.
 - Prefer high-confidence saved findings for automatic selection. Defer stale,
   ambiguous, or broad findings with a reason instead of widening scope.
+- Preserve the confirmed selected saved target ids exactly; they are part of the
+  runtime-narrowed schema and must not be recomputed during validate or save.
 - Route broader remediation to `/blu-audit-fix`, `/blu-quick`, or
   `/blu-plan-phase` rather than expanding this command in place.
 
@@ -56,29 +66,32 @@ agents do bounded analysis only, and repo mutation remains explicit and scoped.
 
 ### Persist
 
-- Author `XX-REVIEW-FIX.md` from the canonical `review.review-fix` template.
-- Include concrete evidence in every section:
-  - `## Findings Addressed`: saved finding ids or summaries plus fixed,
-    skipped, or deferred status.
-  - `## Changes Made`: repo files changed and what changed.
-  - `## Verification`: commands run, targeted checks, reread-only checks, or why
-    no reliable check was available.
-  - `## Follow-Ups`: remaining saved findings, skipped items, stale evidence,
-    or `none`.
-  - `## Next Safe Action`: one implemented Blueprint command.
-- Persist only through `blueprint_review_record` with `artifact: "review-fix"`.
+- Author only the `review.review-fix` JSON model. Markdown `content` fallback is
+  invalid.
+- Use lifecycle statuses `COMPLETED`, `PARTIAL`, or `BLOCKED`.
+- Preserve the locked markers `Status`, `Readiness`, `Completion State`, and
+  `Next Safe Action`; MCP owns rendered source-review provenance.
+- Include concrete model evidence for every rendered heading:
+  `Remediation Summary`, `Findings Addressed`, `Changes Made`, `Verification`,
+  `Dependency Plans`, `Manual / Deferred Work`, `Gap / Repair Routes`,
+  `Follow-Ups`, `Evidence`, and `Next Safe Action`.
+- Validate through `blueprint_review_validate_model`, repair diagnostics against
+  `authoringContext.taskSchema`, and retry validation once. Pass the same
+  `targetIds` array used for authoring context when the run is scoped.
+- Persist only the same validated model through `blueprint_review_record` with
+  `artifact: "review-fix"` and the same scoped `targetIds` array.
 - Treat the returned `reportPath`, `counts`, `followUps`, `status`, and
   `warnings` as authoritative.
 
 ### Validate
 
-- If `blueprint_review_record` rejects the artifact or reports missing required
-  headings, repair against the `review.review-fix` template and retry once.
-- If the retry still fails, stop with the exact MCP failure reason and present
-  the drafted artifact body in the response for user inspection. Do not write
-  `XX-REVIEW-FIX.md` by hand.
+- If `blueprint_review_validate_model` rejects the model, repair against the
+  narrowed task schema and retry once.
+- If `blueprint_review_record` rejects the validated model, stop with the exact
+  MCP failure reason and summarize the model diagnostics in the response for
+  user inspection. Do not write `XX-REVIEW-FIX.md` by hand.
 - If repo verification could not run or failed, keep the artifact status
-  `PARTIAL` or `SKIPPED` as appropriate and route to validation or tests.
+  `PARTIAL` or `BLOCKED` as appropriate and route to validation or tests.
 
 ### Route
 
@@ -95,8 +108,12 @@ agents do bounded analysis only, and repo mutation remains explicit and scoped.
   phase directory/artifact set is authoritative.
 - `blueprint_review_load_findings`: controls saved findings, severity counts,
   source review path, follow-ups, and whether remediation can proceed.
-- `blueprint_artifact_contract_read`: controls the canonical review-fix
-  headings, locked markers, placeholder signals, and repair target.
+- `blueprint_review_authoring_context`: controls the canonical review-fix
+  schema, locked markers, rendered headings, saved finding ids, selected
+  `targetIds`, plan/summary evidence, dependency evidence, allowed next actions,
+  and repair target.
+- `blueprint_review_validate_model`: controls schema validation, residual
+  diagnostics, normalized model shape, and the render preview.
 - `blueprint_review_record`: controls durable `XX-REVIEW-FIX.md` persistence and
   post-write counts/follow-ups.
 - `blueprint_state_update`: controls final command state and next implemented
@@ -145,8 +162,9 @@ evidence, scope checks, or artifact richness.
 - Verification failure: roll back the in-progress uncommitted change for that
   finding, document the failure, and continue only if subsequent findings remain
   independent.
-- MCP write validation failure: repair against the canonical template and retry
-  once; if still failing, stop without manual file writes.
+- Model validation failure: repair against the narrowed task schema and retry
+  once.
+- MCP write validation failure: stop without manual file writes.
 
 ## Output Quality Criteria
 
@@ -154,11 +172,12 @@ evidence, scope checks, or artifact richness.
   summary from `blueprint_review_load_findings`.
 - Changed files and verification evidence are specific enough for a reviewer to
   audit quickly.
-- The artifact distinguishes applied fixes from skipped stale-context findings
+- The rendered artifact distinguishes applied fixes from skipped stale-context findings
   and remaining follow-ups.
-- The status is honest: `APPLIED` only when selected findings were fixed and
+- The status is honest: `COMPLETED` only when selected findings were fixed and
   verified, `PARTIAL` when some selected findings remain or checks are thin,
-  `SKIPPED` when no selected finding could be safely changed.
+  `BLOCKED` when selected findings cannot be safely changed without a blocking
+  prerequisite or repair route.
 - The user-facing summary reports repo changes, verification, artifact status,
   deferred work, and the next implemented command.
 
@@ -166,8 +185,11 @@ evidence, scope checks, or artifact richness.
 
 - The selected findings were all attempted or explicitly deferred before
   persistence.
-- `XX-REVIEW-FIX.md` was persisted through `blueprint_review_record` or the run
-  stopped with the exact MCP write failure after one repair retry.
+- The `review.review-fix` model was validated through
+  `blueprint_review_validate_model` and persisted through
+  `blueprint_review_record` with the same selected `targetIds` used for
+  authoring, or the run stopped with the exact MCP failure after one model repair
+  retry.
 - `.blueprint/STATE.md` was updated through `blueprint_state_update` whenever a
   durable artifact was created or updated.
 - No unrelated repo files were modified.

@@ -36,7 +36,11 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
   );
   assert.match(
     commandFile,
-    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
+    new RegExp(blueprintRuntimeToolFqn("blueprint_review_authoring_context"))
+  );
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_review_validate_model"))
   );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
@@ -49,7 +53,9 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
   assert.match(commandFile, /Treat finding selection as an explicit gate before repo mutation/i);
   assert.match(commandFile, /`--auto` as bounded automatic finding selection only/i);
   assert.match(commandFile, /process one selected finding at a time/i);
-  assert.match(commandFile, /repair the markdown against the `review\.review-fix` template/i);
+  assert.match(commandFile, /Author a `review\.review-fix` JSON model only/i);
+  assert.match(commandFile, /same `targetIds` array used for authoring context/i);
+  assert.match(commandFile, /Markdown `content` fallback is invalid for `review\.review-fix`/i);
   assert.match(commandFile, /No auto-fixer behavior is shipped/i);
   assert.match(commandFile, /XX-REVIEW-FIX\.md/);
   assert.match(commandFile, /\/blu-code-review/);
@@ -81,7 +87,8 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
     /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
   assert.match(skillFile, /blueprint_review_load_findings/);
-  assert.match(skillFile, /blueprint_artifact_contract_read/);
+  assert.match(skillFile, /blueprint_review_authoring_context/);
+  assert.match(skillFile, /blueprint_review_validate_model/);
   assert.match(skillFile, /blueprint_state_update/);
   assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /`--auto` as bounded finding selection only/i);
@@ -93,7 +100,9 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   );
   assert.match(skillFile, /subagent stays read-only/i);
   assert.match(skillFile, /process one selected finding at a time/i);
-  assert.match(skillFile, /repair against the `review\.review-fix` authoring template\s+and retry once/i);
+  assert.match(skillFile, /Author only the `review\.review-fix` JSON model/i);
+  assert.match(skillFile, /same `targetIds` array used for authoring context/i);
+  assert.match(skillFile, /Markdown `content`\s+fallback is invalid/i);
   assert.match(skillFile, /browser\/web\/search-only\s+substitute for codebase analysis/i);
   assert.match(skillFile, /No auto-fixer behavior is shipped/i);
   assert.match(skillFile, /run stays inline,\s+uses the reviewer subagent/i);
@@ -118,7 +127,8 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   for (const tool of [
     "blueprint_phase_locate",
     "blueprint_review_load_findings",
-    "blueprint_artifact_contract_read",
+    "blueprint_review_authoring_context",
+    "blueprint_review_validate_model",
     "blueprint_review_record",
     "blueprint_state_update"
   ]) {
@@ -126,12 +136,21 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   }
 
   assert.match(referenceFile, /`review\.review-fix`/);
-  assert.match(referenceFile, /canonical `review\.review-fix` template/i);
-  assert.match(referenceFile, /## Findings Addressed/);
-  assert.match(referenceFile, /## Changes Made/);
-  assert.match(referenceFile, /## Verification/);
-  assert.match(referenceFile, /## Follow-Ups/);
-  assert.match(referenceFile, /## Next Safe Action/);
+  assert.match(referenceFile, /Author only the `review\.review-fix` JSON model/i);
+  assert.match(referenceFile, /Markdown `content` fallback is\s+invalid/i);
+  assert.match(referenceFile, /`COMPLETED`, `PARTIAL`, or `BLOCKED`/);
+  assert.match(referenceFile, /`Status`, `Readiness`, `Completion State`, and\s+`Next Safe Action`/);
+  assert.match(referenceFile, /`Remediation Summary`/);
+  assert.match(referenceFile, /`Findings Addressed`/);
+  assert.match(referenceFile, /`Changes Made`/);
+  assert.match(referenceFile, /`Verification`/);
+  assert.match(referenceFile, /`Dependency Plans`/);
+  assert.match(referenceFile, /`Manual \/ Deferred Work`/);
+  assert.match(referenceFile, /`Gap \/ Repair Routes`/);
+  assert.match(referenceFile, /`Follow-Ups`/);
+  assert.match(referenceFile, /`Evidence`/);
+  assert.match(referenceFile, /`Next Safe Action`/);
+  assert.match(referenceFile, /same selected `targetIds` used for\s+authoring/i);
   assert.match(referenceFile, /Use `blueprint-reviewer` only as a bounded analysis helper/i);
   assert.match(referenceFile, /must stay read-only/i);
   assert.match(referenceFile, /must not apply fixes/i);
@@ -140,7 +159,7 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   assert.match(referenceFile, /Work one finding at a time/i);
   assert.match(referenceFile, /Reread the implicated source and test files before editing/i);
   assert.match(referenceFile, /Compress carry-forward context/i);
-  assert.match(referenceFile, /MCP write validation failure: repair against the canonical template and retry\s+once/i);
+  assert.match(referenceFile, /Model validation failure: repair against the narrowed task schema and retry\s+once/i);
   assert.match(referenceFile, /Every fixed, skipped, or deferred finding ties back to a saved finding id/i);
   assert.match(referenceFile, /No public command surface, catalog status semantics, hook ownership, hidden git\s+automation, or `.planning\/` runtime dependency was introduced/i);
 });
