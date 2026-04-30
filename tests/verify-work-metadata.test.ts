@@ -35,6 +35,7 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_summary_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_read")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_validate_model")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_render")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_validation_write")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
@@ -83,6 +84,7 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(skillFile, /blueprint-verifier/);
   assert.match(skillFile, /blueprint_phase_validation_write/);
   assert.match(skillFile, /blueprint_phase_validation_authoring_context/);
+  assert.match(skillFile, /blueprint_phase_validation_validate_model/);
   assert.match(skillFile, /blueprint_phase_validation_render/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.verifier/);
@@ -103,8 +105,8 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeContract, /use `ask_user` for the first-pass result on each test/i);
   assert.match(runtimeContract, /structured `modelContract` authority/);
   assert.match(runtimeContract, /phase\.uat\.modelContract/);
-  assert.match(runtimeContract, /blueprint_phase_validation_render/);
-  assert.match(runtimeContract, /readyToWrite: true/i);
+  assert.match(runtimeContract, /blueprint_phase_validation_validate_model/);
+  assert.match(runtimeContract, /status: "valid"/i);
   assert.match(
     runtimeReference,
     /`verify-work`[\s\S]*Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
@@ -113,7 +115,7 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeReference, /concrete user-observable UAT test queue/i);
   assert.match(runtimeReference, /pass\/skipped\/blocked\/issue/i);
   assert.match(runtimeReference, /read the `phase\.uat` model contract/i);
-  assert.match(runtimeReference, /same ready structured model directly to the writer/i);
+  assert.match(runtimeReference, /authoringMode: "model-only"/i);
 });
 
 test("verify-work docs and supporting contracts keep roadmap-sync risk and resumable UAT behavior explicit", async () => {
@@ -128,7 +130,7 @@ test("verify-work docs and supporting contracts keep roadmap-sync risk and resum
     /updates `?\.blueprint\/ROADMAP\.md`? when valid execution, verification, and UAT evidence make completion durable/i
   );
   assert.match(commandDoc, /## Shell Risk Profile[\s\S]*Medium: writes UAT evidence, can sync `\.blueprint\/ROADMAP\.md` completion state, and updates follow-up state\./i);
-  assert.match(commandDoc, /render the final `XX-UAT\.md` body through `blueprint_phase_validation_render`/i);
+  assert.match(commandDoc, /validate the final structured UAT payload through `blueprint_phase_validation_validate_model`/i);
   assert.match(commandDoc, /modelContract` JSON Schema, quality rules, context bindings, rendered headings, and example leakage signals/i);
   assert.match(commandDoc, /phase\.uat\.modelContract/i);
   assert.match(commandDoc, /validates the written artifact before updating state/i);

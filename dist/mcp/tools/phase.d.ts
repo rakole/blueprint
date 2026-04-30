@@ -192,6 +192,48 @@ type PhaseVerificationStructuredModel = {
     suggestedRepairs: string[];
     nextSafeAction: string;
 };
+type PhaseUatStructuredModel = {
+    status: "PASS" | "FAIL" | "PARTIAL";
+    resumeState: "RESUMED" | "NEW" | "CONTINUED";
+    checkpoint: string;
+    uatSummary: string[];
+    sessionState: string[];
+    currentTest: {
+        number: string;
+        name: string;
+        expected: string;
+        awaiting: string;
+    };
+    testMatrix: Array<{
+        number: string;
+        test: string;
+        expectedBehavior: string;
+        evidence: string;
+        result: "pending" | "pass" | "issue" | "skipped" | "blocked";
+        notes: string;
+    }>;
+    resultSummary: {
+        total: number;
+        passed: number;
+        issues: number;
+        pending: number;
+        skipped: number;
+        blocked: number;
+    };
+    questionsAsked: string[];
+    observedBehavior: string[];
+    unresolvedGaps: string[];
+    structuredGaps: Array<{
+        test: string;
+        truth: string;
+        status: "failed" | "partial" | "blocked" | "none";
+        severity: "blocker" | "major" | "minor" | "cosmetic" | "none";
+        reason: string;
+        followUp: string;
+    }>;
+    followUpFixes: string[];
+    nextSafeAction: string;
+};
 type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 type PhaseValidationModelDiagnostic = {
     source: PhaseValidationDiagnosticSource;
@@ -208,7 +250,7 @@ type PhaseValidationValidateModelResult = {
     status: "valid" | "invalid";
     valid: boolean;
     phase: ResolvedPhaseLocation | null;
-    artifact: "verification";
+    artifact: PhaseValidationArtifactKind;
     path: string | null;
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
@@ -218,7 +260,7 @@ type PhaseValidationValidateModelResult = {
         bySource: Record<PhaseValidationDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
-    normalizedModel: PhaseVerificationStructuredModel | null;
+    normalizedModel: PhaseVerificationStructuredModel | PhaseUatStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
@@ -1398,6 +1440,7 @@ export declare const phaseToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             verification: "verification";
+            uat: "uat";
         }>;
         model: z.ZodUnknown;
     };
