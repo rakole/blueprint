@@ -217,12 +217,7 @@
               ],
               "properties": {
                 "status": {
-                  "enum": [
-                    "completed",
-                    "unavailable",
-                    "failed",
-                    "blocked"
-                  ]
+                  "const": "completed"
                 }
               }
             },
@@ -330,6 +325,19 @@
             "const": "blocked"
           },
           "reviewerCoverage": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "const": "completed"
+                  }
+                }
+              }
+            },
             "contains": {
               "type": "object",
               "required": [

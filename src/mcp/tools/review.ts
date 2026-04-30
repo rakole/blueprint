@@ -1111,12 +1111,6 @@ async function buildAllowedPeerReviewNextActions(args: {
       : args.hasCodeReview
         ? "/blu-progress"
         : `/blu-code-review ${args.phaseNumber}`;
-  const completedCandidates = uniqueSortedStrings([
-    completedPreferred,
-    `/blu-execute-phase ${args.phaseNumber}`,
-    `/blu-code-review ${args.phaseNumber}`,
-    "/blu-progress"
-  ]);
   const partialCandidates = uniqueSortedStrings([
     `/blu-plan-phase ${args.phaseNumber}`,
     `/blu-review ${args.phaseNumber}`
@@ -1139,7 +1133,7 @@ async function buildAllowedPeerReviewNextActions(args: {
 
     return filtered.length > 0 ? filtered : actions;
   };
-  const completedNextSafeActions = filterImplemented(completedCandidates);
+  const completedNextSafeActions = filterImplemented([completedPreferred]);
   const partialNextSafeActions = filterImplemented(partialCandidates);
   const blockedNextSafeActions = filterImplemented(blockedCandidates);
 
@@ -1155,17 +1149,30 @@ async function buildAllowedPeerReviewNextActions(args: {
   };
 }
 
-function collectPeerReviewEvidenceArtifacts(args: {
+const PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS = [
+  ".blueprint/ROADMAP.md",
+  ".blueprint/REQUIREMENTS.md"
+];
+
+async function collectPeerReviewEvidenceArtifacts(args: {
+  projectRoot: string;
   planPaths: string[];
   artifacts: string[];
-  reportPath: string;
-}): string[] {
+}): Promise<string[]> {
+  const repoEvidenceArtifacts: string[] = [];
+
+  for (const artifactPath of PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS) {
+    if (await pathExists(resolveBlueprintPath(args.projectRoot, artifactPath))) {
+      repoEvidenceArtifacts.push(artifactPath);
+    }
+  }
+
   return uniqueSortedStrings([
+    ...repoEvidenceArtifacts,
     ...args.planPaths,
     ...args.artifacts
-      .filter((artifactPath) => artifactPath !== args.reportPath)
       .filter((artifactPath) =>
-        /-(?:CONTEXT|RESEARCH|UI-SPEC|PLAN|SUMMARY|VERIFICATION|UAT|REVIEW|SECURITY|UI-REVIEW)\.md$/i.test(artifactPath)
+        /-(?:CONTEXT|RESEARCH|UI-SPEC|PLAN|SUMMARY|VERIFICATION|UAT|REVIEW|REVIEWS|SECURITY|UI-REVIEW)\.md$/i.test(artifactPath)
       )
   ]);
 }
@@ -1406,10 +1413,10 @@ async function buildPeerReviewAuthoringContext(args: {
       title: planRead.metadata?.title ?? null
     }))
     .filter((plan) => plan.planId.length > 0 && plan.path.length > 0);
-  const knownEvidenceArtifacts = collectPeerReviewEvidenceArtifacts({
+  const knownEvidenceArtifacts = await collectPeerReviewEvidenceArtifacts({
+    projectRoot: args.projectRoot,
     planPaths: plans.map((plan) => plan.path),
-    artifacts: located.artifacts,
-    reportPath
+    artifacts: located.artifacts
   });
   const nextActions = await buildAllowedPeerReviewNextActions({
     phaseNumber,
@@ -3878,6 +3885,86 @@ function parseUiReviewFindingsTable(content: string): {
   };
 }
 
+function parsePeerReviewFindingsTableFindings(content: string): ReviewFinding[] {
+  const findings: ReviewFinding[] = [];
+  const seenSummaries = new Set<string>();
+
+  for (const section of extractMarkdownSectionContent(content, /^Findings$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length === 0) {
+      continue;
+    }
+
+    let headers: string[] | null = null;
+
+    for (const cells of tableRows) {
+      if (cells.length < 5) {
+        continue;
+      }
+
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
+
+      if (
+        headers === null &&
+        normalizedCells.includes("severity") &&
+        normalizedCells.includes("source") &&
+        normalizedCells.includes("evidence") &&
+        normalizedCells.includes("recommendation") &&
+        normalizedCells.includes("status")
+      ) {
+        headers = normalizedCells;
+        continue;
+      }
+
+      const severityIndex = headers ? findHeaderIndex(headers, [/^severity$/]) : 0;
+      const sourceIndex = headers ? findHeaderIndex(headers, [/^source$/]) : 1;
+      const evidenceIndex = headers ? findHeaderIndex(headers, [/^evidence$/]) : 2;
+      const recommendationIndex = headers ? findHeaderIndex(headers, [/^recommendation$/]) : 3;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : 4;
+      const severity = cells[severityIndex >= 0 ? severityIndex : 0] ?? "";
+      const source = cells[sourceIndex >= 0 ? sourceIndex : 1] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : 2] ?? "";
+      const recommendation = cells[recommendationIndex >= 0 ? recommendationIndex : 3] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : 4] ?? "";
+
+      if (!/^(?:OPEN|BLOCKED)$/i.test(status.trim())) {
+        continue;
+      }
+
+      if (
+        isPlaceholderReviewListItem(source) &&
+        isPlaceholderReviewListItem(evidence) &&
+        isPlaceholderReviewListItem(recommendation)
+      ) {
+        continue;
+      }
+
+      const summary = normalizeFindingSummary(
+        `${source}: ${evidence}${
+          isPlaceholderReviewListItem(recommendation)
+            ? ""
+            : ` Recommendation: ${recommendation}`
+        }`
+      );
+
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: normalizeSecurityFindingSeverity(severity),
+        summary,
+        sourceSection: "Findings"
+      });
+    }
+  }
+
+  return findings;
+}
+
 function parseFindingsFromArtifact(
   content: string,
   artifact: ReviewArtifactKind
@@ -3959,6 +4046,23 @@ function parseFindingsFromArtifact(
     parsedFollowUps.push(...table.followUps);
 
     for (const tableFinding of table.findings) {
+      if (seenFindingKeys.has(tableFinding.summary)) {
+        continue;
+      }
+
+      seenFindingKeys.add(tableFinding.summary);
+      severityCounts[tableFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: tableFinding.severity,
+        summary: tableFinding.summary,
+        sourceSection: tableFinding.sourceSection
+      });
+    }
+  }
+
+  if (artifact === "peer-review") {
+    for (const tableFinding of parsePeerReviewFindingsTableFindings(content)) {
       if (seenFindingKeys.has(tableFinding.summary)) {
         continue;
       }
@@ -4178,7 +4282,11 @@ function renderPeerReviewModelContent(
   located: LocatedReviewPhase,
   authoringContext: PeerReviewAuthoringContext
 ): string {
-  const reviewers = model.reviewerCoverage.map((row) => row.reviewer).join(", ");
+  const completedReviewers = model.reviewerCoverage.filter((row) => row.status === "completed");
+  const reviewers =
+    completedReviewers.length > 0
+      ? completedReviewers.map((row) => row.reviewer).join(", ")
+      : "none";
   const reviewerRows = model.reviewerCoverage.map((row) => [
     row.reviewer,
     row.status,
@@ -4189,11 +4297,13 @@ function renderPeerReviewModelContent(
     row.goalFit,
     row.summary
   ]);
-  const findings = model.findings.map((row) =>
-    row.status === "NONE"
-      ? "none"
-      : `[${row.severity}][${row.status}] ${row.source} - Evidence: ${row.evidence} Recommendation: ${row.recommendation}`
-  );
+  const findingRows = model.findings.map((row) => [
+    row.severity,
+    row.source,
+    row.evidence,
+    row.recommendation,
+    row.status
+  ]);
   const evidenceRows = authoringContext.knownEvidenceArtifacts.map((artifactPath) => {
     const coverage = model.evidenceCoverage[artifactPath];
     return [artifactPath, coverage.status, coverage.rationale];
@@ -4217,7 +4327,7 @@ ${renderMarkdownTable(["Reviewer", "Status", "Summary"], reviewerRows)}
 
 ## Reviewer Results
 
-${renderBulletList(model.reviewerCoverage.map((row) => `${row.reviewer}: ${row.summary}`))}
+${renderBulletList(completedReviewers.map((row) => `${row.reviewer}: ${row.summary}`))}
 
 ## Plan Reviews
 
@@ -4225,7 +4335,7 @@ ${renderMarkdownTable(["Plan", "Goal Fit", "Summary"], planRows)}
 
 ## Findings
 
-${renderBulletList(findings)}
+${renderMarkdownTable(["Severity", "Source", "Evidence", "Recommendation", "Status"], findingRows)}
 
 ## Consensus
 
