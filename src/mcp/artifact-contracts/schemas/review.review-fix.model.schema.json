@@ -105,7 +105,7 @@
     },
     "evidence": {
       "type": "array",
-      "description": "Evidence ledger rows rendered into the Evidence table. The task schema requires exact source paths from the saved review and live execution inventory.",
+      "description": "Evidence ledger rows rendered into the Evidence table. The task schema requires exact source paths from the saved review and live execution inventory while allowing additional sink-safe provenance rows.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/evidenceRow"
@@ -337,11 +337,21 @@
             }
           },
           "changesMade": {
-            "minItems": 1,
-            "maxItems": 1,
-            "items": {
-              "$ref": "#/$defs/noChangeRow"
-            }
+            "oneOf": [
+              {
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/changeRow"
+                }
+              },
+              {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "$ref": "#/$defs/noChangeRow"
+                }
+              }
+            ]
           },
           "verification": {
             "contains": {
@@ -448,7 +458,9 @@
     "dependencyStatus": {
       "type": "string",
       "enum": [
-        "satisfied"
+        "satisfied",
+        "pending",
+        "blocked"
       ]
     },
     "manualOrDeferredStatus": {
@@ -500,6 +512,18 @@
       "type": "string",
       "pattern": "^(?:\\.blueprint|[A-Za-z0-9._-]+)(?:/[A-Za-z0-9._-]+)*(?:\\.[A-Za-z0-9._-]+)?$",
       "description": "Evidence source path token suitable for a Markdown table cell."
+    },
+    "evidenceSourceString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Evidence source table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
+    },
+    "commandEvidenceString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
+      "description": "Single-line command evidence suitable for the Evidence table source cell."
     },
     "findingId": {
       "type": "string",
@@ -762,12 +786,54 @@
         "source",
         "summary"
       ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "command"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/commandEvidenceString"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "not": {
+                  "const": "command"
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/sourcePathString"
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "kind": {
           "$ref": "#/$defs/evidenceKind"
         },
         "source": {
-          "$ref": "#/$defs/sourcePathString"
+          "$ref": "#/$defs/evidenceSourceString"
         },
         "summary": {
           "$ref": "#/$defs/tableCellString"

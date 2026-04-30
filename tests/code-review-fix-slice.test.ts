@@ -274,6 +274,64 @@ function validReviewFixModel(overrides: Record<string, unknown> = {}): Record<st
   };
 }
 
+async function addPendingReviewFixPlan(repoPath: string, planId = "02"): Promise<void> {
+  const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-fix");
+  await writeFile(
+    path.join(phaseDir, `05-${planId}-PLAN.md`),
+    `---
+phase: 5
+plan_id: "${planId}"
+title: "Pending Review Fix Plan"
+wave: 1
+status: ready
+objective: "Leave a pending execution plan for review-fix debt checks."
+depends_on: []
+requirements: ["REVFIX-01"]
+files_modified: ["src/feature.ts"]
+read_first: ["src/feature.ts"]
+acceptance_criteria:
+  - "Pending execution evidence is routed through execute-phase"
+autonomous: true
+---
+
+# Phase 05: Review Fix - Plan ${planId}
+
+## Goal
+
+Leave a pending execution plan for review-fix debt checks.
+
+## Scope
+
+- Keep pending execution debt visible without blocking review-fix authoring.
+
+## Tasks
+
+### Task 1: Preserve pending debt
+
+#### Read First
+
+- src/feature.ts
+
+#### Action
+
+- Do not write a completed summary for this plan in the fixture.
+
+#### Acceptance Criteria
+
+- Pending execution evidence is routed through execute-phase
+
+## Verification
+
+- /blu-execute-phase 5 should be the next safe repair route for this pending plan.
+
+## Must Haves
+
+- Review-fix authoring remains available while COMPLETED review-fix status is disallowed.
+`,
+    "utf8"
+  );
+}
+
 test("code-review-fix docs and catalog metadata promote the review-remediation slice to implemented", async () => {
   const [catalogMarkdown, implementationOrder, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
@@ -417,7 +475,92 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
   assert.deepEqual(loaded.followUps, []);
 });
 
-test("review-fix authoring context narrows selected findings, exact evidence, and empty dependency shape", async (t) => {
+test("review-fix evidence allows required upstream rows plus extra safe provenance", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const baseEvidence = validReviewFixModel().evidence as Array<Record<string, unknown>>;
+  const model = validReviewFixModel({
+    evidence: [
+      ...baseEvidence,
+      {
+        kind: "repo-path",
+        source: "src/feature.ts",
+        summary: "Changed source file supplied extra remediation provenance."
+      },
+      {
+        kind: "command",
+        source: "npm test -- tests/code-review-fix-slice.test.ts",
+        summary: "Focused command evidence remained sink-safe in the evidence table."
+      }
+    ]
+  });
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model
+  });
+
+  assert.equal(
+    validation.status,
+    "valid",
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const mislabeledUpstreamEvidence = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      evidence: [
+        {
+          kind: "command",
+          source: ".blueprint/phases/05-review-fix/05-REVIEW.md",
+          summary: "Mislabeled source review evidence must not satisfy the upstream review row."
+        },
+        {
+          kind: "other",
+          source: ".blueprint/phases/05-review-fix/05-01-PLAN.md",
+          summary: "Mislabeled plan evidence must not satisfy the upstream plan row."
+        },
+        {
+          kind: "repo-path",
+          source: ".blueprint/phases/05-review-fix/05-01-SUMMARY.md",
+          summary: "Mislabeled summary evidence must not satisfy the upstream summary row."
+        },
+        {
+          kind: "summary",
+          source: ".blueprint/phases/05-review-fix/05-99-SUMMARY.md",
+          summary: "Invented upstream-looking summary evidence must be rejected."
+        }
+      ]
+    })
+  });
+
+  assert.equal(mislabeledUpstreamEvidence.status, "invalid");
+  assert.ok(
+    mislabeledUpstreamEvidence.diagnostics.some((diagnostic) => diagnostic.source === "schema"),
+    mislabeledUpstreamEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const recorded = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model
+  });
+
+  assert.equal(recorded.status, "created");
+  const saved = await readFile(path.join(repoPath, recorded.reportPath), "utf8");
+  assert.match(saved, /src\/feature\.ts/);
+  assert.match(saved, /npm test -- tests\/code-review-fix-slice\.test\.ts/);
+});
+
+test("review-fix authoring context narrows selected findings, required evidence subset, and empty dependency shape", async (t) => {
   const repoPath = await createCodeReviewFixRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -562,6 +705,172 @@ test("review-fix authoring blocks when required upstream context is missing", as
   assert.equal(validation.diagnostics[0]?.source, "scope");
 });
 
+test("review-fix pending execution debt keeps authoring ready and blocks completed status", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await addPendingReviewFixPlan(repoPath);
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix"
+  });
+
+  assert.equal(context.status, "ready");
+  assert.ok(context.authoringContext);
+  const authoringContext = context.authoringContext as {
+    allowCompleted: boolean;
+    blockedNextSafeActions: string[];
+    blockedRequiredNextSafeAction: string | null;
+    executionDebt: {
+      pendingPlans: string[];
+      blockers: string[];
+    };
+    knownEvidenceArtifacts: string[];
+    taskSchema: { properties?: Record<string, Record<string, unknown>> };
+  };
+
+  assert.equal(authoringContext.allowCompleted, false);
+  assert.deepEqual(authoringContext.executionDebt.pendingPlans, ["02"]);
+  assert.match(authoringContext.executionDebt.blockers.join("\n"), /pending execution plans: 02/);
+  assert.ok(authoringContext.blockedNextSafeActions.includes("/blu-execute-phase 5"));
+  assert.equal(authoringContext.blockedRequiredNextSafeAction, "/blu-execute-phase 5");
+  assert.deepEqual(authoringContext.taskSchema.properties?.status.enum, ["PARTIAL", "BLOCKED"]);
+
+  const requiredEvidence = [
+    {
+      kind: "review",
+      source: ".blueprint/phases/05-review-fix/05-REVIEW.md",
+      summary: "Saved review findings supplied the selected remediation targets."
+    },
+    {
+      kind: "plan",
+      source: ".blueprint/phases/05-review-fix/05-01-PLAN.md",
+      summary: "Completed plan evidence supplied the original execution baseline."
+    },
+    {
+      kind: "summary",
+      source: ".blueprint/phases/05-review-fix/05-01-SUMMARY.md",
+      summary: "Completed summary evidence supplied the execution baseline."
+    },
+    {
+      kind: "plan",
+      source: ".blueprint/phases/05-review-fix/05-02-PLAN.md",
+      summary: "Pending plan evidence forces a follow-up execute-phase route."
+    }
+  ];
+  assert.deepEqual(
+    authoringContext.knownEvidenceArtifacts,
+    requiredEvidence.map((row) => row.source).sort()
+  );
+
+  const invalidCompleted = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      evidence: requiredEvidence
+    })
+  });
+
+  assert.equal(invalidCompleted.status, "invalid");
+  assert.ok(
+    invalidCompleted.diagnostics.some((diagnostic) =>
+      diagnostic.source === "schema" && diagnostic.path === "model.status"
+    )
+  );
+
+  const blockedModel = validReviewFixModel({
+    status: "BLOCKED",
+    readiness: "blocked",
+    completionState: "blocked",
+    findingsAddressed: [
+      {
+        findingId: "F-01",
+        status: "deferred",
+        evidence: "Pending plan 02 must complete before this saved finding can be closed.",
+        disposition: "Carry the selected implementation finding through execute-phase."
+      },
+      {
+        findingId: "F-02",
+        status: "deferred",
+        evidence: "Pending plan 02 must complete before test coverage can be declared closed.",
+        disposition: "Carry the selected regression finding through execute-phase."
+      },
+      {
+        findingId: "FU-01",
+        status: "skipped",
+        evidence: "Focused validation waits on pending plan 02 execution evidence.",
+        disposition: "Re-run validation after execute-phase completes the pending plan."
+      }
+    ],
+    changesMade: [
+      {
+        file: "none",
+        summary: "none"
+      }
+    ],
+    verification: [
+      {
+        check: "Pending plan 02 execution evidence exists",
+        command: "/blu-execute-phase 5",
+        result: "blocked",
+        evidence: "Plan 02 has not produced a completed summary yet."
+      }
+    ],
+    manualOrDeferredWork: [
+      {
+        item: "Complete pending execution plan 02",
+        reason: "Review-fix completion cannot be truthful until pending execution evidence exists.",
+        followUp: "/blu-execute-phase 5",
+        status: "DEFERRED"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "Pending plan 02 execution summary",
+        evidence: "The live plan inventory includes 05-02-PLAN.md without a completed summary.",
+        repair: "Run /blu-execute-phase 5 to produce the missing execution evidence.",
+        status: "BLOCKED"
+      }
+    ],
+    followUps: ["Run /blu-execute-phase 5 to close pending execution debt."],
+    evidence: [
+      ...requiredEvidence,
+      {
+        kind: "command",
+        source: "/blu-execute-phase 5",
+        summary: "Execution repair command is the required blocked route."
+      }
+    ],
+    nextSafeAction: "/blu-execute-phase 5"
+  });
+
+  const blockedValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: blockedModel
+  });
+
+  assert.equal(
+    blockedValidation.status,
+    "valid",
+    blockedValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const recorded = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: blockedModel
+  });
+
+  assert.equal(recorded.status, "created");
+});
+
 test("review-fix writer rejects markdown fallback for model-only persistence", async (t) => {
   const repoPath = await createCodeReviewFixRepo();
   t.after(async () => {
@@ -692,6 +1001,82 @@ test("review-fix truth table rejects completed models with active gaps and accep
   });
 
   assert.equal(partial.status, "valid");
+});
+
+test("review-fix blocked status can carry real changed file rows", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const blocked = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      status: "BLOCKED",
+      readiness: "blocked",
+      completionState: "blocked",
+      findingsAddressed: [
+        {
+          findingId: "F-01",
+          status: "deferred",
+          evidence: "The source guard was started but cannot be closed until validation is unblocked.",
+          disposition: "Keep the selected implementation finding open."
+        },
+        {
+          findingId: "F-02",
+          status: "deferred",
+          evidence: "Regression coverage still waits on the blocked validation path.",
+          disposition: "Keep the selected test finding open."
+        },
+        {
+          findingId: "FU-01",
+          status: "skipped",
+          evidence: "Focused validation could not be rerun while the blocker remains.",
+          disposition: "Carry the saved follow-up forward."
+        }
+      ],
+      changesMade: [
+        {
+          file: "src/feature.ts",
+          summary: "Started the negative-input guard before validation became blocked."
+        }
+      ],
+      verification: [
+        {
+          check: "Focused review-fix fixture passes",
+          command: "npm test -- tests/code-review-fix-slice.test.ts",
+          result: "blocked",
+          evidence: "Validation could not complete because the focused fixture is blocked."
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "Complete blocked validation",
+          reason: "The source changed but verification has not completed.",
+          followUp: "/blu-progress",
+          status: "DEFERRED"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Blocked validation for changed source",
+          evidence: "src/feature.ts has a started remediation but no passing validation yet.",
+          repair: "Resolve the validation blocker before marking review-fix completed.",
+          status: "BLOCKED"
+        }
+      ],
+      followUps: ["Resolve the blocked validation path for src/feature.ts."],
+      nextSafeAction: "/blu-progress"
+    })
+  });
+
+  assert.equal(
+    blocked.status,
+    "valid",
+    blocked.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
 });
 
 test("review-fix validation rejects stale upstream evidence inventory", async (t) => {
