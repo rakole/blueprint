@@ -551,11 +551,16 @@ type UiReviewStructuredModel = {
 type UiReviewAuthoringContext = {
   phase: ReviewScopePhase;
   path: string;
+  completedPlans: Array<{ planId: string; path: string }>;
   completedSummaries: string[];
+  dependencyPlans: Array<{ planId: string; path: string }>;
   pendingPlans: string[];
   lowerWavePendingPlanIds: string[];
+  verification: string | null;
+  uat: string | null;
   knownEvidenceArtifacts: string[];
   existingUiReview: string | null;
+  optionalEvidenceArtifacts: string[];
   allowedExistingReviewPostures: UiReviewStructuredModel["auditTrail"]["existingReviewPosture"][];
   completedNextSafeAction: string;
   followUpNextSafeAction: string;
@@ -2094,6 +2099,10 @@ function uniqueSortedStrings(values: string[]): string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
+function uniqueOrderedStrings(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
 function exactObjectPropertyContains(
   propertyName: string,
   value: string
@@ -2909,6 +2918,12 @@ async function buildAllowedUiReviewNextActions(args: {
 function buildUiReviewTaskSchema(args: {
   baseSchema: Record<string, unknown>;
   knownEvidenceArtifacts: string[];
+  optionalEvidenceArtifacts: string[];
+  completedPlans: Array<{ planId: string; path: string }>;
+  dependencyPlans: Array<{ planId: string; path: string }>;
+  verification: string | null;
+  uat: string | null;
+  existingUiReview: string | null;
   allowPass: boolean;
   allowedExistingReviewPostures: UiReviewStructuredModel["auditTrail"]["existingReviewPosture"][];
   completedNextSafeAction: string;
@@ -2958,6 +2973,7 @@ function buildUiReviewTaskSchema(args: {
 
     const allowedEvidenceValues = [
       ...args.knownEvidenceArtifacts,
+      ...args.optionalEvidenceArtifacts,
       {
         type: "string",
         pattern: "^(?:(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+:\\d+(?:-\\d+)?|screenshots?: [^\\r\\n|]+|visual observation: [^\\r\\n|]+|not supplied: [^\\r\\n|]+)$"
@@ -3038,6 +3054,12 @@ function buildUiReviewTaskSchema(args: {
 
   schema["x-blueprint-runtimeContext"] = {
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    optionalEvidenceArtifacts: args.optionalEvidenceArtifacts,
+    completedPlans: args.completedPlans,
+    dependencyPlans: args.dependencyPlans,
+    verificationArtifact: args.verification,
+    uatArtifact: args.uat,
+    existingUiReview: args.existingUiReview,
     allowPass: args.allowPass,
     allowedExistingReviewPostures: args.allowedExistingReviewPostures,
     completedNextSafeAction: args.completedNextSafeAction,
@@ -3114,7 +3136,11 @@ async function buildUiReviewAuthoringContext(args: {
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
-  const [summaryIndex, executionTargets] = await Promise.all([
+  const [planIndex, summaryIndex, executionTargets] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: args.projectRoot,
+      phase: phaseNumber
+    }),
     blueprintPhaseSummaryIndex({
       cwd: args.projectRoot,
       phase: phaseNumber
@@ -3153,6 +3179,32 @@ async function buildUiReviewAuthoringContext(args: {
     .filter((summaryRead) => summaryRead.found && summaryRead.path && summaryRead.validation?.valid)
     .map((summaryRead) => summaryRead.path!)
     .sort((left, right) => left.localeCompare(right));
+  const completedPlanIds = new Set(summaryIndex.completedPlans);
+  const completedPlanRecords = planIndex.plans.filter((plan) =>
+    completedPlanIds.has(plan.planId)
+  );
+  const completedPlans = completedPlanRecords
+    .map((plan) => ({
+      planId: plan.planId,
+      path: plan.path
+    }))
+    .sort((left, right) => left.planId.localeCompare(right.planId));
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const dependencyPlans = uniqueOrderedStrings(
+    planIndex.plans.flatMap((plan) =>
+      dependencyPlanRowsForReviewFix(
+        plan.dependsOn,
+        phase.phasePrefix,
+        phase.phaseDir,
+        knownPlanIds
+      ).map((dependency) => `${dependency.planId}\t${dependency.path}`)
+    )
+  )
+    .map((entry) => {
+      const [planId, dependencyPath] = entry.split("\t");
+      return { planId, path: dependencyPath };
+    })
+    .sort((left, right) => left.planId.localeCompare(right.planId));
 
   if (completedSummaries.length === 0) {
     blockers.push(
@@ -3181,6 +3233,9 @@ async function buildUiReviewAuthoringContext(args: {
     ...(artifacts.verification ? [artifacts.verification] : []),
     ...(artifacts.uat ? [artifacts.uat] : [])
   ]);
+  const optionalEvidenceArtifacts = artifacts.existingUiReview
+    ? [artifacts.existingUiReview]
+    : [];
   const allowedExistingReviewPostures: UiReviewStructuredModel["auditTrail"]["existingReviewPosture"][] =
     artifacts.existingUiReview ? ["reused", "overwrite-confirmed"] : ["none"];
   const allowPass =
@@ -3196,6 +3251,12 @@ async function buildUiReviewAuthoringContext(args: {
       ? buildUiReviewTaskSchema({
           baseSchema: uiReviewBaseSchema,
           knownEvidenceArtifacts,
+          optionalEvidenceArtifacts,
+          completedPlans,
+          dependencyPlans,
+          verification: artifacts.verification,
+          uat: artifacts.uat,
+          existingUiReview: artifacts.existingUiReview,
           allowPass,
           allowedExistingReviewPostures,
           ...nextActions
@@ -3205,11 +3266,16 @@ async function buildUiReviewAuthoringContext(args: {
     ? {
         phase,
         path: `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES["ui-review"]}`,
+        completedPlans,
         completedSummaries,
+        dependencyPlans,
         pendingPlans: summaryIndex.pendingPlans,
         lowerWavePendingPlanIds: executionTargets.blockers.lowerWavePendingPlanIds,
+        verification: artifacts.verification,
+        uat: artifacts.uat,
         knownEvidenceArtifacts,
         existingUiReview: artifacts.existingUiReview,
+        optionalEvidenceArtifacts,
         allowedExistingReviewPostures,
         ...nextActions,
         schemaPath: modelContract.schemaPath,
@@ -3233,6 +3299,7 @@ async function buildUiReviewAuthoringContext(args: {
     reason: blockers.length > 0 ? blockers.join(" ") : null,
     warnings: uniqueSortedStrings([
       ...located.warnings,
+      ...planIndex.warnings,
       ...summaryIndex.warnings,
       ...executionTargets.warnings
     ])
@@ -3696,6 +3763,121 @@ function parseSecurityFindingsTableFindings(content: string): ReviewFinding[] {
   return findings;
 }
 
+function normalizeUiReviewFindingSeverity(value: string): ReviewFindingSeverity {
+  const normalized = value.toLowerCase();
+
+  return (["high", "medium", "low"] as const).includes(
+    normalized as "high" | "medium" | "low"
+  )
+    ? normalized as ReviewFindingSeverity
+    : "unknown";
+}
+
+function parseUiReviewFindingsTable(content: string): {
+  findings: ReviewFinding[];
+  followUps: string[];
+} {
+  const findings: ReviewFinding[] = [];
+  const followUps: string[] = [];
+  const seenSummaries = new Set<string>();
+
+  for (const section of extractMarkdownSectionContent(content, /^Findings$/i)) {
+    const tableRows = parseMarkdownTableRows(section);
+
+    if (tableRows.length === 0) {
+      continue;
+    }
+
+    let headers: string[] | null = null;
+
+    for (const cells of tableRows) {
+      if (cells.length < 6) {
+        continue;
+      }
+
+      const normalizedCells = cells.map(normalizeMarkdownHeaderCell);
+
+      if (
+        headers === null &&
+        normalizedCells.includes("pillar") &&
+        normalizedCells.includes("severity") &&
+        normalizedCells.includes("evidence")
+      ) {
+        headers = normalizedCells;
+        continue;
+      }
+
+      const pillarIndex = headers ? findHeaderIndex(headers, [/^pillar$/]) : 0;
+      const severityIndex = headers ? findHeaderIndex(headers, [/^severity$/]) : 1;
+      const statusIndex = headers ? findHeaderIndex(headers, [/^status$/]) : 2;
+      const evidenceIndex = headers ? findHeaderIndex(headers, [/^evidence$/]) : 3;
+      const impactIndex = headers ? findHeaderIndex(headers, [/^user impact$/]) : 4;
+      const recommendationIndex = headers ? findHeaderIndex(headers, [/^recommendation$/]) : 5;
+      const pillar = cells[pillarIndex >= 0 ? pillarIndex : 0] ?? "";
+      const severity = cells[severityIndex >= 0 ? severityIndex : 1] ?? "";
+      const status = cells[statusIndex >= 0 ? statusIndex : 2] ?? "";
+      const evidence = cells[evidenceIndex >= 0 ? evidenceIndex : 3] ?? "";
+      const userImpact = cells[impactIndex >= 0 ? impactIndex : 4] ?? "";
+      const recommendation = cells[recommendationIndex >= 0 ? recommendationIndex : 5] ?? "";
+
+      if (
+        /^none$/i.test(pillar) &&
+        /^none$/i.test(severity) &&
+        /^none$/i.test(status) &&
+        /^none$/i.test(evidence) &&
+        /^none$/i.test(userImpact) &&
+        /^none$/i.test(recommendation)
+      ) {
+        continue;
+      }
+
+      if (
+        pillar.length === 0 ||
+        /^none$/i.test(status) ||
+        isPlaceholderReviewListItem(evidence)
+      ) {
+        continue;
+      }
+
+      const impactText = userImpact.length > 0 && !isPlaceholderReviewListItem(userImpact)
+        ? ` Impact: ${userImpact}.`
+        : "";
+      const recommendationText =
+        recommendation.length > 0 && !isPlaceholderReviewListItem(recommendation)
+          ? ` Recommendation: ${recommendation}.`
+          : "";
+      const summary = normalizeFindingSummary(
+        `${pillar}${status ? ` ${status}` : ""}: ${evidence}.${impactText}${recommendationText}`
+      );
+
+      if (summary.length === 0 || seenSummaries.has(summary)) {
+        continue;
+      }
+
+      seenSummaries.add(summary);
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: normalizeUiReviewFindingSeverity(severity),
+        summary,
+        sourceSection: "Findings"
+      });
+
+      if (
+        recommendation.length > 0 &&
+        !isPlaceholderReviewListItem(recommendation) &&
+        !/^none$/i.test(recommendation)
+      ) {
+        followUps.push(recommendation);
+      }
+    }
+  }
+
+  return {
+    findings,
+    followUps: uniqueOrderedStrings(followUps)
+  };
+}
+
 function parseFindingsFromArtifact(
   content: string,
   artifact: ReviewArtifactKind
@@ -3708,6 +3890,7 @@ function parseFindingsFromArtifact(
   const findings: ReviewFinding[] = [];
   const seenFindingKeys = new Set<string>();
   const severityCounts = emptySeverityCounts();
+  const parsedFollowUps: string[] = [];
 
   for (const entry of entries) {
     for (const item of entry.items) {
@@ -3771,13 +3954,36 @@ function parseFindingsFromArtifact(
     }
   }
 
+  if (artifact === "ui-review") {
+    const table = parseUiReviewFindingsTable(content);
+    parsedFollowUps.push(...table.followUps);
+
+    for (const tableFinding of table.findings) {
+      if (seenFindingKeys.has(tableFinding.summary)) {
+        continue;
+      }
+
+      seenFindingKeys.add(tableFinding.summary);
+      severityCounts[tableFinding.severity] += 1;
+      findings.push({
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+        severity: tableFinding.severity,
+        summary: tableFinding.summary,
+        sourceSection: tableFinding.sourceSection
+      });
+    }
+  }
+
   return {
     findings,
     severityCounts,
-    followUps: collectSubstantiveReviewItems(
-      content,
-      /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
-    )
+    followUps: uniqueOrderedStrings([
+      ...collectSubstantiveReviewItems(
+        content,
+        /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
+      ),
+      ...parsedFollowUps
+    ])
   };
 }
 
@@ -4345,10 +4551,22 @@ function renderUiReviewEvidenceCoverage(args: {
   model: UiReviewStructuredModel;
   knownEvidenceArtifacts: string[];
 }): string[] {
-  return args.knownEvidenceArtifacts.map((artifactPath) => {
+  const knownArtifacts = new Set(args.knownEvidenceArtifacts);
+  const artifactCoverage = args.knownEvidenceArtifacts.map((artifactPath) => {
     const coverage = args.model.evidenceCoverage[artifactPath];
     return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
   });
+  const citedEvidence = uniqueOrderedStrings([
+    ...args.model.pillarScores.map((row) => row.evidence),
+    ...args.model.findings.map((row) => row.evidence)
+  ])
+    .map((evidence) => evidence.trim())
+    .filter((evidence) => evidence.length > 0)
+    .filter((evidence) => !isGenericNoneValue(evidence))
+    .filter((evidence) => !knownArtifacts.has(evidence))
+    .map((evidence) => `${evidence} - cited by pillar or finding evidence.`);
+
+  return [...artifactCoverage, ...citedEvidence];
 }
 
 function renderUiReviewModelContent(
@@ -6713,7 +6931,136 @@ function addUiReviewSemanticDiagnostics(args: {
   }
 }
 
+function collectUiReviewEvidenceEntries(model: UiReviewStructuredModel): Array<{
+  path: string;
+  evidence: string;
+}> {
+  return [
+    ...model.pillarScores.map((row, index) => ({
+      path: `model.pillarScores[${index}].evidence`,
+      evidence: row.evidence
+    })),
+    ...model.findings.map((row, index) => ({
+      path: `model.findings[${index}].evidence`,
+      evidence: row.evidence
+    }))
+  ];
+}
+
+async function addUiReviewRepoCitationDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  projectRoot: string;
+  model: UiReviewStructuredModel;
+}): Promise<void> {
+  for (const entry of collectUiReviewEvidenceEntries(args.model)) {
+    const parsed = parseCodeReviewLocation(entry.evidence);
+
+    if (!parsed) {
+      continue;
+    }
+
+    if (parsed.file.startsWith(".blueprint/")) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.repo_citation_blueprint_artifact",
+          message: `UI-review evidence must cite saved Blueprint artifacts without line suffixes: ${entry.evidence}.`,
+          context: { evidence: entry.evidence, file: parsed.file },
+          suggestion: "Use the exact saved artifact path from authoringContext.knownEvidenceArtifacts instead of a repo-line citation."
+        })
+      );
+      continue;
+    }
+
+    if (parsed.startLine < 1 || parsed.endLine < parsed.startLine) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.invalid_line_range",
+          message: `UI-review evidence has an invalid repo line range: ${entry.evidence}.`,
+          context: {
+            evidence: entry.evidence,
+            startLine: parsed.startLine,
+            endLine: parsed.endLine
+          },
+          suggestion: "Use one-based line numbers with an end line greater than or equal to the start line."
+        })
+      );
+      continue;
+    }
+
+    let absolutePath: string;
+    try {
+      absolutePath = resolveRepoRelativePath(args.projectRoot, parsed.file);
+    } catch (error) {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.repo_citation_path_invalid",
+          message:
+            error instanceof Error
+              ? error.message
+              : `UI-review evidence path could not be resolved: ${parsed.file}.`,
+          context: { evidence: entry.evidence, file: parsed.file },
+          suggestion: "Use a repo-relative file:line citation inside the current repository."
+        })
+      );
+      continue;
+    }
+
+    try {
+      const stats = await fs.stat(absolutePath);
+      if (!stats.isFile()) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: entry.path,
+            code: "residual.repo_citation_not_file",
+            message: `UI-review evidence path is not a file: ${parsed.file}.`,
+            context: { evidence: entry.evidence, file: parsed.file },
+            suggestion: "Use a repo-relative file path to an existing file."
+          })
+        );
+        continue;
+      }
+
+      const lineCount = await countFileLines(absolutePath);
+      if (parsed.endLine > lineCount) {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: entry.path,
+            code: "residual.repo_citation_line_missing",
+            message: `UI-review evidence line range exceeds ${parsed.file}'s ${lineCount} line(s): ${entry.evidence}.`,
+            context: {
+              evidence: entry.evidence,
+              file: parsed.file,
+              lineCount
+            },
+            suggestion: "Update the evidence citation to an existing line or line range."
+          })
+        );
+      }
+    } catch {
+      args.diagnostics.push(
+        modelDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "residual.repo_citation_missing_file",
+          message: `UI-review evidence cites a file that does not exist: ${parsed.file}.`,
+          context: { evidence: entry.evidence, file: parsed.file },
+          suggestion: "Use a repo-relative file:line citation for a file that exists in this repository."
+        })
+      );
+    }
+  }
+}
+
 async function collectUiReviewResidualDiagnostics(args: {
+  projectRoot: string;
   model: Record<string, unknown>;
   normalizedModel: UiReviewStructuredModel | null;
 }): Promise<ReviewModelDiagnostic[]> {
@@ -6731,6 +7078,11 @@ async function collectUiReviewResidualDiagnostics(args: {
   });
   addUiReviewSemanticDiagnostics({
     diagnostics,
+    model: args.normalizedModel
+  });
+  await addUiReviewRepoCitationDiagnostics({
+    diagnostics,
+    projectRoot: args.projectRoot,
     model: args.normalizedModel
   });
 
@@ -7715,6 +8067,7 @@ export async function blueprintReviewValidateModel(
       normalizedUiReviewModel = normalizeUiReviewModel(modelObject);
       diagnostics.push(
         ...await collectUiReviewResidualDiagnostics({
+          projectRoot,
           model: modelObject,
           normalizedModel: normalizeUiReviewModelForResiduals(modelObject)
         })
