@@ -926,7 +926,9 @@ test("ui-review is implemented once manifest, review skill, and review MCP tools
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_phase_locate",
-    "blueprint_review_record"
+    "blueprint_review_authoring_context",
+    "blueprint_review_record",
+    "blueprint_review_validate_model"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-ui-auditor"]);
   assert.deepEqual(entry.blockedBy, []);

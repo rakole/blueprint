@@ -12,7 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `ui-review` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and UI-spec evidence, decide whether overwrite confirmation or a bounded auditor handoff is needed, execute the six-pillar UI audit that fits the saved scope, persist the durable UI-review artifact through MCP, validate the saved audit posture, and route to the next safe implemented follow-up without widening beyond the selected phase.
 - Keep the UI-audit posture explicit throughout the run: resolved scope must stay tied to the selected phase, saved execution evidence, saved `XX-UI-SPEC.md` contract when present, and the actual frontend surface under review; pending gates stay limited to overwrite confirmation; execution mode should reflect inline versus `blueprint-ui-auditor`-assisted analysis; and the artifact plus findings posture must stay legible while the audit is in flight.
-- Runtime contract reference: `skills/blueprint-review/references/ui-review-runtime-contract.md` owns scored-pillar output quality, evidence depth, capability-gated auditor use, no-subagent fallback, and MCP retry/repair behavior.
+- Runtime contract reference: `skills/blueprint-review/references/ui-review-runtime-contract.md` owns model-only authoring, scored-pillar output quality, evidence depth, capability-gated auditor use, no-subagent fallback, and MCP retry/repair behavior.
 
 
 ## Purpose
@@ -60,14 +60,16 @@
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
-- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, notes}`
+- `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, modelContract, authoringTemplate, notes}`
+- `blueprint_review_authoring_context` -> `{status, artifact, phase, authoringContext, taskSchema, reason, warnings}`
+- `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, normalizedModel, renderPreview, taskSchema}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 
 ## UI Review Artifact Contract
 
 - Read `blueprint_artifact_contract_read` for `review.ui-review` before drafting or revising `XX-UI-REVIEW.md`.
-- Use `contract.authoringTemplate` as the heading and schema authority. The local runtime contract adds the output-quality requirements: scored six-pillar table, overall `/24`, priority fixes, evidence trail, and retry/repair behavior.
-- Persist the durable UI audit through `blueprint_review_record` with `artifact: "ui-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-UI-REVIEW.md`.
+- Use `contract.modelContract.schemaPath`, `contract.modelContract.jsonSchema`, and `blueprint_review_authoring_context.authoringContext.taskSchema` as the schema authority. The local runtime contract adds the output-quality requirements: scored six-pillar table, overall `/24`, priority fixes, evidence trail, and retry/repair behavior.
+- Persist the durable UI audit through `blueprint_review_record` with `artifact: "ui-review"` and the same validated structured model; treat the returned `reportPath` as authoritative instead of hand-building `XX-UI-REVIEW.md`.
 
 ## Output Quality Contract
 
@@ -144,7 +146,7 @@
 
 - Preserve generated review artifacts when follow-up git or external CLI steps fail.
 - Fall back to explicit UI evidence review or manual next-step guidance instead of guessing.
-- If `blueprint_review_record` returns `status: "invalid"` or missing-heading warnings, repair the authored markdown against the canonical `review.ui-review` template and the local runtime contract, retry once through MCP, and stop with the MCP reason if the retry still fails.
+- If `blueprint_review_validate_model` or `blueprint_review_record` returns `status: "invalid"`, repair the authored model against the narrowed task schema and the local runtime contract, retry once through MCP, and stop with the MCP reason if the retry still fails.
 
 
 ## Acceptance Criteria

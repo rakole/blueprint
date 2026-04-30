@@ -677,16 +677,18 @@ test("ui-review docs and UI auditor are marked implemented in docs", async () =>
   assert.match(uiReviewDoc, /`blueprint_phase_locate`/);
   assert.match(uiReviewDoc, /`blueprint_artifact_list`/);
   assert.match(uiReviewDoc, /`blueprint_artifact_contract_read`/);
+  assert.match(uiReviewDoc, /`blueprint_review_authoring_context`/);
+  assert.match(uiReviewDoc, /`blueprint_review_validate_model`/);
   assert.match(uiReviewDoc, /`blueprint_review_record`/);
   assert.match(uiReviewDoc, /`blueprint-ui-auditor`/);
   assert.match(uiReviewDoc, /phase XX-UI-REVIEW\.md/);
   assert.match(
     mcpToolsDoc,
-    /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, and `blueprint_review_record`/
+    /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
   assert.match(
     migrationMarkdown,
-    /\| `ui-review` \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_record` \|/
+    /\| `ui-review` \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \|/
   );
 });
 

@@ -327,6 +327,14 @@ type SecurityThreatStatus = "closed" | "accepted" | "open" | "none";
 type SecurityEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
 type SecurityManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type SecurityGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type UiReviewVerdict = "PASS" | "FOLLOW_UP" | "BLOCKED";
+type UiReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
+type UiReviewCompletionState = "complete" | "partial" | "blocked";
+type UiReviewPillar = "Copywriting" | "Visual Hierarchy" | "Color" | "Typography" | "Spacing" | "Experience Design";
+type UiReviewEvidenceCoverageStatus = "used" | "unavailable";
+type UiReviewPriorityFixStatus = "OPEN" | "NONE";
+type UiReviewFindingStatus = "OPEN" | "BLOCKED" | "NONE";
+type UiReviewFindingSeverity = "high" | "medium" | "low" | "none";
 type SecurityDeclaredThreat = {
     threatId: string;
     sourcePlan: string;
@@ -412,6 +420,65 @@ type SecurityAuthoringContext = {
     baseSchema: Record<string, unknown>;
     taskSchema: Record<string, unknown>;
 };
+type UiReviewStructuredModel = {
+    verdict: UiReviewVerdict;
+    readiness: UiReviewReadiness;
+    completionState: UiReviewCompletionState;
+    uiReviewSummary: string[];
+    overallScore: number;
+    evidenceCoverage: Record<string, {
+        status: UiReviewEvidenceCoverageStatus;
+        rationale: string;
+    }>;
+    pillarScores: Array<{
+        pillar: UiReviewPillar;
+        score: number;
+        evidence: string;
+        keyFinding: string;
+    }>;
+    priorityFixes: Array<{
+        item: string;
+        userImpact: string;
+        repair: string;
+        status: UiReviewPriorityFixStatus;
+    }>;
+    findings: Array<{
+        pillar: UiReviewPillar | "none";
+        severity: UiReviewFindingSeverity;
+        evidence: string;
+        userImpact: string;
+        recommendation: string;
+        status: UiReviewFindingStatus;
+    }>;
+    followUps: string[];
+    auditTrail: {
+        auditDate: string;
+        executionMode: "inline" | "ui-auditor-assisted";
+        existingReviewPosture: "none" | "reused" | "overwrite-confirmed";
+        visualEvidence: "captured" | "supplied" | "not-supplied";
+        auditorPath: "blueprint-ui-auditor" | "no-subagent-fallback";
+        scoreConsistencyNote: string;
+        confidenceLimitations: string;
+    };
+    nextSafeAction: string;
+};
+type UiReviewAuthoringContext = {
+    phase: ReviewScopePhase;
+    path: string;
+    completedSummaries: string[];
+    pendingPlans: string[];
+    lowerWavePendingPlanIds: string[];
+    knownEvidenceArtifacts: string[];
+    existingUiReview: string | null;
+    allowedExistingReviewPostures: UiReviewStructuredModel["auditTrail"]["existingReviewPosture"][];
+    completedNextSafeAction: string;
+    followUpNextSafeAction: string;
+    blockedNextSafeAction: string;
+    allowedNextActions: string[];
+    schemaPath: string;
+    baseSchema: Record<string, unknown>;
+    taskSchema: Record<string, unknown>;
+};
 type ReviewDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 type ReviewModelDiagnostic = {
     source: ReviewDiagnosticSource;
@@ -424,7 +491,7 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact?: "code-review" | "peer-review" | "review-fix" | "security";
+    artifact?: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     files?: string[];
     depth?: ReviewDepth;
     targetIds?: string[];
@@ -444,21 +511,21 @@ type ReviewValidateModelResult = {
         bySource: Record<ReviewDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
-    normalizedModel: CodeReviewStructuredModel | PeerReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | null;
+    normalizedModel: CodeReviewStructuredModel | PeerReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | UiReviewStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
 type ReviewAuthoringContextArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact: "code-review" | "peer-review" | "review-fix" | "security";
+    artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     files?: string[];
     depth?: ReviewDepth;
     targetIds?: string[];
 };
 type ReviewAuthoringContextResult = {
     status: "ready" | "invalid";
-    artifact: "code-review" | "peer-review" | "review-fix" | "security";
+    artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     phase: ReviewScopePhase | null;
     files: string[];
     reviewMode: ReviewScopeResult["reviewMode"] | null;
@@ -466,7 +533,7 @@ type ReviewAuthoringContextResult = {
     baseSchema: Record<string, unknown> | null;
     taskSchema: Record<string, unknown> | null;
     modelOnly: boolean;
-    authoringContext: CodeReviewAuthoringContext | PeerReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | null;
+    authoringContext: CodeReviewAuthoringContext | PeerReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | UiReviewAuthoringContext | null;
     prerequisiteBlockers: string[];
     reason: string | null;
     warnings: string[];
@@ -517,6 +584,7 @@ export declare const reviewToolDefinitions: ({
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
+            "ui-review": "ui-review";
         }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
@@ -539,6 +607,7 @@ export declare const reviewToolDefinitions: ({
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
+            "ui-review": "ui-review";
         }>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{

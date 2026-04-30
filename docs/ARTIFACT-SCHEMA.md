@@ -773,7 +773,12 @@ Minimum validation structure:
 - `## Next Safe Action`
 
 Authoring expectations:
-- must read the canonical `review.ui-review` authoring template before
+- `/blu-ui-review` authors `review.ui-review` JSON first, validates it against
+  `src/mcp/artifact-contracts/schemas/review.ui-review.model.schema.json` plus
+  the narrowed task schema, and then persists that same model through
+  `blueprint_review_record`; Markdown `content` fallback is invalid
+- must read the canonical `review.ui-review` model contract and
+  `blueprint_review_authoring_context.authoringContext.taskSchema` before
   drafting or repair
 - should include `## Pillar Scores`, `## Priority Fixes`, and `## Audit Trail`
   when creating or updating a UI review
@@ -786,10 +791,16 @@ Authoring expectations:
   visual certainty from static evidence alone
 - should identify up to three concrete priority fixes with user impact and
   repair guidance, or write `none` with explicit pass evidence
-- invalid or incomplete UI-review content should be repaired against the
-  canonical `review.ui-review` authoring template and retried once through
-  `blueprint_review_record`; the command must not bypass MCP by writing the
-  artifact directly
+- PASS requires ready-for-routing, complete state, no priority fixes, no
+  findings, exact `none` followUps, score consistency, and a routed implemented
+  next action
+- FOLLOW_UP and BLOCKED require concrete findings or blocked evidence, concrete
+  followUps, non-complete state, and `/blu-progress` rather than a ready
+  validation or UAT next action
+- invalid or incomplete UI-review models should be repaired against the
+  narrowed `review.ui-review` task schema and retried once through
+  `blueprint_review_validate_model` and `blueprint_review_record`; the command
+  must not bypass MCP by writing the artifact directly
 
 ### `XX-REVIEW.md`
 

@@ -26,12 +26,14 @@ test("ui-review manifest references the review tools, UI auditor, and safe routi
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_authoring_context")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_validate_model")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_record")));
-  assert.match(commandFile, /contract\.authoringTemplate/);
+  assert.match(commandFile, /contract\.modelContract\.schemaPath/);
   assert.match(commandFile, /Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design/);
   assert.match(commandFile, /overall score out of 24/);
   assert.match(commandFile, /no-subagent fallback/);
-  assert.match(commandFile, /repair the body once against the `review\.ui-review` authoring template/);
+  assert.match(commandFile, /repair the model once against `review\.ui-review`/);
   assert.match(commandFile, /XX-UI-REVIEW\.md/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-validate-phase/);
@@ -60,10 +62,12 @@ test("blueprint-review skill captures MCP-owned ui-review rules", async () => {
   );
   assert.match(skillFile, /### `ui-review`/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
-  assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /contract\.modelContract\.schemaPath/);
+  assert.match(skillFile, /blueprint_review_authoring_context/);
+  assert.match(skillFile, /blueprint_review_validate_model/);
   assert.match(skillFile, /blueprint-ui-auditor/);
   assert.match(skillFile, /blueprint_review_record/);
-  assert.match(skillFile, /scored six-pillar audit/i);
+  assert.match(skillFile, /scored six-pillar JSON model/i);
   assert.match(skillFile, /overall `\/24` score/);
   assert.match(skillFile, /no-subagent fallback/);
   assert.match(skillFile, /audit one pillar at\s+    a time/);
@@ -92,7 +96,9 @@ test("ui-review runtime contract captures rich artifact authoring and recovery",
   assert.match(runtimeContract, /### Resolve/);
   assert.match(runtimeContract, /### Persist/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
-  assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_authoring_context/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_review_validate_model/);
   assert.match(runtimeContract, /Pillar Scores/);
   assert.match(runtimeContract, /Priority Fixes/);
   assert.match(runtimeContract, /overall score out of 24/);
@@ -100,8 +106,8 @@ test("ui-review runtime contract captures rich artifact authoring and recovery",
   assert.match(runtimeContract, /No-Subagent Fallback/);
   assert.match(runtimeContract, /audit one pillar at a time/i);
   assert.match(runtimeContract, /Browser-only, web-search-only, shell-only, or generic helpers/);
-  assert.match(runtimeContract, /Invalid UI-review write/);
-  assert.match(runtimeContract, /retry through\s+  `blueprint_review_record`/);
+  assert.match(runtimeContract, /Invalid UI-review model or write/);
+  assert.match(runtimeContract, /blueprint_review_validate_model[\s\S]*blueprint_review_record/);
 
   assert.match(agentFile, /Score each pillar from `1\/4` through `4\/4`/);
   assert.match(agentFile, /overall score out of 24/);
