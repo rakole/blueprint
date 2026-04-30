@@ -930,16 +930,20 @@ test("review docs and migration notes keep the peer-review contract explicit", a
   assert.match(reviewDoc, /`blueprint_artifact_list`/);
   assert.match(reviewDoc, /`blueprint_phase_plan_index`/);
   assert.match(reviewDoc, /`blueprint_phase_plan_read`/);
+  assert.match(reviewDoc, /`blueprint_phase_summary_index`/);
+  assert.match(reviewDoc, /`blueprint_phase_execution_targets`/);
+  assert.match(reviewDoc, /`blueprint_review_authoring_context`/);
+  assert.match(reviewDoc, /`blueprint_review_validate_model`/);
   assert.match(reviewDoc, /`blueprint_review_record`/);
   assert.match(reviewDoc, /phase XX-REVIEWS\.md/);
   assert.match(reviewDoc, /preserve disagreement/i);
   assert.match(
     mcpToolsDoc,
-    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, and `blueprint_review_record`/
+    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_execution_targets`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
   assert.match(
     migrationMarkdown,
-    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_execution_targets`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
   );
 });
 

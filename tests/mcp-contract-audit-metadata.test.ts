@@ -559,7 +559,7 @@ test("review contracts stay explicit across code-review, remediation, and review
   );
   assert.match(reviewSkill, /update_topic plus `write_todos`/i);
   assert.match(reviewSkill, /Read the review-fix authoring context through\s+`blueprint_review_authoring_context` before drafting `XX-REVIEW-FIX\.md`/i);
-  assert.match(reviewSkill, /Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS\.md`/i);
+  assert.match(reviewSkill, /read `blueprint_review_authoring_context` with `artifact: "peer-review"`\s+before drafting `XX-REVIEWS\.md`/i);
   assert.match(reviewSkill, /Directories, wildcards, absolute paths, and `?\.blueprint\/\*\*`? paths are invalid or skipped/i);
   assert.match(reviewSkill, /returned `findings` and `severityCounts` as the authoritative fix baseline/i);
   assert.match(reviewerAgent, /returned `blueprint_review_scope\.files` list as authoritative/i);

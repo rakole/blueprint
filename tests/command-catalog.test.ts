@@ -990,6 +990,11 @@ test("review is implemented once manifest, review skill, and plan-backed peer-re
     "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
+    "blueprint_phase_summary_index",
+    "blueprint_phase_summary_read",
+    "blueprint_phase_execution_targets",
+    "blueprint_review_authoring_context",
+    "blueprint_review_validate_model",
     "blueprint_review_record"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-reviewer"]);

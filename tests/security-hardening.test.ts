@@ -34,6 +34,8 @@ async function createSecurePhaseRepo(): Promise<string> {
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-security-audit");
 
   await mkdir(phaseDir, { recursive: true });
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(path.join(repoPath, "src/security-audit.ts"), "export const audit = true;\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -76,12 +78,127 @@ async function createSecurePhaseRepo(): Promise<string> {
   );
   await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
   await writeFile(
+    path.join(phaseDir, "05-01-PLAN.md"),
+    `---
+phase: 5
+plan_id: "01"
+title: "Security audit UI surface"
+wave: 1
+status: planned
+objective: "Ship the security audit UI surface for review."
+depends_on: []
+requirements:
+  - SEC-01
+files_modified:
+  - src/security-audit.ts
+read_first:
+  - src/security-audit.ts
+acceptance_criteria:
+  - npm test -- tests/security-hardening.test.ts exits 0
+autonomous: true
+---
+
+# Phase 05: Security Audit - Plan 01
+
+## Goal
+
+Ship the security audit UI surface for review.
+
+## Scope
+
+- Implement the security audit UI surface.
+
+## Tasks
+
+### Task 1: Implement review surface
+
+#### Read First
+
+- src/security-audit.ts
+
+#### Action
+
+- Add the review surface.
+
+#### Acceptance Criteria
+
+- npm test -- tests/security-hardening.test.ts exits 0
+
+## Verification
+
+- Run the focused security hardening test.
+
+## Must Haves
+
+- Preserve prompt-boundary hardening evidence.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "05-UI-SPEC.md"),
+    `# Phase 05: Security Audit - UI Spec
+
+## Outcome Mode
+
+- UI Contract
+
+## Contract
+
+- Security audit messaging must preserve prompt-boundary hardening evidence.
+`,
+    "utf8"
+  );
+  await writeFile(
     path.join(phaseDir, "05-01-SUMMARY.md"),
     `# Phase 05: Security Audit - Summary 01
 
-## Result
+**Plan:** \`05-01-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase 5
+
+## Outcome
 
 - Added the runtime review substrate and secure-phase command surface.
+
+## Changes Made
+
+- Added the runtime review substrate and secure-phase command surface.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| npm test -- tests/security-hardening.test.ts exits 0 | npm test -- tests/security-hardening.test.ts | pass | Focused security hardening tests passed. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| test | npm test -- tests/security-hardening.test.ts | Targeted verification evidence for plan 01. |
 `,
     "utf8"
   );
@@ -193,31 +310,95 @@ test("review persistence sanitizes hidden control characters and records the war
   const written = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
-    artifact: "peer-review",
-    content: `# Phase 05: Security Audit - Peer Reviews
-
-**Reviewers:** security-reviewer, implementation-reviewer
-
-## Review Summa\u200Bry
-
-- Hidden control text should be stripped before persistence.
-
-## Reviewer Results
-
-- security-reviewer: Hidden control text was sanitized before persistence.
-
-## Disagreements
-
-- none
-
-## Follow-Ups
-
-- Add shared prompt-boundary hardening before the next maintenance rollout.
-
-## Next Safe Action
-
-- /blu-progress
-`
+    artifact: "ui-review",
+    model: {
+      verdict: "FOLLOW_UP",
+      readiness: "needs-follow-up",
+      completionState: "partial",
+      uiReviewSummary: [
+        "Hidden control text\u200B should be stripped before persistence with an 18/24 score."
+      ],
+      overallScore: 18,
+      evidenceCoverage: {
+        ".blueprint/phases/05-security-audit/05-01-SUMMARY.md": {
+          status: "used",
+          rationale: "Completed summary evidence identifies the security audit UI surface."
+        },
+        ".blueprint/phases/05-security-audit/05-UI-SPEC.md": {
+          status: "used",
+          rationale: "UI spec evidence supplies the prompt-boundary hardening baseline."
+        }
+      },
+      pillarScores: [
+        {
+          pillar: "Copywriting",
+          score: 3,
+          evidence: ".blueprint/phases/05-security-audit/05-01-SUMMARY.md",
+          keyFinding: "Security audit messaging is direct."
+        },
+        {
+          pillar: "Visual Hierarchy",
+          score: 3,
+          evidence: ".blueprint/phases/05-security-audit/05-UI-SPEC.md",
+          keyFinding: "Prompt-boundary hardening evidence is visible."
+        },
+        {
+          pillar: "Color",
+          score: 4,
+          evidence: "not supplied: no runtime screenshot was supplied",
+          keyFinding: "No color risk was visible from static evidence."
+        },
+        {
+          pillar: "Typography",
+          score: 3,
+          evidence: ".blueprint/phases/05-security-audit/05-UI-SPEC.md",
+          keyFinding: "Typography requirements remain basic but adequate."
+        },
+        {
+          pillar: "Spacing",
+          score: 2,
+          evidence: ".blueprint/phases/05-security-audit/05-UI-SPEC.md",
+          keyFinding: "Prompt-boundary warning spacing needs polish."
+        },
+        {
+          pillar: "Experience Design",
+          score: 3,
+          evidence: ".blueprint/phases/05-security-audit/05-01-SUMMARY.md",
+          keyFinding: "The review flow remains usable with one follow-up."
+        }
+      ],
+      priorityFixes: [
+        {
+          item: "Prompt-boundary warning spacing is weak",
+          userImpact: "Hardening evidence is less scannable",
+          repair: "Tighten spacing around warning copy",
+          status: "OPEN"
+        }
+      ],
+      findings: [
+        {
+          pillar: "Spacing",
+          severity: "medium",
+          evidence: ".blueprint/phases/05-security-audit/05-UI-SPEC.md",
+          userImpact: "Security hardening warnings are harder to scan",
+          recommendation: "Tighten spacing around warning copy",
+          status: "OPEN"
+        }
+      ],
+      followUps: [
+        "Add shared prompt-boundary hardening before the next maintenance rollout."
+      ],
+      auditTrail: {
+        auditDate: "2026-04-13",
+        executionMode: "inline",
+        existingReviewPosture: "none",
+        visualEvidence: "not-supplied",
+        auditorPath: "no-subagent-fallback",
+        scoreConsistencyNote: "Score total was recalculated from all six pillar rows.",
+        confidenceLimitations: "Screenshots were not supplied, so this is a code/static-evidence audit."
+      },
+      nextSafeAction: "/blu-progress"
+    }
   });
 
   assert.equal(written.status, "created");
@@ -228,5 +409,5 @@ test("review persistence sanitizes hidden control characters and records the war
     "utf8"
   );
   assert.doesNotMatch(saved, /\u200B/);
-  assert.match(saved, /## Review Summary/);
+  assert.match(saved, /## UI Review Summary/);
 });

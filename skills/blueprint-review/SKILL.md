@@ -107,9 +107,9 @@ non-routable until their extra MCP substrate lands.
 ## Shared MCP Contracts
 
 - `blueprint_review_scope`: explicit `files` must be repo-relative file paths. Directories, wildcards, absolute paths, and `.blueprint/**` paths are invalid or skipped. Omit `files` when the command wants scope derived from executed plans and summaries, treat returned `files` as authoritative, use `confirmationRecommended` instead of prompt-only heuristics for scope-confirmation gates, and request `includeAuthoringContext` for code-review model authoring.
-- `blueprint_review_authoring_context`: request this for `review.security`, `review.review-fix`, and `review.ui-review` authoring before drafting the model. For review-fix, treat saved code-review findings plus phase execution plan, summary, and dependency evidence as schema-owned runtime context. For ui-review, treat completed summaries, pending plans, exact evidence keys, existing UI-review path, and allowed next actions as schema-owned runtime context. Pass the exact selected saved target ids as `targetIds` when remediation is intentionally scoped to a subset, and keep that same array through validation and persistence. Treat `status: "invalid"` as an early blocker rather than an invitation to invent summaries, finding rows, threat rows, evidence keys, or next actions.
-- `blueprint_review_validate_model`: validate `review.code-review`, `review.review-fix`, `review.security`, and `review.ui-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid. For review-fix subset remediation, pass the same `targetIds` used for authoring context.
-- `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review`, `review-fix`, `security`, and `ui-review`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`, and `review-fix` also passes the same `targetIds` selection when the model covers a subset. Markdown `content` is invalid for all four. For peer-review artifacts, pass full report content. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
+- `blueprint_review_authoring_context`: request this for `review.peer-review`, `review.security`, `review.review-fix`, and `review.ui-review` authoring before drafting the model. For peer review, treat selected phase plans plus saved phase evidence as schema-owned runtime context. For review-fix, treat saved code-review findings plus phase execution plan, summary, and dependency evidence as schema-owned runtime context. For ui-review, treat completed summaries, pending plans, exact evidence keys, existing UI-review path, allowed overwrite posture, and allowed next actions as schema-owned runtime context. Pass the exact selected saved target ids as `targetIds` when remediation is intentionally scoped to a subset, and keep that same array through validation and persistence. Treat `status: "invalid"` as an early blocker rather than an invitation to invent summaries, finding rows, threat rows, evidence keys, or next actions.
+- `blueprint_review_validate_model`: validate `review.code-review`, `review.peer-review`, `review.review-fix`, `review.security`, and `review.ui-review` JSON against the runtime-narrowed `taskSchema`, aggregate schema plus residual diagnostics, and use `renderPreview` only after the model is valid. For review-fix subset remediation, pass the same `targetIds` used for authoring context.
+- `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review`, `peer-review`, `review-fix`, `security`, and `ui-review`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`, and `review-fix` also passes the same `targetIds` selection when the model covers a subset. Markdown `content` is invalid for all five. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
 - `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
@@ -509,15 +509,16 @@ non-routable until their extra MCP substrate lands.
 
 1. Load `skills/blueprint-review/references/review-runtime-contract.md`
    before analysis. That local reference owns peer-review packet depth,
-   canonical artifact authoring, capability-gated `blueprint-reviewer` use,
+   schema-first artifact authoring, capability-gated `blueprint-reviewer` use,
    no-subagent fallback, reviewer-availability truth, disagreement handling,
    retry/repair behavior, output quality criteria, and completion criteria.
 2. Resolve the target phase first and read the current Blueprint artifact
    inventory before assembling reviewer prompts.
-3. Read the canonical review contract through `blueprint_artifact_contract_read` before drafting `XX-REVIEWS.md`.
-   Use the `review.peer-review` contract id, `contract.authoringTemplate`,
-   required headings, and locked markers as the heading/schema authority before
-   drafting, revising, or repairing the artifact.
+3. Read the canonical review contract through `blueprint_artifact_contract_read`
+   and read `blueprint_review_authoring_context` with `artifact: "peer-review"`
+   before drafting `XX-REVIEWS.md`. Use the `review.peer-review`
+   `modelContract`, `baseSchema`, and runtime-narrowed `taskSchema` as the
+   model-authoring authority before drafting, revising, or repairing the artifact.
 4. Read `blueprint_phase_plan_index` and then each selected plan through
    `blueprint_phase_plan_read`. If no saved plan exists, stop and route to
    `/blu-plan-phase <phase>` instead of reviewing chat memory.
@@ -557,14 +558,17 @@ non-routable until their extra MCP substrate lands.
     saved-plan review, reviewer-packet assembly, reviewer availability,
     external-review execution, synthesis, artifact persistence, and routing stay
     visible without becoming persistence, including reviewer disagreement status.
-13. Persist the finished peer review through `blueprint_review_record` with
+13. Validate the structured peer-review JSON through
+    `blueprint_review_validate_model`, repairing all diagnostics together once
+    if needed.
+14. Persist the same validated model through `blueprint_review_record` with
     the `peer-review` artifact. Treat returned `reportPath`, `counts`,
     `followUps`, `status`, and `warnings` as authoritative.
-14. If `blueprint_review_record` rejects the artifact or reports missing
-    headings, repair once against the `review.peer-review` authoring template
-    and the local runtime contract, then retry through MCP. If the retry still
-    fails, stop with the MCP reason and do not write the artifact by hand.
-15. Keep next-step guidance inside implemented Blueprint commands only. Prefer
+15. If `blueprint_review_validate_model` or `blueprint_review_record` rejects
+    the model, repair once against the `review.peer-review` task schema and the
+    local runtime contract, then retry through MCP. If the retry still fails,
+    stop with the MCP reason and do not write the artifact by hand.
+16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
     `/blu-plan-phase <phase>` when plan revisions are needed,
     `/blu-execute-phase <phase>` when execution evidence is missing,
     `/blu-code-review <phase>` when code review is missing, and

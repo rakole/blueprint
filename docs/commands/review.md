@@ -12,7 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `review` uses the shared long-running-mutation posture: resolve the target phase, read saved phase plans plus related evidence, decide reviewer availability and any overwrite gate, execute the bounded peer-review fan-out that is actually available, persist the durable peer-review artifact through MCP, validate the saved review posture, and route to the next safe implemented follow-up only when reviewer availability is honest and explicit.
 - Keep the external review posture explicit throughout the run: resolved scope must stay tied to the saved phase plan set, pending gates stay limited to overwrite confirmation, reviewer-availability confirmation, or the visible `reviewer-availability` waiting state, execution mode should reflect explicit reviewer flags versus `--all`, and reviewer coverage plus disagreement posture must come from the real reviewer run instead of being invented after the fact.
-- Load `skills/blueprint-review/references/review-runtime-contract.md` for the richer peer-review behavior: reviewer-packet assembly from saved Blueprint evidence, canonical `review.peer-review` authoring, capability-gated `blueprint-reviewer` packet/synthesis analysis, explicit no-subagent fallback, one MCP repair retry, and output-quality criteria.
+- Load `skills/blueprint-review/references/review-runtime-contract.md` for the richer peer-review behavior: reviewer-packet assembly from saved Blueprint evidence, schema-first `review.peer-review` model authoring, capability-gated `blueprint-reviewer` packet/synthesis analysis, explicit no-subagent fallback, one MCP repair retry, and output-quality criteria.
 
 
 ## Purpose
@@ -70,16 +70,21 @@
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` for `review.peer-review`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
-- `blueprint_review_record` -> `{reportPath, counts, followUps}`
+- `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_execution_targets` -> `{pendingPlanIds, selectedPlanIds, selectedPlans, blockers, warnings}`
+- `blueprint_review_authoring_context` -> `{status, artifact, phase, schemaPath, baseSchema, taskSchema, authoringContext, prerequisiteBlockers, warnings}`
+- `blueprint_review_validate_model` -> `{status, valid, phase, schemaPath, taskSchema, diagnostics, normalizedModel, renderPreview, warnings}`
+- `blueprint_review_record` -> `{reportPath, counts, followUps, status, warnings}`
 
 ## Peer-Review Persistence Contract
 
 - Read only the selected phase plans through `blueprint_phase_plan_read`; do not widen peer-review scope from unrelated repo drift.
-- Read `review.peer-review` through `blueprint_artifact_contract_read` before drafting or repairing the artifact. Treat `contract.authoringTemplate`, required headings, and locked markers as the heading/schema authority, while `skills/blueprint-review/references/review-runtime-contract.md` is the richness, fallback, and retry authority.
+- Read `review.peer-review` through `blueprint_artifact_contract_read` and `blueprint_review_authoring_context` before drafting or repairing the artifact. Treat `contract.modelContract`, the base schema, and the runtime-narrowed task schema as the model-authoring authority, while `skills/blueprint-review/references/review-runtime-contract.md` is the richness, fallback, and retry authority.
 - Build the reviewer packet from saved Blueprint evidence: selected plans, roadmap phase intent when available, requirements/context/research evidence when available, and directly related prior phase artifacts from the artifact inventory. The packet should ask every reviewer for summary, strengths, severity-tagged concerns, suggestions, risk assessment, and whether the plans achieve the phase goal.
-- Persist the durable peer-review artifact through `blueprint_review_record` with `artifact: "peer-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEWS.md`.
+- Validate the structured peer-review model through `blueprint_review_validate_model`, then persist the same model through `blueprint_review_record` with `artifact: "peer-review"` and treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEWS.md`.
 - Preserve partial reviewer coverage honestly when only some requested reviewers can run, and keep reviewer disagreement explicit in the saved artifact rather than flattening it into false consensus.
-- If `blueprint_review_record` rejects the artifact or reports missing headings, repair once against the canonical `review.peer-review` template and the local runtime contract, then retry through MCP. If the retry still fails, stop with the MCP reason and do not write by hand.
+- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the model, repair all diagnostics together once against the canonical `review.peer-review` task schema and the local runtime contract, then retry through MCP. If the retry still fails, stop with the MCP reason and do not write by hand.
 
 
 ## Skills And Subagents
@@ -141,7 +146,7 @@ When no suitable subagent is available, the command continues sequentially: asse
 - Keep the next safe action on `/blu-review <phase>` when reviewer availability is still unresolved.
 - Route to `/blu-plan-phase <phase>` when the saved plan baseline is missing instead of guessing.
 - Fall back to manual reviewer guidance instead of inventing reviewer coverage.
-- Repair invalid peer-review content once against `review.peer-review` headings and `skills/blueprint-review/references/review-runtime-contract.md`; stop without hand-writing `.blueprint/` if the retry still fails.
+- Repair invalid peer-review models once against the `review.peer-review` task schema and `skills/blueprint-review/references/review-runtime-contract.md`; stop without hand-writing `.blueprint/` if the retry still fails.
 
 
 ## Acceptance Criteria
@@ -155,7 +160,7 @@ When no suitable subagent is available, the command continues sequentially: asse
 - Keeps reviewer availability, reviewer disagreement, pending gates, execution mode, and the waiting state explicit while peer review is in flight.
 - Uses Gemini-native `ask_user` confirmation for overwrite and structured reviewer-availability decision paths.
 - Keeps reviewer availability and disagreement explicit in the saved artifact.
-- Uses the canonical `review.peer-review` authoring template as heading/schema authority while filling it with substantive reviewer evidence, risk, consensus, divergence, and follow-up guidance.
+- Uses the canonical `review.peer-review` model contract and narrowed task schema as authoring authority while filling it with substantive reviewer evidence, risk, consensus, divergence, and follow-up guidance.
 - Supports a capability-gated `blueprint-reviewer` packet/synthesis quality path and a clear no-subagent sequential fallback.
 - Forbids browser/web/search-only or generic helpers as substitutes for codebase/workflow analysis or external reviewer CLIs.
 - Leaves unrelated repo files untouched.

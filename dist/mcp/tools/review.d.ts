@@ -23,6 +23,15 @@ type ReviewFixExecutionDebt = {
     }>;
     blockers: string[];
 };
+type PeerReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type PeerReviewReadiness = "ready-for-routing" | "not-ready-for-routing" | "blocked";
+type PeerReviewCompletionState = "complete" | "pending" | "blocked";
+type PeerReviewReviewerStatus = "completed" | "unavailable" | "failed" | "blocked";
+type PeerReviewPlanFit = "achieves-goal" | "needs-revision" | "blocked";
+type PeerReviewFindingStatus = "OPEN" | "BLOCKED" | "NONE";
+type PeerReviewManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type PeerReviewGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type PeerReviewEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
 type ReviewFinding = {
     id: string;
     severity: ReviewFindingSeverity;
@@ -244,6 +253,73 @@ type ReviewFixAuthoringContext = {
     baseSchema: Record<string, unknown>;
     taskSchema: Record<string, unknown>;
 };
+type PeerReviewStructuredModel = {
+    status: PeerReviewStatus;
+    readiness: PeerReviewReadiness;
+    completionState: PeerReviewCompletionState;
+    reviewSummary: string[];
+    reviewerCoverage: Array<{
+        reviewer: string;
+        status: PeerReviewReviewerStatus;
+        summary: string;
+    }>;
+    planReviews: Array<{
+        planId: string;
+        path: string;
+        goalFit: PeerReviewPlanFit;
+        summary: string;
+    }>;
+    findings: Array<{
+        severity: ReviewFindingSeverity;
+        source: string;
+        evidence: string;
+        recommendation: string;
+        status: PeerReviewFindingStatus;
+    }>;
+    consensus: string[];
+    disagreements: string[];
+    riskAssessment: {
+        level: "LOW" | "MEDIUM" | "HIGH";
+        summary: string;
+    };
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: PeerReviewManualStatus;
+    }>;
+    gapRoutes: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: PeerReviewGapStatus;
+    }>;
+    followUps: string[];
+    evidenceCoverage: Record<string, {
+        status: PeerReviewEvidenceCoverageStatus;
+        rationale: string;
+    }>;
+    nextSafeAction: string;
+};
+type PeerReviewAuthoringContext = {
+    phase: ReviewScopePhase;
+    path: string;
+    plans: Array<{
+        planId: string;
+        path: string;
+        title: string | null;
+    }>;
+    knownEvidenceArtifacts: string[];
+    pendingPlans: string[];
+    existingPeerReview: string | null;
+    completedNextSafeActions: string[];
+    partialNextSafeActions: string[];
+    blockedNextSafeActions: string[];
+    allowedNextActions: string[];
+    schemaPath: string;
+    baseSchema: Record<string, unknown>;
+    taskSchema: Record<string, unknown>;
+};
 type SecurityReviewStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
 type SecurityReviewReadiness = "ready-for-routing" | "needs-follow-up" | "blocked";
 type SecurityReviewCompletionState = "complete" | "partial" | "blocked";
@@ -415,7 +491,7 @@ type ReviewModelDiagnostic = {
 type ReviewValidateModelArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact?: "code-review" | "review-fix" | "security" | "ui-review";
+    artifact?: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     files?: string[];
     depth?: ReviewDepth;
     targetIds?: string[];
@@ -435,21 +511,21 @@ type ReviewValidateModelResult = {
         bySource: Record<ReviewDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
-    normalizedModel: CodeReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | UiReviewStructuredModel | null;
+    normalizedModel: CodeReviewStructuredModel | PeerReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | UiReviewStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
 type ReviewAuthoringContextArgs = {
     cwd?: string;
     phase?: NumericInput;
-    artifact: "code-review" | "review-fix" | "security" | "ui-review";
+    artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     files?: string[];
     depth?: ReviewDepth;
     targetIds?: string[];
 };
 type ReviewAuthoringContextResult = {
     status: "ready" | "invalid";
-    artifact: "code-review" | "review-fix" | "security" | "ui-review";
+    artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     phase: ReviewScopePhase | null;
     files: string[];
     reviewMode: ReviewScopeResult["reviewMode"] | null;
@@ -457,7 +533,7 @@ type ReviewAuthoringContextResult = {
     baseSchema: Record<string, unknown> | null;
     taskSchema: Record<string, unknown> | null;
     modelOnly: boolean;
-    authoringContext: CodeReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | UiReviewAuthoringContext | null;
+    authoringContext: CodeReviewAuthoringContext | PeerReviewAuthoringContext | ReviewFixAuthoringContext | SecurityAuthoringContext | UiReviewAuthoringContext | null;
     prerequisiteBlockers: string[];
     reason: string | null;
     warnings: string[];
@@ -505,6 +581,7 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodOptional<z.ZodEnum<{
             "code-review": "code-review";
+            "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
             "ui-review": "ui-review";
@@ -527,6 +604,7 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
+            "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
             "ui-review": "ui-review";

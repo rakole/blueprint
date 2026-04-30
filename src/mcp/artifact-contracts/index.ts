@@ -1546,27 +1546,184 @@ function renderPeerReviewTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Peer Reviews
 
 **Reviewers:** <reviewer-cli-1>, <reviewer-cli-2>
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-routing|not-ready-for-routing|blocked
+**Completion State:** complete|pending|blocked
+**Next Safe Action:** /blu-execute-phase <phase>|/blu-code-review <phase>|/blu-plan-phase <phase>|/blu-review <phase>|/blu-progress
 
 ## Review Summary
 
 - Concise synthesis of the saved reviewer outputs.
 
+## Reviewer Coverage
+
+| Reviewer | Status | Summary |
+|----------|--------|---------|
+| reviewer-cli | completed/unavailable/failed/blocked | reviewer outcome |
+
 ## Reviewer Results
 
 - Reviewer name: main conclusions.
+
+## Plan Reviews
+
+| Plan | Goal Fit | Summary |
+|------|----------|---------|
+| ${phasePrefix(context)}-01-PLAN.md | achieves-goal/needs-revision/blocked | plan-specific review result |
+
+## Findings
+
+| Severity | Source | Evidence | Recommendation | Status |
+|----------|--------|----------|----------------|--------|
+| unknown | none | none | none | NONE |
+
+## Consensus
+
+- Shared reviewer conclusion.
 
 ## Disagreements
 
 - Explicit reviewer disagreement, or \`none\`.
 
+## Risk Assessment
+
+| Level | Summary |
+|-------|---------|
+| LOW/MEDIUM/HIGH | concise risk posture |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
 ## Follow-Ups
 
 - Plan revision, execution change, or \`none\`.
+
+## Evidence Reviewed
+
+| Evidence | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/<phase>/XX-YY-PLAN.md | used/deferred/unavailable | why it mattered |
 
 ## Next Safe Action
 
 - /blu-progress`;
 }
+
+const PEER_REVIEW_MODEL_SCHEMA_FILE = "review.peer-review.model.schema.json";
+const PEER_REVIEW_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/review.peer-review.model.schema.json";
+
+const PEER_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.review.peer-review.model",
+  schemaVersion: "1.0.0",
+  schemaPath: PEER_REVIEW_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(PEER_REVIEW_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, content, planPaths, summaryPaths, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
+    "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so selected plans, evidence coverage, and status-safe next actions stay deterministic.",
+    "COMPLETED peer reviews must use exact none sentinel rows for findings, manual/deferred work, and gap routes, and must route only to the next implemented post-review action.",
+    "PARTIAL and BLOCKED peer reviews must include at least one concrete finding, gap route, and non-none follow-up so reviewer availability or plan-revision debt remains resumable.",
+    "Use concrete reviewer output, saved plan paths, and saved evidence paths; do not copy minimal example wording, scaffold prose, or generic none values where real reviewer evidence or gaps exist."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, report path, selected plan ids, selected plan paths, and saved evidence paths come from blueprint_phase_locate, blueprint_phase_plan_index/read, blueprint_artifact_list, and blueprint_review_record arguments.",
+    "Allowed nextSafeAction values come from the peer-review status truth table, pending-plan state, existing review evidence, and the implemented command catalog.",
+    "Existing peer-review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
+  ],
+  renderedHeadings: [
+    "Review Summary",
+    "Reviewer Coverage",
+    "Reviewer Results",
+    "Plan Reviews",
+    "Findings",
+    "Consensus",
+    "Disagreements",
+    "Risk Assessment",
+    "Manual / Deferred Work",
+    "Gap / Repair Routes",
+    "Follow-Ups",
+    "Evidence Reviewed",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    reviewSummary: [
+      "Codex reviewed the saved phase plan and found it ready for execution."
+    ],
+    reviewerCoverage: [
+      {
+        reviewer: "codex",
+        status: "completed",
+        summary: "Saved plan evidence was reviewed successfully."
+      }
+    ],
+    planReviews: [
+      {
+        planId: "01",
+        path: ".blueprint/phases/03-review-phase/03-01-PLAN.md",
+        goalFit: "achieves-goal",
+        summary: "The plan is scoped and ready for execution."
+      }
+    ],
+    findings: [
+      {
+        severity: "unknown",
+        source: "none",
+        evidence: "none",
+        recommendation: "none",
+        status: "NONE"
+      }
+    ],
+    consensus: [
+      "The saved plan can proceed to execution."
+    ],
+    disagreements: ["none"],
+    riskAssessment: {
+      level: "LOW",
+      summary: "No peer-review blockers remain."
+    },
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        evidence: "none",
+        repair: "none",
+        status: "NONE"
+      }
+    ],
+    followUps: ["none"],
+    evidenceCoverage: {
+      ".blueprint/phases/03-review-phase/03-01-PLAN.md": {
+        status: "used",
+        rationale: "The saved plan was the peer-review source of truth."
+      }
+    },
+    nextSafeAction: "/blu-execute-phase 3"
+  },
+  exampleLeakageSignals: [
+    "Codex reviewed the saved phase plan and found it ready for execution.",
+    "Saved plan evidence was reviewed successfully.",
+    "The saved plan can proceed to execution."
+  ]
+};
 
 function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Security
@@ -3649,10 +3806,23 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Peer Review",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-REVIEWS.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Review Summary", "Reviewer Results", "Disagreements", "Follow-Ups", "Next Safe Action"],
-    lockedMarkers: ["**Reviewers:**"],
-    placeholderSignals: ["<reviewer-cli-1>", "<reviewer-cli-2>"],
-    notes: ["Preserve reviewer disagreement honestly instead of flattening it."],
+    requiredHeadings: PEER_REVIEW_MODEL_CONTRACT.renderedHeadings,
+    lockedMarkers: ["**Reviewers:**", "**Status:**", "**Next Safe Action:**"],
+    placeholderSignals: [
+      "<reviewer-cli-1>",
+      "<reviewer-cli-2>",
+      "COMPLETED|PARTIAL|BLOCKED",
+      "completed/unavailable/failed/blocked",
+      "achieves-goal/needs-revision/blocked",
+      "LOW/MEDIUM/HIGH",
+      ".blueprint/phases/<phase>/XX-YY-PLAN.md"
+    ],
+    notes: [
+      "Preserve reviewer disagreement honestly instead of flattening it.",
+      "Structured model authoring is schema-first: runtime context supplies selected plan inventory, saved evidence inventory, report path, and status-safe next actions.",
+      "`COMPLETED` peer reviews prove reviewer coverage is resolved and no actionable peer-review gaps remain; `PARTIAL` and `BLOCKED` preserve reviewer or plan-revision debt as resumable evidence."
+    ],
+    modelContract: PEER_REVIEW_MODEL_CONTRACT,
     renderScaffoldTemplate: renderPeerReviewTemplate,
     renderAuthoringTemplate: renderPeerReviewTemplate
   },
