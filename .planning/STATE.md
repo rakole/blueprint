@@ -4,8 +4,8 @@
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 1 - Bug Taxonomy And Reporting Harness
 **Active command:** none
-**Last successful command:** $gsd-discuss-phase 1
-**Next suggested action:** $gsd-plan-phase 1
+**Last successful command:** $gsd-plan-phase 1
+**Next suggested action:** $gsd-execute-phase 1
 **Last updated:** 2026-05-01
 
 ## Project Reference
@@ -13,8 +13,9 @@
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 1 context is captured; next step is planning the
-bug-reporting structure, template, index, and audit rules used by later slices.
+**Current focus:** Phase 1 is planned; next step is executing the
+bug-reporting structure, template, index, illustrative example, and audit
+boundary checks used by later slices.
 
 ## Workflow Preferences
 
@@ -44,7 +45,7 @@ bug-reporting structure, template, index, and audit rules used by later slices.
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Bug Taxonomy And Reporting Harness | Ready for planning |
+| 1 | Bug Taxonomy And Reporting Harness | Ready to execute |
 | 2 | Bootstrap Router Config Audit | Pending |
 | 3 | Core Lifecycle Audit | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Pending |
@@ -60,8 +61,9 @@ bug-reporting structure, template, index, and audit rules used by later slices.
 - 2026-05-01: Preserved the existing `.planning/codebase/` brownfield map as audit context.
 - 2026-05-01: Chose fine-grained phase slicing so each workflow family can independently produce bug docs.
 - 2026-05-01: Captured Phase 1 context for the bug-reporting harness, including template, rich index, full lifecycle status vocabulary, and evidence-layout decisions.
+- 2026-05-01: Planned Phase 1 with research, validation strategy, pattern map, and three executable plans covering the bug template, index, illustrative example, and no-fix boundary checks.
 
 ## Next Step
 
-Run `$gsd-plan-phase 1` to turn the captured Phase 1 context into an execution
-plan for the bug-reporting harness and `docs/bugs/` authoring artifacts.
+Run `$gsd-execute-phase 1` to create the bug-reporting harness and
+`docs/bugs/` authoring artifacts.

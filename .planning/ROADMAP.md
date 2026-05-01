@@ -8,7 +8,7 @@
 
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
-| 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Ready to execute |
 | 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -29,6 +29,17 @@
 **Dependencies:** Existing codebase map and Blueprint runtime docs.
 
 **UI hint:** no
+
+**Plan artifacts:**
+- Wave 1: `01-01-PLAN.md` creates `docs/bugs/TEMPLATE.md`.
+- Wave 1: `01-02-PLAN.md` creates `docs/bugs/INDEX.md`.
+- Wave 2 *(blocked on Wave 1 completion)*: `01-03-PLAN.md` creates the illustrative non-real example report, updates the index reference, and runs boundary verification.
+
+**Cross-cutting constraints:**
+- Preserve Blueprint as a Gemini-native product boundary, not a GSD or legacy-port audit.
+- Keep the milestone discovery-only; do not fix source, manifest, skill, test, build, generated asset, runtime, `.blueprint/`, or host-global state defects during Phase 1 execution.
+- Keep `.blueprint/` runtime state distinct from `.planning/` audit bookkeeping in every harness artifact.
+- Require grep/file-read/command-verifiable evidence and explicit uncertainty in later bug reports.
 
 **Success criteria:**
 1. `docs/bugs/` exists with an index and reusable bug-report template guidance.
