@@ -10,7 +10,7 @@
 |-------|------|------|--------------|--------|
 | 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Verified |
 | 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Planned |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -103,11 +103,27 @@
 - `src/mcp/tools/phase.ts`, `src/mcp/tools/artifacts.ts`, review/validation schema assets
 - tests for phase planning, execution, validation, UAT, and add-tests
 
+**Plan artifacts:**
+- Wave 1: `03-01-PLAN.md` audits discovery artifact lifecycle commands for discuss, research, UI-spec/skip rationale, checkpoint ownership, artifact validation, and state handoff behavior.
+- Wave 2 *(blocked on Wave 1 completion)*: `03-02-PLAN.md` audits `plan-phase` readiness gates, schema-first plan authoring, model validation, strict plan writes, scoped plan validation, and checker-loop behavior.
+- Wave 3 *(blocked on Wave 2 completion)*: `03-03-PLAN.md` audits `execute-phase` target selection, lower-wave blockers, plan reads, summary model writes, `PARTIAL`/`BLOCKED` carry-forward semantics, and state handoff behavior.
+- Wave 4 *(blocked on Wave 3 completion)*: `03-04-PLAN.md` audits `validate-phase` and `verify-work` summary-backed validation, UAT readiness, resumable UAT checkpointing, roadmap/state sync, and regression coverage.
+- Wave 5 *(blocked on Wave 4 completion)*: `03-05-PLAN.md` audits `add-tests`, reconciles Phase 3 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+
+**Cross-cutting constraints:**
+- Preserve command-flow order from discovery through add-tests.
+- Use static contract review plus targeted existing tests before any disposable probe.
+- Keep discovery-only execution: Phase 3 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, skill, test, build, generated asset, runtime `.blueprint/`, installed-extension, or host-global defects.
+- Record concrete evidence and uncertainty for every confirmed or likely lifecycle finding.
+- Verify `git status --short` at every plan boundary and document any temporary probe cleanup.
+
 **Success criteria:**
 1. Phase artifact authoring, validation, checkpoint, summary, verification, and UAT contracts are compared to implementation.
 2. State updates and next-safe-action behavior are checked.
 3. Missing prerequisite and safe-degradation paths are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** planned on 2026-05-01; ready to begin Phase 3 execution.
 
 ### Phase 4: Roadmap Capture Lightweight Audit
 
