@@ -10,7 +10,7 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": false,
-    "research_before_questions": false,
+    "research_before_questions": true,
     "skip_discuss": false
   },
   "planning": {
