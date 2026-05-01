@@ -15,7 +15,7 @@ created: 2026-05-01
 |----------|-------|
 | Framework | Node test runner via `tsx --test` |
 | Config file | `package.json`, `tsconfig.json` |
-| Quick run command | `npx tsx --test tests/phase-discovery-discuss.test.ts tests/phase-discovery-research.test.ts tests/phase-discovery-ui.test.ts tests/phase-planning-tools.test.ts tests/execute-phase-summary-tools.test.ts tests/phase-validation-slice.test.ts tests/add-tests-slice.test.ts` |
+| Quick run command | `npx tsx --test tests/phase-discovery-discuss.test.ts tests/phase-discovery-research.test.ts tests/phase-discovery-ui.test.ts tests/phase-discovery-tools.test.ts tests/phase-planning-tools.test.ts tests/phase-plan-validation-hardening.test.ts tests/phase-plan-write-locking.test.ts tests/plan-phase-metadata.test.ts tests/execute-phase-summary-tools.test.ts tests/execute-phase-metadata.test.ts tests/phase-validation-slice.test.ts tests/validate-phase-tools.test.ts tests/verify-work-roadmap-sync.test.ts tests/validate-phase-metadata.test.ts tests/verify-work-metadata.test.ts tests/add-tests-slice.test.ts tests/add-tests-metadata.test.ts` |
 | Full suite command | `npm test` |
 | Estimated runtime | Not recorded (see Phase 3 summaries for pass/fail evidence). |
 
