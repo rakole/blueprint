@@ -1,0 +1,217 @@
+# Roadmap: Blueprint Defect Discovery Milestone
+
+**Created:** 2026-05-01
+**Granularity:** Fine
+**Milestone Goal:** Systematically find, classify, and document current Blueprint defects in `docs/bugs/*.md` without applying fixes.
+
+## Phase Overview
+
+| Phase | Name | Goal | Requirements | Status |
+|-------|------|------|--------------|--------|
+| 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+
+## Phase Details
+
+### Phase 1: Bug Taxonomy And Reporting Harness
+
+**Goal:** Create the reusable defect-reporting harness before any workflow-specific findings are written.
+
+**Mapped requirements:** BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Existing codebase map and Blueprint runtime docs.
+
+**UI hint:** no
+
+**Success criteria:**
+1. `docs/bugs/` exists with an index and reusable bug-report template guidance.
+2. Bug id, severity, confidence, affected-surface, and status vocabularies are defined.
+3. The audit explicitly states that Blueprint must not be treated as GSD.
+4. The no-fix rule is visible in the harness and phase handoff.
+
+### Phase 2: Bootstrap Router Config Audit
+
+**Goal:** Find and document defects in the foundational user entrypoints and configuration/readiness substrate.
+
+**Mapped requirements:** COV-01, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- `commands/blu.toml`, `commands/blu-new-project.toml`, `commands/blu-help.toml`, `commands/blu-progress.toml`, `commands/blu-next.toml`, settings/profile/health manifests
+- `skills/blueprint-router/`, `skills/blueprint-bootstrap/`, `skills/blueprint-governance/`
+- `src/mcp/tools/project.ts`, `src/mcp/tools/config.ts`, `src/mcp/tools/state.ts`, `src/mcp/command-resources.ts`
+- readiness tests, command catalog tests, new-project tests, help/progress fixtures
+
+**Success criteria:**
+1. Implemented-only routing behavior is checked against docs, manifests, skills, runtime tools, and tests.
+2. Bootstrap mapped-only and mapping-incomplete behavior is checked.
+3. Config normalization, defaults, and health repair behavior are checked.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 3: Core Lifecycle Audit
+
+**Goal:** Find and document defects in phase discovery, planning, execution, validation, UAT, and test-generation flows.
+
+**Mapped requirements:** COV-02, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- Lifecycle command manifests and specs
+- `skills/blueprint-phase-discovery/`, `skills/blueprint-phase-planning/`, `skills/blueprint-phase-execution/`, `skills/blueprint-phase-validation/`
+- `src/mcp/tools/phase.ts`, `src/mcp/tools/artifacts.ts`, review/validation schema assets
+- tests for phase planning, execution, validation, UAT, and add-tests
+
+**Success criteria:**
+1. Phase artifact authoring, validation, checkpoint, summary, verification, and UAT contracts are compared to implementation.
+2. State updates and next-safe-action behavior are checked.
+3. Missing prerequisite and safe-degradation paths are checked.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 4: Roadmap Capture Lightweight Audit
+
+**Goal:** Find and document defects in roadmap administration, milestone flows, capture, quick execution, and debug.
+
+**Mapped requirements:** COV-03, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- Roadmap admin command manifests and skills
+- Capture command manifests and `skills/blueprint-capture/`
+- `skills/blueprint-phase-execution/` quick/fast behavior
+- `skills/blueprint-debug/`
+- `src/mcp/tools/phase.ts`, `src/mcp/tools/artifacts.ts`, `src/mcp/tools/review.ts`
+- roadmap, backlog, todo, note, debug, and quick tests
+
+**Success criteria:**
+1. Add/insert/remove phase behavior, milestone closeout, and gap planning are checked.
+2. Capture indexes and duplicate/status handling are checked.
+3. Quick, fast, and debug report/follow-up boundaries are checked.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 5: Review Quality Impact Shipping Audit
+
+**Goal:** Find and document defects in review, remediation, docs, impact, review-branch, shipping, and undo workflows.
+
+**Mapped requirements:** COV-04, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- `skills/blueprint-review/`, `skills/blueprint-docs/`, `skills/blueprint-impact/`, `skills/blueprint-maintenance/`
+- `src/mcp/tools/review.ts`, `src/mcp/tools/impact.ts`, `src/mcp/tools/artifacts.ts`, `src/mcp/tools/workspace.ts`
+- impact report schemas, review schemas, maintenance report contracts
+- code-review, audit-fix, secure-phase, ui-review, docs-update, impact, pr-branch, ship, and undo tests
+
+**Success criteria:**
+1. Schema-first review and report authoring paths are checked.
+2. Impact scope/config/context/report behavior is checked.
+3. High-risk git mutation previews and report-before-mutate contracts are checked for shipping/undo/pr-branch.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 6: Workspace Maintenance Audit
+
+**Goal:** Find and document defects in workspace/workstream/maintenance flows and host-global state handling.
+
+**Mapped requirements:** COV-05, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- `commands/blu-new-workspace.toml`, `commands/blu-remove-workspace.toml`, `commands/blu-workstreams.toml`, `commands/blu-cleanup.toml`, `commands/blu-update.toml`, `commands/blu-reapply-patches.toml`
+- `skills/blueprint-maintenance/`
+- `src/mcp/tools/workspace.ts`, `src/mcp/tools/update.ts`, runtime host helpers
+- workspace, workstream, cleanup, update, and patch tests
+
+**Success criteria:**
+1. Host-global registry boundaries and transactional behavior are checked.
+2. Dirty-tree, confirmation, rollback, and compatibility blockers are checked.
+3. Advisory update and patch registry behavior are checked.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 7: Host Packaging Build Hooks Audit
+
+**Goal:** Find and document defects in extension packaging, build outputs, host manifests, advisory hooks, and install readiness.
+
+**Mapped requirements:** COV-06, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phase 1 bug-reporting harness.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- `gemini-extension.json`, `tabnine-extension.json`, `package.json`, `scripts/build.mjs`, `scripts/lib/extension-hosts.mjs`
+- `hooks/hooks.json`, `src/hooks/*.ts`, `src/shared/security.ts`
+- generated `dist/`
+- extension install and hook tests
+
+**Success criteria:**
+1. Built asset presence and packaging contract alignment are checked.
+2. Gemini/Tabnine host env wiring is checked.
+3. Advisory hook behavior is checked against docs and tests.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 8: Cross-Cut Drift And Regression Gaps
+
+**Goal:** Find and document cross-cutting contract drift, missing regression coverage, schema drift, and issue clusters from the codebase concern map.
+
+**Mapped requirements:** CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phases 2 through 7.
+
+**UI hint:** no
+
+**Suggested surfaces:**
+- `docs/DECISIONS.md`, `docs/MCP-TOOLS.md`, `docs/RUNTIME-REFERENCE.md`, `docs/COMMAND-CATALOG.md`, `docs/commands/*.md`
+- `commands/*.toml`, `skills/*/SKILL.md`, `agents/*.md`
+- `.planning/codebase/CONCERNS.md`
+- all relevant tests and generated assets identified in previous phases
+
+**Success criteria:**
+1. Docs/source/test drift findings are separated from confirmed runtime behavior bugs.
+2. Missing regression coverage is documented as bugs or test-gap reports where it creates risk.
+3. Shared root-cause clusters are linked.
+4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+### Phase 9: Bug Index Priority Review
+
+**Goal:** Dedupe and classify the full bug inventory so the user can choose repair work later.
+
+**Mapped requirements:** BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03
+
+**Dependencies:** Phases 1 through 8.
+
+**UI hint:** no
+
+**Success criteria:**
+1. `docs/bugs/INDEX.md` links every bug report and records severity, confidence, affected surface, status, and discovery phase.
+2. Duplicates and related bugs are marked and cross-linked.
+3. Highest-priority repair candidates are summarized without implementing fixes.
+4. Remaining verification questions are listed separately from confirmed defects.
+
+## Coverage Validation
+
+All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one phase. The no-fix requirements apply to every phase and should be verified at phase boundaries.
+
+---
+*Roadmap created: 2026-05-01*
+*Last updated: 2026-05-01 after initialization*
