@@ -17,7 +17,7 @@ created: 2026-05-01
 | Config file | `package.json`, `tsconfig.json` |
 | Quick run command | `npx tsx --test tests/help-progress-health.test.ts tests/next.test.ts tests/command-catalog.test.ts tests/command-contract-docs.test.ts tests/new-project.test.ts tests/map-codebase.test.ts` |
 | Full suite command | `npm test` |
-| Estimated runtime | ~1.7s observed for phase-2 targeted re-check; full suite not re-run. |
+| Estimated runtime | ~2.3s observed for phase-2 targeted re-check; full suite not re-run. |
 
 ## Sampling Rate
 
@@ -29,9 +29,9 @@ created: 2026-05-01
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 2-01-01 | 01 | 1 | COV-01, NFIX-01, NFIX-03 | T-01 | Router audit writes only bug docs and planning summaries. | regression/read audit | `npx tsx --test tests/help-progress-health.test.ts tests/next.test.ts` | yes | covered |
-| 2-02-01 | 02 | 1 | COV-01, NFIX-01, NFIX-03 | T-02 | Catalog audit does not repair manifests, skills, tools, docs, or tests. | regression/read audit | `npx tsx --test tests/command-catalog.test.ts tests/command-contract-docs.test.ts` | yes | covered |
-| 2-03-01 | 03 | 1 | COV-01, NFIX-01, NFIX-03 | T-03 | Bootstrap/config audit writes only bug docs and planning summaries. | regression/read audit | `npx tsx --test tests/new-project.test.ts tests/map-codebase.test.ts tests/help-progress-health.test.ts` | yes | covered |
+| 2-01-01 | 01 | 1 | COV-01, NFIX-01, NFIX-02, NFIX-03 | T-01 | Router audit writes only bug docs and planning summaries. | regression/read audit | `npx tsx --test tests/help-progress-health.test.ts tests/next.test.ts` | yes | covered |
+| 2-02-01 | 02 | 1 | COV-01, NFIX-01, NFIX-02, NFIX-03 | T-02 | Catalog audit does not repair manifests, skills, tools, docs, or tests. | regression/read audit | `npx tsx --test tests/command-catalog.test.ts tests/command-contract-docs.test.ts` | yes | covered |
+| 2-03-01 | 03 | 1 | COV-01, NFIX-01, NFIX-02, NFIX-03 | T-03 | Bootstrap/config audit writes only bug docs and planning summaries. | regression/read audit | `npx tsx --test tests/new-project.test.ts tests/map-codebase.test.ts tests/help-progress-health.test.ts` | yes | covered |
 | 2-04-01 | 04 | 2 | COV-01, NFIX-01, NFIX-02, NFIX-03 | T-04 | Closeout validates bug index and no-fix boundary. | grep/status audit | `git status --short` plus `rg -n "Phase 2" docs/bugs/INDEX.md` | yes | covered |
 
 ## Wave 0 Requirements
@@ -50,7 +50,7 @@ Existing infrastructure covers all Phase 2 validation requirements.
 | Metric | Count |
 |--------|-------|
 | Gaps found | 0 |
-| Resolved | 4 |
+| Resolved | 0 |
 | Escalated | 0 |
 
 | Evidence | Count |
@@ -66,4 +66,4 @@ Existing infrastructure covers all Phase 2 validation requirements.
 - [x] No watch-mode flags.
 - [x] `nyquist_compliant: true` set in frontmatter.
 
-**Approval:** pending execution evidence
+**Approval:** validated via the Phase-2 targeted test subset on 2026-05-01
