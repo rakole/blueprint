@@ -2,10 +2,10 @@
 
 **Project status:** initialized
 **Current milestone:** Blueprint Defect Discovery Milestone
-**Current phase:** Phase 1 - Bug Taxonomy And Reporting Harness
+**Current phase:** Phase 2 - Bootstrap Router Config Audit
 **Active command:** none
-**Last successful command:** $gsd-execute-phase 1
-**Next suggested action:** $gsd-verify-work 1
+**Last successful command:** $gsd-verify-work 1
+**Next suggested action:** $gsd-discuss-phase 2
 **Last updated:** 2026-05-01
 
 ## Project Reference
@@ -13,8 +13,8 @@
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 1 execution is complete; next step is verifying the
-bug-reporting harness and then advancing to the first real Blueprint audit slice.
+**Current focus:** Phase 1 is verified. Next step is starting Phase 2 discovery
+for bootstrap routing, readiness, and config behavior.
 
 ## Workflow Preferences
 
@@ -44,7 +44,7 @@ bug-reporting harness and then advancing to the first real Blueprint audit slice
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Bug Taxonomy And Reporting Harness | Executed; ready for verification |
+| 1 | Bug Taxonomy And Reporting Harness | Verified |
 | 2 | Bootstrap Router Config Audit | Pending |
 | 3 | Core Lifecycle Audit | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Pending |
@@ -63,8 +63,9 @@ bug-reporting harness and then advancing to the first real Blueprint audit slice
 - 2026-05-01: Planned Phase 1 with research, validation strategy, pattern map, and three executable plans covering the bug template, index, illustrative example, and no-fix boundary checks.
 - 2026-05-01: Executed Phase 1 Wave 1 by creating `docs/bugs/TEMPLATE.md`, `docs/bugs/INDEX.md`, and saved execution summaries for Plans 01 and 02.
 - 2026-05-01: Executed Phase 1 Wave 2 by creating `docs/bugs/BPBUG-000-illustrative-example.md`, linking it from the index, and verifying the discovery-only boundary.
+- 2026-05-01: Completed Phase 1 UAT with 5 of 5 checkpoints passing and no gaps recorded in `01-UAT.md`.
 
 ## Next Step
 
-Run `$gsd-verify-work 1` to validate the completed bug-reporting harness before
-starting Phase 2.
+Run `$gsd-discuss-phase 2` to start the Bootstrap Router Config Audit and
+capture its concrete audit plan inputs.

@@ -8,7 +8,7 @@
 
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
-| 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Executed; ready for verification |
+| 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Verified |
 | 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -48,7 +48,7 @@
 3. The audit explicitly states that Blueprint must not be treated as GSD.
 4. The no-fix rule is visible in the harness and phase handoff.
 
-**Execution status:** executed on 2026-05-01; ready for `$gsd-verify-work 1`.
+**Execution status:** verified on 2026-05-01; ready to begin Phase 2 discovery.
 
 ### Phase 2: Bootstrap Router Config Audit
 
