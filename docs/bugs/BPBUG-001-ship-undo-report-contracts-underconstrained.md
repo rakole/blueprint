@@ -11,6 +11,13 @@ reported: 2026-05-01
 
 # BPBUG-001: Ship and undo report contracts accept under-specified high-risk evidence
 
+## Classification
+
+- Severity: `medium`
+- Confidence: `confirmed`
+- Surface: `MCP tool`
+- Status: `new`
+
 ## Summary
 
 Blueprint's `/blu-ship` and `/blu-undo` command manifests require durable reports to record high-risk shipping and revert evidence, but the canonical `report.ship` and `report.undo` contracts only require broad headings. Minimal reports without saved evidence, source/base branch detail, exact push/PR/revert commands, `gh` fallback notes, digest inputs, branch state, or pending approved commands validate successfully.
@@ -45,7 +52,7 @@ High-risk git workflows can produce durable reports that look schema-valid while
 | `src/mcp/artifact-contracts/index.ts:4480-4508` | `report.ship` and `report.undo` define required headings only and both have `placeholderSignals: []`. | Validation has no contract-backed signal for omitted branch, evidence, fallback, digest, or command details. |
 | `tests/ship-metadata.test.ts:8-82` | The ship metadata tests assert manifest, skill, and runtime-reference strings but do not load `report.ship`, validate a populated report, or reject a minimal report. | Current focused coverage cannot catch the under-constrained report contract. |
 | `tests/undo-metadata.test.ts:8-143` | The undo metadata tests assert guardrail strings and shipped status but do not load `report.undo`, validate a populated report, or reject a minimal report. | Current focused coverage cannot catch the under-constrained undo report contract. |
-| `npx tsx -e "...validateReportArtifactContent..."` | Minimal `ship-latest` and `undo-latest` reports returned `{"valid":true,"issues":[],"warnings":[]}`. | Confirms the validator currently accepts reports that omit the high-risk fields. |
+| `npx tsx -e 'import { validateReportArtifactContent } ...'` | The no-write probe below returned `{"ship":{"valid":true,"issues":[],"warnings":[]},"undo":{"valid":true,"issues":[],"warnings":[]}}`. | Confirms the validator currently accepts reports that omit the high-risk fields. |
 | `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts` | The focused metadata suite passed: 12 tests, 12 pass, 0 fail. | Confirms existing tests do not detect this contract gap. |
 
 ## Verification Steps
@@ -54,7 +61,60 @@ High-risk git workflows can produce durable reports that look schema-valid while
 2. Inspect `commands/blu-undo.toml:20-23` and confirm the command requires affected evidence, digest inputs, branch state, candidate commits, dependency-impact notes, and pending revert commands in `undo-latest`.
 3. Inspect `src/mcp/artifact-contracts/index.ts:2525-2570` and `src/mcp/artifact-contracts/index.ts:4480-4508`; observe that the canonical templates and placeholder signals do not require those fields.
 4. Run `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts`; observe that the suite passes despite the weak ship/undo report contracts.
-5. Run a no-write validation probe with `validateReportArtifactContent` using minimal `ship-latest` and `undo-latest` reports containing only the required headings; observe both return `valid: true`.
+5. Run this no-write validation probe with minimal `ship-latest` and `undo-latest` reports containing only the required headings:
+
+```bash
+npx tsx -e 'import { validateReportArtifactContent } from "./src/mcp/tools/artifacts.ts";
+const ship = `# Ship Report
+
+## Selected Scope
+
+- scope
+
+## Branch Plan
+
+- plan
+
+## Push Or PR Outcome
+
+- none
+
+## Manual Fallback Guidance
+
+- fallback
+
+## Next Safe Action
+
+- /blu-progress`;
+const undo = `# Undo Report
+
+## Requested Scope
+
+- scope
+
+## Candidate Revert Set
+
+- commits
+
+## Dependency Impact
+
+- impact
+
+## Mutation Outcome
+
+- pending
+
+## Next Safe Action
+
+- /blu-progress`;
+console.log(JSON.stringify({ ship: validateReportArtifactContent(ship, "ship-latest"), undo: validateReportArtifactContent(undo, "undo-latest") }));'
+```
+
+Observed stdout:
+
+```json
+{"ship":{"valid":true,"issues":[],"warnings":[]},"undo":{"valid":true,"issues":[],"warnings":[]}}
+```
 
 ## Likely Cause
 
