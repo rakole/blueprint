@@ -2597,10 +2597,16 @@ test("root router and help/progress assets keep implemented-only waiting-state g
   assert.match(runtimeReference, /\|\s*`progress`\s*\|\s*`docs\/commands\/progress\.md`\s*\|/);
 });
 
-test("runtime-facing docs mention shipped command coverage instead of a docs-only runtime description", async () => {
+test("runtime-facing docs keep host instructions concise while preserving command recall", async () => {
   const geminiFile = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
   const readmeFile = await readFile(path.join(repoRoot, "README.md"), "utf8");
 
+  assert.match(geminiFile, /Runtime Operator Guide/);
+  assert.match(geminiFile, /runtime guidance for the host agent/);
+  assert.match(geminiFile, /Gemini CLI and Tabnine CLI run the same Blueprint workflow surface/);
+  assert.doesNotMatch(geminiFile, /Checkpoint Status/);
+  assert.doesNotMatch(geminiFile, /Phase 2\.1 drift recovery/);
+  assert.doesNotMatch(geminiFile, /Phase 3 discovery shipped/);
   assert.match(geminiFile, /\/blu-settings/);
   assert.match(geminiFile, /\/blu-set-profile/);
   assert.match(geminiFile, /\/blu-help/);

@@ -1,91 +1,99 @@
-# Blueprint
+# Blueprint Runtime Operator Guide
 
-Blueprint is a Gemini-native planning and execution system for repository work.
+You are running Blueprint inside a Gemini-compatible CLI extension. Blueprint is a command-driven planning and execution workflow for repository work. This file is runtime guidance for the host agent; it is not Blueprint source-repo status memory and should not be used as a changelog.
 
-## Checkpoint Status
+Gemini CLI and Tabnine CLI run the same Blueprint workflow surface. Treat Tabnine CLI as a host rebrand with the same slash commands, MCP tool names, skills, agents, and fallback behavior.
 
-- Phase 2.1 drift recovery and Phase 2.2 future-contract drift repair both closed on 2026-04-11.
-- Phase 3 discovery shipped on 2026-04-11.
-- The live runtime now includes `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-add-tests`, `/blu-fast`, `/blu-quick`, `/blu-debug`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`, `/blu-docs-update`, `/blu-list-phase-assumptions`, `/blu-code-review`, `/blu-code-review-fix`, `/blu-audit-fix`, `/blu-secure-phase`, `/blu-review`, `/blu-ui-review`, `/blu-pr-branch`, `/blu-ship`, `/blu-undo`, `/blu-new-workspace`, `/blu-remove-workspace`, `/blu-cleanup`, and `/blu-reapply-patches`. Current follow-up work is keeping the shipped discovery, planning, execution, validation/UAT, test-generation, lightweight execution, debugging, governance, roadmap-admin, capture, docs, review, review-fix, and maintenance contracts aligned while later unshipped commands remain non-routable until their manifest, primary skill, and required MCP tools line up.
-- Runtime routing must still surface only commands whose catalog entry is `implemented`.
-- Host-facing docs should keep using the shared effectiveness-spine vocabulary: execution profile, stage, pending gate/status, and next safe action. When Gemini-only helpers are unavailable, Blueprint should describe the fallback honestly rather than implying tool parity.
+## Operating Posture
 
-## Command Namespace
+- Start from the user's intent and the current repository state.
+- Use `/blu` when the user wants routing, help, progress, or a next safe action.
+- Use a direct `/blu-<command>` when the user already knows the action they want.
+- Keep responses grounded in the active stage, pending gate or status, and next safe action.
+- Recommend only commands whose live `blueprint_command_catalog` entry is `implemented`.
+- If a command is planned, blocked, repairing, or missing a required substrate, say that plainly and route to the safest implemented alternative.
 
-- Use `/blu` as the root router when the user wants help, next-step guidance, or intent-based routing.
-- Use direct commands in the `/blu-<command>` namespace when the user already knows the action they want.
-- Current shipped direct commands: `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-help`, `/blu-progress`, `/blu-health`, `/blu-map-codebase`, `/blu-discuss-phase`, `/blu-list-phase-assumptions`, `/blu-research-phase`, `/blu-ui-phase`, `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-add-tests`, `/blu-fast`, `/blu-quick`, `/blu-debug`, `/blu-next`, `/blu-pause-work`, `/blu-resume-work`, `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`, `/blu-docs-update`, `/blu-code-review`, `/blu-code-review-fix`, `/blu-audit-fix`, `/blu-secure-phase`, `/blu-review`, `/blu-ui-review`, `/blu-pr-branch`, `/blu-ship`, `/blu-undo`, `/blu-new-workspace`, `/blu-remove-workspace`, `/blu-cleanup`, and `/blu-reapply-patches`.
+## Startup Checks
 
-## State Boundaries
+Before running Blueprint orchestration:
 
-- Project-local Blueprint state lives in `.blueprint/`.
-- Global operational Blueprint state lives in `~/.gemini/blueprint/`.
-- `.planning/` is not Blueprint runtime state and must not be used for shipped command persistence. It may still exist in this repo as implementation bookkeeping for the Blueprint build-out.
+1. Confirm the working directory is the repository the user wants to operate on.
+2. Check whether `.blueprint/` exists and whether the repo is initialized.
+3. Prefer Blueprint MCP tools when available:
+   - `mcp_blueprint_blueprint_project_status`
+   - `mcp_blueprint_blueprint_command_catalog`
+   - `mcp_blueprint_blueprint_config_get`
+4. If the MCP server or a required tool is unavailable, do not invent shell wrappers such as `mcp use ...`, `blueprint-mcp ...`, or ad-hoc SDK scripts. Say the Blueprint MCP server is disconnected or undiscovered and ask the user to check `/mcp` or restart the host CLI.
+5. If the repo is uninitialized, route to `/blu-new-project`. If state is partial or unhealthy, route to `/blu-health`. If the user only wants orientation, route to `/blu-progress` or `/blu-help`.
 
-## Current Runtime Surface
+## CLI Integration Constraints
 
-- `/blu-new-project` bootstraps deterministic `.blueprint/` artifacts and normalized repo config.
-- `/blu-settings` reads or updates normalized Blueprint config through MCP tools.
-- `/blu-set-profile` changes only the project-local `model_profile`.
-- `/blu-help` returns read-only routing guidance from an implementation-aware command catalog and repo readiness.
-- `/blu-progress` summarizes repo status, blockers, warnings, and the next safe action from real `.blueprint/` state while filtering to implemented commands.
-- `/blu-next` turns the current derived next action into a safe direct-command recommendation without introducing hidden writes.
-- `/blu-health` diagnoses Blueprint artifacts and enters repair flows only after explicit confirmation.
-- `/blu-map-codebase` creates or reuses the seven-document `.blueprint/codebase/` bundle, including `STRUCTURE.md`.
-- `/blu-discuss-phase` now captures substantive `XX-CONTEXT.md` content and can persist resumable discussion checkpoints.
-- `/blu-list-phase-assumptions` now runs as a read-only discovery command that surfaces roadmap- and context-backed phase assumptions before planning.
-- `/blu-research-phase` now persists substantive `XX-RESEARCH.md` content instead of relying on scaffold placeholders.
-- `/blu-ui-phase` now persists substantive `XX-UI-SPEC.md` content or an explicit skip rationale in that same file.
-- `/blu-plan-phase` now persists substantive `XX-YY-PLAN.md` content through the plan MCP substrate.
-- `/blu-execute-phase` now persists `XX-YY-SUMMARY.md` execution evidence through the summary MCP substrates and keeps the next action explicit.
-- `/blu-validate-phase` now persists `XX-VERIFICATION.md` verification evidence through the validation MCP substrates.
-- `/blu-verify-work` now persists resumable `XX-UAT.md` conversational UAT evidence through the same validation MCP substrates and keeps follow-up fixes explicit.
-- `/blu-add-tests` now generates focused repo tests from saved summaries plus validation or UAT evidence, updates `XX-VERIFICATION.md` through the validation MCP substrates, and persists `.blueprint/reports/add-tests-<phase>.md`.
-- `/blu-fast` now ships as the trivial inline execution path; it keeps truly small repo work out of the heavier planning surface and updates `.blueprint/STATE.md` only when Blueprint is already initialized.
-- `/blu-quick` now ships as the bounded lightweight execution path; it starts from project status and the runtime command catalog, keeps deeper discuss, research, and validation work opt-in, persists `.blueprint/reports/quick-run-latest.md`, and updates `.blueprint/STATE.md`.
-- `/blu-debug` now ships as the structured investigation path; it persists `.blueprint/reports/debug-latest.md`, keeps diagnose-only runs confirmation-gated for fixes, and routes broader remediation into the implemented execution surface.
-- `/blu-audit-milestone` audits milestone completion against original intent, writes a durable report in `.blueprint/reports/`, and keeps the follow-up inside the implemented Blueprint surface.
-- `/blu-complete-milestone`, `/blu-milestone-summary`, and `/blu-new-milestone` now ship as the report-driven milestone closeout and carry-forward reset trio on the existing roadmap, artifact, and state substrates.
-- `/blu-note` now ships as the project-local note capture slice; it appends duplicate-safe notes to `.blueprint/notes/NOTES.md` through Blueprint MCP and leaves list or promote behavior for later capture contracts.
-- `/blu-add-todo` now ships as the project-local todo capture slice; it appends duplicate-safe todo entries to `.blueprint/todos/TODO.md` through Blueprint MCP.
-- `/blu-add-backlog` now ships as the parking-lot capture slice; it appends deterministic backlog entries to `.blueprint/backlog/BACKLOG.md`, detects duplicates, and can optionally reserve a `999.x` phase stub through Blueprint MCP plus scaffolding.
-- `/blu-explore` now ships as the ideation-routing capture slice; it classifies ideas into note, todo, backlog, or roadmap-ready work, requires explicit routing confirmation before any write, and persists only the confirmed target through Blueprint MCP.
-- `/blu-docs-update` now verifies or refreshes selected repo docs against repo and Blueprint evidence, keeps the write scope narrow, and persists a durable `.blueprint/reports/docs-update-latest.md` report.
-- `/blu-code-review` now resolves a deterministic repo-file scope from executed plans or explicit file paths, keeps findings evidence-backed, and persists `XX-REVIEW.md` through the shared review MCP tools.
-- `/blu-code-review-fix` now loads saved `XX-REVIEW.md` findings through `blueprint_review_load_findings`, keeps remediation bounded to the selected issues, persists `XX-REVIEW-FIX.md`, and updates `.blueprint/STATE.md` with the next safe implemented follow-up.
-- `/blu-audit-fix` now ships as the bounded remediation path; it starts from saved review or validation evidence, keeps repo mutation scoped to the deterministic review surface, persists `.blueprint/reports/audit-fix-<phase>.md`, and routes the next safe action through implemented validation or progress commands.
-- `/blu-review` now ships as the phase-plan peer-review path; it reads saved plan artifacts through the plan MCP substrate, keeps reviewer availability explicit instead of assumed, and persists `XX-REVIEWS.md` through `blueprint_review_record`.
-- `/blu-ui-review` now persists `XX-UI-REVIEW.md` through `blueprint_review_record`, keeps the shipped UI audit slice phase-scoped and MCP-owned, and can use `blueprint-ui-auditor` for bounded six-pillar review.
-- `/blu-pr-branch` now ships as the review-branch preparation path; it keeps `.blueprint/` filtering explicit, requires confirmation before any git replay, and persists `.blueprint/reports/pr-branch-latest.md`.
-- `/blu-ship` now ships as the confirmation-gated shipping path; it reuses saved verification and review evidence, separates push from PR creation, persists `.blueprint/reports/ship-latest.md`, and leaves a durable manual fallback when `gh` cannot create the PR.
-- `/blu-undo` now ships as the confirmation-gated safe-revert path; it previews the revert scope first, persists `.blueprint/reports/undo-latest.md` before any git mutation, and keeps git history changes limited to explicit `git revert` style steps.
-- `/blu-new-workspace` now ships as the confirmation-gated workspace bootstrap path; it resolves the default workspace root from effective config when available, persists `.blueprint-workspace.json` plus `~/.<host>/blueprint/workspaces.json` through the workspace MCP tools, and keeps the full creation plan visible before mutation.
-- `/blu-remove-workspace` now ships as the confirmation-gated workspace teardown path; it resolves the exact workspace target from the host-global registry, blocks on dirty or drifted repo members, and removes the matching workspace manifest, workspace root, and registry entry only after explicit confirmation.
-- `/blu-cleanup` now ships as the confirmation-gated cleanup path; it reads project, roadmap, and milestone closeout evidence first, persists `.blueprint/reports/cleanup-latest.md` before filesystem mutation, and never archives the current phase or active roadmap scope.
-- `/blu-reapply-patches` now ships as the confirmation-gated patch replay path; it keeps patch state under `~/.<host>/blueprint/patches/`, previews replay conflicts before mutation, hard-stops on dirty or incompatible targets, and appends replay audits through the patch MCP tools instead of creating project-local patch reports.
-- `/blu-plan-milestone-gaps` reads the latest milestone audit, groups actionable gaps into a coherent follow-up slice, appends the approved phases through MCP roadmap tools, and routes to `/blu-discuss-phase` for the first new phase.
-- `/blu-pause-work` and `/blu-resume-work` now persist the canonical handoff/report and state-routing contract across `.blueprint/reports/pause-work-latest.md` and `.blueprint/STATE.md`.
-- `/blu-secure-phase` now persists `XX-SECURITY.md` through `blueprint_review_record` and keeps the shipped security review slice phase-scoped and MCP-owned.
-- `/blu-add-phase` now appends the next whole-number phase, ignores decimal suffixes when numbering, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
-- `/blu-insert-phase` now inserts the next decimal phase after an existing integer phase, keeps later roadmap entries stable, scaffolds `.blueprint/phases/<decimal-phase-slug>/`, and routes back to `/blu-discuss-phase`.
-- `/blu-remove-phase` now removes a future phase, deletes the matching phase directory, renumbers later roadmap references plus phase-scoped artifact filenames, and updates `.blueprint/STATE.md`.
-- Shipped orchestration skills live in `skills/`, including `blueprint-phase-discovery`, `blueprint-phase-validation`, `blueprint-debug`, `blueprint-docs`, `blueprint-review`, `blueprint-roadmap-admin`, and `blueprint-maintenance`.
-- Shipped agent contracts live in `agents/`, including `blueprint-researcher`, `blueprint-debugger`, `blueprint-ui-designer`, `blueprint-doc-writer`, `blueprint-doc-verifier`, `blueprint-reviewer`, `blueprint-security-auditor`, and `blueprint-ui-auditor`.
+- Slash commands are file commands from `commands/blu*.toml`.
+- Direct command names use the `/blu-<command>` namespace; do not use removed colon-form variants.
+- Blueprint MCP tools are called through runtime FQNs such as `mcp_blueprint_blueprint_project_status`; translate older shorthand ids like `blueprint_project_status` before calling tools.
+- Gemini-native helpers such as `ask_user`, `write_todos`, `update_topic`, tracker tools, and MCP resource tools are useful when present, but they are session UX only. When unavailable, use concise prose confirmations, visible todo lists, and explicit gates.
+- Keep `ask_user` headers short when using interactive prompts.
+- Do not mutate the installed extension directory. `/blu-update` is advisory and must leave manual update and restart guidance explicit.
+
+## State Paths
+
+- Project-local Blueprint state lives in `.blueprint/`; treat it as the source of truth for project artifacts.
+- Host-global operational state lives under `~/.<host>/blueprint/`.
+- On Gemini CLI, `~/.<host>/blueprint/` means `~/.gemini/blueprint/`.
+- On Tabnine CLI, `~/.<host>/blueprint/` means `~/.tabnine/blueprint/`.
+- `.planning/` is not Blueprint runtime state. If it exists in the Blueprint source repository, treat it only as local implementation bookkeeping.
+
+## Command Surface
+
+The live command catalog is authoritative. The current implemented surface is grouped below for recall, but routing decisions still come from `blueprint_command_catalog`.
+
+Foundation:
+`/blu`, `/blu-help`, `/blu-progress`, `/blu-next`, `/blu-health`, `/blu-new-project`, `/blu-settings`, `/blu-set-profile`, `/blu-map-codebase`
+
+Phase lifecycle:
+`/blu-discuss-phase`, `/blu-list-phase-assumptions`, `/blu-research-phase`, `/blu-ui-phase`, `/blu-plan-phase`, `/blu-execute-phase`, `/blu-validate-phase`, `/blu-verify-work`, `/blu-add-tests`, `/blu-pause-work`, `/blu-resume-work`
+
+Lightweight execution and capture:
+`/blu-fast`, `/blu-quick`, `/blu-debug`, `/blu-note`, `/blu-add-todo`, `/blu-check-todos`, `/blu-add-backlog`, `/blu-review-backlog`, `/blu-explore`
+
+Roadmap and milestone work:
+`/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, `/blu-complete-milestone`, `/blu-milestone-summary`, `/blu-new-milestone`
+
+Quality, impact, and shipping:
+`/blu-docs-update`, `/blu-code-review`, `/blu-code-review-fix`, `/blu-audit-fix`, `/blu-impact`, `/blu-secure-phase`, `/blu-review`, `/blu-ui-review`, `/blu-pr-branch`, `/blu-ship`, `/blu-undo`
+
+Workspace and maintenance:
+`/blu-new-workspace`, `/blu-remove-workspace`, `/blu-workstreams`, `/blu-update`, `/blu-cleanup`, `/blu-reapply-patches`
+
+## Workflow Contracts
+
+- Commands own user experience, routing, and confirmation gates.
+- MCP tools own structured reads and persistent writes.
+- Skills provide command-family orchestration contracts. Load only the skill or reference file needed for the invoked command.
+- Agents are for bounded deep work. Use them only when the command contract calls for them and the task has clear ownership, inputs, and outputs.
+- Do not persist Blueprint artifacts through prompt-only prose when a Blueprint MCP tool owns that artifact.
+- Use returned MCP paths, ids, statuses, warnings, and validation results as authoritative.
 
 ## Mutation Rules
 
-- Commands own UX and routing.
-- MCP tools own persistent reads and writes.
-- Do not create or mutate Blueprint artifacts through prompt-only prose when an MCP tool is responsible for the change.
-- Host docs may describe Gemini-only helpers such as `ask_user`, `write_todos`, `update_topic`, tracker tools, and resource tools, but they must also state the non-Gemini fallback posture instead of promising those helpers everywhere.
-- When you need to name a Blueprint MCP tool explicitly in Gemini CLI, use the runtime FQN form `mcp_blueprint_<toolName>`.
-- Never try to reach Blueprint MCP tools through shell wrappers such as `mcp use ...`, `blueprint-mcp ...`, or ad-hoc `node -e` SDK scripts. If a Blueprint MCP tool is unavailable, say the Blueprint MCP server is disconnected or undiscovered and ask the user to check `/mcp` or restart Gemini CLI.
+- Read state before writing state.
+- Keep writes inside the command's declared scope.
+- Require explicit confirmation before high-risk flows such as `/blu-pr-branch`, `/blu-ship`, `/blu-undo`, `/blu-new-workspace`, `/blu-remove-workspace`, `/blu-cleanup`, and `/blu-reapply-patches`.
+- For repo code changes, follow the command contract's verification path before claiming completion.
+- For `.blueprint/` artifacts, prefer the dedicated MCP write tool over direct file edits.
+- For host-global state, write only through the relevant Blueprint MCP maintenance tool.
+- Do not rely on hooks for core state transitions; hooks are advisory.
 
-## Router Guidance
+## Context Budget
 
-- Prefer safe inline routing when user intent is clear.
-- Recommend the best direct `/blu-<command>` entrypoint when intent is ambiguous or the next action is risky.
-- Only recommend commands whose `blueprint_command_catalog` entry is `implemented`.
-- For roadmap work, keep `/blu-add-phase`, `/blu-insert-phase`, `/blu-remove-phase`, `/blu-plan-milestone-gaps`, `/blu-audit-milestone`, and `/blu-list-phase-assumptions` available as the implemented Wave 2 commands until the remaining roadmap surfaces ship.
-- When a command is blocked, explain the missing substrate instead of presenting it as runnable.
-- Do not rely on slash-command chaining or undocumented aliases.
+- Prefer compact MCP status, catalog, and artifact-index responses over rereading large files.
+- For long runs, summarize completed stages and keep unresolved gates visible.
+- Avoid loading every command, skill, or agent file at once.
+- When resuming, trust saved `.blueprint/STATE.md`, reports, summaries, and validation artifacts before reconstructing history from chat.
+
+## Fallbacks
+
+- If a required MCP tool is missing, report the missing tool or substrate and stop before mutation.
+- If a Gemini-native helper is missing, keep the same gate in prose rather than pretending the helper ran.
+- If command catalog status and docs disagree, trust the live runtime catalog for routability and mention the mismatch as a documentation or substrate issue.
+- If the user asks for a planned-only command, recommend the closest implemented command only when that recommendation is safe and explicit.

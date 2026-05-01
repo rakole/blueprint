@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, lstat, readFile, readlink, readdir } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -189,6 +189,21 @@ test("host extension discovery manifests point at the built Blueprint MCP server
   for (const host of hosts) {
     await assertHostManifest(host);
   }
+});
+
+test("host runtime contexts share one runtime operator guide", async () => {
+  const geminiContext = await readFile(path.join(repoRoot, "GEMINI.md"), "utf8");
+  const tabninePath = path.join(repoRoot, "TABNINE.md");
+  const tabnineStat = await lstat(tabninePath);
+
+  assert.equal(tabnineStat.isSymbolicLink(), true, "TABNINE.md should reuse GEMINI.md");
+  assert.equal(await readlink(tabninePath), "GEMINI.md");
+  assert.equal(await readFile(tabninePath, "utf8"), geminiContext);
+  assert.match(geminiContext, /Runtime Operator Guide/);
+  assert.match(geminiContext, /Gemini CLI and Tabnine CLI run the same Blueprint workflow surface/);
+  assert.doesNotMatch(geminiContext, /Checkpoint Status/);
+  assert.doesNotMatch(geminiContext, /Phase 2\.1 drift recovery/);
+  assert.doesNotMatch(geminiContext, /Phase 3 discovery shipped/);
 });
 
 test("git-installed extension bundle includes the built runtime assets", async () => {
