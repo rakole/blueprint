@@ -12,7 +12,7 @@
 | 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Planned |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -183,11 +183,26 @@
 - impact report schemas, review schemas, maintenance report contracts
 - code-review, audit-fix, secure-phase, ui-review, docs-update, impact, pr-branch, ship, and undo tests
 
+**Plan artifacts:**
+- Wave 1: `05-01-PLAN.md` audits review artifact quality for `code-review`, `secure-phase`, `review`, and `ui-review`.
+- Wave 2 *(blocked on Wave 1 completion)*: `05-02-PLAN.md` audits remediation and docs mutation safety for `code-review-fix`, `audit-fix`, and `docs-update`.
+- Wave 3 *(blocked on Wave 2 completion)*: `05-03-PLAN.md` audits `/blu-impact` depth, scaling, report validation, and output rendering.
+- Wave 4 *(blocked on Wave 3 completion)*: `05-04-PLAN.md` audits high-risk git safety for `pr-branch`, `ship`, and `undo`.
+- Wave 5 *(blocked on Wave 4 completion)*: `05-05-PLAN.md` reconciles Phase 5 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+
+**Cross-cutting constraints:**
+- Preserve discovery-only execution: Phase 5 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, skill, test, build, generated asset, runtime `.blueprint/`, installed-extension, host-global, remote-service, branch, PR, or git-history defects.
+- Require schema-plus-evidence review quality for review artifacts; schema-valid but materially weak evidence is still a bug candidate when supported by concrete evidence.
+- Keep `/blu-impact` risk, confidence, ownership, dependency, and unknown signals distinct; missing metadata must not be treated as proof of safety.
+- Keep high-risk git workflow audits static or disposable: no branch creation, push, PR, revert, reset, or source-branch mutation in the main audit worktree.
+
 **Success criteria:**
 1. Schema-first review and report authoring paths are checked.
 2. Impact scope/config/context/report behavior is checked.
 3. High-risk git mutation previews and report-before-mutate contracts are checked for shipping/undo/pr-branch.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** planned on 2026-05-02; ready to execute Phase 5 discovery.
 
 ### Phase 6: Workspace Maintenance Audit
 
