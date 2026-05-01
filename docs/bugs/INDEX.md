@@ -10,7 +10,7 @@ relationships, and keeps the milestone discovery-only.
 
 | ID | Title | Severity | Confidence | Surface | Status | Discovery Phase | Impact | Likely Cause | Report |
 |----|-------|----------|------------|---------|--------|-----------------|--------|--------------|--------|
-| BPBUG-001 | next real bug id | none yet | none yet | none yet | next real bug id | pending | reserved for the first real defect | pending discovery evidence | pending |
+| BPBUG-001 | Ship and undo report contracts accept under-specified high-risk evidence | medium | confirmed | MCP tool | new | 5 | Valid `ship-latest` and `undo-latest` reports can omit high-risk push, PR, revert, evidence, fallback, digest, and branch-state details required by their command manifests. | Ship and undo report contracts stayed broad heading-only templates while command manifests evolved to require richer durable evidence. | [BPBUG-001](./BPBUG-001-ship-undo-report-contracts-underconstrained.md) |
 
 `BPBUG-000` is reserved for the illustrative non-real example and is excluded
 from real defect totals.
@@ -33,7 +33,7 @@ bug links to show shared root causes, downstream fallout, or overlapping evidenc
 - [`BPBUG-000-illustrative-example.md`](./BPBUG-000-illustrative-example.md)
   demonstrates the report format only.
 - `BPBUG-000` is excluded from real defect totals and must not be used as repair evidence.
-- `BPBUG-001` remains the next real bug id.
+- `BPBUG-001` is the first real defect report.
 
 ## Discovery-Only Guardrails
 
