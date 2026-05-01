@@ -55,7 +55,7 @@ unrelated pre-existing user changes separately and do not revert them.
 | Phase | Surfaces Examined | Surfaces Deferred | Bug IDs |
 |-------|-------------------|-------------------|---------|
 | Phase 1 | bug reporting harness, template, index, illustrative example boundary | workflow-specific Blueprint audit surfaces | BPBUG-000 illustrative only; BPBUG-001 reserved next real bug id |
-| Phase 2 | pending | pending | pending |
+| Phase 2 | router/readiness (Plan 01); catalog/substrate (Plan 02); bootstrap/config/governance (Plan 03); no confirmed or likely defects found | later lifecycle, review, workspace, packaging, and cross-cut drift slices | none found in Plans 01-04; BPBUG-001 remains the next real bug id |
 | Phase 3 | pending | pending | pending |
 | Phase 4 | pending | pending | pending |
 | Phase 5 | pending | pending | pending |

@@ -9,7 +9,7 @@
 | Phase | Name | Goal | Requirements | Status |
 |-------|------|------|--------------|--------|
 | 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Verified |
-| 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Ready to execute |
+| 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Ready to validate |
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -71,6 +71,7 @@
 - Wave 1: `02-02-PLAN.md` audits command catalog, manifest, skill, required MCP tool, and runtime-contract substrate.
 - Wave 1: `02-03-PLAN.md` audits `new-project`, `map-codebase`, settings, set-profile, health, config normalization, saved defaults, and repair routing.
 - Wave 2 *(blocked on Wave 1 completion)*: `02-04-PLAN.md` reconciles Phase 2 bug reports, updates the bug index slice row, and verifies no-fix boundaries.
+- Execution evidence: `02-01-SUMMARY.md`, `02-02-SUMMARY.md`, `02-03-SUMMARY.md`, and `02-04-SUMMARY.md` are now saved in the phase directory.
 
 **Cross-cutting constraints:**
 - Preserve discovery-only execution: Phase 2 writes bug reports, bug index updates, and planning summaries only.
@@ -83,6 +84,8 @@
 2. Bootstrap mapped-only and mapping-incomplete behavior is checked.
 3. Config normalization, defaults, and health repair behavior are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** executed on 2026-05-01; no confirmed or likely defects were found and the phase is ready for validation.
 
 ### Phase 3: Core Lifecycle Audit
 
