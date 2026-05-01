@@ -353,6 +353,7 @@ function validSummaryModel(
 }
 
 type AddTestsReportContext = Awaited<ReturnType<typeof blueprintArtifactReportAuthoringContext>>;
+type AuditFixReportContext = AddTestsReportContext;
 
 function validAddTestsReportModel(
   context: AddTestsReportContext,
@@ -632,6 +633,207 @@ function validAddTestsReportContent(): string {
 
 - /blu-progress
 `;
+}
+
+async function seedAuditFixScopeFile(repoPath: string): Promise<string> {
+  const scopeFile = "src/mcp/tools/phase.ts";
+
+  await mkdir(path.join(repoPath, "src/mcp/tools"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, scopeFile),
+    "export const executionSummaryScope = true;\n",
+    "utf8"
+  );
+
+  return scopeFile;
+}
+
+function auditFixRuntimeContext(scopeFile: string, dryRun = false) {
+  return {
+    source: "verification" as const,
+    severity: "high" as const,
+    maxAttempts: 1,
+    dryRun,
+    scopeFiles: [scopeFile]
+  };
+}
+
+function validAuditFixReportModel(
+  context: AuditFixReportContext,
+  status: "COMPLETED" | "PARTIAL" | "BLOCKED" = "COMPLETED",
+  patch: Record<string, unknown> = {}
+): Record<string, unknown> {
+  const summaryEvidence = Object.fromEntries(
+    context.completedSummaries.map((summary) => [
+      summary.path,
+      {
+        planId: summary.planId,
+        linkedPlanPath: summary.linkedPlanPath,
+        summaryStatus: "COMPLETED",
+        targetedVerification:
+          summary.targetedVerification.length > 0
+            ? summary.targetedVerification
+            : ["npm test -- tests/phase-planning-tools.test.ts"],
+        coverageNote: `Saved summary ${summary.planId} proves the linked-plan remediation provenance.`
+      }
+    ])
+  );
+  const selectedEvidencePath =
+    context.selectedEvidencePaths[0] ??
+    ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md";
+  const scopeFile = context.scopeFiles[0] ?? "src/mcp/tools/phase.ts";
+  const isComplete = status === "COMPLETED";
+  const isBlocked = status === "BLOCKED";
+
+  return {
+    status,
+    readiness: isComplete
+      ? "ready-for-routing"
+      : isBlocked
+        ? "blocked"
+        : "not-ready-for-routing",
+    completionState: isComplete ? "complete" : isBlocked ? "blocked" : "pending",
+    remediationSummary: [
+      isComplete
+        ? "The bounded audit-fix run resolved the selected verification-backed gap and closed the current remediation loop."
+        : isBlocked
+          ? "The bounded audit-fix run stopped at a hard blocker before a safe repo mutation could land."
+          : "The bounded audit-fix run narrowed the failure, but at least one concrete repair route still remains open."
+    ],
+    summaryEvidence,
+    classification: [
+      {
+        findingId: "AF-03-01",
+        evidenceSource: selectedEvidencePath,
+        severity: "high",
+        classification: isBlocked ? "manual-only" : "auto-fixable",
+        reason: "The saved verification evidence maps to one scoped repo file and one focused follow-up check.",
+        implicatedFiles: [scopeFile],
+        narrowVerification: "npm test -- tests/phase-planning-tools.test.ts"
+      }
+    ],
+    changesApplied: isComplete
+      ? [
+          {
+            findingId: "AF-03-01",
+            status: "fixed",
+            changedFiles: [scopeFile],
+            summary: "Added the bounded remediation guard for the saved verification gap."
+          }
+        ]
+      : isBlocked
+        ? [
+            {
+              findingId: "none",
+              status: "none",
+              changedFiles: ["none"],
+              summary: "none"
+            }
+          ]
+        : [
+            {
+              findingId: "AF-03-01",
+              status: "planned",
+              changedFiles: [scopeFile],
+              summary: "Prepared the bounded repo change, but verification still routes follow-up work."
+            }
+          ],
+    verification: [
+      {
+        findingId: "AF-03-01",
+        check: isBlocked ? "blocked verification handoff" : "phase summary tool slice",
+        command: isBlocked ? "none" : "npm test -- tests/phase-planning-tools.test.ts",
+        result: isComplete ? "pass" : isBlocked ? "blocked" : "fail",
+        evidence: isComplete
+          ? "The targeted phase summary tooling slice passed after the remediation."
+          : isBlocked
+            ? "Verification could not run until the blocking prerequisite is resolved."
+            : "The targeted phase summary tooling slice still fails and keeps the repair route open."
+      }
+    ],
+    pendingPlans: context.pendingPlans,
+    dependencyPlans: context.dependencyPlans.map((dependency) => ({
+      ...dependency
+    })),
+    manualOrDeferredWork: isComplete
+      ? [
+          {
+            item: "none",
+            status: "NONE",
+            reason: "none",
+            followUp: "none"
+          }
+        ]
+      : [
+          {
+            item: isBlocked ? "Resolve the blocking prerequisite" : "Repair the failing verification path",
+            status: isBlocked ? "MANUAL" : "DEFERRED",
+            reason: isBlocked
+              ? "The remediation could not continue until the prerequisite blocker clears."
+              : "The focused verification still reports a concrete gap.",
+            followUp: isBlocked ? "/blu-code-review 3" : "/blu-add-tests 3"
+          }
+        ],
+    gapRoutes: isComplete
+      ? [
+          {
+            gap: "none",
+            status: "NONE",
+            evidence: "none",
+            repair: "none"
+          }
+        ]
+      : [
+          {
+            gap: isBlocked ? "Blocking prerequisite still unresolved" : "Focused verification still failing",
+            status: isBlocked ? "BLOCKED" : "OPEN",
+            evidence: isBlocked
+              ? "The saved evidence still depends on an unresolved blocker."
+              : "The focused phase summary tooling slice remains red.",
+            repair: isBlocked
+              ? "Refresh the saved evidence path before retrying the remediation loop."
+              : "Repair the failing behavior or add the missing coverage before rerunning audit-fix."
+          }
+        ],
+    followUpFixes: isComplete
+      ? ["none"]
+      : [
+          isBlocked
+            ? "Refresh the saved evidence or prerequisite state before retrying audit-fix."
+            : "Repair the failing verification path and rerun the bounded remediation."
+        ],
+    evidence: [
+      {
+        kind: "verification",
+        source: selectedEvidencePath,
+        summary: "Saved verification evidence selected by the audit-fix source filter."
+      },
+      ...context.completedSummaries.map((summary) => ({
+        kind: "summary" as const,
+        source: summary.path,
+        summary: `Completed summary ${summary.planId} proves linked plan provenance for the remediation scope.`
+      })),
+      {
+        kind: "scope",
+        source: scopeFile,
+        summary: "Scoped repo file inspected for the bounded remediation."
+      }
+    ],
+    commitTraceability: {
+      preFixHead: "abc1234",
+      createdCommits: ["none"]
+    },
+    todoCapture: {
+      status: "not-needed",
+      evidence: "No follow-up index entry was required after recording the bounded remediation outcome."
+    },
+    nextSafeAction: isComplete
+      ? "/blu-progress"
+      : isBlocked
+        ? "/blu-code-review 3"
+        : "/blu-add-tests 3",
+    ...patch
+  };
 }
 
 function executionPlanContent(planId: string, wave: number, gapClosure = false): string {
@@ -1746,6 +1948,298 @@ test("add-tests report runtime narrowing rejects stale summaries and impossible 
   assert.match(
     blockedInvalidVerificationWrite.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /must be equal to constant/i
+  );
+});
+
+test("audit-fix authoring context blocks missing required runtime context and narrows empty optional context exactly", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  const scopeFile = await seedAuditFixScopeFile(repoPath);
+  const missingRuntime = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3"
+  });
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: auditFixRuntimeContext(scopeFile)
+  });
+  const taskSchemaText = JSON.stringify(context.taskSchema);
+
+  assert.equal(missingRuntime.status, "invalid");
+  assert.match(missingRuntime.reason ?? "", /required upstream context/i);
+  assert.equal(missingRuntime.taskSchema, null);
+  assert.equal(context.status, "ready", context.reason ?? context.warnings.join("\n"));
+  assert.deepEqual(context.pendingPlans, []);
+  assert.deepEqual(context.dependencyPlans, []);
+  assert.match(taskSchemaText, /"pendingPlans".*"maxItems":0/s);
+  assert.match(taskSchemaText, /"dependencyPlans".*"maxItems":0/s);
+  assert.match(taskSchemaText, /"selectedEvidencePaths":"required upstream context"/);
+  assert.match(taskSchemaText, /"scopeFiles":"required upstream context"/);
+});
+
+test("audit-fix report model validates and writes in one shot while preserving runtime provenance", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  const scopeFile = await seedAuditFixScopeFile(repoPath);
+  const auditFixContext = auditFixRuntimeContext(scopeFile);
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext
+  });
+  const model = validAuditFixReportModel(context);
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    model,
+    auditFixContext
+  });
+  const markdownFallback = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    content: "# Audit Fix Report\n\n## Evidence Used\n\n- none\n",
+    auditFixContext
+  });
+  const write = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    model,
+    auditFixContext
+  });
+  const savedReport = await readFile(
+    path.join(repoPath, ".blueprint/reports/audit-fix-3.md"),
+    "utf8"
+  );
+  const reused = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    model,
+    auditFixContext
+  });
+
+  assert.equal(validation.status, "valid", validation.diagnostics.map((d) => d.message).join("\n"));
+  assert.match(validation.renderPreview ?? "", /\*\*Source:\*\* verification/);
+  assert.equal(markdownFallback.status, "invalid");
+  assert.match(markdownFallback.issues.join("\n"), /model-only|Markdown content fallback/i);
+  assert.equal(write.status, "created");
+  assert.equal(write.path, ".blueprint/reports/audit-fix-3.md");
+  assert.match(savedReport, /\*\*Readiness:\*\* ready-for-routing/);
+  assert.match(savedReport, /\*\*Source:\*\* verification/);
+  assert.match(savedReport, /\*\*Severity Filter:\*\* high/);
+  assert.match(savedReport, /\*\*Max Attempts:\*\* 1/);
+  assert.match(savedReport, /\*\*Dry Run:\*\* false/);
+  assert.match(savedReport, new RegExp(`- ${scopeFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+  assert.match(savedReport, /Report write status: created for \.blueprint\/reports\/audit-fix-3\.md/);
+  assert.equal(reused.status, "reused");
+});
+
+test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale inventory, impossible completed pending debt, and dry-run mutation claims", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  const scopeFile = await seedAuditFixScopeFile(repoPath);
+  const auditFixContext = auditFixRuntimeContext(scopeFile);
+  const initialContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext
+  });
+  const staleModel = validAuditFixReportModel(initialContext);
+  const unsupported = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(initialContext, "COMPLETED", {
+      reportPath: ".blueprint/reports/audit-fix-3.md"
+    })
+  });
+  const missingModel = validAuditFixReportModel(initialContext);
+  delete missingModel.remediationSummary;
+  const missing = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: missingModel
+  });
+  const injected = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(initialContext, "COMPLETED", {
+      classification: [
+        {
+          findingId: "AF-03-01",
+          evidenceSource: initialContext.selectedEvidencePaths[0],
+          severity: "high",
+          classification: "auto-fixable",
+          reason: "Unsafe | table delimiter",
+          implicatedFiles: [scopeFile],
+          narrowVerification: "npm test -- tests/phase-planning-tools.test.ts"
+        }
+      ]
+    })
+  });
+  const outOfScopeSeverity = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(initialContext, "COMPLETED", {
+      classification: [
+        {
+          findingId: "AF-03-01",
+          evidenceSource: initialContext.selectedEvidencePaths[0],
+          severity: "low",
+          classification: "auto-fixable",
+          reason: "This row should fall outside the runtime high-severity filter.",
+          implicatedFiles: [scopeFile],
+          narrowVerification: "npm test -- tests/phase-planning-tools.test.ts"
+        }
+      ]
+    })
+  });
+  const dryRunContext = auditFixRuntimeContext(scopeFile, true);
+  const dryRunAuthoringContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: dryRunContext
+  });
+  const dryRunMutationClaim = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: dryRunContext,
+    model: validAuditFixReportModel(dryRunAuthoringContext, "PARTIAL", {
+      changesApplied: [
+        {
+          findingId: "AF-03-01",
+          status: "fixed",
+          changedFiles: [scopeFile],
+          summary: "Claimed a repo mutation even though the run stayed dry-run."
+        }
+      ],
+      commitTraceability: {
+        preFixHead: "abc1234",
+        createdCommits: ["deadbee"]
+      }
+    })
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1),
+    "utf8"
+  );
+  const pendingContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext
+  });
+  const impossibleCompleted = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(pendingContext)
+  });
+  const partialWithPending = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(pendingContext, "PARTIAL")
+  });
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02")
+  });
+  const staleValidation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: staleModel
+  });
+
+  assert.equal(unsupported.status, "invalid");
+  assert.match(
+    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have additional properties/i
+  );
+  assert.equal(missing.status, "invalid");
+  assert.match(
+    missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must have required property 'remediationSummary'/i
+  );
+  assert.equal(injected.status, "invalid");
+  assert.match(
+    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must match pattern/i
+  );
+  assert.equal(outOfScopeSeverity.status, "invalid");
+  assert.match(
+    outOfScopeSeverity.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to one of the allowed values|must be equal to one of/i
+  );
+  assert.deepEqual(pendingContext.pendingPlans.map((plan) => plan.planId), ["02"]);
+  assert.equal(impossibleCompleted.status, "invalid");
+  assert.match(
+    impossibleCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must NOT have more than 0 items/i
+  );
+  assert.equal(
+    partialWithPending.status,
+    "valid",
+    partialWithPending.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(staleValidation.status, "invalid");
+  assert.match(
+    staleValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /requires a valid saved verification artifact|did not expose a runtime task schema|must have required property|must NOT have fewer than/i
+  );
+  assert.equal(dryRunMutationClaim.status, "invalid");
+  assert.match(
+    dryRunMutationClaim.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to one of the allowed values|dry-run audit-fix reports must not claim applied file mutations or created commits/i
   );
 });
 

@@ -83,6 +83,8 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_review_validate_model`
 - `blueprint_review_record`
 - `blueprint_artifact_contract_read`
+- `blueprint_artifact_report_authoring_context`
+- `blueprint_artifact_report_validate_model`
 - `blueprint_artifact_report_write`
 - `blueprint_artifact_mutate_index`
 - `blueprint_state_update`
@@ -112,7 +114,9 @@ non-routable until their extra MCP substrate lands.
 - `blueprint_review_record`: pass numeric `phase` and the correct review `artifact` enum. For model-only artifacts (`code-review`, `peer-review`, `review-fix`, `security`, and `ui-review`), pass only the validated structured `model`; `code-review` also passes resolved `scopeFiles` and `scopeSource`, and `review-fix` also passes the same `targetIds` selection when the model covers a subset. Markdown `content` is invalid for all five. The tool owns the final review filename; use returned `reportPath`, `counts`, and `followUps` as authoritative.
 - `blueprint_artifact_contract_read`: read the canonical review and report contracts before drafting, updating, or validating review artifacts instead of relying on copied prompt-local templates.
 - `blueprint_review_load_findings`: omit `artifact` only when the command intentionally wants saved `code-review` findings; use returned `findings` and `severityCounts` as the authoritative fix baseline.
-- `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. Use the returned `path` as authoritative.
+- `blueprint_artifact_report_authoring_context`: for `report.audit-fix`, pass the bare report name plus the exact `auditFixContext {source, severity, maxAttempts, dryRun, scopeFiles}` so saved evidence, completed summary inventory, dependency/pending-plan debt, and report marker rendering stay MCP-owned.
+- `blueprint_artifact_report_validate_model`: for `report.audit-fix`, validate only the structured model fields `status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`; pass the same `auditFixContext` used for authoring context.
+- `blueprint_artifact_report_write`: pass a bare report name such as `audit-fix-3`, not `.blueprint/reports/audit-fix-3.md`. For `report.audit-fix`, persist the same validated structured `model` plus the same `auditFixContext`, and use the returned `path` as authoritative.
 - Do not guess review scope from unstaged repo drift when saved phase evidence is the authoritative baseline.
 - Keep repo mutation tightly bounded to the resolved review scope and capped candidate set.
 
@@ -486,22 +490,43 @@ non-routable until their extra MCP substrate lands.
 19. Enforce stop-on-first-failure behavior in mutation mode: stop the loop on
     the first failed fix or failed required verification and record remaining
     candidates as unattempted.
-20. Persist the durable remediation report through
-    `blueprint_artifact_report_write` using the bare canonical report name
+20. Read `report.audit-fix` through `blueprint_artifact_contract_read` and
+    then call `blueprint_artifact_report_authoring_context` with the bare
+    canonical report name `audit-fix-<phase>` plus
+    `auditFixContext {source, severity, maxAttempts, dryRun, scopeFiles}`. Use
+    `contract.modelContract.schemaPath`, the JSON schema, locked markers, and
+    the narrowed `taskSchema` as the model-authoring authority before drafting,
+    revising, or repairing the report.
+21. Validate the authored `report.audit-fix` JSON through
+    `blueprint_artifact_report_validate_model`; repair every returned schema or
+    residual diagnostic against the narrowed task schema, then retry validation
+    once before persistence. Pass the same `auditFixContext`, and author only
+    the model fields `status`, `readiness`, `completionState`,
+    `remediationSummary`, `summaryEvidence`, `classification`,
+    `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`,
+    `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`,
+    `commitTraceability`, `todoCapture`, and `nextSafeAction`. Markdown
+    `content` fallback is invalid.
+22. Persist the durable remediation report through
+    `blueprint_artifact_report_write` using the same validated `model` and the
+    same `auditFixContext`, and the bare canonical report name
     `audit-fix-<phase>`, not a `.blueprint/reports/...` path. Capture commit
     traceability in the report (pre-fix HEAD, any created commit SHA(s), or
-    `none`). Use the canonical `report.audit-fix` headings and include concrete
-    evidence in `Evidence Used`, source/severity/max/dry-run settings plus the
-    classification table in `Fix Scope`, attempted changes and verification in
-    `Changes Applied`, manual-only/unattempted/stale-context gaps in
-    `Remaining Gaps`, and exactly one implemented command in `Next Safe Action`.
-21. If `blueprint_artifact_report_write` rejects the report body or returns
-    missing-heading validation warnings, repair the body against the canonical
-    `report.audit-fix` headings and retry once through MCP. If the retry still
-    fails, stop with the MCP reason and do not write `.blueprint/` by hand.
-22. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
+    `none`). Keep the locked wording `Status`, `Readiness`, `Completion State`,
+    `Source`, `Severity Filter`, `Max Attempts`, `Dry Run`, `Evidence Used`,
+    `Fix Scope`, `Changes Applied`, `Remaining Gaps`, and `Next Safe Action`
+    intact while rendering summary evidence, the evidence ledger, the
+    classification table, dependency or pending-plan debt, attempted changes,
+    verification, manual or deferred work, gap routes, follow-up fixes, todo
+    capture, and stale-context gaps.
+23. If validation or `blueprint_artifact_report_write` rejects the model,
+    repair the structured report against the canonical `report.audit-fix`
+    contract, the narrowed task schema, and returned diagnostics, then retry
+    once through MCP. If the retry still fails, stop with the MCP reason and do
+    not write `.blueprint/` by hand.
+24. Capture todo follow-up through `blueprint_artifact_mutate_index` only after
     explicit user confirmation via `ask_user`.
-23. Update `STATE.md` through `blueprint_state_update` so the next safe action
+25. Update `STATE.md` through `blueprint_state_update` so the next safe action
     points at `/blu-validate-phase <phase>`, `/blu-add-tests <phase>`, or
     `/blu-progress` based on the remaining evidence gap.
 

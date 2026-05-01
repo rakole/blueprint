@@ -1108,7 +1108,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     runtimeReference,
-    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
   );
   assert.match(
     runtimeReference,
@@ -1121,6 +1121,10 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   assert.match(
     runtimeReference,
     /`audit-fix`[\s\S]*classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/
   );
 
   assert.match(
@@ -1137,7 +1141,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     migrationDoc,
-    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
   );
   assert.match(
     migrationDoc,
@@ -1161,8 +1165,11 @@ test("audit-fix is implemented once manifest, review skill, and remediation MCP 
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_mutate_index",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_phase_locate",
     "blueprint_review_scope",

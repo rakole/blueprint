@@ -533,13 +533,17 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(codeReviewFixDoc, /Do not recreate finding ids or severity/i);
 
   assert.match(auditFixCommand, /bare canonical report name `audit-fix-<phase>`/i);
+  assert.match(auditFixCommand, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
   assert.match(auditFixCommand, /returned `createdEntryIds` as authoritative/i);
   assert.match(auditFixCommand, /audit-fix-runtime-contract\.md/i);
   assert.match(auditFixCommand, /classification \(`auto-fixable`, `manual-only`, or `skip`\)/i);
   assert.match(auditFixDoc, /## Remediation Scope And Report Contract/);
   assert.match(auditFixDoc, /returned `createdEntryIds` as authoritative/i);
   assert.match(auditFixDoc, /classification table before mutation/i);
-  assert.match(auditFixDoc, /repair the report against the canonical `report\.audit-fix` headings and retry once through MCP/i);
+  assert.match(
+    auditFixDoc,
+    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, and returned diagnostics/i
+  );
   assert.match(auditFixContract, /## No-Subagent Fallback/i);
   assert.match(auditFixContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);
   assert.match(auditFixContract, /Use `blueprint-verifier` only after a fix or dry-run plan/i);

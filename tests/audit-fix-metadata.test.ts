@@ -54,10 +54,31 @@ test("audit-fix manifest references the remediation tools, agents, and safe rout
   assert.match(commandFile, /commit traceability/i);
   assert.match(commandFile, /classification \(`auto-fixable`, `manual-only`, or `skip`\)/i);
   assert.match(commandFile, /no-subagent fallback/i);
-  assert.match(commandFile, /repair the body against the canonical headings and retry once through MCP/i);
+  assert.match(commandFile, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
+  assert.match(
+    commandFile,
+    /`status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
+  );
+  assert.match(commandFile, /Do not duplicate `auditFixContext` or rendered marker values inside the model/i);
+  assert.match(
+    commandFile,
+    /repair the structured model against the returned diagnostics and retry the MCP flow once/i
+  );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_scope")));
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read"))
+  );
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_authoring_context"))
+  );
+  assert.match(
+    commandFile,
+    new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_validate_model"))
+  );
   assert.match(
     commandFile,
     new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_report_write"))
@@ -94,6 +115,8 @@ test("blueprint-review skill captures audit-fix report-backed remediation rules"
     skillFile,
     /Each command-local runtime contract owns the detailed stage vocabulary, in-flight status fields, and waiting-state semantics/
   );
+  assert.match(skillFile, /blueprint_artifact_report_authoring_context/);
+  assert.match(skillFile, /blueprint_artifact_report_validate_model/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
   assert.match(skillFile, /blueprint_state_update/);
@@ -106,7 +129,15 @@ test("blueprint-review skill captures audit-fix report-backed remediation rules"
   assert.match(skillFile, /`auto-fixable`, `manual-only`, or `skip`/);
   assert.match(skillFile, /Reject browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /no-subagent fallback from the runtime\s+contract/i);
-  assert.match(skillFile, /repair the body against the canonical\s+`report\.audit-fix` headings and retry once through MCP/i);
+  assert.match(skillFile, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
+  assert.match(
+    skillFile,
+    /`status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
+  );
+  assert.match(
+    skillFile,
+    /repair the structured report against the canonical `report\.audit-fix`\s+contract, the narrowed task schema, and returned diagnostics/i
+  );
   assert.match(skillFile, /update_topic plus `write_todos`/i);
   assert.match(skillFile, /tracker-eligible/i);
   assert.match(skillFile, /session-local coordination only/i);
@@ -138,6 +169,9 @@ test("audit-fix runtime contract preserves retained classification, fallback, an
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_review_scope",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_artifact_mutate_index",
     "blueprint_state_update"
@@ -157,6 +191,15 @@ test("audit-fix runtime contract preserves retained classification, fallback, an
   assert.match(runtimeContract, /`Changes Applied`/);
   assert.match(runtimeContract, /`Remaining Gaps`/);
   assert.match(runtimeContract, /`Next Safe Action`/);
+  assert.match(runtimeContract, /`Source`/);
+  assert.match(runtimeContract, /`Severity Filter`/);
+  assert.match(runtimeContract, /`Max Attempts`/);
+  assert.match(runtimeContract, /`Dry Run`/);
+  assert.match(runtimeContract, /auditFixContext \{source, severity, maxAttempts,\s+dryRun, scopeFiles\}/i);
+  assert.match(
+    runtimeContract,
+    /`remediationSummary`, `summaryEvidence`,\s+`classification`, `changesApplied`, `verification`, `pendingPlans`,\s+`dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`,\s+`evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
+  );
   assert.match(runtimeContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);
   assert.match(runtimeContract, /Use `blueprint-verifier` only after a fix or dry-run plan/i);
   assert.match(runtimeContract, /## No-Subagent Fallback/);
@@ -164,7 +207,14 @@ test("audit-fix runtime contract preserves retained classification, fallback, an
     runtimeContract,
     /1\. Read selected saved evidence and scoped files\.[\s\S]*2\. Classify findings into `auto-fixable`, `manual-only`, or `skip`\.[\s\S]*3\. Present the classification table[\s\S]*4\. Process one capped finding at a time\./
   );
-  assert.match(runtimeContract, /Invalid report write: repair once against `report\.audit-fix` headings/i);
+  assert.match(
+    runtimeContract,
+    /Invalid report model or write: repair once against `report\.audit-fix`/i
+  );
+  assert.match(
+    runtimeContract,
+    /`contract\.modelContract\.schemaPath`, the narrowed `taskSchema`, and\s+MCP diagnostics/i
+  );
   assert.match(runtimeContract, /No browser\/web\/search-only or generic agent was used as a substitute/i);
   assert.match(runtimeContract, /`blueprint-fixer` remained planned-only and non-routable/);
 });

@@ -2763,29 +2763,223 @@ const ADD_TESTS_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
 function renderAuditFixTemplate(context?: ArtifactTemplateContext): string {
   return `# Audit Fix Report
 
+**Status:** COMPLETED|PARTIAL|BLOCKED
+**Readiness:** ready-for-routing|not-ready-for-routing|blocked
+**Completion State:** complete|pending|blocked
+**Source:** review|security|verification|uat|all
+**Severity Filter:** medium|high|all
+**Max Attempts:** <positive integer>
+**Dry Run:** true|false
+**Next Safe Action:** /blu-validate-phase <phase>|/blu-add-tests <phase>|/blu-progress
+
 ## Evidence Used
 
-- Saved review, verification, UAT, or security artifacts selected for phase ${phasePrefix(context)}.
-- Scoped repo files reviewed: <repo-relative files or none>.
-- Pre-fix HEAD: <sha or unknown>.
+- Concrete summary of this bounded remediation pass and how the evidence set supports it.
+
+### Scope Files
+
+- Repo-relative scope files selected through audit-fix context: <repo-relative files or none>.
+
+### Summary Evidence
+
+| Summary Path | Plan ID | Verification | Coverage Note |
+|--------------|---------|--------------|---------------|
+| .blueprint/phases/<phase-slug>/XX-YY-SUMMARY.md | <plan id> | <targeted verification or none> | <how this summary supports the remediation> |
+
+### Evidence Ledger
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| review|security|verification|uat|summary|scope | .blueprint/phases/<phase-slug>/XX-ARTIFACT.md | Concrete evidence used for this audit-fix run. |
 
 ## Fix Scope
 
-- Source/severity/max/dry-run settings.
-- Classification table with finding id, evidence source, severity, classification, reason, implicated files, and narrow verification.
+- Remediation summary bullets grounded in the selected evidence and scope.
+
+| Finding ID | Evidence Source | Severity | Classification | Implicated Files | Narrow Verification | Reason |
+|------------|-----------------|----------|----------------|------------------|---------------------|--------|
+| <finding id> | <saved artifact or scoped file evidence> | <critical|high|medium|low|unknown> | <auto-fixable|manual-only|skip> | <repo-relative paths or none> | <targeted check or reread-only> | <why this finding fits this bucket> |
+
+- Dependency plans:
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+- Pending plans:
+
+| Pending Plan | Reason |
+|--------------|--------|
+| none | none |
 
 ## Changes Applied
 
-- Applied fixes, failed attempts, dry-run-only plans, verification checks, commit SHA(s), rollback status, or \`none\`.
+| Finding ID | Status | Changed Files | Summary |
+|------------|--------|---------------|---------|
+| <finding id or none> | <fixed|planned|failed|skipped|none> | <repo-relative files or none> | <bounded change, dry-run plan, failure, or none> |
+
+- Verification:
+
+| Finding ID | Check | Command | Result | Evidence |
+|------------|-------|---------|--------|----------|
+| <finding id> | <targeted verification check> | <command or none> | <pass|fail|blocked|not-run|reread-only> | <verification evidence> |
+
+- Commit traceability: pre-fix HEAD <sha>; created commits <sha list or none>.
 
 ## Remaining Gaps
 
-- Manual-only findings, skipped findings, unattempted candidates, stale evidence, todo decisions, stop reason, or \`none\`.
+### Manual / Deferred Work
+
+| Item | Status | Reason | Follow-Up |
+|------|--------|--------|-----------|
+| <manual or deferred work or none> | <MANUAL|DEFERRED|NONE> | <why this work remains> | <next repair or none> |
+
+### Gap / Repair Routes
+
+| Gap | Status | Evidence | Repair |
+|-----|--------|----------|--------|
+| <gap or none> | <OPEN|BLOCKED|NONE> | <why this gap remains> | <follow-up route or none> |
+
+### Follow-Up Fixes
+
+- Follow-up fixes: <concrete follow-up fix or none>.
+- Todo capture: <captured|declined|not-needed|blocked> - <evidence or none>.
+- Manual-only findings, skipped findings, unattempted candidates, stale evidence, todo decisions, and stop reason stay explicit here.
 
 ## Next Safe Action
 
 - /blu-progress`;
 }
+
+const AUDIT_FIX_REPORT_MODEL_SCHEMA_FILE = "report.audit-fix.model.schema.json";
+const AUDIT_FIX_REPORT_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json";
+
+const AUDIT_FIX_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.report.audit-fix.model",
+  schemaVersion: "1.0.0",
+  schemaPath: AUDIT_FIX_REPORT_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(AUDIT_FIX_REPORT_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, reportName, reportPath, path, content, rendered headings, or the auditFixContext marker values; MCP owns report identity, marker rendering, and Markdown rendering.",
+    "Author against the runtime-narrowed taskSchema for the exact audit-fix report name plus auditFixContext so summary evidence keys, classification rows, dependency plans, pending plans, evidence paths, todo capture, and nextSafeAction stay deterministic.",
+    "Preserve the locked top-marker wording Status, Readiness, Completion State, Source, Severity Filter, Max Attempts, Dry Run, and Next Safe Action exactly as rendered by MCP from the validated model plus auditFixContext.",
+    "COMPLETED audit-fix reports require no pending plans, exact NONE sentinel rows for manualOrDeferredWork and gapRoutes, followUpFixes set to none, and verification rows with passing or reread-only results.",
+    "PARTIAL audit-fix reports require at least one open or blocked gap route, a concrete follow-up fix, and explicit evidence of dry-run planning, early-stop state, or carry-forward remediation.",
+    "BLOCKED audit-fix reports require blocked readiness, at least one blocked or not-run verification row, and at least one blocked gap route with a concrete repair path.",
+    "Use concrete saved-summary, review, security, verification, UAT, scoped-file, change, verification, todo, and commit-traceability evidence. Do not copy minimal example wording, placeholder prose, or invented commit ids."
+  ],
+  contextBindings: [
+    "Phase, phasePrefix, phaseName, phaseDir, canonical report name, and report path come from the bare audit-fix reportName plus Blueprint phase inventory.",
+    "Saved evidence paths, completed summary inventory, dependency plans, pending plans, overwrite baseline, and allowed nextSafeAction values come from blueprint_artifact_report_authoring_context for report.audit-fix.",
+    "auditFixContext supplies source, severity, maxAttempts, dryRun, and scopeFiles to the report tool flow; those values render the top markers and Scope Files section and are not authored inside the model payload.",
+    "blueprint_artifact_report_validate_model narrows validation to the exact reportName, auditFixContext, base schema, and task schema returned for the current audit-fix phase.",
+    "blueprint_artifact_report_write persists the same validated model plus auditFixContext and renders canonical Markdown; Markdown content fallback is not supported for report.audit-fix in the schema-first flow."
+  ],
+  renderedHeadings: [
+    "Evidence Used",
+    "Scope Files",
+    "Summary Evidence",
+    "Evidence Ledger",
+    "Fix Scope",
+    "Changes Applied",
+    "Remaining Gaps",
+    "Follow-Up Fixes",
+    "Next Safe Action"
+  ],
+  minimalValidExample: {
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    remediationSummary: [
+      "The bounded audit-fix run addressed the highest-severity saved finding and left no remaining remediation debt."
+    ],
+    summaryEvidence: {
+      ".blueprint/phases/04-release-readiness/04-01-SUMMARY.md": {
+        planId: "01",
+        linkedPlanPath: ".blueprint/phases/04-release-readiness/04-01-PLAN.md",
+        summaryStatus: "COMPLETED",
+        targetedVerification: ["npm test -- tests/review-slice.test.ts"],
+        coverageNote: "The completed summary captured the behavior validated by the targeted remediation check."
+      }
+    },
+    classification: [
+      {
+        findingId: "REV-04-01",
+        evidenceSource: ".blueprint/phases/04-release-readiness/04-REVIEW.md",
+        severity: "high",
+        classification: "auto-fixable",
+        reason: "The saved finding mapped to one bounded file change and a focused verification check.",
+        implicatedFiles: ["src/mcp/tools/review.ts"],
+        narrowVerification: "npm test -- tests/review-slice.test.ts"
+      }
+    ],
+    changesApplied: [
+      {
+        findingId: "REV-04-01",
+        status: "fixed",
+        changedFiles: ["src/mcp/tools/review.ts"],
+        summary: "Added the missing validation guard for persisted review artifacts."
+      }
+    ],
+    verification: [
+      {
+        findingId: "REV-04-01",
+        check: "targeted review slice",
+        command: "npm test -- tests/review-slice.test.ts",
+        result: "pass",
+        evidence: "The targeted review slice passed after the remediation."
+      }
+    ],
+    pendingPlans: [],
+    dependencyPlans: [],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        status: "NONE",
+        reason: "none",
+        followUp: "none"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "none",
+        status: "NONE",
+        evidence: "none",
+        repair: "none"
+      }
+    ],
+    followUpFixes: ["none"],
+    evidence: [
+      {
+        kind: "review",
+        source: ".blueprint/phases/04-release-readiness/04-REVIEW.md",
+        summary: "Saved review findings baseline for the targeted remediation."
+      },
+      {
+        kind: "scope",
+        source: "src/mcp/tools/review.ts",
+        summary: "Scoped repo file reread before the fix was applied."
+      }
+    ],
+    commitTraceability: {
+      preFixHead: "abc1234",
+      createdCommits: ["none"]
+    },
+    todoCapture: {
+      status: "not-needed",
+      evidence: "No follow-up todo was required after the remediation completed."
+    },
+    nextSafeAction: "/blu-progress"
+  },
+  exampleLeakageSignals: [
+    "The bounded audit-fix run addressed the highest-severity saved finding and left no remaining remediation debt.",
+    "The completed summary captured the behavior validated by the targeted remediation check.",
+    "The saved finding mapped to one bounded file change and a focused verification check.",
+    "Added the missing validation guard for persisted review artifacts.",
+    "The targeted review slice passed after the remediation."
+  ]
+};
 
 function renderImpactTemplate(context?: ArtifactTemplateContext): string {
   const name = reportName(context, "impact-<scope-fingerprint>");
@@ -4364,9 +4558,35 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalFilePattern: ".blueprint/reports/audit-fix-<phase>.md",
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: ["Evidence Used", "Fix Scope", "Changes Applied", "Remaining Gaps", "Next Safe Action"],
-    lockedMarkers: [],
-    placeholderSignals: [],
-    notes: ["Audit-fix reports capture dry-run or applied remediation without creating a review-fix artifact."],
+    lockedMarkers: [
+      "**Status:**",
+      "**Readiness:**",
+      "**Completion State:**",
+      "**Source:**",
+      "**Severity Filter:**",
+      "**Max Attempts:**",
+      "**Dry Run:**",
+      "**Next Safe Action:**"
+    ],
+    placeholderSignals: [
+      "COMPLETED|PARTIAL|BLOCKED",
+      "ready-for-routing|not-ready-for-routing|blocked",
+      "complete|pending|blocked",
+      "review|security|verification|uat|all",
+      "medium|high|all",
+      "true|false",
+      "auto-fixable|manual-only|skip",
+      "pass|fail|blocked|not-run|reread-only",
+      "MANUAL|DEFERRED|NONE",
+      "OPEN|BLOCKED|NONE",
+      "src/mcp/tools/review.ts"
+    ],
+    notes: [
+      "Audit-fix reports capture dry-run or applied remediation without creating a review-fix artifact.",
+      "Audit-fix reports are model-authored in the schema-first flow: read the canonical report contract, pass auditFixContext into blueprint_artifact_report_authoring_context, validate the structured model, then persist the same model plus auditFixContext through blueprint_artifact_report_write.",
+      "Structured audit-fix evidence must keep remediationSummary, summaryEvidence, classification, bounded changes, verification, dependency or pending-plan debt, manual or deferred work, gap routes, follow-up fixes, evidence, commit traceability, todoCapture, and exactly one implemented next action explicit."
+    ],
+    modelContract: AUDIT_FIX_REPORT_MODEL_CONTRACT,
     renderScaffoldTemplate: renderAuditFixTemplate,
     renderAuthoringTemplate: renderAuditFixTemplate
   }

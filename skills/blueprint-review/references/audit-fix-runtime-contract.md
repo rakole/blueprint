@@ -63,19 +63,25 @@ bounded agents classify or verify only when they are suitable.
 
 ### Persist
 
-- Author `.blueprint/reports/audit-fix-<phase>.md` from the canonical
-  `report.audit-fix` required headings:
-  - `Evidence Used`
-  - `Fix Scope`
-  - `Changes Applied`
-  - `Remaining Gaps`
-  - `Next Safe Action`
-- Persist only through `blueprint_artifact_report_write` with the bare report
-  name `audit-fix-<phase>`.
-- Include evidence sources, source/severity/max/dry-run settings, the
-  classification table, attempted-fix statuses, verification results,
-  stop-on-first-failure state, unattempted candidates, manual-only findings,
-  todo-capture decisions, and commit traceability.
+- Read `report.audit-fix` through `blueprint_artifact_contract_read`, then call
+  `blueprint_artifact_report_authoring_context` with the bare report name
+  `audit-fix-<phase>` plus `auditFixContext {source, severity, maxAttempts,
+  dryRun, scopeFiles}`.
+- Author only the structured model fields `status`, `readiness`,
+  `completionState`, `remediationSummary`, `summaryEvidence`,
+  `classification`, `changesApplied`, `verification`, `pendingPlans`,
+  `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`,
+  `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`.
+- Preserve the locked wording `Status`, `Readiness`, `Completion State`,
+  `Source`, `Severity Filter`, `Max Attempts`, `Dry Run`, `Evidence Used`,
+  `Fix Scope`, `Changes Applied`, `Remaining Gaps`, and `Next Safe Action`.
+- Persist only through `blueprint_artifact_report_write` with the same
+  validated `model`, the same `auditFixContext`, and the bare report name
+  `audit-fix-<phase>`.
+- Include summary evidence, evidence ledger rows, the classification table,
+  attempted-fix statuses, verification results, dependency and pending-plan
+  debt, manual or deferred work, gap routes, follow-up fixes, todo-capture
+  status, and commit traceability.
 - Commit traceability must include the pre-fix HEAD reference, any commit SHA(s)
   created during the run, or `none` when no commit was created.
 - If a concrete follow-up should become a todo, ask for explicit confirmation
@@ -84,9 +90,13 @@ bounded agents classify or verify only when they are suitable.
 
 ### Validate
 
-- If `blueprint_artifact_report_write` returns `status: "invalid"` or warns
-  about missing headings, repair the report body against the canonical
-  `report.audit-fix` headings and retry once through MCP.
+- Validate the structured report through
+  `blueprint_artifact_report_validate_model` before persistence, passing the
+  same `auditFixContext`.
+- If validation or `blueprint_artifact_report_write` returns `status: "invalid"`
+  or warns about schema, marker, or rendered-heading issues, repair the model
+  against `contract.modelContract.schemaPath`, the narrowed `taskSchema`, and
+  MCP diagnostics, then retry once through MCP.
 - If the retry still fails, stop with the exact MCP warnings or thrown error and
   do not write the report by hand.
 - If verification could not run, failed, or was reread-only, make that explicit
@@ -115,8 +125,16 @@ bounded agents classify or verify only when they are suitable.
   verification, UAT, prior report, or todo context exists.
 - `blueprint_review_scope`: controls the authoritative repo-file scope and
   whether execution evidence can ground remediation.
+- `blueprint_artifact_contract_read`: controls the canonical `report.audit-fix`
+  contract, locked markers, rendered headings, model schema path, and notes.
+- `blueprint_artifact_report_authoring_context`: controls the narrowed report
+  task schema, summary evidence inventory, dependency and pending-plan debt,
+  overwrite baseline, allowed next actions, and the accepted `auditFixContext`.
+- `blueprint_artifact_report_validate_model`: controls structured-model
+  validation diagnostics plus canonical Markdown preview before persistence.
 - `blueprint_artifact_report_write`: controls durable report persistence,
-  overwrite behavior, validation status, and final report path.
+  overwrite behavior, validation status, final report path, and model-only
+  audit-fix rendering with `auditFixContext`.
 - `blueprint_artifact_mutate_index`: controls optional confirmed todo capture
   and authoritative todo ids.
 - `blueprint_state_update`: controls final command state and next implemented
@@ -125,19 +143,23 @@ bounded agents classify or verify only when they are suitable.
 ## Artifact Authoring Rules
 
 The audit-fix report must be useful as a standalone review artifact, not merely
-valid Markdown.
+schema-valid JSON or valid Markdown.
 
+- `Status`, `Readiness`, and `Completion State` must follow the schema truth
+  table, while `Source`, `Severity Filter`, `Max Attempts`, and `Dry Run` come
+  from `auditFixContext`; all seven remain exact locked markers.
 - `## Evidence Used`: cite selected saved artifacts, scoped repo files, pre-fix
-  HEAD, relevant warnings, and any unavailable expected evidence.
-- `## Fix Scope`: record `--source`, `--severity`, `--max`, `--dry-run`, the
-  candidate classification table, confirmation gates, and the authoritative
-  `blueprint_review_scope.files` list.
+  HEAD, relevant warnings, any unavailable expected evidence, `### Scope
+  Files`, `### Summary Evidence`, and `### Evidence Ledger`.
+- `## Fix Scope`: record the remediation summary bullets, candidate
+  classification table, confirmation gates, the authoritative
+  `blueprint_review_scope.files` list, and dependency or pending-plan debt.
 - `## Changes Applied`: record fixed, failed, skipped, and dry-run-only
-  findings; changed files; verification commands or reread checks; created
-  commit SHA(s) or `none`; and rollback or early-stop details.
-- `## Remaining Gaps`: record manual-only findings, unattempted capped
-  candidates, verification gaps, todo decisions, stale evidence, and stop
-  reason or `none`.
+  findings; changed files; verification checks and commands; created commit
+  SHA(s) or `none`; and rollback or early-stop details.
+- `## Remaining Gaps`: record manual-only findings, gap routes, follow-up
+  fixes, todo capture status, unattempted capped candidates, verification gaps,
+  stale evidence, and stop reason or `none`.
 - `## Next Safe Action`: name exactly one implemented Blueprint command and why
   it is safe from the saved evidence.
 
@@ -197,8 +219,9 @@ evidence citations, verification notes, or report richness.
   mismatch reason.
 - Failed fix or failed required verification: stop the mutation loop, preserve
   evidence, and leave remaining candidates unattempted.
-- Invalid report write: repair once against `report.audit-fix` headings and MCP
-  warnings, then retry through `blueprint_artifact_report_write`.
+- Invalid report model or write: repair once against `report.audit-fix`,
+  `contract.modelContract.schemaPath`, the narrowed `taskSchema`, and MCP
+  diagnostics, then retry through the validate/write flow.
 - Failed retry: stop without manual `.blueprint/` writes.
 
 ## Stop-On-First-Failure Behavior
@@ -249,8 +272,11 @@ the report must be traceable either way:
 - The classification table was produced before mutation.
 - Mutation, if any, was capped by `--severity` and `--max`, confirmation-gated
   when non-trivial, and stopped on first failure.
-- The report was persisted through `blueprint_artifact_report_write`, or the run
-  stopped after one failed MCP repair retry.
+- The report model was validated through
+  `blueprint_artifact_report_validate_model` with the same `auditFixContext`
+  passed to authoring and persistence, and it was then persisted through
+  `blueprint_artifact_report_write`, or the run stopped after one failed MCP
+  repair retry.
 - Optional todo capture used `blueprint_artifact_mutate_index` only after
   explicit confirmation.
 - State was updated through `blueprint_state_update` after durable persistence.
