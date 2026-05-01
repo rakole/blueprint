@@ -110,19 +110,20 @@ Hold the shipped Wave 2 roadmap-admin surface stable while the next rollout is r
 <!-- GSD:project-start source:PROJECT.md -->
 ## Project
 
-**Blueprint Impact Command**
+**Blueprint Defect Discovery Milestone**
 
-This project adds a new Blueprint command, `/blu-impact`, that computes blast radius for proposed changes before implementation or merge. It analyzes diff scope, roadmap context, touched code and configuration surfaces, and known dependencies to produce a structured impact report teams can review quickly. The primary audience is engineering teams that need reliable cross-service impact visibility and reviewer confidence in large or regulated repos.
+This milestone systematically finds, classifies, and documents current defects in Blueprint. Blueprint is a Gemini CLI extension built from scratch with command manifests, skills, agents, and an MCP server for deterministic document CRUD and state management; it may look workflow-similar to GSD, but it is not GSD and must not be analyzed as GSD internals.
 
-**Core Value:** Every meaningful change gets a provable blast-radius report before it ships.
+**Core Value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
 
 ### Constraints
 
-- **Architecture**: Keep commands thin and user-facing while pushing deterministic analysis/state operations into MCP tools.
-- **Routing safety**: Planned commands must stay non-routable until their runtime contract is complete and catalog status is `implemented`.
-- **State boundary**: Project state remains `.blueprint/` at runtime; `.planning/` here is implementation bookkeeping only.
-- **Risk posture**: Initial command must be advisory/read-only and must call out uncertainty rather than inventing certainty.
-- **Compatibility**: Must degrade safely when optional ownership/dependency metadata is missing.
+- **Product boundary**: Treat Blueprint as a Gemini-native extension, not as GSD or a legacy slash-command port.
+- **Discovery only**: Current milestone writes planning artifacts and `docs/bugs/*.md`; it must not fix source defects.
+- **State boundary**: Runtime state remains `.blueprint/`; `.planning/` here is implementation bookkeeping only.
+- **Evidence standard**: Bug docs must cite concrete files, command outputs, tests, or contract mismatches and must label uncertainty explicitly.
+- **Routing safety**: `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` must keep implemented-only recommendations; any defect around this is documented, not silently repaired.
+- **Host safety**: Do not mutate installed extension directories or host-global `~/.gemini/blueprint/` state during discovery.
 <!-- GSD:project-end -->
 
 <!-- GSD:stack-start source:codebase/STACK.md -->
