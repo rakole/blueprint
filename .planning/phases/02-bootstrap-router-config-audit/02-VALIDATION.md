@@ -1,7 +1,7 @@
 ---
 phase: 2
 slug: bootstrap-router-config-audit
-status: draft
+status: complete
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-01
@@ -67,3 +67,5 @@ Existing infrastructure covers all Phase 2 validation requirements.
 - [x] `nyquist_compliant: true` set in frontmatter.
 
 **Approval:** validated via the Phase-2 targeted test subset on 2026-05-01
+
+**Manual sign-off:** approved 2026-05-01 (close validation loop)
