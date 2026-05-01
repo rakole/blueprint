@@ -414,14 +414,19 @@ function validAddTestsReportModel(
         command: "npm test -- tests/phase-planning-tools.test.ts"
       }
     ],
-    testsAddedOrUpdated: [
-      {
-        path: "tests/phase-planning-tools.test.ts",
-        summary: isBlocked
-          ? "none"
-          : "Added focused summary tooling coverage for the saved evidence path."
-      }
-    ],
+    testsAddedOrUpdated: isBlocked
+      ? [
+          {
+            path: "none",
+            summary: "none"
+          }
+        ]
+      : [
+          {
+            path: "tests/phase-planning-tools.test.ts",
+            summary: "Added focused summary tooling coverage for the saved evidence path."
+          }
+        ],
     targetedCommands: [
       {
         command: "npm test -- tests/phase-planning-tools.test.ts",
@@ -1274,6 +1279,80 @@ test("add-tests report authoring rejects invalid validation evidence and non-can
   assert.equal(nonCanonicalFileExists, false);
 });
 
+test("add-tests report authoring normalizes basename summary plan markers", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    validSummaryContent("01"),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context)
+  });
+
+  assert.equal(context.status, "ready", context.reason ?? context.warnings.join("\n"));
+  assert.equal(
+    context.completedSummaries[0]?.linkedPlanPath,
+    ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+  );
+  assert.equal(validation.status, "valid", validation.diagnostics.map((d) => d.message).join("\n"));
+});
+
+test("add-tests report authoring ignores malformed code-review artifacts for completed routing", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-REVIEW.md"),
+    "# Broken Review\n\nThis placeholder does not satisfy the code-review contract.\n",
+    "utf8"
+  );
+
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context)
+  });
+
+  assert.equal(context.status, "ready", context.reason ?? context.warnings.join("\n"));
+  assert.match(context.warnings.join("\n"), /invalid code-review evidence is ignored/i);
+  assert.equal(validation.status, "valid", validation.diagnostics.map((d) => d.message).join("\n"));
+  assert.equal(validation.normalizedModel?.nextSafeAction, "/blu-code-review 3");
+});
+
 test("add-tests report model validates and writes with exact empty optional dependency context", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -1313,11 +1392,19 @@ test("add-tests report model validates and writes with exact empty optional depe
     reportName: "add-tests-3",
     model
   });
+  const savedReport = await readFile(
+    path.join(repoPath, ".blueprint/reports/add-tests-3.md"),
+    "utf8"
+  );
   const reused = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "add-tests-3",
     model
   });
+  const reusedReport = await readFile(
+    path.join(repoPath, ".blueprint/reports/add-tests-3.md"),
+    "utf8"
+  );
   const invalidDependency = await blueprintArtifactReportValidateModel({
     cwd: repoPath,
     reportName: "add-tests-3",
@@ -1361,7 +1448,13 @@ test("add-tests report model validates and writes with exact empty optional depe
   assert.match(markdownFallback.issues.join("\n"), /model-only|Markdown content fallback/i);
   assert.equal(write.status, "created");
   assert.equal(write.path, ".blueprint/reports/add-tests-3.md");
+  assert.doesNotMatch(savedReport, /pending MCP write/i);
+  assert.match(
+    savedReport,
+    /Report write status: created for \.blueprint\/reports\/add-tests-3\.md/
+  );
   assert.equal(reused.status, "reused");
+  assert.equal(reusedReport, savedReport);
   assert.equal(invalidDependency.status, "invalid");
   assert.match(
     invalidDependency.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
@@ -1460,6 +1553,67 @@ test("add-tests report schema rejects unsupported fields, missing required field
       )
     })
   });
+  const inflatedPassingCounts = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "COMPLETED", {
+      resultCounts: {
+        generated: 1,
+        passing: 2,
+        failing: 0,
+        blocked: 0
+      }
+    })
+  });
+  const blockedNoGeneratedChangedFiles = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "BLOCKED", {
+      testsAddedOrUpdated: [
+        {
+          path: "tests/phase-planning-tools.test.ts",
+          summary: "Claimed a test file changed even though no tests were generated."
+        }
+      ]
+    })
+  });
+  const blockedNotRunCountsAsBlocked = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "BLOCKED", {
+      targetedCommands: [
+        {
+          command: "npm test -- tests/phase-planning-tools.test.ts",
+          result: "not-run",
+          evidence: "The focused command was not run because a prerequisite was blocked."
+        }
+      ],
+      resultCounts: {
+        generated: 0,
+        passing: 0,
+        failing: 0,
+        blocked: 1
+      }
+    })
+  });
+  const blockedGeneratedCanClaimChangedFiles = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: validAddTestsReportModel(context, "BLOCKED", {
+      testsAddedOrUpdated: [
+        {
+          path: "tests/phase-planning-tools.test.ts",
+          summary: "Generated coverage exists but the command remains blocked."
+        }
+      ],
+      resultCounts: {
+        generated: 1,
+        passing: 0,
+        failing: 0,
+        blocked: 1
+      }
+    })
+  });
 
   assert.equal(unsupported.status, "invalid");
   assert.match(
@@ -1485,6 +1639,26 @@ test("add-tests report schema rejects unsupported fields, missing required field
   assert.match(
     nonStringCoverageNote.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /must be string/i
+  );
+  assert.equal(inflatedPassingCounts.status, "invalid");
+  assert.match(
+    inflatedPassingCounts.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /resultCounts\.passing must match targetedCommands results/i
+  );
+  assert.equal(blockedNoGeneratedChangedFiles.status, "invalid");
+  assert.match(
+    blockedNoGeneratedChangedFiles.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must be equal to constant/i
+  );
+  assert.equal(
+    blockedNotRunCountsAsBlocked.status,
+    "valid",
+    blockedNotRunCountsAsBlocked.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(
+    blockedGeneratedCanClaimChangedFiles.status,
+    "valid",
+    blockedGeneratedCanClaimChangedFiles.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
   );
 });
 
