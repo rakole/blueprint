@@ -444,6 +444,40 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "required": [
+          "status",
+          "resultCounts"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          },
+          "resultCounts": {
+            "required": [
+              "generated"
+            ],
+            "properties": {
+              "generated": {
+                "const": 0
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "testsAddedOrUpdated": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noTestChangeRow"
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {

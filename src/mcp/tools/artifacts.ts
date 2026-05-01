@@ -341,6 +341,7 @@ type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
+type AddTestsReportPersistenceStatus = "created" | "updated" | "reused";
 
 type AddTestsReportModel = {
   status: AddTestsReportStatus;
@@ -8101,6 +8102,37 @@ function isGenericNoneValue(value: string): boolean {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
 }
 
+function addTestsReportTargetedCommandCounts(model: Record<string, unknown>): {
+  passing: number;
+  failing: number;
+  blocked: number;
+} | null {
+  if (!Array.isArray(model.targetedCommands)) {
+    return null;
+  }
+
+  const counts = {
+    passing: 0,
+    failing: 0,
+    blocked: 0
+  };
+
+  for (const row of model.targetedCommands) {
+    const rowObject = asJsonObject(row);
+    const result = rowObject?.result;
+
+    if (result === "pass") {
+      counts.passing += 1;
+    } else if (result === "fail") {
+      counts.failing += 1;
+    } else if (result === "blocked" || result === "not-run") {
+      counts.blocked += 1;
+    }
+  }
+
+  return counts;
+}
+
 function parseAddTestsReportPhase(reportName: string): string | null {
   const normalized = normalizeReportSlug(reportName);
   const match = normalized.match(/^add-tests-(\d+(?:\.\d+)?)$/);
@@ -8203,6 +8235,83 @@ function phasePlanPathFromSummaryPath(summaryPath: string): string {
   return summaryPath.replace(/-SUMMARY\.md$/, "-PLAN.md");
 }
 
+function normalizeSummaryLinkedPlanPath(summaryPath: string, planReference: string | null): string {
+  if (!planReference) {
+    return phasePlanPathFromSummaryPath(summaryPath);
+  }
+
+  if (planReference.startsWith(`${BLUEPRINT_DIR}/`)) {
+    return planReference;
+  }
+
+  if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
+    return `${path.posix.dirname(summaryPath)}/${planReference}`;
+  }
+
+  return planReference;
+}
+
+async function resolveAddTestsSummaryLinkedPlan(args: {
+  projectRoot: string;
+  summaryPath: string;
+  content: string;
+  warnings: string[];
+}): Promise<{
+  linkedPlanPath: string;
+  linkedPlanExists: boolean;
+}> {
+  const summaryPlanReference = extractSummaryPlanReference(args.content);
+  let linkedPlanPath = normalizeSummaryLinkedPlanPath(args.summaryPath, summaryPlanReference);
+
+  try {
+    return {
+      linkedPlanPath,
+      linkedPlanExists: await pathExists(resolveBlueprintPath(args.projectRoot, linkedPlanPath))
+    };
+  } catch (error) {
+    const fallbackPath = phasePlanPathFromSummaryPath(args.summaryPath);
+
+    args.warnings.push(
+      `${args.summaryPath}: Summary artifact **Plan:** marker ${summaryPlanReference ?? linkedPlanPath} could not be resolved as a Blueprint path; falling back to ${fallbackPath} for validation.`
+    );
+    linkedPlanPath = fallbackPath;
+
+    return {
+      linkedPlanPath,
+      linkedPlanExists: await pathExists(resolveBlueprintPath(args.projectRoot, linkedPlanPath))
+    };
+  }
+}
+
+async function collectValidAddTestsReviewPath(args: {
+  projectRoot: string;
+  phaseFiles: string[];
+}): Promise<{
+  path: string | null;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+
+  for (const artifactPath of args.phaseFiles
+    .filter((entry) => entry.endsWith("-REVIEW.md"))
+    .sort((left, right) => left.localeCompare(right))) {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const validation = validateReviewArtifactContent(raw, "code-review");
+
+    if (validation.valid) {
+      return { path: artifactPath, warnings };
+    }
+
+    warnings.push(
+      `${artifactPath}: invalid code-review evidence is ignored for report.add-tests next-action routing.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+
+  return { path: null, warnings };
+}
+
 async function collectAddTestsReportContext(
   projectRoot: string,
   reportName: string
@@ -8260,8 +8369,12 @@ async function collectAddTestsReportContext(
     .filter((entry) => /-\d{2,}-SUMMARY\.md$/.test(entry))
     .sort((left, right) => left.localeCompare(right))) {
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, summaryPath), "utf8");
-    const linkedPlanPath = extractSummaryPlanReference(content) ?? phasePlanPathFromSummaryPath(summaryPath);
-    const linkedPlanExists = await pathExists(resolveBlueprintPath(projectRoot, linkedPlanPath));
+    const { linkedPlanPath, linkedPlanExists } = await resolveAddTestsSummaryLinkedPlan({
+      projectRoot,
+      summaryPath,
+      content,
+      warnings
+    });
     const validation = validateStrictSummaryArtifactContent(content, {
       linkedPlanPath: linkedPlanExists ? linkedPlanPath : null,
       requirePlanMarker: true
@@ -8314,7 +8427,9 @@ async function collectAddTestsReportContext(
   });
   warnings.push(...validationEvidence.warnings);
   const validationEvidencePaths = validationEvidence.paths;
-  const reviewPath = phaseFiles.find((entry) => entry.endsWith("-REVIEW.md")) ?? null;
+  const reviewEvidence = await collectValidAddTestsReviewPath({ projectRoot, phaseFiles });
+  warnings.push(...reviewEvidence.warnings);
+  const reviewPath = reviewEvidence.path;
 
   if (completedSummaries.length === 0) {
     blockers.push(
@@ -8940,6 +9055,36 @@ function addTestsReportResidualDiagnostics(
     }
   }
 
+  const targetedCommandCounts = addTestsReportTargetedCommandCounts(model);
+  const resultCounts = asJsonObject(model.resultCounts);
+
+  if (targetedCommandCounts && resultCounts) {
+    for (const [countName, expected] of Object.entries(targetedCommandCounts)) {
+      const actual = resultCounts[countName];
+
+      if (typeof actual !== "number" || actual === expected) {
+        continue;
+      }
+
+      diagnostics.push(
+        addTestsDiagnostic({
+          source: "residual",
+          path: `model.resultCounts.${countName}`,
+          code: "counts.targeted_commands_mismatch",
+          message:
+            `Add-tests resultCounts.${countName} must match targetedCommands results; expected ${expected} from command rows and received ${actual}.`,
+          context: {
+            expected,
+            actual,
+            rule: "pass -> passing, fail -> failing, blocked or not-run -> blocked"
+          },
+          suggestion:
+            "Update resultCounts so pass, fail, blocked, and not-run targeted command rows reconcile exactly; not-run counts as blocked execution debt."
+        })
+      );
+    }
+  }
+
   return diagnostics;
 }
 
@@ -8974,6 +9119,7 @@ function renderMarkdownTable(headers: string[], rows: string[][]): string {
 function renderAddTestsReportModelContent(args: {
   model: AddTestsReportModel;
   context: AddTestsReportAuthoringContextResult;
+  reportWriteStatus?: string;
 }): string {
   const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
     ([summaryPath, entry]) => [
@@ -9098,7 +9244,7 @@ ${renderMarkdownTable(
 )}
 
 - Verification write status: ${args.model.verificationWrite.status} - ${args.model.verificationWrite.evidence}
-- Report write status: pending MCP write for ${args.context.path}
+- Report write status: ${args.reportWriteStatus ?? `pending MCP write for ${args.context.path}`}
 
 ## Follow-Up Fixes
 
@@ -9108,6 +9254,23 @@ ${renderBulletList(args.model.followUpFixes)}
 
 - ${args.model.nextSafeAction}
 `;
+}
+
+function formatAddTestsReportWriteStatus(
+  status: AddTestsReportPersistenceStatus,
+  pathValue: string
+): string {
+  return `${status} for ${pathValue}`;
+}
+
+function withAddTestsReportWriteStatus(
+  content: string,
+  status: AddTestsReportPersistenceStatus,
+  pathValue: string
+): string {
+  const replacement = `- Report write status: ${formatAddTestsReportWriteStatus(status, pathValue)}`;
+
+  return content.replace(/^- Report write status: .+$/m, replacement);
 }
 
 export async function blueprintArtifactReportValidateModel(
@@ -9301,16 +9464,19 @@ export async function blueprintArtifactReportWrite(
       );
     }
 
-    const normalizedContent = modelValidation.renderPreview.endsWith("\n")
+    const renderPreview = modelValidation.renderPreview.endsWith("\n")
       ? modelValidation.renderPreview
       : `${modelValidation.renderPreview}\n`;
+    const contentForStatus = (status: AddTestsReportPersistenceStatus) =>
+      withAddTestsReportWriteStatus(renderPreview, status, pathValue);
     const exists = await pathExists(absolutePath);
     const warnings = [...modelValidation.warnings];
 
     if (exists) {
       const existingContent = await fs.readFile(absolutePath, "utf8");
+      const reusableContents = (["created", "updated", "reused"] as const).map(contentForStatus);
 
-      if (existingContent === normalizedContent) {
+      if (reusableContents.includes(existingContent)) {
         warnings.push("Preserved existing report because the model-rendered content was unchanged.");
 
         return {
@@ -9329,6 +9495,17 @@ export async function blueprintArtifactReportWrite(
           `${pathValue} already exists. Re-run only after explicit overwrite confirmation.`
         );
       }
+    }
+
+    const normalizedContent = contentForStatus(exists ? "updated" : "created");
+    const renderedValidation = validateReportArtifactContent(normalizedContent, args.reportName);
+
+    if (!renderedValidation.valid) {
+      return artifactReportWriteInvalidResult(
+        pathValue,
+        renderedValidation.issues,
+        [...warnings, ...renderedValidation.warnings]
+      );
     }
 
     warnings.push(

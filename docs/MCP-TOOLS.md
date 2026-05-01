@@ -89,6 +89,8 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 | `blueprint_artifact_mutate_index` | Append or update canonical capture entries in Blueprint indexes such as backlog, notes, and todos, with duplicate detection, pending-todo inspection, and optional backlog stub reservation metadata | `{targetPath, createdEntryIds, matchedEntryIds, entries, updatedCounts, duplicateEntryIds, reservedPhase, summary, warnings}` |
 | `blueprint_artifact_validate` | Validate Blueprint artifact structure and required fields | `{valid, issues, suggestedRepairs, warnings}` |
 | `blueprint_artifact_summary_digest` | Build digests from saved artifacts plus optional code, tests, docs, and tracked-file inputs | `{digest, inputsUsed}` |
+| `blueprint_artifact_report_authoring_context` | Return schema-first `report.add-tests` authoring context with completed summaries, validation/UAT evidence, pending/dependency plans, report path, and status-safe next actions | `{status, reportName, path, phase, completedSummaries, pendingPlans, dependencyPlans, validationEvidencePaths, allowedNextActions, schemaPath, baseSchema, taskSchema, prerequisiteBlockers, warnings}` |
+| `blueprint_artifact_report_validate_model` | Validate a structured `report.add-tests` model against the narrowed task schema and return canonical Markdown preview without writing files | `{status, valid, reportName, path, phase, schemaPath, taskSchema, diagnostics, normalizedModel, renderPreview, warnings}` |
 | `blueprint_artifact_report_write` | Persist durable report artifacts such as milestone audits with overwrite protection | `{path, written, created, overwritten, status, warnings}` |
 
 ### Review
