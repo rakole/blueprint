@@ -958,6 +958,9 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   assert.match(auditFixDoc, /`blueprint_phase_locate`/);
   assert.match(auditFixDoc, /`blueprint_artifact_list`/);
   assert.match(auditFixDoc, /`blueprint_review_scope`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_contract_read`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_report_authoring_context`/);
+  assert.match(auditFixDoc, /`blueprint_artifact_report_validate_model`/);
   assert.match(auditFixDoc, /`blueprint_artifact_report_write`/);
   assert.match(auditFixDoc, /`blueprint_artifact_mutate_index`/);
   assert.match(auditFixDoc, /`blueprint_state_update`/);
@@ -971,16 +974,17 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
   assert.match(auditFixDoc, /commit traceability/i);
   assert.match(auditFixDoc, /planned inventory and is not a required runtime path/i);
   assert.match(auditFixDoc, /audit-fix-runtime-contract\.md/);
+  assert.match(auditFixDoc, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
   assert.match(auditFixDoc, /classification table before mutation/i);
   assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(auditFixDoc, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
   assert.match(
     mcpToolsDoc,
-    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
+    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_contract_read`, `blueprint_artifact_report_authoring_context`, `blueprint_artifact_report_validate_model`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
   );
   assert.match(
     migrationMarkdown,
-    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
+    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
   );
   assert.match(
     migrationMarkdown,
@@ -990,9 +994,10 @@ test("audit-fix docs and migration notes keep the remediation contract explicit"
     migrationMarkdown,
     /classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
   );
+  assert.match(migrationMarkdown, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
   assert.match(
     migrationMarkdown,
-    /repair invalid `report\.audit-fix` writes once against canonical headings/
+    /repair invalid `report\.audit-fix` models once against the narrowed contract/i
   );
   assert.match(
     migrationMarkdown,

@@ -15,6 +15,7 @@ import {
   resolveReportContractId,
   resolveReviewArtifactContractId
 } from "../artifact-contracts/index.js";
+import { blueprintDirectCommand } from "../command-paths.js";
 import {
   assertNoNullBytes,
   ensurePathWithinRootSync,
@@ -25,6 +26,13 @@ import {
   safeJsonParseObject
 } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
+import {
+  blueprintPhaseExecutionTargets,
+  blueprintPhasePlanIndex,
+  blueprintPhasePlanRead,
+  blueprintPhaseSummaryIndex,
+  blueprintPhaseSummaryRead
+} from "./phase.js";
 
 export const BLUEPRINT_DIR = ".blueprint";
 export const BLUEPRINT_STATE_PATH = `${BLUEPRINT_DIR}/STATE.md`;
@@ -143,6 +151,10 @@ export type CodebaseArtifactDiagnostics = {
   invalid: string[];
   mapped: boolean;
   warnings: string[];
+};
+
+type ArtifactCommandCatalogResult = {
+  commands: Record<string, { implemented: boolean }>;
 };
 
 export const DURABLE_REQUIREMENT_ID_PATTERN = /^[A-Z][A-Z0-9-]*-\d+$/;
@@ -288,11 +300,25 @@ type ArtifactReportWriteArgs = {
   content?: string;
   model?: Record<string, unknown>;
   overwrite?: boolean;
+  auditFixContext?: {
+    source: AuditFixReportSource;
+    severity: AuditFixReportSeverityFilter;
+    maxAttempts: number;
+    dryRun: boolean;
+    scopeFiles: string[];
+  };
 };
 
 type ArtifactReportAuthoringContextArgs = {
   cwd?: string;
   reportName: string;
+  auditFixContext?: {
+    source: AuditFixReportSource;
+    severity: AuditFixReportSeverityFilter;
+    maxAttempts: number;
+    dryRun: boolean;
+    scopeFiles: string[];
+  };
 };
 
 type ArtifactReportValidateModelArgs = ArtifactReportAuthoringContextArgs & {
@@ -342,6 +368,32 @@ type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
 type AddTestsReportPersistenceStatus = "created" | "updated" | "reused";
+type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
+type AuditFixReportSeverityFilter = "medium" | "high" | "all";
+type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type AuditFixReportReadiness =
+  | "ready-for-routing"
+  | "not-ready-for-routing"
+  | "blocked";
+type AuditFixReportCompletionState = "complete" | "pending" | "blocked";
+type AuditFixFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+type AuditFixClassification = "auto-fixable" | "manual-only" | "skip";
+type AuditFixChangeStatus = "fixed" | "planned" | "failed" | "skipped" | "none";
+type AuditFixVerificationResult = "pass" | "fail" | "blocked" | "not-run" | "reread-only";
+type AuditFixDependencyStatus = "satisfied" | "pending" | "blocked";
+type AuditFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type AuditFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type AuditFixEvidenceKind =
+  | "review"
+  | "security"
+  | "verification"
+  | "uat"
+  | "summary"
+  | "scope"
+  | "git"
+  | "command"
+  | "other";
+type AuditFixTodoStatus = "captured" | "declined" | "not-needed" | "blocked";
 
 type AddTestsReportModel = {
   status: AddTestsReportStatus;
@@ -395,7 +447,91 @@ type AddTestsReportDiagnostic = {
   suggestion: string;
 };
 
-type AddTestsReportAuthoringContextResult = {
+type AuditFixReportModel = {
+  status: AuditFixReportStatus;
+  readiness: AuditFixReportReadiness;
+  completionState: AuditFixReportCompletionState;
+  remediationSummary: string[];
+  summaryEvidence: Record<
+    string,
+    {
+      planId: string;
+      linkedPlanPath: string;
+      summaryStatus: "COMPLETED";
+      targetedVerification: string[];
+      coverageNote: string;
+    }
+  >;
+  classification: Array<{
+    findingId: string;
+    evidenceSource: string;
+    severity: AuditFixFindingSeverity;
+    classification: AuditFixClassification;
+    reason: string;
+    implicatedFiles: string[];
+    narrowVerification: string;
+  }>;
+  changesApplied: Array<{
+    findingId: string;
+    status: AuditFixChangeStatus;
+    changedFiles: string[];
+    summary: string;
+  }>;
+  verification: Array<{
+    findingId: string;
+    check: string;
+    command: string;
+    result: AuditFixVerificationResult;
+    evidence: string;
+  }>;
+  pendingPlans: Array<{ planId: string; path: string; reason: string }>;
+  dependencyPlans: Array<{
+    planId: string;
+    path: string;
+    status: AuditFixDependencyStatus;
+    evidence: string;
+  }>;
+  manualOrDeferredWork: Array<{
+    item: string;
+    reason: string;
+    followUp: string;
+    status: AuditFixManualStatus;
+  }>;
+  gapRoutes: Array<{
+    gap: string;
+    evidence: string;
+    repair: string;
+    status: AuditFixGapStatus;
+  }>;
+  followUpFixes: string[];
+  evidence: Array<{
+    kind: AuditFixEvidenceKind;
+    source: string;
+    summary: string;
+  }>;
+  commitTraceability: {
+    preFixHead: string;
+    createdCommits: string[];
+  };
+  todoCapture: {
+    status: AuditFixTodoStatus;
+    evidence: string;
+  };
+  nextSafeAction: string;
+};
+
+type ArtifactReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+
+type ArtifactReportDiagnostic = {
+  source: ArtifactReportDiagnosticSource;
+  path: string;
+  code: string;
+  message: string;
+  context: Record<string, unknown>;
+  suggestion: string;
+};
+
+type ArtifactReportAuthoringContextResult = {
   status: "ready" | "invalid";
   reportName: string;
   path: string;
@@ -414,6 +550,14 @@ type AddTestsReportAuthoringContextResult = {
   pendingPlans: Array<{ planId: string; path: string; reason: string }>;
   dependencyPlans: Array<{ planId: string; path: string }>;
   validationEvidencePaths: string[];
+  selectedEvidencePaths: string[];
+  scopeFiles: string[];
+  auditFixContext: {
+    source: AuditFixReportSource;
+    severity: AuditFixReportSeverityFilter;
+    maxAttempts: number;
+    dryRun: boolean;
+  } | null;
   allowedNextActions: string[];
   schemaPath: string | null;
   baseSchema: Record<string, unknown> | null;
@@ -424,16 +568,16 @@ type AddTestsReportAuthoringContextResult = {
   warnings: string[];
 };
 
-type AddTestsReportValidateModelResult = {
+type ArtifactReportValidateModelResult = {
   status: "valid" | "invalid";
   valid: boolean;
   reportName: string;
   path: string;
-  phase: AddTestsReportAuthoringContextResult["phase"];
+  phase: ArtifactReportAuthoringContextResult["phase"];
   schemaPath: string | null;
   taskSchema: Record<string, unknown> | null;
-  diagnostics: AddTestsReportDiagnostic[];
-  normalizedModel: AddTestsReportModel | null;
+  diagnostics: ArtifactReportDiagnostic[];
+  normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
   renderPreview: string | null;
   warnings: string[];
 };
@@ -1828,21 +1972,31 @@ const artifactSummaryDigestInputSchema = {
 const artifactContractReadInputSchema = {
   artifactId: z.enum(artifactContractIds).optional()
 };
+const auditFixRuntimeInputSchema = z.object({
+  source: z.enum(["review", "security", "verification", "uat", "all"]),
+  severity: z.enum(["medium", "high", "all"]),
+  maxAttempts: z.number().int().positive(),
+  dryRun: z.boolean(),
+  scopeFiles: z.array(z.string()).min(1)
+});
 const artifactReportWriteInputSchema = {
   cwd: z.string().optional(),
   reportName: z.string(),
   content: z.string().optional(),
   model: z.record(z.string(), z.unknown()).optional(),
-  overwrite: z.boolean().optional()
+  overwrite: z.boolean().optional(),
+  auditFixContext: auditFixRuntimeInputSchema.optional()
 };
 const artifactReportAuthoringContextInputSchema = {
   cwd: z.string().optional(),
-  reportName: z.string()
+  reportName: z.string(),
+  auditFixContext: auditFixRuntimeInputSchema.optional()
 };
 const artifactReportValidateModelInputSchema = {
   cwd: z.string().optional(),
   reportName: z.string(),
-  model: z.record(z.string(), z.unknown())
+  model: z.record(z.string(), z.unknown()),
+  auditFixContext: auditFixRuntimeInputSchema.optional()
 };
 const artifactCodebaseWriteInputSchema = {
   cwd: z.string().optional(),
@@ -3085,6 +3239,31 @@ function extractMarkdownTableDataRows(section: string): string[][] {
 
 function extractBlueprintCommands(section: string): string[] {
   return [...new Set(section.match(/\/blu-[a-z0-9]+(?:-[a-z0-9]+)*/gi) ?? [])];
+}
+
+let implementedCommandNamesPromise: Promise<Set<string>> | null = null;
+
+async function getImplementedCommandNames(): Promise<Set<string>> {
+  if (!implementedCommandNamesPromise) {
+    implementedCommandNamesPromise = (async () => {
+      try {
+        const projectModule = (await import("./project.js")) as {
+          blueprintCommandCatalog: () => Promise<ArtifactCommandCatalogResult>;
+        };
+        const catalog = await projectModule.blueprintCommandCatalog();
+
+        return new Set(
+          Object.entries(catalog.commands)
+            .filter(([, entry]) => entry.implemented)
+            .map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+      } catch {
+        return new Set<string>();
+      }
+    })();
+  }
+
+  return implementedCommandNamesPromise;
 }
 
 function summarizeMarkdownTableRow(line: string): string {
@@ -8002,6 +8181,95 @@ function setArrayEnum(
   schema.allOf = values.map(exactArrayContains);
 }
 
+function setArrayItemEnum(
+  schema: Record<string, unknown> | null,
+  values: string[],
+  options: { allowEmpty?: boolean; minItems?: number } = {}
+): void {
+  if (!schema) {
+    return;
+  }
+
+  if (values.length === 0) {
+    if (options.allowEmpty ?? false) {
+      allowOnlyEmptyArray(schema);
+    }
+    return;
+  }
+
+  schema.uniqueItems = true;
+  schema.items = { type: "string", enum: values };
+  schema.minItems = options.minItems ?? (options.allowEmpty ? 0 : 1);
+}
+
+function artifactReportDiagnostic(args: ArtifactReportDiagnostic): ArtifactReportDiagnostic {
+  return args;
+}
+
+function formatArtifactReportDiagnostic(diagnostic: ArtifactReportDiagnostic): string {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
+function ajvPathToArtifactReportModelPath(instancePath: string): string {
+  if (instancePath.length === 0) {
+    return "model";
+  }
+
+  return `model${instancePath
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => {
+      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+    })
+    .join("")}`;
+}
+
+function schemaDiagnosticFromArtifactReportAjvError(
+  error: ErrorObject,
+  reportLabel: string
+): ArtifactReportDiagnostic {
+  const missingProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "missingProperty" in error.params &&
+    typeof error.params.missingProperty === "string"
+      ? error.params.missingProperty
+      : null;
+  const additionalProperty =
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "additionalProperty" in error.params &&
+    typeof error.params.additionalProperty === "string"
+      ? error.params.additionalProperty
+      : null;
+  const basePath = ajvPathToArtifactReportModelPath(error.instancePath);
+  const pathValue =
+    missingProperty !== null
+      ? `${basePath}.${missingProperty}`
+      : additionalProperty !== null
+        ? `${basePath}.${additionalProperty}`
+        : basePath;
+
+  return artifactReportDiagnostic({
+    source: "schema",
+    path: pathValue,
+    code: `schema.${error.keyword}`,
+    message: error.message ?? `Model does not match the ${reportLabel} task schema.`,
+    context: {
+      keyword: error.keyword,
+      params: error.params,
+      schemaPath: error.schemaPath
+    },
+    suggestion:
+      missingProperty !== null
+        ? `Add required field ${missingProperty}.`
+        : additionalProperty !== null
+          ? `Remove unsupported field ${additionalProperty}.`
+          : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context."
+  });
+}
+
 function addTestsDiagnostic(args: AddTestsReportDiagnostic): AddTestsReportDiagnostic {
   return args;
 }
@@ -8144,12 +8412,10 @@ function canonicalAddTestsReportName(phaseNumber: string): string {
   return `add-tests-${phaseNumber}`;
 }
 
-async function resolveAddTestsReportPhase(
+async function resolvePhaseBackedReportPhase(
   projectRoot: string,
-  reportName: string
-): Promise<AddTestsReportAuthoringContextResult["phase"]> {
-  const phaseNumber = parseAddTestsReportPhase(reportName);
-
+  phaseNumber: string | null
+): Promise<ArtifactReportAuthoringContextResult["phase"]> {
   if (!phaseNumber) {
     return null;
   }
@@ -8173,6 +8439,13 @@ async function resolveAddTestsReportPhase(
     phaseName: slugToTitle(phaseDirName.replace(/^\d+(?:\.\d+)?-?/, "")),
     phaseDir: `${BLUEPRINT_PHASES_PATH}/${phaseDirName}`
   };
+}
+
+async function resolveAddTestsReportPhase(
+  projectRoot: string,
+  reportName: string
+): Promise<ArtifactReportAuthoringContextResult["phase"]> {
+  return resolvePhaseBackedReportPhase(projectRoot, parseAddTestsReportPhase(reportName));
 }
 
 function extractSummaryTargetedVerification(content: string): string[] {
@@ -8316,10 +8589,10 @@ async function collectAddTestsReportContext(
   projectRoot: string,
   reportName: string
 ): Promise<{
-  phase: AddTestsReportAuthoringContextResult["phase"];
-  completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"];
-  pendingPlans: AddTestsReportAuthoringContextResult["pendingPlans"];
-  dependencyPlans: AddTestsReportAuthoringContextResult["dependencyPlans"];
+  phase: ArtifactReportAuthoringContextResult["phase"];
+  completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: ArtifactReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: ArtifactReportAuthoringContextResult["dependencyPlans"];
   validationEvidencePaths: string[];
   reviewPath: string | null;
   blockers: string[];
@@ -8362,7 +8635,7 @@ async function collectAddTestsReportContext(
   const planPaths = phaseFiles
     .filter((entry) => /-\d{2,}-PLAN\.md$/.test(entry))
     .sort((left, right) => left.localeCompare(right));
-  const completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"] = [];
+  const completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"] = [];
   const dependencyPlanMap = new Map<string, { planId: string; path: string }>();
 
   for (const summaryPath of phaseFiles
@@ -8457,6 +8730,412 @@ async function collectAddTestsReportContext(
   };
 }
 
+function parseAuditFixReportPhase(reportName: string): string | null {
+  const normalized = normalizeReportSlug(reportName);
+  const match = normalized.match(/^audit-fix-(\d+(?:\.\d+)?)$/);
+
+  return match ? normalizePhaseNumber(match[1]) : null;
+}
+
+function canonicalAuditFixReportName(phaseNumber: string): string {
+  return `audit-fix-${phaseNumber}`;
+}
+
+async function resolveAuditFixReportPhase(
+  projectRoot: string,
+  reportName: string
+): Promise<ArtifactReportAuthoringContextResult["phase"]> {
+  return resolvePhaseBackedReportPhase(projectRoot, parseAuditFixReportPhase(reportName));
+}
+
+function auditFixEvidenceKindFromPath(artifactPath: string): AuditFixEvidenceKind {
+  if (artifactPath.endsWith("-REVIEW.md")) {
+    return "review";
+  }
+  if (artifactPath.endsWith("-SECURITY.md")) {
+    return "security";
+  }
+  if (artifactPath.endsWith("-VERIFICATION.md")) {
+    return "verification";
+  }
+  if (artifactPath.endsWith("-UAT.md")) {
+    return "uat";
+  }
+  if (artifactPath.endsWith("-SUMMARY.md")) {
+    return "summary";
+  }
+  return artifactPath.startsWith(".blueprint/") ? "other" : "scope";
+}
+
+async function validateAuditFixScopeFiles(args: {
+  projectRoot: string;
+  scopeFiles: string[];
+}): Promise<{
+  files: string[];
+  blockers: string[];
+}> {
+  const blockers: string[] = [];
+  const files = uniqueSorted(args.scopeFiles.map((entry) => entry.trim()).filter((entry) => entry.length > 0));
+
+  if (files.length === 0) {
+    blockers.push(
+      "report.audit-fix authoring requires the authoritative blueprint_review_scope.files list as required upstream context."
+    );
+    return { files: [], blockers };
+  }
+
+  for (const file of files) {
+    let absolutePath: string;
+    try {
+      absolutePath = resolveRepoRelativeInputPathSync(args.projectRoot, file);
+    } catch (error) {
+      blockers.push(
+        error instanceof Error
+          ? error.message
+          : `Audit-fix scope file path could not be resolved: ${file}.`
+      );
+      continue;
+    }
+
+    if (file.startsWith(`${BLUEPRINT_DIR}/`)) {
+      blockers.push(
+        `Audit-fix scope file ${file} is invalid because report.audit-fix scope must stay on repo files, not Blueprint artifacts.`
+      );
+      continue;
+    }
+
+    try {
+      const stats = await fs.stat(absolutePath);
+      if (!stats.isFile()) {
+        blockers.push(`Audit-fix scope file ${file} is not a regular file.`);
+      }
+    } catch {
+      blockers.push(`Audit-fix scope file ${file} does not exist.`);
+    }
+  }
+
+  return { files, blockers };
+}
+
+function dependencyPlanPathForPhase(phaseDir: string, phasePrefix: string, planId: string): string {
+  return `${phaseDir}/${phasePrefix}-${planId}-PLAN.md`;
+}
+
+async function collectAuditFixSummaryInventory(args: {
+  projectRoot: string;
+  phase: NonNullable<ArtifactReportAuthoringContextResult["phase"]>;
+}): Promise<{
+  completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: ArtifactReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: Array<{
+    planId: string;
+    path: string;
+    status: AuditFixDependencyStatus;
+    evidence: string;
+  }>;
+  blockers: string[];
+  warnings: string[];
+}> {
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+  const [planIndex, summaryIndex, executionTargets] = await Promise.all([
+    blueprintPhasePlanIndex({
+      cwd: args.projectRoot,
+      phase: args.phase.phaseNumber
+    }),
+    blueprintPhaseSummaryIndex({
+      cwd: args.projectRoot,
+      phase: args.phase.phaseNumber
+    }),
+    blueprintPhaseExecutionTargets({
+      cwd: args.projectRoot,
+      phase: args.phase.phaseNumber
+    })
+  ]);
+
+  warnings.push(...planIndex.warnings, ...summaryIndex.warnings, ...executionTargets.warnings);
+
+  const summaryReads = await Promise.all(
+    summaryIndex.completedPlans.map((planId) =>
+      blueprintPhaseSummaryRead({
+        cwd: args.projectRoot,
+        phase: args.phase.phaseNumber,
+        planId
+      })
+    )
+  );
+  const planReads = await Promise.all(
+    planIndex.plans.map((plan) =>
+      blueprintPhasePlanRead({
+        cwd: args.projectRoot,
+        phase: args.phase.phaseNumber,
+        planId: plan.planId
+      })
+    )
+  );
+
+  const completedSummaries = summaryReads
+    .filter((summaryRead) => summaryRead.found && summaryRead.path && summaryRead.validation?.valid)
+    .map((summaryRead) => ({
+      planId: summaryRead.planId ?? summaryRead.path!.match(/-(\d{2,})-SUMMARY\.md$/)?.[1] ?? "",
+      path: summaryRead.path!,
+      linkedPlanPath:
+        summaryRead.metadata?.linkedPlanPath ??
+        phasePlanPathFromSummaryPath(summaryRead.path!),
+      targetedVerification: extractSummaryTargetedVerification(summaryRead.content ?? "")
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+
+  if (completedSummaries.length === 0) {
+    blockers.push(
+      `${args.phase.phaseDir}: report.audit-fix requires at least one valid COMPLETED execution summary as required upstream context.`
+    );
+  }
+
+  const completedPlanIds = new Set(completedSummaries.map((summary) => summary.planId));
+  const lowerWavePendingPlanIds = new Set(executionTargets.blockers.lowerWavePendingPlanIds);
+  const pendingPlans = planIndex.plans
+    .filter((plan) => !completedPlanIds.has(plan.planId))
+    .map((plan) => ({
+      planId: plan.planId,
+      path: plan.path,
+      reason: lowerWavePendingPlanIds.has(plan.planId)
+        ? "A lower-wave pending plan still blocks full remediation closure."
+        : "No valid completed summary exists for this plan."
+    }));
+
+  const dependencyRows = new Map<string, { planId: string; path: string }>();
+  for (const planRead of planReads) {
+    if (!planRead.found || !planRead.metadata) {
+      if (planRead.path) {
+        warnings.push(`${planRead.path}: unreadable or invalid plan metadata is ignored for audit-fix dependency provenance.`);
+      }
+      continue;
+    }
+
+    for (const dependencyId of planRead.metadata.dependsOn) {
+      const normalizedPlanId = dependencyId.trim();
+      if (!/^\d{2,}$/.test(normalizedPlanId)) {
+        warnings.push(
+          `${planRead.path}: ignored non-canonical dependency id "${dependencyId}" while building audit-fix dependency provenance.`
+        );
+        continue;
+      }
+
+      const dependencyPath = dependencyPlanPathForPhase(
+        args.phase.phaseDir,
+        args.phase.phasePrefix,
+        normalizedPlanId
+      );
+      dependencyRows.set(`${normalizedPlanId}:${dependencyPath}`, {
+        planId: normalizedPlanId,
+        path: dependencyPath
+      });
+    }
+  }
+
+  const dependencyPlans = [...dependencyRows.values()]
+    .sort((left, right) => left.planId.localeCompare(right.planId))
+    .map((dependency) => {
+      const status: AuditFixDependencyStatus = completedPlanIds.has(dependency.planId)
+        ? "satisfied"
+        : lowerWavePendingPlanIds.has(dependency.planId)
+          ? "blocked"
+          : "pending";
+      const evidence =
+        status === "satisfied"
+          ? `Completed summary evidence exists for dependency plan ${dependency.planId}.`
+          : status === "blocked"
+            ? `Lower-wave pending plan ${dependency.planId} still blocks full remediation closure.`
+            : `Dependency plan ${dependency.planId} has no valid completed summary yet.`;
+
+      return {
+        ...dependency,
+        status,
+        evidence
+      };
+    });
+
+  return {
+    completedSummaries,
+    pendingPlans,
+    dependencyPlans,
+    blockers,
+    warnings
+  };
+}
+
+async function collectValidAuditFixArtifactPath(args: {
+  projectRoot: string;
+  phaseFiles: string[];
+  suffix: "-REVIEW.md" | "-SECURITY.md" | "-VERIFICATION.md" | "-UAT.md";
+  summaryPaths: string[];
+}): Promise<{
+  path: string | null;
+  warnings: string[];
+}> {
+  const warnings: string[] = [];
+
+  for (const artifactPath of args.phaseFiles
+    .filter((entry) => entry.endsWith(args.suffix))
+    .sort((left, right) => left.localeCompare(right))) {
+    const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
+    const validation =
+      args.suffix === "-REVIEW.md"
+        ? validateReviewArtifactContent(raw, "code-review")
+        : args.suffix === "-SECURITY.md"
+          ? validateReviewArtifactContent(raw, "security")
+          : args.suffix === "-VERIFICATION.md"
+            ? validateVerificationArtifactContent(raw, args.summaryPaths)
+            : validateUatArtifactContent(raw, args.summaryPaths, {
+                requireReadyVerificationEvidence: true
+              });
+
+    if (validation.valid) {
+      return { path: artifactPath, warnings };
+    }
+
+    warnings.push(
+      `${artifactPath}: invalid ${args.suffix === "-REVIEW.md"
+        ? "code-review"
+        : args.suffix === "-SECURITY.md"
+          ? "security review"
+          : args.suffix === "-VERIFICATION.md"
+            ? "verification"
+            : "UAT"} evidence is ignored for report.audit-fix prerequisites.`
+    );
+    warnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
+    warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
+  }
+
+  return { path: null, warnings };
+}
+
+async function collectAuditFixSelectedEvidencePaths(args: {
+  projectRoot: string;
+  phaseDir: string;
+  source: AuditFixReportSource;
+  summaryPaths: string[];
+}): Promise<{
+  selectedEvidencePaths: string[];
+  warnings: string[];
+  blockers: string[];
+}> {
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+  const phaseDirAbs = resolveBlueprintPath(args.projectRoot, args.phaseDir);
+  const entries = await fs.readdir(phaseDirAbs).catch(() => []);
+  const phaseFiles = entries.map((entry) => `${args.phaseDir}/${entry}`);
+  const review = await collectValidAuditFixArtifactPath({
+    projectRoot: args.projectRoot,
+    phaseFiles,
+    suffix: "-REVIEW.md",
+    summaryPaths: args.summaryPaths
+  });
+  const security = await collectValidAuditFixArtifactPath({
+    projectRoot: args.projectRoot,
+    phaseFiles,
+    suffix: "-SECURITY.md",
+    summaryPaths: args.summaryPaths
+  });
+  const verification = await collectValidAuditFixArtifactPath({
+    projectRoot: args.projectRoot,
+    phaseFiles,
+    suffix: "-VERIFICATION.md",
+    summaryPaths: args.summaryPaths
+  });
+  const uat = await collectValidAuditFixArtifactPath({
+    projectRoot: args.projectRoot,
+    phaseFiles,
+    suffix: "-UAT.md",
+    summaryPaths: args.summaryPaths
+  });
+
+  warnings.push(...review.warnings, ...security.warnings, ...verification.warnings, ...uat.warnings);
+
+  const availableBySource: Record<Exclude<AuditFixReportSource, "all">, string | null> = {
+    review: review.path,
+    security: security.path,
+    verification: verification.path,
+    uat: uat.path
+  };
+  const selectedEvidencePaths =
+    args.source === "all"
+      ? uniqueSorted(
+          Object.values(availableBySource).filter((value): value is string => value !== null)
+        )
+      : availableBySource[args.source]
+        ? [availableBySource[args.source]!]
+        : [];
+
+  if (args.source === "all") {
+    if (selectedEvidencePaths.length === 0) {
+      blockers.push(
+        `${args.phaseDir}: report.audit-fix requires at least one valid saved review, security, verification, or UAT artifact when source is "all".`
+      );
+    }
+  } else if (selectedEvidencePaths.length === 0) {
+    blockers.push(
+      `${args.phaseDir}: report.audit-fix requires a valid saved ${args.source} artifact when source is "${args.source}".`
+    );
+  }
+
+  return {
+    selectedEvidencePaths,
+    warnings,
+    blockers
+  };
+}
+
+async function buildAuditFixAllowedNextActions(args: {
+  phaseNumber: string;
+}): Promise<{
+  completedActions: string[];
+  partialActions: string[];
+  blockedActions: string[];
+  allowedActions: string[];
+}> {
+  const implementedCommands = await getImplementedCommandNames();
+  const filterImplemented = (candidates: string[]): string[] => {
+    if (implementedCommands.size === 0) {
+      return candidates;
+    }
+
+    return candidates.filter((candidate) => {
+      const commands = extractBlueprintCommands(candidate).map((command) => command.toLowerCase());
+      return commands.length > 0 && commands.every((command) => implementedCommands.has(command));
+    });
+  };
+
+  const completedActions = filterImplemented([
+    `/blu-validate-phase ${args.phaseNumber}`,
+    "/blu-progress"
+  ]);
+  const partialActions = filterImplemented([
+    `/blu-add-tests ${args.phaseNumber}`,
+    `/blu-validate-phase ${args.phaseNumber}`,
+    "/blu-progress"
+  ]);
+  const blockedActions = filterImplemented([
+    `/blu-code-review ${args.phaseNumber}`,
+    `/blu-verify-work ${args.phaseNumber}`,
+    `/blu-execute-phase ${args.phaseNumber}`,
+    `/blu-add-tests ${args.phaseNumber}`,
+    "/blu-progress"
+  ]);
+
+  return {
+    completedActions,
+    partialActions,
+    blockedActions,
+    allowedActions: uniqueSorted([
+      ...completedActions,
+      ...partialActions,
+      ...blockedActions
+    ])
+  };
+}
+
 async function buildAddTestsAllowedNextActions(args: {
   phaseNumber: string;
   reviewPath: string | null;
@@ -8480,9 +9159,9 @@ async function buildAddTestsAllowedNextActions(args: {
 
 function buildAddTestsReportTaskSchema(args: {
   baseSchema: Record<string, unknown>;
-  completedSummaries: AddTestsReportAuthoringContextResult["completedSummaries"];
-  pendingPlans: AddTestsReportAuthoringContextResult["pendingPlans"];
-  dependencyPlans: AddTestsReportAuthoringContextResult["dependencyPlans"];
+  completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: ArtifactReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: ArtifactReportAuthoringContextResult["dependencyPlans"];
   validationEvidencePaths: string[];
   completedAction: string;
   partialAction: string;
@@ -8491,6 +9170,7 @@ function buildAddTestsReportTaskSchema(args: {
 }): Record<string, unknown> {
   const schema = cloneJsonObject(args.baseSchema);
   const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
   const summaryPaths = args.completedSummaries.map((summary) => summary.path);
   const evidencePaths = [...summaryPaths, ...args.validationEvidencePaths];
 
@@ -8722,14 +9402,425 @@ async function addTestsReportModelSchemas(args: {
   };
 }
 
+async function collectAuditFixReportContext(args: {
+  projectRoot: string;
+  reportName: string;
+  auditFixContext: NonNullable<ArtifactReportAuthoringContextArgs["auditFixContext"]>;
+}): Promise<{
+  phase: ArtifactReportAuthoringContextResult["phase"];
+  completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: ArtifactReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: Array<{
+    planId: string;
+    path: string;
+    status: AuditFixDependencyStatus;
+    evidence: string;
+  }>;
+  auditFixContext: NonNullable<ArtifactReportAuthoringContextArgs["auditFixContext"]>;
+  selectedEvidencePaths: string[];
+  scopeFiles: string[];
+  blockers: string[];
+  warnings: string[];
+}> {
+  const blockers: string[] = [];
+  const warnings: string[] = [];
+  const parsedPhase = parseAuditFixReportPhase(args.reportName);
+
+  if (!parsedPhase) {
+    blockers.push(
+      `report.audit-fix model writes require reportName to use the exact audit-fix-<phase> pattern; received "${args.reportName}".`
+    );
+  } else if (normalizeReportSlug(args.reportName) !== canonicalAuditFixReportName(parsedPhase)) {
+    blockers.push(
+      `report.audit-fix model writes require canonical reportName ${canonicalAuditFixReportName(parsedPhase)}; received "${args.reportName}".`
+    );
+  }
+
+  const phase = await resolveAuditFixReportPhase(args.projectRoot, args.reportName);
+  if (!phase) {
+    blockers.push(`Could not resolve a Blueprint phase directory for reportName "${args.reportName}".`);
+    return {
+      phase,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      auditFixContext: args.auditFixContext,
+      selectedEvidencePaths: [],
+      scopeFiles: [],
+      blockers,
+      warnings
+    };
+  }
+
+  const normalizedSource = args.auditFixContext.source;
+  const normalizedSeverity = args.auditFixContext.severity;
+  const maxAttempts = args.auditFixContext.maxAttempts;
+  if (!["review", "security", "verification", "uat", "all"].includes(normalizedSource)) {
+    blockers.push(`Unsupported report.audit-fix source "${normalizedSource}".`);
+  }
+  if (!["medium", "high", "all"].includes(normalizedSeverity)) {
+    blockers.push(`Unsupported report.audit-fix severity "${normalizedSeverity}".`);
+  }
+  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
+    blockers.push("report.audit-fix maxAttempts must be a positive integer.");
+  }
+
+  const scopeValidation = await validateAuditFixScopeFiles({
+    projectRoot: args.projectRoot,
+    scopeFiles: args.auditFixContext.scopeFiles
+  });
+  blockers.push(...scopeValidation.blockers);
+
+  const summaryInventory = await collectAuditFixSummaryInventory({
+    projectRoot: args.projectRoot,
+    phase: phase
+  });
+  blockers.push(...summaryInventory.blockers);
+  warnings.push(...summaryInventory.warnings);
+
+  const selectedEvidence = await collectAuditFixSelectedEvidencePaths({
+    projectRoot: args.projectRoot,
+    phaseDir: phase.phaseDir,
+    source: normalizedSource,
+    summaryPaths: summaryInventory.completedSummaries.map((summary) => summary.path)
+  });
+  blockers.push(...selectedEvidence.blockers);
+  warnings.push(...selectedEvidence.warnings);
+
+  return {
+    phase,
+    completedSummaries: summaryInventory.completedSummaries,
+    pendingPlans: summaryInventory.pendingPlans,
+    dependencyPlans: summaryInventory.dependencyPlans,
+    auditFixContext: args.auditFixContext,
+    selectedEvidencePaths: selectedEvidence.selectedEvidencePaths,
+    scopeFiles: scopeValidation.files,
+    blockers,
+    warnings
+  };
+}
+
+function buildAuditFixReportTaskSchema(args: {
+  baseSchema: Record<string, unknown>;
+  completedSummaries: ArtifactReportAuthoringContextResult["completedSummaries"];
+  pendingPlans: ArtifactReportAuthoringContextResult["pendingPlans"];
+  dependencyPlans: Array<{
+    planId: string;
+    path: string;
+    status: AuditFixDependencyStatus;
+    evidence: string;
+  }>;
+  dryRun: boolean;
+  severity: AuditFixReportSeverityFilter;
+  selectedEvidencePaths: string[];
+  scopeFiles: string[];
+  allowedActions: string[];
+  completedActions: string[];
+  partialActions: string[];
+  blockedActions: string[];
+}): Record<string, unknown> {
+  const schema = cloneJsonObject(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const summaryPaths = args.completedSummaries.map((summary) => summary.path);
+
+  if (properties) {
+    const summaryEvidence = getJsonObjectProperty(properties, "summaryEvidence");
+    if (summaryEvidence) {
+      summaryEvidence.required = summaryPaths;
+      summaryEvidence.minProperties = summaryPaths.length;
+      summaryEvidence.maxProperties = summaryPaths.length;
+      summaryEvidence.propertyNames =
+        summaryPaths.length > 0 ? { enum: summaryPaths } : { not: {} };
+      summaryEvidence.properties = Object.fromEntries(
+        args.completedSummaries.map((summary) => [
+          summary.path,
+          {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "planId",
+              "linkedPlanPath",
+              "summaryStatus",
+              "targetedVerification",
+              "coverageNote"
+            ],
+            properties: {
+              planId: { const: summary.planId },
+              linkedPlanPath: { const: summary.linkedPlanPath },
+              summaryStatus: { const: "COMPLETED" },
+              targetedVerification: {
+                type: "array",
+                minItems: summary.targetedVerification.length,
+                maxItems: summary.targetedVerification.length,
+                uniqueItems: true,
+                items:
+                  summary.targetedVerification.length > 0
+                    ? { type: "string", enum: summary.targetedVerification }
+                    : false,
+                allOf: summary.targetedVerification.map(exactArrayContains)
+              },
+              coverageNote: {
+                $ref: "#/$defs/tableCellString"
+              }
+            }
+          }
+        ])
+      );
+    }
+
+    const classificationProps = getJsonObjectProperty(
+      getJsonObjectProperty(defs ?? {}, "classificationRow"),
+      "properties"
+    );
+    if (classificationProps) {
+      const evidenceSource = getJsonObjectProperty(classificationProps, "evidenceSource");
+      const severity = getJsonObjectProperty(classificationProps, "severity");
+      const implicatedFiles = getJsonObjectProperty(classificationProps, "implicatedFiles");
+      if (evidenceSource) {
+        evidenceSource.enum = args.selectedEvidencePaths;
+      }
+      if (severity) {
+        severity.enum =
+          args.severity === "high"
+            ? ["critical", "high"]
+            : args.severity === "medium"
+              ? ["critical", "high", "medium"]
+              : ["critical", "high", "medium", "low", "unknown"];
+      }
+      if (implicatedFiles) {
+        implicatedFiles.uniqueItems = true;
+        implicatedFiles.minItems = 1;
+        implicatedFiles.items = {
+          oneOf: [{ type: "string", enum: args.scopeFiles }, { const: "none" }]
+        };
+      }
+    }
+
+    const changesProps = getJsonObjectProperty(
+      getJsonObjectProperty(defs ?? {}, "changeRow"),
+      "properties"
+    );
+    if (changesProps) {
+      const changedFiles = getJsonObjectProperty(changesProps, "changedFiles");
+      const status = getJsonObjectProperty(changesProps, "status");
+      if (changedFiles) {
+        changedFiles.uniqueItems = true;
+        changedFiles.items = { type: "string", enum: args.scopeFiles };
+        changedFiles.minItems = args.dryRun ? 0 : 1;
+      }
+      if (status) {
+        status.enum = args.dryRun
+          ? ["planned", "failed", "skipped"]
+          : ["fixed", "planned", "failed", "skipped"];
+      }
+    }
+
+    const pendingPlans = getJsonObjectProperty(properties, "pendingPlans");
+    if (args.pendingPlans.length === 0) {
+      allowOnlyEmptyArray(pendingPlans);
+    } else if (pendingPlans) {
+      pendingPlans.minItems = args.pendingPlans.length;
+      pendingPlans.maxItems = args.pendingPlans.length;
+      const itemProperties = getJsonObjectProperty(
+        getJsonObjectProperty(defs ?? {}, "pendingPlanRow"),
+        "properties"
+      );
+      if (itemProperties) {
+        const planId = getJsonObjectProperty(itemProperties, "planId");
+        const pathProperty = getJsonObjectProperty(itemProperties, "path");
+        if (planId) {
+          planId.enum = args.pendingPlans.map((plan) => plan.planId);
+        }
+        if (pathProperty) {
+          pathProperty.enum = args.pendingPlans.map((plan) => plan.path);
+        }
+      }
+      pendingPlans.allOf = args.pendingPlans.map((plan) =>
+        exactObjectPropertyContains("planId", plan.planId)
+      );
+    }
+
+    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
+    if (args.dependencyPlans.length === 0) {
+      allowOnlyEmptyArray(dependencyPlans);
+    } else if (dependencyPlans) {
+      dependencyPlans.minItems = args.dependencyPlans.length;
+      dependencyPlans.maxItems = args.dependencyPlans.length;
+      const itemProperties = getJsonObjectProperty(
+        getJsonObjectProperty(defs ?? {}, "dependencyPlanRow"),
+        "properties"
+      );
+      if (itemProperties) {
+        const planId = getJsonObjectProperty(itemProperties, "planId");
+        const pathProperty = getJsonObjectProperty(itemProperties, "path");
+        const status = getJsonObjectProperty(itemProperties, "status");
+        if (planId) {
+          planId.enum = args.dependencyPlans.map((plan) => plan.planId);
+        }
+        if (pathProperty) {
+          pathProperty.enum = args.dependencyPlans.map((plan) => plan.path);
+        }
+        if (status) {
+          status.enum = [...new Set(args.dependencyPlans.map((plan) => plan.status))];
+        }
+      }
+      dependencyPlans.allOf = args.dependencyPlans.map((plan) => ({
+        contains: {
+          type: "object",
+          required: ["planId", "path", "status"],
+          properties: {
+            planId: { const: plan.planId },
+            path: { const: plan.path },
+            status: { const: plan.status }
+          }
+        },
+        minContains: 1,
+        maxContains: 1
+      }));
+    }
+
+    const evidence = getJsonObjectProperty(properties, "evidence");
+    if (evidence) {
+      const requiredSources = uniqueSorted([...args.selectedEvidencePaths, ...summaryPaths]);
+      evidence.allOf = requiredSources.map((source) => ({
+        contains: {
+          type: "object",
+          required: ["source", "kind"],
+          properties: {
+            source: { const: source },
+            kind: { const: auditFixEvidenceKindFromPath(source) }
+          }
+        },
+        minContains: 1,
+        maxContains: 1
+      }));
+    }
+
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "COMPLETED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.completedActions }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PARTIAL" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.partialActions }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "BLOCKED" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.blockedActions }
+        }
+      }
+    }
+  ];
+
+  schema["x-blueprint-runtimeContext"] = {
+    selectedEvidencePaths: args.selectedEvidencePaths,
+    scopeFiles: args.scopeFiles,
+    completedSummaryPaths: summaryPaths,
+    pendingPlans: args.pendingPlans,
+    dependencyPlans: args.dependencyPlans,
+    completedActions: args.completedActions,
+    partialActions: args.partialActions,
+    blockedActions: args.blockedActions,
+    upstreamContext: {
+      selectedEvidencePaths: "required upstream context",
+      scopeFiles: "required upstream context",
+      completedSummaryPaths: "required upstream context",
+      pendingPlans: "optional empty context",
+      dependencyPlans: "optional empty context"
+    }
+  };
+
+  return schema;
+}
+
+async function auditFixReportModelSchemas(args: {
+  contract: ReturnType<typeof readArtifactContract>;
+  contextData: Awaited<ReturnType<typeof collectAuditFixReportContext>>;
+}): Promise<{
+  schemaPath: string;
+  baseSchema: Record<string, unknown>;
+  taskSchema: Record<string, unknown>;
+  allowedNextActions: string[];
+}> {
+  const modelContract = args.contract.modelContract;
+
+  if (!modelContract) {
+    throw new Error("report.audit-fix does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("report.audit-fix modelContract does not expose a schemaPath.");
+  }
+  if (!args.contextData.phase) {
+    throw new Error("report.audit-fix cannot build a task schema without a resolved phase.");
+  }
+
+  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
+  const allowedNextActions = await buildAuditFixAllowedNextActions({
+    phaseNumber: args.contextData.phase.phaseNumber
+  });
+  const taskSchema = buildAuditFixReportTaskSchema({
+    baseSchema,
+    completedSummaries: args.contextData.completedSummaries,
+    pendingPlans: args.contextData.pendingPlans,
+    dependencyPlans: args.contextData.dependencyPlans,
+    dryRun: args.contextData.auditFixContext.dryRun,
+    severity: args.contextData.auditFixContext.severity,
+    selectedEvidencePaths: args.contextData.selectedEvidencePaths,
+    scopeFiles: args.contextData.scopeFiles,
+    ...allowedNextActions
+  });
+
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema,
+    allowedNextActions: allowedNextActions.allowedActions
+  };
+}
+
 export async function blueprintArtifactReportAuthoringContext(
   args: ArtifactReportAuthoringContextArgs
-): Promise<AddTestsReportAuthoringContextResult> {
+): Promise<ArtifactReportAuthoringContextResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const pathValue = buildBlueprintReportPath(args.reportName);
   const contractId = resolveReportContractId(args.reportName);
 
-  if (contractId !== "report.add-tests") {
+  if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
     return {
       status: "invalid",
       reportName: normalizeReportSlug(args.reportName),
@@ -8739,24 +9830,78 @@ export async function blueprintArtifactReportAuthoringContext(
       pendingPlans: [],
       dependencyPlans: [],
       validationEvidencePaths: [],
+      selectedEvidencePaths: [],
+      scopeFiles: [],
+      auditFixContext: null,
       allowedNextActions: [],
       schemaPath: null,
       baseSchema: null,
       taskSchema: null,
       modelOnly: true,
       prerequisiteBlockers: [
-        `blueprint_artifact_report_authoring_context currently supports report.add-tests only; ${args.reportName} is not an add-tests report.`
+        `blueprint_artifact_report_authoring_context currently supports report.add-tests and report.audit-fix only; ${args.reportName} is not one of those report contracts.`
       ],
       reason: "Unsupported report contract for schema-first report authoring.",
       warnings: []
     };
   }
 
-  const contract = readArtifactContract("report.add-tests");
-  const contextData = await collectAddTestsReportContext(projectRoot, args.reportName);
+  if (contractId === "report.add-tests") {
+    const contract = readArtifactContract("report.add-tests");
+    const contextData = await collectAddTestsReportContext(projectRoot, args.reportName);
+    const schemas =
+      contextData.blockers.length === 0
+        ? await addTestsReportModelSchemas({ contract, contextData })
+        : null;
+
+    return {
+      status: contextData.blockers.length === 0 ? "ready" : "invalid",
+      reportName: normalizeReportSlug(args.reportName),
+      path: pathValue,
+      phase: contextData.phase,
+      completedSummaries: contextData.completedSummaries,
+      pendingPlans: contextData.pendingPlans,
+      dependencyPlans: contextData.dependencyPlans,
+      validationEvidencePaths: contextData.validationEvidencePaths,
+      selectedEvidencePaths: [],
+      scopeFiles: [],
+      auditFixContext: null,
+      allowedNextActions: schemas?.allowedNextActions ?? [],
+      schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
+      baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
+      taskSchema: schemas?.taskSchema ?? null,
+      modelOnly: true,
+      prerequisiteBlockers: contextData.blockers,
+      reason: contextData.blockers.length > 0 ? contextData.blockers.join(" ") : null,
+      warnings: contextData.warnings
+    };
+  }
+
+  const contract = readArtifactContract("report.audit-fix");
+  const runtimeContext = args.auditFixContext;
+  const missingRuntimeContext = runtimeContext === undefined || runtimeContext === null;
+  const contextData = missingRuntimeContext
+    ? {
+        phase: await resolveAuditFixReportPhase(projectRoot, args.reportName),
+        completedSummaries: [],
+        pendingPlans: [],
+        dependencyPlans: [],
+        auditFixContext: null,
+        selectedEvidencePaths: [],
+        scopeFiles: [],
+        blockers: [
+          "report.audit-fix authoring requires runtime source, severity, maxAttempts, dryRun, and authoritative scopeFiles as required upstream context."
+        ],
+        warnings: []
+      }
+    : await collectAuditFixReportContext({
+        projectRoot,
+        reportName: args.reportName,
+        auditFixContext: runtimeContext
+      });
   const schemas =
-    contextData.blockers.length === 0
-      ? await addTestsReportModelSchemas({ contract, contextData })
+    contextData.blockers.length === 0 && contextData.auditFixContext
+      ? await auditFixReportModelSchemas({ contract, contextData })
       : null;
 
   return {
@@ -8767,7 +9912,18 @@ export async function blueprintArtifactReportAuthoringContext(
     completedSummaries: contextData.completedSummaries,
     pendingPlans: contextData.pendingPlans,
     dependencyPlans: contextData.dependencyPlans,
-    validationEvidencePaths: contextData.validationEvidencePaths,
+    validationEvidencePaths: [],
+    selectedEvidencePaths: contextData.selectedEvidencePaths,
+    scopeFiles: contextData.scopeFiles,
+    auditFixContext:
+      runtimeContext === undefined || runtimeContext === null
+        ? null
+        : {
+            source: runtimeContext.source,
+            severity: runtimeContext.severity,
+            maxAttempts: runtimeContext.maxAttempts,
+            dryRun: runtimeContext.dryRun
+          },
     allowedNextActions: schemas?.allowedNextActions ?? [],
     schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
     baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
@@ -9088,6 +10244,460 @@ function addTestsReportResidualDiagnostics(
   return diagnostics;
 }
 
+function normalizeAuditFixReportModel(model: Record<string, unknown>): AuditFixReportModel | null {
+  const remediationSummary = normalizeStringArray(model.remediationSummary);
+  const followUpFixes = normalizeStringArray(model.followUpFixes);
+  const summaryEvidence = asJsonObject(model.summaryEvidence);
+  const commitTraceability = asJsonObject(model.commitTraceability);
+  const todoCapture = asJsonObject(model.todoCapture);
+
+  if (
+    typeof model.status !== "string" ||
+    typeof model.readiness !== "string" ||
+    typeof model.completionState !== "string" ||
+    remediationSummary === null ||
+    followUpFixes === null ||
+    !summaryEvidence ||
+    !commitTraceability ||
+    !todoCapture ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizeRows = <T>(
+    value: unknown,
+    mapper: (row: Record<string, unknown>) => T | null
+  ): T[] | null => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    const rows = value.map((row) => {
+      const rowObject = asJsonObject(row);
+      return rowObject ? mapper(rowObject) : null;
+    });
+
+    return rows.some((row) => row === null) ? null : rows as T[];
+  };
+
+  const normalizedSummaryEvidence: AuditFixReportModel["summaryEvidence"] = {};
+  for (const [summaryPath, entry] of Object.entries(summaryEvidence)) {
+    const entryObject = asJsonObject(entry);
+    const targetedVerification = normalizeStringArray(entryObject?.targetedVerification);
+    if (
+      !entryObject ||
+      typeof entryObject.planId !== "string" ||
+      typeof entryObject.linkedPlanPath !== "string" ||
+      typeof entryObject.summaryStatus !== "string" ||
+      targetedVerification === null ||
+      typeof entryObject.coverageNote !== "string"
+    ) {
+      return null;
+    }
+
+    normalizedSummaryEvidence[summaryPath.trim()] = {
+      planId: entryObject.planId.trim(),
+      linkedPlanPath: entryObject.linkedPlanPath.trim(),
+      summaryStatus: entryObject.summaryStatus as "COMPLETED",
+      targetedVerification,
+      coverageNote: entryObject.coverageNote.trim()
+    };
+  }
+
+  const classification = normalizeRows(model.classification, (row) =>
+    typeof row.findingId === "string" &&
+    typeof row.evidenceSource === "string" &&
+    typeof row.severity === "string" &&
+    typeof row.classification === "string" &&
+    typeof row.reason === "string" &&
+    Array.isArray(row.implicatedFiles) &&
+    row.implicatedFiles.every((item) => typeof item === "string") &&
+    typeof row.narrowVerification === "string"
+      ? {
+          findingId: row.findingId.trim(),
+          evidenceSource: row.evidenceSource.trim(),
+          severity: row.severity as AuditFixFindingSeverity,
+          classification: row.classification as AuditFixClassification,
+          reason: row.reason.trim(),
+          implicatedFiles: row.implicatedFiles.map((item) => item.trim()),
+          narrowVerification: row.narrowVerification.trim()
+        }
+      : null
+  );
+  const changesApplied = normalizeRows(model.changesApplied, (row) =>
+    typeof row.findingId === "string" &&
+    typeof row.status === "string" &&
+    Array.isArray(row.changedFiles) &&
+    row.changedFiles.every((item) => typeof item === "string") &&
+    typeof row.summary === "string"
+      ? {
+          findingId: row.findingId.trim(),
+          status: row.status as AuditFixChangeStatus,
+          changedFiles: row.changedFiles.map((item) => item.trim()),
+          summary: row.summary.trim()
+        }
+      : null
+  );
+  const verification = normalizeRows(model.verification, (row) =>
+    typeof row.findingId === "string" &&
+    typeof row.check === "string" &&
+    typeof row.command === "string" &&
+    typeof row.result === "string" &&
+    typeof row.evidence === "string"
+      ? {
+          findingId: row.findingId.trim(),
+          check: row.check.trim(),
+          command: row.command.trim(),
+          result: row.result as AuditFixVerificationResult,
+          evidence: row.evidence.trim()
+        }
+      : null
+  );
+  const pendingPlans = normalizeRows(model.pendingPlans, (row) =>
+    typeof row.planId === "string" && typeof row.path === "string" && typeof row.reason === "string"
+      ? {
+          planId: row.planId.trim(),
+          path: row.path.trim(),
+          reason: row.reason.trim()
+        }
+      : null
+  );
+  const dependencyPlans = normalizeRows(model.dependencyPlans, (row) =>
+    typeof row.planId === "string" &&
+    typeof row.path === "string" &&
+    typeof row.status === "string" &&
+    typeof row.evidence === "string"
+      ? {
+          planId: row.planId.trim(),
+          path: row.path.trim(),
+          status: row.status as AuditFixDependencyStatus,
+          evidence: row.evidence.trim()
+        }
+      : null
+  );
+  const manualOrDeferredWork = normalizeRows(model.manualOrDeferredWork, (row) =>
+    typeof row.item === "string" &&
+    typeof row.reason === "string" &&
+    typeof row.followUp === "string" &&
+    typeof row.status === "string"
+      ? {
+          item: row.item.trim(),
+          reason: row.reason.trim(),
+          followUp: row.followUp.trim(),
+          status: row.status as AuditFixManualStatus
+        }
+      : null
+  );
+  const gapRoutes = normalizeRows(model.gapRoutes, (row) =>
+    typeof row.gap === "string" &&
+    typeof row.evidence === "string" &&
+    typeof row.repair === "string" &&
+    typeof row.status === "string"
+      ? {
+          gap: row.gap.trim(),
+          evidence: row.evidence.trim(),
+          repair: row.repair.trim(),
+          status: row.status as AuditFixGapStatus
+        }
+      : null
+  );
+  const evidence = normalizeRows(model.evidence, (row) =>
+    typeof row.kind === "string" && typeof row.source === "string" && typeof row.summary === "string"
+      ? {
+          kind: row.kind as AuditFixEvidenceKind,
+          source: row.source.trim(),
+          summary: row.summary.trim()
+        }
+      : null
+  );
+  const createdCommits = normalizeStringArray(commitTraceability.createdCommits);
+
+  if (
+    classification === null ||
+    changesApplied === null ||
+    verification === null ||
+    pendingPlans === null ||
+    dependencyPlans === null ||
+    manualOrDeferredWork === null ||
+    gapRoutes === null ||
+    evidence === null ||
+    typeof commitTraceability.preFixHead !== "string" ||
+    createdCommits === null ||
+    typeof todoCapture.status !== "string" ||
+    typeof todoCapture.evidence !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    status: model.status as AuditFixReportStatus,
+    readiness: model.readiness as AuditFixReportReadiness,
+    completionState: model.completionState as AuditFixReportCompletionState,
+    remediationSummary,
+    summaryEvidence: normalizedSummaryEvidence,
+    classification,
+    changesApplied,
+    verification,
+    pendingPlans,
+    dependencyPlans,
+    manualOrDeferredWork,
+    gapRoutes,
+    followUpFixes,
+    evidence,
+    commitTraceability: {
+      preFixHead: commitTraceability.preFixHead.trim(),
+      createdCommits
+    },
+    todoCapture: {
+      status: todoCapture.status as AuditFixTodoStatus,
+      evidence: todoCapture.evidence.trim()
+    },
+    nextSafeAction: model.nextSafeAction.trim()
+  };
+}
+
+async function collectAuditFixResidualDiagnostics(args: {
+  projectRoot: string;
+  model: Record<string, unknown>;
+  normalizedModel: AuditFixReportModel | null;
+  authoringContext: ArtifactReportAuthoringContextResult;
+  modelContract: ReturnType<typeof readArtifactContract>["modelContract"];
+}): Promise<ArtifactReportDiagnostic[]> {
+  const diagnostics: ArtifactReportDiagnostic[] = [];
+  const stringEntries = collectModelStringEntries(args.model);
+
+  for (const entry of stringEntries) {
+    if (hasModelPlaceholderLanguage(entry.value)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: entry.path,
+          code: "content.placeholder",
+          message: `Audit-fix report model contains placeholder language: ${entry.value}.`,
+          context: { value: entry.value },
+          suggestion: "Replace placeholder language with concrete saved-evidence, file, command, or commit context."
+        })
+      );
+    }
+  }
+
+  if (args.modelContract) {
+    for (const signal of args.modelContract.exampleLeakageSignals) {
+      const leakedEntry = stringEntries.find((entry) => entry.value.includes(signal));
+      if (leakedEntry) {
+        diagnostics.push(
+          artifactReportDiagnostic({
+            source: "residual",
+            path: leakedEntry.path,
+            code: "content.example_leakage",
+            message: `Audit-fix report model copied example leakage signal from ${args.modelContract.schemaId}: ${signal}.`,
+            context: { signal },
+            suggestion: "Replace copied example wording with run-specific evidence."
+          })
+        );
+      }
+    }
+  }
+
+  if (!args.normalizedModel) {
+    return diagnostics;
+  }
+
+  args.normalizedModel.remediationSummary.forEach((value, index) => {
+    if (isGenericNoneValue(value)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: `model.remediationSummary[${index}]`,
+          code: "content.generic_text",
+          message: "Audit-fix remediationSummary cannot use generic none values.",
+          context: { value },
+          suggestion: "Describe the bounded remediation or blocker concretely."
+        })
+      );
+    }
+  });
+
+  for (const [index, row] of args.normalizedModel.classification.entries()) {
+    for (const field of ["reason", "narrowVerification"] as const) {
+      if (isGenericNoneValue(row[field])) {
+        diagnostics.push(
+          artifactReportDiagnostic({
+            source: "residual",
+            path: `model.classification[${index}].${field}`,
+            code: "content.generic_text",
+            message: `Audit-fix classification.${index}.${field} must be concrete.`,
+            context: { value: row[field] },
+            suggestion: "Tie the row to saved evidence, scope, or a focused verification path."
+          })
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of args.normalizedModel.changesApplied.entries()) {
+    if (row.status === "fixed" && row.changedFiles.length === 0) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: `model.changesApplied[${index}].changedFiles`,
+          code: "content.changed_files_missing",
+          message: "Audit-fix fixed change rows must cite at least one changed repo file.",
+          context: { row },
+          suggestion: "List the repo-relative files changed for this fix attempt."
+        })
+      );
+    }
+
+    if (row.status !== "fixed" && row.changedFiles.length > 0 && args.authoringContext.auditFixContext?.dryRun) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: `model.changesApplied[${index}].changedFiles`,
+          code: "content.dry_run_changed_files",
+          message: "Dry-run audit-fix reports must not claim changed files.",
+          context: { row },
+          suggestion: "Leave changedFiles empty for dry-run rows and describe the plan concretely in the summary."
+        })
+      );
+    }
+
+    if (row.status !== "fixed" && isGenericNoneValue(row.summary)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: `model.changesApplied[${index}].summary`,
+          code: "content.generic_text",
+          message: "Audit-fix changesApplied summary must remain concrete.",
+          context: { row },
+          suggestion: "Describe the planned, failed, or skipped outcome concretely."
+        })
+      );
+    }
+
+    for (const file of row.changedFiles) {
+      try {
+        const absolutePath = resolveRepoRelativeInputPathSync(args.projectRoot, file);
+        const stats = await fs.stat(absolutePath);
+        if (!stats.isFile()) {
+          diagnostics.push(
+            artifactReportDiagnostic({
+              source: "residual",
+              path: `model.changesApplied[${index}].changedFiles`,
+              code: "content.changed_file_not_file",
+              message: `Audit-fix changed file path is not a regular file: ${file}.`,
+              context: { file },
+              suggestion: "Use an existing repo-relative file path inside the authoritative scope."
+            })
+          );
+        }
+      } catch {
+        diagnostics.push(
+          artifactReportDiagnostic({
+            source: "residual",
+            path: `model.changesApplied[${index}].changedFiles`,
+            code: "content.changed_file_missing",
+            message: `Audit-fix changed file path does not exist: ${file}.`,
+            context: { file },
+            suggestion: "Use an existing repo-relative file path inside the authoritative scope."
+          })
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of args.normalizedModel.verification.entries()) {
+    if (row.result === "not-run" && row.check === "none" && row.command === "none") {
+      continue;
+    }
+    for (const field of ["check", "command", "evidence"] as const) {
+      if (isGenericNoneValue(row[field])) {
+        diagnostics.push(
+          artifactReportDiagnostic({
+            source: "residual",
+            path: `model.verification[${index}].${field}`,
+            code: "content.generic_text",
+            message: `Audit-fix verification.${index}.${field} must be concrete unless it is the exact not-run sentinel.`,
+            context: { value: row[field] },
+            suggestion: "Record the focused verification command or the explicit reason it could not run."
+          })
+        );
+      }
+    }
+  }
+
+  for (const [index, row] of args.normalizedModel.evidence.entries()) {
+    if (isGenericNoneValue(row.summary)) {
+      diagnostics.push(
+        artifactReportDiagnostic({
+          source: "residual",
+          path: `model.evidence[${index}].summary`,
+          code: "content.generic_text",
+          message: "Audit-fix evidence summary must be concrete.",
+          context: { row },
+          suggestion: "Explain what this exact artifact, path, or command proves."
+        })
+      );
+    }
+  }
+
+  if (
+    args.authoringContext.auditFixContext?.dryRun &&
+    (args.normalizedModel.changesApplied.some((row) => row.status === "fixed" || row.changedFiles.length > 0) ||
+      args.normalizedModel.commitTraceability.createdCommits.some((value) => value !== "none"))
+  ) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.dry_run_mutation_claim",
+        message: "Dry-run audit-fix reports must not claim applied file mutations or created commits.",
+        context: {
+          dryRun: true
+        },
+        suggestion: "Use planned or skipped change rows, empty changedFiles arrays, and a createdCommits none sentinel."
+      })
+    );
+  }
+
+  const knownFindingIds = new Set(args.normalizedModel.classification.map((row) => row.findingId));
+  const unknownChangeFindingIds = args.normalizedModel.changesApplied
+    .map((row) => row.findingId)
+    .filter((findingId) => !knownFindingIds.has(findingId));
+  const unknownVerificationFindingIds = args.normalizedModel.verification
+    .map((row) => row.findingId)
+    .filter((findingId) => !knownFindingIds.has(findingId));
+
+  if (unknownChangeFindingIds.length > 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.changesApplied",
+        code: "content.change_out_of_scope",
+        message: `Audit-fix changesApplied contains finding ids outside the classified candidate set: ${uniqueSorted(unknownChangeFindingIds).join(", ")}.`,
+        context: { unknownChangeFindingIds },
+        suggestion: "Use findingId values that already exist in classification."
+      })
+    );
+  }
+
+  if (unknownVerificationFindingIds.length > 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.verification",
+        code: "content.verification_out_of_scope",
+        message: `Audit-fix verification contains finding ids outside the classified candidate set: ${uniqueSorted(unknownVerificationFindingIds).join(", ")}.`,
+        context: { unknownVerificationFindingIds },
+        suggestion: "Use findingId values that already exist in classification."
+      })
+    );
+  }
+
+  return diagnostics;
+}
+
 function markdownCell(value: unknown): string {
   return String(value ?? "none")
     .replace(/\r\n/g, "\n")
@@ -9118,7 +10728,7 @@ function renderMarkdownTable(headers: string[], rows: string[][]): string {
 
 function renderAddTestsReportModelContent(args: {
   model: AddTestsReportModel;
-  context: AddTestsReportAuthoringContextResult;
+  context: ArtifactReportAuthoringContextResult;
   reportWriteStatus?: string;
 }): string {
   const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
@@ -9273,32 +10883,183 @@ function withAddTestsReportWriteStatus(
   return content.replace(/^- Report write status: .+$/m, replacement);
 }
 
+function renderAuditFixReportModelContent(args: {
+  model: AuditFixReportModel;
+  context: ArtifactReportAuthoringContextResult;
+  reportWriteStatus?: string;
+}): string {
+  const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
+    ([summaryPath, entry]) => [
+      summaryPath,
+      `${entry.planId} (${entry.linkedPlanPath})`,
+      entry.summaryStatus,
+      entry.targetedVerification.join("; "),
+      entry.coverageNote
+    ]
+  );
+
+  return `# Audit Fix Report
+
+**Status:** ${args.model.status}
+**Readiness:** ${args.model.readiness}
+**Completion State:** ${args.model.completionState}
+**Report:** \`${args.context.path}\`
+**Source:** ${args.context.auditFixContext?.source ?? "unknown"}
+**Severity Filter:** ${args.context.auditFixContext?.severity ?? "unknown"}
+**Max Attempts:** ${args.context.auditFixContext?.maxAttempts ?? 0}
+**Dry Run:** ${args.context.auditFixContext?.dryRun ? "true" : "false"}
+**Next Safe Action:** ${args.model.nextSafeAction}
+
+## Evidence Used
+
+${renderBulletList(args.context.selectedEvidencePaths)}
+
+### Scope Files
+
+${renderBulletList(args.context.scopeFiles)}
+
+### Summary Evidence
+
+${renderMarkdownTable(
+  ["Summary", "Linked Plan", "Status", "Targeted Verification", "Coverage Note"],
+  summaryEvidenceRows
+)}
+
+### Evidence Ledger
+
+${renderMarkdownTable(
+  ["Kind", "Source", "Summary"],
+  args.model.evidence.map((row) => [row.kind, row.source, row.summary])
+)}
+
+## Fix Scope
+
+${renderBulletList(args.model.remediationSummary)}
+
+${renderMarkdownTable(
+  ["Finding", "Evidence Source", "Severity", "Classification", "Reason", "Files", "Narrow Verification"],
+  args.model.classification.map((row) => [
+    row.findingId,
+    row.evidenceSource,
+    row.severity,
+    row.classification,
+    row.reason,
+    row.implicatedFiles.join("; "),
+    row.narrowVerification
+  ])
+)}
+
+## Changes Applied
+
+${renderMarkdownTable(
+  ["Finding", "Status", "Changed Files", "Summary"],
+  args.model.changesApplied.map((row) => [
+    row.findingId,
+    row.status,
+    row.changedFiles.join("; "),
+    row.summary
+  ])
+)}
+
+${renderMarkdownTable(
+  ["Finding", "Check", "Command", "Result", "Evidence"],
+  args.model.verification.map((row) => [
+    row.findingId,
+    row.check,
+    row.command,
+    row.result,
+    row.evidence
+  ])
+)}
+
+- Pre-fix HEAD: ${args.model.commitTraceability.preFixHead}
+- Created commits: ${args.model.commitTraceability.createdCommits.join(", ")}
+- Report write status: ${args.reportWriteStatus ?? `pending MCP write for ${args.context.path}`}
+
+## Remaining Gaps
+
+${renderMarkdownTable(
+  ["Plan", "Path", "Reason"],
+  args.model.pendingPlans.map((row) => [row.planId, row.path, row.reason])
+)}
+
+${renderMarkdownTable(
+  ["Plan", "Path", "Status", "Evidence"],
+  args.model.dependencyPlans.map((row) => [row.planId, row.path, row.status, row.evidence])
+)}
+
+${renderMarkdownTable(
+  ["Item", "Reason", "Follow-Up", "Status"],
+  args.model.manualOrDeferredWork.map((row) => [
+    row.item,
+    row.reason,
+    row.followUp,
+    row.status
+  ])
+)}
+
+${renderMarkdownTable(
+  ["Gap", "Evidence", "Repair", "Status"],
+  args.model.gapRoutes.map((row) => [row.gap, row.evidence, row.repair, row.status])
+)}
+
+## Follow-Up Fixes
+
+${renderBulletList(args.model.followUpFixes)}
+
+- Todo capture: ${args.model.todoCapture.status} - ${args.model.todoCapture.evidence}
+
+## Next Safe Action
+
+- ${args.model.nextSafeAction}
+`;
+}
+
+function withAuditFixReportWriteStatus(
+  content: string,
+  status: AddTestsReportPersistenceStatus,
+  pathValue: string
+): string {
+  const replacement = `- Report write status: ${status} for ${pathValue}`;
+
+  return content.replace(/^- Report write status: .+$/m, replacement);
+}
+
 export async function blueprintArtifactReportValidateModel(
   args: ArtifactReportValidateModelArgs
-): Promise<AddTestsReportValidateModelResult> {
+): Promise<ArtifactReportValidateModelResult> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
   const context = await blueprintArtifactReportAuthoringContext({
-    cwd: args.cwd,
-    reportName: args.reportName
+    cwd: projectRoot,
+    reportName: args.reportName,
+    auditFixContext: args.auditFixContext
   });
-  const diagnostics: AddTestsReportDiagnostic[] = context.prerequisiteBlockers.map((message) =>
-    addTestsDiagnostic({
+  const contractId = resolveReportContractId(args.reportName);
+  const diagnostics: ArtifactReportDiagnostic[] = context.prerequisiteBlockers.map((message) =>
+    artifactReportDiagnostic({
       source: "scope",
-      path: "report.add-tests",
+      path: contractId ?? "report",
       code: "scope.prerequisite_blocker",
       message,
       context: { reportName: context.reportName, phase: context.phase?.phaseNumber ?? null },
-      suggestion: "Repair required completed summary and validation/UAT context before authoring report.add-tests."
+      suggestion:
+        contractId === "report.audit-fix"
+          ? "Repair required source evidence, summary provenance, or scope context before authoring report.audit-fix."
+          : "Repair required completed summary and validation/UAT context before authoring report.add-tests."
     })
   );
   const modelObject = asJsonObject(args.model);
 
   if (!modelObject) {
     diagnostics.push(
-      addTestsDiagnostic({
+      artifactReportDiagnostic({
         source: "schema",
         path: "model",
         code: "schema.type",
-        message: "Add-tests report model must be a JSON object.",
+        message:
+          contractId === "report.audit-fix"
+            ? "Audit-fix report model must be a JSON object."
+            : "Add-tests report model must be a JSON object.",
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
         suggestion: "Return a JSON object that matches taskSchema."
       })
@@ -9307,18 +11068,21 @@ export async function blueprintArtifactReportValidateModel(
 
   if (!context.taskSchema) {
     diagnostics.push(
-      addTestsDiagnostic({
+      artifactReportDiagnostic({
         source: "scope",
         path: "taskSchema",
         code: "contract.missing_schema",
-        message: "report.add-tests did not expose a runtime task schema.",
+        message: `${contractId ?? "report"} did not expose a runtime task schema.`,
         context: {},
-        suggestion: "Read the live report.add-tests authoring context before writing."
+        suggestion:
+          contractId === "report.audit-fix"
+            ? "Read the live report.audit-fix authoring context before writing."
+            : "Read the live report.add-tests authoring context before writing."
       })
     );
   }
 
-  let normalizedModel: AddTestsReportModel | null = null;
+  let normalizedModel: AddTestsReportModel | AuditFixReportModel | null = null;
 
   if (modelObject && context.taskSchema) {
     const validate = createArtifactAjvValidator().compile(context.taskSchema);
@@ -9326,41 +11090,67 @@ export async function blueprintArtifactReportValidateModel(
 
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromAddTestsReportAjvError)
+        ...(validate.errors ?? []).map((error) =>
+          schemaDiagnosticFromArtifactReportAjvError(
+            error,
+            contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests"
+          )
+        )
       );
     }
 
-    diagnostics.push(
-      ...addTestsReportResidualDiagnostics(
-        modelObject,
-        readArtifactContract("report.add-tests").modelContract
-      )
-    );
+    if (contractId === "report.audit-fix") {
+      normalizedModel = normalizeAuditFixReportModel(modelObject);
+      diagnostics.push(
+        ...await collectAuditFixResidualDiagnostics({
+          projectRoot,
+          model: modelObject,
+          normalizedModel: normalizeAuditFixReportModel(modelObject),
+          authoringContext: context,
+          modelContract: readArtifactContract("report.audit-fix").modelContract
+        })
+      );
+    } else {
+      diagnostics.push(
+        ...addTestsReportResidualDiagnostics(
+          modelObject,
+          readArtifactContract("report.add-tests").modelContract
+        )
+      );
 
-    if (schemaValid) {
-      normalizedModel = normalizeAddTestsReportModel(modelObject);
+      if (schemaValid) {
+        normalizedModel = normalizeAddTestsReportModel(modelObject);
+      }
     }
   }
 
   let renderPreview: string | null = null;
 
   if (diagnostics.length === 0 && normalizedModel) {
-    const rendered = renderAddTestsReportModelContent({
-      model: normalizedModel,
-      context
-    });
+    const rendered =
+      contractId === "report.audit-fix"
+        ? renderAuditFixReportModelContent({
+            model: normalizedModel as AuditFixReportModel,
+            context
+          })
+        : renderAddTestsReportModelContent({
+            model: normalizedModel as AddTestsReportModel,
+            context
+          });
     const validation = validateReportArtifactContent(rendered, context.reportName);
 
     for (const issue of validation.issues) {
       diagnostics.push(
-        addTestsDiagnostic({
+        artifactReportDiagnostic({
           source: "markdown",
           path: "renderPreview",
           code: "markdown.invalid_render",
           message: issue,
           context: {},
           suggestion:
-            "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
+            contractId === "report.audit-fix"
+              ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract."
+              : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
         })
       );
     }
@@ -9405,7 +11195,9 @@ function reportModelWriteIssues(reportName: string): string[] {
   }
 
   return [
-    `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
+    contractId === "report.add-tests" || contractId === "report.audit-fix"
+      ? ""
+      : `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
   ];
 }
 
@@ -9439,36 +11231,42 @@ export async function blueprintArtifactReportWrite(
     ]);
   }
 
-  if (contractId === "report.add-tests" && hasContent) {
+  if ((contractId === "report.add-tests" || contractId === "report.audit-fix") && hasContent) {
     return artifactReportWriteInvalidResult(pathValue, [
-      "report.add-tests is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write."
+      `${contractId} is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write.`
     ]);
   }
 
   if (hasModel) {
-    if (contractId !== "report.add-tests") {
-      return artifactReportWriteInvalidResult(pathValue, reportModelWriteIssues(args.reportName));
+    if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
+      return artifactReportWriteInvalidResult(
+        pathValue,
+        reportModelWriteIssues(args.reportName).filter((issue) => issue.length > 0)
+      );
     }
 
     const modelValidation = await blueprintArtifactReportValidateModel({
       cwd: projectRoot,
       reportName: args.reportName,
+      auditFixContext: args.auditFixContext,
       model: args.model
     });
 
     if (!modelValidation.valid || !modelValidation.renderPreview) {
-      return artifactReportWriteInvalidResult(
-        pathValue,
-        modelValidation.diagnostics.map(formatAddTestsReportDiagnostic),
-        modelValidation.warnings
-      );
+        return artifactReportWriteInvalidResult(
+          pathValue,
+        modelValidation.diagnostics.map(formatArtifactReportDiagnostic),
+          modelValidation.warnings
+        );
     }
 
     const renderPreview = modelValidation.renderPreview.endsWith("\n")
       ? modelValidation.renderPreview
       : `${modelValidation.renderPreview}\n`;
     const contentForStatus = (status: AddTestsReportPersistenceStatus) =>
-      withAddTestsReportWriteStatus(renderPreview, status, pathValue);
+      contractId === "report.audit-fix"
+        ? withAuditFixReportWriteStatus(renderPreview, status, pathValue)
+        : withAddTestsReportWriteStatus(renderPreview, status, pathValue);
     const exists = await pathExists(absolutePath);
     const warnings = [...modelValidation.warnings];
 
@@ -9761,7 +11559,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_authoring_context",
     description:
-      "Return the schema-first report.add-tests authoring context, including the base model schema and runtime-narrowed task schema for the selected add-tests report.",
+      "Return the schema-first report authoring context for report.add-tests or report.audit-fix, including the base model schema and runtime-narrowed task schema for the selected report contract.",
     inputSchema: artifactReportAuthoringContextInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportAuthoringContext(args as ArtifactReportAuthoringContextArgs)
@@ -9769,7 +11567,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_validate_model",
     description:
-      "Validate a structured report.add-tests model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
+      "Validate a structured report.add-tests or report.audit-fix model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
     inputSchema: artifactReportValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportValidateModel(args as ArtifactReportValidateModelArgs)
@@ -9777,7 +11575,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_write",
     description:
-      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests is model-only and rejects Markdown content fallback.",
+      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests and report.audit-fix are model-only and reject Markdown content fallback.",
     inputSchema: artifactReportWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportWrite(args as ArtifactReportWriteArgs)

@@ -5,7 +5,6 @@ import * as z from "zod/v4";
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import {
   BLUEPRINT_DIR,
-  BLUEPRINT_REPORTS_PATH,
   buildBlueprintReportPath,
   blueprintPathExists,
   BLUEPRINT_STATE_PATH,
@@ -284,7 +283,7 @@ const DEFAULT_STATE: BlueprintState = {
   lastUpdated: new Date(0).toISOString()
 };
 
-const PAUSE_HANDOFF_REPORT_PATH = `${BLUEPRINT_REPORTS_PATH}/pause-work-latest.md`;
+const PAUSE_HANDOFF_REPORT_PATH = ".blueprint/reports/pause-work-latest.md";
 const PAUSE_WORK_COMMAND = blueprintDirectCommand("pause-work");
 const RESUME_WORK_COMMAND = blueprintDirectCommand("resume-work");
 const PAUSE_HANDOFF_BLOCKER_PREFIX = "Paused handoff is active at ";

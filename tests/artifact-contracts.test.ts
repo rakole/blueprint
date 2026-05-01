@@ -104,7 +104,7 @@ Read the contract, then normalize before writing.
 `;
 }
 
-test("artifact contract read exposes structured model contracts for phase plan, phase summary, phase UAT, quick run, and add-tests", async () => {
+test("artifact contract read exposes structured model contracts for phase plan, phase summary, phase UAT, quick run, add-tests, and audit-fix", async () => {
   const planContract = await blueprintArtifactContractRead({ artifactId: "phase.plan" });
   const summaryContract = await blueprintArtifactContractRead({ artifactId: "phase.summary" });
   const uatContract = await blueprintArtifactContractRead({ artifactId: "phase.uat" });
@@ -113,6 +113,9 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   });
   const addTestsContract = await blueprintArtifactContractRead({
     artifactId: "report.add-tests"
+  });
+  const auditFixReportContract = await blueprintArtifactContractRead({
+    artifactId: "report.audit-fix"
   });
   const listedContracts = await blueprintArtifactContractRead({});
   const listedPlanContract = listedContracts.contracts.find(
@@ -126,6 +129,9 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   );
   const listedAddTestsContract = listedContracts.contracts.find(
     (contract) => contract.id === "report.add-tests"
+  );
+  const listedAuditFixContract = listedContracts.contracts.find(
+    (contract) => contract.id === "report.audit-fix"
   );
   const listedUatContract = listedContracts.contracts.find(
     (contract) => contract.id === "phase.uat"
@@ -265,6 +271,47 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   assert.equal(
     listedAddTestsContract?.modelContract?.schemaId,
     "blueprint.report.add-tests.model"
+  );
+
+  assert.equal(
+    auditFixReportContract.contract.modelContract?.schemaId,
+    "blueprint.report.audit-fix.model"
+  );
+  assert.equal(auditFixReportContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    auditFixReportContract.contract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json"
+  );
+  assert.deepEqual(
+    (auditFixReportContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "remediationSummary"]
+  );
+  assert.ok(
+    auditFixReportContract.contract.modelContract?.renderedHeadings.includes("Summary Evidence")
+  );
+  assert.ok(
+    auditFixReportContract.contract.modelContract?.renderedHeadings.includes("Follow-Up Fixes")
+  );
+  assert.ok(
+    auditFixReportContract.contract.modelContract?.qualityRules.some((rule) =>
+      /auditFixContext/i.test(rule)
+    )
+  );
+  assert.ok(
+    auditFixReportContract.contract.modelContract?.contextBindings.some((binding) =>
+      /auditFixContext/i.test(binding)
+    )
+  );
+  const auditFixModelProperties =
+    auditFixReportContract.contract.modelContract?.jsonSchema.properties as
+      | Record<string, unknown>
+      | undefined;
+  assert.equal(Boolean(auditFixModelProperties && "auditFixContext" in auditFixModelProperties), false);
+  assert.ok(auditFixModelProperties && "summaryEvidence" in auditFixModelProperties);
+  assert.ok(auditFixModelProperties && "todoCapture" in auditFixModelProperties);
+  assert.equal(
+    listedAuditFixContract?.modelContract?.schemaId,
+    "blueprint.report.audit-fix.model"
   );
 });
 
@@ -1566,10 +1613,37 @@ test("review and report contracts validate canonical sections while keeping extr
     "Remaining Gaps",
     "Next Safe Action"
   ]);
-  assert.match(auditFixContract.authoringTemplate, /Classification table with finding id/);
+  assert.deepEqual(auditFixContract.lockedMarkers, [
+    "**Status:**",
+    "**Readiness:**",
+    "**Completion State:**",
+    "**Source:**",
+    "**Severity Filter:**",
+    "**Max Attempts:**",
+    "**Dry Run:**",
+    "**Next Safe Action:**"
+  ]);
+  assert.equal(auditFixContract.modelContract?.schemaId, "blueprint.report.audit-fix.model");
+  assert.equal(auditFixContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    auditFixContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json"
+  );
+  assert.deepEqual(
+    (auditFixContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
+    ["status", "readiness", "completionState", "remediationSummary"]
+  );
+  assert.match(auditFixContract.authoringTemplate, /\*\*Source:\*\* review\|security\|verification\|uat\|all/);
   assert.match(
     auditFixContract.authoringTemplate,
-    /Manual-only findings, skipped findings, unattempted candidates/
+    /\| Finding ID \| Evidence Source \| Severity \| Classification \|/
+  );
+  assert.match(auditFixContract.authoringTemplate, /### Summary Evidence/);
+  assert.match(auditFixContract.authoringTemplate, /### Evidence Ledger/);
+  assert.match(auditFixContract.authoringTemplate, /### Follow-Up Fixes/);
+  assert.match(
+    auditFixContract.authoringTemplate,
+    /Todo capture: <captured\|declined\|not-needed\|blocked>/
   );
   assert.equal(securityScaffoldValidation.valid, false);
   assert.match(securityScaffoldValidation.issues.join("\n"), /placeholder scaffold text/i);

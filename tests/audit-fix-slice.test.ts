@@ -38,7 +38,15 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(auditFixDoc, /classification table before mutation/i);
   assert.match(auditFixDoc, /`auto-fixable`, `manual-only`, or `skip`/);
-  assert.match(auditFixDoc, /repair the report against the canonical `report\.audit-fix` headings and retry once through MCP/i);
+  assert.match(auditFixDoc, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
+  assert.match(
+    auditFixDoc,
+    /`status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
+  );
+  assert.match(
+    auditFixDoc,
+    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, and returned diagnostics/i
+  );
   assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(auditFixDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
   assert.match(auditFixDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/i);
@@ -64,6 +72,14 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(
     runtimeReference,
+    /`audit-fix`[\s\S]*pass `auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}` through the report tool flow/i
+  );
+  assert.match(
+    runtimeReference,
+    /`audit-fix`[\s\S]*author only the model fields `status`, `readiness`, `completionState`, `remediationSummary`/i
+  );
+  assert.match(
+    runtimeReference,
     /`audit-fix`[\s\S]*preserve the single-agent no-subagent fallback that processes one finding at a time with carry-forward compression/i
   );
   assert.match(
@@ -72,7 +88,7 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(
     runtimeReference,
-    /`audit-fix`[\s\S]*repair invalid `report\.audit-fix` writes once against canonical headings/i
+    /`audit-fix`[\s\S]*repair invalid `report\.audit-fix` models once against the narrowed contract/i
   );
 });
 
@@ -81,6 +97,9 @@ test("audit-fix is exposed as an implemented remediation command with the regist
   const entry = catalog.commands["audit-fix"];
 
   assert.ok(blueprintToolNames.includes("blueprint_review_scope"));
+  assert.ok(blueprintToolNames.includes("blueprint_artifact_contract_read"));
+  assert.ok(blueprintToolNames.includes("blueprint_artifact_report_authoring_context"));
+  assert.ok(blueprintToolNames.includes("blueprint_artifact_report_validate_model"));
   assert.ok(blueprintToolNames.includes("blueprint_artifact_report_write"));
   assert.ok(blueprintToolNames.includes("blueprint_artifact_mutate_index"));
   assert.ok(blueprintToolNames.includes("blueprint_state_update"));
@@ -92,6 +111,9 @@ test("audit-fix is exposed as an implemented remediation command with the regist
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_review_scope",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
     "blueprint_artifact_mutate_index",
     "blueprint_state_update"

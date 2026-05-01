@@ -1,0 +1,821 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.report.audit-fix.model",
+  "title": "Blueprint Audit Fix Report Model",
+  "description": "Model-authored payload for report.audit-fix. Runtime-owned phase identity, report path, auditFixContext marker values, saved evidence inventory, scope files, summary inventory, and Markdown rendering are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "readiness",
+    "completionState",
+    "remediationSummary",
+    "summaryEvidence",
+    "classification",
+    "changesApplied",
+    "verification",
+    "pendingPlans",
+    "dependencyPlans",
+    "manualOrDeferredWork",
+    "gapRoutes",
+    "followUpFixes",
+    "evidence",
+    "commitTraceability",
+    "todoCapture",
+    "nextSafeAction"
+  ],
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/status"
+    },
+    "readiness": {
+      "$ref": "#/$defs/readiness"
+    },
+    "completionState": {
+      "$ref": "#/$defs/completionState"
+    },
+    "remediationSummary": {
+      "type": "array",
+      "description": "Concrete summary bullets for the bounded remediation posture rendered under Fix Scope.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "summaryEvidence": {
+      "type": "object",
+      "description": "Evidence decisions keyed by exact completed summary paths. The task schema narrows this to every current completed summary key.",
+      "additionalProperties": {
+        "$ref": "#/$defs/summaryEvidenceEntry"
+      }
+    },
+    "classification": {
+      "type": "array",
+      "description": "Classification rows rendered under Fix Scope.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/classificationRow"
+      }
+    },
+    "changesApplied": {
+      "type": "array",
+      "description": "Change rows rendered under Changes Applied. Dry-run or blocked runs may use the exact no-change sentinel row.",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/changeRow"
+          },
+          {
+            "$ref": "#/$defs/noChangeRow"
+          }
+        ]
+      }
+    },
+    "verification": {
+      "type": "array",
+      "description": "Targeted verification rows rendered under Changes Applied.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/verificationRow"
+      }
+    },
+    "pendingPlans": {
+      "type": "array",
+      "description": "Pending plan rows carried into Fix Scope when they constrain safe remediation.",
+      "items": {
+        "$ref": "#/$defs/pendingPlanRow"
+      }
+    },
+    "dependencyPlans": {
+      "type": "array",
+      "description": "Dependency plan rows carried into Fix Scope when they constrain safe remediation.",
+      "items": {
+        "$ref": "#/$defs/dependencyPlanRow"
+      }
+    },
+    "manualOrDeferredWork": {
+      "type": "array",
+      "description": "Manual or deferred remediation rows rendered under Remaining Gaps. COMPLETED reports must use the exact NONE sentinel row.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/manualOrDeferredRow"
+      }
+    },
+    "gapRoutes": {
+      "type": "array",
+      "description": "Gap and repair route rows rendered under Remaining Gaps. COMPLETED reports must use the exact NONE sentinel row.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/gapRouteRow"
+      }
+    },
+    "followUpFixes": {
+      "type": "array",
+      "description": "Concrete follow-up fixes, or the exact single none sentinel when no repo follow-up remains.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/bulletString"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Evidence ledger rows rendered under Evidence Used.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidenceRow"
+      }
+    },
+    "commitTraceability": {
+      "$ref": "#/$defs/commitTraceability"
+    },
+    "todoCapture": {
+      "$ref": "#/$defs/todoCapture"
+    },
+    "nextSafeAction": {
+      "$ref": "#/$defs/blueprintCommandAction"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "COMPLETED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "ready-for-routing"
+          },
+          "completionState": {
+            "const": "complete"
+          },
+          "pendingPlans": {
+            "maxItems": 0
+          },
+          "manualOrDeferredWork": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noManualOrDeferredRow"
+            }
+          },
+          "gapRoutes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "$ref": "#/$defs/noGapRouteRow"
+            }
+          },
+          "followUpFixes": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "none"
+            }
+          },
+          "verification": {
+            "items": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "enum": [
+                    "pass",
+                    "reread-only"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "not-ready-for-routing"
+          },
+          "completionState": {
+            "const": "pending"
+          },
+          "manualOrDeferredWork": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "MANUAL",
+                    "DEFERRED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "OPEN",
+                    "BLOCKED"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUpFixes": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "readiness": {
+            "const": "blocked"
+          },
+          "completionState": {
+            "const": "blocked"
+          },
+          "verification": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "result"
+              ],
+              "properties": {
+                "result": {
+                  "enum": [
+                    "fail",
+                    "blocked",
+                    "not-run"
+                  ]
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "gapRoutes": {
+            "contains": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "const": "BLOCKED"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "followUpFixes": {
+            "contains": {
+              "not": {
+                "const": "none"
+              }
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "bulletString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
+    },
+    "tableCellString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n|]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "PARTIAL",
+        "BLOCKED"
+      ]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": [
+        "ready-for-routing",
+        "not-ready-for-routing",
+        "blocked"
+      ]
+    },
+    "completionState": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "pending",
+        "blocked"
+      ]
+    },
+    "blueprintArtifactPath": {
+      "type": "string",
+      "pattern": "^\\.blueprint/(?:phases|reports)/[A-Za-z0-9._@+\\-/]+\\.md$"
+    },
+    "repoRelativePath": {
+      "type": "string",
+      "pattern": "^(?!(?:/|.*(?:^|/)\\.\\.(?:/|$)))[A-Za-z0-9._@+\\-/]+$"
+    },
+    "summaryEvidenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "linkedPlanPath",
+        "summaryStatus",
+        "targetedVerification",
+        "coverageNote"
+      ],
+      "properties": {
+        "planId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "linkedPlanPath": {
+          "$ref": "#/$defs/blueprintArtifactPath"
+        },
+        "summaryStatus": {
+          "const": "COMPLETED"
+        },
+        "targetedVerification": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/bulletString"
+          }
+        },
+        "coverageNote": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "severityClass": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ]
+    },
+    "classificationValue": {
+      "type": "string",
+      "enum": [
+        "auto-fixable",
+        "manual-only",
+        "skip"
+      ]
+    },
+    "classificationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findingId",
+        "evidenceSource",
+        "severity",
+        "classification",
+        "reason",
+        "implicatedFiles",
+        "narrowVerification"
+      ],
+      "properties": {
+        "findingId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidenceSource": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "severity": {
+          "$ref": "#/$defs/severityClass"
+        },
+        "classification": {
+          "$ref": "#/$defs/classificationValue"
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "implicatedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/repoRelativePath"
+              },
+              {
+                "const": "none"
+              }
+            ]
+          }
+        },
+        "narrowVerification": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "changeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findingId",
+        "status",
+        "changedFiles",
+        "summary"
+      ],
+      "properties": {
+        "findingId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "planned",
+            "failed",
+            "skipped"
+          ]
+        },
+        "changedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repoRelativePath"
+          }
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "noChangeRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findingId",
+        "status",
+        "changedFiles",
+        "summary"
+      ],
+      "properties": {
+        "findingId": {
+          "const": "none"
+        },
+        "status": {
+          "const": "none"
+        },
+        "changedFiles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "const": "none"
+          }
+        },
+        "summary": {
+          "const": "none"
+        }
+      }
+    },
+    "verificationRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "findingId",
+        "check",
+        "command",
+        "result",
+        "evidence"
+      ],
+      "properties": {
+        "findingId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "check": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "command": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "blocked",
+            "not-run",
+            "reread-only"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "pendingPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "reason"
+      ],
+      "properties": {
+        "planId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "path": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/blueprintArtifactPath"
+            },
+            {
+              "const": "none"
+            }
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "dependencyPlanRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planId",
+        "path",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "planId": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "path": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/blueprintArtifactPath"
+            },
+            {
+              "const": "none"
+            }
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "manualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "status",
+        "reason",
+        "followUp"
+      ],
+      "properties": {
+        "item": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "MANUAL",
+            "DEFERRED",
+            "NONE"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "followUp": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "noManualOrDeferredRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item",
+        "status",
+        "reason",
+        "followUp"
+      ],
+      "properties": {
+        "item": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        },
+        "reason": {
+          "const": "none"
+        },
+        "followUp": {
+          "const": "none"
+        }
+      }
+    },
+    "gapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "status",
+        "evidence",
+        "repair"
+      ],
+      "properties": {
+        "gap": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "BLOCKED",
+            "NONE"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "repair": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "noGapRouteRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gap",
+        "status",
+        "evidence",
+        "repair"
+      ],
+      "properties": {
+        "gap": {
+          "const": "none"
+        },
+        "status": {
+          "const": "NONE"
+        },
+        "evidence": {
+          "const": "none"
+        },
+        "repair": {
+          "const": "none"
+        }
+      }
+    },
+    "evidenceRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "source",
+        "summary"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "review",
+            "security",
+            "verification",
+            "uat",
+            "summary",
+            "scope",
+            "git",
+            "command",
+            "other"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/tableCellString"
+        },
+        "summary": {
+          "$ref": "#/$defs/tableCellString"
+        }
+      }
+    },
+    "commitShaOrNone": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        {
+          "const": "none"
+        }
+      ]
+    },
+    "commitTraceability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preFixHead",
+        "createdCommits"
+      ],
+      "properties": {
+        "preFixHead": {
+          "$ref": "#/$defs/bulletString"
+        },
+        "createdCommits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/commitShaOrNone"
+          }
+        }
+      }
+    },
+    "todoCapture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "captured",
+            "declined",
+            "not-needed",
+            "blocked"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/bulletString"
+        }
+      }
+    },
+    "blueprintCommandAction": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*)(?:\\s+[A-Za-z0-9._:/=@+-]+)*$"
+    }
+  }
+}
