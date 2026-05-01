@@ -4,8 +4,8 @@
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 1 - Bug Taxonomy And Reporting Harness
 **Active command:** none
-**Last successful command:** $gsd-plan-phase 1
-**Next suggested action:** $gsd-execute-phase 1
+**Last successful command:** $gsd-execute-phase 1
+**Next suggested action:** $gsd-verify-work 1
 **Last updated:** 2026-05-01
 
 ## Project Reference
@@ -13,9 +13,8 @@
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 1 is planned; next step is executing the
-bug-reporting structure, template, index, illustrative example, and audit
-boundary checks used by later slices.
+**Current focus:** Phase 1 execution is complete; next step is verifying the
+bug-reporting harness and then advancing to the first real Blueprint audit slice.
 
 ## Workflow Preferences
 
@@ -45,7 +44,7 @@ boundary checks used by later slices.
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Bug Taxonomy And Reporting Harness | Ready to execute |
+| 1 | Bug Taxonomy And Reporting Harness | Executed; ready for verification |
 | 2 | Bootstrap Router Config Audit | Pending |
 | 3 | Core Lifecycle Audit | Pending |
 | 4 | Roadmap Capture Lightweight Audit | Pending |
@@ -62,8 +61,10 @@ boundary checks used by later slices.
 - 2026-05-01: Chose fine-grained phase slicing so each workflow family can independently produce bug docs.
 - 2026-05-01: Captured Phase 1 context for the bug-reporting harness, including template, rich index, full lifecycle status vocabulary, and evidence-layout decisions.
 - 2026-05-01: Planned Phase 1 with research, validation strategy, pattern map, and three executable plans covering the bug template, index, illustrative example, and no-fix boundary checks.
+- 2026-05-01: Executed Phase 1 Wave 1 by creating `docs/bugs/TEMPLATE.md`, `docs/bugs/INDEX.md`, and saved execution summaries for Plans 01 and 02.
+- 2026-05-01: Executed Phase 1 Wave 2 by creating `docs/bugs/BPBUG-000-illustrative-example.md`, linking it from the index, and verifying the discovery-only boundary.
 
 ## Next Step
 
-Run `$gsd-execute-phase 1` to create the bug-reporting harness and
-`docs/bugs/` authoring artifacts.
+Run `$gsd-verify-work 1` to validate the completed bug-reporting harness before
+starting Phase 2.
