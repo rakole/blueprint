@@ -10,8 +10,8 @@
 |-------|------|------|--------------|--------|
 | 1 | Bug Taxonomy And Reporting Harness | Establish the defect-reporting structure, bug schema, index, and audit rules used by all later slices. | BOUND-01, BOUND-02, BOUND-03, HARN-01, HARN-02, HARN-03, HARN-04, BUG-01, BUG-02, BUG-03, CLASS-01, CLASS-02, CLASS-03, EVID-01, EVID-02, EVID-03, SLICE-01, SLICE-02, SLICE-03, NFIX-01, NFIX-02, NFIX-03 | Verified |
 | 2 | Bootstrap Router Config Audit | Audit `/blu`, `new-project`, `help`, `progress`, `next`, `settings`, `set-profile`, `health`, map-first readiness, catalog routing, and config behavior. | COV-01, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Executed |
-| 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Validated |
+| 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Ready For Validation |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -123,7 +123,7 @@
 3. Missing prerequisite and safe-degradation paths are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
 
-**Execution status:** executed on 2026-05-01; no confirmed or likely defects were found and the phase is ready for validation.
+**Execution status:** validated on 2026-05-01; no confirmed or likely defects were found across Plans 01 through 05.
 
 ### Phase 4: Roadmap Capture Lightweight Audit
 
@@ -143,11 +143,29 @@
 - `src/mcp/tools/phase.ts`, `src/mcp/tools/artifacts.ts`, `src/mcp/tools/review.ts`
 - roadmap, backlog, todo, note, debug, and quick tests
 
+**Plan artifacts:**
+- Wave 1: `04-01-PLAN.md` audits roadmap mutation safety for `add-phase`, `insert-phase`, `remove-phase`, and `plan-milestone-gaps`.
+- Wave 2 *(blocked on Wave 1 completion)*: `04-02-PLAN.md` audits milestone report and carry-forward flows for `audit-milestone`, `complete-milestone`, `milestone-summary`, and `new-milestone`.
+- Wave 3 *(blocked on Wave 2 completion)*: `04-03-PLAN.md` audits capture indexes and backlog promotion for notes, todos, backlog, review-backlog, and explore.
+- Wave 4 *(blocked on Wave 3 completion)*: `04-04-PLAN.md` audits `fast` and `quick` lightweight execution boundaries.
+- Wave 5 *(blocked on Wave 4 completion)*: `04-05-PLAN.md` audits `debug`, reconciles Phase 4 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+- Execution evidence: `04-01-SUMMARY.md`, `04-02-SUMMARY.md`,
+  `04-03-SUMMARY.md`, `04-04-SUMMARY.md`, and `04-05-SUMMARY.md` are now
+  saved in the phase directory.
+
+**Cross-cutting constraints:**
+- Preserve discovery-only execution: Phase 4 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, skill, test, build, generated asset, runtime `.blueprint/`, installed-extension, host-global, remote-service, or command behavior defects.
+- Prefer static contract review plus targeted existing tests before any disposable runtime probe.
+- Roadmap mutation findings must check preview parity, destructive confirmations, partial-failure recovery, and MCP-returned state routing before conclusion.
+- All follow-up routing in findings and summaries must stay inside implemented Blueprint commands.
+
 **Success criteria:**
 1. Add/insert/remove phase behavior, milestone closeout, and gap planning are checked.
 2. Capture indexes and duplicate/status handling are checked.
 3. Quick, fast, and debug report/follow-up boundaries are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** execution complete on 2026-05-01; no confirmed or likely defects were found across Plans 01 through 05 and the phase is ready for validation.
 
 ### Phase 5: Review Quality Impact Shipping Audit
 
