@@ -28,9 +28,18 @@ Mark duplicate findings with `status: duplicate` and link them to the
 canonical bug instead of silently repeating the same defect. Use the related
 bug links to show shared root causes, downstream fallout, or overlapping evidence.
 
+## Illustrative Example
+
+- [`BPBUG-000-illustrative-example.md`](./BPBUG-000-illustrative-example.md)
+  demonstrates the report format only.
+- `BPBUG-000` is excluded from real defect totals and must not be used as repair evidence.
+- `BPBUG-001` remains the next real bug id.
+
 ## Discovery-Only Guardrails
 
 No source, manifest, skill, test, generated asset, or runtime behavior fixes are applied during this milestone.
+
+No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
 
 Later phases must document findings and suggested repair directions without
 turning the audit into source-fix work.
@@ -45,7 +54,7 @@ unrelated pre-existing user changes separately and do not revert them.
 
 | Phase | Surfaces Examined | Surfaces Deferred | Bug IDs |
 |-------|-------------------|-------------------|---------|
-| Phase 1 | bug reporting harness, template, index, illustrative example boundary | workflow-specific Blueprint audit surfaces | BPBUG-000 reserved example only |
+| Phase 1 | bug reporting harness, template, index, illustrative example boundary | workflow-specific Blueprint audit surfaces | BPBUG-000 illustrative only; BPBUG-001 reserved next real bug id |
 | Phase 2 | pending | pending | pending |
 | Phase 3 | pending | pending | pending |
 | Phase 4 | pending | pending | pending |
