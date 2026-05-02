@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: Phase 7 - Host Packaging Build Hooks Audit
-status: validated_partial
-stopped_at: Phase 7 validation partial
+current_phase: Phase 8 - Cross-Cut Drift And Regression Gaps
+status: validated
+stopped_at: Ready for Phase 8 planning
 last_updated: "2026-05-02T10:39:28Z"
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 32
   completed_plans: 32
-  percent: 67
+  percent: 78
 ---
 
 # Blueprint Defect Discovery State
 
 **Project status:** initialized
 **Current milestone:** Blueprint Defect Discovery Milestone
-**Current phase:** Phase 7 - Host Packaging Build Hooks Audit
+**Current phase:** Phase 8 - Cross-Cut Drift And Regression Gaps
 **Active command:** none
-**Last successful command:** $gsd-validate-phase 7 (partial)
-**Next suggested action:** Repair BPBUG-004, then rerun `$gsd-validate-phase 7`
+**Last successful command:** $gsd-validate-phase 7
+**Next suggested action:** Begin Phase 8 planning with `$gsd-plan-phase 8`
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,12 +29,9 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 7 validation is partial. The phase audited Gemini and
-Tabnine extension manifests, the build pipeline, generated `dist`, advisory
-hooks, package scripts, and install or smoke readiness behavior, and recorded
-BPBUG-004 for stale tracked build outputs. Validation coverage now detects that
-defect through `tests/built-schema-assets.test.ts`, but the targeted Phase 7
-subset cannot pass until the tracked generated bundle is repaired.
+**Current focus:** Phase 8 planning is next. Phase 7 is validated after
+repairing BPBUG-004; the tracked generated bundle now includes the audit-fix
+schema asset, and the Phase 7 targeted validation subset passes.
 
 ## Workflow Preferences
 
@@ -70,9 +67,15 @@ subset cannot pass until the tracked generated bundle is repaired.
 | 4 | Roadmap Capture Lightweight Audit | Validated |
 | 5 | Review Quality Impact Shipping Audit | Validated |
 | 6 | Workspace Maintenance Audit | Validated |
-| 7 | Host Packaging Build Hooks Audit | Validated (Partial) |
+| 7 | Host Packaging Build Hooks Audit | Validated |
 | 8 | Cross-Cut Drift And Regression Gaps | Pending |
 | 9 | Bug Index Priority Review | Pending |
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260502-bpbug-004-dist-refresh | Repair BPBUG-004 by refreshing the tracked dist bundle so it includes the audit-fix generated schema asset | 2026-05-02 | 350e87a | [260502-bpbug-004-dist-refresh](./quick/260502-bpbug-004-dist-refresh/) |
 
 ## Recent Activity
 
@@ -113,15 +116,17 @@ subset cannot pass until the tracked generated bundle is repaired.
 - 2026-05-02: Executed Phase 7 Plan 03 and confirmed advisory hook policy, bundled hook config, shared security reuse, and focused hook/security tests aligned with no confirmed or likely defect.
 - 2026-05-02: Executed Phase 7 Plan 04 and confirmed clean-home smoke readiness with passing fake-CLI tests while documenting Docker as the containerized install integration blocker.
 - 2026-05-02: Closed out Phase 7 by reconciling BPBUG-004, updating the bug index slice row, preserving the discovery-only boundary, and preparing the phase for validation.
-- 2026-05-02: Rechecked Phase 7 Nyquist coverage. The targeted validation subset still has 26 passing tests and 1 failing generated-asset freshness test, so Phase 7 remains validated partial pending BPBUG-004 repair.
+- 2026-05-02: Rechecked Phase 7 Nyquist coverage before repair. The targeted validation subset still had 26 passing tests and 1 failing generated-asset freshness test, so Phase 7 remained validated partial at that point.
+- 2026-05-02: Repaired BPBUG-004 in a fresh worktree by running `npm ci`, rebuilding `dist/`, and committing the generated audit-fix schema asset plus rebuilt bundle outputs.
+- 2026-05-02: Reran Phase 7 validation after BPBUG-004 repair; the targeted Phase 7 subset passed with 27 passing tests and 0 failures, so Phase 7 is now Nyquist-compliant.
 
 ## Session Continuity
 
 **Last session:** 2026-05-02T08:45:43.266Z
 **Last Date:** 2026-05-02T08:45:43.266Z
-**Stopped At:** Phase 7 validation partial
+**Stopped At:** Ready for Phase 8 planning
 **Resume File:** .planning/ROADMAP.md
 
 ## Next Step
 
-Repair BPBUG-004's stale tracked generated bundle, then rerun `$gsd-validate-phase 7`.
+Begin Phase 8 planning with `$gsd-plan-phase 8`.
