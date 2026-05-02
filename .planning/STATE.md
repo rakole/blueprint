@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: Phase 6 - Workspace Maintenance Audit
-status: ready_for_planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-05-02T08:46:08.002Z"
+status: ready_to_execute
+stopped_at: Phase 6 planned
+last_updated: "2026-05-02T08:51:03.000Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 22
+  total_plans: 27
   completed_plans: 22
   percent: 56
 ---
@@ -20,8 +20,8 @@ progress:
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 6 - Workspace Maintenance Audit
 **Active command:** none
-**Last successful command:** $gsd-discuss-phase 6
-**Next suggested action:** $gsd-plan-phase 6
+**Last successful command:** $gsd-plan-phase 6
+**Next suggested action:** $gsd-execute-phase 6
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,7 +29,7 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 5 validation is complete. Phase 6 is next and will audit
+**Current focus:** Phase 6 is planned and ready to execute. It will audit
 workspace, workstream, cleanup, update, patch replay, registry, worktree, and
 host-global state behavior.
 
@@ -66,7 +66,7 @@ host-global state behavior.
 | 3 | Core Lifecycle Audit | Validated |
 | 4 | Roadmap Capture Lightweight Audit | Validated |
 | 5 | Review Quality Impact Shipping Audit | Validated |
-| 6 | Workspace Maintenance Audit | Pending |
+| 6 | Workspace Maintenance Audit | Planned |
 | 7 | Host Packaging Build Hooks Audit | Pending |
 | 8 | Cross-Cut Drift And Regression Gaps | Pending |
 | 9 | Bug Index Priority Review | Pending |
@@ -100,14 +100,15 @@ host-global state behavior.
 - 2026-05-02: Executed Phase 5 Plans 01 through 05 with targeted review, remediation/docs, impact, and high-risk git workflow audits.
 - 2026-05-02: Recorded BPBUG-001 for under-constrained `ship-latest` and `undo-latest` report contracts, updated the Phase 5 bug-index slice row, and moved the phase to validation-ready bookkeeping.
 - 2026-05-02: Validated Phase 5 Nyquist coverage against `05-VALIDATION.md`, found no gaps, and advanced to Phase 6 discovery.
+- 2026-05-02: Planned Phase 6 with research, validation strategy, pattern map, and five executable plans covering workspace registry/teardown, workstream snapshot integrity, cleanup protected-scope behavior, advisory update plus patch replay, and closeout/no-fix verification.
 
 ## Session Continuity
 
 **Last session:** 2026-05-02T08:45:43.266Z
 **Last Date:** 2026-05-02T08:45:43.266Z
-**Stopped At:** Phase 6 context gathered
-**Resume File:** .planning/phases/06-workspace-maintenance-audit/06-CONTEXT.md
+**Stopped At:** Phase 6 planned
+**Resume File:** .planning/phases/06-workspace-maintenance-audit/06-01-PLAN.md
 
 ## Next Step
 
-Run `$gsd-plan-phase 6` to plan Phase 6 workspace maintenance audit discovery.
+Run `$gsd-execute-phase 6` to execute Phase 6 workspace maintenance audit discovery.

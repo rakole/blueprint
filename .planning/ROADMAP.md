@@ -13,7 +13,7 @@
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Planned |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -220,11 +220,27 @@
 - `src/mcp/tools/workspace.ts`, `src/mcp/tools/update.ts`, runtime host helpers
 - workspace, workstream, cleanup, update, and patch tests
 
+**Plan artifacts:**
+- Wave 1: `06-01-PLAN.md` audits `new-workspace` and `remove-workspace` registry atomicity, create/remove rollback, worktree/clone safety, exact target resolution, and host-global workspace boundaries.
+- Wave 2 *(blocked on Wave 1 completion)*: `06-02-PLAN.md` audits project-local workstream state, canonical index/state validation, waiting states, dirty-tree active transitions, and resume snapshot restoration.
+- Wave 3 *(blocked on Wave 2 completion)*: `06-03-PLAN.md` audits cleanup protected-scope behavior, closeout evidence, report-before-mutate ordering, destination/overwrite gates, and partial filesystem failure visibility.
+- Wave 4 *(blocked on Wave 3 completion)*: `06-04-PLAN.md` audits advisory update boundaries and patch replay preview/replay/audit behavior.
+- Wave 5 *(blocked on Waves 1-4 completion)*: `06-05-PLAN.md` reconciles Phase 6 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+
+**Cross-cutting constraints:**
+- Preserve discovery-only execution: Phase 6 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, skill, test, build, generated asset, runtime `.blueprint/`, installed-extension, host-global, workspace, patch-registry, branch, PR, remote-service, or git-history defects.
+- Keep host-global operational state bounded to `~/.<host>/blueprint/` for workspace registry, update metadata, and patch registry behavior.
+- Keep workstream state project-local under `.blueprint/workstreams/` and do not reintroduce global workstream indexes, `.planning/` ownership, or workstream config toggles.
+- Treat destructive maintenance flows as preview-confirm-mutate-validate flows and file bugs when visible confirmation, exact target, dirty-tree, rollback, or report-before-mutate guarantees are under-constrained.
+- Prefer static contract review plus targeted existing tests before disposable probes; any probe must use disposable temp roots and document cleanup.
+
 **Success criteria:**
 1. Host-global registry boundaries and transactional behavior are checked.
 2. Dirty-tree, confirmation, rollback, and compatibility blockers are checked.
 3. Advisory update and patch registry behavior are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** planned on 2026-05-02; ready to execute Phase 6 discovery.
 
 ### Phase 7: Host Packaging Build Hooks Audit
 
@@ -292,4 +308,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-01 after initialization*
+*Last updated: 2026-05-02 after Phase 6 planning*
