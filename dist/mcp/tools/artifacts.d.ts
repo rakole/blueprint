@@ -195,10 +195,24 @@ type ArtifactReportWriteArgs = {
     content?: string;
     model?: Record<string, unknown>;
     overwrite?: boolean;
+    auditFixContext?: {
+        source: AuditFixReportSource;
+        severity: AuditFixReportSeverityFilter;
+        maxAttempts: number;
+        dryRun: boolean;
+        scopeFiles: string[];
+    };
 };
 type ArtifactReportAuthoringContextArgs = {
     cwd?: string;
     reportName: string;
+    auditFixContext?: {
+        source: AuditFixReportSource;
+        severity: AuditFixReportSeverityFilter;
+        maxAttempts: number;
+        dryRun: boolean;
+        scopeFiles: string[];
+    };
 };
 type ArtifactReportValidateModelArgs = ArtifactReportAuthoringContextArgs & {
     model: unknown;
@@ -239,6 +253,20 @@ type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
+type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
+type AuditFixReportSeverityFilter = "medium" | "high" | "all";
+type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+type AuditFixReportReadiness = "ready-for-routing" | "not-ready-for-routing" | "blocked";
+type AuditFixReportCompletionState = "complete" | "pending" | "blocked";
+type AuditFixFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
+type AuditFixClassification = "auto-fixable" | "manual-only" | "skip";
+type AuditFixChangeStatus = "fixed" | "planned" | "failed" | "skipped" | "none";
+type AuditFixVerificationResult = "pass" | "fail" | "blocked" | "not-run" | "reread-only";
+type AuditFixDependencyStatus = "satisfied" | "pending" | "blocked";
+type AuditFixManualStatus = "MANUAL" | "DEFERRED" | "NONE";
+type AuditFixGapStatus = "OPEN" | "BLOCKED" | "NONE";
+type AuditFixEvidenceKind = "review" | "security" | "verification" | "uat" | "summary" | "scope" | "git" | "command" | "other";
+type AuditFixTodoStatus = "captured" | "declined" | "not-needed" | "blocked";
 type AddTestsReportModel = {
     status: AddTestsReportStatus;
     readiness: AddTestsReportReadiness;
@@ -313,16 +341,89 @@ type AddTestsReportModel = {
     };
     nextSafeAction: string;
 };
-type AddTestsReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-type AddTestsReportDiagnostic = {
-    source: AddTestsReportDiagnosticSource;
+type AuditFixReportModel = {
+    status: AuditFixReportStatus;
+    readiness: AuditFixReportReadiness;
+    completionState: AuditFixReportCompletionState;
+    remediationSummary: string[];
+    summaryEvidence: Record<string, {
+        planId: string;
+        linkedPlanPath: string;
+        summaryStatus: "COMPLETED";
+        targetedVerification: string[];
+        coverageNote: string;
+    }>;
+    classification: Array<{
+        findingId: string;
+        evidenceSource: string;
+        severity: AuditFixFindingSeverity;
+        classification: AuditFixClassification;
+        reason: string;
+        implicatedFiles: string[];
+        narrowVerification: string;
+    }>;
+    changesApplied: Array<{
+        findingId: string;
+        status: AuditFixChangeStatus;
+        changedFiles: string[];
+        summary: string;
+    }>;
+    verification: Array<{
+        findingId: string;
+        check: string;
+        command: string;
+        result: AuditFixVerificationResult;
+        evidence: string;
+    }>;
+    pendingPlans: Array<{
+        planId: string;
+        path: string;
+        reason: string;
+    }>;
+    dependencyPlans: Array<{
+        planId: string;
+        path: string;
+        status: AuditFixDependencyStatus;
+        evidence: string;
+    }>;
+    manualOrDeferredWork: Array<{
+        item: string;
+        reason: string;
+        followUp: string;
+        status: AuditFixManualStatus;
+    }>;
+    gapRoutes: Array<{
+        gap: string;
+        evidence: string;
+        repair: string;
+        status: AuditFixGapStatus;
+    }>;
+    followUpFixes: string[];
+    evidence: Array<{
+        kind: AuditFixEvidenceKind;
+        source: string;
+        summary: string;
+    }>;
+    commitTraceability: {
+        preFixHead: string;
+        createdCommits: string[];
+    };
+    todoCapture: {
+        status: AuditFixTodoStatus;
+        evidence: string;
+    };
+    nextSafeAction: string;
+};
+type ArtifactReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type ArtifactReportDiagnostic = {
+    source: ArtifactReportDiagnosticSource;
     path: string;
     code: string;
     message: string;
     context: Record<string, unknown>;
     suggestion: string;
 };
-type AddTestsReportAuthoringContextResult = {
+type ArtifactReportAuthoringContextResult = {
     status: "ready" | "invalid";
     reportName: string;
     path: string;
@@ -348,6 +449,14 @@ type AddTestsReportAuthoringContextResult = {
         path: string;
     }>;
     validationEvidencePaths: string[];
+    selectedEvidencePaths: string[];
+    scopeFiles: string[];
+    auditFixContext: {
+        source: AuditFixReportSource;
+        severity: AuditFixReportSeverityFilter;
+        maxAttempts: number;
+        dryRun: boolean;
+    } | null;
     allowedNextActions: string[];
     schemaPath: string | null;
     baseSchema: Record<string, unknown> | null;
@@ -357,16 +466,16 @@ type AddTestsReportAuthoringContextResult = {
     reason: string | null;
     warnings: string[];
 };
-type AddTestsReportValidateModelResult = {
+type ArtifactReportValidateModelResult = {
     status: "valid" | "invalid";
     valid: boolean;
     reportName: string;
     path: string;
-    phase: AddTestsReportAuthoringContextResult["phase"];
+    phase: ArtifactReportAuthoringContextResult["phase"];
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
-    diagnostics: AddTestsReportDiagnostic[];
-    normalizedModel: AddTestsReportModel | null;
+    diagnostics: ArtifactReportDiagnostic[];
+    normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
     renderPreview: string | null;
     warnings: string[];
 };
@@ -530,8 +639,8 @@ export declare function blueprintArtifactMutateIndex(args: ArtifactMutateIndexAr
 export declare function blueprintArtifactValidate(args?: ArtifactValidateArgs): Promise<ArtifactValidateResult>;
 export declare function blueprintArtifactSummaryDigest(args?: ArtifactSummaryDigestArgs): Promise<ArtifactSummaryDigestResult>;
 export declare function blueprintArtifactContractRead(args?: ArtifactContractReadArgs): Promise<ArtifactContractReadResult>;
-export declare function blueprintArtifactReportAuthoringContext(args: ArtifactReportAuthoringContextArgs): Promise<AddTestsReportAuthoringContextResult>;
-export declare function blueprintArtifactReportValidateModel(args: ArtifactReportValidateModelArgs): Promise<AddTestsReportValidateModelResult>;
+export declare function blueprintArtifactReportAuthoringContext(args: ArtifactReportAuthoringContextArgs): Promise<ArtifactReportAuthoringContextResult>;
+export declare function blueprintArtifactReportValidateModel(args: ArtifactReportValidateModelArgs): Promise<ArtifactReportValidateModelResult>;
 export declare function blueprintArtifactReportWrite(args: ArtifactReportWriteArgs): Promise<ArtifactReportWriteResult>;
 export declare function blueprintCodebaseArtifactWrite(args: ArtifactCodebaseWriteArgs): Promise<ArtifactCodebaseWriteResult>;
 export declare const artifactToolDefinitions: ({
@@ -611,8 +720,8 @@ export declare const artifactToolDefinitions: ({
             requirements: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 id: z.ZodString;
                 scope: z.ZodOptional<z.ZodEnum<{
-                    committed: "committed";
                     deferred: "deferred";
+                    committed: "committed";
                     out_of_scope: "out_of_scope";
                 }>>;
                 group: z.ZodOptional<z.ZodString>;
@@ -673,9 +782,9 @@ export declare const artifactToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         target: z.ZodEnum<{
+            note: "note";
             backlog: "backlog";
             todo: "todo";
-            note: "note";
         }>;
         action: z.ZodOptional<z.ZodEnum<{
             append: "append";
@@ -737,8 +846,25 @@ export declare const artifactToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         reportName: z.ZodString;
+        auditFixContext: z.ZodOptional<z.ZodObject<{
+            source: z.ZodEnum<{
+                review: "review";
+                verification: "verification";
+                uat: "uat";
+                security: "security";
+                all: "all";
+            }>;
+            severity: z.ZodEnum<{
+                high: "high";
+                all: "all";
+                medium: "medium";
+            }>;
+            maxAttempts: z.ZodNumber;
+            dryRun: z.ZodBoolean;
+            scopeFiles: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
     };
-    handler: (args: Record<string, unknown>) => Promise<AddTestsReportAuthoringContextResult>;
+    handler: (args: Record<string, unknown>) => Promise<ArtifactReportAuthoringContextResult>;
 } | {
     name: string;
     description: string;
@@ -746,8 +872,25 @@ export declare const artifactToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         reportName: z.ZodString;
         model: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        auditFixContext: z.ZodOptional<z.ZodObject<{
+            source: z.ZodEnum<{
+                review: "review";
+                verification: "verification";
+                uat: "uat";
+                security: "security";
+                all: "all";
+            }>;
+            severity: z.ZodEnum<{
+                high: "high";
+                all: "all";
+                medium: "medium";
+            }>;
+            maxAttempts: z.ZodNumber;
+            dryRun: z.ZodBoolean;
+            scopeFiles: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
     };
-    handler: (args: Record<string, unknown>) => Promise<AddTestsReportValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<ArtifactReportValidateModelResult>;
 } | {
     name: string;
     description: string;
@@ -757,6 +900,23 @@ export declare const artifactToolDefinitions: ({
         content: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
+        auditFixContext: z.ZodOptional<z.ZodObject<{
+            source: z.ZodEnum<{
+                review: "review";
+                verification: "verification";
+                uat: "uat";
+                security: "security";
+                all: "all";
+            }>;
+            severity: z.ZodEnum<{
+                high: "high";
+                all: "all";
+                medium: "medium";
+            }>;
+            maxAttempts: z.ZodNumber;
+            dryRun: z.ZodBoolean;
+            scopeFiles: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ArtifactReportWriteResult>;
 })[];
