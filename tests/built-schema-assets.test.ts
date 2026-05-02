@@ -20,6 +20,31 @@ async function assertGitTracksPath(relativePath: string): Promise<void> {
   }
 }
 
+async function assertTrackedDistIsCommittedCleanly(): Promise<void> {
+  const status = await execFileAsync(
+    "git",
+    ["status", "--short", "--untracked-files=no", "--", "dist"],
+    {
+      cwd: repoRoot
+    }
+  );
+  const dirtyEntries = status.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  assert.deepEqual(
+    dirtyEntries,
+    [],
+    [
+      "Tracked dist outputs changed after build and must be committed cleanly.",
+      "Git-installed Blueprint extension hosts launch the checked-in dist bundle directly.",
+      "Dirty dist entries:",
+      ...dirtyEntries
+    ].join("\n")
+  );
+}
+
 test("tracked dist schema inventory mirrors source artifact-contract schemas", async () => {
   const sourceSchemaDir = path.join(repoRoot, "src", "mcp", "artifact-contracts", "schemas");
   const distSchemaDir = path.join(repoRoot, "dist", "mcp", "artifact-contracts", "schemas");
@@ -45,4 +70,8 @@ test("tracked dist schema inventory mirrors source artifact-contract schemas", a
     });
     await assertGitTracksPath(distRelativePath);
   }
+});
+
+test("tracked dist outputs stay committed after build refreshes generated assets", async () => {
+  await assertTrackedDistIsCommittedCleanly();
 });
