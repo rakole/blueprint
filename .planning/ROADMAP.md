@@ -16,7 +16,7 @@
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Ready for validation |
-| 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Planned |
 
 ## Phase Details
 
@@ -329,11 +329,25 @@
 
 **UI hint:** no
 
+**Plan artifacts:**
+- Wave 1: `09-01-PLAN.md` creates the inventory/status freshness baseline, reconciles BPBUG-004 against the later quick repair evidence, and writes `09-INVENTORY-REVIEW.md`.
+- Wave 2 *(blocked on Wave 1 completion)*: `09-02-PLAN.md` applies the duplicate-vs-related policy and updates explicit duplicate/related-bug trail evidence.
+- Wave 3 *(blocked on Wave 2 completion)*: `09-03-PLAN.md` creates the repair-priority bands, repair batches, and verification-questions lane in `docs/bugs/INDEX.md` and `09-REPAIR-QUEUE.md`.
+- Wave 4 *(blocked on Wave 3 completion)*: `09-04-PLAN.md` closes the Phase 9 index slice, updates workflow bookkeeping, and verifies the discovery-only boundary.
+
+**Cross-cutting constraints:**
+- Preserve the existing BPBUG evidence trail and template vocabulary while adding repair-priority and duplicate-status views.
+- Separate active repair candidates from repaired/history items before ranking; BPBUG-004 must be checked against the quick repair and Phase 7 validation rerun before priority assignment.
+- Mark duplicates only when both the user-visible defect and repair path match; root-cause clusters remain relatedness signals.
+- Keep Phase 9 discovery-only: no source, manifest, skill, test, generated-asset, runtime `.blueprint/`, installed-extension, host-global, branch, PR, remote, or git-history fix is applied.
+
 **Success criteria:**
 1. `docs/bugs/INDEX.md` links every bug report and records severity, confidence, affected surface, status, and discovery phase.
 2. Duplicates and related bugs are marked and cross-linked.
 3. Highest-priority repair candidates are summarized without implementing fixes.
 4. Remaining verification questions are listed separately from confirmed defects.
+
+**Planning status:** planned on 2026-05-02 with research, validation strategy, pattern map, and four executable plans.
 
 ## Coverage Validation
 
@@ -341,4 +355,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 8 execution*
+*Last updated: 2026-05-02 after Phase 9 planning*

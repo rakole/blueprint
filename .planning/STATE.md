@@ -2,26 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: Phase 8 - Cross-Cut Drift And Regression Gaps
-status: ready_to_validate
-stopped_at: Phase 9 context gathered
-last_updated: "2026-05-02T12:31:24.494Z"
+current_phase: Phase 9 - Bug Index Priority Review
+status: ready_to_execute
+stopped_at: Phase 9 planned
+last_updated: "2026-05-02T14:32:27Z"
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 37
+  total_plans: 41
   completed_plans: 37
-  percent: 100
+  percent: 90
 ---
 
 # Blueprint Defect Discovery State
 
 **Project status:** initialized
 **Current milestone:** Blueprint Defect Discovery Milestone
-**Current phase:** Phase 8 - Cross-Cut Drift And Regression Gaps
+**Current phase:** Phase 9 - Bug Index Priority Review
 **Active command:** none
-**Last successful command:** $gsd-execute-phase 8
-**Next suggested action:** Validate Phase 8 with `$gsd-validate-phase 8`
+**Last successful command:** $gsd-plan-phase 9
+**Next suggested action:** Execute Phase 9 with `$gsd-execute-phase 9`
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,10 +29,10 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 8 execution is complete and ready for validation. The
-cross-layer drift and regression-gap passes found no new duplicate defects,
-Plan 03 added BPBUG-005 for weak repo-root validation, and Phase 9 priority
-review remains deferred until Phase 8 validation completes.
+**Current focus:** Phase 9 planning is complete. The priority-review plan will
+reconcile the full BPBUG inventory, separate repaired/history items from active
+repair candidates, preserve duplicate-vs-related policy, and summarize repair
+batches without applying fixes.
 
 ## Workflow Preferences
 
@@ -70,7 +70,7 @@ review remains deferred until Phase 8 validation completes.
 | 6 | Workspace Maintenance Audit | Validated |
 | 7 | Host Packaging Build Hooks Audit | Validated |
 | 8 | Cross-Cut Drift And Regression Gaps | Ready for validation |
-| 9 | Bug Index Priority Review | Pending |
+| 9 | Bug Index Priority Review | Planned |
 
 ### Quick Tasks Completed
 
@@ -126,14 +126,15 @@ review remains deferred until Phase 8 validation completes.
 - 2026-05-02: Executed Phase 8 Plan 03 and recorded BPBUG-005 because the shared repo-root guard accepts a fake `.git` entry as a valid repository.
 - 2026-05-02: Executed Phase 8 Plan 04 and added practical root-cause cluster links for BPBUG-001 through BPBUG-005 without marking any report duplicate.
 - 2026-05-02: Closed out Phase 8 by updating the bug-index slice row, state, roadmap, and validation handoff; Phase 8 is now ready for `$gsd-validate-phase 8`.
+- 2026-05-02: Planned Phase 9 with research, validation strategy, pattern map, and four executable plans covering inventory/status freshness, duplicate and related-bug review, repair-priority batches, verification questions, and no-fix closeout.
 
 ## Session Continuity
 
-**Last session:** 2026-05-02T12:31:24.491Z
-**Last Date:** 2026-05-02T12:31:24.491Z
-**Stopped At:** Phase 9 context gathered
-**Resume File:** .planning/phases/09-bug-index-priority-review/09-CONTEXT.md
+**Last session:** 2026-05-02T14:32:27Z
+**Last Date:** 2026-05-02T14:32:27Z
+**Stopped At:** Phase 9 planned
+**Resume File:** .planning/phases/09-bug-index-priority-review/09-01-PLAN.md
 
 ## Next Step
 
-Validate Phase 8 with `$gsd-validate-phase 8`.
+Execute Phase 9 with `$gsd-execute-phase 9`.
