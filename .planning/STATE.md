@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: Phase 7 - Host Packaging Build Hooks Audit
-status: ready_to_plan
-stopped_at: Phase 6 validated
-last_updated: "2026-05-02T09:34:55Z"
+status: ready_to_validate
+stopped_at: Phase 7 executed
+last_updated: "2026-05-02T09:58:47Z"
 progress:
   total_phases: 9
   completed_phases: 6
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 32
+  completed_plans: 32
   percent: 67
 ---
 
@@ -20,8 +20,8 @@ progress:
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 7 - Host Packaging Build Hooks Audit
 **Active command:** none
-**Last successful command:** $gsd-validate-phase 6
-**Next suggested action:** $gsd-plan-phase 7
+**Last successful command:** $gsd-execute-phase 7
+**Next suggested action:** $gsd-validate-phase 7
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,9 +29,10 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 7 is next and ready to plan. It will audit Gemini and
-Tabnine extension manifests, the build pipeline, generated `dist`, advisory
-hooks, package scripts, and install or smoke readiness behavior.
+**Current focus:** Phase 7 execution is complete and ready for validation. The
+phase audited Gemini and Tabnine extension manifests, the build pipeline,
+generated `dist`, advisory hooks, package scripts, and install or smoke
+readiness behavior, and recorded BPBUG-004 for stale tracked build outputs.
 
 ## Workflow Preferences
 
@@ -55,7 +56,7 @@ hooks, package scripts, and install or smoke readiness behavior.
 
 ## Blockers
 
-(None)
+- Docker is unavailable locally, so `npm run test:integration:extension` remained an environment blocker during Phase 7 Plan 04.
 
 ## Phase Status
 
@@ -67,7 +68,7 @@ hooks, package scripts, and install or smoke readiness behavior.
 | 4 | Roadmap Capture Lightweight Audit | Validated |
 | 5 | Review Quality Impact Shipping Audit | Validated |
 | 6 | Workspace Maintenance Audit | Validated |
-| 7 | Host Packaging Build Hooks Audit | Pending |
+| 7 | Host Packaging Build Hooks Audit | Ready for Validation |
 | 8 | Cross-Cut Drift And Regression Gaps | Pending |
 | 9 | Bug Index Priority Review | Pending |
 
@@ -104,14 +105,20 @@ hooks, package scripts, and install or smoke readiness behavior.
 - 2026-05-02: Executed Phase 6 Plans 01 through 05 with targeted workspace, workstream, cleanup, advisory update, and patch replay audits.
 - 2026-05-02: Recorded BPBUG-002 for missing cleanup behavioral regression coverage and BPBUG-003 for stale shared MCP update-tool docs, updated the Phase 6 bug-index slice row, and preserved the discovery-only boundary.
 - 2026-05-02: Validated Phase 6 Nyquist coverage against `06-VALIDATION.md`, confirmed no remaining validation gaps, and advanced the milestone bookkeeping to Phase 7 planning.
+- 2026-05-02: Planned Phase 7 with research, validation strategy, pattern map, and five executable plans covering host manifests, build/generated assets, advisory hooks, install/smoke readiness, and bug-index/no-fix closeout.
+- 2026-05-02: Executed Phase 7 Plan 01 and confirmed the Gemini/Tabnine manifests, shared host metadata, runtime operator guide, and focused runtime-contract tests aligned with no confirmed or likely defect.
+- 2026-05-02: Executed Phase 7 Plan 02, recorded BPBUG-004 for stale tracked build outputs that omit audit-fix generated assets, updated the bug index, and restored rebuilt `dist/` outputs after capturing evidence.
+- 2026-05-02: Executed Phase 7 Plan 03 and confirmed advisory hook policy, bundled hook config, shared security reuse, and focused hook/security tests aligned with no confirmed or likely defect.
+- 2026-05-02: Executed Phase 7 Plan 04 and confirmed clean-home smoke readiness with passing fake-CLI tests while documenting Docker as the containerized install integration blocker.
+- 2026-05-02: Closed out Phase 7 by reconciling BPBUG-004, updating the bug index slice row, preserving the discovery-only boundary, and preparing the phase for validation.
 
 ## Session Continuity
 
 **Last session:** 2026-05-02T08:45:43.266Z
 **Last Date:** 2026-05-02T08:45:43.266Z
-**Stopped At:** Phase 6 validated
+**Stopped At:** Phase 7 executed
 **Resume File:** .planning/ROADMAP.md
 
 ## Next Step
 
-Run `$gsd-plan-phase 7` to plan Phase 7 host packaging, build, and hooks discovery.
+Run `$gsd-validate-phase 7` to validate the Phase 7 host packaging, build, hooks, and install-readiness audit.
