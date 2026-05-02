@@ -76,6 +76,22 @@ Fresh reruns passed for all five Phase 9 targeted validation commands:
 
 No additional test-generation work is required for Phase 9 Nyquist coverage. This phase is a discovery-only planning and bug-board reconciliation slice whose locked acceptance criteria are already expressed as deterministic grep/status audits plus explicit manual judgment gates for duplicate policy, repair ordering, and follow-up separation. The current artifact set satisfies those requirements without touching source, manifests, skills, or runtime files.
 
+## Validation Audit 2026-05-02 - Bookkeeping Recheck
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Generated test files | 0 |
+
+Follow-up recheck during `$gsd-validate-phase 9`: reran all five targeted
+Phase 9 validation commands and confirmed they still pass against the current
+artifact set. No new automated coverage was needed, no implementation files
+were touched, and the remaining work was limited to aligning
+`.planning/ROADMAP.md` and `.planning/STATE.md` with the already-complete Phase
+9 validation result.
+
 ## Validation Sign-Off Checklist
 
 - [x] All planned tasks have an automated, grep, or status verification command.

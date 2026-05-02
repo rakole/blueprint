@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: Phase 9 - Bug Index Priority Review
-status: ready_to_validate
-stopped_at: Phase 9 executed
-last_updated: "2026-05-02T14:44:29Z"
+status: ready_to_audit_milestone
+stopped_at: Phase 9 validated
+last_updated: "2026-05-02T15:06:32Z"
 progress:
   total_phases: 9
   completed_phases: 9
@@ -20,8 +20,8 @@ progress:
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 9 - Bug Index Priority Review
 **Active command:** none
-**Last successful command:** $gsd-execute-phase 9
-**Next suggested action:** Validate Phase 9 with `$gsd-validate-phase 9`
+**Last successful command:** $gsd-validate-phase 9
+**Next suggested action:** Audit the milestone with `$gsd-audit-milestone`
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,10 +29,10 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 9 execution is complete. The bug inventory now
-separates active repair candidates from verified repaired/history evidence,
-records an explicit no-duplicate outcome, and summarizes repair batches without
-applying fixes.
+**Current focus:** Phases 8 and 9 are now Nyquist-validated. The bug inventory
+is reconciled, separates active repair candidates from verified
+repaired/history evidence, records an explicit no-duplicate outcome, and is
+ready for milestone audit without applying fixes.
 
 ## Workflow Preferences
 
@@ -69,8 +69,8 @@ applying fixes.
 | 5 | Review Quality Impact Shipping Audit | Validated |
 | 6 | Workspace Maintenance Audit | Validated |
 | 7 | Host Packaging Build Hooks Audit | Validated |
-| 8 | Cross-Cut Drift And Regression Gaps | Ready for validation |
-| 9 | Bug Index Priority Review | Ready for validation |
+| 8 | Cross-Cut Drift And Regression Gaps | Validated |
+| 9 | Bug Index Priority Review | Validated |
 
 ### Quick Tasks Completed
 
@@ -128,14 +128,15 @@ applying fixes.
 - 2026-05-02: Closed out Phase 8 by updating the bug-index slice row, state, roadmap, and validation handoff; Phase 8 is now ready for `$gsd-validate-phase 8`.
 - 2026-05-02: Planned Phase 9 with research, validation strategy, pattern map, and four executable plans covering inventory/status freshness, duplicate and related-bug review, repair-priority batches, verification questions, and no-fix closeout.
 - 2026-05-02: Executed Phase 9 by reconciling BPBUG-004 into verified repaired/history evidence, recording that no duplicate reports or open verification questions remain, adding repair-priority bands and repair batches, and routing the milestone to `$gsd-validate-phase 9`.
+- 2026-05-02: Re-ran the targeted Phase 9 Nyquist validation checks, confirmed no new gaps, advanced Phases 8 and 9 to validated bookkeeping, and routed the milestone to `$gsd-audit-milestone`.
 
 ## Session Continuity
 
-**Last session:** 2026-05-02T14:44:29Z
-**Last Date:** 2026-05-02T14:44:29Z
-**Stopped At:** Phase 9 executed
-**Resume File:** .planning/phases/09-bug-index-priority-review/09-04-SUMMARY.md
+**Last session:** 2026-05-02T15:06:32Z
+**Last Date:** 2026-05-02T15:06:32Z
+**Stopped At:** Phase 9 validated
+**Resume File:** .planning/phases/09-bug-index-priority-review/09-VALIDATION.md
 
 ## Next Step
 
-Validate Phase 9 with `$gsd-validate-phase 9`.
+Audit the milestone with `$gsd-audit-milestone`.

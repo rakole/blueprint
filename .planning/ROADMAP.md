@@ -15,8 +15,8 @@
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Ready for validation |
-| 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Planned |
+| 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Validated |
+| 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
 
 ## Phase Details
 
@@ -317,7 +317,7 @@
 3. Shared root-cause clusters are linked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
 
-**Execution status:** ready for validation on 2026-05-02. Plans 01 and 02 found no new duplicate drift or regression-gap bug beyond the already-open BPBUG-001, BPBUG-002, and BPBUG-003 findings, BPBUG-004 is now historical repaired-state evidence with active parity guards in the current tree, Plan 03 recorded BPBUG-005 for weak repo-root validation, and Plan 04 added a practical root-cause cluster board for BPBUG-001 through BPBUG-005.
+**Execution status:** validated on 2026-05-02. Plans 01 and 02 found no new duplicate drift or regression-gap bug beyond the already-open BPBUG-001, BPBUG-002, and BPBUG-003 findings, BPBUG-004 is now historical repaired-state evidence with active parity guards in the current tree, Plan 03 recorded BPBUG-005 for weak repo-root validation, and Plan 04 added a practical root-cause cluster board for BPBUG-001 through BPBUG-005. The targeted Phase 8 validation subsets, grep audits, and disposable proof probe passed with no remaining Nyquist gaps.
 
 ### Phase 9: Bug Index Priority Review
 
@@ -347,7 +347,7 @@
 3. Highest-priority repair candidates are summarized without implementing fixes.
 4. Remaining verification questions are listed separately from confirmed defects.
 
-**Execution status:** ready for validation on 2026-05-02. Plan 01 created the inventory/status-freshness ledger and moved BPBUG-004 into verified repaired/history evidence, Plan 02 recorded an explicit no-duplicate outcome, Plan 03 added repair-priority bands plus repair batches and confirmed no open verification questions remain, and Plan 04 updated the canonical bug board plus workflow bookkeeping without creating new bug ids.
+**Execution status:** validated on 2026-05-02. Plan 01 created the inventory/status-freshness ledger and moved BPBUG-004 into verified repaired/history evidence, Plan 02 recorded an explicit no-duplicate outcome, Plan 03 added repair-priority bands plus repair batches and confirmed no open verification questions remain, and Plan 04 updated the canonical bug board plus workflow bookkeeping without creating new bug ids. The five targeted Phase 9 grep/status validation checks passed with no remaining Nyquist gaps.
 
 ## Coverage Validation
 
@@ -355,4 +355,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 9 execution*
+*Last updated: 2026-05-02 after Phase 9 validation*
