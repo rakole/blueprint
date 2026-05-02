@@ -1,0 +1,24 @@
+# Phase 8 Risk-Backed Regression Gaps
+
+Discovery-only artifact. This ledger records high-risk recurrence gaps and current guard evidence without adding or changing tests during Phase 8.
+
+| Risk Area | Existing Guard | Missing Guard | Failure Mode | Disposition | Related Bug Or Note |
+|---|---|---|---|---|---|
+| BPBUG-001 ship/undo durable evidence recurrence | `tests/ship-metadata.test.ts` and `tests/undo-metadata.test.ts` keep command, skill, and runtime-reference strings aligned. | No populated-report validation or minimal-report rejection protects `report.ship` and `report.undo`; `placeholderSignals` remain empty in `src/mcp/artifact-contracts/index.ts`. | High-risk push, PR, and revert reports can still validate while omitting the durable evidence the manifests require. | confirmed bug | BPBUG-001 |
+| BPBUG-002 cleanup protected-scope recurrence | `tests/cleanup-metadata.test.ts` plus `tests/cleanup-tools.test.ts` cover report persistence, canonical headings, and digest scope. | No cleanup orchestration regression proves protected exclusions, report-before-mutate sequencing, overwrite gates, or partial-failure preservation end to end. | A destructive cleanup regression can still slip past a green test suite because the command-level safety path is not behaviorally exercised. | confirmed bug | BPBUG-002 |
+| BPBUG-003 shared update-doc recurrence | `tests/update-tools.test.ts` exercises the live update result shape, and `tests/update-metadata.test.ts` keeps the command and tool names present in docs. | No doc-to-runtime field-shape regression prevents `docs/MCP-TOOLS.md` from drifting away from the live update-tool return schema. | Shared MCP docs can remain misleading even while runtime tests stay green. | confirmed bug | BPBUG-003 |
+| BPBUG-004 generated `dist` freshness recurrence | `tests/built-schema-assets.test.ts` asserts tracked schema parity, `tests/built-assets-smoke.test.ts` exercises the built bundle, and `tests/impact-tools.test.ts` warns when runtime source changes lack `dist` coverage. | No new material gap was confirmed in the current tree. | Historical generated-asset freshness drift should fail earlier in the targeted bundle-parity checks that now exist. | aligned | BPBUG-004 historical repaired state |
+| Workspace create/remove host-global safety | `tests/workspace-tools.test.ts` covers registry locking, rollback, dirty-tree blockers, registry drift, malformed registries, and installed-extension target refusal. | No material missing guard was evidenced in the current tree. | Host-global registry or workspace teardown regressions should surface through the existing behavioral workspace suite. | aligned | none |
+| Patch replay destructive blockers | `tests/patch-tools.test.ts` covers dirty-tree, compatibility-mismatch, and conflict-stop behavior, and `tests/reapply-patches-metadata.test.ts` keeps prompt contracts aligned. | No material missing guard was evidenced in the current tree. | Patch replay regressions should stop before mutation through the existing patch-tool safeguards. | aligned | none |
+| Impact low-confidence and unknown handling | `tests/impact-tools.test.ts` covers structured unknowns, low-confidence description-only scope, sensitive-area blocking, and PASS/WARN/BLOCK logic. | No material missing guard was evidenced in the current tree. | Impact analysis remains explicit about unknowns and confidence instead of inventing safe conclusions. | aligned | none |
+| Large-repo performance regression coverage | Impact tests cover correctness and low-confidence routing, but not pathological time or memory envelopes for huge repos or lockfiles. | No bounded performance regression harness proves acceptable runtime on very large repos. | Large-repo slowdown remains a real tuning concern, but Phase 8 did not find concrete misleading output or a user-visible correctness failure. | non-bug note | Carry to Phase 9 performance review |
+
+## Decision Coverage
+
+- `D-05` Only recurrence gaps that still protect high-risk or user-visible behavior remained classified as bugs.
+- `D-06` Large-repo performance concerns stayed as notes instead of being inflated into new bug reports.
+- `D-07` The ledger prioritized prior bug recurrence, destructive safety gates, generated assets, and user-visible tool contracts.
+- `D-08` Each confirmed gap names the specific missing guard and the failure mode that can still escape.
+- `D-17` Existing defects were carried forward only where the current tree still shows the same missing guard or stale contract evidence.
+- `D-18` No source, manifest, skill, test, generated-asset, runtime, branch, PR, remote, or host-global fix was applied while building this ledger.
+- `D-19` No temporary probe files were created for this ledger; all evidence came from checked-in source, docs, tests, and targeted suite output.

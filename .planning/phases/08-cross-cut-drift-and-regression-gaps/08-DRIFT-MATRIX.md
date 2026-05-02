@@ -1,0 +1,23 @@
+# Phase 8 Cross-Layer Drift Matrix
+
+Discovery-only artifact. This matrix records cross-layer contract drift evidence for Phase 8 without applying source, manifest, skill, test, generated-asset, runtime, branch, or host-state fixes.
+
+| Surface Family | Expected Contract | Observed Evidence | Risk Tag | Disposition | Related Bug Or Note |
+|---|---|---|---|---|---|
+| router/readiness | `docs/DECISIONS.md` keeps `/blu` and `/blu-<command>` locked, `.blueprint/` remains runtime state, and `/blu`, `help`, `progress`, and `next` recommend implemented commands only. | `tests/command-contract-docs.test.ts`, `tests/command-catalog.test.ts`, and `tests/extension-runtime-contracts.test.ts` all passed on 2026-05-02 with 103 passing tests, including the implemented-only routing and runtime-contract-resource checks. | implemented-only routing | aligned | none |
+| lifecycle | Discovery, planning, execution, and validation docs, manifests, skills, runtime references, and summary tools should stay synchronized. | The same 103-test contract suite passed, and `execute-phase` runtime-contract assertions still cover lower-wave gating, summary tools, and implemented-only routing without surfacing new drift. | lifecycle contract sync | aligned | none |
+| roadmap/capture/lightweight execution | Wave 2 and Wave 3 shipped command metadata should match per-command specs, primary skills, and runtime tool registration. | The command-catalog and command-doc suites passed for roadmap administration, capture, `fast`, `quick`, and `debug`; no new metadata or routing drift was surfaced in the current tree. | shipped metadata sync | aligned | none |
+| review/impact/shipping | High-risk maintenance manifests and docs should match canonical report contracts and focused tests. | `commands/blu-ship.toml` and `commands/blu-undo.toml` still require richer durable evidence than `report.ship` and `report.undo` enforce in `src/mcp/artifact-contracts/index.ts`, and `tests/ship-metadata.test.ts` plus `tests/undo-metadata.test.ts` remain metadata-only. This is the existing confirmed drift already captured in BPBUG-001. | high-risk report contract drift | confirmed bug | BPBUG-001 |
+| workspace/maintenance | Workspace, cleanup, update, and patch-replay command docs and runtime references should stay aligned with shipped behavior and registered tools. | Workspace create/remove behavior remains well-covered by `tests/workspace-tools.test.ts`, and patch replay has dedicated metadata plus `tests/patch-tools.test.ts` coverage. The only material mismatch touching this family is the shared MCP update-doc row tracked separately below. | maintenance contract sync | aligned | See shared MCP docs/tests row |
+| packaging/hooks/generated assets | The tracked `dist/` bundle, copied schemas, host manifests, and built runtime smoke should match current source and install contracts. | `tests/built-schema-assets.test.ts` and `tests/built-assets-smoke.test.ts` passed on 2026-05-02, and the tracked `dist` schema inventory currently mirrors source. BPBUG-004 remains useful as historical evidence, but the current tree no longer shows fresh packaging drift. | generated-asset freshness | aligned | BPBUG-004 historical repaired state |
+| shared MCP docs/tests | Shared MCP docs should describe the same tool return shapes the runtime and focused tests treat as canonical. | `docs/MCP-TOOLS.md` still advertises `installSource`, `jsonPath`, and `markdownPath` for the update tools, while `docs/commands/update.md`, `src/mcp/tools/update.ts`, and `tests/update-tools.test.ts` all use `installProvenance`, `savedPaths`, and richer advisory metadata. This is the existing confirmed docs/runtime drift already captured in BPBUG-003. | shared tool docs drift | confirmed bug | BPBUG-003 |
+
+## Decision Coverage
+
+- `D-01` Phase 8 used one cross-layer matrix spanning docs, manifests, skills, runtime source, tests, and generated assets.
+- `D-02` Only material mismatches that can mislead a user, model, runtime caller, or later repair planner stayed classified as bugs.
+- `D-03` The matrix is grouped by prior surface families rather than by an exhaustive per-command rerun.
+- `D-04` The audit reused prior clean slices and re-checked only the shared contract layers touched by cross-cut evidence.
+- `D-17` Existing findings were carried forward only when they still had concrete source, doc, test, or generated-output evidence in the current tree.
+- `D-18` No source, manifest, skill, test, generated-asset, runtime, branch, PR, remote, or host-global fix was applied while building this matrix.
+- `D-20` No planned-only or non-routable Blueprint command is recommended as the immediate remediation path for the recorded drift.

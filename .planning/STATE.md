@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_phase: Phase 8 - Cross-Cut Drift And Regression Gaps
-status: validated
-stopped_at: Phase 8 context gathered
-last_updated: "2026-05-02T11:04:23.703Z"
+status: ready_to_validate
+stopped_at: Phase 8 executed
+last_updated: "2026-05-02T11:34:36.000Z"
 progress:
   total_phases: 9
   completed_phases: 7
-  total_plans: 32
-  completed_plans: 32
+  total_plans: 37
+  completed_plans: 37
   percent: 100
 ---
 
@@ -20,8 +20,8 @@ progress:
 **Current milestone:** Blueprint Defect Discovery Milestone
 **Current phase:** Phase 8 - Cross-Cut Drift And Regression Gaps
 **Active command:** none
-**Last successful command:** $gsd-validate-phase 7
-**Next suggested action:** Begin Phase 8 planning with `$gsd-plan-phase 8`
+**Last successful command:** $gsd-execute-phase 8
+**Next suggested action:** Validate Phase 8 with `$gsd-validate-phase 8`
 **Last updated:** 2026-05-02
 
 ## Project Reference
@@ -29,9 +29,10 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-01)
 
 **Core value:** Every meaningful current Blueprint defect is captured as a detailed, evidence-backed bug document that can later drive safe, prioritized fixes.
-**Current focus:** Phase 8 planning is next. Phase 7 is validated after
-repairing BPBUG-004; the tracked generated bundle now includes the audit-fix
-schema asset, and the Phase 7 targeted validation subset passes.
+**Current focus:** Phase 8 execution is complete and ready for validation. The
+cross-layer drift and regression-gap passes found no new duplicate defects,
+Plan 03 added BPBUG-005 for weak repo-root validation, and Phase 9 priority
+review remains deferred until Phase 8 validation completes.
 
 ## Workflow Preferences
 
@@ -68,7 +69,7 @@ schema asset, and the Phase 7 targeted validation subset passes.
 | 5 | Review Quality Impact Shipping Audit | Validated |
 | 6 | Workspace Maintenance Audit | Validated |
 | 7 | Host Packaging Build Hooks Audit | Validated |
-| 8 | Cross-Cut Drift And Regression Gaps | Pending |
+| 8 | Cross-Cut Drift And Regression Gaps | Ready for validation |
 | 9 | Bug Index Priority Review | Pending |
 
 ### Quick Tasks Completed
@@ -119,14 +120,20 @@ schema asset, and the Phase 7 targeted validation subset passes.
 - 2026-05-02: Rechecked Phase 7 Nyquist coverage before repair. The targeted validation subset still had 26 passing tests and 1 failing generated-asset freshness test, so Phase 7 remained validated partial at that point.
 - 2026-05-02: Repaired BPBUG-004 in a fresh worktree by running `npm ci`, rebuilding `dist/`, and committing the generated audit-fix schema asset plus rebuilt bundle outputs.
 - 2026-05-02: Reran Phase 7 validation after BPBUG-004 repair; the targeted Phase 7 subset passed with 27 passing tests and 0 failures, so Phase 7 is now Nyquist-compliant.
+- 2026-05-02: Planned Phase 8 with research, validation strategy, pattern map, and five executable plans covering cross-layer contract drift, risk-backed regression gaps, concern-map triage, root-cause clustering, and closeout/no-fix verification.
+- 2026-05-02: Executed Phase 8 Plan 01 and confirmed no new material cross-layer drift beyond the existing BPBUG-001 and BPBUG-003 findings.
+- 2026-05-02: Executed Phase 8 Plan 02 and confirmed BPBUG-001, BPBUG-002, and BPBUG-003 remain the active regression-gap defects while BPBUG-004 now has parity guards in the current tree.
+- 2026-05-02: Executed Phase 8 Plan 03 and recorded BPBUG-005 because the shared repo-root guard accepts a fake `.git` entry as a valid repository.
+- 2026-05-02: Executed Phase 8 Plan 04 and added practical root-cause cluster links for BPBUG-001 through BPBUG-005 without marking any report duplicate.
+- 2026-05-02: Closed out Phase 8 by updating the bug-index slice row, state, roadmap, and validation handoff; Phase 8 is now ready for `$gsd-validate-phase 8`.
 
 ## Session Continuity
 
 **Last session:** 2026-05-02T11:04:23.696Z
 **Last Date:** 2026-05-02T11:04:23.696Z
-**Stopped At:** Phase 8 context gathered
-**Resume File:** .planning/phases/08-cross-cut-drift-and-regression-gaps/08-CONTEXT.md
+**Stopped At:** Phase 8 executed
+**Resume File:** .planning/phases/08-cross-cut-drift-and-regression-gaps/08-05-SUMMARY.md
 
 ## Next Step
 
-Begin Phase 8 planning with `$gsd-plan-phase 8`.
+Validate Phase 8 with `$gsd-validate-phase 8`.

@@ -15,7 +15,7 @@
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Ready for validation |
 | 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
 
 ## Phase Details
@@ -296,11 +296,28 @@
 - `.planning/codebase/CONCERNS.md`
 - all relevant tests and generated assets identified in previous phases
 
+**Plan artifacts:**
+- Wave 1: `08-01-PLAN.md` creates the cross-layer drift matrix and audits docs, catalog, command manifests, skills, MCP docs, runtime catalog/source, and focused contract tests.
+- Wave 1: `08-02-PLAN.md` creates the risk-backed regression-gap ledger and audits prior bug recurrence, high-risk guards, generated asset freshness, and nearby test coverage.
+- Wave 2 *(blocked on Wave 1 completion)*: `08-03-PLAN.md` triages `.planning/codebase/CONCERNS.md` leads for parser, schema, filesystem, security, and scaling risks.
+- Wave 3 *(blocked on Wave 2 completion)*: `08-04-PLAN.md` links BPBUG-001 through BPBUG-004 and any new Phase 8 findings into practical root-cause clusters.
+- Wave 4 *(blocked on Wave 3 completion)*: `08-05-PLAN.md` reconciles Phase 8 bug reports, updates the bug index slice row, verifies no-fix boundaries, and routes to validation.
+- Execution evidence: `08-01-SUMMARY.md`, `08-02-SUMMARY.md`, `08-03-SUMMARY.md`, `08-04-SUMMARY.md`, and `08-05-SUMMARY.md` are now saved in the phase directory.
+
+**Cross-cutting constraints:**
+- Preserve discovery-only execution: Phase 8 may write bug reports, bug index updates, planning matrix/ledger/triage artifacts, and execution summaries, but must not fix source, manifests, skills, agents, tests, scripts, hooks, generated assets, runtime `.blueprint/`, installed extensions, host-global state, branches, PRs, remotes, or git history.
+- File drift bugs only for material mismatches that can mislead a user, model, test, installer, runtime caller, or later repair planner; keep low-impact wording drift as non-bug notes.
+- File regression-gap bugs only when the missing guard protects high-risk behavior, prior bug recurrence, generated asset freshness, destructive safety gates, or user-visible runtime contracts.
+- Keep concern-map leads evidence-backed and label uncertainty explicitly; speculative security, TOCTOU, filesystem, and performance concerns remain risk notes unless concrete impact is found.
+- Preserve distinct bug identities while adding root-cause cluster links; mark duplicates only when both the defect and repair path match.
+
 **Success criteria:**
 1. Docs/source/test drift findings are separated from confirmed runtime behavior bugs.
 2. Missing regression coverage is documented as bugs or test-gap reports where it creates risk.
 3. Shared root-cause clusters are linked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** ready for validation on 2026-05-02. Plans 01 and 02 found no new duplicate drift or regression-gap bug beyond the already-open BPBUG-001, BPBUG-002, and BPBUG-003 findings, BPBUG-004 is now historical repaired-state evidence with active parity guards in the current tree, Plan 03 recorded BPBUG-005 for weak repo-root validation, and Plan 04 added a practical root-cause cluster board for BPBUG-001 through BPBUG-005.
 
 ### Phase 9: Bug Index Priority Review
 
@@ -324,4 +341,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 7 partial validation*
+*Last updated: 2026-05-02 after Phase 8 execution*
