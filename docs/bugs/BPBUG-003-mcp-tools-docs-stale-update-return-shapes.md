@@ -73,7 +73,7 @@ None known. The mismatch is confirmed by direct comparison of the shared MCP doc
 
 ## Related Bugs
 
-None known.
+- Root-cause cluster: `docs/runtime synchronization`. This bug remains the anchor for the shared-tool-doc drift cluster; no duplicate or same-repair-path peer is currently known.
 
 ## No Fix Applied
 

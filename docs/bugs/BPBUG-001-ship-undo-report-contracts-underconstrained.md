@@ -130,7 +130,7 @@ None known. The contract mismatch is confirmed by source inspection, focused met
 
 ## Related Bugs
 
-None known.
+- Root-cause cluster: `under-specified contracts`. This bug remains the anchor for that cluster; no duplicate or same-repair-path peer is currently known.
 
 ## No Fix Applied
 

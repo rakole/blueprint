@@ -85,7 +85,7 @@ None known. The coverage gap is confirmed by command/doc inspection, cleanup-spe
 
 ## Related Bugs
 
-None known.
+- Root-cause cluster: `missing regression guards`. This bug remains the anchor for the destructive-orchestration regression-gap cluster; no duplicate or same-repair-path peer is currently known.
 
 ## No Fix Applied
 

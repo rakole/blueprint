@@ -14,6 +14,7 @@ relationships, and keeps the milestone discovery-only.
 | BPBUG-002 | Cleanup lacks behavioral regression coverage for protected-scope archival | medium | confirmed | tests | new | 6 | An implemented high-risk cleanup flow can regress current-phase protection, active-roadmap exclusions, or report-before-mutate ordering without any cleanup-specific behavioral test catching it. | Cleanup shipped with manifest and metadata coverage, but no dedicated behavior-level regression for its destructive orchestration path. | [BPBUG-002](./BPBUG-002-cleanup-lacks-behavioral-regression-coverage.md) |
 | BPBUG-003 | MCP tool docs advertise stale return shapes for update tools | low | confirmed | docs | new | 6 | Shared MCP docs can mislead callers about the live `blueprint_update_check` and `blueprint_update_plan` fields, hiding update provenance, restart, and saved-path details the runtime actually returns. | The update implementation and tests evolved, but `docs/MCP-TOOLS.md` kept older summary rows instead of the live result shapes. | [BPBUG-003](./BPBUG-003-mcp-tools-docs-stale-update-return-shapes.md) |
 | BPBUG-004 | Tracked built bundle is stale and omits audit-fix generated assets | high | confirmed | generated assets | new | 7 | Git-installed hosts launch a tracked `dist/` bundle that lags the implemented `audit-fix` source contract, including a missing copied schema asset and regenerated server or declaration output. | Source-side `audit-fix` contract and schema changes landed without a matching committed `dist/` refresh, and packaging tests only asserted bundle presence and startup rather than generated-asset freshness. | [BPBUG-004](./BPBUG-004-stale-built-bundle-omits-audit-fix-generated-assets.md) |
+| BPBUG-005 | Repo-root guard accepts any `.git` entry as a valid repository | medium | confirmed | cross-cutting | new | 8 | Blueprint can falsely treat arbitrary directories as valid repo roots, which weakens a shared safety boundary and can create `.blueprint/` state or later git-dependent failures in non-repo directories. | The shared `ensureRepoRoot()` helper stayed as a `.git`-existence check even as more MCP tools began depending on it as a real repository-boundary guard. | [BPBUG-005](./BPBUG-005-repo-root-guard-accepts-any-git-entry.md) |
 
 `BPBUG-000` is reserved for the illustrative non-real example and is excluded
 from real defect totals.
@@ -30,6 +31,17 @@ from real defect totals.
 Mark duplicate findings with `status: duplicate` and link them to the
 canonical bug instead of silently repeating the same defect. Use the related
 bug links to show shared root causes, downstream fallout, or overlapping evidence.
+
+## Root Cause Clusters
+
+| Cluster | Bug IDs | Shared Cause | Preventive Repair Direction |
+|---------|---------|--------------|-----------------------------|
+| under-specified contracts | BPBUG-001 | High-risk report contracts stayed broader than the evidence the shipping and undo manifests require. | Tighten canonical report schemas, placeholder signals, and populated-report regression checks. |
+| missing regression guards | BPBUG-002 | Destructive or sequencing-sensitive behavior shipped with metadata coverage but without behavior-level regression proof. | Add executable command-level regression coverage for protected-scope and report-before-mutate flows. |
+| docs/runtime synchronization | BPBUG-003 | Shared tool docs drifted behind the live runtime and focused tests. | Cross-check shared docs against runtime result shapes and focused tool suites. |
+| generated-asset freshness | BPBUG-004 | Source-side contract changes outpaced the tracked `dist/` bundle and copied schema inventory. | Require tracked `dist` freshness and schema-parity checks for Git-installed host bundles. |
+| repo-root validation gaps | BPBUG-005 | Shared repo-root gating trusts `.git` presence instead of validating a real repository boundary. | Replace existence-only repo-root checks with Git-backed validation and add fake-`.git` regression coverage. |
+| cross-layer contract synchronization gaps | none new in Phase 8 | Phase 8 re-checked docs, manifests, skills, runtime, tests, and generated assets together and found only the already-indexed contract drift defects above. | Keep matrix-based cross-layer re-checks in future discovery or repair follow-ups so new drift does not fragment across surfaces. |
 
 ## Illustrative Example
 
@@ -64,7 +76,7 @@ unrelated pre-existing user changes separately and do not revert them.
 | Phase 5 | review artifact quality for `code-review`, `secure-phase`, `review`, and `ui-review` (Plan 01); remediation and docs mutation safety for `code-review-fix`, `audit-fix`, and `docs-update` (Plan 02); impact analysis depth, scaling, report validation, and output rendering for `impact` (Plan 03); high-risk git workflow safety for `pr-branch`, `ship`, and `undo` (Plan 04); closeout and no-fix boundary verification (Plan 05) | workspace, maintenance, packaging, generated assets, hooks, host install, and cross-cut drift slices | BPBUG-001 |
 | Phase 6 | workspace create/remove commands `new-workspace` and `remove-workspace` (Plan 01); `workstreams` registry, status, and state transition coverage (Plan 02); `cleanup` protected-scope archival and confirmation safety (Plan 03); advisory `update` and `reapply-patches` flows plus shared MCP update-tool docs (Plan 04); closeout and no-fix boundary verification (Plan 05) | packaging, generated `dist`, hooks, install/smoke, and cross-cut drift slices | BPBUG-002, BPBUG-003 |
 | Phase 7 | host manifests and shared metadata (Plan 01); build pipeline, generated `dist`, copied schemas, and built runtime smoke (Plan 02); advisory hook config and shared security behavior (Plan 03); clean-home smoke and containerized install-readiness contracts (Plan 04); closeout and no-fix boundary verification (Plan 05) | cross-cut docs/runtime drift and duplicated root-cause analysis to Phase 8; final priority review to Phase 9; containerized install execution remains environment-blocked until Docker is available | BPBUG-004 |
-| Phase 8 | pending | pending | pending |
+| Phase 8 | cross-cut docs/runtime drift (Plan 01); risk-backed regression gaps (Plan 02); concern-map triage (Plan 03); root-cause clusters (Plan 04); closeout and no-fix verification (Plan 05) | final repair prioritization deferred to Phase 9; lower-risk concern-map performance notes and deliberate `BLUEPRINT_TEST_*` env-toggle uncertainty stayed as notes instead of new bugs | BPBUG-005 |
 | Phase 9 | pending | pending | pending |
 
 Later phases should update their slice row when they complete even if no bugs

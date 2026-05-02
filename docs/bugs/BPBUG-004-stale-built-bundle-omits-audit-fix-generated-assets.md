@@ -89,7 +89,7 @@ None known. The stale-built-bundle defect is confirmed by direct comparison of i
 
 ## Related Bugs
 
-None known.
+- Root-cause cluster: `generated-asset freshness`. This bug remains the anchor for the tracked-bundle freshness cluster; no duplicate or same-repair-path peer is currently known.
 
 ## No Fix Applied
 
