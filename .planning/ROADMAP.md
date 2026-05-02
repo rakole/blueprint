@@ -13,7 +13,7 @@
 | 3 | Core Lifecycle Audit | Audit phase discovery, planning, execution, validation, UAT, add-tests, checkpoints, summaries, and state transitions. | COV-02, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Planned |
+| 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
@@ -240,7 +240,7 @@
 3. Advisory update and patch registry behavior are checked.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
 
-**Execution status:** planned on 2026-05-02; ready to execute Phase 6 discovery.
+**Execution status:** validated on 2026-05-02; BPBUG-002 and BPBUG-003 were recorded during execution, Phase 6 Nyquist coverage was rechecked in `06-VALIDATION.md`, and the phase is ready to begin Phase 7 planning.
 
 ### Phase 7: Host Packaging Build Hooks Audit
 
@@ -308,4 +308,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 6 planning*
+*Last updated: 2026-05-02 after Phase 6 validation*
