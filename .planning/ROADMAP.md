@@ -14,7 +14,7 @@
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Planned |
+| 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Ready for Validation |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
 
@@ -264,6 +264,7 @@
 - Wave 2 *(blocked on Wave 1 completion)*: `07-03-PLAN.md` audits advisory hook configuration, stdin/stdout behavior, shared security reuse, and hook regression coverage.
 - Wave 3 *(blocked on Wave 2 completion)*: `07-04-PLAN.md` audits clean-home smoke behavior, staged install bundles, link/install metadata, and optional host/auth integration blockers.
 - Wave 4 *(blocked on Waves 1-3 completion)*: `07-05-PLAN.md` reconciles Phase 7 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+- Execution evidence: `07-01-SUMMARY.md`, `07-02-SUMMARY.md`, `07-03-SUMMARY.md`, `07-04-SUMMARY.md`, and `07-05-SUMMARY.md` are now saved in the phase directory.
 
 **Cross-cutting constraints:**
 - Preserve discovery-only execution: Phase 7 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, hook, script, package, test, build, generated asset, runtime `.blueprint/`, installed-extension, host-global, branch, PR, remote-service, or git-history defects.
@@ -276,6 +277,8 @@
 2. Gemini/Tabnine host env wiring is checked.
 3. Advisory hook behavior is checked against docs and tests.
 4. All confirmed or likely defects are documented in `docs/bugs/*.md`.
+
+**Execution status:** ready for validation on 2026-05-02; BPBUG-004 was recorded for a stale tracked build bundle that omits audit-fix generated assets, no confirmed or likely defects were found in Plans 01, 03, and 04, and Plan 04 documented Docker as an environment blocker for the containerized install integration run.
 
 ### Phase 8: Cross-Cut Drift And Regression Gaps
 
@@ -321,4 +324,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 6 validation*
+*Last updated: 2026-05-02 after Phase 7 execution*
