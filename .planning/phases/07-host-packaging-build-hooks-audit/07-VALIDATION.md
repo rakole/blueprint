@@ -1,8 +1,8 @@
 ---
 phase: 7
 slug: host-packaging-build-hooks-audit
-status: planned
-nyquist_compliant: true
+status: complete
+nyquist_compliant: false
 wave_0_complete: true
 created: 2026-05-02
 ---
@@ -15,7 +15,7 @@ created: 2026-05-02
 |----------|-------|
 | Framework | Node test runner via `tsx --test`; package scripts through npm |
 | Config file | `package.json`, `tsconfig.json` |
-| Quick run command | `npx tsx --test tests/extension-runtime-contracts.test.ts tests/built-assets-smoke.test.ts tests/hooks.test.ts tests/security-hardening.test.ts tests/security-docs.test.ts tests/gemini-clean-home-smoke.test.ts` |
+| Quick run command | `npx tsx --test tests/extension-runtime-contracts.test.ts tests/built-assets-smoke.test.ts tests/built-schema-assets.test.ts tests/hooks.test.ts tests/security-hardening.test.ts tests/security-docs.test.ts tests/gemini-clean-home-smoke.test.ts` |
 | Full suite command | `npm test` |
 | Integration command | `npm run test:integration:extension` |
 | Estimated runtime | Not recorded. Plans should record actual pass/fail, skip, or environment blockers. |
@@ -31,7 +31,7 @@ created: 2026-05-02
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 7-01-01 | 01 | 1 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-01 | Host manifests and shared host metadata are audited without mutating installed extension state. | contract/read audit | `npx tsx --test tests/extension-runtime-contracts.test.ts` | yes | covered |
-| 7-02-01 | 02 | 1 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-02 | Build and generated-asset defects are documented without committing generated fixes. | build/smoke audit | `npm run build` plus `npx tsx --test tests/built-assets-smoke.test.ts` | yes | covered |
+| 7-02-01 | 02 | 1 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-02 | Build and generated-asset defects are documented without committing generated fixes. | build/smoke audit | `npx tsx --test tests/built-assets-smoke.test.ts tests/built-schema-assets.test.ts` | yes | partial |
 | 7-03-01 | 03 | 2 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-03 | Hook defects are documented while hooks remain advisory and non-state-owning. | regression/read audit | `npx tsx --test tests/hooks.test.ts tests/security-hardening.test.ts tests/security-docs.test.ts` | yes | covered |
 | 7-04-01 | 04 | 3 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-04 | Install and smoke defects are documented using disposable staging roots, clean homes, containers, or fake CLIs. | smoke/integration audit | `npx tsx --test tests/gemini-clean-home-smoke.test.ts` and, when available, `npm run test:integration:extension` | yes | covered |
 | 7-05-01 | 05 | 4 | COV-06, NFIX-01, NFIX-02, NFIX-03 | T-05 | Phase 7 closeout reconciles bug docs and confirms no-fix boundaries. | status/index audit | `rg -n "Phase 7|packaging|build|hooks|install|smoke|dist|manifest" docs/bugs/INDEX.md` plus `git status --short` | yes | covered |
@@ -44,10 +44,33 @@ Targeted infrastructure covers all Phase 7 validation requirements.
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Generated asset freshness | COV-06, NFIX-01 | Tests can prove built assets run, but the audit must decide whether source-to-dist drift is a defect without preserving generated fixes. | Run `npm run build`, inspect `git status --short`, and document any generated diff as evidence only. Do not commit generated asset changes during this discovery phase. |
+| Generated rebuild cleanliness | COV-06, NFIX-01 | `tests/built-schema-assets.test.ts` now proves the tracked schema inventory is incomplete, but the broader `npm run build` leaves tracked `dist/` diffs that still require human review and cleanup evidence rather than an auto-kept fix. | Run `npm run build`, inspect `git status --short` and `git diff --stat -- dist`, and document any generated diff as evidence only. Do not commit generated asset changes during this discovery phase. |
 | Host CLI integration skips | COV-06, NFIX-02 | Docker, Tabnine CLI install command, and Gemini API auth may be absent in the local environment. | Run available fake or container tests. Record missing Docker, `BLUEPRINT_TABNINE_CLI_INSTALL_COMMAND`, or `GEMINI_API_KEY` as environment blockers unless manifest or script behavior itself is defective. |
 | Advisory-only hook posture | COV-06 | Hook tests can assert selected outputs, but the audit must compare docs, config, and implementation boundaries. | Verify every hook either returns `{}` or `decision: "allow"` and that enforcement remains in MCP/shared security docs rather than hooks. |
 | Discovery-only boundary | NFIX-01, NFIX-03 | Requires inspecting local git status and separating unrelated changes. | Run `git status --short`; verify intentional changes are limited to `docs/bugs/` and `.planning/phases/07-host-packaging-build-hooks-audit/`. |
+
+## Validation Audit 2026-05-02
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 1 |
+| Resolved | 1 |
+| Escalated | 1 |
+| Generated test files | 1 |
+
+| Evidence | Count |
+|----------|-------|
+| Phase-7 targeted test files executed | 7 |
+| Phase-7 targeted test cases executed | 27 |
+| Targeted test failures | 1 |
+
+Recheck (2026-05-02): the existing Phase 7 validation draft was stale. It still marked the phase `planned`, claimed `nyquist_compliant: true`, and treated Plan 02 as fully covered even though `BPBUG-004` explicitly recorded that the tracked `dist` bundle was missing `dist/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json` and no automated test asserted schema-inventory parity.
+
+That gap is now closed at the validation-surface level by `tests/built-schema-assets.test.ts`, which compares every source artifact-contract schema under `src/mcp/artifact-contracts/schemas/` against the checked-in `dist/mcp/artifact-contracts/schemas/` bundle and also requires each copied schema file to be Git-tracked. This gives Plan 02 a real automated regression, but it currently fails against the known product defect from `BPBUG-004`, so Phase 7 remains validated-but-partial rather than Nyquist-compliant.
+
+The fresh targeted validation run exited with 26 passing tests and 1 failing test under `npx tsx --test tests/extension-runtime-contracts.test.ts tests/built-assets-smoke.test.ts tests/built-schema-assets.test.ts tests/hooks.test.ts tests/security-hardening.test.ts tests/security-docs.test.ts tests/gemini-clean-home-smoke.test.ts`. The only failure is `tests/built-schema-assets.test.ts`, which reports that `dist/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json` is missing even though the matching source schema exists. Plans 01, 03, 04, and 05 remain green; Plan 02 is the only partial slice until the stale generated bundle is repaired.
+
+Bug-index validation still passes: `BPBUG-004` remains the only real `discovery_phase: 7` bug report and is indexed in `docs/bugs/INDEX.md`. At validation time, `git status --short` is limited to this validation update plus `tests/built-schema-assets.test.ts`; implementation files remain untouched.
 
 ## Validation Sign-Off Checklist
 
@@ -55,5 +78,8 @@ Targeted infrastructure covers all Phase 7 validation requirements.
 - [x] Sampling continuity: each plan has at least one targeted verification probe.
 - [x] Wave 0 covers all missing references.
 - [x] No watch-mode flags.
-- [x] `nyquist_compliant: true` set in frontmatter.
+- [ ] `nyquist_compliant: true` set in frontmatter.
 
+**Approval:** partial validation recorded on 2026-05-02
+
+**Manual sign-off:** pending BPBUG-004 repair and rerun of the Phase 7 targeted subset
