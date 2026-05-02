@@ -347,7 +347,7 @@
 3. Highest-priority repair candidates are summarized without implementing fixes.
 4. Remaining verification questions are listed separately from confirmed defects.
 
-**Planning status:** planned on 2026-05-02 with research, validation strategy, pattern map, and four executable plans.
+**Execution status:** ready for validation on 2026-05-02. Plan 01 created the inventory/status-freshness ledger and moved BPBUG-004 into verified repaired/history evidence, Plan 02 recorded an explicit no-duplicate outcome, Plan 03 added repair-priority bands plus repair batches and confirmed no open verification questions remain, and Plan 04 updated the canonical bug board plus workflow bookkeeping without creating new bug ids.
 
 ## Coverage Validation
 
@@ -355,4 +355,4 @@ All v1 requirements in `.planning/REQUIREMENTS.md` are mapped to at least one ph
 
 ---
 *Roadmap created: 2026-05-01*
-*Last updated: 2026-05-02 after Phase 9 planning*
+*Last updated: 2026-05-02 after Phase 9 execution*

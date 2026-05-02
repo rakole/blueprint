@@ -4,7 +4,7 @@ title: Tracked built bundle is stale and omits audit-fix generated assets
 severity: high
 confidence: confirmed
 surface: generated assets
-status: new
+status: verified
 discovery_phase: 7
 reported: 2026-05-02
 ---
@@ -16,7 +16,17 @@ reported: 2026-05-02
 - Severity: `high`
 - Confidence: `confirmed`
 - Surface: `generated assets`
-- Status: `new`
+- Status: `verified`
+
+## Current Status
+
+This defect was discovered during the Phase 7 audit and documented here as a
+real generated-asset freshness bug. It was later repaired by quick task
+`260502-bpbug-004-dist-refresh`, which recorded commit `350e87a` after
+refreshing the tracked `dist/` bundle. The Phase 7 validation rerun then passed
+its targeted subset with `27 passing tests, 0 failures`, so this report now
+stays in the inventory as verified repaired/history evidence rather than an
+active repair candidate.
 
 ## Summary
 
@@ -93,4 +103,7 @@ None known. The stale-built-bundle defect is confirmed by direct comparison of i
 
 ## No Fix Applied
 
-No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+No source, manifest, skill, test, generated asset, or runtime behavior fix was
+applied during the original Phase 7 discovery plan itself. The later quick
+repair is recorded separately in `260502-bpbug-004-dist-refresh` and the Phase 7
+validation rerun history.
