@@ -48,6 +48,7 @@ const requiredInstalledPaths = [
   "agents/blueprint-planner.md",
   "hooks/hooks.json",
   "dist/mcp/server.js",
+  "dist/mcp/artifact-contracts/schemas/report.audit-fix.model.schema.json",
   "dist/hooks/read-before-edit.js",
   "dist/hooks/blueprint-write-guard.js",
   "dist/hooks/workflow-advisory.js",
