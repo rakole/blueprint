@@ -14,7 +14,7 @@
 | 4 | Roadmap Capture Lightweight Audit | Audit roadmap admin, milestone flows, notes, todos, backlog, explore, fast, quick, and debug surfaces. | COV-03, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 5 | Review Quality Impact Shipping Audit | Audit review, security, UI-review, peer-review, docs-update, impact, pr-branch, ship, and undo surfaces. | COV-04, NFIX-01, NFIX-02, NFIX-03 | Validated |
 | 6 | Workspace Maintenance Audit | Audit workspace, workstream, cleanup, update, patch replay, registry, worktree, and high-risk confirmation behavior. | COV-05, NFIX-01, NFIX-02, NFIX-03 | Validated |
-| 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Pending |
+| 7 | Host Packaging Build Hooks Audit | Audit Gemini/Tabnine extension manifests, build pipeline, generated `dist`, hooks, package scripts, and install/smoke behavior. | COV-06, NFIX-01, NFIX-02, NFIX-03 | Planned |
 | 8 | Cross-Cut Drift And Regression Gaps | Audit docs/runtime drift, codebase concern leads, regression coverage gaps, schema drift, generated asset drift, and duplicated root causes. | CLASS-04, EVID-04, COV-07, COV-08, NFIX-01, NFIX-02, NFIX-03 | Pending |
 | 9 | Bug Index Priority Review | Dedupe, cross-link, classify, and summarize the full bug inventory for later repair planning. | BUG-04, REPAIR-01, REPAIR-02, REPAIR-03, NFIX-01, NFIX-02, NFIX-03 | Pending |
 
@@ -257,6 +257,19 @@
 - `hooks/hooks.json`, `src/hooks/*.ts`, `src/shared/security.ts`
 - generated `dist/`
 - extension install and hook tests
+
+**Plan artifacts:**
+- Wave 1: `07-01-PLAN.md` audits Gemini/Tabnine host manifests, host context files, shared host metadata, and runtime-contract coverage.
+- Wave 1: `07-02-PLAN.md` audits package scripts, build pipeline behavior, generated `dist`, copied schemas, tracked built assets, and built runtime smoke.
+- Wave 2 *(blocked on Wave 1 completion)*: `07-03-PLAN.md` audits advisory hook configuration, stdin/stdout behavior, shared security reuse, and hook regression coverage.
+- Wave 3 *(blocked on Wave 2 completion)*: `07-04-PLAN.md` audits clean-home smoke behavior, staged install bundles, link/install metadata, and optional host/auth integration blockers.
+- Wave 4 *(blocked on Waves 1-3 completion)*: `07-05-PLAN.md` reconciles Phase 7 bug reports, updates the bug index slice row, and verifies the discovery-only boundary.
+
+**Cross-cutting constraints:**
+- Preserve discovery-only execution: Phase 7 may write bug reports, bug index updates, and planning summaries, but must not fix source, manifest, hook, script, package, test, build, generated asset, runtime `.blueprint/`, installed-extension, host-global, branch, PR, remote-service, or git-history defects.
+- Treat generated `dist` drift as evidence only; do not keep rebuilt assets as a repair during this milestone.
+- Keep hooks advisory-only and configured through `hooks/hooks.json`, with MCP and shared security owning enforcement.
+- Keep install and smoke probes disposable through staged bundles, clean homes, fake CLIs, or containers; document Docker, Tabnine installer, or Gemini auth blockers separately from Blueprint defects.
 
 **Success criteria:**
 1. Built asset presence and packaging contract alignment are checked.
