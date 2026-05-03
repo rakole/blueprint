@@ -11,20 +11,18 @@ commands:
   - /blu-fast
   - /blu-quick
 input_bundles:
-  shared:
-    - docs/ARTIFACT-SCHEMA.md
-    - docs/MCP-TOOLS.md
+  shared: []
   commands:
     "/blu-execute-phase":
-      - docs/commands/execute-phase.md
+      - commands/blu-execute-phase.toml
       - skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md
       - skills/blueprint-phase-execution/references/long-running-execution-profile.md
     "/blu-quick":
-      - docs/commands/quick.md
+      - commands/blu-quick.toml
       - skills/blueprint-phase-execution/references/quick-runtime-contract.md
       - skills/blueprint-phase-execution/references/long-running-execution-profile.md
     "/blu-fast":
-      - docs/commands/fast.md
+      - commands/blu-fast.toml
       - skills/blueprint-phase-execution/references/fast-runtime-contract.md
 ---
 
@@ -40,6 +38,9 @@ host-native, plan-aware, and MCP-owned.
 This skill package is the runtime source of truth for `/blu-execute-phase`,
 `/blu-quick`, and `/blu-fast`.
 
+- Shipped phase-execution commands are docs-free at runtime. Resolve runtime
+  inputs from structured `input_bundles`, command manifests, local references,
+  and MCP/artifact contracts.
 - Runtime behavior must stay executable from this skill plus its local
   references alone.
 - Load only the command-specific reference bundle for the active command. Do
@@ -83,7 +84,9 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
   optional state refresh without report persistence.
 
 Command-specific inputs are resolved from the structured `input_bundles`
-frontmatter for the invoking execution command.
+frontmatter for the invoking execution command. The shared bundle is
+intentionally empty so active command runtime stays docs-free and derives
+contracts from manifests, local references, and MCP/artifact contract reads.
 
 ## Shared MCP Contracts
 

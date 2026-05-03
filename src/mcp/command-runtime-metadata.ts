@@ -214,6 +214,23 @@ const UI_PHASE_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const EXECUTE_PHASE_REQUIRED_TOOLS = [
+  "blueprint_phase_locate",
+  "blueprint_phase_plan_index",
+  "blueprint_phase_execution_targets",
+  "blueprint_phase_plan_read",
+  "blueprint_phase_summary_index",
+  "blueprint_phase_summary_read",
+  "blueprint_phase_summary_authoring_context",
+  "blueprint_phase_summary_validate_model",
+  "blueprint_phase_summary_write",
+  "blueprint_artifact_contract_read",
+  "blueprint_config_get",
+  "blueprint_artifact_validate",
+  "blueprint_state_load",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_phase_context",
@@ -366,6 +383,18 @@ const EXPLORE_REQUIRED_TOOLS = [
   "blueprint_artifact_mutate_index",
   "blueprint_roadmap_add_phase",
   "blueprint_artifact_scaffold"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const QUICK_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_command_catalog",
+  "blueprint_artifact_report_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const FAST_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const SETTINGS_REQUIRED_TOOLS = [
@@ -536,6 +565,7 @@ const UI_PHASE_OPTIONAL_AGENTS = [
   "blueprint-ui-designer",
   "blueprint-checker"
 ] as const;
+const EXECUTE_PHASE_OPTIONAL_AGENTS = ["blueprint-executor"] as const;
 const VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"] as const;
 const ADD_TESTS_OPTIONAL_AGENTS = [
   "blueprint-executor",
@@ -551,6 +581,12 @@ const AUDIT_FIX_OPTIONAL_AGENTS = [
 const REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
 const UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"] as const;
 const EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"] as const;
+const QUICK_OPTIONAL_AGENTS = [
+  "blueprint-researcher",
+  "blueprint-planner",
+  "blueprint-executor",
+  "blueprint-verifier"
+] as const;
 
 function runtimeMetadataSourceId(commandName: string): string {
   return `${RUNTIME_METADATA_PATH}#${commandName}`;
@@ -840,6 +876,55 @@ export const UI_PHASE_RUNTIME_METADATA = {
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
       "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const EXECUTE_PHASE_RUNTIME_METADATA = {
+  commandName: "execute-phase",
+  sourceId: runtimeMetadataSourceId("execute-phase"),
+  catalog: {
+    wave: 1,
+    family: "Core Lifecycle",
+    primarySkill: "blueprint-phase-execution",
+    declaredStatus: "implemented",
+    risk:
+      "High: drives real repo mutation during implementation and records execution summaries."
+  },
+  requiredTools: EXECUTE_PHASE_REQUIRED_TOOLS,
+  optionalAgents: EXECUTE_PHASE_OPTIONAL_AGENTS,
+  spec: {
+    path: runtimeMetadataSourceId("execute-phase"),
+    title: "`/blu-execute-phase`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.",
+    reads: [
+      ".blueprint/config.json",
+      ".blueprint/STATE.md",
+      "selected plan and summary files through MCP",
+      "phase.summary contract"
+    ],
+    writes: [
+      "one or more XX-YY-SUMMARY.md files",
+      ".blueprint/STATE.md"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("execute-phase"),
+    waveTitle: "Core Lifecycle",
+    command: "execute-phase",
+    primarySkill: "blueprint-phase-execution",
+    exactMcpDestination: EXECUTE_PHASE_REQUIRED_TOOLS,
+    optionalAgents: EXECUTE_PHASE_OPTIONAL_AGENTS,
+    hookInvolvement: [
+      "read-before-edit",
+      ".blueprint write guard",
+      "workflow advisory"
+    ],
+    contractNotes:
+      "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, read the canonical phase.summary contract plus the schema-first summary authoring context before any summary write or replacement, use blueprint_phase_execution_targets for deterministic target selection plus overwrite and overlap warnings, refuse stale or invalid saved plans, preserve wave order and lower-wave blockers, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, rerun the summary index before synced state update, never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1943,6 +2028,88 @@ export const EXPLORE_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const QUICK_RUNTIME_METADATA = {
+  commandName: "quick",
+  sourceId: runtimeMetadataSourceId("quick"),
+  catalog: {
+    wave: 3,
+    family: "Capture And Lightweight Execution",
+    primarySkill: "blueprint-phase-execution",
+    declaredStatus: "implemented",
+    risk: "High: can execute repo changes with reduced ceremony."
+  },
+  requiredTools: QUICK_REQUIRED_TOOLS,
+  optionalAgents: QUICK_OPTIONAL_AGENTS,
+  spec: {
+    path: runtimeMetadataSourceId("quick"),
+    title: "`/blu-quick`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.",
+    reads: [
+      "project status, command availability, and current next-step posture through MCP"
+    ],
+    writes: ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("quick"),
+    waveTitle: "Capture And Lightweight Execution",
+    command: "quick",
+    primarySkill: "blueprint-phase-execution",
+    exactMcpDestination: QUICK_REQUIRED_TOOLS,
+    optionalAgents: QUICK_OPTIONAL_AGENTS,
+    hookInvolvement: [
+      "read-before-edit",
+      ".blueprint write guard",
+      "workflow advisory"
+    ],
+    contractNotes:
+      "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const FAST_RUNTIME_METADATA = {
+  commandName: "fast",
+  sourceId: runtimeMetadataSourceId("fast"),
+  catalog: {
+    wave: 3,
+    family: "Capture And Lightweight Execution",
+    primarySkill: "blueprint-phase-execution",
+    declaredStatus: "implemented",
+    risk: "Medium: minimal-planning repo mutation path."
+  },
+  requiredTools: FAST_REQUIRED_TOOLS,
+  optionalAgents: [],
+  spec: {
+    path: runtimeMetadataSourceId("fast"),
+    title: "`/blu-fast`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.",
+    reads: ["project status through MCP when useful"],
+    writes: ["optional .blueprint/STATE.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("fast"),
+    waveTitle: "Capture And Lightweight Execution",
+    command: "fast",
+    primarySkill: "blueprint-phase-execution",
+    exactMcpDestination: FAST_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [
+      "read-before-edit",
+      ".blueprint write guard",
+      "workflow advisory"
+    ],
+    contractNotes:
+      "Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const RUNTIME_OWNED_COMMAND_METADATA = {
   [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
   [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
@@ -1953,6 +2120,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [DISCUSS_PHASE_RUNTIME_METADATA.commandName]: DISCUSS_PHASE_RUNTIME_METADATA,
   [RESEARCH_PHASE_RUNTIME_METADATA.commandName]: RESEARCH_PHASE_RUNTIME_METADATA,
   [UI_PHASE_RUNTIME_METADATA.commandName]: UI_PHASE_RUNTIME_METADATA,
+  [EXECUTE_PHASE_RUNTIME_METADATA.commandName]: EXECUTE_PHASE_RUNTIME_METADATA,
   [LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA.commandName]:
     LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA,
   [VALIDATE_PHASE_RUNTIME_METADATA.commandName]: VALIDATE_PHASE_RUNTIME_METADATA,
@@ -1980,7 +2148,9 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [CHECK_TODOS_RUNTIME_METADATA.commandName]: CHECK_TODOS_RUNTIME_METADATA,
   [ADD_BACKLOG_RUNTIME_METADATA.commandName]: ADD_BACKLOG_RUNTIME_METADATA,
   [REVIEW_BACKLOG_RUNTIME_METADATA.commandName]: REVIEW_BACKLOG_RUNTIME_METADATA,
-  [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA
+  [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA,
+  [QUICK_RUNTIME_METADATA.commandName]: QUICK_RUNTIME_METADATA,
+  [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
 } as const;
 
 export function listRuntimeOwnedCommandMetadata(): RuntimeOwnedCommandMetadata[] {

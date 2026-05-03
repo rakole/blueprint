@@ -562,8 +562,8 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            standard: "standard";
             quick: "quick";
+            standard: "standard";
             deep: "deep";
         }>>;
         includeAuthoringContext: z.ZodOptional<z.ZodBoolean>;
@@ -599,8 +599,8 @@ export declare const reviewToolDefinitions: ({
         }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            standard: "standard";
             quick: "quick";
+            standard: "standard";
             deep: "deep";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -622,8 +622,8 @@ export declare const reviewToolDefinitions: ({
         }>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            standard: "standard";
             quick: "quick";
+            standard: "standard";
             deep: "deep";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
@@ -653,8 +653,8 @@ export declare const reviewToolDefinitions: ({
             "phase-evidence": "phase-evidence";
         }>>;
         depth: z.ZodOptional<z.ZodEnum<{
-            standard: "standard";
             quick: "quick";
+            standard: "standard";
             deep: "deep";
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;

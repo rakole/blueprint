@@ -54,27 +54,46 @@ test("structured multi-command skills return shared-only inputs for unknown comm
   assert.deepEqual(inputs.effective, []);
 });
 
-test("structured input bundles resolve command-specific execution inputs", async () => {
-  const inputs = await loadBlueprintSkillInputs(
-    "blueprint-phase-execution",
-    "/blu-execute-phase",
-    readRelativePath
-  );
+test("structured input bundles resolve docs-free command-specific execution inputs", async () => {
+  const expectations = [
+    [
+      "/blu-execute-phase",
+      [
+        "commands/blu-execute-phase.toml",
+        "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+        "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+      ]
+    ],
+    [
+      "/blu-quick",
+      [
+        "commands/blu-quick.toml",
+        "skills/blueprint-phase-execution/references/quick-runtime-contract.md",
+        "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+      ]
+    ],
+    [
+      "/blu-fast",
+      [
+        "commands/blu-fast.toml",
+        "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+      ]
+    ]
+  ] as const;
 
-  assert.equal(inputs.skill, "blueprint-phase-execution");
-  assert.deepEqual(inputs.shared, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
-  assert.deepEqual(inputs.commandSpecific, [
-    "docs/commands/execute-phase.md",
-    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
-    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
-  ]);
-  assert.deepEqual(inputs.effective, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/commands/execute-phase.md",
-    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
-    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
-  ]);
+  for (const [commandName, commandSpecificInputs] of expectations) {
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-phase-execution",
+      commandName,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-phase-execution");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, commandSpecificInputs);
+    assert.deepEqual(inputs.effective, commandSpecificInputs);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
 });
 
 test("plan-phase skill resolves its slim command-scoped input bundle", async () => {
