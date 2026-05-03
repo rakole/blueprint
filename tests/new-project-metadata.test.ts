@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   NEW_PROJECT_RUNTIME_METADATA,
@@ -9,6 +11,7 @@ import {
 } from "../src/mcp/command-runtime-metadata.js";
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 const newProjectRuntimeInputBundle = [
@@ -95,6 +98,54 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   }
 
   assert.doesNotMatch(commandFile, /\/gsd-/);
+});
+
+test("new-project remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+  const bundledDocsRoot = path.join(repoRoot, "docs");
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? fileURLToPath(filePath) : path.resolve(String(filePath));
+    const docsRelativePath = path.relative(bundledDocsRoot, normalizedPath);
+
+    if (
+      docsRelativePath !== "" &&
+      !docsRelativePath.startsWith("..") &&
+      !path.isAbsolute(docsRelativePath)
+    ) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["new-project"];
+  const contract = await buildBlueprintCommandRuntimeContractResource("new-project");
+
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.deepEqual(entry.requiredTools, [...NEW_PROJECT_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(entry.optionalAgents, [...NEW_PROJECT_RUNTIME_METADATA.optionalAgents]);
+  assert.equal(contract.spec?.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+  );
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, newProjectRuntimeInputBundle);
+  assert.deepEqual(contract.skillInputs.effective, newProjectRuntimeInputBundle);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("blueprint-bootstrap skill and questioning reference capture Gemini-native deep bootstrap guidance", async () => {
