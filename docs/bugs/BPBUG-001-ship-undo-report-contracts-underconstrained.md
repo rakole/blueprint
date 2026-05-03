@@ -135,3 +135,85 @@ None known. The contract mismatch is confirmed by source inspection, focused met
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Plan - 2026-05-03
+
+### Local Evidence Inspected
+
+- Bug contract: `docs/bugs/BPBUG-001-ship-undo-report-contracts-underconstrained.md` confirms current gap, expected fields, and suggested fix direction.
+- Command manifests: `commands/blu-ship.toml` requires saved evidence, digest, branch/remote plan, exact commands, `gh` fallback, and `ship-latest` persistence; `commands/blu-undo.toml` requires affected evidence, digest inputs, branch state, candidate commits, dependency impact, pending revert commands, and `undo-latest`.
+- Maintenance skill: `skills/blueprint-maintenance/SKILL.md` already has shared report-contract guidance and report-write rules; ship/undo flows are the impacted orchestration paths.
+- Runtime contracts: `src/mcp/artifact-contracts/index.ts` has broad ship/undo templates and heading-only `report.ship`/`report.undo` definitions with empty `placeholderSignals`.
+- Existing validator is sufficient: `src/mcp/tools/artifacts.ts` validates H1, locked markers, required non-empty headings, and placeholder signals; report writes call it before persistence.
+- Precedent: `tests/pr-branch-metadata.test.ts` locks a rich report template, rejects unresolved placeholders, rejects weak content, and accepts a populated report.
+- Current missing coverage: `tests/ship-metadata.test.ts` and `tests/undo-metadata.test.ts` check metadata/status strings but do not lock report contract behavior.
+- Human docs gap: `docs/ARTIFACT-SCHEMA.md` lists reports but lacks ship/undo report sections; the pr-branch schema section is the template mirror to follow.
+
+### Official Gemini CLI Research
+
+- Official Gemini CLI tools documentation says tools are invoked by the model as needed, mutating file/shell tools require confirmation, and users should review confirmation prompts: <https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/tools.md>.
+- The same reference lists `ask_user`, `write_todos`, experimental task tracker tools, and `update_topic`; `update_topic` accepts `title`, `summary`, and `strategic_intent`, while the tracker is experimental and enabled separately. This supports keeping Blueprint tracker usage session-local and fallback-safe, not durable.
+- Official extension documentation says extensions expose custom commands through TOML files under `commands/`, load MCP servers from `gemini-extension.json`, and workspace config can override extension MCP settings: <https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md>.
+- Official MCP documentation says discovered MCP tools are available to the model like built-ins and are executed through the MCP server with normal confirmation/display behavior: <https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md>.
+- Impact on this fix: no artifact-contract design change is required. Durable ship/undo reports must not depend on `write_todos`, `update_topic`, or tracker state. The fix should add or keep canonical Blueprint MCP report-contract reads where command prompts author reports.
+
+### Implementation Plan
+
+- Keep the fix structural and minimal: strengthen `report.ship` and `report.undo` Markdown contracts using existing `requiredHeadings`, `lockedMarkers`, and `placeholderSignals`; do not add model schemas or custom validators.
+- Update `src/mcp/artifact-contracts/index.ts`:
+  - Replace `renderShipTemplate()` with sections: `Selected Scope`, `Saved Evidence`, `Branch Plan`, `Remote Actions`, `Push Or PR Outcome`, `Manual Fallback Guidance`, `Next Safe Action`.
+  - Include ship fields for scope, source branch, source HEAD, base branch, execution mode, draft/ready mode, digest inputs, saved evidence paths, tracked files, config used, current branch, push requested, PR requested, git commands approved, `gh` commands approved, `gh` availability/auth, push outcome, PR outcome, `gh` fallback notes, manual checklist, and draft PR body source.
+  - Replace `renderUndoTemplate()` with sections: `Requested Scope`, `Branch State`, `Affected Evidence And Digest Inputs`, `Candidate Revert Set`, `Dependency Impact`, `Approved Revert Commands`, `Mutation Outcome`, `Next Safe Action`.
+  - Include undo fields for scope, reason, execution mode, pending gate, current branch, HEAD, working tree status, merge state, report overwrite status, digest inputs, affected evidence, stale evidence impact, tracked files, commit ledger, dependency risk, pending/approved git commands, forbidden-command check, revert outcome, and blockers.
+  - Update `report.ship` and `report.undo` required headings, add locked markers for those field labels, and add placeholder signals for all angle-bracket/example enum placeholders.
+- Update command prompts:
+  - In `commands/blu-ship.toml`, after digest, call `mcp_blueprint_blueprint_artifact_contract_read` for `report.ship`; use `contract.authoringTemplate` as the report authority before `mcp_blueprint_blueprint_artifact_report_write`; add this FQN to response requirements.
+  - In `commands/blu-undo.toml`, do the same for `report.undo` while preserving report-before-mutate ordering.
+- Update orchestration/docs:
+  - In `skills/blueprint-maintenance/SKILL.md`, name `report.ship` and `report.undo` alongside `report.pr-branch`; add ship/undo steps to read the canonical contract before report persistence.
+  - In `docs/commands/ship.md` and `docs/commands/undo.md`, add `blueprint_artifact_contract_read` to Required MCP Tools and report contract sections.
+  - In `docs/MCP-TOOLS.md` and `docs/RUNTIME-REFERENCE.md`, update ship/undo exact tool lists and mention canonical report contracts.
+  - In `docs/ARTIFACT-SCHEMA.md`, add `reports/ship-latest.md` and `reports/undo-latest.md` sections mirroring the new templates.
+
+### Gemini CLI Tool Usage Placement
+
+- Keep `update_topic` and `write_todos` only in ship's non-trivial in-flight progress guidance; they stay session-local.
+- Keep tracker wording capability-gated and session-local because official docs mark task tracker experimental.
+- Do not add Gemini core tools to undo.
+- Add only Blueprint MCP FQN `mcp_blueprint_blueprint_artifact_contract_read` to ship/undo prompt flows and response requirements.
+
+### Tests
+
+- Update `tests/ship-metadata.test.ts`:
+  - Import `readArtifactContract` and `validateReportArtifactContent`.
+  - Assert new headings, locked markers, placeholder signals, and template fields.
+  - Assert `contract.authoringTemplate` is invalid until placeholders are replaced.
+  - Assert the old minimal report from BPBUG-001 is invalid.
+  - Assert a populated ship report validates.
+  - Update metadata assertions for `mcp_blueprint_blueprint_artifact_contract_read`.
+- Update `tests/undo-metadata.test.ts` with parallel undo contract assertions and old-minimal rejection.
+- Update `tests/command-contract-docs.test.ts`, `tests/mcp-contract-audit-metadata.test.ts`, and `tests/maintenance-regression.test.ts` for the new contract-read references and runtime tool lists.
+- Verification commands after `npm ci`: `npm run typecheck`; `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/mcp-contract-audit-metadata.test.ts`.
+
+### Parallel Waves
+
+- Wave 1, contract runtime: `src/mcp/artifact-contracts/index.ts`, `docs/ARTIFACT-SCHEMA.md`. Needs the final field list above. No dependency.
+- Wave 2, prompt/runtime alignment: `commands/blu-ship.toml`, `commands/blu-undo.toml`, `skills/blueprint-maintenance/SKILL.md`, `docs/commands/ship.md`, `docs/commands/undo.md`, `docs/MCP-TOOLS.md`, `docs/RUNTIME-REFERENCE.md`. Can run parallel with Wave 1 if the same headings/field names are shared.
+- Wave 3, tests: `tests/ship-metadata.test.ts`, `tests/undo-metadata.test.ts`, `tests/command-contract-docs.test.ts`, `tests/mcp-contract-audit-metadata.test.ts`, `tests/maintenance-regression.test.ts`. Depends on Waves 1-2.
+
+### DoD Reviewer Checklist
+
+- `report.ship` and `report.undo` reject the BPBUG-001 minimal reports.
+- The canonical ship/undo templates reject themselves until placeholders are replaced.
+- Populated ship/undo fixtures validate successfully through `validateReportArtifactContent`.
+- `blueprint_artifact_report_write` still uses existing validation; no custom write path or model schema was added.
+- Ship/undo manifests read `report.ship`/`report.undo` contracts before report write and still pass bare report names only.
+- `update_topic`, `write_todos`, and tracker state remain session-local and non-durable.
+- Runtime catalog remains implemented because all added required tools are already registered.
+- No installed extension directory, `dist/`, host-global state, or unrelated command surface is changed.
+
+### Risks / Uncertainty
+
+- Tightening headings/markers may make old broad `ship-latest` or `undo-latest` bodies invalid on reuse; this is acceptable for high-risk evidence repair, but mention it in release notes if needed.
+- Structural Markdown validation still cannot prove semantic truth of values such as `none`; schema-first report models would be a larger future hardening task.
+- Gemini task tracker is experimental, so durable report content must not rely on tracker availability.
