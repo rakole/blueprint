@@ -4,7 +4,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 
@@ -53,6 +56,9 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-code-review/);
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /"\/blu-code-review":/);
+  assert.match(skillFile, /commands\/blu-code-review\.toml/);
   assert.match(skillFile, /Execution profile for `code-review`: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -88,15 +94,6 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
     path.join(repoRoot, "agents/blueprint-reviewer.md"),
     "utf8"
   );
-  const commandDoc = await readFile(
-    path.join(repoRoot, "docs/commands/code-review.md"),
-    "utf8"
-  );
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
-  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
 
   assert.match(runtimeContract, /## Required MCP Calls/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
@@ -125,16 +122,52 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(reviewerAgent, /severity is\s+`critical\|high\|medium\|low\|unknown`/i);
   assert.match(reviewerAgent, /scoped file:line evidence, impact, and concrete fix or\s+verification guidance/i);
   assert.doesNotMatch(reviewerAgent, /\/blu-code-review-fix|\/blu-audit-fix|peer-review/i);
+});
 
-  assert.match(commandDoc, /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/);
-  assert.match(commandDoc, /## Depth And Output Quality Contract/);
-  assert.match(commandDoc, /## Subagent And Fallback Contract/);
-  assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
-  assert.match(commandDoc, /confirmationRecommended/);
-  assert.match(commandDoc, /`blueprint_review_validate_model`/);
-  assert.match(mcpToolsDoc, /confirmationRecommended/);
-  assert.match(runtimeReference, /code-review[\s\S]*code-review-runtime-contract\.md/);
-  assert.match(mcpToolsDoc, /code-review-runtime-contract\.md/);
+test("code-review runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("code-review");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("code-review");
+
+  assert.ok(metadata);
+  assert.equal(metadata.spec.path, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.equal(metadata.runtimeReference.path, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  ]);
+  assert.deepEqual(metadata.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_contract_read",
+    "blueprint_review_scope",
+    "blueprint_review_load_findings",
+    "blueprint_review_validate_model",
+    "blueprint_review_record"
+  ]);
+
+  assert.equal(catalog.commands["code-review"].specPath, metadata.spec.path);
+  assert.equal(contract.catalog.specPath, metadata.spec.path);
+  assert.equal(contract.spec?.path, metadata.spec.path);
+  assert.equal(contract.runtimeReference?.path, metadata.runtimeReference.path);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.spec.path);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, metadata.requiredTools);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-reviewer"]);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for deterministic phase-scoped review/i
+  );
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-code-review.toml",
+      "skills/blueprint-review/references/code-review-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-code-review.toml",
+      "skills/blueprint-review/references/code-review-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
 });
 
 test("code-review authoring contract requires line-backed fix guidance", () => {

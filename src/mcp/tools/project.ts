@@ -636,6 +636,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists(bundledUrl(manifestPath));
   const specExists = runtimeMetadata ? true : await pathExists(specUrl!);
+  const missingRuntimeInputs: string[] = [];
   const specMarkdown = specExists && specUrl ? await fs.readFile(specUrl, "utf8") : "";
   const requiredTools = runtimeMetadata
     ? [...runtimeMetadata.requiredTools]
@@ -662,8 +663,16 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
   }
 
+  for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
+    if (!(await pathExists(bundledUrl(inputPath)))) {
+      missingRuntimeInputs.push(inputPath);
+      blockedBy.push(`Missing runtime input: ${inputPath}`);
+    }
+  }
+
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
+  const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
 
   for (const toolName of missingTools) {
     blockedBy.push(`Missing required MCP tool: ${toolName}`);
@@ -681,7 +690,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
 
   let status = catalogFacts.declaredStatus;
 
-  if (!(manifestExists && skillExists && requiredToolsSatisfied)) {
+  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -708,7 +717,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
     skillPath: skillResolution.resolvedPath,
-    specPath: specExists ? specPath : null,
+    specPath: specExists && runtimeInputsSatisfied ? specPath : null,
     requiredTools,
     requiredToolsSatisfied,
     optionalAgents,

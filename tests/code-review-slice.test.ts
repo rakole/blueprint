@@ -1,6 +1,7 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import { execFile as execFileCallback } from "node:child_process";
+import { promises as fs } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,6 +9,7 @@ import { promisify } from "node:util";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -21,6 +23,37 @@ import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const execFileAsync = promisify(execFileCallback);
+
+function isBundledPath(value: unknown, relativePath: string): boolean {
+  if (value instanceof URL) {
+    return value.pathname.endsWith(`/${relativePath}`);
+  }
+
+  return typeof value === "string" && value.endsWith(relativePath);
+}
+
+function makeBundledDocsUnavailable(t: TestContext): void {
+  const unavailableDocs = [
+    "docs/COMMAND-CATALOG.md",
+    "docs/RUNTIME-REFERENCE.md",
+    "docs/commands/code-review.md"
+  ];
+  const originalReadFile = fs.readFile;
+
+  fs.readFile = (async (...args: Parameters<typeof fs.readFile>) => {
+    if (unavailableDocs.some((relativePath) => isBundledPath(args[0], relativePath))) {
+      const error = new Error("ENOENT");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      throw error;
+    }
+
+    return originalReadFile(...args);
+  }) as typeof fs.readFile;
+
+  t.after(() => {
+    fs.readFile = originalReadFile;
+  });
+}
 
 type CodeReviewRepoOptions = {
   withPlan?: boolean;
@@ -321,6 +354,68 @@ function createStructuredCodeReviewModel(
     ...overrides
   };
 }
+
+test("code-review catalog, runtime contract, and next-action validation survive bundled docs being unavailable", async (t) => {
+  makeBundledDocsUnavailable(t);
+
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const implementedCommands = Object.entries(catalog.commands)
+    .filter(([, entry]) => entry.implemented)
+    .map(([commandName]) => commandName);
+
+  assert.ok(implementedCommands.includes("code-review"));
+  assert.ok(implementedCommands.includes("code-review-fix"));
+  assert.ok(implementedCommands.includes("secure-phase"));
+  assert.ok(implementedCommands.includes("validate-phase"));
+  assert.ok(implementedCommands.includes("verify-work"));
+  assert.ok(implementedCommands.includes("add-tests"));
+  assert.ok(implementedCommands.includes("progress"));
+  assert.equal(
+    catalog.commands["code-review"].specPath,
+    "src/mcp/command-runtime-metadata.ts#code-review"
+  );
+
+  const contract = await buildBlueprintCommandRuntimeContractResource("code-review");
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(
+    contract.spec?.path,
+    "src/mcp/command-runtime-metadata.ts#code-review"
+  );
+  assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-code-review.toml",
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  ]);
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    includeAuthoringContext: true
+  });
+  assert.equal(scoped.status, "ready");
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5"));
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-secure-phase 5"));
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-progress"));
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-code-review-fix 5"
+    })
+  });
+
+  assert.equal(validation.status, "valid");
+  assert.equal(validation.valid, true);
+  assert.equal(validation.diagnosticCounts.total, 0);
+});
 
 test("state load follows the saved code-review next safe action once review evidence exists", async (t) => {
   const repoPath = await createCodeReviewRepo({
