@@ -257,7 +257,7 @@ test("resource contract docs keep live command exposure scoped and read-only", a
   assert.match(runtimeReference, /## Read-Only MCP Resource Contract/);
   assert.match(
     runtimeReference,
-    /Router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly for the resource paths that are still planned/i
+    /Router and progress commands use command manifests, `blueprint-router` input bundles, source-owned runtime metadata, and read-oriented MCP tools\. Docs remain control-plane history, not runtime inputs/i
   );
   assert.match(
     runtimeReference,

@@ -132,11 +132,11 @@ test("MCP resource docs keep the read-only contract, live command resources, and
   );
   assert.match(
     runtimeReference,
-    /Router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly for the resource paths that are still planned/i
+    /Router and progress commands use command manifests, `blueprint-router` input bundles, source-owned runtime metadata, and read-oriented MCP tools\. Docs remain control-plane history, not runtime inputs/i
   );
   assert.match(
     runtimeReference,
-    /Until they are implemented, router, progress, and discovery-style commands must continue to use the current docs plus read-oriented MCP tools directly instead of pretending the resource path exists for the still-planned phase, codebase, and reports views/i
+    /Until they are implemented, discovery-style commands must continue to use existing read-oriented MCP tools and control-plane history directly instead of pretending the resource path exists for the still-planned phase, codebase, and reports views/i
   );
   assert.match(
     runtimeReference,

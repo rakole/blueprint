@@ -15,7 +15,17 @@ commands:
   - /blu-help
   - /blu-progress
   - /blu-next
-  - /blu-do
+input_bundles:
+  shared: []
+  commands:
+    "/blu":
+      - commands/blu.toml
+    "/blu-help":
+      - commands/blu-help.toml
+    "/blu-progress":
+      - commands/blu-progress.toml
+    "/blu-next":
+      - commands/blu-next.toml
 ---
 
 # Blueprint Router Skill
@@ -42,14 +52,9 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 - no hidden support commands
 - `/blu` waiting-state visibility without widening routable commands
 
-## Required Inputs
+## Runtime Input Notes
 
-- `docs/commands/root-router.md`
-- `docs/commands/help.md`
-- `docs/commands/progress.md`
-- `docs/commands/next.md`
-- `docs/commands/do.md`
-- `docs/RUNTIME-REFERENCE.md`
+Runtime input resolution is structured and command-scoped through the `input_bundles` frontmatter above. Router commands load their active command manifest as the skill-authored input bundle; live catalog metadata and command runtime-contract resources provide the command availability and routing surface.
 
 ## Required MCP Tools
 
@@ -72,7 +77,7 @@ Stay aligned with the locked `help`, `progress`, `next`, and `do` contracts whil
 9. If repo state is `mapped-only`, prefer `/blu-new-project`.
 10. If repo state is partial, prefer `/blu-health`.
 11. Surface config warnings only when they materially change the next safe action.
-12. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a mapping prerequisite, missing artifact, or blocked substrate.
+12. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a mapping prerequisite, missing artifact, approval gate, or blocked substrate.
 
 ## Planned `/blu-do` Contract
 

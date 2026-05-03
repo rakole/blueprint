@@ -21,11 +21,14 @@ import {
   DEBUG_RUNTIME_METADATA,
   DOCS_UPDATE_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
+  HELP_RUNTIME_METADATA,
   MAP_CODEBASE_RUNTIME_METADATA,
+  NEXT_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
   NEW_WORKSPACE_RUNTIME_METADATA,
   PLAN_PHASE_RUNTIME_METADATA,
+  PROGRESS_RUNTIME_METADATA,
   PR_BRANCH_RUNTIME_METADATA,
   REAPPLY_PATCHES_RUNTIME_METADATA,
   REMOVE_WORKSPACE_RUNTIME_METADATA,
@@ -210,7 +213,7 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     ...MAP_CODEBASE_RUNTIME_METADATA.optionalAgents
   ]);
   assert.equal(catalog.commands["map-codebase"].risk, MAP_CODEBASE_RUNTIME_METADATA.catalog.risk);
-  assert.equal(catalog.commands.help.specPath, "docs/commands/help.md");
+  assert.equal(catalog.commands.help.specPath, HELP_RUNTIME_METADATA.sourceId);
 
   const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
 
@@ -312,7 +315,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.equal(contract.catalog.implemented, true);
 
   assert.ok(contract.spec);
-  assert.equal(contract.spec.path, "docs/commands/help.md");
+  assert.equal(contract.spec.path, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.spec.wave, 0);
   assert.equal(contract.spec.family, "Foundation");
   assert.equal(contract.spec.executionProfile, "router");
@@ -320,35 +323,25 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.equal(contract.spec.primarySkill, "blueprint-router");
   assert.deepEqual(contract.spec.requiredTools, entry.requiredTools);
   assert.deepEqual(contract.spec.optionalSubagents, []);
-  assert.match(contract.spec.purpose ?? "", /showing available Blueprint commands/i);
+  assert.match(contract.spec.purpose ?? "", /safe Blueprint router guidance/i);
   assert.deepEqual(contract.spec.writes, []);
   assert.deepEqual(contract.skillInputs, {
     skill: "blueprint-router",
-    shared: [
-      "docs/commands/root-router.md",
-      "docs/commands/help.md",
-      "docs/commands/progress.md",
-      "docs/commands/next.md",
-      "docs/commands/do.md",
-      "docs/RUNTIME-REFERENCE.md"
-    ],
-    commandSpecific: [],
-    effective: [
-      "docs/commands/root-router.md",
-      "docs/commands/help.md",
-      "docs/commands/progress.md",
-      "docs/commands/next.md",
-      "docs/commands/do.md",
-      "docs/RUNTIME-REFERENCE.md"
-    ]
+    shared: [],
+    commandSpecific: ["commands/blu-help.toml"],
+    effective: ["commands/blu-help.toml"]
   });
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 
   assert.ok(contract.runtimeReference);
-  assert.equal(contract.runtimeReference.path, "docs/RUNTIME-REFERENCE.md");
+  assert.equal(contract.runtimeReference.path, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.runtimeReference.wave, 0);
   assert.equal(contract.runtimeReference.waveTitle, "Foundation");
   assert.equal(contract.runtimeReference.command, "help");
-  assert.equal(contract.runtimeReference.commandSpecPath, "docs/commands/help.md");
+  assert.equal(contract.runtimeReference.commandSpecPath, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.runtimeReference.primarySkill, "blueprint-router");
   assert.deepEqual(contract.runtimeReference.exactMcpDestination, entry.requiredTools);
   assert.deepEqual(contract.runtimeReference.optionalAgents, []);
@@ -356,7 +349,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.match(contract.runtimeReference.contractNotes ?? "", /never present planned or blocked commands as runnable/i);
   assert.deepEqual(contract.runtimeReference.evidenceState, [
     "locked",
-    "docs-aligned",
+    "source-owned",
     "needs-behavior-audit"
   ]);
 
@@ -383,6 +376,60 @@ test("command runtime contract resource stays anchored to live catalog, command 
     addPhaseContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+});
+
+test("router commands resolve catalog and runtime contract truth from runtime metadata", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const metadata of [
+    HELP_RUNTIME_METADATA,
+    PROGRESS_RUNTIME_METADATA,
+    NEXT_RUNTIME_METADATA
+  ] as const) {
+    const commandName = metadata.commandName;
+    const entry = catalog.commands[commandName];
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+
+    assert.equal(entry.specPath, metadata.sourceId);
+    assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(entry.optionalAgents, []);
+    assert.deepEqual(entry.availableOptionalAgents, []);
+    assert.deepEqual(contract.catalog.requiredTools, [...metadata.requiredTools]);
+    assert.equal(contract.spec?.path, metadata.sourceId);
+    assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.spec?.optionalSubagents, []);
+    assert.deepEqual(contract.spec?.writes, []);
+    assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+    assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+    assert.deepEqual(contract.runtimeReference?.evidenceState, [
+      "locked",
+      "source-owned",
+      "needs-behavior-audit"
+    ]);
+    assert.deepEqual(contract.skillInputs.shared, []);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [
+      blueprintPrimaryManifestPath(commandName)
+    ]);
+    assert.deepEqual(contract.skillInputs.effective, [
+      blueprintPrimaryManifestPath(commandName)
+    ]);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /map-codebase/i
+    );
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /mapped-only.*new-project|new-project.*mapped-only/i
+    );
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /planned or blocked commands are not runnable|never present planned or blocked commands as runnable/i
+    );
+  }
 });
 
 test("review commands resolve catalog and runtime contract truth from runtime metadata", async () => {
@@ -1063,6 +1110,69 @@ test("planned commands stay non-routable until their dedicated manifest exists",
       /Missing command manifest: commands\/blu-do\.toml/
     );
   }
+});
+
+test("docless fallback preserves planned do without exposing a runtime contract", async (t) => {
+  const realAccess = fs.access.bind(fs);
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "access", async (filePath, mode) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (normalizedPath.includes("/docs/")) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realAccess(
+      filePath as Parameters<typeof fs.access>[0],
+      mode as Parameters<typeof fs.access>[1]
+    );
+  });
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (normalizedPath.includes("/docs/")) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands.do;
+
+  assert.ok(entry);
+  assert.equal(getRuntimeOwnedCommandMetadata("do"), null);
+  assert.equal(entry.declaredStatus, "planned");
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.manifestPath, null);
+  assert.equal(entry.specPath, null);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing command manifest: commands\/blu-do\.toml/
+  );
+  assert.match(entry.blockedBy.join("\n"), /Missing command spec: docs\/commands\/do\.md/);
+  assert.deepEqual(catalog.aliases.do, blueprintDirectCommandAliases("do"));
+  assert.ok(catalog.waves["3"].includes("do"));
+
+  const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+
+  assert.equal(advertisedCommands.includes("do"), false);
+  await assert.rejects(
+    buildBlueprintCommandRuntimeContractResource("do"),
+    /Blueprint runtime-contract resources are available only for implemented commands: do/
+  );
 });
 
 test("impact is implemented once its additive command substrate is complete", async () => {

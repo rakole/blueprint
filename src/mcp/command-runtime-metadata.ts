@@ -172,6 +172,18 @@ const PROGRESS_REQUIRED_TOOLS = [
   "blueprint_command_catalog"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const HELP_REQUIRED_TOOLS = [
+  "blueprint_command_catalog",
+  "blueprint_project_status"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const NEXT_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_state_load",
+  "blueprint_artifact_list",
+  "blueprint_command_catalog"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const DISCUSS_PHASE_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_phase_context",
@@ -605,7 +617,9 @@ const MAP_CODEBASE_REQUIRED_TOOLS = [
   "blueprint_artifact_validate"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const HELP_SPEC_PATH = "commands/blu-help.toml";
 const PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
+const NEXT_SPEC_PATH = "commands/blu-next.toml";
 const MAP_CODEBASE_SPEC_PATH =
   "skills/blueprint-map/references/map-runtime-contract.md";
 const DISCUSS_PHASE_SPEC_PATH =
@@ -1052,6 +1066,45 @@ export const NEW_MILESTONE_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const HELP_RUNTIME_METADATA = {
+  commandName: "help",
+  sourceId: runtimeMetadataSourceId("help"),
+  catalog: {
+    wave: 0,
+    family: "Foundation",
+    primarySkill: "blueprint-router",
+    declaredStatus: "implemented",
+    risk: "Low: read-only router guidance from project status and the live command catalog."
+  },
+  requiredTools: HELP_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [HELP_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("help"),
+    title: "`/blu-help`",
+    executionProfile: "router",
+    rootRoutable: true,
+    purpose:
+      "`help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.",
+    reads: [
+      "Project status and command availability through Blueprint MCP tools."
+    ],
+    writes: []
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("help"),
+    waveTitle: "Foundation",
+    command: "help",
+    primarySkill: "blueprint-router",
+    exactMcpDestination: HELP_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const PROGRESS_RUNTIME_METADATA = {
   commandName: "progress",
   sourceId: runtimeMetadataSourceId("progress"),
@@ -1086,7 +1139,47 @@ export const PROGRESS_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.",
+      "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const NEXT_RUNTIME_METADATA = {
+  commandName: "next",
+  sourceId: runtimeMetadataSourceId("next"),
+  catalog: {
+    wave: 1,
+    family: "Core Lifecycle",
+    primarySkill: "blueprint-router",
+    declaredStatus: "implemented",
+    risk:
+      "Low: read-only next-step routing from project status, state, artifacts, and the live command catalog."
+  },
+  requiredTools: NEXT_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [NEXT_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("next"),
+    title: "`/blu-next`",
+    executionProfile: "router",
+    rootRoutable: true,
+    purpose:
+      "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.",
+    reads: [
+      ".blueprint/ state, artifact inventory, project status, and command catalog through MCP tools."
+    ],
+    writes: []
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("next"),
+    waveTitle: "Core Lifecycle",
+    command: "next",
+    primarySkill: "blueprint-router",
+    exactMcpDestination: NEXT_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2782,7 +2875,9 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [MILESTONE_SUMMARY_RUNTIME_METADATA.commandName]:
     MILESTONE_SUMMARY_RUNTIME_METADATA,
   [NEW_MILESTONE_RUNTIME_METADATA.commandName]: NEW_MILESTONE_RUNTIME_METADATA,
+  [HELP_RUNTIME_METADATA.commandName]: HELP_RUNTIME_METADATA,
   [PROGRESS_RUNTIME_METADATA.commandName]: PROGRESS_RUNTIME_METADATA,
+  [NEXT_RUNTIME_METADATA.commandName]: NEXT_RUNTIME_METADATA,
   [MAP_CODEBASE_RUNTIME_METADATA.commandName]: MAP_CODEBASE_RUNTIME_METADATA,
   [SETTINGS_RUNTIME_METADATA.commandName]: SETTINGS_RUNTIME_METADATA,
   [SET_PROFILE_RUNTIME_METADATA.commandName]: SET_PROFILE_RUNTIME_METADATA,

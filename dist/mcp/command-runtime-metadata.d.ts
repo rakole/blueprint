@@ -341,6 +341,40 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const HELP_RUNTIME_METADATA: {
+    readonly commandName: "help";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-router";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: read-only router guidance from project status and the live command catalog.";
+    };
+    readonly requiredTools: readonly ["blueprint_command_catalog", "blueprint_project_status"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-help.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-help`";
+        readonly executionProfile: "router";
+        readonly rootRoutable: true;
+        readonly purpose: "`help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.";
+        readonly reads: readonly ["Project status and command availability through Blueprint MCP tools."];
+        readonly writes: readonly [];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "help";
+        readonly primarySkill: "blueprint-router";
+        readonly exactMcpDestination: readonly ["blueprint_command_catalog", "blueprint_project_status"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
 export declare const PROGRESS_RUNTIME_METADATA: {
     readonly commandName: "progress";
     readonly sourceId: string;
@@ -371,7 +405,41 @@ export declare const PROGRESS_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [];
-        readonly contractNotes: "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.";
+        readonly contractNotes: "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const NEXT_RUNTIME_METADATA: {
+    readonly commandName: "next";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-router";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: read-only next-step routing from project status, state, artifacts, and the live command catalog.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-next.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-next`";
+        readonly executionProfile: "router";
+        readonly rootRoutable: true;
+        readonly purpose: "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.";
+        readonly reads: readonly [".blueprint/ state, artifact inventory, project status, and command catalog through MCP tools."];
+        readonly writes: readonly [];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "next";
+        readonly primarySkill: "blueprint-router";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable.";
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
@@ -2032,6 +2100,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
+    readonly help: {
+        readonly commandName: "help";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-router";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: read-only router guidance from project status and the live command catalog.";
+        };
+        readonly requiredTools: readonly ["blueprint_command_catalog", "blueprint_project_status"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-help.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-help`";
+            readonly executionProfile: "router";
+            readonly rootRoutable: true;
+            readonly purpose: "`help` shows safe Blueprint router guidance from project readiness and the implemented command catalog.";
+            readonly reads: readonly ["Project status and command availability through Blueprint MCP tools."];
+            readonly writes: readonly [];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "help";
+            readonly primarySkill: "blueprint-router";
+            readonly exactMcpDestination: readonly ["blueprint_command_catalog", "blueprint_project_status"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
     readonly progress: {
         readonly commandName: "progress";
         readonly sourceId: string;
@@ -2062,7 +2164,41 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [];
-            readonly contractNotes: "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.";
+            readonly contractNotes: "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly next: {
+        readonly commandName: "next";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-router";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: read-only next-step routing from project status, state, artifacts, and the live command catalog.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-next.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-next`";
+            readonly executionProfile: "router";
+            readonly rootRoutable: true;
+            readonly purpose: "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.";
+            readonly reads: readonly [".blueprint/ state, artifact inventory, project status, and command catalog through MCP tools."];
+            readonly writes: readonly [];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "next";
+            readonly primarySkill: "blueprint-router";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
         };
     };
