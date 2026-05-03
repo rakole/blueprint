@@ -28,55 +28,47 @@ const reservedKeyAssertions = [
   }
 ] as const;
 
-test("config baseline locks the reserved effectiveness-spine keys and enum values", async () => {
-  const baselineDoc = await readFile(
-    path.join(repoRoot, "docs/COMMAND-BASELINE.md"),
+test("settings runtime reference locks effectiveness-spine keys and persistence path", async () => {
+  const settingsReference = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-governance/references/settings-runtime-contract.md"
+    ),
     "utf8"
   );
 
   for (const { key, values } of reservedKeyAssertions) {
-    const expectedLine = new RegExp(`- \`${key.replace(".", "\\.")}\`: \`${values.join(" \\| ")}\``);
-    assert.match(baselineDoc, expectedLine);
+    const expectedLine = new RegExp(
+      `- \`${key.replace(".", "\\.")}\`: \`${values.join(" \\| ")}\``
+    );
+    assert.match(settingsReference, expectedLine);
   }
 
-  assert.match(
-    baselineDoc,
-    /`S8\.2` adds runtime normalization, defaults precedence, and persistence through the existing config MCP path/i
-  );
+  assert.match(settingsReference, /inherit from saved defaults when present, otherwise from hardcoded defaults/i);
+  assert.match(settingsReference, /Keep the common settings pass stable/i);
+  assert.match(settingsReference, /do not force these keys into the first settings pass/i);
+  assert.match(settingsReference, /normal `mcp_blueprint_blueprint_config_set` JSON-object `patch` path/i);
+  assert.match(settingsReference, /Project settings writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`/i);
+  assert.match(settingsReference, /Saved defaults writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in/i);
+  assert.match(settingsReference, /Patches must be JSON objects/i);
+  assert.match(settingsReference, /Do not write config files directly/i);
 });
 
-test("artifact schema documents the effectiveness-spine config additions as current runtime behavior", async () => {
-  const schemaDoc = await readFile(
-    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
+test("source-owned config behavior keeps effectiveness-spine defaults and enum guards", async () => {
+  const configSource = await readFile(
+    path.join(repoRoot, "src/mcp/tools/config.ts"),
     "utf8"
   );
 
-  assert.match(schemaDoc, /"ux": \{/);
-  assert.match(schemaDoc, /"orchestration": \{/);
-  assert.match(schemaDoc, /"research": \{/);
-  assert.match(schemaDoc, /`S8\.2` adds runtime normalization and persistence through the existing config MCP tools/i);
-  assert.match(schemaDoc, /Older project configs that omit these keys still inherit them from saved defaults or hardcoded defaults/i);
-
   for (const { key, values } of reservedKeyAssertions) {
-    assert.match(schemaDoc, new RegExp(`\`${key.replace(".", "\\.")}\``));
+    const [group, name] = key.split(".");
+    assert.match(configSource, new RegExp(`${name}: "${values[0]}"`));
+    assert.match(configSource, new RegExp(`fullPath === "${group}\\.${name}"`));
     for (const value of values) {
-      assert.match(schemaDoc, new RegExp(`\`${value}\``));
+      assert.match(configSource, new RegExp(`"${value}"`));
     }
   }
-});
 
-test("settings docs keep the effectiveness-spine keys on the normal config path without forcing them into the common pass", async () => {
-  const settingsDoc = await readFile(
-    path.join(repoRoot, "docs/commands/settings.md"),
-    "utf8"
-  );
-
-  for (const { key } of reservedKeyAssertions) {
-    assert.match(settingsDoc, new RegExp(key.replace(".", "\\.")));
-  }
-
-  assert.match(settingsDoc, /now normalize and persist through the same config MCP path as other settings/i);
-  assert.match(settingsDoc, /effective config should still inherit them from saved defaults or hardcoded defaults/i);
-  assert.match(settingsDoc, /Keep the common settings pass stable; do not force the effectiveness-spine keys into that first pass/i);
-  assert.match(settingsDoc, /write them through the documented config MCP path instead of inventing a separate persistence flow/i);
+  assert.match(configSource, /function getHardCodedConfig\(\)/);
+  assert.match(configSource, /export async function blueprintConfigSet\(/);
 });

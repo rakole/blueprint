@@ -14,6 +14,19 @@ commands:
   - /blu-health
   - /blu-pause-work
   - /blu-resume-work
+input_bundles:
+  shared: []
+  commands:
+    "/blu-settings":
+      - skills/blueprint-governance/references/settings-runtime-contract.md
+    "/blu-set-profile":
+      - skills/blueprint-governance/references/set-profile-runtime-contract.md
+    "/blu-health":
+      - skills/blueprint-governance/references/health-runtime-contract.md
+    "/blu-pause-work":
+      - skills/blueprint-governance/references/pause-work-runtime-contract.md
+    "/blu-resume-work":
+      - skills/blueprint-governance/references/resume-work-runtime-contract.md
 ---
 
 # Blueprint Governance Skill
@@ -34,13 +47,15 @@ Handle config, profile, and health flows with explicit state inspection and conf
 
 Stay close to the locked governance contracts for settings, profile selection, and health validation while preserving Blueprint config and hook boundaries.
 
-## Required Inputs
+## Runtime Inputs
 
-- `docs/commands/settings.md`
-- `docs/commands/set-profile.md`
-- `docs/commands/health.md`
-- `docs/commands/pause-work.md`
-- `docs/commands/resume-work.md`
+Load only the active command's structured `input_bundles.commands[...]` reference:
+
+- `/blu-settings`: `skills/blueprint-governance/references/settings-runtime-contract.md`
+- `/blu-set-profile`: `skills/blueprint-governance/references/set-profile-runtime-contract.md`
+- `/blu-health`: `skills/blueprint-governance/references/health-runtime-contract.md`
+- `/blu-pause-work`: `skills/blueprint-governance/references/pause-work-runtime-contract.md`
+- `/blu-resume-work`: `skills/blueprint-governance/references/resume-work-runtime-contract.md`
 
 ## Required MCP Tools
 

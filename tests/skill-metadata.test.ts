@@ -142,6 +142,31 @@ test("capture commands resolve only command-scoped manifest inputs", async () =>
   }
 });
 
+test("governance commands resolve only command-scoped runtime references", async () => {
+  const expectations = [
+    ["settings", "settings-runtime-contract.md"],
+    ["set-profile", "set-profile-runtime-contract.md"],
+    ["health", "health-runtime-contract.md"],
+    ["pause-work", "pause-work-runtime-contract.md"],
+    ["resume-work", "resume-work-runtime-contract.md"]
+  ] as const;
+
+  for (const [commandName, referenceName] of expectations) {
+    const referencePath = `skills/blueprint-governance/references/${referenceName}`;
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-governance",
+      `/blu-${commandName}`,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-governance");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, [referencePath]);
+    assert.deepEqual(inputs.effective, [referencePath]);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
+});
+
 test("roadmap-admin siblings keep legacy Required Inputs fallback", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-roadmap-admin",

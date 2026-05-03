@@ -136,6 +136,108 @@ export declare const PROGRESS_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const SETTINGS_RUNTIME_METADATA: {
+    readonly commandName: "settings";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-governance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: config-only mutation inside repo config plus optional user defaults.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/settings-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-settings`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`settings` inspects and updates Blueprint repo or default configuration through governance MCP tools.";
+        readonly reads: readonly ["Project status and current Blueprint configuration through MCP."];
+        readonly writes: readonly [".blueprint/config.json or host defaults when explicitly requested"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "settings";
+        readonly primarySkill: "blueprint-governance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const SET_PROFILE_RUNTIME_METADATA: {
+    readonly commandName: "set-profile";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-governance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: single-setting mutation for project model profile selection.";
+    };
+    readonly requiredTools: readonly ["blueprint_config_get", "blueprint_config_set_profile"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/set-profile-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-set-profile`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`set-profile` changes the current project model_profile through the governance MCP config substrate.";
+        readonly reads: readonly ["Current Blueprint configuration through MCP."];
+        readonly writes: readonly [".blueprint/config.json model_profile"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "set-profile";
+        readonly primarySkill: "blueprint-governance";
+        readonly exactMcpDestination: readonly ["blueprint_config_get", "blueprint_config_set_profile"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const HEALTH_RUNTIME_METADATA: {
+    readonly commandName: "health";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-governance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: repair mode can normalize config and rewrite malformed planning artifacts.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_load", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_state_sync"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/health-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-health`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.";
+        readonly reads: readonly ["Project status, config, state, artifact inventory, and validation results through MCP."];
+        readonly writes: readonly [".blueprint/config.json and malformed planning artifacts only in explicit repair mode"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "health";
+        readonly primarySkill: "blueprint-governance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_load", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_state_sync"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
 export declare const VALIDATE_PHASE_RUNTIME_METADATA: {
     readonly commandName: "validate-phase";
     readonly sourceId: string;
@@ -337,6 +439,74 @@ export declare const ADD_TESTS_RUNTIME_METADATA: {
         readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const PAUSE_WORK_RUNTIME_METADATA: {
+    readonly commandName: "pause-work";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-governance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: writes handoff and state artifacts only.";
+    };
+    readonly requiredTools: readonly ["blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_pause_handoff_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/pause-work-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-pause-work`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`pause-work` records a canonical handoff from current Blueprint state and artifact inventory.";
+        readonly reads: readonly ["Current state, artifact inventory, and existing pause handoff state through MCP."];
+        readonly writes: readonly [".blueprint/reports/pause-work-latest.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "pause-work";
+        readonly primarySkill: "blueprint-governance";
+        readonly exactMcpDestination: readonly ["blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_pause_handoff_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const RESUME_WORK_RUNTIME_METADATA: {
+    readonly commandName: "resume-work";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-governance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: restores state from the canonical pause handoff and updates the next safe action.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/resume-work-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-resume-work`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`resume-work` restores working context from the canonical pause handoff and records the next safe action.";
+        readonly reads: readonly ["Project status, current state, artifact inventory, and canonical pause handoff through MCP."];
+        readonly writes: readonly [".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "resume-work";
+        readonly primarySkill: "blueprint-governance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.";
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
@@ -639,6 +809,108 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
         };
     };
+    readonly settings: {
+        readonly commandName: "settings";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-governance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: config-only mutation inside repo config plus optional user defaults.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/settings-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-settings`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`settings` inspects and updates Blueprint repo or default configuration through governance MCP tools.";
+            readonly reads: readonly ["Project status and current Blueprint configuration through MCP."];
+            readonly writes: readonly [".blueprint/config.json or host defaults when explicitly requested"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "settings";
+            readonly primarySkill: "blueprint-governance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "set-profile": {
+        readonly commandName: "set-profile";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-governance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: single-setting mutation for project model profile selection.";
+        };
+        readonly requiredTools: readonly ["blueprint_config_get", "blueprint_config_set_profile"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/set-profile-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-set-profile`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`set-profile` changes the current project model_profile through the governance MCP config substrate.";
+            readonly reads: readonly ["Current Blueprint configuration through MCP."];
+            readonly writes: readonly [".blueprint/config.json model_profile"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "set-profile";
+            readonly primarySkill: "blueprint-governance";
+            readonly exactMcpDestination: readonly ["blueprint_config_get", "blueprint_config_set_profile"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly health: {
+        readonly commandName: "health";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-governance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: repair mode can normalize config and rewrite malformed planning artifacts.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_load", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_state_sync"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/health-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-health`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.";
+            readonly reads: readonly ["Project status, config, state, artifact inventory, and validation results through MCP."];
+            readonly writes: readonly [".blueprint/config.json and malformed planning artifacts only in explicit repair mode"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "health";
+            readonly primarySkill: "blueprint-governance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_load", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_state_sync"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
     readonly "validate-phase": {
         readonly commandName: "validate-phase";
         readonly sourceId: string;
@@ -840,6 +1112,74 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "pause-work": {
+        readonly commandName: "pause-work";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-governance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: writes handoff and state artifacts only.";
+        };
+        readonly requiredTools: readonly ["blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_pause_handoff_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/pause-work-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-pause-work`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`pause-work` records a canonical handoff from current Blueprint state and artifact inventory.";
+            readonly reads: readonly ["Current state, artifact inventory, and existing pause handoff state through MCP."];
+            readonly writes: readonly [".blueprint/reports/pause-work-latest.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "pause-work";
+            readonly primarySkill: "blueprint-governance";
+            readonly exactMcpDestination: readonly ["blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_pause_handoff_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "resume-work": {
+        readonly commandName: "resume-work";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-governance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: restores state from the canonical pause handoff and updates the next safe action.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-governance/references/resume-work-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-resume-work`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`resume-work` restores working context from the canonical pause handoff and records the next safe action.";
+            readonly reads: readonly ["Project status, current state, artifact inventory, and canonical pause handoff through MCP."];
+            readonly writes: readonly [".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "resume-work";
+            readonly primarySkill: "blueprint-governance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_load", "blueprint_artifact_list", "blueprint_pause_handoff_get", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
         };
     };

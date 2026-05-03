@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintPauseHandoffGet,
@@ -110,10 +111,17 @@ Exercise the pause/resume handoff flow.
 }
 
 test("resume-work spec metadata references the governance handoff contract and registered tools", async () => {
-  const [manifestDoc, commandDoc, catalogDoc] = await Promise.all([
+  const [manifestDoc, referenceDoc, catalogDoc, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-resume-work.toml"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/resume-work.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8")
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-governance/references/resume-work-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("resume-work")
   ]);
 
   assert.match(manifestDoc, /Restore the latest Blueprint pause handoff/);
@@ -131,23 +139,21 @@ test("resume-work spec metadata references the governance handoff contract and r
     manifestDoc,
     /Preserve the canonical pause handoff report; do not rewrite or delete `\.blueprint\/reports\/pause-work-latest\.md`/
   );
-  assert.match(commandDoc, /# `\/blu-resume-work`/);
-  assert.match(commandDoc, /\| Wave \| `1` \|/);
-  assert.match(commandDoc, /\| Family \| `Core Lifecycle` \|/);
-  assert.match(commandDoc, /Root-routable \| Yes\. The root `\/blu` router may dispatch here directly\./);
-  assert.match(commandDoc, /Primary skill: `blueprint-governance`/);
-  assert.match(commandDoc, /`blueprint_project_status`/);
-  assert.match(commandDoc, /`blueprint_state_load`/);
-  assert.match(commandDoc, /`blueprint_artifact_list`/);
-  assert.match(commandDoc, /`blueprint_pause_handoff_get`/);
-  assert.match(commandDoc, /`blueprint_state_update`/);
+  assert.match(referenceDoc, /# \/blu-resume-work Runtime Contract/);
+  assert.match(referenceDoc, /## Write Boundaries/);
   assert.match(
-    commandDoc,
-    /Reconstructs context from `STATE\.md`, phase artifacts, and the canonical `pause-work` handoff schema/
+    referenceDoc,
+    /Restore context from the canonical pause handoff, re-anchor `STATE\.md` on live Blueprint state/i
   );
-  assert.match(commandDoc, /Direct `resume-work` happy-path fixture\./);
-  assert.match(commandDoc, /Missing-artifact recovery fixture\./);
-  assert.match(commandDoc, /Single-phase happy path fixture\./);
+  assert.equal(runtimeContract.catalog.specPath, "src/mcp/command-runtime-metadata.ts#resume-work");
+  assert.equal(runtimeContract.spec?.path, "src/mcp/command-runtime-metadata.ts#resume-work");
+  assert.deepEqual(runtimeContract.skillInputs.effective, [
+    "skills/blueprint-governance/references/resume-work-runtime-contract.md"
+  ]);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
   assert.match(
     catalogDoc,
     /\| `resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented` \| `\.blueprint\/STATE\.md` \| `Low: restores state from the canonical pause handoff and updates the next safe action\.` \|/
