@@ -1,8 +1,6 @@
 # Blueprint
 
-<p align="center">
-  <img src="resources/README_banner_dark.png" alt="Blueprint" width="100%">
-</p>
+![Blueprint](https://raw.githubusercontent.com/rakole/blueprint/main/resources/README_banner_dark.png)
 
 Blueprint is a Gemini CLI extension for running a structured, artifact-backed product workflow inside your repository. It helps you turn an idea into a roadmap, shape each phase, execute the work, validate the result, review it, and ship it without losing the thread between sessions.
 
