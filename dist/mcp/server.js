@@ -16605,46 +16605,101 @@ function renderShipTemplate() {
 
 ## Selected Scope
 
-- Branch, commits, or review scope selected for shipping.
+- **Scope:** <selected scope such as review-branch|current-branch|commits>
+- **Source branch:** <source branch>
+- **Source HEAD:** <commit sha>
+- **Base branch:** <base branch>
+- **Execution mode:** <preview-only|confirmed-run|blocked>
+- **Draft or ready mode:** <draft|ready>
+- **Config used:** git.base_branch=<base branch value>; git.branching_strategy=<branching strategy value>; planning.commit_docs=<true|false>
+- **Current branch:** <current branch>
+
+## Saved Evidence
+
+- **Digest inputs used:** <inputsUsed from blueprint_artifact_summary_digest>
+- **Saved evidence paths:** <saved evidence paths or none>
+- **Tracked files:** <repo-relative tracked files or none>
+- **Draft PR body source:** <path|generated body|none>
 
 ## Branch Plan
 
-- Push or PR plan that was attempted.
+- **Push requested:** <true|false>
+- **PR requested:** <true|false>
+- **Git commands approved:** <commands or none>
+
+## Remote Actions
+
+- **gh commands approved:** <commands or none>
+- **gh availability and auth:** <available and authenticated|available but unauthenticated|unavailable>
 
 ## Push Or PR Outcome
 
-- Actual push or PR outcome, or \`none\`.
+- **Push outcome:** <not-run|success|failed|blocked>
+- **PR outcome:** <not-run|created|updated|failed|blocked>
+- **gh fallback notes:** <fallback notes or none>
 
 ## Manual Fallback Guidance
 
-- Manual next step when remote shipping did not complete.
+- **Manual checklist:**
+  1. <manual step one>
+  2. <manual step two>
+  3. <manual step three>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- <manual next action or /blu-progress>`;
 }
 function renderUndoTemplate() {
   return `# Undo Report
 
 ## Requested Scope
 
-- Approved undo target and why it was selected.
+- **Scope:** <requested undo scope such as commits|report overwrite|phase artifact>
+- **Reason:** <operator-approved reason>
+- **Execution mode:** <preview-only|confirmed-run|blocked>
+- **Pending gate:** <awaiting confirmation|approved|blocked>
+
+## Branch State
+
+- **Current branch:** <current branch>
+- **HEAD:** <commit sha>
+- **Working tree status:** <clean|dirty>
+- **Merge state:** <not in progress|merge in progress|rebase in progress|cherry-pick in progress>
+- **Report overwrite status:** <new report|overwrite approved|overwrite blocked>
+
+## Affected Evidence And Digest Inputs
+
+- **Digest inputs used:** <inputsUsed from blueprint_artifact_summary_digest>
+- **Affected evidence:** <saved evidence paths or none>
+- **Stale evidence impact:** <stale evidence impact or none>
+- **Tracked files:** <repo-relative tracked files or none>
 
 ## Candidate Revert Set
 
-- Commits, files, or artifacts that are part of the undo scope.
+- **Commit ledger:**
+
+| Commit | Subject | Scope | Revert action | Notes |
+|---|---|---|---|---|
+| <sha> | <subject> | <scope> | <revert|skip> | <notes> |
 
 ## Dependency Impact
 
-- Dependency or follow-on risk from the undo.
+- **Dependency risk:** <dependency risk or none>
+
+## Approved Revert Commands
+
+- **Pending git commands:** <commands awaiting approval or none>
+- **Approved git commands:** <approved commands or none>
+- **Forbidden-command check:** <passed|failed with blockers>
 
 ## Mutation Outcome
 
-- Result of the undo operation or \`pending\`.
+- **Revert outcome:** <not-run|success|failed|blocked>
+- **Blockers:** <blockers or none>
 
 ## Next Safe Action
 
-- /blu-progress`;
+- <manual next action or /blu-progress>`;
 }
 function renderCleanupTemplate() {
   return `# Cleanup Report
@@ -19506,10 +19561,67 @@ var init_artifact_contracts = __esm({
         canonicalName: "Ship Report",
         canonicalFilePattern: ".blueprint/reports/ship-latest.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Selected Scope", "Branch Plan", "Push Or PR Outcome", "Manual Fallback Guidance", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: [],
-        notes: ["Ship reports keep manual fallback guidance explicit when remote shipping does not complete."],
+        requiredHeadings: [
+          "Selected Scope",
+          "Saved Evidence",
+          "Branch Plan",
+          "Remote Actions",
+          "Push Or PR Outcome",
+          "Manual Fallback Guidance",
+          "Next Safe Action"
+        ],
+        lockedMarkers: [
+          "**Scope:**",
+          "**Source branch:**",
+          "**Source HEAD:**",
+          "**Base branch:**",
+          "**Execution mode:**",
+          "**Draft or ready mode:**",
+          "**Config used:**",
+          "**Current branch:**",
+          "**Digest inputs used:**",
+          "**Saved evidence paths:**",
+          "**Tracked files:**",
+          "**Draft PR body source:**",
+          "**Push requested:**",
+          "**PR requested:**",
+          "**Git commands approved:**",
+          "**gh commands approved:**",
+          "**gh availability and auth:**",
+          "**Push outcome:**",
+          "**PR outcome:**",
+          "**gh fallback notes:**",
+          "**Manual checklist:**"
+        ],
+        placeholderSignals: [
+          "<selected scope such as review-branch|current-branch|commits>",
+          "<source branch>",
+          "<commit sha>",
+          "<base branch>",
+          "<preview-only|confirmed-run|blocked>",
+          "<draft|ready>",
+          "<base branch value>",
+          "<branching strategy value>",
+          "<current branch>",
+          "<inputsUsed from blueprint_artifact_summary_digest>",
+          "<saved evidence paths or none>",
+          "<repo-relative tracked files or none>",
+          "<path|generated body|none>",
+          "<true|false>",
+          "<commands or none>",
+          "<available and authenticated|available but unauthenticated|unavailable>",
+          "<not-run|success|failed|blocked>",
+          "<not-run|created|updated|failed|blocked>",
+          "<fallback notes or none>",
+          "<manual step one>",
+          "<manual step two>",
+          "<manual step three>",
+          "<manual next action or /blu-progress>"
+        ],
+        notes: [
+          "Ship reports must record the selected shipping scope, saved evidence, and the exact remote action approvals before mutation.",
+          "Ship reports keep manual fallback guidance explicit when push or PR creation does not complete."
+        ],
         renderScaffoldTemplate: renderShipTemplate,
         renderAuthoringTemplate: renderShipTemplate
       },
@@ -19521,10 +19633,69 @@ var init_artifact_contracts = __esm({
         canonicalName: "Undo Report",
         canonicalFilePattern: ".blueprint/reports/undo-latest.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Requested Scope", "Candidate Revert Set", "Dependency Impact", "Mutation Outcome", "Next Safe Action"],
-        lockedMarkers: [],
-        placeholderSignals: [],
-        notes: ["Undo reports capture approved scope before mutation begins."],
+        requiredHeadings: [
+          "Requested Scope",
+          "Branch State",
+          "Affected Evidence And Digest Inputs",
+          "Candidate Revert Set",
+          "Dependency Impact",
+          "Approved Revert Commands",
+          "Mutation Outcome",
+          "Next Safe Action"
+        ],
+        lockedMarkers: [
+          "**Scope:**",
+          "**Reason:**",
+          "**Execution mode:**",
+          "**Pending gate:**",
+          "**Current branch:**",
+          "**HEAD:**",
+          "**Working tree status:**",
+          "**Merge state:**",
+          "**Report overwrite status:**",
+          "**Digest inputs used:**",
+          "**Affected evidence:**",
+          "**Stale evidence impact:**",
+          "**Tracked files:**",
+          "**Commit ledger:**",
+          "**Dependency risk:**",
+          "**Pending git commands:**",
+          "**Approved git commands:**",
+          "**Forbidden-command check:**",
+          "**Revert outcome:**",
+          "**Blockers:**"
+        ],
+        placeholderSignals: [
+          "<requested undo scope such as commits|report overwrite|phase artifact>",
+          "<operator-approved reason>",
+          "<preview-only|confirmed-run|blocked>",
+          "<awaiting confirmation|approved|blocked>",
+          "<current branch>",
+          "<commit sha>",
+          "<clean|dirty>",
+          "<not in progress|merge in progress|rebase in progress|cherry-pick in progress>",
+          "<new report|overwrite approved|overwrite blocked>",
+          "<inputsUsed from blueprint_artifact_summary_digest>",
+          "<saved evidence paths or none>",
+          "<stale evidence impact or none>",
+          "<repo-relative tracked files or none>",
+          "<sha>",
+          "<subject>",
+          "<scope>",
+          "<revert|skip>",
+          "<notes>",
+          "<dependency risk or none>",
+          "<commands awaiting approval or none>",
+          "<approved commands or none>",
+          "<passed|failed with blockers>",
+          "<not-run|success|failed|blocked>",
+          "<blockers or none>",
+          "<manual next action or /blu-progress>"
+        ],
+        notes: [
+          "Undo reports must capture branch state, digest inputs, candidate revert scope, and approval gates before mutation begins.",
+          "Undo reports must preserve blocker details when the revert path is preview-only, rejected, or incomplete."
+        ],
         renderScaffoldTemplate: renderUndoTemplate,
         renderAuthoringTemplate: renderUndoTemplate
       },
@@ -49425,9 +49596,34 @@ function validateReportArtifactContent(content, reportName2) {
   ) : false;
   const hasLegacyMilestoneAuditGapSummary = isMilestoneAudit ? /(?:^|\n)## Gaps Found\s*$/m.test(content) : false;
   const legacyMilestoneAuditCompatibility = isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
+  const isShipReport = contractId === "report.ship";
+  const isUndoReport = contractId === "report.undo";
+  const hasScopedSemanticValidation = isShipReport || isUndoReport;
   const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
-  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
+  if (!validation.valid && !legacyMilestoneAuditCompatibility && !hasScopedSemanticValidation) {
     return validation;
+  }
+  if (isShipReport) {
+    const issues = [
+      ...validation.issues,
+      ...validateShipReportSemantics(content)
+    ];
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: validation.warnings
+    };
+  }
+  if (isUndoReport) {
+    const issues = [
+      ...validation.issues,
+      ...validateUndoReportSemantics(content)
+    ];
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: validation.warnings
+    };
   }
   if (isMilestoneAudit) {
     const issues = [];
@@ -49552,6 +49748,167 @@ function validateReportArtifactContent(content, reportName2) {
     };
   }
   return validation;
+}
+function extractReportMarkerValue(content, heading, marker) {
+  const section = extractMarkdownSection5(content, heading);
+  const match = section.match(
+    new RegExp(`^- \\*\\*${escapeRegex2(marker)}:\\*\\*\\s*(.+)$`, "m")
+  );
+  return match?.[1]?.trim() ?? null;
+}
+function validateReportEnumMarker(content, heading, marker, allowedValues, artifactLabel) {
+  const value = extractReportMarkerValue(content, heading, marker);
+  if (value === null) {
+    return [];
+  }
+  if (allowedValues.includes(value)) {
+    return [];
+  }
+  return [
+    `${artifactLabel} marker ${marker} must use one of: ${allowedValues.join(", ")}.`
+  ];
+}
+function detectForbiddenUndoCommands(commands) {
+  const forbiddenPatterns = [
+    { pattern: /\bgit\s+reset\s+--hard\b/i, label: "git reset --hard" },
+    { pattern: /\bgit\s+branch\s+(?:-D|--delete)\b/i, label: "git branch delete" },
+    { pattern: /\bgit\s+push\s+(?:--force(?:-with-lease)?|-f)\b/i, label: "git push --force" },
+    { pattern: /\bgit\s+rebase\b/i, label: "git rebase" }
+  ];
+  return forbiddenPatterns.filter(({ pattern }) => pattern.test(commands)).map(({ label }) => label);
+}
+function validateShipReportSemantics(content) {
+  const issues = [];
+  issues.push(
+    ...validateReportEnumMarker(
+      content,
+      "Selected Scope",
+      "Execution mode",
+      ["preview-only", "confirmed-run", "blocked"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Selected Scope",
+      "Draft or ready mode",
+      ["draft", "ready"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch Plan",
+      "Push requested",
+      ["true", "false"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch Plan",
+      "PR requested",
+      ["true", "false"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Remote Actions",
+      "gh availability and auth",
+      ["available and authenticated", "available but unauthenticated", "unavailable"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Push Or PR Outcome",
+      "Push outcome",
+      ["not-run", "success", "failed", "blocked"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Push Or PR Outcome",
+      "PR outcome",
+      ["not-run", "created", "updated", "failed", "blocked"],
+      "Ship report"
+    )
+  );
+  return issues;
+}
+function validateUndoReportSemantics(content) {
+  const issues = [];
+  issues.push(
+    ...validateReportEnumMarker(
+      content,
+      "Requested Scope",
+      "Execution mode",
+      ["preview-only", "confirmed-run", "blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Requested Scope",
+      "Pending gate",
+      ["awaiting confirmation", "approved", "blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Working tree status",
+      ["clean", "dirty"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Merge state",
+      ["not in progress", "merge in progress", "rebase in progress", "cherry-pick in progress"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Report overwrite status",
+      ["new report", "overwrite approved", "overwrite blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Approved Revert Commands",
+      "Forbidden-command check",
+      ["passed", "failed with blockers"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Mutation Outcome",
+      "Revert outcome",
+      ["not-run", "success", "failed", "blocked"],
+      "Undo report"
+    )
+  );
+  const forbiddenCommandCheck = extractReportMarkerValue(
+    content,
+    "Approved Revert Commands",
+    "Forbidden-command check"
+  );
+  for (const marker of ["Pending git commands", "Approved git commands"]) {
+    const commands = extractReportMarkerValue(content, "Approved Revert Commands", marker);
+    if (commands === null || commands.toLowerCase() === "none") {
+      continue;
+    }
+    const forbiddenCommands = detectForbiddenUndoCommands(commands);
+    if (forbiddenCommands.length === 0) {
+      continue;
+    }
+    issues.push(
+      `Undo report marker ${marker} must not include destructive undo commands: ${forbiddenCommands.join(", ")}.`
+    );
+    if (forbiddenCommandCheck === "passed") {
+      issues.push(
+        "Undo report marker Forbidden-command check cannot be `passed` when destructive undo commands appear in the approved revert commands section."
+      );
+    }
+  }
+  return issues;
 }
 function normalizeSummaryPlanReference(value) {
   const trimmed = value.trim();

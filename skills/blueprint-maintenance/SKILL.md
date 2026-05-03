@@ -85,7 +85,7 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 ## Shared MCP Contracts
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` for state or roadmap inference. Never pass phase directories, slugs, or filenames.
-- `blueprint_artifact_contract_read`: for known report shapes such as `report.pr-branch`, use the returned `authoringTemplate` as the heading and schema authority before report persistence.
+- `blueprint_artifact_contract_read`: for known report shapes such as `report.pr-branch`, `report.ship`, and `report.undo`, use the returned `authoringTemplate` as the heading and schema authority before report persistence.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths`, `trackedFiles`, and related file inputs only, and treat `inputsUsed` as the authoritative digest scope.
 - `blueprint_artifact_report_write`: pass a bare report name such as `pr-branch-latest`, `ship-latest`, `undo-latest`, or `cleanup-latest`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
 
@@ -204,8 +204,11 @@ Shared in-flight contract for `ship`:
 9. Keep remote mutation explicit: local preparation, optional push, and optional PR creation are separate steps, and the preview must name the exact git or `gh` commands that would run.
 10. Require explicit confirmation that includes draft versus ready state, source and base branches, requested push or PR steps, and fallback behavior when `gh` is missing or unauthenticated.
 11. When the flow branches across local prep, remote checks, optional push, optional PR creation, manual fallback preparation, and post-ship routing, tracker-backed coordination may be used, but treat tracker state as session-local coordination only and keep the visible checklist authoritative for the user.
-12. Persist the durable outcome through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
-13. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written.
+12. Read `blueprint_artifact_contract_read` for `report.ship` before report persistence, and use the returned `authoringTemplate` as the canonical `ship-latest` report authority.
+13. Persist the approved shipping plan through `blueprint_artifact_report_write` with the bare report name `ship-latest`, including manual fallback guidance when remote creation does not happen. Use the returned `path` as the authoritative saved report location.
+14. Run only the approved local prep, push, or PR steps. Never hide a push behind PR creation, and skip PR creation in favor of manual fallback guidance when `gh` is missing or unauthenticated.
+15. After the approved push or PR attempt finishes, overwrite `ship-latest` through `blueprint_artifact_report_write` so the durable report captures actual outcomes, fallback notes, and post-mutation evidence instead of leaving only the pre-mutation plan.
+16. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the post-mutation report overwrite is written.
 
 ### `undo`
 
@@ -226,9 +229,11 @@ Shared in-flight contract for `undo`:
 8. Keep the active stage visible as the run moves through `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the resolved scope, pending gate, execution mode, and next safe action legible throughout the run.
 9. Require explicit confirmation that includes the exact revert scope, candidate commits, dependency-impact notes, the `undo-latest` report, and the precise git commands that will run. Keep the pending gate explicit as `undo-confirmation` until the user approves.
 10. If replacing `undo-latest` needs overwrite approval, keep the report-overwrite waiting state explicit as `report-overwrite-confirmation` and name the next safe action before continuing.
-11. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
-12. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
-13. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the report is written and the revert succeeds.
+11. Read `blueprint_artifact_contract_read` for `report.undo` before report persistence, and use the returned `authoringTemplate` as the canonical `undo-latest` report authority.
+12. Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest` before git mutation begins, and use the returned `path` as the authoritative saved report location.
+13. Run only safe revert-style git steps. Never use `git reset --hard`, implicit branch deletion, or other destructive shortcuts for this command.
+14. After the revert attempt finishes, overwrite `undo-latest` through `blueprint_artifact_report_write` so the durable report captures the actual outcome, blockers, and stale-evidence fallout instead of leaving only the pre-mutation plan.
+15. If the outcome changes the next safe Blueprint action, update it through `blueprint_state_update` after the post-mutation report overwrite is written and the revert succeeds.
 
 ### `cleanup`
 

@@ -5400,11 +5400,40 @@ export function validateReportArtifactContent(
     : false;
   const legacyMilestoneAuditCompatibility =
     isMilestoneAudit && hasLegacyMilestoneAuditGapSummary && !hasStructuredMilestoneAuditGapSections;
+  const isShipReport = contractId === "report.ship";
+  const isUndoReport = contractId === "report.undo";
+  const hasScopedSemanticValidation = isShipReport || isUndoReport;
 
   const validation = validateContractBackedMarkdown(content, contractId, "Report artifact");
 
-  if (!validation.valid && !legacyMilestoneAuditCompatibility) {
+  if (!validation.valid && !legacyMilestoneAuditCompatibility && !hasScopedSemanticValidation) {
     return validation;
+  }
+
+  if (isShipReport) {
+    const issues = [
+      ...validation.issues,
+      ...validateShipReportSemantics(content)
+    ];
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: validation.warnings
+    };
+  }
+
+  if (isUndoReport) {
+    const issues = [
+      ...validation.issues,
+      ...validateUndoReportSemantics(content)
+    ];
+
+    return {
+      valid: issues.length === 0,
+      issues,
+      warnings: validation.warnings
+    };
   }
 
   if (isMilestoneAudit) {
@@ -5555,6 +5584,200 @@ export function validateReportArtifactContent(
   }
 
   return validation;
+}
+
+function extractReportMarkerValue(
+  content: string,
+  heading: string,
+  marker: string
+): string | null {
+  const section = extractMarkdownSection(content, heading);
+  const match = section.match(
+    new RegExp(`^- \\*\\*${escapeRegex(marker)}:\\*\\*\\s*(.+)$`, "m")
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
+function validateReportEnumMarker(
+  content: string,
+  heading: string,
+  marker: string,
+  allowedValues: readonly string[],
+  artifactLabel: string
+): string[] {
+  const value = extractReportMarkerValue(content, heading, marker);
+
+  if (value === null) {
+    return [];
+  }
+
+  if (allowedValues.includes(value)) {
+    return [];
+  }
+
+  return [
+    `${artifactLabel} marker ${marker} must use one of: ${allowedValues.join(", ")}.`
+  ];
+}
+
+function detectForbiddenUndoCommands(commands: string): string[] {
+  const forbiddenPatterns: Array<{ pattern: RegExp; label: string }> = [
+    { pattern: /\bgit\s+reset\s+--hard\b/i, label: "git reset --hard" },
+    { pattern: /\bgit\s+branch\s+(?:-D|--delete)\b/i, label: "git branch delete" },
+    { pattern: /\bgit\s+push\s+(?:--force(?:-with-lease)?|-f)\b/i, label: "git push --force" },
+    { pattern: /\bgit\s+rebase\b/i, label: "git rebase" }
+  ];
+
+  return forbiddenPatterns
+    .filter(({ pattern }) => pattern.test(commands))
+    .map(({ label }) => label);
+}
+
+function validateShipReportSemantics(content: string): string[] {
+  const issues: string[] = [];
+
+  issues.push(
+    ...validateReportEnumMarker(
+      content,
+      "Selected Scope",
+      "Execution mode",
+      ["preview-only", "confirmed-run", "blocked"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Selected Scope",
+      "Draft or ready mode",
+      ["draft", "ready"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch Plan",
+      "Push requested",
+      ["true", "false"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch Plan",
+      "PR requested",
+      ["true", "false"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Remote Actions",
+      "gh availability and auth",
+      ["available and authenticated", "available but unauthenticated", "unavailable"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Push Or PR Outcome",
+      "Push outcome",
+      ["not-run", "success", "failed", "blocked"],
+      "Ship report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Push Or PR Outcome",
+      "PR outcome",
+      ["not-run", "created", "updated", "failed", "blocked"],
+      "Ship report"
+    )
+  );
+
+  return issues;
+}
+
+function validateUndoReportSemantics(content: string): string[] {
+  const issues: string[] = [];
+
+  issues.push(
+    ...validateReportEnumMarker(
+      content,
+      "Requested Scope",
+      "Execution mode",
+      ["preview-only", "confirmed-run", "blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Requested Scope",
+      "Pending gate",
+      ["awaiting confirmation", "approved", "blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Working tree status",
+      ["clean", "dirty"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Merge state",
+      ["not in progress", "merge in progress", "rebase in progress", "cherry-pick in progress"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Branch State",
+      "Report overwrite status",
+      ["new report", "overwrite approved", "overwrite blocked"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Approved Revert Commands",
+      "Forbidden-command check",
+      ["passed", "failed with blockers"],
+      "Undo report"
+    ),
+    ...validateReportEnumMarker(
+      content,
+      "Mutation Outcome",
+      "Revert outcome",
+      ["not-run", "success", "failed", "blocked"],
+      "Undo report"
+    )
+  );
+
+  const forbiddenCommandCheck = extractReportMarkerValue(
+    content,
+    "Approved Revert Commands",
+    "Forbidden-command check"
+  );
+
+  for (const marker of ["Pending git commands", "Approved git commands"]) {
+    const commands = extractReportMarkerValue(content, "Approved Revert Commands", marker);
+
+    if (commands === null || commands.toLowerCase() === "none") {
+      continue;
+    }
+
+    const forbiddenCommands = detectForbiddenUndoCommands(commands);
+
+    if (forbiddenCommands.length === 0) {
+      continue;
+    }
+
+    issues.push(
+      `Undo report marker ${marker} must not include destructive undo commands: ${forbiddenCommands.join(", ")}.`
+    );
+
+    if (forbiddenCommandCheck === "passed") {
+      issues.push(
+        "Undo report marker Forbidden-command check cannot be `passed` when destructive undo commands appear in the approved revert commands section."
+      );
+    }
+  }
+
+  return issues;
 }
 
 type SummaryValidationOptions = {

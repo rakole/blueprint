@@ -729,8 +729,11 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
 
   assert.match(shipCommand, /repo-relative tracked-file inputs/i);
   assert.match(shipCommand, /returned `inputsUsed` list as the authoritative digest scope/i);
+  assert.match(shipCommand, /mcp_blueprint_blueprint_artifact_contract_read/i);
+  assert.match(shipCommand, /contract\.authoringTemplate/i);
   assert.match(shipCommand, /bare report name `ship-latest`/i);
   assert.match(shipDoc, /## Digest And Report Contract/);
+  assert.match(shipDoc, /contract\.authoringTemplate/i);
 
   assert.match(cleanupCommand, /explicit repo-relative `artifactPaths`/i);
   assert.match(cleanupCommand, /returned `inputsUsed` list as the authoritative digest scope/i);
