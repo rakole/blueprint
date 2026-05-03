@@ -18,6 +18,11 @@ export const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE =
 
 type CommandCatalogResult = Awaited<ReturnType<typeof blueprintCommandCatalog>>;
 type CommandCatalogEntry = CommandCatalogResult["commands"][string];
+type RelativePathReader = (relativePath: string) => Promise<string | null>;
+
+type BuildBlueprintCommandRuntimeContractResourceOptions = {
+  readRelativePath?: RelativePathReader;
+};
 
 export type BlueprintCommandSpecResource = {
   path: string;
@@ -216,16 +221,11 @@ function buildCommandRuntimeContractUri(commandName: string): string {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
 
-const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS = new Set(["review"]);
 const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION =
-  "Read-only projection of one implemented Blueprint command's catalog metadata, command spec, and runtime-reference row; `review` is intentionally excluded.";
+  "Read-only projection of one implemented Blueprint command's catalog metadata, command spec, and runtime-reference row.";
 
 function buildNonImplementedRuntimeContractErrorMessage(commandName: string): string {
   return `Blueprint runtime-contract resources are available only for implemented commands: ${commandName}`;
-}
-
-function buildExcludedRuntimeContractErrorMessage(commandName: string): string {
-  return `Blueprint runtime-contract resources intentionally exclude this command today: ${commandName}`;
 }
 
 function isExposedRuntimeContractCatalogEntry(entry: CommandCatalogEntry): boolean {
@@ -250,10 +250,12 @@ function runtimeOwnedMetadataToRuntimeReferenceRow(
   };
 }
 
-async function readBlueprintRuntimeReferenceRows(): Promise<
+async function readBlueprintRuntimeReferenceRows(
+  readRelativePath: RelativePathReader = readBundledFile
+): Promise<
   Map<string, BlueprintRuntimeReferenceRowResource>
 > {
-  const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
+  const runtimeReferenceMarkdown = await readRelativePath("docs/RUNTIME-REFERENCE.md");
   const rows = runtimeReferenceMarkdown
     ? parseRuntimeReferenceRows(runtimeReferenceMarkdown)
     : new Map<string, BlueprintRuntimeReferenceRowResource>();
@@ -265,33 +267,40 @@ async function readBlueprintRuntimeReferenceRows(): Promise<
   return rows;
 }
 
+function runtimeOwnedMetadataToCommandSpec(
+  metadata: RuntimeOwnedCommandMetadata
+): BlueprintCommandSpecResource {
+  return {
+    path: metadata.spec.path,
+    title: metadata.spec.title,
+    wave: metadata.catalog.wave,
+    family: metadata.catalog.family,
+    executionProfile: metadata.spec.executionProfile,
+    rootRoutable: metadata.spec.rootRoutable,
+    purpose: metadata.spec.purpose,
+    requiredTools: [...metadata.requiredTools],
+    primarySkill: metadata.catalog.primarySkill,
+    optionalSubagents: [...metadata.optionalAgents],
+    reads: [...metadata.spec.reads],
+    writes: [...metadata.spec.writes]
+  };
+}
+
 async function readBundledCommandSpec(
-  entry: CommandCatalogEntry
+  entry: CommandCatalogEntry,
+  readRelativePath: RelativePathReader = readBundledFile
 ): Promise<BlueprintCommandSpecResource | null> {
   const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
 
   if (runtimeMetadata) {
-    return {
-      path: runtimeMetadata.spec.path,
-      title: runtimeMetadata.spec.title,
-      wave: runtimeMetadata.catalog.wave,
-      family: runtimeMetadata.catalog.family,
-      executionProfile: runtimeMetadata.spec.executionProfile,
-      rootRoutable: runtimeMetadata.spec.rootRoutable,
-      purpose: runtimeMetadata.spec.purpose,
-      requiredTools: [...runtimeMetadata.requiredTools],
-      primarySkill: runtimeMetadata.catalog.primarySkill,
-      optionalSubagents: [...runtimeMetadata.optionalAgents],
-      reads: [...runtimeMetadata.spec.reads],
-      writes: [...runtimeMetadata.spec.writes]
-    };
+    return runtimeOwnedMetadataToCommandSpec(runtimeMetadata);
   }
 
   if (!entry.specPath) {
     return null;
   }
 
-  const specMarkdown = await readBundledFile(entry.specPath);
+  const specMarkdown = await readRelativePath(entry.specPath);
 
   return specMarkdown ? parseCommandSpec(specMarkdown, entry.specPath) : null;
 }
@@ -305,10 +314,6 @@ export async function listBlueprintCommandRuntimeContractCommands(): Promise<str
   const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
   const commands = await Promise.all(
     Object.entries(catalog.commands).map(async ([commandName, entry]) => {
-      if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
-        return null;
-      }
-
       if (!isExposedRuntimeContractCatalogEntry(entry)) {
         return null;
       }
@@ -325,8 +330,10 @@ export async function listBlueprintCommandRuntimeContractCommands(): Promise<str
 }
 
 export async function buildBlueprintCommandRuntimeContractResource(
-  commandName: string
+  commandName: string,
+  options: BuildBlueprintCommandRuntimeContractResourceOptions = {}
 ): Promise<BlueprintCommandRuntimeContractResource> {
+  const readRelativePath = options.readRelativePath ?? readBundledFile;
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands[commandName];
 
@@ -334,23 +341,26 @@ export async function buildBlueprintCommandRuntimeContractResource(
     throw new Error(`Unknown Blueprint command: ${commandName}`);
   }
 
-  if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
-    throw new Error(buildExcludedRuntimeContractErrorMessage(commandName));
-  }
-
   if (!isExposedRuntimeContractCatalogEntry(entry)) {
     throw new Error(buildNonImplementedRuntimeContractErrorMessage(commandName));
   }
 
-  const [spec, runtimeReferenceRows] = await Promise.all([
-    readBundledCommandSpec(entry),
-    readBlueprintRuntimeReferenceRows()
-  ]);
-  const runtimeReference = runtimeReferenceRows.get(commandName);
+  const runtimeMetadata =
+    getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ??
+    getRuntimeOwnedCommandMetadata(commandName);
+  const [spec, runtimeReference] = runtimeMetadata
+    ? [
+        runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
+        runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata)
+      ]
+    : await Promise.all([
+        readBundledCommandSpec(entry, readRelativePath),
+        readBlueprintRuntimeReferenceRows(readRelativePath).then((rows) => rows.get(commandName))
+      ]);
   const skillInputs = await loadBlueprintSkillInputs(
     entry.primarySkill,
     entry.command,
-    readBundledFile,
+    readRelativePath,
     entry.skillPath
   );
 

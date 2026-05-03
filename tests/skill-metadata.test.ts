@@ -142,6 +142,36 @@ test("capture commands resolve only command-scoped manifest inputs", async () =>
   }
 });
 
+test("review commands resolve docs-free manifest and local runtime-contract inputs", async () => {
+  const expectations = [
+    ["code-review", "commands/blu-code-review.toml", "code-review-runtime-contract.md"],
+    [
+      "code-review-fix",
+      "commands/blu-code-review-fix.toml",
+      "code-review-fix-runtime-contract.md"
+    ],
+    ["audit-fix", "commands/blu-audit-fix.toml", "audit-fix-runtime-contract.md"],
+    ["secure-phase", "commands/blu-secure-phase.toml", "secure-phase-runtime-contract.md"],
+    ["review", "commands/blu-review.toml", "review-runtime-contract.md"],
+    ["ui-review", "commands/blu-ui-review.toml", "ui-review-runtime-contract.md"]
+  ] as const;
+
+  for (const [commandName, manifestPath, contractFile] of expectations) {
+    const runtimeContractPath = `skills/blueprint-review/references/${contractFile}`;
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-review",
+      `/blu-${commandName}`,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-review");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, [manifestPath, runtimeContractPath]);
+    assert.deepEqual(inputs.effective, [manifestPath, runtimeContractPath]);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
+});
+
 test("governance commands resolve only command-scoped runtime references", async () => {
   const expectations = [
     ["settings", "settings-runtime-contract.md"],

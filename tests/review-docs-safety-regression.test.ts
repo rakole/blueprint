@@ -18,64 +18,64 @@ async function readRepoFiles(paths: string[]): Promise<Record<string, string>> {
 
 test("review-family contracts keep overwrite and scope boundaries explicit", async () => {
   const files = await readRepoFiles([
-    "docs/commands/code-review.md",
-    "docs/commands/review.md",
-    "docs/commands/secure-phase.md",
-    "docs/commands/ui-review.md",
+    "commands/blu-code-review.toml",
+    "commands/blu-review.toml",
+    "commands/blu-secure-phase.toml",
+    "commands/blu-ui-review.toml",
     "skills/blueprint-review/SKILL.md",
     "skills/blueprint-review/references/review-runtime-contract.md"
   ]);
 
-  const codeReview = files["docs/commands/code-review.md"];
+  const codeReview = files["commands/blu-code-review.toml"];
   assert.match(
     codeReview,
-    /shared review posture from the runtime contract/i
+    /runtime contract's shared review posture/i
   );
   assert.match(
     codeReview,
-    /Directories, wildcards, `\.blueprint\/\*\*`, and absolute paths are invalid review-scope inputs/i
+    /do not pass directories, wildcards, `\.blueprint\/\*\*`, or absolute filesystem paths/i
   );
   assert.match(
     codeReview,
-    /treat the returned `files` list as authoritative instead of widening scope from chat memory or git drift/i
+    /do not widen it from chat memory or unstaged changes/i
   );
   assert.match(
     codeReview,
-    /If explicit files were supplied, review only those exact repo-relative paths/i
+    /If explicit files were supplied, treat the returned `files` list as the exact user-selected scope/i
   );
   assert.match(
     codeReview,
-    /Require explicit overwrite confirmation before replacing an existing `XX-REVIEW\.md`/i
+    /require explicit overwrite confirmation before changing it/i
   );
 
-  const review = files["docs/commands/review.md"];
+  const review = files["commands/blu-review.toml"];
   assert.match(
     review,
-    /resolved scope must stay tied to the saved phase plan set/i
+    /Review only the selected phase plans plus directly related saved evidence/i
   );
   assert.match(
     review,
-    /pending gates stay limited to overwrite confirmation, reviewer-availability confirmation, or the visible `reviewer-availability` waiting state/i
+    /pending gate \(`none`, overwrite confirmation, reviewer-availability confirmation, or `reviewer-availability`\)/i
   );
   assert.match(
     review,
-    /Read only the selected phase plans through `blueprint_phase_plan_read`; do not widen peer-review scope from unrelated repo drift/i
+    /Read the saved plan set through `mcp_blueprint_blueprint_phase_plan_read`/i
   );
   assert.match(
     review,
-    /Use Gemini CLI's `ask_user` tool for overwrite confirmation before replacing an existing `XX-REVIEWS\.md`/i
+    /Use `ask_user` for overwrite confirmation and any structured reviewer-availability confirmation/i
   );
   assert.match(
     review,
-    /Read `review\.peer-review` through `blueprint_artifact_contract_read` and `blueprint_review_authoring_context` before drafting or repairing the artifact/i
+    /Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review\.peer-review` contract and `mcp_blueprint_blueprint_review_authoring_context`/i
   );
   assert.match(
     review,
-    /Optional subagents: `blueprint-reviewer`/i
+    /use the `blueprint-reviewer` subagent only for read-only packet and consensus\/disagreement analysis/i
   );
   assert.match(
     review,
-    /When no suitable subagent is available, the command continues sequentially/i
+    /If that subagent is unavailable or unnecessary, use the local runtime contract's no-subagent fallback/i
   );
 
   const reviewRuntimeContract = files["skills/blueprint-review/references/review-runtime-contract.md"];
@@ -96,24 +96,24 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
     /Browser-only, web-search-only, shell-only, or generic helpers are not\s+acceptable substitutes/i
   );
 
-  const securePhase = files["docs/commands/secure-phase.md"];
+  const securePhase = files["commands/blu-secure-phase.toml"];
   assert.match(
     securePhase,
-    /use saved plan evidence only to define the declared threats and mitigations, then audit against that register instead of widening into a generic security scan/i
+    /saved phase threat model from the executed plan evidence and build the bounded threat register from the declared scope/i
   );
   assert.match(
     securePhase,
-    /Use Gemini CLI's `ask_user` tool for overwrite confirmation before replacing an existing `XX-SECURITY\.md`/i
+    /Use `ask_user` for overwrite confirmation and any structured verify-versus-accept decision/i
   );
 
-  const uiReview = files["docs/commands/ui-review.md"];
+  const uiReview = files["commands/blu-ui-review.toml"];
   assert.match(
     uiReview,
-    /route to the next safe implemented follow-up without widening beyond the selected phase/i
+    /next logical implemented Blueprint action/i
   );
   assert.match(
     uiReview,
-    /Overwrite remains explicit confirmation when a prior `XX-UI-REVIEW\.md` already exists/i
+    /require explicit overwrite confirmation before changing it/i
   );
 
   const reviewSkill = files["skills/blueprint-review/SKILL.md"];
@@ -133,65 +133,65 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
 
 test("review remediation contracts stay bounded to saved evidence and approved selection", async () => {
   const files = await readRepoFiles([
-    "docs/commands/code-review-fix.md",
-    "docs/commands/audit-fix.md",
+    "commands/blu-code-review-fix.toml",
+    "commands/blu-audit-fix.toml",
     "skills/blueprint-review/SKILL.md"
   ]);
 
-  const codeReviewFix = files["docs/commands/code-review-fix.md"];
+  const codeReviewFix = files["commands/blu-code-review-fix.toml"];
   assert.match(
     codeReviewFix,
-    /loads the saved findings first, narrows the fix set to explicitly selected or high-confidence auto-selected findings/i
+    /Read `mcp_blueprint_blueprint_review_load_findings`[\s\S]*load the saved `XX-REVIEW\.md` findings/i
   );
   assert.match(
     codeReviewFix,
-    /It does not currently imply atomic git commits, branch creation, or a separate fixer-agent loop/i
+    /Do not create git commits or branches automatically/i
   );
   assert.match(
     codeReviewFix,
-    /`--auto` is a bounded finding-selection shortcut only/i
+    /Treat `--auto` as bounded automatic finding selection only/i
   );
   assert.match(
     codeReviewFix,
-    /it does not authorize automatic commits, automatic PR creation, or capped re-review loops/i
+    /does not authorize any auto-fixer behavior, automatic commits, branch creation, or hidden iterative re-review loops/i
   );
   assert.match(
     codeReviewFix,
-    /Do not recreate finding ids or severity from chat memory, current branch drift, or a second prompt-only review/i
+    /instead of recreating findings from chat memory or current git drift/i
   );
   assert.match(
     codeReviewFix,
-    /Keep pending gates limited to overwrite confirmation and finding-selection confirmation; broader repair planning should route to another implemented command instead of widening this command in place/i
+    /Keep pending gates limited to overwrite confirmation or finding-selection confirmation/i
   );
 
-  const auditFix = files["docs/commands/audit-fix.md"];
+  const auditFix = files["commands/blu-audit-fix.toml"];
   assert.match(
     auditFix,
-    /starts from saved evidence instead of chat memory/i
+    /Classify candidate issues only from selected saved evidence/i
   );
   assert.match(
     auditFix,
-    /treat the returned `files` list as authoritative instead of widening scope from git drift or chat memory/i
+    /Do not widen or reinterpret review scope after `mcp_blueprint_blueprint_review_scope` returns; its `files` list is authoritative/i
   );
   assert.match(
     auditFix,
-    /Do not classify from unstaged drift or prompt memory alone/i
+    /Do not classify from unstaged drift alone or chat memory/i
   );
   assert.match(
     auditFix,
-    /Apply `--severity` and `--max` after classification, keep remediation bounded to that capped candidate set, and stop on first failed fix attempt or failed required verification/i
+    /chosen source\/severity\/max filters/i
   );
   assert.match(
     auditFix,
-    /Use Gemini CLI `ask_user` for non-trivial mutation confirmation before editing files/i
+    /use Gemini CLI's `ask_user` for explicit confirmation when remediation is non-trivial/i
   );
   assert.match(
     auditFix,
-    /Use Gemini CLI `ask_user` for report overwrite confirmation/i
+    /require explicit overwrite confirmation before replacing it/i
   );
   assert.match(
     auditFix,
-    /Tracker use is session-local coordination only and must be paired with visible `write_todos`; it does not replace Blueprint MCP persistence/i
+    /Treat tracker state as session-local coordination only, pair it with visible `write_todos`/i
   );
 
   const reviewSkill = files["skills/blueprint-review/SKILL.md"];

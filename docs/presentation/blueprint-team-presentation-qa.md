@@ -219,8 +219,8 @@ Grounded in `README.md`, `PROGRESS.md`, `docs/DECISIONS.md`, `docs/ARCHITECTURE.
 - **Q: What is inside a runtime-contract resource?**  
   **A:** Catalog metadata, parsed command spec, runtime-reference row, and resolved skill-input bundle.
 
-- **Q: Why is `review` excluded from runtime-contract resources?**  
-  **A:** It is an explicit current exception even though the `review` command itself is implemented.
+- **Q: Is `review` exposed through runtime-contract resources?**
+  **A:** Yes. Implemented commands, including `review`, are exposed through `blueprint://commands/{command}/runtime-contract`.
 
 - **Q: Why derive resources instead of storing extra JSON?**  
   **A:** Derived resources avoid creating a second state channel that can drift from live runtime truth.

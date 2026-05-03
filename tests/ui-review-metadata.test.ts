@@ -3,9 +3,57 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("ui-review runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("ui-review");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("ui-review");
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#ui-review");
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/ui-review-runtime-contract.md"
+  ]);
+
+  assert.equal(catalog.commands["ui-review"].specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands["ui-review"].requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["ui-review"].optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-ui-review.toml",
+      "skills/blueprint-review/references/ui-review-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-ui-review.toml",
+      "skills/blueprint-review/references/ui-review-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+});
 
 test("ui-review manifest references the review tools, UI auditor, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-review.toml"), "utf8");

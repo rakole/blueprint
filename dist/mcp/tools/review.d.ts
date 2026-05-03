@@ -577,10 +577,10 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodOptional<z.ZodEnum<{
             "code-review": "code-review";
+            "ui-review": "ui-review";
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
-            "ui-review": "ui-review";
         }>>;
     };
     handler: (args: Record<string, unknown>) => Promise<ReviewLoadFindingsResult>;
@@ -592,10 +592,10 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodOptional<z.ZodEnum<{
             "code-review": "code-review";
+            "ui-review": "ui-review";
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
-            "ui-review": "ui-review";
         }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
@@ -615,10 +615,10 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
+            "ui-review": "ui-review";
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
-            "ui-review": "ui-review";
         }>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
         depth: z.ZodOptional<z.ZodEnum<{
@@ -637,10 +637,10 @@ export declare const reviewToolDefinitions: ({
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         artifact: z.ZodEnum<{
             "code-review": "code-review";
+            "ui-review": "ui-review";
             "peer-review": "peer-review";
             "review-fix": "review-fix";
             security: "security";
-            "ui-review": "ui-review";
         }>;
         content: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodUnknown>;

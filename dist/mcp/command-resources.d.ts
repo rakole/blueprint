@@ -5,6 +5,10 @@ export declare const BLUEPRINT_COMMAND_CATALOG_RESOURCE_URI = "blueprint://comma
 export declare const BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE = "blueprint://commands/{command}/runtime-contract";
 type CommandCatalogResult = Awaited<ReturnType<typeof blueprintCommandCatalog>>;
 type CommandCatalogEntry = CommandCatalogResult["commands"][string];
+type RelativePathReader = (relativePath: string) => Promise<string | null>;
+type BuildBlueprintCommandRuntimeContractResourceOptions = {
+    readRelativePath?: RelativePathReader;
+};
 export type BlueprintCommandSpecResource = {
     path: string;
     title: string | null;
@@ -42,6 +46,6 @@ export type BlueprintCommandRuntimeContractResource = {
 };
 export declare function buildBlueprintCommandCatalogResource(): Promise<CommandCatalogResult>;
 export declare function listBlueprintCommandRuntimeContractCommands(): Promise<string[]>;
-export declare function buildBlueprintCommandRuntimeContractResource(commandName: string): Promise<BlueprintCommandRuntimeContractResource>;
+export declare function buildBlueprintCommandRuntimeContractResource(commandName: string, options?: BuildBlueprintCommandRuntimeContractResourceOptions): Promise<BlueprintCommandRuntimeContractResource>;
 export declare function registerBlueprintCommandResources(server: McpServer): void;
 export {};
