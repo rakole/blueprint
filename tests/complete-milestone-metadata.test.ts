@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("complete-milestone manifest references report-driven closeout tools and summary routing", async () => {
@@ -60,17 +63,26 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
 });
 
-test("complete-milestone docs and runtime reference expose the interactive-read waiting-state contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/complete-milestone.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("complete-milestone runtime-owned metadata exposes the interactive-read waiting-state contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("complete-milestone");
+  const contract =
+    await buildBlueprintCommandRuntimeContractResource("complete-milestone");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /missing-milestone-audit/);
-  assert.match(docFile, /milestone-not-ready/);
-  assert.match(docFile, /milestone-complete-overwrite-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`complete-milestone` .*Interactive-read profile for bounded milestone closeout:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+  assert.ok(contract.spec?.requiredTools.includes("blueprint_state_load"));
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing-milestone-audit[\s\S]*milestone-not-ready[\s\S]*milestone-complete-overwrite-confirmation/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-complete-milestone.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

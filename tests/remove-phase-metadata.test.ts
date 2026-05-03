@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("remove-phase manifest references roadmap removal tools, confirmation gate, and safe routing contract", async () => {
@@ -48,16 +51,23 @@ test("roadmap-admin skill captures remove-phase guards and state follow-up", asy
   assert.match(skillFile, /\/blu-progress/);
 });
 
-test("remove-phase docs and runtime reference expose the interactive-read destructive gate contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/remove-phase.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("remove-phase runtime-owned metadata exposes the interactive-read destructive gate contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("remove-phase");
+  const contract = await buildBlueprintCommandRuntimeContractResource("remove-phase");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /future-phase-guard/);
-  assert.match(docFile, /force-remove-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`remove-phase` .*Interactive-read profile for bounded roadmap removal:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /future-phase-guard[\s\S]*force-remove-confirmation[\s\S]*force: true/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-remove-phase.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

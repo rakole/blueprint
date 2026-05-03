@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { ADD_PHASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
@@ -52,6 +53,9 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   ]);
   const entry = catalog.commands["add-phase"];
 
+  assert.deepEqual(ADD_PHASE_RUNTIME_METADATA.requiredInputPaths, [
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+  ]);
   assert.equal(entry.specPath, "src/mcp/command-runtime-metadata.ts#add-phase");
   assert.equal(contract.spec?.path, "src/mcp/command-runtime-metadata.ts#add-phase");
   assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts#add-phase");
@@ -96,7 +100,7 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.doesNotMatch(skillFile, /- `docs\/commands\/add-phase\.md`/);
   assert.match(
     skillFile,
-    /`\/blu-add-phase` is resolved from the structured `input_bundles` frontmatter/
+    /Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter/
   );
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /There is no add-phase subagent path/i);
@@ -156,4 +160,39 @@ test("add-phase remains implemented from runtime-owned metadata when docs are un
   assert.deepEqual(contract.skillInputs.effective, [
     "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
   ]);
+});
+
+test("add-phase is not implemented when its local runtime contract is missing", async (t) => {
+  const runtimeContractPath = ADD_PHASE_RUNTIME_METADATA.requiredInputPaths?.[0];
+  const originalAccess = fs.access;
+
+  assert.ok(runtimeContractPath);
+
+  fs.access = (async (...args: Parameters<typeof fs.access>) => {
+    const normalizedPath =
+      args[0] instanceof URL ? args[0].pathname : path.resolve(String(args[0]));
+
+    if (normalizedPath.endsWith(runtimeContractPath)) {
+      const error = new Error("ENOENT");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      throw error;
+    }
+
+    return originalAccess(...args);
+  }) as typeof fs.access;
+  t.after(() => {
+    fs.access = originalAccess;
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["add-phase"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.specPath, null);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing runtime input: skills\/blueprint-roadmap-admin\/references\/add-phase-runtime-contract\.md/
+  );
 });

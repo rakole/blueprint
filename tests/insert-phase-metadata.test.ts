@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("insert-phase manifest references roadmap insertion tools, confirmation gate, and discuss-phase routing", async () => {
@@ -91,54 +94,31 @@ test("insert-phase runtime contract locks stage mapping, fallback, repair, and c
   assert.match(contract, /No public command surface, catalog status semantics, hook ownership,\s*installed-extension files, or `\.planning\/` runtime dependency changed/);
 });
 
-test("insert-phase docs and MCP reference use numeric after anchors and phasePrefix-backed scaffolding", async () => {
-  const commandDoc = await readFile(
-    path.join(repoRoot, "docs/commands/insert-phase.md"),
-    "utf8"
-  );
-  const schemaDoc = await readFile(
-    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
-    "utf8"
-  );
-  const mcpDocs = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
-  const runtimeDocs = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
+test("insert-phase runtime-owned metadata uses numeric after anchors and phasePrefix-backed scaffolding", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("insert-phase");
+  const contract = await buildBlueprintCommandRuntimeContractResource("insert-phase");
 
-  assert.match(commandDoc, /<afterPhaseNumber> <description>/);
-  assert.match(commandDoc, /insert-phase-runtime-contract\.md/);
-  assert.match(commandDoc, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(commandDoc, /shared interactive-read classification/i);
-  assert.match(commandDoc, /phase-insert-confirmation/);
-  assert.match(commandDoc, /does not expose the long-running progress layer/i);
-  assert.match(commandDoc, /phasePrefix/);
-  assert.match(commandDoc, /roadmapEvolutionNotes/);
-  assert.match(commandDoc, /Inserted: yes/);
-  assert.match(commandDoc, /Subagent fallback/);
-  assert.match(commandDoc, /do not use Blueprint roadmapper, Blueprint verifier, browser, web-search-only, shell-only, or generic agents as substitutes/);
-  assert.match(commandDoc, /phase\.context/);
-  assert.match(schemaDoc, /optional inserted marker/);
-  assert.match(schemaDoc, /Inserted: yes/);
-  assert.doesNotMatch(commandDoc, /may also mutate code or git state/i);
-  assert.match(mcpDocs, /`blueprint_roadmap_insert_phase` accepts an integer anchor in `after` plus `description`/);
-  assert.match(mcpDocs, /`afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir`/);
-  assert.match(mcpDocs, /insert-phase-runtime-contract\.md/);
-  assert.match(mcpDocs, /canonical `phase\.context` contract/);
-  assert.match(runtimeDocs, /Interactive-read profile for bounded roadmap insertion:/);
-  assert.match(runtimeDocs, /insert-phase-runtime-contract\.md/);
-  assert.match(runtimeDocs, /returned `phasePrefix`/);
-  assert.match(runtimeDocs, /starter `phase\.context` content/);
-  assert.match(runtimeDocs, /no-subagent fallback/);
-  assert.match(runtimeDocs, /roadmapEvolutionNotes/);
-  assert.doesNotMatch(runtimeDocs, /roadmap-evolution marker/i);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+  assert.deepEqual(contract.spec?.optionalSubagents, []);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /insert-phase-runtime-contract\.md[\s\S]*confirmed integer anchor[\s\S]*phasePrefix[\s\S]*roadmapEvolutionNotes/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
-test("roadmap-admin agent guidance keeps insert-phase skill-led while agent contracts retain output-quality expectations", async () => {
-  const skillsDoc = await readFile(
-    path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"),
-    "utf8"
-  );
+test("roadmap-admin agent contracts retain insert-phase output-quality expectations", async () => {
   const roadmapperAgent = await readFile(
     path.join(repoRoot, "agents/blueprint-roadmapper.md"),
     "utf8"
@@ -148,8 +128,6 @@ test("roadmap-admin agent guidance keeps insert-phase skill-led while agent cont
     "utf8"
   );
 
-  assert.match(skillsDoc, /`insert-phase` keeps its richer runtime behavior in `skills\/blueprint-roadmap-admin\/references\/insert-phase-runtime-contract\.md`/);
-  assert.match(skillsDoc, /Browser, web-search-only, shell-only, or generic agents are not substitutes/);
   assert.match(roadmapperAgent, /## Required Output Contract/);
   assert.match(roadmapperAgent, /dependency warnings/);
   assert.match(roadmapperAgent, /Do not rewrite `\.blueprint\/ROADMAP\.md`/);

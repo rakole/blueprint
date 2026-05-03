@@ -81,6 +81,7 @@ export declare const ADD_PHASE_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
     readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"];
     readonly spec: {
         readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
         readonly title: "`/blu-add-phase`";
@@ -99,6 +100,244 @@ export declare const ADD_PHASE_RUNTIME_METADATA: {
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly [".blueprint write guard"];
         readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const INSERT_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "insert-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: inserts the next decimal phase after an integer phase without renumbering later roadmap entries.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-insert-phase`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.";
+        readonly reads: readonly ["The current roadmap and milestone inventory through blueprint_roadmap_read."];
+        readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phasePrefix>-<phaseSlug>/", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "insert-phase";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const REMOVE_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "remove-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: deletes a future phase and renumbers later roadmap references plus phase artifacts.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-remove-phase.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-remove-phase`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`remove-phase` removes a future roadmap phase, deletes its phase directory, renumbers subsequent roadmap and phase artifacts, and re-anchors state on the safest implemented follow-up.";
+        readonly reads: readonly ["The current roadmap and milestone inventory through blueprint_roadmap_read.", "Existing target-phase artifacts and drift through blueprint_phase_locate."];
+        readonly writes: readonly [".blueprint/ROADMAP.md", "renamed phase directories and phase-scoped artifact filenames under .blueprint/phases/", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "remove-phase";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const PLAN_MILESTONE_GAPS_RUNTIME_METADATA: {
+    readonly commandName: "plan-milestone-gaps";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: can add multiple phases in one pass.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-roadmapper"];
+    readonly requiredInputPaths: readonly ["commands/blu-plan-milestone-gaps.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-plan-milestone-gaps`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`plan-milestone-gaps` creates grouped roadmap phases to close actionable gaps identified by the saved milestone audit, keeping persistence on roadmap and state MCP tools.";
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly writes: readonly [".blueprint/ROADMAP.md", "new phase directories for approved gaps", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "plan-milestone-gaps";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-roadmapper"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const AUDIT_MILESTONE_RUNTIME_METADATA: {
+    readonly commandName: "audit-milestone";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: report generation only.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+    readonly optionalAgents: readonly ["blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["commands/blu-audit-milestone.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-audit-milestone`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`audit-milestone` compares original milestone intent against saved phase evidence and writes a durable milestone audit report with grouped gaps and traceability notes.";
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_phase_summary_index -> phase summary evidence", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-audit contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly writes: readonly ["milestone audit report in .blueprint/reports/"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "audit-milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const COMPLETE_MILESTONE_RUNTIME_METADATA: {
+    readonly commandName: "complete-milestone";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: writes milestone closeout evidence and advances archival routing.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-complete-milestone.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-complete-milestone`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.";
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_state_load -> derivedStatus.milestoneAudit readiness", "blueprint_artifact_contract_read -> report.milestone-complete contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly writes: readonly [".blueprint/reports/milestone-complete-<version>.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "complete-milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const MILESTONE_SUMMARY_RUNTIME_METADATA: {
+    readonly commandName: "milestone-summary";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: report generation and routing only.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-milestone-summary.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-milestone-summary`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.";
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-summary contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly writes: readonly [".blueprint/reports/milestone-summary-<version>.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "milestone-summary";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const NEW_MILESTONE_RUNTIME_METADATA: {
+    readonly commandName: "new-milestone";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-roadmapper"];
+    readonly requiredInputPaths: readonly ["commands/blu-new-milestone.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-new-milestone`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "new-milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-roadmapper"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -1465,6 +1704,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"];
         readonly spec: {
             readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
             readonly title: "`/blu-add-phase`";
@@ -1483,6 +1723,244 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly [".blueprint write guard"];
             readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "insert-phase": {
+        readonly commandName: "insert-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: inserts the next decimal phase after an integer phase without renumbering later roadmap entries.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-insert-phase`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.";
+            readonly reads: readonly ["The current roadmap and milestone inventory through blueprint_roadmap_read."];
+            readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phasePrefix>-<phaseSlug>/", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "insert-phase";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_insert_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "remove-phase": {
+        readonly commandName: "remove-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: deletes a future phase and renumbers later roadmap references plus phase artifacts.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-remove-phase.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-remove-phase`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`remove-phase` removes a future roadmap phase, deletes its phase directory, renumbers subsequent roadmap and phase artifacts, and re-anchors state on the safest implemented follow-up.";
+            readonly reads: readonly ["The current roadmap and milestone inventory through blueprint_roadmap_read.", "Existing target-phase artifacts and drift through blueprint_phase_locate."];
+            readonly writes: readonly [".blueprint/ROADMAP.md", "renamed phase directories and phase-scoped artifact filenames under .blueprint/phases/", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "remove-phase";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_locate", "blueprint_roadmap_remove_phase", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "plan-milestone-gaps": {
+        readonly commandName: "plan-milestone-gaps";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: can add multiple phases in one pass.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-roadmapper"];
+        readonly requiredInputPaths: readonly ["commands/blu-plan-milestone-gaps.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-plan-milestone-gaps`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`plan-milestone-gaps` creates grouped roadmap phases to close actionable gaps identified by the saved milestone audit, keeping persistence on roadmap and state MCP tools.";
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly writes: readonly [".blueprint/ROADMAP.md", "new phase directories for approved gaps", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "plan-milestone-gaps";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-roadmapper"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "audit-milestone": {
+        readonly commandName: "audit-milestone";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: report generation only.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["commands/blu-audit-milestone.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-audit-milestone`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`audit-milestone` compares original milestone intent against saved phase evidence and writes a durable milestone audit report with grouped gaps and traceability notes.";
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_phase_summary_index -> phase summary evidence", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-audit contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly writes: readonly ["milestone audit report in .blueprint/reports/"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "audit-milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+            readonly optionalAgents: readonly ["blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "complete-milestone": {
+        readonly commandName: "complete-milestone";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: writes milestone closeout evidence and advances archival routing.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-complete-milestone.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-complete-milestone`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.";
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_state_load -> derivedStatus.milestoneAudit readiness", "blueprint_artifact_contract_read -> report.milestone-complete contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly writes: readonly [".blueprint/reports/milestone-complete-<version>.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "complete-milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "milestone-summary": {
+        readonly commandName: "milestone-summary";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: report generation and routing only.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-milestone-summary.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-milestone-summary`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.";
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-summary contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly writes: readonly [".blueprint/reports/milestone-summary-<version>.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "milestone-summary";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "new-milestone": {
+        readonly commandName: "new-milestone";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-roadmapper"];
+        readonly requiredInputPaths: readonly ["commands/blu-new-milestone.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-new-milestone`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "new-milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-roadmapper"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

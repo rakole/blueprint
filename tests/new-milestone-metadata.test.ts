@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("new-milestone manifest references carry-forward seed generation and discuss-phase routing", async () => {
@@ -57,17 +60,26 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
 });
 
-test("new-milestone docs and runtime reference align to the interactive-read carry-forward contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/new-milestone.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("new-milestone runtime-owned metadata aligns to the interactive-read carry-forward contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("new-milestone");
+  const contract = await buildBlueprintCommandRuntimeContractResource("new-milestone");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /missing-milestone-summary/);
-  assert.match(docFile, /carry-forward-confirmation/);
-  assert.match(docFile, /starter-doc-overwrite-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`new-milestone` .*Interactive-read profile for bounded milestone restart:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    "blueprint-roadmapper"
+  ]);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-new-milestone.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("plan-milestone-gaps manifest references the audit-first gap-planning tools and confirmation gate", async () => {
@@ -49,16 +52,27 @@ test("roadmap-admin skill captures grouped audit-follow-up planning behavior", a
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
 });
 
-test("plan-milestone-gaps docs and runtime reference align to the interactive-read roadmap-admin contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/plan-milestone-gaps.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("plan-milestone-gaps runtime-owned metadata aligns to the interactive-read roadmap-admin contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("plan-milestone-gaps");
+  const contract =
+    await buildBlueprintCommandRuntimeContractResource("plan-milestone-gaps");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /missing-milestone-audit/);
-  assert.match(docFile, /gap-plan-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`plan-milestone-gaps` .*Interactive-read profile for bounded audit-follow-up planning:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    "blueprint-roadmapper"
+  ]);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing-milestone-audit[\s\S]*gap-plan-confirmation[\s\S]*\/blu-discuss-phase <first new phase>/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-plan-milestone-gaps.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

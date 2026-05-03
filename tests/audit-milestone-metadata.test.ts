@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("audit-milestone manifest references the roadmap audit tools, overwrite gate, and safe routing contract", async () => {
@@ -55,15 +58,26 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   assert.match(skillFile, /traceability repair/i);
 });
 
-test("audit-milestone docs and runtime reference align to the interactive-read report contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/audit-milestone.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("audit-milestone runtime-owned metadata aligns to the interactive-read report contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("audit-milestone");
+  const contract = await buildBlueprintCommandRuntimeContractResource("audit-milestone");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /milestone-audit-overwrite-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`audit-milestone` .*Interactive-read profile for bounded milestone auditing:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    "blueprint-verifier"
+  ]);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /report\.milestone-audit[\s\S]*milestone-audit-overwrite-confirmation[\s\S]*\.blueprint\/reports\//
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-audit-milestone.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

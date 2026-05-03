@@ -114,22 +114,37 @@ test("plan-phase skill resolves its slim command-scoped input bundle", async () 
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
-test("roadmap-admin add-phase resolves docless command-scoped input override", async () => {
-  const inputs = await loadBlueprintSkillInputs(
-    "blueprint-roadmap-admin",
-    "/blu-add-phase",
-    readRelativePath
-  );
+test("roadmap-admin commands resolve docless command-scoped inputs", async () => {
+  const expectations = [
+    [
+      "/blu-add-phase",
+      ["skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"]
+    ],
+    [
+      "/blu-insert-phase",
+      ["skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"]
+    ],
+    ["/blu-remove-phase", ["commands/blu-remove-phase.toml"]],
+    ["/blu-plan-milestone-gaps", ["commands/blu-plan-milestone-gaps.toml"]],
+    ["/blu-audit-milestone", ["commands/blu-audit-milestone.toml"]],
+    ["/blu-complete-milestone", ["commands/blu-complete-milestone.toml"]],
+    ["/blu-milestone-summary", ["commands/blu-milestone-summary.toml"]],
+    ["/blu-new-milestone", ["commands/blu-new-milestone.toml"]]
+  ] as const;
 
-  assert.equal(inputs.skill, "blueprint-roadmap-admin");
-  assert.deepEqual(inputs.shared, []);
-  assert.deepEqual(inputs.commandSpecific, [
-    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
-  ]);
-  assert.deepEqual(inputs.effective, [
-    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
-  ]);
-  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  for (const [commandPath, commandSpecificInputs] of expectations) {
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-roadmap-admin",
+      commandPath,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-roadmap-admin");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, commandSpecificInputs);
+    assert.deepEqual(inputs.effective, commandSpecificInputs);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
 });
 
 test("map-codebase resolves docs-free manifest and local runtime-contract inputs", async () => {
@@ -286,31 +301,15 @@ test("governance commands resolve only command-scoped runtime references", async
   }
 });
 
-test("roadmap-admin siblings keep legacy Required Inputs fallback", async () => {
+test("roadmap-admin unknown commands do not fall back to legacy docs inputs", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-roadmap-admin",
-    "/blu-insert-phase",
+    "/blu-unknown-roadmap-admin-command",
     readRelativePath
   );
 
   assert.equal(inputs.skill, "blueprint-roadmap-admin");
-  assert.equal(inputs.commandSpecific.length, 0);
-  assert.deepEqual(inputs.shared, inputs.effective);
-  assert.ok(inputs.effective.includes("docs/commands/insert-phase.md"));
-  assert.ok(inputs.effective.includes("docs/COMMAND-CATALOG.md"));
-  assert.ok(inputs.effective.includes("docs/RUNTIME-REFERENCE.md"));
-  assert.ok(
-    inputs.effective.some((input) =>
-      input.startsWith(
-        "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
-      )
-    )
-  );
-  assert.equal(inputs.effective.includes("docs/commands/add-phase.md"), false);
-  assert.equal(
-    inputs.effective.includes(
-      "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
-    ),
-    false
-  );
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, []);
+  assert.deepEqual(inputs.effective, []);
 });
