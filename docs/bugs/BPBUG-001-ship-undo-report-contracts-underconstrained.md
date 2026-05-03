@@ -4,7 +4,7 @@ title: Ship and undo report contracts accept under-specified high-risk evidence
 severity: medium
 confidence: confirmed
 surface: MCP tool
-status: new
+status: fixed
 discovery_phase: 5
 reported: 2026-05-01
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-01
 - Severity: `medium`
 - Confidence: `confirmed`
 - Surface: `MCP tool`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -135,6 +135,28 @@ None known. The contract mismatch is confirmed by source inspection, focused met
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commits:
+
+- `f55d2f8` tightened canonical `report.ship` and `report.undo` contracts and mirrored them in `docs/ARTIFACT-SCHEMA.md`.
+- `143e246` aligned ship/undo command prompts, maintenance guidance, and runtime docs with canonical contract reads.
+- `146f51f` added focused ship/undo contract regression coverage.
+- `e309c1c` fixed review findings by adding post-mutation report overwrites, ship/undo semantic validation, and partial-placeholder rejection.
+- `235631f` updated full-suite command-catalog expectations and refreshed tracked `dist/mcp/server.js` outputs.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/mcp-contract-audit-metadata.test.ts` - pass, `67/67`.
+- `npm test` - pass, `840/840`.
+
+Residual note:
+
+- A low-severity runtime-reference table wording note was recorded during review. It did not affect the BPBUG-001 high/medium acceptance criteria or runtime behavior after remediation.
 
 ## Repair Plan - 2026-05-03
 
