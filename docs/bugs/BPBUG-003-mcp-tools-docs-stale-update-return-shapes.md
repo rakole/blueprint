@@ -4,7 +4,7 @@ title: MCP tool docs advertise stale return shapes for update tools
 severity: low
 confidence: confirmed
 surface: docs
-status: new
+status: fixed
 discovery_phase: 6
 reported: 2026-05-02
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-02
 - Severity: `low`
 - Confidence: `confirmed`
 - Surface: `docs`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -78,6 +78,87 @@ None known. The mismatch is confirmed by direct comparison of the shared MCP doc
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commit:
+
+- `cca6b6c` synced `docs/MCP-TOOLS.md` update-tool return-shape rows with the live runtime fields and added row-level regression coverage in `tests/update-metadata.test.ts`.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npm run build --silent` - pass.
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts tests/command-contract-docs.test.ts` - pass, `55/55`.
+
+Residual note:
+
+- Review found only low-severity test-hardening notes around future row-extraction brittleness. No CRITICAL, HIGH, or MEDIUM remediation was required.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `PASS`.
+
+Findings:
+
+- `HIGH`: none.
+- `MEDIUM`: none.
+- `LOW`: none.
+
+Evidence checked:
+
+- `docs/MCP-TOOLS.md` rows now list the live `blueprint_update_check` and `blueprint_update_plan` fields.
+- `src/mcp/tools/update.ts` defines `UpdateCheckResult` and `UpdatePlanResult` with the same fields.
+- Stale fields `installSource`, `jsonPath`, and `markdownPath` are absent from the maintenance tool rows.
+- `tests/update-metadata.test.ts` asserts the live field names and rejects the stale field names.
+- The diff scope is limited to `docs/MCP-TOOLS.md`, the BPBUG-003 bug doc, and `tests/update-metadata.test.ts`; no runtime, manifest, skill, global state, or `.blueprint/` state changed.
+
+Tests run:
+
+- `npm ci` - pass.
+- `npm run typecheck` - pass.
+- `npm run build --silent` - pass.
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts tests/command-contract-docs.test.ts` - pass, `55/55`.
+
+### Code Reviewer Report
+
+No `CRITICAL`, `HIGH`, or `MEDIUM` findings.
+
+Low findings:
+
+- `tests/update-metadata.test.ts` row extraction expects the table row to be formatted like ``| `tool` |`` with single spaces; future table reflow could fail the test even if the contract stays correct.
+- `tests/update-metadata.test.ts` interpolates field names directly into `RegExp`; current field names are safe, but future tokens with regex metacharacters would need escaping.
+
+Tests run:
+
+- `npm test --silent -- tests/update-metadata.test.ts` - pass.
+
+Residual risk:
+
+- Low. This repair is docs plus tests only; the main remaining risk is future doc-table formatting changes tripping row extraction.
+
+### Bug Finder Report
+
+No `CRITICAL`, `HIGH`, or `MEDIUM` issues remain for BPBUG-003.
+
+Evidence checked:
+
+- Shared MCP rows expose the live update-check and update-plan fields.
+- Stale fields are gone from the live contract rows.
+- The new regression would catch this docs-row drift in the future.
+- Wording still presents `/blu-update` as advisory and non-self-mutating in `docs/MCP-TOOLS.md` and `docs/commands/update.md`.
+
+Low note:
+
+- The BPBUG-003 seed docs still needed status/outcome cleanup at review time; this section records the final fixed state.
+
+Verification:
+
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts` - pass, `11/11`.
 
 ## Repair Plan - 2026-05-03
 
