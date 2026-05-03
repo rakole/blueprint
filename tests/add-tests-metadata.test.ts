@@ -3,9 +3,46 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("add-tests runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("add-tests");
+  const catalog = await blueprintCommandCatalog();
+  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("add-tests");
+  const runtimeContractPath =
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#add-tests");
+  assert.deepEqual(metadata.requiredInputPaths, [runtimeContractPath]);
+  assert.equal(catalog.commands["add-tests"].specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands["add-tests"].requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.equal(runtimeContract.catalog.specPath, metadata.sourceId);
+  assert.equal(runtimeContract.spec?.path, metadata.sourceId);
+  assert.equal(runtimeContract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(runtimeContract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(runtimeContract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(runtimeContract.skillInputs, {
+    skill: "blueprint-phase-validation",
+    shared: [],
+    commandSpecific: [runtimeContractPath],
+    effective: [runtimeContractPath]
+  });
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.doesNotMatch(JSON.stringify(runtimeContract), /docs\//);
+});
 
 test("add-tests manifest references visibility, validation/report tools, bounded agents, and safe follow-up routing", async () => {
   const commandFile = await readFile(
@@ -161,43 +198,28 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
   assert.match(runtimeContract, /repair the report model against\s+the `report\.add-tests` task schema and retry once/i);
 });
 
-test("add-tests doc and runtime reference keep bounded visibility explicit", async () => {
-  const [commandDoc, runtimeReference, mcpTools] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8")
-  ]);
+test("add-tests runtime contract resource keeps bounded visibility explicit", async () => {
+  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("add-tests");
+  const serializedContract = JSON.stringify(runtimeContract);
 
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /Detailed runtime reference: `skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md`/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
-  assert.match(commandDoc, /## Classification And Test Plan/);
-  assert.match(commandDoc, /Unit \/ TDD/);
-  assert.match(commandDoc, /Integration \/ API/);
-  assert.match(commandDoc, /E2E \/ UI/);
-  assert.match(commandDoc, /targeted test result, verification status, report status, and next safe action/i);
-  assert.match(commandDoc, /`path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
-  assert.match(commandDoc, /returned report `path`, `written`, and `status` as authoritative/i);
-  assert.match(commandDoc, /artifactId: "report\.add-tests"/);
-  assert.match(commandDoc, /generated\/passing\/failing\/blocked counts/i);
-  assert.match(commandDoc, /implementation bugs, test-authoring errors, and blocked checks/i);
-  assert.match(commandDoc, /Reports verification and report persistence outcomes from MCP return values/i);
-  assert.match(
-    runtimeReference,
-    /`add-tests`[\s\S]*load `skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md`[\s\S]*classify candidate files after reading them[\s\S]*test plans with `ask_user`[\s\S]*repair invalid writes once/i
-  );
-  assert.match(
-    mcpTools,
-    /`add-tests`[\s\S]*classification table before mutation[\s\S]*test plan[\s\S]*blueprint-executor[\s\S]*blueprint-verifier[\s\S]*one-candidate-at-a-time no-subagent fallback/i
-  );
+  assert.equal(runtimeContract.spec?.executionProfile, "long-running-mutation");
+  assert.equal(runtimeContract.runtimeReference?.primarySkill, "blueprint-phase-validation");
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /evidence-backed test generation/i);
+  assert.deepEqual(runtimeContract.skillInputs.shared, []);
+  assert.deepEqual(runtimeContract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+  ]);
+  assert.deepEqual(runtimeContract.skillInputs.effective, [
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+  ]);
+  assert.doesNotMatch(serializedContract, /docs\//);
 });
 
 test("add-tests agents and report contract include output-quality expectations", async () => {
-  const [executor, verifier, contractSource, artifactSchema] = await Promise.all([
+  const [executor, verifier, contractSource] = await Promise.all([
     readFile(path.join(repoRoot, "agents/blueprint-executor.md"), "utf8"),
     readFile(path.join(repoRoot, "agents/blueprint-verifier.md"), "utf8"),
-    readFile(path.join(repoRoot, "src/mcp/artifact-contracts/index.ts"), "utf8"),
-    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8")
+    readFile(path.join(repoRoot, "src/mcp/artifact-contracts/index.ts"), "utf8")
   ]);
 
   assert.match(executor, /\/blu-add-tests/);
@@ -220,9 +242,4 @@ test("add-tests agents and report contract include output-quality expectations",
   assert.match(contractSource, /Verification write status/);
   assert.match(contractSource, /Report write status/);
   assert.match(contractSource, /report\.add-tests/);
-
-  assert.match(artifactSchema, /### `reports\/add-tests-<phase>\.md`/);
-  assert.match(artifactSchema, /Classification And Test Plan/);
-  assert.match(artifactSchema, /Unit \/ TDD/);
-  assert.match(artifactSchema, /generated, passing, failing, and blocked checks/i);
 });
