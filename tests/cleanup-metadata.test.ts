@@ -33,6 +33,9 @@ test("cleanup manifest references the maintenance skill, high-risk maintenance p
   assert.match(commandFile, /cleanup-confirmation/);
   assert.match(commandFile, /archive-destination-confirmation/);
   assert.match(commandFile, /report-overwrite-confirmation/);
+  assert.match(commandFile, /Gemini-native `ask_user`/);
+  assert.match(commandFile, /If `ask_user` is unavailable for either confirmation, stop honestly with the named pending gate still visible/i);
+  assert.match(commandFile, /If `ask_user` is unavailable, stop honestly with `report-overwrite-confirmation` still visible/i);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /active roadmap/i);
   assert.match(commandFile, /protected exclusions explicit/i);
@@ -67,6 +70,9 @@ test("maintenance skill captures cleanup visibility, report persistence, and pro
   assert.match(skillFile, /cleanup-confirmation/);
   assert.match(skillFile, /archive-destination-confirmation/);
   assert.match(skillFile, /report-overwrite-confirmation/);
+  assert.match(skillFile, /Gemini-native `ask_user`/);
+  assert.match(skillFile, /if `ask_user` is unavailable stop honestly with the named pending gate still visible/i);
+  assert.match(skillFile, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
   assert.match(skillFile, /protected scope explicit/i);
   assert.match(skillFile, /never the current phase/i);
   assert.match(skillFile, /before filesystem mutation begins/i);
@@ -91,6 +97,10 @@ test("cleanup docs and runtime reference expose the protected-scope visibility a
   assert.match(commandDoc, /cleanup-confirmation/);
   assert.match(commandDoc, /archive-destination-confirmation/);
   assert.match(commandDoc, /report-overwrite-confirmation/);
+  assert.match(commandDoc, /Gemini CLI's built-in `ask_user` interaction tool/i);
+  assert.match(commandDoc, /`ask_user` is a Gemini CLI interaction surface, not Blueprint MCP persistence/i);
+  assert.match(commandDoc, /if `ask_user` is unavailable, stop honestly with `cleanup-confirmation` still visible/i);
+  assert.match(commandDoc, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
   assert.match(commandDoc, /protected exclusions/i);
   assert.match(commandDoc, /next safe action/i);
 

@@ -133,9 +133,10 @@
 
 
 - Require confirmation before moving or deleting accumulated phase directories.
-- Keep the destructive approval gate visible as `cleanup-confirmation` until the user approves, and keep the confirmation explicit before any filesystem mutation begins.
-- Confirm report replacement before overwriting `.blueprint/reports/cleanup-latest.md`, keep the report-overwrite waiting state visible as `report-overwrite-confirmation` while blocked, and name the next safe action before resuming.
-- Confirm the resolved archive destination when no existing cleanup destination is already present, keep that waiting state visible as `archive-destination-confirmation` while blocked, and name the next safe action before resuming.
+- Use Gemini CLI's built-in `ask_user` interaction tool for cleanup confirmation, archive-destination creation approval, and report-overwrite approval when it is available. `ask_user` is a Gemini CLI interaction surface, not Blueprint MCP persistence, so Blueprint-owned writes still stay on the documented MCP tool surface.
+- Keep the destructive approval gate visible as `cleanup-confirmation` until the user approves through `ask_user` when available; if `ask_user` is unavailable, stop honestly with `cleanup-confirmation` still visible and keep the next safe action explicit before any filesystem mutation begins.
+- Confirm report replacement before overwriting `.blueprint/reports/cleanup-latest.md`, keep the report-overwrite waiting state visible as `report-overwrite-confirmation` while blocked, use `ask_user` when available, and stop honestly with that named pending gate still visible when `ask_user` is unavailable.
+- Confirm the resolved archive destination when no existing cleanup destination is already present, keep that waiting state visible as `archive-destination-confirmation` while blocked, use `ask_user` when available, and stop honestly with that named pending gate still visible when `ask_user` is unavailable.
 
 
 ## Edge Cases
