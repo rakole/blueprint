@@ -64,6 +64,7 @@
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -71,6 +72,7 @@
 
 - Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative preview scope instead of widening revert evidence after the tool returns.
+- Read `blueprint_artifact_contract_read` for `report.undo` before report persistence and use `contract.authoringTemplate` as the canonical `undo-latest` report authority.
 - Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
 

@@ -65,6 +65,7 @@
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_artifact_contract_read` -> `{artifactId, contract}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -72,7 +73,8 @@
 
 - Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening shipping evidence after the tool returns.
-- Persist the durable shipping report through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path.
+- Read `blueprint_artifact_contract_read` for `report.ship` before report persistence and use `contract.authoringTemplate` as the canonical `ship-latest` report authority.
+- Persist the approved shipping plan through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
 
 ## In-Flight Progress Contract
@@ -172,7 +174,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
-- Records the selected scope, branch plan, push or PR outcome, and manual fallback guidance in `.blueprint/reports/ship-latest.md`.
+- Records the selected scope, branch plan, approved push or PR actions, and manual fallback guidance in `.blueprint/reports/ship-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when building the shipping path and fallback guidance.
 
 
