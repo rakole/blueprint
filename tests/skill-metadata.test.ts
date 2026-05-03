@@ -26,19 +26,16 @@ test("structured input bundles resolve command-specific discovery inputs", async
   );
 
   assert.equal(inputs.skill, "blueprint-phase-discovery");
-  assert.deepEqual(inputs.shared, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
+  assert.deepEqual(inputs.shared, []);
   assert.deepEqual(inputs.commandSpecific, [
-    "docs/commands/discuss-phase.md",
     "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
     "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
   ]);
   assert.deepEqual(inputs.effective, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/commands/discuss-phase.md",
     "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
     "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
   ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
 test("structured multi-command skills return shared-only inputs for unknown commands", async () => {
@@ -52,9 +49,9 @@ test("structured multi-command skills return shared-only inputs for unknown comm
     raw
   );
 
-  assert.deepEqual(inputs.shared, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
+  assert.deepEqual(inputs.shared, []);
   assert.deepEqual(inputs.commandSpecific, []);
-  assert.deepEqual(inputs.effective, ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"]);
+  assert.deepEqual(inputs.effective, []);
 });
 
 test("structured input bundles resolve command-specific execution inputs", async () => {

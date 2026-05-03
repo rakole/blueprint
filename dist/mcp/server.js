@@ -36251,7 +36251,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36367,6 +36367,55 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_load",
       "blueprint_artifact_list",
       "blueprint_command_catalog"
+    ];
+    DISCUSS_PHASE_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_context",
+      "blueprint_roadmap_read",
+      "blueprint_phase_plan_index",
+      "blueprint_artifact_list",
+      "blueprint_config_get",
+      "blueprint_artifact_contract_read",
+      "blueprint_phase_artifact_read",
+      "blueprint_phase_artifact_write",
+      "blueprint_phase_checkpoint_get",
+      "blueprint_phase_checkpoint_put",
+      "blueprint_phase_checkpoint_delete",
+      "blueprint_artifact_scaffold",
+      "blueprint_state_update",
+      "blueprint_state_load"
+    ];
+    RESEARCH_PHASE_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_context",
+      "blueprint_phase_research_status",
+      "blueprint_phase_artifact_read",
+      "blueprint_phase_artifact_write",
+      "blueprint_phase_checkpoint_get",
+      "blueprint_phase_checkpoint_put",
+      "blueprint_phase_checkpoint_delete",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_scaffold",
+      "blueprint_config_get",
+      "blueprint_state_load",
+      "blueprint_command_catalog",
+      "blueprint_state_update"
+    ];
+    UI_PHASE_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_research_status",
+      "blueprint_config_get",
+      "blueprint_artifact_contract_read",
+      "blueprint_phase_artifact_read",
+      "blueprint_phase_artifact_write",
+      "blueprint_artifact_scaffold",
+      "blueprint_state_update"
+    ];
+    LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_context",
+      "blueprint_roadmap_read",
+      "blueprint_project_status"
     ];
     VALIDATE_PHASE_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
@@ -36590,6 +36639,11 @@ var init_command_runtime_metadata = __esm({
       "blueprint_patch_record"
     ];
     PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
+    DISCUSS_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
+    LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH = "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md";
+    RESEARCH_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md";
+    UI_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md";
+    LIST_PHASE_ASSUMPTIONS_SPEC_PATH = "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md";
     VALIDATE_PHASE_SPEC_PATH = "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
     VERIFY_WORK_SPEC_PATH = "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md";
     CODE_REVIEW_SPEC_PATH = "skills/blueprint-review/references/code-review-runtime-contract.md";
@@ -36613,6 +36667,13 @@ var init_command_runtime_metadata = __esm({
     CLEANUP_SPEC_PATH = "skills/blueprint-maintenance/references/cleanup-runtime-contract.md";
     UPDATE_SPEC_PATH = "skills/blueprint-maintenance/references/update-runtime-contract.md";
     REAPPLY_PATCHES_SPEC_PATH = "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
+    PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = [
+      "blueprint-researcher"
+    ];
+    UI_PHASE_OPTIONAL_AGENTS = [
+      "blueprint-ui-designer",
+      "blueprint-checker"
+    ];
     VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"];
     ADD_TESTS_OPTIONAL_AGENTS = [
       "blueprint-executor",
@@ -36768,6 +36829,165 @@ var init_command_runtime_metadata = __esm({
         hookInvolvement: [".blueprint write guard"],
         contractNotes: "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+      }
+    };
+    DISCUSS_PHASE_RUNTIME_METADATA = {
+      commandName: "discuss-phase",
+      sourceId: runtimeMetadataSourceId("discuss-phase"),
+      catalog: {
+        wave: 1,
+        family: "Core Lifecycle",
+        primarySkill: "blueprint-phase-discovery",
+        declaredStatus: "implemented",
+        risk: "Medium: can replace or extend phase context artifacts."
+      },
+      requiredTools: DISCUSS_PHASE_REQUIRED_TOOLS,
+      optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+      requiredInputPaths: [
+        DISCUSS_PHASE_SPEC_PATH,
+        LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH
+      ],
+      spec: {
+        path: runtimeMetadataSourceId("discuss-phase"),
+        title: "`/blu-discuss-phase`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
+        reads: [
+          "Phase resolution, roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP."
+        ],
+        writes: [
+          "phase XX-CONTEXT.md",
+          "optional phase XX-DISCUSSION-LOG.md",
+          "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("discuss-phase"),
+        waveTitle: "Core Lifecycle",
+        command: "discuss-phase",
+        primarySkill: "blueprint-phase-discovery",
+        exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
+        optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps contract.authoringTemplate as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    RESEARCH_PHASE_RUNTIME_METADATA = {
+      commandName: "research-phase",
+      sourceId: runtimeMetadataSourceId("research-phase"),
+      catalog: {
+        wave: 1,
+        family: "Core Lifecycle",
+        primarySkill: "blueprint-phase-discovery",
+        declaredStatus: "implemented",
+        risk: "Low: writes research artifacts only."
+      },
+      requiredTools: RESEARCH_PHASE_REQUIRED_TOOLS,
+      optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+      requiredInputPaths: [RESEARCH_PHASE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("research-phase"),
+        title: "`/blu-research-phase`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+        reads: [
+          "Phase resolution, context, research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state through MCP."
+        ],
+        writes: [
+          "phase XX-RESEARCH.md",
+          "optional shared phase checkpoint JSON owned by research-phase",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("research-phase"),
+        waveTitle: "Core Lifecycle",
+        command: "research-phase",
+        primarySkill: "blueprint-phase-discovery",
+        exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
+        optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, and saved codebase summaries, stop on missing XX-CONTEXT.md instead of drafting from status-only signals, read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, require explicit source dates or a clear not externally checked marker for State Of The Art, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve the single-agent topic-strand fallback when they are not, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    UI_PHASE_RUNTIME_METADATA = {
+      commandName: "ui-phase",
+      sourceId: runtimeMetadataSourceId("ui-phase"),
+      catalog: {
+        wave: 1,
+        family: "Core Lifecycle",
+        primarySkill: "blueprint-phase-discovery",
+        declaredStatus: "implemented",
+        risk: "Low: writes a UI contract or documented skip rationale only."
+      },
+      requiredTools: UI_PHASE_REQUIRED_TOOLS,
+      optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
+      requiredInputPaths: [UI_PHASE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("ui-phase"),
+        title: "`/blu-ui-phase`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.",
+        reads: [
+          "Phase resolution, research status, effective config, canonical UI-spec contract, saved context/research/UI artifacts, and state through MCP."
+        ],
+        writes: [
+          "phase XX-UI-SPEC.md for either a UI contract or an explicit UI-skip rationale",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("ui-phase"),
+        waveTitle: "Core Lifecycle",
+        command: "ui-phase",
+        primarySkill: "blueprint-phase-discovery",
+        exactMcpDestination: UI_PHASE_REQUIRED_TOOLS,
+        optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA = {
+      commandName: "list-phase-assumptions",
+      sourceId: runtimeMetadataSourceId("list-phase-assumptions"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-phase-discovery",
+        declaredStatus: "implemented",
+        risk: "Low: read-only analysis."
+      },
+      requiredTools: LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS,
+      optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+      requiredInputPaths: [LIST_PHASE_ASSUMPTIONS_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("list-phase-assumptions"),
+        title: "`/blu-list-phase-assumptions`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.",
+        reads: [
+          "Phase resolution, phase context, roadmap state, and project status through MCP."
+        ],
+        writes: []
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("list-phase-assumptions"),
+        waveTitle: "Roadmap And Milestone",
+        command: "list-phase-assumptions",
+        primarySkill: "blueprint-phase-discovery",
+        exactMcpDestination: LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS,
+        optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
+        hookInvolvement: [],
+        contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
     VALIDATE_PHASE_RUNTIME_METADATA = {
@@ -37747,6 +37967,10 @@ var init_command_runtime_metadata = __esm({
       [SETTINGS_RUNTIME_METADATA.commandName]: SETTINGS_RUNTIME_METADATA,
       [SET_PROFILE_RUNTIME_METADATA.commandName]: SET_PROFILE_RUNTIME_METADATA,
       [HEALTH_RUNTIME_METADATA.commandName]: HEALTH_RUNTIME_METADATA,
+      [DISCUSS_PHASE_RUNTIME_METADATA.commandName]: DISCUSS_PHASE_RUNTIME_METADATA,
+      [RESEARCH_PHASE_RUNTIME_METADATA.commandName]: RESEARCH_PHASE_RUNTIME_METADATA,
+      [UI_PHASE_RUNTIME_METADATA.commandName]: UI_PHASE_RUNTIME_METADATA,
+      [LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA.commandName]: LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA,
       [VALIDATE_PHASE_RUNTIME_METADATA.commandName]: VALIDATE_PHASE_RUNTIME_METADATA,
       [VERIFY_WORK_RUNTIME_METADATA.commandName]: VERIFY_WORK_RUNTIME_METADATA,
       [CODE_REVIEW_RUNTIME_METADATA.commandName]: CODE_REVIEW_RUNTIME_METADATA,

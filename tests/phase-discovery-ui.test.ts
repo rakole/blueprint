@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
@@ -155,21 +156,24 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(skillFile, /\/blu-plan-phase <phase>/);
   assert.match(skillFile, /\/blu-progress/);
   const contract = await buildBlueprintCommandRuntimeContractResource("ui-phase");
+  const metadata = getRuntimeOwnedCommandMetadata("ui-phase");
 
-  assert.deepEqual(contract.skillInputs.shared, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md"
+  assert.ok(metadata);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
   ]);
+  assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "docs/commands/ui-phase.md",
     "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/commands/ui-phase.md",
     "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
     false

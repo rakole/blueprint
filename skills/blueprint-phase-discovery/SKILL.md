@@ -12,22 +12,17 @@ commands:
   - /blu-ui-phase
   - /blu-list-phase-assumptions
 input_bundles:
-  shared:
-    - docs/ARTIFACT-SCHEMA.md
-    - docs/MCP-TOOLS.md
+  shared: []
   commands:
     "/blu-discuss-phase":
-      - docs/commands/discuss-phase.md
       - skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md
       - skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md
     "/blu-research-phase":
-      - docs/commands/research-phase.md
       - skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md
     "/blu-ui-phase":
-      - docs/commands/ui-phase.md
       - skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md
     "/blu-list-phase-assumptions":
-      - docs/commands/list-phase-assumptions.md
+      - skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md
 ---
 
 # Blueprint Phase Discovery Skill
@@ -70,11 +65,15 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 
 ## Required Inputs
 
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
+Repository docs are not active runtime inputs for this skill bundle. Do not load
+command specs, artifact-schema docs, or MCP-tool docs as part of normal command
+execution.
 
-Command-specific inputs are resolved from the structured `input_bundles` frontmatter for the invoking discovery command.
-Treat the active command's runtime reference as the detailed behavior authority so this shared skill can stay command-selective instead of carrying every discovery flow inline.
+Command-specific inputs are resolved from the structured `input_bundles`
+frontmatter for the invoking discovery command. Treat the active command's
+skill-local runtime reference as the detailed behavior authority, and treat live
+MCP responses plus `blueprint_artifact_contract_read` results as the runtime
+source of truth for tool behavior, project state, and artifact schema.
 
 ## Command-Scoped Required MCP Tools
 
@@ -203,13 +202,14 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 
 ### `list-phase-assumptions`
 
-Treat `/blu-list-phase-assumptions` as an `interactive-read` summary and keep
-it read-only. Do not use `update_topic`, `write_todos`, or task tracker tools
-for `/blu-list-phase-assumptions`; keep blocked or missing phase resolution in
-a visible waiting-state posture with an explicit next safe action. The command
-spec `docs/commands/list-phase-assumptions.md` remains the command-specific
-source for the five assumption areas, `blueprint-researcher` sidecar limits,
-and correction-oriented conversational output.
+Before running the command flow, read
+`skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md`.
+That command-specific reference is the behavior authority for the five
+assumption areas, read-only output, optional `blueprint-researcher` bounds,
+uncertainty language, waiting-state behavior, and next-safe-action guidance.
+Treat `/blu-list-phase-assumptions` as an `interactive-read` summary and keep it
+read-only. Do not use `update_topic`, `write_todos`, task tracker tools, hidden
+planning, staged progress, or persistence tools for this command.
 
 ### `ui-phase`
 

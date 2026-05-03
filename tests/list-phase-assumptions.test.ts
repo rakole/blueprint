@@ -4,6 +4,7 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -19,6 +20,10 @@ const runtimeReferencePath = path.join(repoRoot, "docs/RUNTIME-REFERENCE.md");
 const discoverableSkillPath = path.join(
   repoRoot,
   "skills/blueprint-phase-discovery/SKILL.md"
+);
+const assumptionsRuntimeContractPath = path.join(
+  repoRoot,
+  "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
 );
 
 async function pathExists(relativePath: string): Promise<boolean> {
@@ -72,21 +77,27 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   assert.match(skillFile, /Execution profile for `\/blu-list-phase-assumptions`: `interactive-read`\./);
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or task tracker tools for `\/blu-list-phase-assumptions`/);
   assert.match(skillFile, /Treat `\/blu-list-phase-assumptions` as an `interactive-read` summary/i);
-  assert.match(skillFile, /waiting-state posture with an explicit next safe action/i);
+  assert.match(skillFile, /name the waiting state plainly/i);
+  assert.match(skillFile, /next safe implemented follow-up/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("list-phase-assumptions");
+  const metadata = getRuntimeOwnedCommandMetadata("list-phase-assumptions");
 
-  assert.deepEqual(contract.skillInputs.shared, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md"
+  assert.ok(metadata);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
   ]);
+  assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "docs/commands/list-phase-assumptions.md"
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/commands/list-phase-assumptions.md"
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
   ]);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
     false
@@ -96,6 +107,21 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
     false
   );
   assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
+});
+
+test("list-phase-assumptions runtime contract preserves the locked five assumption areas", async () => {
+  const contract = await readFile(assumptionsRuntimeContractPath, "utf8");
+  const areaMatches = [
+    ...contract.matchAll(/^- ([A-Za-z ]+):/gm)
+  ].map((match) => match[1]);
+
+  assert.deepEqual(areaMatches, [
+    "Technical approach",
+    "Implementation order",
+    "Scope boundaries",
+    "Risk areas",
+    "Dependencies"
+  ]);
 });
 
 test("list-phase-assumptions remains implemented in the live command catalog", async () => {
@@ -123,7 +149,10 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   assert.equal(entry.manifestPath, "commands/blu-list-phase-assumptions.toml");
   assert.equal(skillResolution.resolution, "discoverable");
   assert.equal(entry.skillPath, skillResolution.canonicalPath);
-  assert.equal(entry.specPath, "docs/commands/list-phase-assumptions.md");
+  assert.equal(
+    entry.specPath,
+    "src/mcp/command-runtime-metadata.ts#list-phase-assumptions"
+  );
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_phase_context",
