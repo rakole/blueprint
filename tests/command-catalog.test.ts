@@ -1381,6 +1381,7 @@ test("ship is implemented once manifest, skill, and report-backed shipping MCP t
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
@@ -1428,6 +1429,7 @@ test("undo is implemented once manifest, skill, and report-backed revert MCP too
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
