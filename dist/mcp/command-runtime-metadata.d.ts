@@ -1,46 +1,652 @@
-export type RuntimeOwnedCommandStatus = "planned" | "implemented" | "blocked" | "repairing";
-export type RuntimeOwnedCommandSpecMetadata = {
-    path: string;
-    title: string | null;
-    wave: number | null;
-    family: string | null;
-    executionProfile: string | null;
-    rootRoutable: boolean | null;
-    purpose: string | null;
-    requiredTools: string[];
-    primarySkill: string | null;
-    optionalSubagents: string[];
-    reads: string[];
-    writes: string[];
-};
-export type RuntimeOwnedReferenceRowMetadata = {
-    path: string;
-    wave: number | null;
-    waveTitle: string | null;
-    command: string;
-    commandSpecPath: string | null;
-    primarySkill: string | null;
-    exactMcpDestination: string[];
-    optionalAgents: string[];
-    hookInvolvement: string[];
-    contractNotes: string | null;
-    evidenceState: string[];
-};
+import type { BlueprintInternalToolName } from "./runtime-vocabulary.js";
+type RuntimeOwnedCommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 export type RuntimeOwnedCommandMetadata = {
     commandName: string;
-    wave: number;
-    family: string;
-    primarySkill: string;
-    declaredStatus: RuntimeOwnedCommandStatus;
-    risk: string;
-    requiredTools: string[];
-    optionalAgents: string[];
-    requiredInputPaths: string[];
-    exposeRuntimeContract: boolean;
-    spec: RuntimeOwnedCommandSpecMetadata;
-    runtimeReference: RuntimeOwnedReferenceRowMetadata;
+    sourceId: string;
+    catalog: {
+        wave: number;
+        family: string;
+        primarySkill: string;
+        declaredStatus: RuntimeOwnedCommandStatus;
+        risk: string;
+    };
+    requiredTools: readonly BlueprintInternalToolName[];
+    optionalAgents: readonly string[];
+    requiredInputPaths?: readonly string[];
+    spec: {
+        path: string;
+        title: string;
+        executionProfile: string;
+        rootRoutable: boolean;
+        purpose: string;
+        reads: readonly string[];
+        writes: readonly string[];
+    };
+    runtimeReference: {
+        path: string;
+        waveTitle: string;
+        command: string;
+        primarySkill: string;
+        exactMcpDestination: readonly BlueprintInternalToolName[];
+        optionalAgents: readonly string[];
+        hookInvolvement: readonly string[];
+        contractNotes: string;
+        evidenceState: readonly string[];
+    };
 };
-export declare const runtimeOwnedCommandMetadata: Record<string, RuntimeOwnedCommandMetadata>;
-export declare function getRuntimeOwnedCommandMetadata(commandName: string): RuntimeOwnedCommandMetadata | null;
+export declare const NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#new-project";
+export declare const NEW_PROJECT_RUNTIME_METADATA: {
+    readonly commandName: "new-project";
+    readonly sourceId: "src/mcp/command-runtime-metadata.ts#new-project";
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-bootstrap";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+    readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+    readonly spec: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
+        readonly title: "`/blu-new-project`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "new-project initializes a Blueprint project with deep context gathering and PROJECT.md. It stays host-native and delegates durable persistence to Blueprint MCP tools while preserving the richer bootstrap flow.";
+        readonly reads: readonly ["~/.<host>/blueprint/defaults.json when present"];
+        readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/STATE.md", ".blueprint/config.json", ".blueprint/phases/"];
+    };
+    readonly runtimeReference: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
+        readonly waveTitle: "Foundation";
+        readonly command: "new-project";
+        readonly primarySkill: "blueprint-bootstrap";
+        readonly exactMcpDestination: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+        readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const ADD_PHASE_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#add-phase";
+export declare const ADD_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "add-phase";
+    readonly sourceId: "src/mcp/command-runtime-metadata.ts#add-phase";
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly title: "`/blu-add-phase`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.";
+        readonly reads: readonly [".blueprint/ROADMAP.md"];
+        readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "add-phase";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const PROGRESS_RUNTIME_METADATA: {
+    readonly commandName: "progress";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-router";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: read-only status inspection.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["commands/blu-progress.toml"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-progress`";
+        readonly executionProfile: "router";
+        readonly rootRoutable: true;
+        readonly purpose: "`progress` summarizes Blueprint repo status, blockers, warnings, and next safe implemented guidance from MCP-owned state.";
+        readonly reads: readonly [".blueprint/ state, config, artifacts, project status, and command catalog through MCP tools."];
+        readonly writes: readonly [];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "progress";
+        readonly primarySkill: "blueprint-router";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const VALIDATE_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "validate-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: writes summary-aware verification evidence and updates follow-up state.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-validate-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.";
+        readonly reads: readonly ["Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."];
+        readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "validate-phase";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const VERIFY_WORK_RUNTIME_METADATA: {
+    readonly commandName: "verify-work";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: writes resumable UAT artifacts, can close or reopen roadmap completion, and records follow-up state.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_render", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/verify-work-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-verify-work`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`verify-work` runs summary-backed UAT and persists resumable phase UAT evidence through the validation MCP substrate.";
+        readonly reads: readonly ["Saved phase summaries, verification and UAT state, config, artifact health, and state through MCP tools."];
+        readonly writes: readonly ["phase XX-UAT.md", ".blueprint/ROADMAP.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "verify-work";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_render", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const CODE_REVIEW_RUNTIME_METADATA: {
+    readonly commandName: "code-review";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: review artifact generation only.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly optionalAgents: readonly ["blueprint-reviewer"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-code-review`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`code-review` reviews source files changed during a Blueprint phase, resolves deterministic scope from executed plan metadata or explicit file paths, honors review settings, audits saved phase evidence, and persists the result through review MCP tools instead of prompt-only file writes.";
+        readonly reads: readonly [".blueprint/config.json", "Phase resolution, artifact inventory, review scoping, saved execution summaries, matching plans, validation or UAT evidence, and any existing review findings through MCP tools and read-only repo access."];
+        readonly writes: readonly ["phase XX-REVIEW.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "code-review";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const CODE_REVIEW_FIX_RUNTIME_METADATA: {
+    readonly commandName: "code-review-fix";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: selected findings can trigger bounded repo remediation plus review-fix/state updates.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-reviewer"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-fix-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-code-review-fix`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`code-review-fix` applies bounded fixes from saved code-review findings and persists review-fix evidence plus state through MCP tools.";
+        readonly reads: readonly ["Saved code-review findings, phase evidence, and review-fix authoring context through MCP tools."];
+        readonly writes: readonly ["phase XX-REVIEW-FIX.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "code-review-fix";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Long-running-mutation profile for bounded saved-finding remediation; keep repo mutation scoped to selected findings, validate review.review-fix, persist through review MCP tools, and route follow-up through implemented validation or progress commands only.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const SECURE_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "secure-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: audit artifact only.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly optionalAgents: readonly ["blueprint-security-auditor"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/secure-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-secure-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`secure-phase` verifies declared saved-plan threats against completed execution evidence and persists phase security evidence through review MCP tools.";
+        readonly reads: readonly ["Saved plans, summaries, threat evidence, artifact inventory, and security authoring context through MCP tools."];
+        readonly writes: readonly ["phase XX-SECURITY.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "secure-phase";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-security-auditor"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const ADD_TESTS_RUNTIME_METADATA: {
+    readonly commandName: "add-tests";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: repo test mutation plus verification/report updates.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-add-tests`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`add-tests` generates focused repo tests from saved phase evidence and persists validation plus report artifacts through MCP tools.";
+        readonly reads: readonly ["Saved summaries, validation or UAT evidence, artifact inventory, report authoring context, and state through MCP tools."];
+        readonly writes: readonly ["repo test files", "phase XX-VERIFICATION.md", ".blueprint/reports/add-tests-<phase>.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "add-tests";
+        readonly primarySkill: "blueprint-phase-validation";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const RUNTIME_OWNED_COMMAND_METADATA: {
+    readonly "new-project": {
+        readonly commandName: "new-project";
+        readonly sourceId: "src/mcp/command-runtime-metadata.ts#new-project";
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-bootstrap";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+        readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+        readonly spec: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
+            readonly title: "`/blu-new-project`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "new-project initializes a Blueprint project with deep context gathering and PROJECT.md. It stays host-native and delegates durable persistence to Blueprint MCP tools while preserving the richer bootstrap flow.";
+            readonly reads: readonly ["~/.<host>/blueprint/defaults.json when present"];
+            readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/STATE.md", ".blueprint/config.json", ".blueprint/phases/"];
+        };
+        readonly runtimeReference: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
+            readonly waveTitle: "Foundation";
+            readonly command: "new-project";
+            readonly primarySkill: "blueprint-bootstrap";
+            readonly exactMcpDestination: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
+            readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "add-phase": {
+        readonly commandName: "add-phase";
+        readonly sourceId: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+            readonly title: "`/blu-add-phase`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.";
+            readonly reads: readonly [".blueprint/ROADMAP.md"];
+            readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "add-phase";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly progress: {
+        readonly commandName: "progress";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-router";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: read-only status inspection.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["commands/blu-progress.toml"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-progress`";
+            readonly executionProfile: "router";
+            readonly rootRoutable: true;
+            readonly purpose: "`progress` summarizes Blueprint repo status, blockers, warnings, and next safe implemented guidance from MCP-owned state.";
+            readonly reads: readonly [".blueprint/ state, config, artifacts, project status, and command catalog through MCP tools."];
+            readonly writes: readonly [];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "progress";
+            readonly primarySkill: "blueprint-router";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_state_load", "blueprint_artifact_list", "blueprint_command_catalog"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "validate-phase": {
+        readonly commandName: "validate-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: writes summary-aware verification evidence and updates follow-up state.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-validate-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.";
+            readonly reads: readonly ["Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."];
+            readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "validate-phase";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "verify-work": {
+        readonly commandName: "verify-work";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: writes resumable UAT artifacts, can close or reopen roadmap completion, and records follow-up state.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_render", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/verify-work-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-verify-work`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`verify-work` runs summary-backed UAT and persists resumable phase UAT evidence through the validation MCP substrate.";
+            readonly reads: readonly ["Saved phase summaries, verification and UAT state, config, artifact health, and state through MCP tools."];
+            readonly writes: readonly ["phase XX-UAT.md", ".blueprint/ROADMAP.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "verify-work";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_render", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "code-review": {
+        readonly commandName: "code-review";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: review artifact generation only.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-code-review`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`code-review` reviews source files changed during a Blueprint phase, resolves deterministic scope from executed plan metadata or explicit file paths, honors review settings, audits saved phase evidence, and persists the result through review MCP tools instead of prompt-only file writes.";
+            readonly reads: readonly [".blueprint/config.json", "Phase resolution, artifact inventory, review scoping, saved execution summaries, matching plans, validation or UAT evidence, and any existing review findings through MCP tools and read-only repo access."];
+            readonly writes: readonly ["phase XX-REVIEW.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "code-review";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly optionalAgents: readonly ["blueprint-reviewer"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "code-review-fix": {
+        readonly commandName: "code-review-fix";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: selected findings can trigger bounded repo remediation plus review-fix/state updates.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-fix-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-code-review-fix`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`code-review-fix` applies bounded fixes from saved code-review findings and persists review-fix evidence plus state through MCP tools.";
+            readonly reads: readonly ["Saved code-review findings, phase evidence, and review-fix authoring context through MCP tools."];
+            readonly writes: readonly ["phase XX-REVIEW-FIX.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "code-review-fix";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-reviewer"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Long-running-mutation profile for bounded saved-finding remediation; keep repo mutation scoped to selected findings, validate review.review-fix, persist through review MCP tools, and route follow-up through implemented validation or progress commands only.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "secure-phase": {
+        readonly commandName: "secure-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: audit artifact only.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-security-auditor"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/secure-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-secure-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`secure-phase` verifies declared saved-plan threats against completed execution evidence and persists phase security evidence through review MCP tools.";
+            readonly reads: readonly ["Saved plans, summaries, threat evidence, artifact inventory, and security authoring context through MCP tools."];
+            readonly writes: readonly ["phase XX-SECURITY.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "secure-phase";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly optionalAgents: readonly ["blueprint-security-auditor"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "add-tests": {
+        readonly commandName: "add-tests";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: repo test mutation plus verification/report updates.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-add-tests`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`add-tests` generates focused repo tests from saved phase evidence and persists validation plus report artifacts through MCP tools.";
+            readonly reads: readonly ["Saved summaries, validation or UAT evidence, artifact inventory, report authoring context, and state through MCP tools."];
+            readonly writes: readonly ["repo test files", "phase XX-VERIFICATION.md", ".blueprint/reports/add-tests-<phase>.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "add-tests";
+            readonly primarySkill: "blueprint-phase-validation";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+};
 export declare function listRuntimeOwnedCommandMetadata(): RuntimeOwnedCommandMetadata[];
-export declare function listRuntimeOwnedCommandContractMetadata(): RuntimeOwnedCommandMetadata[];
+export declare function getRuntimeOwnedCommandMetadata(commandName: string): RuntimeOwnedCommandMetadata | null;
+export declare function getRuntimeOwnedCommandMetadataBySourceId(sourceId: string | null): RuntimeOwnedCommandMetadata | null;
+export {};

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -578,7 +581,7 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
     pauseCommand,
     pauseDoc,
     newProjectCommand,
-    newProjectDoc,
+    newProjectRuntimeContract,
     governanceSkill,
     bootstrapSkill,
     bootstrapContract,
@@ -591,7 +594,7 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
     readRepoFile("commands/blu-pause-work.toml"),
     readRepoFile("docs/commands/pause-work.md"),
     readRepoFile("commands/blu-new-project.toml"),
-    readRepoFile("docs/commands/new-project.md"),
+    buildBlueprintCommandRuntimeContractResource("new-project"),
     readRepoFile("skills/blueprint-governance/SKILL.md"),
     readRepoFile("skills/blueprint-bootstrap/SKILL.md"),
     readRepoFile("skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"),
@@ -615,9 +618,28 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
   assert.match(newProjectCommand, /references\/bootstrap-runtime-contract\.md/);
   assert.match(newProjectCommand, /references\/runtime-guardrails\.md/);
   assert.match(newProjectCommand, /Do not require `docs\/commands\/new-project\.md`/i);
-  assert.match(newProjectDoc, /## Bootstrap Contract/);
-  assert.match(newProjectDoc, /## Runtime Packaging/);
-  assert.match(newProjectDoc, /Treat scaffold output as seeding, not final authored persistence/i);
+  assert.equal(newProjectRuntimeContract.catalog.specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(newProjectRuntimeContract.spec?.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(newProjectRuntimeContract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(newProjectRuntimeContract.skillInputs.shared, []);
+  assert.deepEqual(newProjectRuntimeContract.skillInputs.commandSpecific, [
+    "skills/blueprint-bootstrap/references/questioning.md",
+    "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
+    "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+  ]);
+  assert.deepEqual(newProjectRuntimeContract.skillInputs.effective, [
+    "skills/blueprint-bootstrap/references/questioning.md",
+    "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
+    "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+  ]);
+  assert.equal(
+    newProjectRuntimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.match(
+    newProjectRuntimeContract.runtimeReference?.contractNotes ?? "",
+    /map-first for brownfield repos/i
+  );
   assert.match(bootstrapSkill, /first persistent bootstrap write/i);
   assert.match(bootstrapContract, /`bootstrapSeed`/);
   assert.match(bootstrapContract, /returned `createdPaths`, `configPath`, and `nextAction` as authoritative/i);

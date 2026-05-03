@@ -696,9 +696,10 @@ export declare const artifactToolDefinitions: ({
         projectName: z.ZodOptional<z.ZodString>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         artifacts: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodEnum<{
-            ".blueprint/ROADMAP.md": ".blueprint/ROADMAP.md";
             ".blueprint/PROJECT.md": ".blueprint/PROJECT.md";
             ".blueprint/REQUIREMENTS.md": ".blueprint/REQUIREMENTS.md";
+            ".blueprint/ROADMAP.md": ".blueprint/ROADMAP.md";
+            ".blueprint/phases/": ".blueprint/phases/";
             ".blueprint/codebase/STACK.md": ".blueprint/codebase/STACK.md";
             ".blueprint/codebase/ARCHITECTURE.md": ".blueprint/codebase/ARCHITECTURE.md";
             ".blueprint/codebase/STRUCTURE.md": ".blueprint/codebase/STRUCTURE.md";
@@ -706,7 +707,6 @@ export declare const artifactToolDefinitions: ({
             ".blueprint/codebase/TESTING.md": ".blueprint/codebase/TESTING.md";
             ".blueprint/codebase/INTEGRATIONS.md": ".blueprint/codebase/INTEGRATIONS.md";
             ".blueprint/codebase/CONCERNS.md": ".blueprint/codebase/CONCERNS.md";
-            ".blueprint/phases/": ".blueprint/phases/";
         }>, z.ZodString]>>>;
         bootstrapSeed: z.ZodOptional<z.ZodObject<{
             vision: z.ZodOptional<z.ZodString>;

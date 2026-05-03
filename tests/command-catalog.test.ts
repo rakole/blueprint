@@ -14,7 +14,12 @@ import {
   buildBlueprintCommandRuntimeContractResource,
   listBlueprintCommandRuntimeContractCommands
 } from "../src/mcp/command-resources.js";
-import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import {
+  CODE_REVIEW_RUNTIME_METADATA,
+  getRuntimeOwnedCommandMetadata,
+  NEW_PROJECT_RUNTIME_METADATA,
+  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+} from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
@@ -149,6 +154,17 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.deepEqual(catalog.aliases[command], blueprintDirectCommandAliases(command));
   }
 
+  assert.equal(catalog.commands["new-project"].specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.deepEqual(catalog.commands["new-project"].requiredTools, [
+    ...NEW_PROJECT_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["new-project"].optionalAgents, [
+    ...NEW_PROJECT_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(catalog.commands["new-project"].risk, NEW_PROJECT_RUNTIME_METADATA.catalog.risk);
+  assert.equal(catalog.commands["map-codebase"].specPath, "docs/commands/map-codebase.md");
+  assert.equal(catalog.commands.help.specPath, "docs/commands/help.md");
+
   const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
 
   assert.equal(listPhaseAssumptions.primarySkill, "blueprint-phase-discovery");
@@ -212,6 +228,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.deepEqual(advertisedCommands, expectedAdvertisedCommands);
   assert.ok(advertisedCommands.includes("help"));
   assert.ok(advertisedCommands.includes("impact"));
+  assert.ok(advertisedCommands.includes("add-phase"));
   assert.ok(!advertisedCommands.includes("do"));
   assert.ok(!advertisedCommands.includes("review"));
 
@@ -299,6 +316,25 @@ test("command runtime contract resource stays anchored to live catalog, command 
   await assert.rejects(
     buildBlueprintCommandRuntimeContractResource("do"),
     /Blueprint runtime-contract resources are available only for implemented commands: do/
+  );
+
+  const addPhaseContract = await buildBlueprintCommandRuntimeContractResource("add-phase");
+
+  assert.equal(addPhaseContract.spec?.path, "src/mcp/command-runtime-metadata.ts#add-phase");
+  assert.equal(
+    addPhaseContract.runtimeReference?.path,
+    "src/mcp/command-runtime-metadata.ts#add-phase"
+  );
+  assert.equal(
+    addPhaseContract.runtimeReference?.commandSpecPath,
+    "src/mcp/command-runtime-metadata.ts#add-phase"
+  );
+  assert.deepEqual(addPhaseContract.skillInputs.effective, [
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    addPhaseContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
 });
 
@@ -399,7 +435,13 @@ test("add-phase is implemented once manifest, skill, and roadmap MCP tools exist
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.ok(entry.manifestPath);
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, "src/mcp/command-runtime-metadata.ts#add-phase");
+  assert.ok(catalog.waves["2"].includes("add-phase"));
+  assert.equal(catalog.waves["2"].indexOf("add-phase"), 0);
+  assert.ok(
+    catalog.waves["2"].indexOf("add-phase") <
+      catalog.waves["2"].indexOf("insert-phase")
+  );
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_scaffold",
     "blueprint_roadmap_add_phase",
@@ -956,7 +998,7 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.ok(entry.skillPath);
   assert.equal(
     entry.specPath,
-    "skills/blueprint-review/references/code-review-runtime-contract.md"
+    CODE_REVIEW_RUNTIME_METADATA.sourceId
   );
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
@@ -977,7 +1019,7 @@ test("runtime-owned code-review is repairing when its local runtime contract is 
 
   const originalAccess = fs.access;
   fs.access = (async (...args: Parameters<typeof fs.access>) => {
-    if (isBundledPath(args[0], metadata.spec.path)) {
+    if (isBundledPath(args[0], metadata.requiredInputPaths?.[0] ?? "")) {
       const error = new Error("ENOENT");
       (error as NodeJS.ErrnoException).code = "ENOENT";
       throw error;
@@ -1007,10 +1049,10 @@ test("code-review runtime reference keeps the long-running review posture explic
   const runtimeReference = contract.runtimeReference;
 
   assert.ok(runtimeReference);
-  assert.equal(runtimeReference.path, "src/mcp/command-runtime-metadata.ts");
+  assert.equal(runtimeReference.path, CODE_REVIEW_RUNTIME_METADATA.sourceId);
   assert.equal(
     runtimeReference.commandSpecPath,
-    "skills/blueprint-review/references/code-review-runtime-contract.md"
+    CODE_REVIEW_RUNTIME_METADATA.sourceId
   );
   assert.equal(runtimeReference.primarySkill, "blueprint-review");
   assert.deepEqual(runtimeReference.exactMcpDestination, [

@@ -130,8 +130,11 @@ test("code-review runtime metadata is source-owned and docs-free", async () => {
   const contract = await buildBlueprintCommandRuntimeContractResource("code-review");
 
   assert.ok(metadata);
-  assert.equal(metadata.spec.path, "skills/blueprint-review/references/code-review-runtime-contract.md");
-  assert.equal(metadata.runtimeReference.path, "src/mcp/command-runtime-metadata.ts");
+  assert.equal(metadata.spec.path, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.equal(metadata.runtimeReference.path, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  ]);
   assert.deepEqual(metadata.requiredTools, [
     "blueprint_phase_locate",
     "blueprint_artifact_contract_read",

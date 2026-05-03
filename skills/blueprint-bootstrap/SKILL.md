@@ -10,6 +10,12 @@ description: >
 status: implemented
 commands:
   - /blu-new-project
+input_bundles:
+  commands:
+    "/blu-new-project":
+      - skills/blueprint-bootstrap/references/questioning.md
+      - skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md
+      - skills/blueprint-bootstrap/references/runtime-guardrails.md
 ---
 ### Guidance for LLM only(not to show on screen)
 - Keep the user updated through Gemini CLI native tools or the equivalent host UX when those helpers are available. If not, use concise conversational progress notes with the stage name and gist; do not dump whole output.

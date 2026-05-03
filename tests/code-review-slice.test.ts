@@ -377,16 +377,16 @@ test("code-review catalog, runtime contract, and next-action validation survive 
   assert.ok(implementedCommands.includes("progress"));
   assert.equal(
     catalog.commands["code-review"].specPath,
-    "skills/blueprint-review/references/code-review-runtime-contract.md"
+    "src/mcp/command-runtime-metadata.ts#code-review"
   );
 
   const contract = await buildBlueprintCommandRuntimeContractResource("code-review");
   assert.equal(contract.catalog.status, "implemented");
   assert.equal(
     contract.spec?.path,
-    "skills/blueprint-review/references/code-review-runtime-contract.md"
+    "src/mcp/command-runtime-metadata.ts#code-review"
   );
-  assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts");
+  assert.equal(contract.runtimeReference?.path, "src/mcp/command-runtime-metadata.ts#code-review");
   assert.deepEqual(contract.skillInputs.effective, [
     "commands/blu-code-review.toml",
     "skills/blueprint-review/references/code-review-runtime-contract.md"
