@@ -146,3 +146,57 @@ No source, manifest, skill, test, generated asset, or runtime behavior fix was a
 - The main risk is fixture blast radius: many tests use fake `.git` placeholders, so full-suite repair may be larger than the production fix.
 - This makes `git` availability required for all repo-gated tools, not only workspace/impact paths. That aligns with Blueprint's Git-backed repo assumption but may expose environments with missing Git sooner.
 - Path comparison must canonicalize realpaths to avoid false failures for symlinked checkouts and real worktrees.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `BLOCK`.
+
+Passed checks:
+
+- `ensureRepoRoot()` no longer accepts arbitrary `.git` entries.
+- Real Git repo roots and real worktree roots pass in targeted coverage.
+- Missing `.git` behavior likely remains compatible with workspace default-root fallback because the missing-entry error string is preserved.
+- No command catalog routing, command manifest, installed extension mutation, or workflow-surface change was found.
+
+Blocking findings:
+
+- `CRITICAL`: Full `npm test` fails. `tests/built-schema-assets.test.ts` reports stale tracked `dist/mcp/server.js` and `dist/mcp/server.js.map` after build, and many tests fail with `Blueprint commands must run from the repository root; not a valid git repository root`.
+- `CRITICAL`: Remaining fake `.git` placeholders are still used by repo-root-gated tool tests. Example: `tests/capture-tools.test.ts` writes `gitdir: ./.git/worktree-placeholder` and then calls repo-root-gated `blueprintArtifactMutateIndex`.
+
+Tests run:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts tests/workspace-tools.test.ts` - pass, `41/41`.
+- `npm test` - fail.
+
+### Code Reviewer Report
+
+Findings:
+
+- `CRITICAL`: Full test suite fails because many tests still create fake `.git` files and call MCP tools that use `ensureRepoRoot()`. A representative failure path is `tests/verify-work-roadmap-sync.test.ts`, which writes the placeholder and then fails inside phase tools through `resolveGitTopLevel` -> `ensureRepoRoot`.
+- `MEDIUM`: The worktree-root test cleanup in `tests/security-hardening.test.ts` deletes only the `worktrees/` directory, leaving the main temp repo behind.
+- `MEDIUM`: There is no explicit regression coverage for symlinked repo roots or nested subdirectory rejection.
+- `LOW`: `resolveGitTopLevel()` uses `execFile("git", ...)` without a timeout or `GIT_TERMINAL_PROMPT=0`, unlike some other git helpers. This is a low consistency/safety note.
+
+Tests run:
+
+- `npm test` - fail with many repo-root validation errors.
+
+### Bug Finder Report
+
+Findings:
+
+- `HIGH`: The production guard is correct, but the branch is not integrated because broad test runs fail immediately at the new guard. Representative fixtures still writing fake `.git` placeholders include `tests/new-project.test.ts`, `tests/map-codebase.test.ts`, `tests/cleanup-tools.test.ts`, and `tests/help-progress-health.test.ts`. These suites call repo-gated helpers such as `blueprintProjectInit`, `blueprintProjectStatus`, `blueprintArtifactValidate`, `blueprintArtifactList`, `blueprintArtifactReportWrite`, `blueprintStateLoad`, and `blueprintStateSync`.
+- `LOW`: The new guard shells out to `git rev-parse` on every `ensureRepoRoot()` call, broadening runtime `git` dependency and adding a subprocess to every repo-gated path. No functional break was observed beyond test fixture fallout.
+
+Open checks:
+
+- Manual probes showed real repo root, real worktree root, symlinked repo root, and nested subdirectory behavior was correct: real/symlink/worktree roots passed and nested subdirectories rejected.
+- Symlink-root behavior is not yet suite-protected.
+
+Tests run:
+
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts` - pass, `16/16`.
+- `npm run build --silent && npx tsx --test tests/new-project.test.ts tests/map-codebase.test.ts tests/cleanup-tools.test.ts tests/help-progress-health.test.ts` - fail, `56/66`, all on the new repo-root guard.
