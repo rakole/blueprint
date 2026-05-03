@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
@@ -84,9 +86,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
 });
 
 test("plan-phase skill captures the revision loop and safe follow-up rules", async () => {
-  const [skillFile, runtimeReference, runtimeContract] = await Promise.all([
+  const [skillFile, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-phase-planning/SKILL.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -99,7 +100,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-plan-phase/);
   assert.match(skillFile, /input_bundles:/);
-  assert.match(skillFile, /docs\/commands\/plan-phase\.md/);
+  assert.doesNotMatch(skillFile, /docs\/commands\/plan-phase\.md/);
   assert.match(skillFile, /plan-phase-runtime-contract\.md/);
   assert.match(skillFile, /`long-running-mutation`/);
   assert.match(skillFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
@@ -186,72 +187,112 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /Max revision loop: three checker passes/i);
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
-
-  assert.match(
-    runtimeReference,
-    /\| `plan-phase` \| `docs\/commands\/plan-phase\.md` \| `blueprint-phase-planning` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_context`<br>`blueprint_phase_research_status`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_validation_read`<br>`blueprint_review_load_findings`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_plan_authoring_context`<br>`blueprint_phase_plan_validate_model`<br>`blueprint_phase_plan_validate`<br>`blueprint_phase_plan_write`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
-  );
-  assert.match(
-    runtimeReference,
-    /use `skills\/blueprint-phase-planning\/references\/plan-phase-runtime-contract\.md` as the rich behavior contract/
-  );
-  assert.match(runtimeReference, /gate reuse\/revise\/replace only for writes that revise or replace saved plan ids/i);
-  assert.match(runtimeReference, /planningReadiness/i);
-  assert.match(runtimeReference, /allow additive new plan ids without an unnecessary overwrite gate/i);
-  assert.match(runtimeReference, /consume saved research instead of live browsing/i);
-  assert.match(runtimeReference, /checker review as config-gated rather than mandatory/i);
 });
 
-test("plan-phase command doc explains the plan write contract for planId", async () => {
-  const docFile = await readFile(path.join(repoRoot, "docs/commands/plan-phase.md"), "utf8");
+test("plan-phase runtime metadata owns the migrated catalog and runtime-reference facts", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("plan-phase");
+  const contract = await buildBlueprintCommandRuntimeContractResource("plan-phase");
 
-  assert.match(docFile, /ask_user/);
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, /## Shared Runtime Contract/);
-  assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#plan-phase");
+  assert.equal(metadata.catalog.wave, 1);
+  assert.equal(metadata.catalog.family, "Core Lifecycle");
+  assert.equal(metadata.catalog.primarySkill, "blueprint-phase-planning");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(
+    metadata.catalog.risk,
+    "Medium: can replace plans and change downstream execution order."
   );
-  assert.match(docFile, /shared long-running-mutation posture/i);
-  assert.match(docFile, /Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route/);
-  assert.match(docFile, /plan-phase-runtime-contract\.md/);
-  assert.match(
-    docFile,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
-  );
-  assert.match(docFile, /saved plans would be revised or replaced[\s\S]*structured `reuse`, `revise`, or `replace` decision/i);
-  assert.match(docFile, /## Plan Persistence Contract/);
-  assert.match(docFile, /artifact_contract_read/);
-  assert.match(docFile, /artifactId: "phase\.plan"/);
-  assert.match(docFile, /blueprint_phase_plan_authoring_context/);
-  assert.match(docFile, /taskSchema/);
-  assert.match(docFile, /saved research for unstable technical choices/i);
-  assert.match(docFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
-  assert.match(docFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
-  assert.match(docFile, /planningReadiness/);
-  assert.match(docFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
-  assert.match(docFile, /base: "synced"/);
-  assert.match(docFile, /Omit `planId` to let Blueprint auto-assign the next available plan slot/i);
-  assert.match(docFile, /If targeting a specific plan, pass only the numeric plan id/i);
-  assert.match(docFile, /numeric value `planId: 1`/i);
-  assert.match(docFile, /double-encoded string/i);
-  assert.match(docFile, /do not derive `planId` manually from a scaffold path/i);
-  assert.match(docFile, /actual current `XX-CONTEXT\.md` content/i);
-  assert.match(docFile, /relevant discovery artifacts/i);
-  assert.match(docFile, /blueprint_phase_validation_read/);
-  assert.match(docFile, /blueprint_review_load_findings/);
-  assert.match(docFile, /When omitting `planId` to add a new plan and no saved plan body will be overwritten/i);
-  assert.match(docFile, /repair all diagnostics against the live task schema and contract/i);
-  assert.match(docFile, /validationMode: "strict"/);
-  assert.match(docFile, /authoringMode: "model-only"/);
-  assert.match(docFile, /warn-mode writes/i);
-  assert.doesNotMatch(docFile, /optional plan-check report in \.blueprint\/reports/i);
-  assert.doesNotMatch(docFile, /web docs for unstable technical choices/i);
-  assert.doesNotMatch(docFile, /blueprint_artifact_scaffold/);
-  assert.doesNotMatch(docFile, /blueprint_artifact_validate/);
-  assert.doesNotMatch(
-    docFile,
-    /--auto|--research|--skip-research|--gaps|--skip-verify|--prd|--reviews|--text/
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(metadata.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_phase_context",
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_validation_read",
+    "blueprint_review_load_findings",
+    "blueprint_artifact_contract_read",
+    "blueprint_phase_plan_index",
+    "blueprint_phase_plan_read",
+    "blueprint_phase_plan_authoring_context",
+    "blueprint_phase_plan_validate_model",
+    "blueprint_phase_plan_write",
+    "blueprint_phase_plan_validate",
+    "blueprint_config_get",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(metadata.optionalAgents, [
+    "blueprint-planner",
+    "blueprint-checker"
+  ]);
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.match(metadata.spec.purpose, /MCP-owned structured phase\.plan/i);
+  assert.deepEqual(metadata.spec.writes, [
+    "structured phase.plan JSON through blueprint_phase_plan_write",
+    ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write",
+    ".blueprint/STATE.md through synced state update"
+  ]);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.waveTitle, "Core Lifecycle");
+  assert.deepEqual(metadata.runtimeReference.exactMcpDestination, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_contract_read",
+    "blueprint_phase_context",
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_validation_read",
+    "blueprint_review_load_findings",
+    "blueprint_phase_plan_index",
+    "blueprint_phase_plan_read",
+    "blueprint_phase_plan_authoring_context",
+    "blueprint_phase_plan_validate_model",
+    "blueprint_phase_plan_validate",
+    "blueprint_phase_plan_write",
+    "blueprint_config_get",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual(metadata.runtimeReference.hookInvolvement, [
+    "read-before-edit",
+    ".blueprint write guard"
+  ]);
+  assert.deepEqual(metadata.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.match(metadata.runtimeReference.contractNotes, /Long-running-mutation profile/i);
+  assert.match(metadata.runtimeReference.contractNotes, /planningReadiness/i);
+  assert.match(metadata.runtimeReference.contractNotes, /taskSchema/i);
+  assert.match(metadata.runtimeReference.contractNotes, /validationMode: "strict"/);
+  assert.match(metadata.runtimeReference.contractNotes, /authoringMode: "model-only"/);
+  assert.match(metadata.runtimeReference.contractNotes, /additive new plan ids/i);
+  assert.match(metadata.runtimeReference.contractNotes, /saved research instead of live browsing/i);
+  assert.match(metadata.runtimeReference.contractNotes, /workflow\.plan_check/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint-planner/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint-checker/i);
+  assert.match(metadata.runtimeReference.contractNotes, /no-subagent/i);
+  assert.match(metadata.runtimeReference.contractNotes, /scaffold-placeholder/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Markdown fallback/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Repair MCP/i);
+  assert.match(metadata.runtimeReference.contractNotes, /base: "synced"/);
+
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.runtimeReference.exactMcpDestination
+  ]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
 });
 

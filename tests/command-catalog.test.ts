@@ -21,6 +21,7 @@ import {
   NEW_PROJECT_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
   NEW_WORKSPACE_RUNTIME_METADATA,
+  PLAN_PHASE_RUNTIME_METADATA,
   PR_BRANCH_RUNTIME_METADATA,
   REAPPLY_PATCHES_RUNTIME_METADATA,
   REMOVE_WORKSPACE_RUNTIME_METADATA,
@@ -1029,19 +1030,101 @@ test("impact is implemented once its additive command substrate is complete", as
 test("plan-phase is implemented once manifest, skill, and plan MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["plan-phase"];
+  const expectedRequiredTools = [
+    "blueprint_phase_locate",
+    "blueprint_phase_context",
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_validation_read",
+    "blueprint_review_load_findings",
+    "blueprint_artifact_contract_read",
+    "blueprint_phase_plan_index",
+    "blueprint_phase_plan_read",
+    "blueprint_phase_plan_authoring_context",
+    "blueprint_phase_plan_validate_model",
+    "blueprint_phase_plan_write",
+    "blueprint_phase_plan_validate",
+    "blueprint_config_get",
+    "blueprint_state_load",
+    "blueprint_state_update"
+  ];
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.ok(entry.manifestPath);
-  assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.manifestPath, "commands/blu-plan-phase.toml");
+  assert.equal(entry.skillPath, "skills/blueprint-phase-planning/SKILL.md");
+  assert.equal(entry.specPath, "src/mcp/command-runtime-metadata.ts#plan-phase");
+  assert.equal(entry.specPath, PLAN_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, expectedRequiredTools);
+  assert.deepEqual(entry.requiredTools, [
+    ...PLAN_PHASE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(entry.optionalAgents, [
+    "blueprint-planner",
+    "blueprint-checker"
+  ]);
   assert.deepEqual(entry.availableOptionalAgents.sort(), [
     "blueprint-checker",
     "blueprint-planner"
   ]);
+  assert.deepEqual(entry.optionalAgents, [
+    ...PLAN_PHASE_RUNTIME_METADATA.optionalAgents
+  ]);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("plan-phase runtime contract resource survives missing command docs", async () => {
+  const readWithPlanPhaseDocsUnavailable = async (
+    relativePath: string
+  ): Promise<string | null> => {
+    if (
+      relativePath === "docs/commands/plan-phase.md" ||
+      relativePath === "docs/RUNTIME-REFERENCE.md"
+    ) {
+      return null;
+    }
+
+    return readRelativePath(relativePath);
+  };
+  const contract = await buildBlueprintCommandRuntimeContractResource("plan-phase", {
+    readRelativePath: readWithPlanPhaseDocsUnavailable
+  });
+
+  assert.equal(contract.catalog.specPath, PLAN_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, PLAN_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.spec?.requiredTools, [
+    ...PLAN_PHASE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.spec?.optionalSubagents, [
+    ...PLAN_PHASE_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(
+    contract.runtimeReference?.path,
+    PLAN_PHASE_RUNTIME_METADATA.sourceId
+  );
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    PLAN_PHASE_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...PLAN_PHASE_RUNTIME_METADATA.runtimeReference.exactMcpDestination
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...PLAN_PHASE_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("execute-phase is implemented once manifest, skill, and execution summary MCP tools exist", async () => {

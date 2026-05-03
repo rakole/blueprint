@@ -12,7 +12,6 @@ input_bundles:
   shared: []
   commands:
     "/blu-plan-phase":
-      - docs/commands/plan-phase.md
       - skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md
 ---
 
