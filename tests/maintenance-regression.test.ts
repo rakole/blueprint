@@ -70,12 +70,16 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(prBranch, /next safe action/i);
 
   assert.match(ship, /A dirty working tree or missing base branch is a hard stop for shipping/i);
+  assert.match(ship, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(ship, /contract\.authoringTemplate/);
   assert.match(ship, /Summarize the exact shipping plan before any mutation/i);
   assert.match(ship, /Require explicit confirmation before any push or PR creation/i);
   assert.match(ship, /require explicit overwrite confirmation before replacing an existing `ship-latest` report/i);
   assert.match(ship, /next safe action/i);
 
   assert.match(undo, /A dirty working tree, detached HEAD, merge in progress, or missing revert target is a hard stop for undo/i);
+  assert.match(undo, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(undo, /contract\.authoringTemplate/);
   assert.match(undo, /keep the destructive approval gate visible as `undo-confirmation`/i);
   assert.match(undo, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
   assert.match(undo, /approved undo plan[\s\S]*before git mutation begins/i);
@@ -152,11 +156,13 @@ test("maintenance runtime reference rows keep dirty-tree aborts, pending approva
   assert.match(runtimeReference, /`ship`[\s\S]*High-risk-maintenance profile for branchy shipping flows/i);
   assert.match(runtimeReference, /`ship`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(runtimeReference, /`ship`[\s\S]*local prep plus optional push plus optional PR creation explicit/i);
+  assert.match(runtimeReference, /`ship`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.ship` contract/i);
   assert.match(runtimeReference, /`ship`[\s\S]*persist `ship-latest`/i);
 
   assert.match(runtimeReference, /`undo`[\s\S]*High-risk-maintenance profile for confirmation-gated revert flow/i);
   assert.match(runtimeReference, /`undo`[\s\S]*`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/i);
   assert.match(runtimeReference, /`undo`[\s\S]*`undo-confirmation` and `report-overwrite-confirmation` visible/i);
+  assert.match(runtimeReference, /`undo`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.undo` contract/i);
   assert.match(runtimeReference, /`undo`[\s\S]*persist `undo-latest` before git mutation/i);
 
   assert.match(runtimeReference, /`new-workspace`[\s\S]*High-risk-maintenance profile for confirmation-gated workspace creation/i);

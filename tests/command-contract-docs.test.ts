@@ -761,14 +761,20 @@ test("maintenance skill and ship docs keep the shipping contract explicit", asyn
   assert.match(shipDoc, /`blueprint_config_get`/);
   assert.match(shipDoc, /`blueprint_artifact_list`/);
   assert.match(shipDoc, /`blueprint_artifact_summary_digest`/);
+  assert.match(shipDoc, /`blueprint_artifact_contract_read`/);
   assert.match(shipDoc, /`blueprint_artifact_report_write`/);
   assert.match(shipDoc, /`blueprint_state_update`/);
   assert.match(shipDoc, /ship-latest\.md/);
+  assert.match(shipDoc, /contract\.authoringTemplate/);
   assert.match(shipDoc, /Confirm draft versus ready state/i);
   assert.match(shipDoc, /manual fallback/i);
   assert.match(
     mcpToolsDoc,
     /`ship` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update`/
+  );
+  assert.match(
+    mcpToolsDoc,
+    /The full shipping flow also reads `blueprint_artifact_contract_read` so it can load the canonical `report\.ship` contract and use `contract\.authoringTemplate` before it persists `ship-latest`/i
   );
   assert.match(
     migrationMarkdown,
@@ -870,14 +876,20 @@ test("maintenance skill and undo docs keep the safe-revert contract explicit", a
   assert.match(undoDoc, /`blueprint_phase_locate`/);
   assert.match(undoDoc, /`blueprint_artifact_list`/);
   assert.match(undoDoc, /`blueprint_artifact_summary_digest`/);
+  assert.match(undoDoc, /`blueprint_artifact_contract_read`/);
   assert.match(undoDoc, /`blueprint_artifact_report_write`/);
   assert.match(undoDoc, /`blueprint_state_update`/);
   assert.match(undoDoc, /undo-latest\.md/);
+  assert.match(undoDoc, /contract\.authoringTemplate/);
   assert.match(undoDoc, /git revert/i);
   assert.match(undoDoc, /git reset --hard/i);
   assert.match(
     mcpToolsDoc,
     /`undo` uses `blueprint_project_status`, `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_artifact_report_write`, and `blueprint_state_update`/
+  );
+  assert.match(
+    mcpToolsDoc,
+    /The full undo flow also reads `blueprint_artifact_contract_read` so it can load the canonical `report\.undo` contract and use `contract\.authoringTemplate` before it persists `undo-latest`/i
   );
   assert.match(
     migrationMarkdown,
