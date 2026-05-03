@@ -8,6 +8,12 @@ description: >
 status: implemented
 commands:
   - /blu-impact
+input_bundles:
+  shared: []
+  commands:
+    "/blu-impact":
+      - commands/blu-impact.toml
+      - skills/blueprint-impact/references/impact-runtime-contract.md
 ---
 
 # Blueprint Impact Skill
@@ -32,15 +38,14 @@ and bounded to `.blueprint/impact/<impact-id>/` when writing is enabled.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
-## Required Inputs
+## Runtime Inputs
 
-- `docs/commands/impact.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- `skills/blueprint-impact/references/impact-runtime-contract.md`
+Command-specific inputs come from the structured `input_bundles` frontmatter.
+Runtime use is docs-free: `/blu-impact` loads the command manifest plus the
+local impact runtime contract. Blueprint MCP tools, MCP resources, artifact
+contracts, and live repo context provide the structured truth for catalog
+status, command behavior, artifact shape, scope, risk, confidence, findings,
+unknowns, and output paths.
 
 ## Required MCP Tools
 

@@ -13,6 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import { IMPACT_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -285,8 +286,10 @@ test("impact MCP tools are registered and satisfy the implemented command substr
   assert.equal(entry.implemented, true);
   assert.equal(entry.manifestPath, "commands/blu-impact.toml");
   assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
-  assert.equal(entry.specPath, "docs/commands/impact.md");
+  assert.equal(entry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.notEqual(entry.specPath, "docs/commands/impact.md");
   assert.equal(entry.requiredToolsSatisfied, true);
+  assert.deepEqual(IMPACT_RUNTIME_METADATA.requiredTools, [...IMPACT_TOOL_NAMES]);
   assert.deepEqual(entry.requiredTools, [...IMPACT_TOOL_NAMES]);
   assert.deepEqual(entry.blockedBy, []);
   assert.doesNotMatch(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_/);
@@ -615,6 +618,20 @@ test("impact context load reports Phase 11 runtime metadata", async () => {
   assert.equal(context.status, "loaded");
   assert.equal(context.runtime?.implementationPhase, 11);
   assert.equal(context.runtime?.readOnly, true);
+});
+
+test("impact context load derives impact command assets from runtime-owned metadata", async () => {
+  const context = await blueprintImpactContextLoad({
+    cwd: repoRoot,
+    includeArtifacts: false
+  });
+
+  assert.equal(context.status, "loaded");
+  assert.ok(context.commandAssets);
+  assert.ok(context.commandAssets.impact);
+  assert.equal(context.commandAssets.impact.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.ok(context.commandAssets.specPaths.includes(IMPACT_RUNTIME_METADATA.sourceId));
+  assert.equal(context.commandAssets.specPaths.includes("docs/commands/impact.md"), false);
 });
 
 test("impact context load returns partial for requested target failures and malformed package metadata", async () => {
