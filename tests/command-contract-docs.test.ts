@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 const commandDocsRoot = path.join(repoRoot, "docs/commands");
 
@@ -718,10 +720,10 @@ test("docs skill and bounded docs agents are marked implemented in docs", async 
   );
 });
 
-test("review skill and security auditor are marked implemented in docs for secure-phase", async () => {
-  const [skillsMarkdown, securePhaseDoc] = await Promise.all([
+test("review skill docs and secure-phase manifest keep security runtime ownership explicit", async () => {
+  const [skillsMarkdown, securePhaseManifest] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/commands/secure-phase.md")
+    readRepoFile("commands/blu-secure-phase.toml")
   ]);
 
   assert.match(
@@ -732,45 +734,50 @@ test("review skill and security auditor are marked implemented in docs for secur
     skillsMarkdown,
     /\| `blueprint-security-auditor` \| `implemented` \| Verify threat mitigations and security coverage \|/
   );
-  assert.match(securePhaseDoc, /Primary skill: `blueprint-review`/);
-  assert.match(securePhaseDoc, /`blueprint_phase_plan_index`/);
-  assert.match(securePhaseDoc, /`blueprint_phase_plan_read`/);
-  assert.match(securePhaseDoc, /`blueprint_artifact_contract_read`/);
-  assert.match(securePhaseDoc, /review\.security/);
-  assert.match(securePhaseDoc, /`blueprint_review_record`/);
-  assert.match(securePhaseDoc, /`blueprint-security-auditor`/);
-  assert.match(securePhaseDoc, /phase XX-SECURITY\.md/);
+  assert.match(securePhaseManifest, /Use the `blueprint-review` skill/);
+  assert.match(securePhaseManifest, /blueprint_phase_plan_index/);
+  assert.match(securePhaseManifest, /blueprint_phase_plan_read/);
+  assert.match(securePhaseManifest, /blueprint_artifact_contract_read/);
+  assert.match(securePhaseManifest, /review\.security/);
+  assert.match(securePhaseManifest, /blueprint_review_record/);
+  assert.match(securePhaseManifest, /`blueprint-security-auditor` subagent/);
+  assert.match(securePhaseManifest, /XX-SECURITY\.md/);
 });
 
-test("ui-review docs and UI auditor are marked implemented in docs", async () => {
-  const [skillsMarkdown, uiReviewDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
+test("ui-review manifest, runtime resource, and UI auditor docs stay aligned", async () => {
+  const [skillsMarkdown, uiReviewManifest, mcpToolsDoc, contract] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/commands/ui-review.md"),
+    readRepoFile("commands/blu-ui-review.toml"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    buildBlueprintCommandRuntimeContractResource("ui-review")
   ]);
 
   assert.match(
     skillsMarkdown,
     /\| `blueprint-ui-auditor` \| `implemented` \| Perform retroactive six-pillar UI audits \|/
   );
-  assert.match(uiReviewDoc, /Primary skill: `blueprint-review`/);
-  assert.match(uiReviewDoc, /`blueprint_phase_locate`/);
-  assert.match(uiReviewDoc, /`blueprint_artifact_list`/);
-  assert.match(uiReviewDoc, /`blueprint_artifact_contract_read`/);
-  assert.match(uiReviewDoc, /`blueprint_review_authoring_context`/);
-  assert.match(uiReviewDoc, /`blueprint_review_validate_model`/);
-  assert.match(uiReviewDoc, /`blueprint_review_record`/);
-  assert.match(uiReviewDoc, /`blueprint-ui-auditor`/);
-  assert.match(uiReviewDoc, /phase XX-UI-REVIEW\.md/);
+  assert.match(uiReviewManifest, /Use the `blueprint-review` skill/);
+  assert.match(uiReviewManifest, /blueprint_phase_locate/);
+  assert.match(uiReviewManifest, /blueprint_artifact_list/);
+  assert.match(uiReviewManifest, /blueprint_artifact_contract_read/);
+  assert.match(uiReviewManifest, /blueprint_review_authoring_context/);
+  assert.match(uiReviewManifest, /blueprint_review_validate_model/);
+  assert.match(uiReviewManifest, /blueprint_review_record/);
+  assert.match(uiReviewManifest, /`blueprint-ui-auditor` subagent/);
+  assert.match(uiReviewManifest, /XX-UI-REVIEW\.md/);
   assert.match(
     mcpToolsDoc,
     /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
-  assert.match(
-    migrationMarkdown,
-    /\| `ui-review` \| `docs\/commands\/ui-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \|/
-  );
+  assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#ui-review");
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_list",
+    "blueprint_artifact_contract_read",
+    "blueprint_review_authoring_context",
+    "blueprint_review_validate_model",
+    "blueprint_review_record"
+  ]);
 });
 
 test("maintenance skill and pr-branch docs keep the review-branch contract explicit", async () => {
@@ -978,153 +985,167 @@ test("maintenance skill and undo docs keep the safe-revert contract explicit", a
   );
 });
 
-test("code-review docs and reviewer agent are marked implemented in docs", async () => {
-  const [skillsMarkdown, codeReviewDoc, runtimeReference] = await Promise.all([
+test("code-review manifest, runtime resource, and reviewer docs stay aligned", async () => {
+  const [skillsMarkdown, codeReviewManifest, contract] = await Promise.all([
     readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/commands/code-review.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    readRepoFile("commands/blu-code-review.toml"),
+    buildBlueprintCommandRuntimeContractResource("code-review")
   ]);
 
   assert.match(
     skillsMarkdown,
     /\| `blueprint-reviewer` \| `implemented` \| Produce bounded code review findings from a resolved Blueprint scope \|/
   );
-  assert.match(codeReviewDoc, /Primary skill: `blueprint-review`/);
-  assert.match(codeReviewDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(codeReviewDoc, /## Shared Runtime Contract/);
-  assert.match(codeReviewDoc, /## In-Flight Progress Contract/);
-  assert.match(codeReviewDoc, /`blueprint_review_scope`/);
-  assert.match(codeReviewDoc, /`blueprint_review_load_findings`/);
-  assert.match(codeReviewDoc, /`blueprint_review_validate_model`/);
-  assert.match(codeReviewDoc, /`blueprint-reviewer`/);
-  assert.match(codeReviewDoc, /phase XX-REVIEW\.md/);
+  assert.match(codeReviewManifest, /Use the `blueprint-review` skill/);
+  assert.match(codeReviewManifest, /Execution profile: `long-running-mutation`/);
+  assert.match(codeReviewManifest, /runtime contract's shared review posture/i);
+  assert.match(codeReviewManifest, /update_topic/);
+  assert.match(codeReviewManifest, /blueprint_review_scope/);
+  assert.match(codeReviewManifest, /blueprint_review_load_findings/);
+  assert.match(codeReviewManifest, /blueprint_review_validate_model/);
+  assert.match(codeReviewManifest, /blueprint-reviewer/);
+  assert.match(codeReviewManifest, /XX-REVIEW\.md/);
+  assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#code-review");
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-reviewer"]);
   assert.match(
-    runtimeReference,
-    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for deterministic phase-scoped review/i
   );
-  assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
-  assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /update_topic and write_todos for non-trivial review runs/i
+  );
 });
 
-test("review docs and migration notes keep the peer-review contract explicit", async () => {
-  const [reviewDoc, mcpToolsDoc, migrationMarkdown, catalogMarkdown] = await Promise.all([
-    readRepoFile("docs/commands/review.md"),
+test("review manifest and runtime resource keep the peer-review contract explicit", async () => {
+  const [reviewManifest, mcpToolsDoc, catalogMarkdown, contract] = await Promise.all([
+    readRepoFile("commands/blu-review.toml"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
-    readRepoFile("docs/COMMAND-CATALOG.md")
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    buildBlueprintCommandRuntimeContractResource("review")
   ]);
 
   assert.match(
     catalogMarkdown,
     /\| `review` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEWS\.md` \| `Medium: external reviewer orchestration without default repo mutation\.` \|/
   );
-  assert.match(reviewDoc, /Primary skill: `blueprint-review`/);
-  assert.match(reviewDoc, /`blueprint_phase_locate`/);
-  assert.match(reviewDoc, /`blueprint_artifact_list`/);
-  assert.match(reviewDoc, /`blueprint_phase_plan_index`/);
-  assert.match(reviewDoc, /`blueprint_phase_plan_read`/);
-  assert.match(reviewDoc, /`blueprint_phase_summary_index`/);
-  assert.match(reviewDoc, /`blueprint_phase_execution_targets`/);
-  assert.match(reviewDoc, /`blueprint_review_authoring_context`/);
-  assert.match(reviewDoc, /`blueprint_review_validate_model`/);
-  assert.match(reviewDoc, /`blueprint_review_record`/);
-  assert.match(reviewDoc, /phase XX-REVIEWS\.md/);
-  assert.match(reviewDoc, /preserve disagreement/i);
+  assert.match(reviewManifest, /Use the `blueprint-review` skill/);
+  assert.match(reviewManifest, /blueprint_phase_locate/);
+  assert.match(reviewManifest, /blueprint_artifact_list/);
+  assert.match(reviewManifest, /blueprint_phase_plan_index/);
+  assert.match(reviewManifest, /blueprint_phase_plan_read/);
+  assert.match(reviewManifest, /blueprint_phase_summary_index/);
+  assert.match(reviewManifest, /blueprint_phase_execution_targets/);
+  assert.match(reviewManifest, /blueprint_review_authoring_context/);
+  assert.match(reviewManifest, /blueprint_review_validate_model/);
+  assert.match(reviewManifest, /blueprint_review_record/);
+  assert.match(reviewManifest, /XX-REVIEWS\.md/);
+  assert.match(reviewManifest, /Preserve partial fan-out results/i);
+  assert.match(reviewManifest, /preserve the disagreement/i);
   assert.match(
     mcpToolsDoc,
     /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_execution_targets`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
-  assert.match(
-    migrationMarkdown,
-    /\| `review` \| `docs\/commands\/review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_execution_targets`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
-  );
+  assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#review");
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-reviewer"]);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /saved-plan peer review/i);
 });
 
-test("audit-fix docs and migration notes keep the remediation contract explicit", async () => {
-  const [auditFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
-    readRepoFile("docs/commands/audit-fix.md"),
+test("audit-fix manifest and runtime contract keep the remediation contract explicit", async () => {
+  const [auditFixManifest, mcpToolsDoc, runtimeContract, contract] = await Promise.all([
+    readRepoFile("commands/blu-audit-fix.toml"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    readRepoFile("skills/blueprint-review/references/audit-fix-runtime-contract.md"),
+    buildBlueprintCommandRuntimeContractResource("audit-fix")
   ]);
 
-  assert.match(auditFixDoc, /Primary skill: `blueprint-review`/);
-  assert.match(auditFixDoc, /`blueprint_phase_locate`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_list`/);
-  assert.match(auditFixDoc, /`blueprint_review_scope`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_contract_read`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_report_authoring_context`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_report_validate_model`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_report_write`/);
-  assert.match(auditFixDoc, /`blueprint_artifact_mutate_index`/);
-  assert.match(auditFixDoc, /`blueprint_state_update`/);
-  assert.match(auditFixDoc, /--source <review\|security\|verification\|uat\|all>/);
-  assert.match(auditFixDoc, /--severity <medium\|high\|all>/);
-  assert.match(auditFixDoc, /--max N/);
-  assert.match(auditFixDoc, /--dry-run/);
-  assert.match(auditFixDoc, /ask_user/);
-  assert.match(auditFixDoc, /## In-Flight Progress Contract/);
-  assert.match(auditFixDoc, /stop on first failed fix attempt or failed required verification/i);
-  assert.match(auditFixDoc, /commit traceability/i);
-  assert.match(auditFixDoc, /planned inventory and is not a required runtime path/i);
-  assert.match(auditFixDoc, /audit-fix-runtime-contract\.md/);
-  assert.match(auditFixDoc, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
-  assert.match(auditFixDoc, /classification table before mutation/i);
-  assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
-  assert.match(auditFixDoc, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
+  assert.match(auditFixManifest, /Use the `blueprint-review` skill/);
+  assert.match(auditFixManifest, /blueprint_phase_locate/);
+  assert.match(auditFixManifest, /blueprint_artifact_list/);
+  assert.match(auditFixManifest, /blueprint_review_scope/);
+  assert.match(auditFixManifest, /blueprint_artifact_contract_read/);
+  assert.match(auditFixManifest, /blueprint_artifact_report_authoring_context/);
+  assert.match(auditFixManifest, /blueprint_artifact_report_validate_model/);
+  assert.match(auditFixManifest, /blueprint_artifact_report_write/);
+  assert.match(auditFixManifest, /blueprint_artifact_mutate_index/);
+  assert.match(auditFixManifest, /blueprint_state_update/);
+  assert.match(auditFixManifest, /--source <review\|security\|verification\|uat\|all>/);
+  assert.match(auditFixManifest, /--severity <medium\|high\|all>/);
+  assert.match(auditFixManifest, /--max <N>/);
+  assert.match(auditFixManifest, /--dry-run/);
+  assert.match(auditFixManifest, /ask_user/);
+  assert.match(auditFixManifest, /resolved scope, active stage, pending gate, execution mode, and next safe action/);
+  assert.match(auditFixManifest, /Stop on the first failed mutation or failed required verification/);
+  assert.match(auditFixManifest, /commit traceability/i);
+  assert.match(auditFixManifest, /Treat `blueprint-fixer` as planned-only inventory/);
+  assert.match(auditFixManifest, /audit-fix-runtime-contract\.md/);
+  assert.match(auditFixManifest, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
+  assert.match(auditFixManifest, /classification table/i);
+  assert.match(runtimeContract, /No browser\/web\/search-only or generic agent was used as a substitute/i);
+  assert.match(auditFixManifest, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
   assert.match(
     mcpToolsDoc,
     /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_contract_read`, `blueprint_artifact_report_authoring_context`, `blueprint_artifact_report_validate_model`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
   );
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_list",
+    "blueprint_review_scope",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_report_authoring_context",
+    "blueprint_artifact_report_validate_model",
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_mutate_index",
+    "blueprint_state_update"
+  ]);
   assert.match(
-    migrationMarkdown,
-    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \|/
+    runtimeContract,
+    /confirmation-gated\s+when non-trivial/
   );
   assert.match(
-    migrationMarkdown,
-    /ask_user confirmation for non-trivial mutation and todo capture/
+    runtimeContract,
+    /Selected evidence was read before classification/
+  );
+  assert.match(runtimeContract, /auditFixContext \{source, severity, maxAttempts,\s+dryRun, scopeFiles\}/i);
+  assert.match(
+    runtimeContract,
+    /repair retry/i
   );
   assert.match(
-    migrationMarkdown,
-    /classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
+    runtimeContract,
+    /`blueprint-fixer` remained planned-only and non-routable/
   );
-  assert.match(migrationMarkdown, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
-  assert.match(
-    migrationMarkdown,
-    /repair invalid `report\.audit-fix` models once against the narrowed contract/i
-  );
-  assert.match(
-    migrationMarkdown,
-    /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./
-  );
+  assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#audit-fix");
 });
 
-test("code-review-fix docs and migration notes keep the review-remediation contract explicit", async () => {
-  const [codeReviewFixDoc, mcpToolsDoc, migrationMarkdown] = await Promise.all([
-    readRepoFile("docs/commands/code-review-fix.md"),
+test("code-review-fix manifest and runtime resource keep review remediation explicit", async () => {
+  const [codeReviewFixManifest, mcpToolsDoc, contract] = await Promise.all([
+    readRepoFile("commands/blu-code-review-fix.toml"),
     readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    buildBlueprintCommandRuntimeContractResource("code-review-fix")
   ]);
 
-  assert.match(codeReviewFixDoc, /Primary skill: `blueprint-review`/);
-  assert.match(codeReviewFixDoc, /`blueprint_phase_locate`/);
-  assert.match(codeReviewFixDoc, /`blueprint_review_load_findings`/);
-  assert.match(codeReviewFixDoc, /`blueprint_review_authoring_context`/);
-  assert.match(codeReviewFixDoc, /`blueprint_review_validate_model`/);
-  assert.match(codeReviewFixDoc, /`blueprint_review_record`/);
-  assert.match(codeReviewFixDoc, /`blueprint_state_update`/);
-  assert.match(codeReviewFixDoc, /## In-Flight Progress Contract/);
-  assert.match(codeReviewFixDoc, /`--auto` is a bounded finding-selection shortcut only/i);
-  assert.match(codeReviewFixDoc, /phase XX-REVIEW-FIX\.md/);
-  assert.match(codeReviewFixDoc, /exact selected saved target ids as `targetIds`/);
-  assert.match(codeReviewFixDoc, /Markdown `content` fallback is invalid for `review\.review-fix`/);
+  assert.match(codeReviewFixManifest, /Use the `blueprint-review` skill/);
+  assert.match(codeReviewFixManifest, /blueprint_phase_locate/);
+  assert.match(codeReviewFixManifest, /blueprint_review_load_findings/);
+  assert.match(codeReviewFixManifest, /blueprint_review_authoring_context/);
+  assert.match(codeReviewFixManifest, /blueprint_review_validate_model/);
+  assert.match(codeReviewFixManifest, /blueprint_review_record/);
+  assert.match(codeReviewFixManifest, /blueprint_state_update/);
+  assert.match(codeReviewFixManifest, /resolved scope, active stage, pending gate, execution mode, and next safe action/);
+  assert.match(codeReviewFixManifest, /`--auto` as bounded automatic finding selection only/i);
+  assert.match(codeReviewFixManifest, /XX-REVIEW-FIX\.md/);
+  assert.match(codeReviewFixManifest, /exact selected saved target ids as `targetIds`/);
+  assert.match(codeReviewFixManifest, /Markdown `content` fallback is invalid/);
   assert.match(
     mcpToolsDoc,
     /`code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, `blueprint_review_record`, and `blueprint_state_update`/
   );
-  assert.match(
-    migrationMarkdown,
-    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \|/
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    "src/mcp/command-runtime-metadata.ts#code-review-fix"
   );
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-reviewer"]);
 });
 
 test("add-phase command docs keep the roadmap append contract explicit", async () => {

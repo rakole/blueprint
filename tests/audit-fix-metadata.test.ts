@@ -3,9 +3,57 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("audit-fix runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("audit-fix");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("audit-fix");
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#audit-fix");
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+  ]);
+
+  assert.equal(catalog.commands["audit-fix"].specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands["audit-fix"].requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["audit-fix"].optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-audit-fix.toml",
+      "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-audit-fix.toml",
+      "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+});
 
 test("audit-fix manifest references the remediation tools, agents, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-audit-fix.toml"), "utf8");

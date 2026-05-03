@@ -39,7 +39,7 @@ These labels define the shared command-facing contract for Blueprint docs and ru
 
 ## Read-Only MCP Resource Contract
 
-Blueprint now exposes the read-only command resource contract and keeps the remaining resource views documented for later rollout. `blueprint://commands/catalog` and the implemented-only `blueprint://commands/<command>/runtime-contract` resource are live today, while the phase, codebase, and reports resource views below remain planned. `review` stays an explicit current exception and is not exposed on the runtime-contract path.
+Blueprint now exposes the read-only command resource contract and keeps the remaining resource views documented for later rollout. `blueprint://commands/catalog` and the implemented-only `blueprint://commands/<command>/runtime-contract` resource are live today, while the phase, codebase, and reports resource views below remain planned.
 
 Locked resource URIs:
 

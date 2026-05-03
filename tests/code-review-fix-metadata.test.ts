@@ -3,9 +3,57 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("code-review-fix runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("code-review-fix");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("code-review-fix");
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#code-review-fix");
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+  ]);
+
+  assert.equal(catalog.commands["code-review-fix"].specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands["code-review-fix"].requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["code-review-fix"].optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-code-review-fix.toml",
+      "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-code-review-fix.toml",
+      "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+});
 
 test("code-review-fix manifest references findings tools, canonical contracts, and safe follow-up routing", async () => {
   const commandFile = await readFile(

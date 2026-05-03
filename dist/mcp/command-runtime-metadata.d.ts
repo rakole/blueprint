@@ -306,6 +306,108 @@ export declare const SECURE_PHASE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const AUDIT_FIX_RUNTIME_METADATA: {
+    readonly commandName: "audit-fix";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: bounded remediation plus report/state updates.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/audit-fix-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-audit-fix`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.";
+        readonly reads: readonly ["Saved phase evidence, artifact inventory, deterministic review scope, audit-fix report authoring context, and state through MCP tools plus bounded repo inspection."];
+        readonly writes: readonly [".blueprint/reports/audit-fix-<phase>.md", "optional .blueprint/todos/TODO.md", "repo code changes when not dry-running", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "audit-fix";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const REVIEW_RUNTIME_METADATA: {
+    readonly commandName: "review";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: external reviewer orchestration without default repo mutation.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly optionalAgents: readonly ["blueprint-reviewer"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/review-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-review`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.";
+        readonly reads: readonly ["Phase resolution, artifact inventory, saved phase plans, saved execution summaries, execution targets, and peer-review authoring context through MCP tools."];
+        readonly writes: readonly ["phase XX-REVIEWS.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "review";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
+export declare const UI_REVIEW_RUNTIME_METADATA: {
+    readonly commandName: "ui-review";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-review";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: review artifact only.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly optionalAgents: readonly ["blueprint-ui-auditor"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-review/references/ui-review-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-ui-review`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.";
+        readonly reads: readonly ["Phase resolution, artifact inventory, saved execution and UI-spec evidence, and UI-review authoring context through MCP tools."];
+        readonly writes: readonly ["phase XX-UI-REVIEW.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+        readonly command: "ui-review";
+        readonly primarySkill: "blueprint-review";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-ui-auditor"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
+        readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+    };
+};
 export declare const ADD_TESTS_RUNTIME_METADATA: {
     readonly commandName: "add-tests";
     readonly sourceId: string;
@@ -806,6 +908,108 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-security-auditor"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "audit-fix": {
+        readonly commandName: "audit-fix";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: bounded remediation plus report/state updates.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/audit-fix-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-audit-fix`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.";
+            readonly reads: readonly ["Saved phase evidence, artifact inventory, deterministic review scope, audit-fix report authoring context, and state through MCP tools plus bounded repo inspection."];
+            readonly writes: readonly [".blueprint/reports/audit-fix-<phase>.md", "optional .blueprint/todos/TODO.md", "repo code changes when not dry-running", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "audit-fix";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly review: {
+        readonly commandName: "review";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: external reviewer orchestration without default repo mutation.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-reviewer"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/review-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-review`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.";
+            readonly reads: readonly ["Phase resolution, artifact inventory, saved phase plans, saved execution summaries, execution targets, and peer-review authoring context through MCP tools."];
+            readonly writes: readonly ["phase XX-REVIEWS.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "review";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly optionalAgents: readonly ["blueprint-reviewer"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
+            readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "ui-review": {
+        readonly commandName: "ui-review";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-review";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: review artifact only.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly optionalAgents: readonly ["blueprint-ui-auditor"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-review/references/ui-review-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-ui-review`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.";
+            readonly reads: readonly ["Phase resolution, artifact inventory, saved execution and UI-spec evidence, and UI-review authoring context through MCP tools."];
+            readonly writes: readonly ["phase XX-UI-REVIEW.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
+            readonly command: "ui-review";
+            readonly primarySkill: "blueprint-review";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly optionalAgents: readonly ["blueprint-ui-auditor"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
         };
     };

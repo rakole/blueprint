@@ -83,7 +83,6 @@ const IMPLEMENTED_COMMANDS = [
 
 const PLANNED_COMMANDS = ["do"] as const;
 const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
-const RUNTIME_CONTRACT_EXCLUDED_COMMANDS = new Set(["review"]);
 const CAPTURE_RUNTIME_METADATA_COMMANDS = [
   "note",
   "add-todo",
@@ -91,6 +90,14 @@ const CAPTURE_RUNTIME_METADATA_COMMANDS = [
   "add-backlog",
   "review-backlog",
   "explore"
+] as const;
+const REVIEW_RUNTIME_METADATA_COMMANDS = [
+  "code-review",
+  "code-review-fix",
+  "audit-fix",
+  "secure-phase",
+  "review",
+  "ui-review"
 ] as const;
 
 async function pathExists(relativePath: string): Promise<boolean> {
@@ -225,8 +232,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
     .filter(
       ([commandName, entry]) =>
         entry.status === "implemented" &&
-        entry.implemented === true &&
-        !RUNTIME_CONTRACT_EXCLUDED_COMMANDS.has(commandName)
+        entry.implemented === true
     )
     .map(([commandName]) => commandName)
     .sort();
@@ -237,8 +243,8 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.ok(advertisedCommands.includes("help"));
   assert.ok(advertisedCommands.includes("impact"));
   assert.ok(advertisedCommands.includes("add-phase"));
+  assert.ok(advertisedCommands.includes("review"));
   assert.ok(!advertisedCommands.includes("do"));
-  assert.ok(!advertisedCommands.includes("review"));
 
   for (const commandName of advertisedCommands) {
     const advertisedContract = await buildBlueprintCommandRuntimeContractResource(
@@ -317,11 +323,6 @@ test("command runtime contract resource stays anchored to live catalog, command 
   ]);
 
   await assert.rejects(
-    buildBlueprintCommandRuntimeContractResource("review"),
-    /Blueprint runtime-contract resources intentionally exclude this command today: review/
-  );
-
-  await assert.rejects(
     buildBlueprintCommandRuntimeContractResource("do"),
     /Blueprint runtime-contract resources are available only for implemented commands: do/
   );
@@ -344,6 +345,50 @@ test("command runtime contract resource stays anchored to live catalog, command 
     addPhaseContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+});
+
+test("review commands resolve catalog and runtime contract truth from runtime metadata", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const commandName of REVIEW_RUNTIME_METADATA_COMMANDS) {
+    const metadata = getRuntimeOwnedCommandMetadata(commandName);
+    const entry = catalog.commands[commandName];
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+    const manifestPath = blueprintPrimaryManifestPath(commandName);
+    const runtimeContractPath = metadata?.requiredInputPaths?.[0];
+
+    assert.ok(metadata, `${commandName} should have runtime-owned metadata`);
+    assert.ok(runtimeContractPath, `${commandName} should require a local runtime contract`);
+    assert.equal(entry.specPath, `src/mcp/command-runtime-metadata.ts#${commandName}`);
+    assert.equal(entry.specPath, metadata.sourceId);
+    assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(entry.optionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(entry.availableOptionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(contract.catalog.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.catalog.optionalAgents, [...metadata.optionalAgents]);
+    assert.equal(contract.spec?.path, metadata.sourceId);
+    assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.spec?.optionalSubagents, [...metadata.optionalAgents]);
+    assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+    assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+    assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+      ...metadata.requiredTools
+    ]);
+    assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+      ...metadata.optionalAgents
+    ]);
+    assert.deepEqual(contract.skillInputs.shared, []);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [
+      manifestPath,
+      runtimeContractPath
+    ]);
+    assert.deepEqual(contract.skillInputs.effective, [manifestPath, runtimeContractPath]);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
+    assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+  }
 });
 
 test("capture commands resolve catalog and runtime contract truth from runtime metadata", async () => {

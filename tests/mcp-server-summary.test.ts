@@ -178,7 +178,7 @@ test("server exposes read-only command resources without changing tool summaries
       runtimeContractTemplate?.description ?? "",
       /implemented Blueprint command/i
     );
-    assert.match(
+    assert.doesNotMatch(
       runtimeContractTemplate?.description ?? "",
       /review.*excluded|excluded.*review/i
     );
@@ -186,7 +186,7 @@ test("server exposes read-only command resources without changing tool summaries
       helpRuntimeContractResource?.description ?? "",
       /implemented Blueprint command/i
     );
-    assert.match(
+    assert.doesNotMatch(
       helpRuntimeContractResource?.description ?? "",
       /review.*excluded|excluded.*review/i
     );
@@ -201,8 +201,8 @@ test("server exposes read-only command resources without changing tool summaries
       [...expectedRuntimeContractUris].sort((left, right) => left.localeCompare(right))
     );
     assert.ok(runtimeContractResources.includes("blueprint://commands/help/runtime-contract"));
+    assert.ok(runtimeContractResources.includes("blueprint://commands/review/runtime-contract"));
     assert.ok(!runtimeContractResources.includes("blueprint://commands/do/runtime-contract"));
-    assert.ok(!runtimeContractResources.includes("blueprint://commands/review/runtime-contract"));
 
     const catalogPayload = JSON.parse(catalogRead.contents[0].text);
     assert.equal(catalogPayload.commands.help.status, "implemented");
@@ -220,10 +220,6 @@ test("server exposes read-only command resources without changing tool summaries
     await assert.rejects(
       client.readResource({ uri: "blueprint://commands/do/runtime-contract" }),
       /Blueprint runtime-contract resources are available only for implemented commands: do/
-    );
-    await assert.rejects(
-      client.readResource({ uri: "blueprint://commands/review/runtime-contract" }),
-      /Blueprint runtime-contract resources intentionally exclude this command today: review/
     );
 
     const contractReads = await Promise.all(

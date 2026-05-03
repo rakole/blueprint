@@ -231,6 +231,41 @@ const SECURE_PHASE_REQUIRED_TOOLS = [
   "blueprint_review_record"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const AUDIT_FIX_REQUIRED_TOOLS = [
+  "blueprint_phase_locate",
+  "blueprint_artifact_list",
+  "blueprint_review_scope",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_report_authoring_context",
+  "blueprint_artifact_report_validate_model",
+  "blueprint_artifact_report_write",
+  "blueprint_artifact_mutate_index",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const REVIEW_REQUIRED_TOOLS = [
+  "blueprint_phase_locate",
+  "blueprint_artifact_list",
+  "blueprint_artifact_contract_read",
+  "blueprint_phase_plan_index",
+  "blueprint_phase_plan_read",
+  "blueprint_phase_summary_index",
+  "blueprint_phase_summary_read",
+  "blueprint_phase_execution_targets",
+  "blueprint_review_authoring_context",
+  "blueprint_review_validate_model",
+  "blueprint_review_record"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const UI_REVIEW_REQUIRED_TOOLS = [
+  "blueprint_phase_locate",
+  "blueprint_artifact_list",
+  "blueprint_artifact_contract_read",
+  "blueprint_review_authoring_context",
+  "blueprint_review_validate_model",
+  "blueprint_review_record"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const ADD_TESTS_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_phase_summary_index",
@@ -291,6 +326,12 @@ const CODE_REVIEW_FIX_SPEC_PATH =
   "skills/blueprint-review/references/code-review-fix-runtime-contract.md";
 const SECURE_PHASE_SPEC_PATH =
   "skills/blueprint-review/references/secure-phase-runtime-contract.md";
+const AUDIT_FIX_SPEC_PATH =
+  "skills/blueprint-review/references/audit-fix-runtime-contract.md";
+const REVIEW_SPEC_PATH =
+  "skills/blueprint-review/references/review-runtime-contract.md";
+const UI_REVIEW_SPEC_PATH =
+  "skills/blueprint-review/references/ui-review-runtime-contract.md";
 const ADD_TESTS_SPEC_PATH =
   "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
 
@@ -302,6 +343,12 @@ const ADD_TESTS_OPTIONAL_AGENTS = [
 const CODE_REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
 const CODE_REVIEW_FIX_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
 const SECURE_PHASE_OPTIONAL_AGENTS = ["blueprint-security-auditor"] as const;
+const AUDIT_FIX_OPTIONAL_AGENTS = [
+  "blueprint-reviewer",
+  "blueprint-verifier"
+] as const;
+const REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
+const UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"] as const;
 const EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"] as const;
 
 function runtimeMetadataSourceId(commandName: string): string {
@@ -542,6 +589,132 @@ export const SECURE_PHASE_RUNTIME_METADATA = {
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
       "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const AUDIT_FIX_RUNTIME_METADATA = {
+  commandName: "audit-fix",
+  sourceId: runtimeMetadataSourceId("audit-fix"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-review",
+    declaredStatus: "implemented",
+    risk: "High: bounded remediation plus report/state updates."
+  },
+  requiredTools: AUDIT_FIX_REQUIRED_TOOLS,
+  optionalAgents: AUDIT_FIX_OPTIONAL_AGENTS,
+  requiredInputPaths: [AUDIT_FIX_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("audit-fix"),
+    title: "`/blu-audit-fix`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.",
+    reads: [
+      "Saved phase evidence, artifact inventory, deterministic review scope, audit-fix report authoring context, and state through MCP tools plus bounded repo inspection."
+    ],
+    writes: [
+      ".blueprint/reports/audit-fix-<phase>.md",
+      "optional .blueprint/todos/TODO.md",
+      "repo code changes when not dry-running",
+      ".blueprint/STATE.md"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("audit-fix"),
+    waveTitle: "Quality, Shipping, Docs, And Maintenance",
+    command: "audit-fix",
+    primarySkill: "blueprint-review",
+    exactMcpDestination: AUDIT_FIX_REQUIRED_TOOLS,
+    optionalAgents: AUDIT_FIX_OPTIONAL_AGENTS,
+    hookInvolvement: [
+      "read-before-edit",
+      ".blueprint write guard",
+      "workflow advisory"
+    ],
+    contractNotes:
+      "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const REVIEW_RUNTIME_METADATA = {
+  commandName: "review",
+  sourceId: runtimeMetadataSourceId("review"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-review",
+    declaredStatus: "implemented",
+    risk: "Medium: external reviewer orchestration without default repo mutation."
+  },
+  requiredTools: REVIEW_REQUIRED_TOOLS,
+  optionalAgents: REVIEW_OPTIONAL_AGENTS,
+  requiredInputPaths: [REVIEW_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("review"),
+    title: "`/blu-review`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.",
+    reads: [
+      "Phase resolution, artifact inventory, saved phase plans, saved execution summaries, execution targets, and peer-review authoring context through MCP tools."
+    ],
+    writes: ["phase XX-REVIEWS.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("review"),
+    waveTitle: "Quality, Shipping, Docs, And Maintenance",
+    command: "review",
+    primarySkill: "blueprint-review",
+    exactMcpDestination: REVIEW_REQUIRED_TOOLS,
+    optionalAgents: REVIEW_OPTIONAL_AGENTS,
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const UI_REVIEW_RUNTIME_METADATA = {
+  commandName: "ui-review",
+  sourceId: runtimeMetadataSourceId("ui-review"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-review",
+    declaredStatus: "implemented",
+    risk: "Low: review artifact only."
+  },
+  requiredTools: UI_REVIEW_REQUIRED_TOOLS,
+  optionalAgents: UI_REVIEW_OPTIONAL_AGENTS,
+  requiredInputPaths: [UI_REVIEW_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("ui-review"),
+    title: "`/blu-ui-review`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.",
+    reads: [
+      "Phase resolution, artifact inventory, saved execution and UI-spec evidence, and UI-review authoring context through MCP tools."
+    ],
+    writes: ["phase XX-UI-REVIEW.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("ui-review"),
+    waveTitle: "Quality, Shipping, Docs, And Maintenance",
+    command: "ui-review",
+    primarySkill: "blueprint-review",
+    exactMcpDestination: UI_REVIEW_REQUIRED_TOOLS,
+    optionalAgents: UI_REVIEW_OPTIONAL_AGENTS,
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -830,6 +1003,9 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [CODE_REVIEW_RUNTIME_METADATA.commandName]: CODE_REVIEW_RUNTIME_METADATA,
   [CODE_REVIEW_FIX_RUNTIME_METADATA.commandName]: CODE_REVIEW_FIX_RUNTIME_METADATA,
   [SECURE_PHASE_RUNTIME_METADATA.commandName]: SECURE_PHASE_RUNTIME_METADATA,
+  [AUDIT_FIX_RUNTIME_METADATA.commandName]: AUDIT_FIX_RUNTIME_METADATA,
+  [REVIEW_RUNTIME_METADATA.commandName]: REVIEW_RUNTIME_METADATA,
+  [UI_REVIEW_RUNTIME_METADATA.commandName]: UI_REVIEW_RUNTIME_METADATA,
   [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
   [NOTE_RUNTIME_METADATA.commandName]: NOTE_RUNTIME_METADATA,
   [ADD_TODO_RUNTIME_METADATA.commandName]: ADD_TODO_RUNTIME_METADATA,

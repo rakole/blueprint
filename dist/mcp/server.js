@@ -36251,7 +36251,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, ADD_TESTS_SPEC_PATH, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36426,6 +36426,38 @@ var init_command_runtime_metadata = __esm({
       "blueprint_review_validate_model",
       "blueprint_review_record"
     ];
+    AUDIT_FIX_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_artifact_list",
+      "blueprint_review_scope",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_report_authoring_context",
+      "blueprint_artifact_report_validate_model",
+      "blueprint_artifact_report_write",
+      "blueprint_artifact_mutate_index",
+      "blueprint_state_update"
+    ];
+    REVIEW_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_artifact_list",
+      "blueprint_artifact_contract_read",
+      "blueprint_phase_plan_index",
+      "blueprint_phase_plan_read",
+      "blueprint_phase_summary_index",
+      "blueprint_phase_summary_read",
+      "blueprint_phase_execution_targets",
+      "blueprint_review_authoring_context",
+      "blueprint_review_validate_model",
+      "blueprint_review_record"
+    ];
+    UI_REVIEW_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_artifact_list",
+      "blueprint_artifact_contract_read",
+      "blueprint_review_authoring_context",
+      "blueprint_review_validate_model",
+      "blueprint_review_record"
+    ];
     ADD_TESTS_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
       "blueprint_phase_summary_index",
@@ -36474,6 +36506,9 @@ var init_command_runtime_metadata = __esm({
     CODE_REVIEW_SPEC_PATH = "skills/blueprint-review/references/code-review-runtime-contract.md";
     CODE_REVIEW_FIX_SPEC_PATH = "skills/blueprint-review/references/code-review-fix-runtime-contract.md";
     SECURE_PHASE_SPEC_PATH = "skills/blueprint-review/references/secure-phase-runtime-contract.md";
+    AUDIT_FIX_SPEC_PATH = "skills/blueprint-review/references/audit-fix-runtime-contract.md";
+    REVIEW_SPEC_PATH = "skills/blueprint-review/references/review-runtime-contract.md";
+    UI_REVIEW_SPEC_PATH = "skills/blueprint-review/references/ui-review-runtime-contract.md";
     ADD_TESTS_SPEC_PATH = "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
     VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"];
     ADD_TESTS_OPTIONAL_AGENTS = [
@@ -36483,6 +36518,12 @@ var init_command_runtime_metadata = __esm({
     CODE_REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     CODE_REVIEW_FIX_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     SECURE_PHASE_OPTIONAL_AGENTS = ["blueprint-security-auditor"];
+    AUDIT_FIX_OPTIONAL_AGENTS = [
+      "blueprint-reviewer",
+      "blueprint-verifier"
+    ];
+    REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
+    UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"];
     EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"];
     PROGRESS_RUNTIME_METADATA = {
       commandName: "progress",
@@ -36698,6 +36739,123 @@ var init_command_runtime_metadata = __esm({
         optionalAgents: SECURE_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
         contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.",
+        evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+      }
+    };
+    AUDIT_FIX_RUNTIME_METADATA = {
+      commandName: "audit-fix",
+      sourceId: runtimeMetadataSourceId("audit-fix"),
+      catalog: {
+        wave: 4,
+        family: "Quality And Shipping",
+        primarySkill: "blueprint-review",
+        declaredStatus: "implemented",
+        risk: "High: bounded remediation plus report/state updates."
+      },
+      requiredTools: AUDIT_FIX_REQUIRED_TOOLS,
+      optionalAgents: AUDIT_FIX_OPTIONAL_AGENTS,
+      requiredInputPaths: [AUDIT_FIX_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("audit-fix"),
+        title: "`/blu-audit-fix`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`audit-fix` classifies saved review, security, verification, and UAT evidence, applies bounded remediation when not dry-running, persists a durable audit-fix report, and updates state through MCP tools.",
+        reads: [
+          "Saved phase evidence, artifact inventory, deterministic review scope, audit-fix report authoring context, and state through MCP tools plus bounded repo inspection."
+        ],
+        writes: [
+          ".blueprint/reports/audit-fix-<phase>.md",
+          "optional .blueprint/todos/TODO.md",
+          "repo code changes when not dry-running",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("audit-fix"),
+        waveTitle: "Quality, Shipping, Docs, And Maintenance",
+        command: "audit-fix",
+        primarySkill: "blueprint-review",
+        exactMcpDestination: AUDIT_FIX_REQUIRED_TOOLS,
+        optionalAgents: AUDIT_FIX_OPTIONAL_AGENTS,
+        hookInvolvement: [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        contractNotes: "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+        evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+      }
+    };
+    REVIEW_RUNTIME_METADATA = {
+      commandName: "review",
+      sourceId: runtimeMetadataSourceId("review"),
+      catalog: {
+        wave: 4,
+        family: "Quality And Shipping",
+        primarySkill: "blueprint-review",
+        declaredStatus: "implemented",
+        risk: "Medium: external reviewer orchestration without default repo mutation."
+      },
+      requiredTools: REVIEW_REQUIRED_TOOLS,
+      optionalAgents: REVIEW_OPTIONAL_AGENTS,
+      requiredInputPaths: [REVIEW_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("review"),
+        title: "`/blu-review`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`review` orchestrates bounded peer review from saved phase plans and evidence, preserves reviewer availability and disagreement honestly, and persists the peer-review artifact through review MCP tools.",
+        reads: [
+          "Phase resolution, artifact inventory, saved phase plans, saved execution summaries, execution targets, and peer-review authoring context through MCP tools."
+        ],
+        writes: ["phase XX-REVIEWS.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("review"),
+        waveTitle: "Quality, Shipping, Docs, And Maintenance",
+        command: "review",
+        primarySkill: "blueprint-review",
+        exactMcpDestination: REVIEW_REQUIRED_TOOLS,
+        optionalAgents: REVIEW_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
+        evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+      }
+    };
+    UI_REVIEW_RUNTIME_METADATA = {
+      commandName: "ui-review",
+      sourceId: runtimeMetadataSourceId("ui-review"),
+      catalog: {
+        wave: 4,
+        family: "Quality And Shipping",
+        primarySkill: "blueprint-review",
+        declaredStatus: "implemented",
+        risk: "Low: review artifact only."
+      },
+      requiredTools: UI_REVIEW_REQUIRED_TOOLS,
+      optionalAgents: UI_REVIEW_OPTIONAL_AGENTS,
+      requiredInputPaths: [UI_REVIEW_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("ui-review"),
+        title: "`/blu-ui-review`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.",
+        reads: [
+          "Phase resolution, artifact inventory, saved execution and UI-spec evidence, and UI-review authoring context through MCP tools."
+        ],
+        writes: ["phase XX-UI-REVIEW.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("ui-review"),
+        waveTitle: "Quality, Shipping, Docs, And Maintenance",
+        command: "ui-review",
+        primarySkill: "blueprint-review",
+        exactMcpDestination: UI_REVIEW_REQUIRED_TOOLS,
+        optionalAgents: UI_REVIEW_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -36963,6 +37121,9 @@ var init_command_runtime_metadata = __esm({
       [CODE_REVIEW_RUNTIME_METADATA.commandName]: CODE_REVIEW_RUNTIME_METADATA,
       [CODE_REVIEW_FIX_RUNTIME_METADATA.commandName]: CODE_REVIEW_FIX_RUNTIME_METADATA,
       [SECURE_PHASE_RUNTIME_METADATA.commandName]: SECURE_PHASE_RUNTIME_METADATA,
+      [AUDIT_FIX_RUNTIME_METADATA.commandName]: AUDIT_FIX_RUNTIME_METADATA,
+      [REVIEW_RUNTIME_METADATA.commandName]: REVIEW_RUNTIME_METADATA,
+      [UI_REVIEW_RUNTIME_METADATA.commandName]: UI_REVIEW_RUNTIME_METADATA,
       [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
       [NOTE_RUNTIME_METADATA.commandName]: NOTE_RUNTIME_METADATA,
       [ADD_TODO_RUNTIME_METADATA.commandName]: ADD_TODO_RUNTIME_METADATA,
@@ -65886,13 +66047,9 @@ function parseRuntimeReferenceRows(markdown) {
 function buildCommandRuntimeContractUri(commandName) {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
-var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS = /* @__PURE__ */ new Set(["review"]);
-var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION = "Read-only projection of one implemented Blueprint command's catalog metadata, command spec, and runtime-reference row; `review` is intentionally excluded.";
+var BLUEPRINT_COMMAND_RUNTIME_CONTRACT_DESCRIPTION = "Read-only projection of one implemented Blueprint command's catalog metadata, command spec, and runtime-reference row.";
 function buildNonImplementedRuntimeContractErrorMessage(commandName) {
   return `Blueprint runtime-contract resources are available only for implemented commands: ${commandName}`;
-}
-function buildExcludedRuntimeContractErrorMessage(commandName) {
-  return `Blueprint runtime-contract resources intentionally exclude this command today: ${commandName}`;
 }
 function isExposedRuntimeContractCatalogEntry(entry) {
   return entry.status === "implemented" && entry.implemented;
@@ -65912,36 +66069,39 @@ function runtimeOwnedMetadataToRuntimeReferenceRow(metadata) {
     evidenceState: [...metadata.runtimeReference.evidenceState]
   };
 }
-async function readBlueprintRuntimeReferenceRows() {
-  const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
+async function readBlueprintRuntimeReferenceRows(readRelativePath = readBundledFile) {
+  const runtimeReferenceMarkdown = await readRelativePath("docs/RUNTIME-REFERENCE.md");
   const rows = runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
   for (const metadata of listRuntimeOwnedCommandMetadata()) {
     rows.set(metadata.commandName, runtimeOwnedMetadataToRuntimeReferenceRow(metadata));
   }
   return rows;
 }
-async function readBundledCommandSpec(entry) {
+function runtimeOwnedMetadataToCommandSpec(metadata) {
+  return {
+    path: metadata.spec.path,
+    title: metadata.spec.title,
+    wave: metadata.catalog.wave,
+    family: metadata.catalog.family,
+    executionProfile: metadata.spec.executionProfile,
+    rootRoutable: metadata.spec.rootRoutable,
+    purpose: metadata.spec.purpose,
+    requiredTools: [...metadata.requiredTools],
+    primarySkill: metadata.catalog.primarySkill,
+    optionalSubagents: [...metadata.optionalAgents],
+    reads: [...metadata.spec.reads],
+    writes: [...metadata.spec.writes]
+  };
+}
+async function readBundledCommandSpec(entry, readRelativePath = readBundledFile) {
   const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
   if (runtimeMetadata) {
-    return {
-      path: runtimeMetadata.spec.path,
-      title: runtimeMetadata.spec.title,
-      wave: runtimeMetadata.catalog.wave,
-      family: runtimeMetadata.catalog.family,
-      executionProfile: runtimeMetadata.spec.executionProfile,
-      rootRoutable: runtimeMetadata.spec.rootRoutable,
-      purpose: runtimeMetadata.spec.purpose,
-      requiredTools: [...runtimeMetadata.requiredTools],
-      primarySkill: runtimeMetadata.catalog.primarySkill,
-      optionalSubagents: [...runtimeMetadata.optionalAgents],
-      reads: [...runtimeMetadata.spec.reads],
-      writes: [...runtimeMetadata.spec.writes]
-    };
+    return runtimeOwnedMetadataToCommandSpec(runtimeMetadata);
   }
   if (!entry.specPath) {
     return null;
   }
-  const specMarkdown = await readBundledFile(entry.specPath);
+  const specMarkdown = await readRelativePath(entry.specPath);
   return specMarkdown ? parseCommandSpec(specMarkdown, entry.specPath) : null;
 }
 async function buildBlueprintCommandCatalogResource() {
@@ -65952,9 +66112,6 @@ async function listBlueprintCommandRuntimeContractCommands() {
   const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
   const commands = await Promise.all(
     Object.entries(catalog.commands).map(async ([commandName, entry]) => {
-      if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
-        return null;
-      }
       if (!isExposedRuntimeContractCatalogEntry(entry)) {
         return null;
       }
@@ -65964,27 +66121,28 @@ async function listBlueprintCommandRuntimeContractCommands() {
   );
   return commands.filter((commandName) => commandName !== null).sort();
 }
-async function buildBlueprintCommandRuntimeContractResource(commandName) {
+async function buildBlueprintCommandRuntimeContractResource(commandName, options = {}) {
+  const readRelativePath = options.readRelativePath ?? readBundledFile;
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands[commandName];
   if (!entry) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
   }
-  if (BLUEPRINT_COMMAND_RUNTIME_CONTRACT_EXCLUSIONS.has(commandName)) {
-    throw new Error(buildExcludedRuntimeContractErrorMessage(commandName));
-  }
   if (!isExposedRuntimeContractCatalogEntry(entry)) {
     throw new Error(buildNonImplementedRuntimeContractErrorMessage(commandName));
   }
-  const [spec, runtimeReferenceRows] = await Promise.all([
-    readBundledCommandSpec(entry),
-    readBlueprintRuntimeReferenceRows()
+  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ?? getRuntimeOwnedCommandMetadata(commandName);
+  const [spec, runtimeReference] = runtimeMetadata ? [
+    runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
+    runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata)
+  ] : await Promise.all([
+    readBundledCommandSpec(entry, readRelativePath),
+    readBlueprintRuntimeReferenceRows(readRelativePath).then((rows) => rows.get(commandName))
   ]);
-  const runtimeReference = runtimeReferenceRows.get(commandName);
   const skillInputs = await loadBlueprintSkillInputs(
     entry.primarySkill,
     entry.command,
-    readBundledFile,
+    readRelativePath,
     entry.skillPath
   );
   if (!spec || !entry.specPath) {

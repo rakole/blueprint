@@ -3,9 +3,57 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("review runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("review");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("review");
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#review");
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/review-runtime-contract.md"
+  ]);
+
+  assert.equal(catalog.commands.review.specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands.review.requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands.review.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-review.toml",
+      "skills/blueprint-review/references/review-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-review.toml",
+      "skills/blueprint-review/references/review-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+});
 
 test("review manifest references plan-backed peer-review tools and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8");
@@ -121,70 +169,60 @@ test("blueprint-review skill captures MCP-owned peer-review rules", async () => 
   assert.doesNotMatch(agentFile, /peer-review packet or synthesis mode|reviewer coverage gaps/i);
 });
 
-test("review docs and runtime reference describe the long-running peer-review spine", async () => {
-  const [docFile, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/review.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("review manifest and runtime resource describe the long-running peer-review spine", async () => {
+  const [commandFile, contract] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("review")
   ]);
 
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    docFile,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+    commandFile,
+    /stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
   );
   assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(docFile, /shared long-running-mutation posture/i);
-  assert.match(docFile, /skills\/blueprint-review\/references\/review-runtime-contract\.md/);
-  assert.match(docFile, /blueprint_artifact_contract_read/);
-  assert.match(docFile, /blueprint_review_authoring_context/);
-  assert.match(docFile, /blueprint_review_validate_model/);
-  assert.match(docFile, /review\.peer-review/);
-  assert.match(docFile, /contract\.modelContract/);
-  assert.match(docFile, /Optional subagents: `blueprint-reviewer`/);
-  assert.match(docFile, /no-subagent sequential fallback/i);
-  assert.match(docFile, /requested reviewer set, reviewer availability, disagreement posture/i);
-  assert.match(docFile, /`update_topic` tool and keep a compact peer-review checklist with `write_todos`/i);
-  assert.match(docFile, /session-local visibility only/i);
-  assert.match(docFile, /waiting state explicit as `reviewer-availability`/i);
-  assert.match(docFile, /next-step guidance stays on `\/blu-review <phase>`/i);
+  assert.match(commandFile, /skills\/blueprint-review\/references\/review-runtime-contract\.md/);
+  assert.match(commandFile, /blueprint_artifact_contract_read/);
+  assert.match(commandFile, /blueprint_review_authoring_context/);
+  assert.match(commandFile, /blueprint_review_validate_model/);
+  assert.match(commandFile, /review\.peer-review/);
+  assert.match(commandFile, /contract\.modelContract/);
+  assert.match(commandFile, /blueprint-reviewer/);
+  assert.match(commandFile, /no-subagent fallback/i);
+  assert.match(commandFile, /requested reviewers/i);
+  assert.match(commandFile, /reviewer availability/i);
+  assert.match(commandFile, /disagreement/i);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/i);
+  assert.match(commandFile, /session-local visibility only/i);
+  assert.match(commandFile, /reviewer-availability/i);
+  assert.match(commandFile, /next safe action on `\/blu-review <phase>`/i);
 
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*Long-running-mutation profile for phase-plan peer review/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for saved-plan peer review/i
   );
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /active stage, and next safe action explicit/i
   );
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*`update_topic` and `write_todos` for non-trivial review runs/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /reviewer-availability gates/i
   );
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*reviewer availability, partial reviewer coverage, disagreement posture, and artifact reuse or revision status explicit/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /preserve partial reviewer coverage honestly/i
   );
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*overwrite confirmation, reviewer-availability confirmation, or the visible `reviewer-availability` waiting state/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /blueprint-reviewer only for bounded packet and synthesis quality checks/i
   );
   assert.match(
-    runtimeReference,
-    /`review`[\s\S]*explicit reviewer flags versus `--all` fan-out/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*blueprint_artifact_contract_read/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*skills\/blueprint-review\/references\/review-runtime-contract\.md/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*`blueprint-reviewer` only for read-only packet completeness or consensus\/disagreement synthesis/i
+    contract.skillInputs.effective.join("\n"),
+    /skills\/blueprint-review\/references\/review-runtime-contract\.md/i
   );
 });

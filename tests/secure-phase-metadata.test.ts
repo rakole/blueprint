@@ -3,9 +3,57 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
+
+test("secure-phase runtime metadata is source-owned and docs-free", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("secure-phase");
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("secure-phase");
+
+  assert.ok(metadata);
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#secure-phase");
+  assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.runtimeReference.path, metadata.sourceId);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+  ]);
+
+  assert.equal(catalog.commands["secure-phase"].specPath, metadata.sourceId);
+  assert.deepEqual(catalog.commands["secure-phase"].requiredTools, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["secure-phase"].optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...metadata.optionalAgents
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-review",
+    shared: [],
+    commandSpecific: [
+      "commands/blu-secure-phase.toml",
+      "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+    ],
+    effective: [
+      "commands/blu-secure-phase.toml",
+      "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+    ]
+  });
+  assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+});
 
 test("secure-phase manifest references the review tools, agent, and safe routing contract", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8");
@@ -123,57 +171,45 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /\/blu-progress/);
 });
 
-test("secure-phase docs and runtime reference describe the long-running security spine", async () => {
-  const [docFile, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/secure-phase.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("secure-phase manifest and runtime resource describe the long-running security spine", async () => {
+  const [commandFile, contract] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase")
   ]);
 
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    docFile,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+    commandFile,
+    /stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/
   );
   assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(docFile, /shared long-running-mutation posture/i);
-  assert.match(docFile, /saved plan evidence only/i);
-  assert.match(docFile, /`update_topic` tool and keep a compact threat-review checklist with `write_todos`/i);
-  assert.match(docFile, /session-local visibility only/i);
-  assert.match(docFile, /`pending-open-threat` waiting state/i);
-  assert.match(docFile, /pending-open-threat status/i);
-  assert.match(docFile, /do not emit next-step routing until that gate is cleared/i);
+  assert.match(commandFile, /saved phase threat model/i);
+  assert.match(commandFile, /saved plan evidence only/i);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/i);
+  assert.match(commandFile, /session-local progress tools only/i);
+  assert.match(commandFile, /`pending-open-threat`/i);
+  assert.match(commandFile, /pending-open-threat status/i);
+  assert.match(commandFile, /do not emit next-step routing when any threat remains open/i);
 
   assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*Long-running-mutation profile for phase-scoped threat verification/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for bounded threat verification/i
   );
   assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /persist review\.security through review MCP tools/i
   );
   assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*`update_topic` and `write_todos` for non-trivial secure-phase runs/i
-  );
-  assert.match(runtimeReference, /`secure-phase`[\s\S]*saved-plan threat model only/i);
-  assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*verify-versus-accept decisions, or a visible `pending-open-threat` waiting state/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /open threats are closed or accepted/i
   );
   assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*inline versus security-auditor-assisted verification/i
-  );
-  assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*pending-open-threat status explicit/i
-  );
-  assert.match(
-    runtimeReference,
-    /`secure-phase`[\s\S]*block next-step routing while threats remain open/i
+    contract.skillInputs.effective.join("\n"),
+    /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/i
   );
 });
 

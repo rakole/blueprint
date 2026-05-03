@@ -73,7 +73,7 @@ test("MCP resource docs keep the read-only contract, live command resources, and
   );
   assert.match(
     mcpToolsDoc,
-    /\| `blueprint:\/\/commands\/<command>\/runtime-contract` \| Read the runtime contract for one retained implemented command; `review` is the current explicit exception \| live command-catalog metadata plus the locked command spec and runtime-reference row for that implemented command \| read-only; never a write target \| read the command spec, runtime reference, and current tool docs directly when the resource is unavailable or intentionally excluded \|/i
+    /\| `blueprint:\/\/commands\/<command>\/runtime-contract` \| Read the runtime contract for one retained implemented command \| live command-catalog metadata plus the locked command spec and runtime-reference row for that implemented command \| read-only; never a write target \| read the command spec, runtime reference, and current tool docs directly when the resource is unavailable \|/i
   );
   assert.match(
     mcpToolsDoc,
@@ -102,7 +102,7 @@ test("MCP resource docs keep the read-only contract, live command resources, and
   );
   assert.match(
     artifactSchema,
-    /`blueprint:\/\/commands\/<command>\/runtime-contract` is a read-only projection of one implemented command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row; `review` remains an explicit current exception and is not exposed on this resource path today/i
+    /`blueprint:\/\/commands\/<command>\/runtime-contract` is a read-only projection of one implemented command's locked runtime contract, derived from the command catalog plus the matching command spec and runtime-reference row\./i
   );
   assert.match(
     artifactSchema,
