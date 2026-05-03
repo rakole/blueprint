@@ -315,6 +315,43 @@ const EXPLORE_REQUIRED_TOOLS = [
   "blueprint_artifact_scaffold"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const SETTINGS_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_config_get",
+  "blueprint_config_set"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const SET_PROFILE_REQUIRED_TOOLS = [
+  "blueprint_config_get",
+  "blueprint_config_set_profile"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const HEALTH_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_config_get",
+  "blueprint_config_set",
+  "blueprint_state_load",
+  "blueprint_artifact_list",
+  "blueprint_artifact_validate",
+  "blueprint_state_sync"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const PAUSE_WORK_REQUIRED_TOOLS = [
+  "blueprint_state_load",
+  "blueprint_artifact_list",
+  "blueprint_pause_handoff_get",
+  "blueprint_pause_handoff_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const RESUME_WORK_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_state_load",
+  "blueprint_artifact_list",
+  "blueprint_pause_handoff_get",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
 const VALIDATE_PHASE_SPEC_PATH =
   "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
@@ -334,6 +371,16 @@ const UI_REVIEW_SPEC_PATH =
   "skills/blueprint-review/references/ui-review-runtime-contract.md";
 const ADD_TESTS_SPEC_PATH =
   "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
+const SETTINGS_SPEC_PATH =
+  "skills/blueprint-governance/references/settings-runtime-contract.md";
+const SET_PROFILE_SPEC_PATH =
+  "skills/blueprint-governance/references/set-profile-runtime-contract.md";
+const HEALTH_SPEC_PATH =
+  "skills/blueprint-governance/references/health-runtime-contract.md";
+const PAUSE_WORK_SPEC_PATH =
+  "skills/blueprint-governance/references/pause-work-runtime-contract.md";
+const RESUME_WORK_SPEC_PATH =
+  "skills/blueprint-governance/references/resume-work-runtime-contract.md";
 
 const VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"] as const;
 const ADD_TESTS_OPTIONAL_AGENTS = [
@@ -390,6 +437,123 @@ export const PROGRESS_RUNTIME_METADATA = {
     hookInvolvement: [],
     contractNotes:
       "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const SETTINGS_RUNTIME_METADATA = {
+  commandName: "settings",
+  sourceId: runtimeMetadataSourceId("settings"),
+  catalog: {
+    wave: 0,
+    family: "Foundation",
+    primarySkill: "blueprint-governance",
+    declaredStatus: "implemented",
+    risk:
+      "Low: config-only mutation inside repo config plus optional user defaults."
+  },
+  requiredTools: SETTINGS_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [SETTINGS_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("settings"),
+    title: "`/blu-settings`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`settings` inspects and updates Blueprint repo or default configuration through governance MCP tools.",
+    reads: ["Project status and current Blueprint configuration through MCP."],
+    writes: [".blueprint/config.json or host defaults when explicitly requested"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("settings"),
+    waveTitle: "Foundation",
+    command: "settings",
+    primarySkill: "blueprint-governance",
+    exactMcpDestination: SETTINGS_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime for bounded configuration inspection and mutation: load skills/blueprint-governance/references/settings-runtime-contract.md, read status and config through MCP first, mutate only explicit repo/defaults settings through blueprint_config_set, and route follow-ups only to implemented commands.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const SET_PROFILE_RUNTIME_METADATA = {
+  commandName: "set-profile",
+  sourceId: runtimeMetadataSourceId("set-profile"),
+  catalog: {
+    wave: 0,
+    family: "Foundation",
+    primarySkill: "blueprint-governance",
+    declaredStatus: "implemented",
+    risk: "Low: single-setting mutation for project model profile selection."
+  },
+  requiredTools: SET_PROFILE_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [SET_PROFILE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("set-profile"),
+    title: "`/blu-set-profile`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`set-profile` changes the current project model_profile through the governance MCP config substrate.",
+    reads: ["Current Blueprint configuration through MCP."],
+    writes: [".blueprint/config.json model_profile"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("set-profile"),
+    waveTitle: "Foundation",
+    command: "set-profile",
+    primarySkill: "blueprint-governance",
+    exactMcpDestination: SET_PROFILE_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime for one-field project profile mutation: load skills/blueprint-governance/references/set-profile-runtime-contract.md, inspect current config first, update only model_profile through blueprint_config_set_profile, and route follow-ups only to implemented commands.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const HEALTH_RUNTIME_METADATA = {
+  commandName: "health",
+  sourceId: runtimeMetadataSourceId("health"),
+  catalog: {
+    wave: 0,
+    family: "Foundation",
+    primarySkill: "blueprint-governance",
+    declaredStatus: "implemented",
+    risk:
+      "Medium: repair mode can normalize config and rewrite malformed planning artifacts."
+  },
+  requiredTools: HEALTH_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [HEALTH_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("health"),
+    title: "`/blu-health`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`health` checks Blueprint project health and can run explicit repair-mode normalization through MCP-owned tools.",
+    reads: [
+      "Project status, config, state, artifact inventory, and validation results through MCP."
+    ],
+    writes: [
+      ".blueprint/config.json and malformed planning artifacts only in explicit repair mode"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("health"),
+    waveTitle: "Foundation",
+    command: "health",
+    primarySkill: "blueprint-governance",
+    exactMcpDestination: HEALTH_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -763,6 +927,85 @@ export const ADD_TESTS_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const PAUSE_WORK_RUNTIME_METADATA = {
+  commandName: "pause-work",
+  sourceId: runtimeMetadataSourceId("pause-work"),
+  catalog: {
+    wave: 1,
+    family: "Core Lifecycle",
+    primarySkill: "blueprint-governance",
+    declaredStatus: "implemented",
+    risk: "Low: writes handoff and state artifacts only."
+  },
+  requiredTools: PAUSE_WORK_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [PAUSE_WORK_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("pause-work"),
+    title: "`/blu-pause-work`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`pause-work` records a canonical handoff from current Blueprint state and artifact inventory.",
+    reads: [
+      "Current state, artifact inventory, and existing pause handoff state through MCP."
+    ],
+    writes: [".blueprint/reports/pause-work-latest.md", ".blueprint/STATE.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("pause-work"),
+    waveTitle: "Core Lifecycle",
+    command: "pause-work",
+    primarySkill: "blueprint-governance",
+    exactMcpDestination: PAUSE_WORK_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime for canonical handoff capture: load skills/blueprint-governance/references/pause-work-runtime-contract.md, read state and artifact inventory through MCP, compare existing handoff state before overwrite where relevant, persist only through blueprint_pause_handoff_write and blueprint_state_update, and route follow-ups only to implemented commands.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const RESUME_WORK_RUNTIME_METADATA = {
+  commandName: "resume-work",
+  sourceId: runtimeMetadataSourceId("resume-work"),
+  catalog: {
+    wave: 1,
+    family: "Core Lifecycle",
+    primarySkill: "blueprint-governance",
+    declaredStatus: "implemented",
+    risk:
+      "Low: restores state from the canonical pause handoff and updates the next safe action."
+  },
+  requiredTools: RESUME_WORK_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [RESUME_WORK_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("resume-work"),
+    title: "`/blu-resume-work`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`resume-work` restores working context from the canonical pause handoff and records the next safe action.",
+    reads: [
+      "Project status, current state, artifact inventory, and canonical pause handoff through MCP."
+    ],
+    writes: [".blueprint/STATE.md"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("resume-work"),
+    waveTitle: "Core Lifecycle",
+    command: "resume-work",
+    primarySkill: "blueprint-governance",
+    exactMcpDestination: RESUME_WORK_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.",
+    evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const NOTE_RUNTIME_METADATA = {
   commandName: "note",
   sourceId: runtimeMetadataSourceId("note"),
@@ -998,6 +1241,9 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
   [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
   [PROGRESS_RUNTIME_METADATA.commandName]: PROGRESS_RUNTIME_METADATA,
+  [SETTINGS_RUNTIME_METADATA.commandName]: SETTINGS_RUNTIME_METADATA,
+  [SET_PROFILE_RUNTIME_METADATA.commandName]: SET_PROFILE_RUNTIME_METADATA,
+  [HEALTH_RUNTIME_METADATA.commandName]: HEALTH_RUNTIME_METADATA,
   [VALIDATE_PHASE_RUNTIME_METADATA.commandName]: VALIDATE_PHASE_RUNTIME_METADATA,
   [VERIFY_WORK_RUNTIME_METADATA.commandName]: VERIFY_WORK_RUNTIME_METADATA,
   [CODE_REVIEW_RUNTIME_METADATA.commandName]: CODE_REVIEW_RUNTIME_METADATA,
@@ -1007,6 +1253,8 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [REVIEW_RUNTIME_METADATA.commandName]: REVIEW_RUNTIME_METADATA,
   [UI_REVIEW_RUNTIME_METADATA.commandName]: UI_REVIEW_RUNTIME_METADATA,
   [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
+  [PAUSE_WORK_RUNTIME_METADATA.commandName]: PAUSE_WORK_RUNTIME_METADATA,
+  [RESUME_WORK_RUNTIME_METADATA.commandName]: RESUME_WORK_RUNTIME_METADATA,
   [NOTE_RUNTIME_METADATA.commandName]: NOTE_RUNTIME_METADATA,
   [ADD_TODO_RUNTIME_METADATA.commandName]: ADD_TODO_RUNTIME_METADATA,
   [CHECK_TODOS_RUNTIME_METADATA.commandName]: CHECK_TODOS_RUNTIME_METADATA,

@@ -575,11 +575,11 @@ test("review contracts stay explicit across code-review, remediation, and review
 test("governance and bootstrap contracts stay explicit across config, pause, and bootstrap surfaces", async () => {
   const [
     settingsCommand,
-    settingsDoc,
+    settingsReference,
     setProfileCommand,
-    setProfileDoc,
+    setProfileReference,
     pauseCommand,
-    pauseDoc,
+    pauseReference,
     newProjectCommand,
     newProjectRuntimeContract,
     governanceSkill,
@@ -588,11 +588,11 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
     bootstrapGuardrails
   ] = await Promise.all([
     readRepoFile("commands/blu-settings.toml"),
-    readRepoFile("docs/commands/settings.md"),
+    readRepoFile("skills/blueprint-governance/references/settings-runtime-contract.md"),
     readRepoFile("commands/blu-set-profile.toml"),
-    readRepoFile("docs/commands/set-profile.md"),
+    readRepoFile("skills/blueprint-governance/references/set-profile-runtime-contract.md"),
     readRepoFile("commands/blu-pause-work.toml"),
-    readRepoFile("docs/commands/pause-work.md"),
+    readRepoFile("skills/blueprint-governance/references/pause-work-runtime-contract.md"),
     readRepoFile("commands/blu-new-project.toml"),
     buildBlueprintCommandRuntimeContractResource("new-project"),
     readRepoFile("skills/blueprint-governance/SKILL.md"),
@@ -603,15 +603,17 @@ test("governance and bootstrap contracts stay explicit across config, pause, and
 
   assert.match(settingsCommand, /Pass a JSON-object `patch` only/i);
   assert.match(settingsCommand, /returned `configPath` as authoritative/i);
-  assert.match(settingsDoc, /## Config Mutation Contract/);
-  assert.match(settingsDoc, /defaults to `scope: "project"`/i);
+  assert.match(settingsReference, /## Write Boundaries/);
+  assert.match(settingsReference, /Project settings writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "project"`/i);
 
   assert.match(setProfileCommand, /Use this dedicated tool for `model_profile` changes/i);
-  assert.match(setProfileDoc, /## Profile Mutation Contract/);
+  assert.match(setProfileReference, /## Write Boundaries/);
+  assert.match(setProfileReference, /The only allowed write is `mcp_blueprint_blueprint_config_set_profile`/i);
 
   assert.match(pauseCommand, /`currentState` is required/i);
   assert.match(pauseCommand, /Omit `nextAction` when the safest resume action should be derived/i);
-  assert.match(pauseDoc, /## Pause Handoff Contract/);
+  assert.match(pauseReference, /## Write Boundaries/);
+  assert.match(pauseReference, /Replacing an existing active handoff requires explicit overwrite confirmation/i);
   assert.match(governanceSkill, /`blueprint_pause_handoff_write`: `currentState` is required/i);
 
   assert.match(newProjectCommand, /thin command envelope/i);
@@ -668,7 +670,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     mapCodebaseDoc,
     mapSkill,
     healthCommand,
-    healthDoc
+    healthReference
   ] = await Promise.all([
     readRepoFile("commands/blu-debug.toml"),
     readRepoFile("docs/commands/debug.md"),
@@ -686,7 +688,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     readRepoFile("docs/commands/map-codebase.md"),
     readRepoFile("skills/blueprint-map/SKILL.md"),
     readRepoFile("commands/blu-health.toml"),
-    readRepoFile("docs/commands/health.md")
+    readRepoFile("skills/blueprint-governance/references/health-runtime-contract.md")
   ]);
 
   assert.match(
@@ -796,5 +798,6 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
 
   assert.match(healthCommand, /Pass a JSON-object `patch` only/i);
   assert.match(healthCommand, /returned `configPath` as authoritative/i);
-  assert.match(healthDoc, /## Repair Contract/);
+  assert.match(healthReference, /## Confirmation Gates/);
+  assert.match(healthReference, /## Write Boundaries/);
 });
