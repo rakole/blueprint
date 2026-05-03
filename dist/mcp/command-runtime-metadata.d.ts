@@ -340,6 +340,39 @@ export declare const UI_PHASE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const EXECUTE_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "execute-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: drives real repo mutation during implementation and records execution summaries.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-executor"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-execute-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.";
+        readonly reads: readonly [".blueprint/config.json", ".blueprint/STATE.md", "selected plan and summary files through MCP", "phase.summary contract"];
+        readonly writes: readonly ["one or more XX-YY-SUMMARY.md files", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "execute-phase";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-executor"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, read the canonical phase.summary contract plus the schema-first summary authoring context before any summary write or replacement, use blueprint_phase_execution_targets for deterministic target selection plus overwrite and overlap warnings, refuse stale or invalid saved plans, preserve wave order and lower-wave blockers, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, rerun the summary index before synced state update, never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
     readonly commandName: "list-phase-assumptions";
     readonly sourceId: string;
@@ -1252,6 +1285,72 @@ export declare const EXPLORE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const QUICK_RUNTIME_METADATA: {
+    readonly commandName: "quick";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: can execute repo changes with reduced ceremony.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-quick`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
+        readonly reads: readonly ["project status, command availability, and current next-step posture through MCP"];
+        readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "quick";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const FAST_RUNTIME_METADATA: {
+    readonly commandName: "fast";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: minimal-planning repo mutation path.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-fast`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.";
+        readonly reads: readonly ["project status through MCP when useful"];
+        readonly writes: readonly ["optional .blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "fast";
+        readonly primarySkill: "blueprint-phase-execution";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const RUNTIME_OWNED_COMMAND_METADATA: {
     readonly "new-project": {
         readonly commandName: "new-project";
@@ -1554,6 +1653,39 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "execute-phase": {
+        readonly commandName: "execute-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: drives real repo mutation during implementation and records execution summaries.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-executor"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-execute-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.";
+            readonly reads: readonly [".blueprint/config.json", ".blueprint/STATE.md", "selected plan and summary files through MCP", "phase.summary contract"];
+            readonly writes: readonly ["one or more XX-YY-SUMMARY.md files", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "execute-phase";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_plan_index", "blueprint_phase_execution_targets", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_summary_authoring_context", "blueprint_phase_summary_validate_model", "blueprint_phase_summary_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-executor"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, read the canonical phase.summary contract plus the schema-first summary authoring context before any summary write or replacement, use blueprint_phase_execution_targets for deterministic target selection plus overwrite and overlap warnings, refuse stale or invalid saved plans, preserve wave order and lower-wave blockers, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, rerun the summary index before synced state update, never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -2466,6 +2598,72 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly quick: {
+        readonly commandName: "quick";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: can execute repo changes with reduced ceremony.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-quick`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.";
+            readonly reads: readonly ["project status, command availability, and current next-step posture through MCP"];
+            readonly writes: readonly ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "quick";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly fast: {
+        readonly commandName: "fast";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: minimal-planning repo mutation path.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-fast`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.";
+            readonly reads: readonly ["project status through MCP when useful"];
+            readonly writes: readonly ["optional .blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "fast";
+            readonly primarySkill: "blueprint-phase-execution";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

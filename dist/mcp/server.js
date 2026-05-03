@@ -36251,7 +36251,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36411,6 +36411,22 @@ var init_command_runtime_metadata = __esm({
       "blueprint_artifact_scaffold",
       "blueprint_state_update"
     ];
+    EXECUTE_PHASE_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_plan_index",
+      "blueprint_phase_execution_targets",
+      "blueprint_phase_plan_read",
+      "blueprint_phase_summary_index",
+      "blueprint_phase_summary_read",
+      "blueprint_phase_summary_authoring_context",
+      "blueprint_phase_summary_validate_model",
+      "blueprint_phase_summary_write",
+      "blueprint_artifact_contract_read",
+      "blueprint_config_get",
+      "blueprint_artifact_validate",
+      "blueprint_state_load",
+      "blueprint_state_update"
+    ];
     LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
       "blueprint_phase_context",
@@ -36549,6 +36565,16 @@ var init_command_runtime_metadata = __esm({
       "blueprint_roadmap_add_phase",
       "blueprint_artifact_scaffold"
     ];
+    QUICK_REQUIRED_TOOLS = [
+      "blueprint_project_status",
+      "blueprint_command_catalog",
+      "blueprint_artifact_report_write",
+      "blueprint_state_update"
+    ];
+    FAST_REQUIRED_TOOLS = [
+      "blueprint_project_status",
+      "blueprint_state_update"
+    ];
     SETTINGS_REQUIRED_TOOLS = [
       "blueprint_project_status",
       "blueprint_config_get",
@@ -36674,6 +36700,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint-ui-designer",
       "blueprint-checker"
     ];
+    EXECUTE_PHASE_OPTIONAL_AGENTS = ["blueprint-executor"];
     VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"];
     ADD_TESTS_OPTIONAL_AGENTS = [
       "blueprint-executor",
@@ -36689,6 +36716,12 @@ var init_command_runtime_metadata = __esm({
     REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"];
     EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"];
+    QUICK_OPTIONAL_AGENTS = [
+      "blueprint-researcher",
+      "blueprint-planner",
+      "blueprint-executor",
+      "blueprint-verifier"
+    ];
     PROGRESS_RUNTIME_METADATA = {
       commandName: "progress",
       sourceId: runtimeMetadataSourceId("progress"),
@@ -36951,6 +36984,51 @@ var init_command_runtime_metadata = __esm({
         optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
         contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    EXECUTE_PHASE_RUNTIME_METADATA = {
+      commandName: "execute-phase",
+      sourceId: runtimeMetadataSourceId("execute-phase"),
+      catalog: {
+        wave: 1,
+        family: "Core Lifecycle",
+        primarySkill: "blueprint-phase-execution",
+        declaredStatus: "implemented",
+        risk: "High: drives real repo mutation during implementation and records execution summaries."
+      },
+      requiredTools: EXECUTE_PHASE_REQUIRED_TOOLS,
+      optionalAgents: EXECUTE_PHASE_OPTIONAL_AGENTS,
+      spec: {
+        path: runtimeMetadataSourceId("execute-phase"),
+        title: "`/blu-execute-phase`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`execute-phase` executes saved phase plans in deterministic target order, records plan-linked execution summaries, and syncs Blueprint state without claiming phase completion.",
+        reads: [
+          ".blueprint/config.json",
+          ".blueprint/STATE.md",
+          "selected plan and summary files through MCP",
+          "phase.summary contract"
+        ],
+        writes: [
+          "one or more XX-YY-SUMMARY.md files",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("execute-phase"),
+        waveTitle: "Core Lifecycle",
+        command: "execute-phase",
+        primarySkill: "blueprint-phase-execution",
+        exactMcpDestination: EXECUTE_PHASE_REQUIRED_TOOLS,
+        optionalAgents: EXECUTE_PHASE_OPTIONAL_AGENTS,
+        hookInvolvement: [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, read the canonical phase.summary contract plus the schema-first summary authoring context before any summary write or replacement, use blueprint_phase_execution_targets for deterministic target selection plus overwrite and overlap warnings, refuse stale or invalid saved plans, preserve wave order and lower-wave blockers, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, rerun the summary index before synced state update, never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -37960,6 +38038,82 @@ var init_command_runtime_metadata = __esm({
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
+    QUICK_RUNTIME_METADATA = {
+      commandName: "quick",
+      sourceId: runtimeMetadataSourceId("quick"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-phase-execution",
+        declaredStatus: "implemented",
+        risk: "High: can execute repo changes with reduced ceremony."
+      },
+      requiredTools: QUICK_REQUIRED_TOOLS,
+      optionalAgents: QUICK_OPTIONAL_AGENTS,
+      spec: {
+        path: runtimeMetadataSourceId("quick"),
+        title: "`/blu-quick`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`quick` runs bounded quick delivery with optional depth gates, persists durable quick-run evidence, and routes follow-up through implemented Blueprint commands.",
+        reads: [
+          "project status, command availability, and current next-step posture through MCP"
+        ],
+        writes: ["quick-run report in .blueprint/reports/", ".blueprint/STATE.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("quick"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "quick",
+        primarySkill: "blueprint-phase-execution",
+        exactMcpDestination: QUICK_REQUIRED_TOOLS,
+        optionalAgents: QUICK_OPTIONAL_AGENTS,
+        hookInvolvement: [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    FAST_RUNTIME_METADATA = {
+      commandName: "fast",
+      sourceId: runtimeMetadataSourceId("fast"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-phase-execution",
+        declaredStatus: "implemented",
+        risk: "Medium: minimal-planning repo mutation path."
+      },
+      requiredTools: FAST_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("fast"),
+        title: "`/blu-fast`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`fast` handles genuinely trivial inline execution without subagents, durable reports, or phase artifacts.",
+        reads: ["project status through MCP when useful"],
+        writes: ["optional .blueprint/STATE.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("fast"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "fast",
+        primarySkill: "blueprint-phase-execution",
+        exactMcpDestination: FAST_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: [
+          "read-before-edit",
+          ".blueprint write guard",
+          "workflow advisory"
+        ],
+        contractNotes: "Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility, refuse report-backed or subagent depth, update STATE.md only when Blueprint is initialized, do not create quick-run reports, phase summaries, phase artifacts, or other durable execution evidence, and route anything larger to quick or phase planning. The rich command-local contract lives in skills/blueprint-phase-execution/references/fast-runtime-contract.md.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
     RUNTIME_OWNED_COMMAND_METADATA = {
       [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
       [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
@@ -37970,6 +38124,7 @@ var init_command_runtime_metadata = __esm({
       [DISCUSS_PHASE_RUNTIME_METADATA.commandName]: DISCUSS_PHASE_RUNTIME_METADATA,
       [RESEARCH_PHASE_RUNTIME_METADATA.commandName]: RESEARCH_PHASE_RUNTIME_METADATA,
       [UI_PHASE_RUNTIME_METADATA.commandName]: UI_PHASE_RUNTIME_METADATA,
+      [EXECUTE_PHASE_RUNTIME_METADATA.commandName]: EXECUTE_PHASE_RUNTIME_METADATA,
       [LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA.commandName]: LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA,
       [VALIDATE_PHASE_RUNTIME_METADATA.commandName]: VALIDATE_PHASE_RUNTIME_METADATA,
       [VERIFY_WORK_RUNTIME_METADATA.commandName]: VERIFY_WORK_RUNTIME_METADATA,
@@ -37996,7 +38151,9 @@ var init_command_runtime_metadata = __esm({
       [CHECK_TODOS_RUNTIME_METADATA.commandName]: CHECK_TODOS_RUNTIME_METADATA,
       [ADD_BACKLOG_RUNTIME_METADATA.commandName]: ADD_BACKLOG_RUNTIME_METADATA,
       [REVIEW_BACKLOG_RUNTIME_METADATA.commandName]: REVIEW_BACKLOG_RUNTIME_METADATA,
-      [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA
+      [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA,
+      [QUICK_RUNTIME_METADATA.commandName]: QUICK_RUNTIME_METADATA,
+      [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
     };
   }
 });

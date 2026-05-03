@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
@@ -33,8 +35,8 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /STATE\.md`? records `\/blu-fast`/);
 });
 
-test("fast skill and runtime reference keep the trivial path off the tracker and long-running progress layer", async () => {
-  const [skillFile, fastRuntimeContract, runtimeReference] = await Promise.all([
+test("fast skill and local runtime contract keep the trivial path off the tracker and long-running progress layer", async () => {
+  const [skillFile, fastRuntimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-phase-execution/SKILL.md"), "utf8"),
     readFile(
       path.join(
@@ -42,8 +44,7 @@ test("fast skill and runtime reference keep the trivial path off the tracker and
         "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
       ),
       "utf8"
-    ),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    )
   ]);
 
   assert.match(
@@ -57,12 +58,41 @@ test("fast skill and runtime reference keep the trivial path off the tracker and
   assert.match(fastRuntimeContract, /\/blu-health/);
   assert.match(fastRuntimeContract, /\/blu-quick/);
   assert.match(fastRuntimeContract, /\/blu-plan-phase/);
-  assert.match(
-    runtimeReference,
-    /`fast`[\s\S]*Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus `update_topic` or `write_todos` long-running visibility/i
+});
+
+test("fast runtime contract resource is owned by runtime metadata, not docs", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("fast");
+
+  assert.ok(metadata);
+
+  const contract = await buildBlueprintCommandRuntimeContractResource("fast");
+
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.commandSpecPath, metadata.sourceId);
+  assert.equal(contract.spec.primarySkill, "blueprint-phase-execution");
+  assert.deepEqual(contract.spec.requiredTools, [...metadata.requiredTools]);
+  assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.spec.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference.optionalAgents, []);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-fast.toml",
+    "skills/blueprint-phase-execution/references/fast-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
   assert.match(
-    runtimeReference,
-    /`fast`[\s\S]*skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/i
+    contract.runtimeReference.contractNotes ?? "",
+    /Interactive-read profile for trivial inline execution: keep the ask genuinely small, explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /skills\/blueprint-phase-execution\/references\/fast-runtime-contract\.md/i
   );
 });

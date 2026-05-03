@@ -1047,6 +1047,9 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
 test("execute-phase is implemented once manifest, skill, and execution summary MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["execute-phase"];
+  const metadata = getRuntimeOwnedCommandMetadata("execute-phase");
+
+  assert.ok(metadata);
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
@@ -1054,7 +1057,7 @@ test("execute-phase is implemented once manifest, skill, and execution summary M
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.ok(entry.manifestPath);
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, metadata.sourceId);
   assert.deepEqual(entry.availableOptionalAgents.sort(), ["blueprint-executor"]);
   assert.deepEqual(entry.blockedBy, []);
 });
@@ -1726,6 +1729,9 @@ test("reapply-patches is implemented once manifest, skill, and patch replay MCP 
 test("quick is implemented once manifest, skill, and report-backed quick-run MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["quick"];
+  const metadata = getRuntimeOwnedCommandMetadata("quick");
+
+  assert.ok(metadata);
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
@@ -1733,7 +1739,7 @@ test("quick is implemented once manifest, skill, and report-backed quick-run MCP
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("quick"));
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, metadata.sourceId);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_report_write",
     "blueprint_command_catalog",
@@ -1752,6 +1758,9 @@ test("quick is implemented once manifest, skill, and report-backed quick-run MCP
 test("fast is implemented once manifest, skill, and trivial inline MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["fast"];
+  const metadata = getRuntimeOwnedCommandMetadata("fast");
+
+  assert.ok(metadata);
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
@@ -1759,7 +1768,7 @@ test("fast is implemented once manifest, skill, and trivial inline MCP tools exi
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("fast"));
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, metadata.sourceId);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_project_status",
     "blueprint_state_update"

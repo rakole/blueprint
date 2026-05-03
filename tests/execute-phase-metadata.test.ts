@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
@@ -146,23 +148,40 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
   ]);
 });
 
-test("execute-phase MCP docs include the deterministic execution-target helper and the rich runtime-contract pointer", async () => {
-  const mcpToolsDoc = await readRepoFile("docs/MCP-TOOLS.md");
-  const runtimeReference = await readRepoFile("docs/RUNTIME-REFERENCE.md");
+test("execute-phase runtime contract resource is owned by runtime metadata, not docs", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("execute-phase");
 
-  assert.match(
-    mcpToolsDoc,
-    /\| `blueprint_phase_execution_targets` \| Resolve deterministic execute-phase plan targets, lower-wave blockers, overwrite candidates, and overlap warnings from saved plan and summary state \|/
-  );
-  assert.match(mcpToolsDoc, /`execute-phase` uses `blueprint_phase_execution_targets`/);
-  assert.match(
-    mcpToolsDoc,
-    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/
-  );
+  assert.ok(metadata);
 
-  assert.match(runtimeReference, /`execute-phase`[\s\S]*never persist execute-phase reports/i);
+  const contract = await buildBlueprintCommandRuntimeContractResource("execute-phase");
+
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference.commandSpecPath, metadata.sourceId);
+  assert.equal(contract.spec.primarySkill, "blueprint-phase-execution");
+  assert.deepEqual(contract.spec.requiredTools, [...metadata.requiredTools]);
+  assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+  assert.deepEqual(contract.spec.optionalSubagents, ["blueprint-executor"]);
+  assert.deepEqual(contract.runtimeReference.optionalAgents, ["blueprint-executor"]);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-execute-phase.toml",
+    "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md",
+    "skills/blueprint-phase-execution/references/long-running-execution-profile.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
   assert.match(
-    runtimeReference,
-    /`execute-phase`[\s\S]*skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/i
+    contract.runtimeReference.contractNotes ?? "",
+    /never persist execute-phase reports/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/i
   );
 });
