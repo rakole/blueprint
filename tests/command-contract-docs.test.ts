@@ -4,6 +4,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { MAP_CODEBASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 
 const repoRoot = process.cwd();
 const commandDocsRoot = path.join(repoRoot, "docs/commands");
@@ -438,13 +439,13 @@ test("do docs and router skill keep the planned freeform-routing contract explic
   assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-update/);
 });
 
-test("map-codebase docs keep the repaired brownfield mapping contract explicit", async () => {
-  const [catalogMarkdown, commandDoc, skillDoc, runtimeReference, mcpToolsDoc] = await Promise.all([
+test("map-codebase docs history and runtime contract keep the repaired brownfield mapping behavior explicit", async () => {
+  const [catalogMarkdown, commandDoc, skillDoc, mcpToolsDoc, runtimeContract] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
     readRepoFile("docs/commands/map-codebase.md"),
     readRepoFile("skills/blueprint-map/SKILL.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
-    readRepoFile("docs/MCP-TOOLS.md")
+    readRepoFile("docs/MCP-TOOLS.md"),
+    buildBlueprintCommandRuntimeContractResource("map-codebase")
   ]);
 
   assert.match(
@@ -470,13 +471,37 @@ test("map-codebase docs keep the repaired brownfield mapping contract explicit",
   assert.match(skillDoc, /Keep the in-flight status contract legible throughout the mapping pass/i);
   assert.match(skillDoc, /reuse-by-default behavior/i);
   assert.match(skillDoc, /reuse-versus-refresh guidance/i);
-  assert.match(
-    runtimeReference,
-    /Long-running-mutation profile for read-heavy brownfield mapping: keep `Resolve`\/`Read`\/`Decide`\/`Execute`\/`Persist`\/`Validate`\/`Route` narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  assert.equal(runtimeContract.catalog.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(runtimeContract.spec?.path, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    runtimeContract.runtimeReference?.commandSpecPath,
+    MAP_CODEBASE_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    [...MAP_CODEBASE_RUNTIME_METADATA.requiredTools]
+  );
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.optionalAgents,
+    [...MAP_CODEBASE_RUNTIME_METADATA.optionalAgents]
   );
   assert.match(
-    runtimeReference,
-    /\| `map-codebase` \| `docs\/commands\/map-codebase\.md` \| `blueprint-map` \| `blueprint_project_status`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_scaffold`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_codebase_artifact_write`<br>`blueprint_artifact_validate` \| `blueprint-mapper` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for read-heavy brownfield mapping/i
+  );
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /local map runtime contract/i);
+  assert.deepEqual(runtimeContract.skillInputs.shared, []);
+  assert.deepEqual(
+    runtimeContract.skillInputs.commandSpecific,
+    [...(MAP_CODEBASE_RUNTIME_METADATA.requiredInputPaths ?? [])]
+  );
+  assert.deepEqual(
+    runtimeContract.skillInputs.effective,
+    [...(MAP_CODEBASE_RUNTIME_METADATA.requiredInputPaths ?? [])]
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
   assert.match(
     mcpToolsDoc,
