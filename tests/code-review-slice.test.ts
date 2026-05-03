@@ -17,6 +17,7 @@ import {
   blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const execFileAsync = promisify(execFileCallback);
@@ -96,8 +97,7 @@ async function createCodeReviewRepo(
     summaryChangedFiles = [],
     configPatch = {}
   } = options;
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-code-review-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-code-review-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-scope");
   const codebaseDir = path.join(repoPath, ".blueprint/codebase");
 
@@ -105,7 +105,6 @@ async function createCodeReviewRepo(
   await mkdir(path.join(repoPath, "tests"), { recursive: true });
   await mkdir(phaseDir, { recursive: true });
   await mkdir(codebaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

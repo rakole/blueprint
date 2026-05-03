@@ -21,15 +21,14 @@ import {
   blueprintPhaseResearchStatus,
   blueprintRoadmapRead
 } from "../src/mcp/tools/phase.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function createPhaseRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-tools-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-phase-tools-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(
     path.join(repoPath, ".blueprint/PROJECT.md"),
     `# Project: Blueprint Phase Discovery
@@ -274,13 +273,11 @@ function validContextContent(): string {
 }
 
 async function createLegacyDecimalPhaseRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-tools-legacy-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-phase-tools-legacy-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/01-legacy-bootstrap"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

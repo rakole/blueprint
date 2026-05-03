@@ -46599,8 +46599,10 @@ var init_phase = __esm({
 });
 
 // src/mcp/tools/artifacts.ts
+import { execFile as execFile4 } from "node:child_process";
 import { promises as fs8 } from "node:fs";
 import path10 from "node:path";
+import { promisify as promisify4 } from "node:util";
 async function assessRootBootstrapShape(projectRoot) {
   const entries = await fs8.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
@@ -47461,12 +47463,37 @@ function getBlueprintRoot2(cwd) {
 async function blueprintPathExists(targetPath) {
   return pathExists7(targetPath);
 }
+async function resolveGitTopLevel(projectRoot) {
+  try {
+    const { stdout } = await execFileAsync4("git", [
+      "-C",
+      projectRoot,
+      "rev-parse",
+      "--show-toplevel"
+    ]);
+    return stdout.trim();
+  } catch {
+    throw new Error(
+      "Blueprint commands must run from the repository root; not a valid git repository root."
+    );
+  }
+}
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
   const gitPath = path10.join(projectRoot, ".git");
   if (!await pathExists7(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
+    );
+  }
+  const gitTopLevel = await resolveGitTopLevel(projectRoot);
+  const [resolvedProjectRoot, resolvedGitTopLevel] = await Promise.all([
+    fs8.realpath(projectRoot),
+    fs8.realpath(gitTopLevel)
+  ]);
+  if (resolvedProjectRoot !== resolvedGitTopLevel) {
+    throw new Error(
+      "Blueprint commands must run from the repository root; current directory is not the git top-level root."
     );
   }
   return projectRoot;
@@ -54296,7 +54323,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -54307,6 +54334,7 @@ var init_artifacts = __esm({
     init_security();
     init_config();
     init_phase();
+    execFileAsync4 = promisify4(execFile4);
     BLUEPRINT_DIR = ".blueprint";
     BLUEPRINT_STATE_PATH = `${BLUEPRINT_DIR}/STATE.md`;
     BLUEPRINT_CONFIG_PATH = `${BLUEPRINT_DIR}/config.json`;

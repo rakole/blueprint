@@ -1,5 +1,7 @@
+import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import * as z from "zod/v4";
@@ -33,6 +35,8 @@ import {
   blueprintPhaseSummaryIndex,
   blueprintPhaseSummaryRead
 } from "./phase.js";
+
+const execFileAsync = promisify(execFile);
 
 export const BLUEPRINT_DIR = ".blueprint";
 export const BLUEPRINT_STATE_PATH = `${BLUEPRINT_DIR}/STATE.md`;
@@ -2142,6 +2146,23 @@ export async function blueprintPathExists(targetPath: string): Promise<boolean> 
   return pathExists(targetPath);
 }
 
+async function resolveGitTopLevel(projectRoot: string): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("git", [
+      "-C",
+      projectRoot,
+      "rev-parse",
+      "--show-toplevel"
+    ]);
+
+    return stdout.trim();
+  } catch {
+    throw new Error(
+      "Blueprint commands must run from the repository root; not a valid git repository root."
+    );
+  }
+}
+
 export async function ensureRepoRoot(cwd?: string): Promise<string> {
   const projectRoot = getProjectRoot(cwd);
   const gitPath = path.join(projectRoot, ".git");
@@ -2149,6 +2170,18 @@ export async function ensureRepoRoot(cwd?: string): Promise<string> {
   if (!(await pathExists(gitPath))) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
+    );
+  }
+
+  const gitTopLevel = await resolveGitTopLevel(projectRoot);
+  const [resolvedProjectRoot, resolvedGitTopLevel] = await Promise.all([
+    fs.realpath(projectRoot),
+    fs.realpath(gitTopLevel)
+  ]);
+
+  if (resolvedProjectRoot !== resolvedGitTopLevel) {
+    throw new Error(
+      "Blueprint commands must run from the repository root; current directory is not the git top-level root."
     );
   }
 

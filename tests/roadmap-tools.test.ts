@@ -14,6 +14,7 @@ import {
   blueprintRoadmapRead,
   blueprintRoadmapRemovePhase
 } from "../src/mcp/tools/phase.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -25,8 +26,7 @@ async function pathExists(targetPath: string): Promise<boolean> {
 }
 
 async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-roadmap-tools-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-roadmap-tools-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/01-foundation"), {
     recursive: true
@@ -37,7 +37,6 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
   await mkdir(path.join(repoPath, ".blueprint/phases/02.2-validation-parity"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -139,8 +138,7 @@ async function createAlreadyRepairedAuditBackedRoadmapRepo(): Promise<string> {
 }
 
 async function createInsertRoadmapRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-insert-roadmap-tools-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-insert-roadmap-tools-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/01-foundation"), {
     recursive: true
@@ -151,7 +149,6 @@ async function createInsertRoadmapRepo(): Promise<string> {
   await mkdir(path.join(repoPath, ".blueprint/phases/04-release-hardening"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

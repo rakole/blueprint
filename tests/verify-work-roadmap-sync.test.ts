@@ -9,6 +9,7 @@ import {
   blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
 import { blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 function completedSummaryContent(): string {
   return `# Phase 04: Validation - Summary 01
@@ -67,12 +68,10 @@ async function createRepoFixture(options: {
   verificationContent: string;
   uatContent: string;
 }): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-verify-work-sync-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-verify-work-sync-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-phase-validation");
 
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

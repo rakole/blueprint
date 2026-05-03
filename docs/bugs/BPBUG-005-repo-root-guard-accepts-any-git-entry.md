@@ -4,7 +4,7 @@ title: Repo-root guard accepts any `.git` entry as a valid repository
 severity: medium
 confidence: confirmed
 surface: cross-cutting
-status: new
+status: fixed
 discovery_phase: 8
 reported: 2026-05-02
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-02
 - Severity: `medium`
 - Confidence: `confirmed`
 - Surface: `cross-cutting`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -82,3 +82,141 @@ Root-cause cluster: `repo-root validation gaps`. No same-repair-path peer is kno
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commits:
+
+- `98540b4` replaced `.git` existence-only repo-root gating with Git-backed `rev-parse --show-toplevel` validation plus realpath top-level comparison.
+- `871dd47` added focused fake `.git` file/directory rejection, real worktree-root acceptance, and real Git fixture helpers for targeted tests.
+- `4d5576a` migrated repo-gated test fixtures to real Git repos, added symlink-root and nested-subdirectory regressions, fixed temp cleanup, and refreshed tracked `dist/mcp/server.js` outputs.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts tests/workspace-tools.test.ts` - pass, `43/43`.
+- `npm test` - pass, `851/851`.
+
+Residual note:
+
+- Repo-gated tools now require the Git CLI to validate repository roots. This is aligned with Blueprint's Git-backed repo assumptions and is now covered by full-suite fixture migration.
+
+## Repair Plan - 2026-05-03
+
+### Inspection
+
+- The bug report confirms `ensureRepoRoot()` accepts a fake `.git` file.
+- `src/mcp/tools/artifacts.ts` has `pathExists()`, and `ensureRepoRoot()` only checks `path.join(projectRoot, ".git")`.
+- `src/mcp/tools/phase.ts`, `src/mcp/tools/impact.ts`, and `src/mcp/tools/workspace.ts` import the shared guard. Representative calls include phase validation, artifact validation, impact config/scope, and workstreams.
+- `src/mcp/tools/workspace.ts` already has a safe `runGit()` wrapper and `resolveGitRepoRoot()` uses `git -C <path> rev-parse --show-toplevel`.
+- `tests/artifact-validate-runtime.test.ts` and `tests/security-hardening.test.ts` create fixture repos with fake `.git` files. `tests/workspace-tools.test.ts` already has real Git helpers and worktree coverage. `tests/artifact-contracts.test.ts` is contract-only and probably should not host this regression.
+- A broader fixture sweep may be needed because many test files contain fake worktree placeholder `.git` entries.
+
+### Official Gemini CLI Research
+
+- Gemini CLI shell tool docs define `dir_path` as the command execution directory and emphasize checking exit code/stderr: <https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/shell.md>. Impact: `git rev-parse` is the right deterministic validation primitive, but it should live inside Blueprint MCP code, not slash-command prompt shell snippets.
+- Gemini CLI extension docs show MCP server `command`, `args`, and optional `cwd`, commonly `${extensionPath}`: <https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md> and <https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/writing-extensions.md>. Impact: repo validation must be based on the project `cwd` passed to tools, not the MCP server process cwd.
+- Gemini CLI configuration docs describe project settings under the project root: <https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/configuration.md>. Impact: this supports Blueprint's requirement that repo-scoped state only be accepted from a real project root.
+
+### Minimal Implementation Plan
+
+- Change production logic only in `src/mcp/tools/artifacts.ts`.
+- Add `execFile`/`promisify` imports and a local `runGitRevParseTopLevel(projectRoot)` helper using `execFile("git", ["-C", projectRoot, "rev-parse", "--show-toplevel"])`.
+- Keep the current no-`.git` error text for the missing-entry path so workspace default-root fallback behavior remains stable.
+- After `.git` exists, require `git rev-parse --show-toplevel` to succeed. Reject malformed `.git` files/directories with a clear "not a valid git repository root" error.
+- Compare `fs.realpath(projectRoot)` to `fs.realpath(gitTopLevel)` before accepting. This preserves real worktree roots and symlinked repo roots while rejecting bogus placeholders and nested directories.
+- Return the existing `projectRoot` value after validation to avoid changing downstream path shape.
+
+### Tests To Add / Update
+
+- Add focused regressions, preferably in `tests/security-hardening.test.ts`:
+  - `ensureRepoRoot` rejects a fake `.git` file containing arbitrary text.
+  - `ensureRepoRoot` rejects a fake `.git` directory that is not a Git repository.
+  - `ensureRepoRoot` accepts a real Git worktree root where `.git` is a valid worktree gitdir file.
+- Update fixture helpers in `tests/artifact-validate-runtime.test.ts` and `tests/security-hardening.test.ts` to initialize real Git repos instead of writing placeholders.
+- Reuse or extract a small `tests/helpers/git-fixtures.ts` helper from `tests/workspace-tools.test.ts` if broader fixture cleanup is needed.
+- Run `npm run typecheck`, targeted `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts tests/workspace-tools.test.ts`, then full `npm test`.
+
+### Gemini CLI Tool Usage Placement
+
+- No command manifest change is needed.
+- Do not add `!{git ...}` shell snippets to Gemini slash commands.
+- Git validation belongs inside the MCP server helper in `artifacts.ts`, using Node `execFile` with static args. This mirrors existing internal Git usage in `workspace.ts` and `impact.ts`.
+
+### Parallel Waves
+
+- Wave A, source guard: `src/mcp/tools/artifacts.ts` only.
+- Wave B, focused tests: `tests/security-hardening.test.ts`, `tests/artifact-validate-runtime.test.ts`, optionally `tests/workspace-tools.test.ts`.
+- Wave C, fixture sweep: mechanically replace remaining fake `.git` repo fixtures across tests only where those fixtures call repo-gated Blueprint tools.
+- Dependency: Wave B/C need the real Git fixture helper or duplicated local init helper. Wave A can be reviewed independently.
+
+### DoD Reviewer Checklist
+
+- `ensureRepoRoot()` no longer accepts arbitrary `.git` entries.
+- Real Git repository roots and real worktree roots pass.
+- Missing `.git` behavior remains compatible with workspace default-root fallback.
+- No changes to command catalog routing, command manifests, installed extension mutation, or Blueprint/GSD workflow surfaces.
+- Targeted tests and full test suite pass.
+- Remaining fake `.git` placeholders, if any, are proven not to exercise repo-root-gated tools.
+
+### Risks / Uncertainty
+
+- The main risk is fixture blast radius: many tests use fake `.git` placeholders, so full-suite repair may be larger than the production fix.
+- This makes `git` availability required for all repo-gated tools, not only workspace/impact paths. That aligns with Blueprint's Git-backed repo assumption but may expose environments with missing Git sooner.
+- Path comparison must canonicalize realpaths to avoid false failures for symlinked checkouts and real worktrees.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `BLOCK`.
+
+Passed checks:
+
+- `ensureRepoRoot()` no longer accepts arbitrary `.git` entries.
+- Real Git repo roots and real worktree roots pass in targeted coverage.
+- Missing `.git` behavior likely remains compatible with workspace default-root fallback because the missing-entry error string is preserved.
+- No command catalog routing, command manifest, installed extension mutation, or workflow-surface change was found.
+
+Blocking findings:
+
+- `CRITICAL`: Full `npm test` fails. `tests/built-schema-assets.test.ts` reports stale tracked `dist/mcp/server.js` and `dist/mcp/server.js.map` after build, and many tests fail with `Blueprint commands must run from the repository root; not a valid git repository root`.
+- `CRITICAL`: Remaining fake `.git` placeholders are still used by repo-root-gated tool tests. Example: `tests/capture-tools.test.ts` writes `gitdir: ./.git/worktree-placeholder` and then calls repo-root-gated `blueprintArtifactMutateIndex`.
+
+Tests run:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts tests/workspace-tools.test.ts` - pass, `41/41`.
+- `npm test` - fail.
+
+### Code Reviewer Report
+
+Findings:
+
+- `CRITICAL`: Full test suite fails because many tests still create fake `.git` files and call MCP tools that use `ensureRepoRoot()`. A representative failure path is `tests/verify-work-roadmap-sync.test.ts`, which writes the placeholder and then fails inside phase tools through `resolveGitTopLevel` -> `ensureRepoRoot`.
+- `MEDIUM`: The worktree-root test cleanup in `tests/security-hardening.test.ts` deletes only the `worktrees/` directory, leaving the main temp repo behind.
+- `MEDIUM`: There is no explicit regression coverage for symlinked repo roots or nested subdirectory rejection.
+- `LOW`: `resolveGitTopLevel()` uses `execFile("git", ...)` without a timeout or `GIT_TERMINAL_PROMPT=0`, unlike some other git helpers. This is a low consistency/safety note.
+
+Tests run:
+
+- `npm test` - fail with many repo-root validation errors.
+
+### Bug Finder Report
+
+Findings:
+
+- `HIGH`: The production guard is correct, but the branch is not integrated because broad test runs fail immediately at the new guard. Representative fixtures still writing fake `.git` placeholders include `tests/new-project.test.ts`, `tests/map-codebase.test.ts`, `tests/cleanup-tools.test.ts`, and `tests/help-progress-health.test.ts`. These suites call repo-gated helpers such as `blueprintProjectInit`, `blueprintProjectStatus`, `blueprintArtifactValidate`, `blueprintArtifactList`, `blueprintArtifactReportWrite`, `blueprintStateLoad`, and `blueprintStateSync`.
+- `LOW`: The new guard shells out to `git rev-parse` on every `ensureRepoRoot()` call, broadening runtime `git` dependency and adding a subprocess to every repo-gated path. No functional break was observed beyond test fixture fallout.
+
+Open checks:
+
+- Manual probes showed real repo root, real worktree root, symlinked repo root, and nested subdirectory behavior was correct: real/symlink/worktree roots passed and nested subdirectories rejected.
+- Symlink-root behavior is not yet suite-protected.
+
+Tests run:
+
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts` - pass, `16/16`.
+- `npm run build --silent && npx tsx --test tests/new-project.test.ts tests/map-codebase.test.ts tests/cleanup-tools.test.ts tests/help-progress-health.test.ts` - fail, `56/66`, all on the new repo-root guard.

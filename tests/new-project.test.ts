@@ -25,6 +25,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigGet, blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");
@@ -39,11 +40,7 @@ async function pathExists(targetPath: string): Promise<boolean> {
 }
 
 async function createRepoFromFixture(fixtureName: string): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-new-project-"));
-  const repoPath = path.join(tempRoot, "repo");
-
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  const repoPath = await createGitRepo("blueprint-new-project-");
 
   const sourcePath = path.join(fixtureRoot, fixtureName);
 
