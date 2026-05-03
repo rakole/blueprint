@@ -1659,6 +1659,40 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const DEBUG_RUNTIME_METADATA: {
+    readonly commandName: "debug";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-debug";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: exploratory shell commands and test runs are likely.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-debugger"];
+    readonly requiredInputPaths: readonly ["commands/blu-debug.toml", "skills/blueprint-debug/references/debug-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-debug`";
+        readonly executionProfile: "interactive-read -> long-running-mutation when non-trivial";
+        readonly rootRoutable: true;
+        readonly purpose: "`debug` investigates a concrete issue, persists a durable debug-latest report, and stops at an explicit follow-up gate before todo capture or fix attempts.";
+        readonly reads: readonly ["project status, user-provided issue evidence, relevant local files, command outputs, and prior debug-latest report content when continuing"];
+        readonly writes: readonly [".blueprint/reports/debug-latest.md", "optional explicit follow-up todo through .blueprint/todos/TODO.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "debug";
+        readonly primarySkill: "blueprint-debug";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-debugger"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+        readonly contractNotes: "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const FAST_RUNTIME_METADATA: {
     readonly commandName: "fast";
     readonly sourceId: string;
@@ -3313,6 +3347,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly debug: {
+        readonly commandName: "debug";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-debug";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: exploratory shell commands and test runs are likely.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-debugger"];
+        readonly requiredInputPaths: readonly ["commands/blu-debug.toml", "skills/blueprint-debug/references/debug-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-debug`";
+            readonly executionProfile: "interactive-read -> long-running-mutation when non-trivial";
+            readonly rootRoutable: true;
+            readonly purpose: "`debug` investigates a concrete issue, persists a durable debug-latest report, and stops at an explicit follow-up gate before todo capture or fix attempts.";
+            readonly reads: readonly ["project status, user-provided issue evidence, relevant local files, command outputs, and prior debug-latest report content when continuing"];
+            readonly writes: readonly [".blueprint/reports/debug-latest.md", "optional explicit follow-up todo through .blueprint/todos/TODO.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "debug";
+            readonly primarySkill: "blueprint-debug";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-debugger"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
+            readonly contractNotes: "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

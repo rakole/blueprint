@@ -8,6 +8,12 @@ description: >
 status: implemented
 commands:
   - /blu-debug
+input_bundles:
+  shared: []
+  commands:
+    "/blu-debug":
+      - commands/blu-debug.toml
+      - skills/blueprint-debug/references/debug-runtime-contract.md
 ---
 
 # Blueprint Debug Skill
@@ -20,7 +26,12 @@ the right next step is a bounded fix, a saved plan, or more validation.
 
 ## Runtime Call Rules
 
-- Execution profile: `long-running-mutation`
+- Load only the active command's structured `input_bundles.commands[...]`
+  inputs for this invocation. `/blu-debug` does not use docs as active runtime
+  inputs.
+- Execution profile: start in `interactive-read` for lightweight evidence-backed
+  investigations that can stay concise, and escalate to
+  `long-running-mutation` only when the investigation becomes non-trivial.
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
@@ -28,8 +39,10 @@ the right next step is a bounded fix, a saved plan, or more validation.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose when the host makes it available.
-- Use Gemini CLI's internal `update_topic` tool to keep non-trivial debugging anchored on the active stage.
-- Use Gemini CLI's internal `write_todos` tool to maintain a compact visible checklist for non-trivial investigations.
+- Use Gemini CLI's internal `update_topic` tool only for non-trivial
+  investigations to keep the active stage visible.
+- Use Gemini CLI's internal `write_todos` tool only for non-trivial
+  investigations to maintain a compact visible checklist.
 - Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence, and they are not permission to capture persisted follow-up todos implicitly.
 
 ## Parity Goal
@@ -43,15 +56,19 @@ host-native boundaries:
 - diagnose-only runs stay distinct from fix attempts
 - routing stays inside the implemented Blueprint surface
 
-## Required Inputs
+## Local Runtime Inputs
 
-- `docs/commands/debug.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- the issue statement, repro notes, failing command, or other evidence the user supplied
+`/blu-debug` resolves active runtime inputs from the structured
+`input_bundles` frontmatter:
+
+- `commands/blu-debug.toml`
+- `skills/blueprint-debug/references/debug-runtime-contract.md`
+
+The earlier repository-doc-backed Required Inputs list is intentionally not a
+parsed section of this skill. Runtime execution must stay self-sufficient from
+the command manifest, this skill, the command-local runtime contract, live MCP
+tool contracts, and the issue statement, repro notes, failing command, or other
+evidence the user supplied.
 
 ## Required MCP Tools
 
@@ -72,6 +89,12 @@ host-native boundaries:
 ## Workflow Rules
 
 ### `debug`
+
+Load `skills/blueprint-debug/references/debug-runtime-contract.md` as the rich
+command-local runtime contract for this command. The summary below is the quick
+checklist; the reference owns the detailed stage mapping, persistence rules,
+diagnose-only gate, overwrite confirmation, session-local helper boundaries,
+and output-quality criteria.
 
 1. Require a concrete issue statement before deep investigation. If the request
    is too vague, ask for the failing behavior, expected behavior, and repro
@@ -104,7 +127,10 @@ host-native boundaries:
    route to `/blu-quick`, route to `/blu-plan-phase`, route to
    `/blu-validate-phase`, or defer to `/blu-progress` when multiple
    implemented next steps remain viable.
-10. Stop on an explicit follow-up gate after the diagnosis: keep the short menu visible as report-only, capture a todo, route to `/blu-quick`, route to `/blu-plan-phase`, or defer to `/blu-progress` when the saved-verification branch is not needed.
+10. Keep the short follow-up menu explicit: report-only, capture a todo only
+   after user ask or confirmation, route to `/blu-quick`, route to
+   `/blu-plan-phase`, route to `/blu-validate-phase`, or defer to
+   `/blu-progress`.
 11. Use `blueprint_artifact_mutate_index` only for explicit todo follow-up
    capture after the user asks to capture it or confirms that the diagnosis or
    saved report should become a persisted todo. Do not silently turn every

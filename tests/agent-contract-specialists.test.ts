@@ -269,6 +269,11 @@ test("debug specialist agent encodes bounded investigation and report-ready diag
 
   assert.match(debuggerAgent, /## Required Reads/);
   assert.match(debuggerAgent, /debug-latest\.md/);
+  assert.match(debuggerAgent, /`\/blu-debug` command manifest/i);
+  assert.match(debuggerAgent, /skill-local runtime contract/i);
+  assert.match(debuggerAgent, /live MCP or\s+runtime-contract inputs/i);
+  assert.match(debuggerAgent, /parent-provided command constraints/i);
+  assert.doesNotMatch(debuggerAgent, /locked Blueprint docs/i);
   assert.match(debuggerAgent, /## Investigation Protocol/);
   assert.match(debuggerAgent, /narrowest plausible repro path/i);
   assert.match(debuggerAgent, /confirmed`, `likely`, and `unproven`/);
