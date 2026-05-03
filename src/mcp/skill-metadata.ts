@@ -253,6 +253,14 @@ function isObject(
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function legacyRequiredInputsFallbackEnabled(
+  frontmatter: BlueprintSkillFrontmatterObject
+): boolean {
+  const value = frontmatter.legacy_required_inputs_fallback;
+
+  return typeof value === "string" && ["enabled", "true"].includes(value.toLowerCase());
+}
+
 export function resolveBlueprintSkillInputsFromContent(
   skillName: string,
   commandPath: string,
@@ -278,6 +286,23 @@ export function resolveBlueprintSkillInputsFromContent(
     const shared = asStringArray(rawBundles.shared);
     const rawCommands = isObject(rawBundles.commands) ? rawBundles.commands : {};
     const commandSpecific = asStringArray(rawCommands[commandPath]);
+
+    if (
+      commandSpecific.length === 0 &&
+      !(commandPath in rawCommands) &&
+      legacyRequiredInputsFallbackEnabled(frontmatter)
+    ) {
+      const legacyInputs = parseLegacyRequiredInputs(extracted.body);
+
+      if (legacyInputs.length > 0) {
+        return {
+          skill: skillName,
+          shared: legacyInputs,
+          commandSpecific: [],
+          effective: legacyInputs
+        };
+      }
+    }
 
     return {
       skill: skillName,

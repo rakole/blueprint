@@ -217,6 +217,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.deepEqual(advertisedCommands, expectedAdvertisedCommands);
   assert.ok(advertisedCommands.includes("help"));
   assert.ok(advertisedCommands.includes("impact"));
+  assert.ok(advertisedCommands.includes("add-phase"));
   assert.ok(!advertisedCommands.includes("do"));
   assert.ok(!advertisedCommands.includes("review"));
 
@@ -304,6 +305,25 @@ test("command runtime contract resource stays anchored to live catalog, command 
   await assert.rejects(
     buildBlueprintCommandRuntimeContractResource("do"),
     /Blueprint runtime-contract resources are available only for implemented commands: do/
+  );
+
+  const addPhaseContract = await buildBlueprintCommandRuntimeContractResource("add-phase");
+
+  assert.equal(addPhaseContract.spec?.path, "src/mcp/command-runtime-metadata.ts#add-phase");
+  assert.equal(
+    addPhaseContract.runtimeReference?.path,
+    "src/mcp/command-runtime-metadata.ts#add-phase"
+  );
+  assert.equal(
+    addPhaseContract.runtimeReference?.commandSpecPath,
+    "src/mcp/command-runtime-metadata.ts#add-phase"
+  );
+  assert.deepEqual(addPhaseContract.skillInputs.effective, [
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    addPhaseContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
 });
 
@@ -404,7 +424,13 @@ test("add-phase is implemented once manifest, skill, and roadmap MCP tools exist
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.ok(entry.manifestPath);
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, "src/mcp/command-runtime-metadata.ts#add-phase");
+  assert.ok(catalog.waves["2"].includes("add-phase"));
+  assert.equal(catalog.waves["2"].indexOf("add-phase"), 0);
+  assert.ok(
+    catalog.waves["2"].indexOf("add-phase") <
+      catalog.waves["2"].indexOf("insert-phase")
+  );
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_scaffold",
     "blueprint_roadmap_add_phase",

@@ -53,7 +53,8 @@ import {
 import { resolveAvailableOptionalAgents } from "../agent-definition.js";
 import {
   getRuntimeOwnedCommandMetadata,
-  NEW_PROJECT_RUNTIME_METADATA
+  listRuntimeOwnedCommandMetadata,
+  type RuntimeOwnedCommandMetadata
 } from "../command-runtime-metadata.js";
 
 type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
@@ -715,28 +716,59 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   };
 }
 
-async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalogResult> {
-  const parsedRow = {
-    commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
-    wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
-    family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
-    primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
-    declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
-    risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
-  };
-  const entry = await buildCommandCatalogEntry(parsedRow);
-
+function runtimeOwnedMetadataToParsedRow(
+  metadata: RuntimeOwnedCommandMetadata
+): ParsedCatalogRow {
   return {
-    commands: {
-      [parsedRow.commandName]: entry
-    },
-    waves: {
-      [String(parsedRow.wave)]: [parsedRow.commandName]
-    },
-    aliases: {
-      [parsedRow.commandName]: blueprintDirectCommandAliases(parsedRow.commandName)
-    }
+    commandName: metadata.commandName,
+    wave: metadata.catalog.wave,
+    family: metadata.catalog.family,
+    primarySkill: metadata.catalog.primarySkill,
+    declaredStatus: metadata.catalog.declaredStatus,
+    risk: metadata.catalog.risk
   };
+}
+
+async function addRuntimeOwnedCommandCatalogEntry(
+  result: CommandCatalogResult,
+  metadata: RuntimeOwnedCommandMetadata
+): Promise<void> {
+  const parsedRow = runtimeOwnedMetadataToParsedRow(metadata);
+  const entry = await buildCommandCatalogEntry(parsedRow);
+  const waveKey = String(parsedRow.wave);
+
+  result.commands[parsedRow.commandName] = entry;
+  result.waves[waveKey] ??= [];
+
+  if (!result.waves[waveKey].includes(parsedRow.commandName)) {
+    result.waves[waveKey].push(parsedRow.commandName);
+  }
+
+  result.aliases[parsedRow.commandName] = blueprintDirectCommandAliases(
+    parsedRow.commandName
+  );
+}
+
+async function addMissingRuntimeOwnedCommandCatalogEntries(
+  result: CommandCatalogResult
+): Promise<CommandCatalogResult> {
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    if (result.commands[metadata.commandName]) {
+      continue;
+    }
+
+    await addRuntimeOwnedCommandCatalogEntry(result, metadata);
+  }
+
+  return result;
+}
+
+async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalogResult> {
+  return addMissingRuntimeOwnedCommandCatalogEntries({
+    commands: {},
+    waves: {},
+    aliases: {}
+  });
 }
 
 async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
@@ -776,26 +808,8 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
       aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
     }
 
-    if (!commands[NEW_PROJECT_RUNTIME_METADATA.commandName]) {
-      const parsedRow = {
-        commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
-        wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
-        family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
-        primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
-        declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
-        risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
-      };
-      const entry = await buildCommandCatalogEntry(parsedRow);
-
-      commands[parsedRow.commandName] = entry;
-      const waveKey = String(parsedRow.wave);
-      waves[waveKey] ??= [];
-      waves[waveKey].push(parsedRow.commandName);
-      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
-    }
-
     return Object.keys(commands).length > 0
-      ? { commands, waves, aliases }
+      ? addMissingRuntimeOwnedCommandCatalogEntries({ commands, waves, aliases })
       : await buildRuntimeOwnedFallbackCommandCatalog();
   } catch {
     return buildRuntimeOwnedFallbackCommandCatalog();

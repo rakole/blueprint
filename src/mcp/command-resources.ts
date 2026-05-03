@@ -4,7 +4,9 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 
 import {
   getRuntimeOwnedCommandMetadata,
-  getRuntimeOwnedCommandMetadataBySourceId
+  getRuntimeOwnedCommandMetadataBySourceId,
+  listRuntimeOwnedCommandMetadata,
+  type RuntimeOwnedCommandMetadata
 } from "./command-runtime-metadata.js";
 import { loadBlueprintSkillInputs, type BlueprintSkillResolvedInputs } from "./skill-metadata.js";
 import { blueprintCommandCatalog } from "./tools/project.js";
@@ -230,6 +232,24 @@ function isExposedRuntimeContractCatalogEntry(entry: CommandCatalogEntry): boole
   return entry.status === "implemented" && entry.implemented;
 }
 
+function runtimeOwnedMetadataToRuntimeReferenceRow(
+  metadata: RuntimeOwnedCommandMetadata
+): BlueprintRuntimeReferenceRowResource {
+  return {
+    path: metadata.runtimeReference.path,
+    wave: metadata.catalog.wave,
+    waveTitle: metadata.runtimeReference.waveTitle,
+    command: metadata.runtimeReference.command,
+    commandSpecPath: metadata.sourceId,
+    primarySkill: metadata.runtimeReference.primarySkill,
+    exactMcpDestination: [...metadata.runtimeReference.exactMcpDestination],
+    optionalAgents: [...metadata.runtimeReference.optionalAgents],
+    hookInvolvement: [...metadata.runtimeReference.hookInvolvement],
+    contractNotes: metadata.runtimeReference.contractNotes,
+    evidenceState: [...metadata.runtimeReference.evidenceState]
+  };
+}
+
 async function readBlueprintRuntimeReferenceRows(): Promise<
   Map<string, BlueprintRuntimeReferenceRowResource>
 > {
@@ -237,22 +257,9 @@ async function readBlueprintRuntimeReferenceRows(): Promise<
   const rows = runtimeReferenceMarkdown
     ? parseRuntimeReferenceRows(runtimeReferenceMarkdown)
     : new Map<string, BlueprintRuntimeReferenceRowResource>();
-  const newProjectMetadata = getRuntimeOwnedCommandMetadata("new-project");
 
-  if (newProjectMetadata) {
-    rows.set(newProjectMetadata.commandName, {
-      path: newProjectMetadata.runtimeReference.path,
-      wave: newProjectMetadata.catalog.wave,
-      waveTitle: newProjectMetadata.runtimeReference.waveTitle,
-      command: newProjectMetadata.runtimeReference.command,
-      commandSpecPath: newProjectMetadata.sourceId,
-      primarySkill: newProjectMetadata.runtimeReference.primarySkill,
-      exactMcpDestination: [...newProjectMetadata.runtimeReference.exactMcpDestination],
-      optionalAgents: [...newProjectMetadata.runtimeReference.optionalAgents],
-      hookInvolvement: [...newProjectMetadata.runtimeReference.hookInvolvement],
-      contractNotes: newProjectMetadata.runtimeReference.contractNotes,
-      evidenceState: [...newProjectMetadata.runtimeReference.evidenceState]
-    });
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    rows.set(metadata.commandName, runtimeOwnedMetadataToRuntimeReferenceRow(metadata));
   }
 
   return rows;
