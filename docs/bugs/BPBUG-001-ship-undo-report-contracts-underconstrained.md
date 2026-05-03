@@ -217,3 +217,66 @@ No source, manifest, skill, test, generated asset, or runtime behavior fix was a
 - Tightening headings/markers may make old broad `ship-latest` or `undo-latest` bodies invalid on reuse; this is acceptable for high-risk evidence repair, but mention it in release notes if needed.
 - Structural Markdown validation still cannot prove semantic truth of values such as `none`; schema-first report models would be a larger future hardening task.
 - Gemini task tracker is experimental, so durable report content must not rely on tracker availability.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `PASS`.
+
+Findings:
+
+- `BLOCKER`: none.
+- `HIGH`: none.
+- `MEDIUM/LOW/INFO`: The BPBUG-001 minimal report probe strings now fail validation with missing locked markers and missing required sections. This is expected and matches the repair plan, but it is a behavior change for legacy thin `ship-latest` or `undo-latest` reports.
+
+Evidence checked:
+
+- `report.ship` and `report.undo` reject the BPBUG-001 minimal reports.
+- Canonical ship/undo templates reject themselves until placeholders are replaced.
+- Populated ship/undo fixtures validate through `validateReportArtifactContent`.
+- `blueprint_artifact_report_write` still uses existing validation through `validateReportArtifactContent`; no custom write path or model schema was added.
+- `commands/blu-ship.toml` reads `report.ship` before persisting `ship-latest` with the bare report name.
+- `commands/blu-undo.toml` reads `report.undo` before persisting `undo-latest` with the bare report name.
+- `update_topic`, `write_todos`, and tracker state remain session-local and non-durable.
+- Runtime catalog probe returned `status: "implemented"` and `requiredToolsSatisfied: true` for `ship` and `undo`, with `blueprint_artifact_contract_read` present in required tools.
+- `git diff --name-only origin/main..HEAD` was limited to command/docs/skill/contracts/tests; no `dist/`, extension manifest, installed extension, or host-global state change was present.
+
+Tests run:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/mcp-contract-audit-metadata.test.ts` - pass, `67/67`.
+
+### Code Reviewer Report
+
+No `CRITICAL` or `HIGH` issues found. The BPBUG-001 tightening was internally consistent across templates, contracts, manifests, docs, and tests, and the targeted suite passed.
+
+Findings:
+
+- `MEDIUM`: `report.ship` uses a nested placeholder for the config line, such as `<git.base_branch=<value>; ...>`. The validator flags exact `placeholderSignals` substrings, so a partially edited line that still contains inner `<value>` tokens but no longer contains the full original placeholder string could incorrectly pass placeholder detection. Recommended fix: use a single non-nested placeholder token for the whole field or add narrower placeholder signals.
+- `LOW`: `docs/RUNTIME-REFERENCE.md` still omits `blueprint_artifact_contract_read` from the `ship`/`undo` exact MCP destination table column even though the manifests require it and nearby prose mentions it. This may confuse readers who treat the column as canonical.
+
+Tests run:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/pr-branch-metadata.test.ts tests/ship-metadata.test.ts tests/undo-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/mcp-contract-audit-metadata.test.ts` - pass, `67/67`.
+
+Residual risk:
+
+- Old pre-BPBUG-001 minimal reports are intentionally invalid under the tightened contracts, so future reuse flows should regenerate from the new authoring template.
+- Ship/undo validators remain structural unless follow-up semantic validation is added.
+
+### Bug Finder Report
+
+No `CRITICAL` findings. Remaining issues found: `2 HIGH`, `1 MEDIUM`, `1 LOW`.
+
+Findings:
+
+- `HIGH`: `commands/blu-ship.toml` writes `ship-latest` before remote mutation but does not require a second `blueprint_artifact_report_write` after approved push/PR steps complete. The durable report can remain stuck at the preflight plan and miss actual push outcome, PR outcome, fallback notes, and post-mutation evidence. Recommended fix: keep the pre-mutation report write, then explicitly overwrite `ship-latest` after the push/PR attempt with actual outcomes.
+- `HIGH`: `commands/blu-undo.toml` writes `undo-latest` before `git revert` but does not require a second write after the revert succeeds, fails, or stops on conflicts. The durable report can omit the actual mutation outcome and blockers. Recommended fix: keep the pre-mutation report write, then explicitly overwrite `undo-latest` after the revert attempt with final outcome and blockers.
+- `MEDIUM`: Ship/undo report validation still false-accepts semantically invalid safety records because the Markdown validator only checks H1, headings, locked markers, and placeholder removal. A probe returned `valid: true` for a ship report with values such as `Execution mode: yolo` and `Push requested: maybe`, and for an undo report with `Approved git commands: git reset --hard HEAD~1` plus `Forbidden-command check: passed`. Recommended fix: add ship/undo-specific semantic validation for allowed enum values and forbidden destructive undo commands, with negative tests.
+- `LOW`: The runtime-reference exact MCP destination table omits `blueprint_artifact_contract_read` for `ship` and `undo`, while tests assert that incomplete column. Recommended fix: update the table and assertions together. This is tracked as low severity and is not part of the required critical/high/medium remediation pass.
+
+Tests run:
+
+- `npx tsx --test tests/ship-metadata.test.ts tests/undo-metadata.test.ts` - pass, `8/8`.
