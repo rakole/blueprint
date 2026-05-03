@@ -4,7 +4,7 @@ title: Cleanup lacks behavioral regression coverage for protected-scope archival
 severity: medium
 confidence: confirmed
 surface: tests
-status: new
+status: fixed
 discovery_phase: 6
 reported: 2026-05-02
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-02
 - Severity: `medium`
 - Confidence: `confirmed`
 - Surface: `tests`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -90,6 +90,26 @@ None known. The coverage gap is confirmed by command/doc inspection, cleanup-spe
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commits:
+
+- `e034e40` locked cleanup destructive confirmation guidance to Gemini-native `ask_user` gates without changing the Blueprint MCP tool surface.
+- `e7b7918` added the initial cleanup behavior regression suite.
+- `571f591` hardened the behavior fixture to use completed historical milestones outside the active roadmap, bind tested invariants to live manifest/skill text, and exercise true partial archive failure.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/cleanup-behavior.test.ts tests/cleanup-tools.test.ts tests/cleanup-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts` - pass, `109/109`.
+- `npm test` - pass, `845/845`.
+
+Residual note:
+
+- Cleanup remains prompt-orchestrated rather than a dedicated cleanup executor MCP tool. The repair adds executable fixture coverage for the intended invariants and contract assertions against the live manifest/skill, but it does not introduce a new runtime cleanup tool.
 
 ## Repair Plan - 2026-05-03
 
