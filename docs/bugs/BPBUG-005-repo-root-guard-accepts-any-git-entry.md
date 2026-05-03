@@ -4,7 +4,7 @@ title: Repo-root guard accepts any `.git` entry as a valid repository
 severity: medium
 confidence: confirmed
 surface: cross-cutting
-status: new
+status: fixed
 discovery_phase: 8
 reported: 2026-05-02
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-02
 - Severity: `medium`
 - Confidence: `confirmed`
 - Surface: `cross-cutting`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -82,6 +82,26 @@ Root-cause cluster: `repo-root validation gaps`. No same-repair-path peer is kno
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commits:
+
+- `98540b4` replaced `.git` existence-only repo-root gating with Git-backed `rev-parse --show-toplevel` validation plus realpath top-level comparison.
+- `871dd47` added focused fake `.git` file/directory rejection, real worktree-root acceptance, and real Git fixture helpers for targeted tests.
+- `4d5576a` migrated repo-gated test fixtures to real Git repos, added symlink-root and nested-subdirectory regressions, fixed temp cleanup, and refreshed tracked `dist/mcp/server.js` outputs.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/security-hardening.test.ts tests/artifact-validate-runtime.test.ts tests/workspace-tools.test.ts` - pass, `43/43`.
+- `npm test` - pass, `851/851`.
+
+Residual note:
+
+- Repo-gated tools now require the Git CLI to validate repository roots. This is aligned with Blueprint's Git-backed repo assumptions and is now covered by full-suite fixture migration.
 
 ## Repair Plan - 2026-05-03
 
