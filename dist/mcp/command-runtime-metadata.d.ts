@@ -272,6 +272,40 @@ export declare const DISCUSS_PHASE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const PLAN_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "plan-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-planning";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: can replace plans and change downstream execution order.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_write", "blueprint_phase_plan_validate", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-plan-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.";
+        readonly reads: readonly ["Phase resolution, context, planning readiness, saved discovery artifacts, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."];
+        readonly writes: readonly ["structured phase.plan JSON through blueprint_phase_plan_write", ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write", ".blueprint/STATE.md through synced state update"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "plan-phase";
+        readonly primarySkill: "blueprint-phase-planning";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_validate", "blueprint_phase_plan_write", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: \"strict\" and authoringMode: \"model-only\", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const RESEARCH_PHASE_RUNTIME_METADATA: {
     readonly commandName: "research-phase";
     readonly sourceId: string;
@@ -1585,6 +1619,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps contract.authoringTemplate as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "plan-phase": {
+        readonly commandName: "plan-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-planning";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: can replace plans and change downstream execution order.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_write", "blueprint_phase_plan_validate", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-plan-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.";
+            readonly reads: readonly ["Phase resolution, context, planning readiness, saved discovery artifacts, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."];
+            readonly writes: readonly ["structured phase.plan JSON through blueprint_phase_plan_write", ".blueprint/phases/<phase>/<phase-prefix>-<plan-id>-PLAN.md (XX-YY-PLAN.md) through blueprint_phase_plan_write", ".blueprint/STATE.md through synced state update"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "plan-phase";
+            readonly primarySkill: "blueprint-phase-planning";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_validate", "blueprint_phase_plan_write", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: \"strict\" and authoringMode: \"model-only\", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

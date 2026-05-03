@@ -106,13 +106,12 @@ test("plan-phase skill resolves its slim command-scoped input bundle", async () 
   assert.equal(inputs.skill, "blueprint-phase-planning");
   assert.deepEqual(inputs.shared, []);
   assert.deepEqual(inputs.commandSpecific, [
-    "docs/commands/plan-phase.md",
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
   assert.deepEqual(inputs.effective, [
-    "docs/commands/plan-phase.md",
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
 test("roadmap-admin add-phase resolves docless command-scoped input override", async () => {
