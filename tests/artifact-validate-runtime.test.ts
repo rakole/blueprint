@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -10,15 +9,14 @@ import {
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
+import { createCommittedGitRepo } from "./helpers/git-fixtures.js";
 
 async function createVerifyWorkFixtureRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-verify-work-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createCommittedGitRepo("blueprint-verify-work-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-validation"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "# Roadmap\n", "utf8");
@@ -51,11 +49,9 @@ async function createVerifyWorkFixtureRepo(): Promise<string> {
 async function createThinBootstrapFixtureRepo(
   includePhaseArtifact = false
 ): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-bootstrap-validate-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createCommittedGitRepo("blueprint-bootstrap-validate-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "# Roadmap\n", "utf8");
@@ -84,12 +80,9 @@ async function createThinBootstrapFixtureRepo(
 async function createLegacyCompatibilityFixtureRepo(
   includeDiscoveryPhase = false
 ): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-compat-validate-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createCommittedGitRepo("blueprint-compat-validate-");
 
-  await mkdir(repoPath, { recursive: true });
   await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(
     path.join(repoPath, ".blueprint/PROJECT.md"),
     "# Project\n\n## Vision\n\nKeep runtime and tests aligned.\n",

@@ -13,6 +13,7 @@ import path from "node:path";
 
 import {
   blueprintArtifactReportWrite,
+  ensureRepoRoot,
   resolveRepoRelativePath
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintReviewRecord } from "../src/mcp/tools/review.js";
@@ -20,13 +21,13 @@ import {
   prepareTextForPersistence,
   safeJsonParseObject
 } from "../src/shared/security.js";
+import {
+  createCommittedGitRepo,
+  createCommittedGitWorktree
+} from "./helpers/git-fixtures.js";
 
 async function createRepoRoot(prefix: string): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), prefix));
-  const repoPath = path.join(tempRoot, "repo");
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
-  return repoPath;
+  return createCommittedGitRepo(prefix);
 }
 
 async function createSecurePhaseRepo(): Promise<string> {
@@ -250,6 +251,44 @@ test("shared JSON parsing enforces object shape and size limits", () => {
       }),
     /safety limit/i
   );
+});
+
+test("ensureRepoRoot rejects a fake .git file containing arbitrary text", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-security-fake-git-file-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await mkdir(repoPath, { recursive: true });
+  await writeFile(path.join(repoPath, ".git"), "definitely not git metadata\n", "utf8");
+
+  await assert.rejects(() => ensureRepoRoot(repoPath), /repository root/i);
+});
+
+test("ensureRepoRoot rejects a fake .git directory that is not a Git repository", async (t) => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-security-fake-git-dir-"));
+  const repoPath = path.join(tempRoot, "repo");
+
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".git"), { recursive: true });
+
+  await assert.rejects(() => ensureRepoRoot(repoPath), /repository root/i);
+});
+
+test("ensureRepoRoot accepts a real Git worktree root with a valid gitdir file", async (t) => {
+  const { worktreePath } = await createCommittedGitWorktree("blueprint-security-worktree-root-");
+
+  t.after(async () => {
+    await rm(path.dirname(path.dirname(worktreePath)), { recursive: true, force: true });
+  });
+
+  await assert.doesNotReject(() => ensureRepoRoot(worktreePath));
+  assert.equal(await ensureRepoRoot(worktreePath), worktreePath);
 });
 
 test("repo-relative path resolution blocks traversal, absolute-path misuse, and symlink escapes", async (t) => {
