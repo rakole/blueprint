@@ -16,6 +16,8 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { MAP_CODEBASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import {
   CODEBASE_ARTIFACTS,
   blueprintArtifactList,
@@ -646,6 +648,44 @@ test("map-codebase command file uses runtime FQNs and explicit repo-relative art
   assert.match(agentFile, /map-runtime-contract\.md/);
   assert.match(agentFile, /concise evidence paths and concrete repo signals/i);
   assert.match(agentFile, /Do not use browser, web, generic page-inspection, or search-only agents/i);
+});
+
+test("map-codebase runtime metadata mirrors key command contract details", async () => {
+  const contract = await buildBlueprintCommandRuntimeContractResource("map-codebase");
+
+  assert.equal(MAP_CODEBASE_RUNTIME_METADATA.sourceId, "src/mcp/command-runtime-metadata.ts#map-codebase");
+  assert.equal(contract.catalog.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.equal(contract.spec?.rootRoutable, true);
+  assert.deepEqual(contract.spec?.reads, []);
+  assert.deepEqual(contract.spec?.writes, [
+    ".blueprint/codebase/STACK.md",
+    ".blueprint/codebase/ARCHITECTURE.md",
+    ".blueprint/codebase/STRUCTURE.md",
+    ".blueprint/codebase/CONVENTIONS.md",
+    ".blueprint/codebase/TESTING.md",
+    ".blueprint/codebase/INTEGRATIONS.md",
+    ".blueprint/codebase/CONCERNS.md"
+  ]);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    "blueprint_project_status",
+    "blueprint_artifact_contract_read",
+    "blueprint_artifact_scaffold",
+    "blueprint_artifact_list",
+    "blueprint_artifact_summary_digest",
+    "blueprint_codebase_artifact_write",
+    "blueprint_artifact_validate"
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-mapper"]);
+  assert.deepEqual(contract.runtimeReference?.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /local map runtime contract/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /focus areas as targeted deepening/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /contract\.authoringTemplate/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /inputsUsed as authoritative/i);
 });
 
 test("map-codebase runtime reference defines rich canonical templates and fallback behavior", async () => {

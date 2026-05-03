@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { promises as fs } from "node:fs";
 import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 
 import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
 import {
@@ -18,6 +19,7 @@ import {
   CODE_REVIEW_RUNTIME_METADATA,
   CLEANUP_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
+  MAP_CODEBASE_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
   NEW_WORKSPACE_RUNTIME_METADATA,
@@ -198,7 +200,14 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     ...NEW_PROJECT_RUNTIME_METADATA.optionalAgents
   ]);
   assert.equal(catalog.commands["new-project"].risk, NEW_PROJECT_RUNTIME_METADATA.catalog.risk);
-  assert.equal(catalog.commands["map-codebase"].specPath, "docs/commands/map-codebase.md");
+  assert.equal(catalog.commands["map-codebase"].specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(catalog.commands["map-codebase"].requiredTools, [
+    ...MAP_CODEBASE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["map-codebase"].optionalAgents, [
+    ...MAP_CODEBASE_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(catalog.commands["map-codebase"].risk, MAP_CODEBASE_RUNTIME_METADATA.catalog.risk);
   assert.equal(catalog.commands.help.specPath, "docs/commands/help.md");
 
   const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
@@ -916,7 +925,6 @@ test("implemented commands expose their declared optional agent contracts when s
 test("map-codebase is implemented once the brownfield mapping contract and tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["map-codebase"];
-  const commandDoc = await readRelativePath("docs/commands/map-codebase.md");
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
@@ -924,19 +932,70 @@ test("map-codebase is implemented once the brownfield mapping contract and tools
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.equal(entry.manifestPath, "commands/blu-map-codebase.toml");
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
-  assert.deepEqual([...entry.requiredTools].sort(), [
-    "blueprint_artifact_contract_read",
-    "blueprint_artifact_list",
-    "blueprint_artifact_scaffold",
-    "blueprint_artifact_summary_digest",
-    "blueprint_artifact_validate",
-    "blueprint_codebase_artifact_write",
-    "blueprint_project_status"
-  ].sort());
+  assert.equal(entry.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...MAP_CODEBASE_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(entry.optionalAgents, [...MAP_CODEBASE_RUNTIME_METADATA.optionalAgents]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-mapper"]);
   assert.deepEqual(entry.blockedBy, []);
-  assert.match(commandDoc ?? "", /\| Execution profile \| `long-running-mutation` \|/);
+});
+
+test("map-codebase runtime contract builds from metadata when docs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (
+      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
+      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
+      normalizedPath.includes("/docs/commands/")
+    ) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const contract = await buildBlueprintCommandRuntimeContractResource("map-codebase");
+
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.specPath, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.reads, []);
+  assert.deepEqual(contract.spec?.writes, [...MAP_CODEBASE_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, MAP_CODEBASE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    MAP_CODEBASE_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...MAP_CODEBASE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-mapper"]);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-map-codebase.toml",
+    "skills/blueprint-map/references/map-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-map-codebase.toml",
+    "skills/blueprint-map/references/map-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.doesNotMatch(JSON.stringify(contract.skillInputs), /docs\//);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /reuse as the default/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /ask_user confirmation/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /\/blu-new-project/i);
 });
 
 test("research-phase is implemented once manifest, skill, and external-policy-aware tools exist", async () => {

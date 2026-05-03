@@ -519,7 +519,19 @@ const REAPPLY_PATCHES_REQUIRED_TOOLS = [
   "blueprint_patch_record"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const MAP_CODEBASE_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_scaffold",
+  "blueprint_artifact_list",
+  "blueprint_artifact_summary_digest",
+  "blueprint_codebase_artifact_write",
+  "blueprint_artifact_validate"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
+const MAP_CODEBASE_SPEC_PATH =
+  "skills/blueprint-map/references/map-runtime-contract.md";
 const DISCUSS_PHASE_SPEC_PATH =
   "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
 const LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH =
@@ -612,6 +624,7 @@ const QUICK_OPTIONAL_AGENTS = [
   "blueprint-executor",
   "blueprint-verifier"
 ] as const;
+const MAP_CODEBASE_OPTIONAL_AGENTS = ["blueprint-mapper"] as const;
 
 function runtimeMetadataSourceId(commandName: string): string {
   return `${RUNTIME_METADATA_PATH}#${commandName}`;
@@ -653,6 +666,55 @@ export const PROGRESS_RUNTIME_METADATA = {
     contractNotes:
       "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const MAP_CODEBASE_RUNTIME_METADATA = {
+  commandName: "map-codebase",
+  sourceId: runtimeMetadataSourceId("map-codebase"),
+  catalog: {
+    wave: 0,
+    family: "Foundation",
+    primarySkill: "blueprint-map",
+    declaredStatus: "implemented",
+    risk:
+      "Medium: refresh mode can replace existing codebase-mapping artifacts."
+  },
+  requiredTools: MAP_CODEBASE_REQUIRED_TOOLS,
+  optionalAgents: MAP_CODEBASE_OPTIONAL_AGENTS,
+  requiredInputPaths: [
+    "commands/blu-map-codebase.toml",
+    MAP_CODEBASE_SPEC_PATH
+  ],
+  spec: {
+    path: runtimeMetadataSourceId("map-codebase"),
+    title: "`/blu-map-codebase`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle. Focus areas deepen the same bundle instead of creating a separate suffix-only mode.",
+    reads: [],
+    writes: [
+      ".blueprint/codebase/STACK.md",
+      ".blueprint/codebase/ARCHITECTURE.md",
+      ".blueprint/codebase/STRUCTURE.md",
+      ".blueprint/codebase/CONVENTIONS.md",
+      ".blueprint/codebase/TESTING.md",
+      ".blueprint/codebase/INTEGRATIONS.md",
+      ".blueprint/codebase/CONCERNS.md"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("map-codebase"),
+    waveTitle: "Foundation",
+    command: "map-codebase",
+    primarySkill: "blueprint-map",
+    exactMcpDestination: MAP_CODEBASE_REQUIRED_TOOLS,
+    optionalAgents: MAP_CODEBASE_OPTIONAL_AGENTS,
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
@@ -2200,6 +2262,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
   [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
   [PROGRESS_RUNTIME_METADATA.commandName]: PROGRESS_RUNTIME_METADATA,
+  [MAP_CODEBASE_RUNTIME_METADATA.commandName]: MAP_CODEBASE_RUNTIME_METADATA,
   [SETTINGS_RUNTIME_METADATA.commandName]: SETTINGS_RUNTIME_METADATA,
   [SET_PROFILE_RUNTIME_METADATA.commandName]: SET_PROFILE_RUNTIME_METADATA,
   [HEALTH_RUNTIME_METADATA.commandName]: HEALTH_RUNTIME_METADATA,

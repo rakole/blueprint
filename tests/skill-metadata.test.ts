@@ -132,6 +132,26 @@ test("roadmap-admin add-phase resolves docless command-scoped input override", a
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
+test("map-codebase resolves docs-free manifest and local runtime-contract inputs", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-map",
+    "/blu-map-codebase",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-map");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "commands/blu-map-codebase.toml",
+    "skills/blueprint-map/references/map-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "commands/blu-map-codebase.toml",
+    "skills/blueprint-map/references/map-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
 test("capture commands resolve only command-scoped manifest inputs", async () => {
   const expectations = [
     ["note", "commands/blu-note.toml"],
