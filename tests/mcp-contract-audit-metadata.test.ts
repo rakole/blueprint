@@ -667,7 +667,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     cleanupCommand,
     cleanupDoc,
     mapCodebaseCommand,
-    mapCodebaseDoc,
+    mapCodebaseReference,
     mapSkill,
     healthCommand,
     healthReference
@@ -685,7 +685,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     readRepoFile("commands/blu-cleanup.toml"),
     readRepoFile("docs/commands/cleanup.md"),
     readRepoFile("commands/blu-map-codebase.toml"),
-    readRepoFile("docs/commands/map-codebase.md"),
+    readRepoFile("skills/blueprint-map/references/map-runtime-contract.md"),
     readRepoFile("skills/blueprint-map/SKILL.md"),
     readRepoFile("commands/blu-health.toml"),
     readRepoFile("skills/blueprint-governance/references/health-runtime-contract.md")
@@ -775,16 +775,14 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
   assert.match(mapCodebaseCommand, /evidence-density/i);
   assert.match(mapCodebaseCommand, /one-document-at-a-time main-agent fallback/i);
   assert.match(mapCodebaseCommand, /status: "invalid"/);
-  assert.match(mapCodebaseDoc, /ask_user/i);
-  assert.match(mapCodebaseDoc, /blueprint_artifact_contract_read/i);
-  assert.match(mapCodebaseDoc, /blueprint_codebase_artifact_write/i);
-  assert.match(mapCodebaseDoc, /blueprint_artifact_validate/i);
-  assert.match(mapCodebaseDoc, /Existing codebase docs should be reused by default\./i);
-  assert.match(mapCodebaseDoc, /## Mapping Artifact Contract/);
-  assert.match(mapCodebaseDoc, /rich canonical authoring/i);
-  assert.match(mapCodebaseDoc, /evidence-density/i);
-  assert.match(mapCodebaseDoc, /one artifact at a time/i);
-  assert.match(mapCodebaseDoc, /status: "invalid"/);
+  assert.match(mapCodebaseReference, /blueprint_artifact_contract_read/i);
+  assert.match(mapCodebaseReference, /blueprint_codebase_artifact_write/i);
+  assert.match(mapCodebaseReference, /blueprint_artifact_validate/i);
+  assert.match(mapCodebaseReference, /reused by default/i);
+  assert.match(mapCodebaseReference, /richness and evidence authority/i);
+  assert.match(mapCodebaseReference, /path-backed analysis/i);
+  assert.match(mapCodebaseReference, /one artifact at a time/i);
+  assert.match(mapCodebaseReference, /status: "invalid"/);
   assert.match(mapSkill, /ask_user/i);
   assert.match(mapSkill, /blueprint_artifact_contract_read/i);
   assert.match(mapSkill, /blueprint_codebase_artifact_write/i);

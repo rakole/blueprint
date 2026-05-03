@@ -11,6 +11,12 @@ description: >
 status: implemented
 commands:
   - /blu-map-codebase
+input_bundles:
+  shared: []
+  commands:
+    /blu-map-codebase:
+      - commands/blu-map-codebase.toml
+      - skills/blueprint-map/references/map-runtime-contract.md
 ---
 
 # Blueprint Map Skill

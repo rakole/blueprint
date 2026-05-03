@@ -136,6 +136,40 @@ export declare const PROGRESS_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const MAP_CODEBASE_RUNTIME_METADATA: {
+    readonly commandName: "map-codebase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 0;
+        readonly family: "Foundation";
+        readonly primarySkill: "blueprint-map";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: refresh mode can replace existing codebase-mapping artifacts.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+    readonly optionalAgents: readonly ["blueprint-mapper"];
+    readonly requiredInputPaths: readonly ["commands/blu-map-codebase.toml", "skills/blueprint-map/references/map-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-map-codebase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle. Focus areas deepen the same bundle instead of creating a separate suffix-only mode.";
+        readonly reads: readonly [];
+        readonly writes: readonly [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Foundation";
+        readonly command: "map-codebase";
+        readonly primarySkill: "blueprint-map";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+        readonly optionalAgents: readonly ["blueprint-mapper"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const SETTINGS_RUNTIME_METADATA: {
     readonly commandName: "settings";
     readonly sourceId: string;
@@ -1484,6 +1518,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly [];
             readonly contractNotes: "Router profile; preserve read-only next-step guidance from MCP-owned project status, config, state, artifact inventory, and implemented command catalog.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "map-codebase": {
+        readonly commandName: "map-codebase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 0;
+            readonly family: "Foundation";
+            readonly primarySkill: "blueprint-map";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: refresh mode can replace existing codebase-mapping artifacts.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+        readonly optionalAgents: readonly ["blueprint-mapper"];
+        readonly requiredInputPaths: readonly ["commands/blu-map-codebase.toml", "skills/blueprint-map/references/map-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-map-codebase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`map-codebase` analyzes a brownfield codebase with mapper-style passes and produces the stable seven-document Blueprint codebase bundle. Focus areas deepen the same bundle instead of creating a separate suffix-only mode.";
+            readonly reads: readonly [];
+            readonly writes: readonly [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Foundation";
+            readonly command: "map-codebase";
+            readonly primarySkill: "blueprint-map";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+            readonly optionalAgents: readonly ["blueprint-mapper"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
     readonly settings: {
