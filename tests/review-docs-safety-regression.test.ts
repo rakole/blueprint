@@ -215,38 +215,38 @@ test("review remediation contracts stay bounded to saved evidence and approved s
 
 test("docs contracts keep repo truth authoritative and external verification opt-in", async () => {
   const files = await readRepoFiles([
-    "docs/commands/docs-update.md",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md",
     "skills/blueprint-docs/SKILL.md"
   ]);
 
-  const docsUpdate = files["docs/commands/docs-update.md"];
+  const docsUpdate = files["skills/blueprint-docs/references/docs-update-runtime-contract.md"];
   assert.match(
     docsUpdate,
-    /resolved scope must stay tied to the selected doc files plus the digest `inputsUsed`/i
+    /Resolve the documentation scope before drafting or verification/i
   );
   assert.match(
     docsUpdate,
-    /Treat the returned `inputsUsed` list as the authoritative digest scope instead of re-describing or widening the evidence set afterward/i
+    /Treat returned `inputsUsed` as the authoritative digest scope/i
   );
   assert.match(
     docsUpdate,
-    /repo truth must stay distinct from cited external truth whenever the run actually uses outside sources/i
+    /Keep cited external truth separate from repo truth/i
   );
   assert.match(
     docsUpdate,
-    /treats external source checks as optional cited evidence instead of a substitute for repo truth/i
+    /Use external web verification only when the user explicitly requested it/i
   );
   assert.match(
     docsUpdate,
-    /When external verification is genuinely needed, keep cited external truth separate in the report instead of flattening it into the same evidence claim/i
+    /a\s+claim depends on current external API, library, product, or standards facts/i
   );
   assert.match(
     docsUpdate,
-    /Continue with repo truth only and report that external verification was skipped when web tools are unavailable/i
+    /If external verification was requested but unavailable, continue\s+from repo truth and say what was skipped/i
   );
   assert.match(
     docsUpdate,
-    /Route broad evidence-light refreshes to `\/blu-map-codebase` instead of improvising documentation from chat memory/i
+    /If a broad refresh lacks the saved codebase mapping bundle, stop and route to\s+`\/blu-map-codebase`/i
   );
 
   const docsSkill = files["skills/blueprint-docs/SKILL.md"];

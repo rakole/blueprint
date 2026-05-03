@@ -8,6 +8,12 @@ description: >
 status: implemented
 commands:
   - /blu-docs-update
+input_bundles:
+  shared: []
+  commands:
+    "/blu-docs-update":
+      - commands/blu-docs-update.toml
+      - skills/blueprint-docs/references/docs-update-runtime-contract.md
 ---
 
 # Blueprint Docs Skill
@@ -36,17 +42,13 @@ Blueprint's host-native boundaries:
 - repo doc edits stay narrowly scoped instead of becoming a broad rewrite pass
 - follow-up routing stays inside the implemented Blueprint surface
 
-## Required Inputs
+## Runtime Inputs
 
-- `docs/commands/docs-update.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- the targeted repo docs selected for the current pass
-- relevant code, tests, and any existing `.blueprint/codebase/` artifacts that
-  verify the documentation claims
+Command-specific inputs are resolved from the structured `input_bundles`
+frontmatter for `/blu-docs-update`: load the command manifest and the local
+runtime contract, then use MCP tools, resources, artifact contracts, selected
+repo documentation files, relevant source or test files, saved Blueprint
+artifacts, and optional docs agents when the command contract allows them.
 
 ## Required MCP Tools
 

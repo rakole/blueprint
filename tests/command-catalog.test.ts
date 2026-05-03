@@ -18,6 +18,7 @@ import {
 import {
   CODE_REVIEW_RUNTIME_METADATA,
   CLEANUP_RUNTIME_METADATA,
+  DOCS_UPDATE_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
   MAP_CODEBASE_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA,
@@ -1752,6 +1753,74 @@ test("docs-update is implemented once manifest, skill, and docs-report MCP tools
     "blueprint-doc-writer"
   ]);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("docs-update runtime contract builds from metadata and local skill inputs when docs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (
+      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
+      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
+      normalizedPath.includes("/docs/commands/")
+    ) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const contract = await buildBlueprintCommandRuntimeContractResource("docs-update");
+
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.specPath, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.requiredTools, [
+    ...DOCS_UPDATE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.spec?.writes, [...DOCS_UPDATE_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    DOCS_UPDATE_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...DOCS_UPDATE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents.sort(), [
+    "blueprint-doc-verifier",
+    "blueprint-doc-writer"
+  ]);
+  assert.deepEqual(contract.runtimeReference?.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /digest inputsUsed/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /bare reportName docs-update-latest/i);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /implemented follow-ups/i);
 });
 
 test("pr-branch is implemented once manifest, skill, and review-branch report MCP tools exist", async () => {

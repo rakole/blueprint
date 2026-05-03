@@ -435,6 +435,13 @@ const ADD_TESTS_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const DOCS_UPDATE_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_artifact_list",
+  "blueprint_artifact_summary_digest",
+  "blueprint_artifact_report_write"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const NOTE_REQUIRED_TOOLS = [
   "blueprint_artifact_mutate_index"
 ] as const satisfies readonly BlueprintInternalToolName[];
@@ -635,6 +642,8 @@ const UI_REVIEW_SPEC_PATH =
   "skills/blueprint-review/references/ui-review-runtime-contract.md";
 const ADD_TESTS_SPEC_PATH =
   "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
+const DOCS_UPDATE_SPEC_PATH =
+  "skills/blueprint-docs/references/docs-update-runtime-contract.md";
 const SETTINGS_SPEC_PATH =
   "skills/blueprint-governance/references/settings-runtime-contract.md";
 const SET_PROFILE_SPEC_PATH =
@@ -690,6 +699,10 @@ const AUDIT_FIX_OPTIONAL_AGENTS = [
 ] as const;
 const REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
 const UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"] as const;
+const DOCS_UPDATE_OPTIONAL_AGENTS = [
+  "blueprint-doc-writer",
+  "blueprint-doc-verifier"
+] as const;
 const ROADMAP_ADMIN_HOOKS = [
   "read-before-edit",
   ".blueprint write guard"
@@ -1885,6 +1898,48 @@ export const ADD_TESTS_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const DOCS_UPDATE_RUNTIME_METADATA = {
+  commandName: "docs-update",
+  sourceId: runtimeMetadataSourceId("docs-update"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-docs",
+    declaredStatus: "implemented",
+    risk: "Medium: writes selected repo documentation files and a durable docs-update report."
+  },
+  requiredTools: DOCS_UPDATE_REQUIRED_TOOLS,
+  optionalAgents: DOCS_UPDATE_OPTIONAL_AGENTS,
+  requiredInputPaths: [DOCS_UPDATE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("docs-update"),
+    title: "`/blu-docs-update`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`docs-update` refreshes or verifies selected repo documentation against saved Blueprint and repo evidence, optionally checks current external truth, and persists the durable docs-update report through MCP.",
+    reads: [
+      "Project health, artifact inventory, selected repo documentation, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth."
+    ],
+    writes: [
+      "selected repo documentation files when not verify-only",
+      ".blueprint/reports/docs-update-latest.md"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("docs-update"),
+    waveTitle: "Quality And Shipping",
+    command: "docs-update",
+    primarySkill: "blueprint-docs",
+    exactMcpDestination: DOCS_UPDATE_REQUIRED_TOOLS,
+    optionalAgents: DOCS_UPDATE_OPTIONAL_AGENTS,
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const PAUSE_WORK_RUNTIME_METADATA = {
   commandName: "pause-work",
   sourceId: runtimeMetadataSourceId("pause-work"),
@@ -2692,6 +2747,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [REVIEW_RUNTIME_METADATA.commandName]: REVIEW_RUNTIME_METADATA,
   [UI_REVIEW_RUNTIME_METADATA.commandName]: UI_REVIEW_RUNTIME_METADATA,
   [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
+  [DOCS_UPDATE_RUNTIME_METADATA.commandName]: DOCS_UPDATE_RUNTIME_METADATA,
   [PAUSE_WORK_RUNTIME_METADATA.commandName]: PAUSE_WORK_RUNTIME_METADATA,
   [RESUME_WORK_RUNTIME_METADATA.commandName]: RESUME_WORK_RUNTIME_METADATA,
   [PR_BRANCH_RUNTIME_METADATA.commandName]: PR_BRANCH_RUNTIME_METADATA,
