@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  CHECK_TODOS_RUNTIME_METADATA,
+  getRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("check-todos manifest uses runtime skill and todo-status MCP identities", async () => {
@@ -45,18 +51,42 @@ test("blueprint-capture skill captures shipped check-todos behavior", async () =
   );
 });
 
-test("check-todos docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/check-todos.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("check-todos runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("check-todos");
+  const contract = await buildBlueprintCommandRuntimeContractResource("check-todos");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(
-    docFile,
-    /Confirm active or completed status changes before writing them unless the user's intent is already unmistakably explicit\./
+  assert.deepEqual(metadata, CHECK_TODOS_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, CHECK_TODOS_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...CHECK_TODOS_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...CHECK_TODOS_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: CHECK_TODOS_RUNTIME_METADATA.spec.path,
+    title: CHECK_TODOS_RUNTIME_METADATA.spec.title,
+    wave: CHECK_TODOS_RUNTIME_METADATA.catalog.wave,
+    family: CHECK_TODOS_RUNTIME_METADATA.catalog.family,
+    executionProfile: CHECK_TODOS_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: CHECK_TODOS_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: CHECK_TODOS_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...CHECK_TODOS_RUNTIME_METADATA.requiredTools],
+    primarySkill: CHECK_TODOS_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...CHECK_TODOS_RUNTIME_METADATA.optionalAgents],
+    reads: [...CHECK_TODOS_RUNTIME_METADATA.spec.reads],
+    writes: [...CHECK_TODOS_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(
+    contract.runtimeReference?.path,
+    CHECK_TODOS_RUNTIME_METADATA.sourceId
   );
-  assert.match(runtimeFile, /`check-todos` .*Interactive-read profile for deterministic todo inspection plus bounded status change:/);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    CHECK_TODOS_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

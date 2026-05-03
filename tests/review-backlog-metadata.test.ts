@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  REVIEW_BACKLOG_RUNTIME_METADATA
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("review-backlog manifest references preview, promotion, backlog updates, and discuss routing", async () => {
@@ -45,21 +51,42 @@ test("blueprint-capture skill captures review-backlog preview, promotion, and st
   assert.match(skillFile, /\/blu-discuss-phase <first promoted phase>/);
 });
 
-test("review-backlog docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/review-backlog.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("review-backlog runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("review-backlog");
+  const contract = await buildBlueprintCommandRuntimeContractResource("review-backlog");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(docFile, /Confirm each promote or remove decision\. Keep is the default safe path\./);
-  const backlogRuntimeRow = runtimeFile
-    .split("\n")
-    .find((line) => line.startsWith("| `review-backlog` |"));
-  assert.ok(backlogRuntimeRow, "runtime reference should include the review-backlog row");
-  assert.match(backlogRuntimeRow, /Interactive-read profile for deterministic backlog review:/);
-  assert.match(backlogRuntimeRow, /explicit promote or remove confirmations/i);
-  assert.match(backlogRuntimeRow, /keep` as the default safe path/i);
+  assert.deepEqual(metadata, REVIEW_BACKLOG_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, REVIEW_BACKLOG_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...REVIEW_BACKLOG_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...REVIEW_BACKLOG_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: REVIEW_BACKLOG_RUNTIME_METADATA.spec.path,
+    title: REVIEW_BACKLOG_RUNTIME_METADATA.spec.title,
+    wave: REVIEW_BACKLOG_RUNTIME_METADATA.catalog.wave,
+    family: REVIEW_BACKLOG_RUNTIME_METADATA.catalog.family,
+    executionProfile: REVIEW_BACKLOG_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: REVIEW_BACKLOG_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: REVIEW_BACKLOG_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...REVIEW_BACKLOG_RUNTIME_METADATA.requiredTools],
+    primarySkill: REVIEW_BACKLOG_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...REVIEW_BACKLOG_RUNTIME_METADATA.optionalAgents],
+    reads: [...REVIEW_BACKLOG_RUNTIME_METADATA.spec.reads],
+    writes: [...REVIEW_BACKLOG_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(
+    contract.runtimeReference?.path,
+    REVIEW_BACKLOG_RUNTIME_METADATA.sourceId
+  );
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    REVIEW_BACKLOG_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  ADD_TODO_RUNTIME_METADATA,
+  getRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("add-todo manifest uses runtime skill and capture MCP identities", async () => {
@@ -43,14 +49,39 @@ test("blueprint-capture skill captures todo append behavior", async () => {
   );
 });
 
-test("add-todo docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/add-todo.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("add-todo runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("add-todo");
+  const contract = await buildBlueprintCommandRuntimeContractResource("add-todo");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`add-todo` .*Interactive-read profile for short project-local todo capture:/);
+  assert.deepEqual(metadata, ADD_TODO_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, ADD_TODO_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...ADD_TODO_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...ADD_TODO_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: ADD_TODO_RUNTIME_METADATA.spec.path,
+    title: ADD_TODO_RUNTIME_METADATA.spec.title,
+    wave: ADD_TODO_RUNTIME_METADATA.catalog.wave,
+    family: ADD_TODO_RUNTIME_METADATA.catalog.family,
+    executionProfile: ADD_TODO_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: ADD_TODO_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: ADD_TODO_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...ADD_TODO_RUNTIME_METADATA.requiredTools],
+    primarySkill: ADD_TODO_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...ADD_TODO_RUNTIME_METADATA.optionalAgents],
+    reads: [...ADD_TODO_RUNTIME_METADATA.spec.reads],
+    writes: [...ADD_TODO_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(contract.runtimeReference?.path, ADD_TODO_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    ADD_TODO_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

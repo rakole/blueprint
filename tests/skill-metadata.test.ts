@@ -117,6 +117,31 @@ test("roadmap-admin add-phase resolves docless command-scoped input override", a
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
+test("capture commands resolve only command-scoped manifest inputs", async () => {
+  const expectations = [
+    ["note", "commands/blu-note.toml"],
+    ["add-todo", "commands/blu-add-todo.toml"],
+    ["check-todos", "commands/blu-check-todos.toml"],
+    ["add-backlog", "commands/blu-add-backlog.toml"],
+    ["review-backlog", "commands/blu-review-backlog.toml"],
+    ["explore", "commands/blu-explore.toml"]
+  ] as const;
+
+  for (const [commandName, manifestPath] of expectations) {
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-capture",
+      `/blu-${commandName}`,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-capture");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, [manifestPath]);
+    assert.deepEqual(inputs.effective, [manifestPath]);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
+});
+
 test("roadmap-admin siblings keep legacy Required Inputs fallback", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-roadmap-admin",

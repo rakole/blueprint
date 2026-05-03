@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  ADD_BACKLOG_RUNTIME_METADATA,
+  getRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("add-backlog manifest uses runtime skill and capture MCP identities", async () => {
@@ -40,14 +46,42 @@ test("blueprint-capture skill captures backlog parking-lot behavior", async () =
   assert.match(skillFile, /implemented commands only/i);
 });
 
-test("add-backlog docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/add-backlog.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("add-backlog runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("add-backlog");
+  const contract = await buildBlueprintCommandRuntimeContractResource("add-backlog");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`add-backlog` .*Interactive-read profile for parking-lot capture:/);
+  assert.deepEqual(metadata, ADD_BACKLOG_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, ADD_BACKLOG_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...ADD_BACKLOG_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...ADD_BACKLOG_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: ADD_BACKLOG_RUNTIME_METADATA.spec.path,
+    title: ADD_BACKLOG_RUNTIME_METADATA.spec.title,
+    wave: ADD_BACKLOG_RUNTIME_METADATA.catalog.wave,
+    family: ADD_BACKLOG_RUNTIME_METADATA.catalog.family,
+    executionProfile: ADD_BACKLOG_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: ADD_BACKLOG_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: ADD_BACKLOG_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...ADD_BACKLOG_RUNTIME_METADATA.requiredTools],
+    primarySkill: ADD_BACKLOG_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...ADD_BACKLOG_RUNTIME_METADATA.optionalAgents],
+    reads: [...ADD_BACKLOG_RUNTIME_METADATA.spec.reads],
+    writes: [...ADD_BACKLOG_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(
+    contract.runtimeReference?.path,
+    ADD_BACKLOG_RUNTIME_METADATA.sourceId
+  );
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    ADD_BACKLOG_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

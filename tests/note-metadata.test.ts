@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  NOTE_RUNTIME_METADATA
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("note manifest uses runtime skill and capture MCP identities", async () => {
@@ -40,14 +46,39 @@ test("blueprint-capture skill captures shipped note behavior", async () => {
   );
 });
 
-test("note docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/note.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("note runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("note");
+  const contract = await buildBlueprintCommandRuntimeContractResource("note");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`note` .*Interactive-read profile for deterministic project-local note capture:/);
+  assert.deepEqual(metadata, NOTE_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, NOTE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...NOTE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...NOTE_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: NOTE_RUNTIME_METADATA.spec.path,
+    title: NOTE_RUNTIME_METADATA.spec.title,
+    wave: NOTE_RUNTIME_METADATA.catalog.wave,
+    family: NOTE_RUNTIME_METADATA.catalog.family,
+    executionProfile: NOTE_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: NOTE_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: NOTE_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...NOTE_RUNTIME_METADATA.requiredTools],
+    primarySkill: NOTE_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...NOTE_RUNTIME_METADATA.optionalAgents],
+    reads: [...NOTE_RUNTIME_METADATA.spec.reads],
+    writes: [...NOTE_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(contract.runtimeReference?.path, NOTE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    NOTE_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

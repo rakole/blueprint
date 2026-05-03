@@ -12,6 +12,21 @@ commands:
   - /blu-add-backlog
   - /blu-review-backlog
   - /blu-explore
+input_bundles:
+  shared: []
+  commands:
+    "/blu-note":
+      - commands/blu-note.toml
+    "/blu-add-todo":
+      - commands/blu-add-todo.toml
+    "/blu-check-todos":
+      - commands/blu-check-todos.toml
+    "/blu-add-backlog":
+      - commands/blu-add-backlog.toml
+    "/blu-review-backlog":
+      - commands/blu-review-backlog.toml
+    "/blu-explore":
+      - commands/blu-explore.toml
 ---
 
 # Blueprint Capture Skill
@@ -26,6 +41,7 @@ Keep notes, todos, backlog entries, and ideation handoffs project-local, determi
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
+- Load only the active command's structured `input_bundles.commands[...]` inputs for that invocation.
 
 ## Parity Goal
 
@@ -36,20 +52,6 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 - parking-lot ideas may reserve `999.x` phase-style stubs without becoming active roadmap work
 - root routing and follow-up guidance stay inside the implemented command surface
 - planned capture commands remain documented but unroutable until their own manifest-plus-tool contracts ship
-
-## Required Inputs
-
-- `docs/commands/note.md`
-- `docs/commands/add-todo.md`
-- `docs/commands/check-todos.md`
-- `docs/commands/add-backlog.md`
-- `docs/commands/review-backlog.md`
-- `docs/commands/explore.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
 
 ## Required MCP Tools
 
