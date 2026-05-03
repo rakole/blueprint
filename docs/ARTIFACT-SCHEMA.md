@@ -1147,6 +1147,168 @@ Contract notes:
 - Persist this report through `blueprint_artifact_report_write` with the bare report name `pr-branch-latest`.
 - Replacing an existing pr-branch report requires explicit confirmation.
 
+### `reports/ship-latest.md`
+
+Purpose:
+- durable shipping report for `/blu-ship`
+- evidence ledger for push and PR decisions, approved commands, and manual fallback guidance
+
+Minimum locked sections:
+- `## Selected Scope`
+- `## Saved Evidence`
+- `## Branch Plan`
+- `## Remote Actions`
+- `## Push Or PR Outcome`
+- `## Manual Fallback Guidance`
+- `## Next Safe Action`
+
+Ship report expectations:
+- must record the selected shipping scope, source branch, source `HEAD`, base branch, current branch, execution mode, draft or ready mode, and config inputs used for branch policy
+- must preserve digest `inputsUsed`, saved evidence paths, tracked files, and the draft PR body source so the push or PR outcome can be traced to concrete inputs
+- must record whether push and PR were requested, which `git` and `gh` commands were approved, and whether `gh` was available and authenticated before remote mutation
+- must capture both push and PR outcomes explicitly, including blocked or not-run states, instead of implying success from surrounding narration
+- must include a manual checklist and fallback notes when remote shipping does not complete automatically
+
+Exact persistence template:
+
+```md
+# Ship Report
+
+## Selected Scope
+
+- **Scope:** <selected scope such as review-branch|current-branch|commits>
+- **Source branch:** <source branch>
+- **Source HEAD:** <commit sha>
+- **Base branch:** <base branch>
+- **Execution mode:** <preview-only|confirmed-run|blocked>
+- **Draft or ready mode:** <draft|ready>
+- **Config used:** <git.base_branch=<value>; git.branching_strategy=<value>; planning.commit_docs=<true|false>>
+- **Current branch:** <current branch>
+
+## Saved Evidence
+
+- **Digest inputs used:** <inputsUsed from blueprint_artifact_summary_digest>
+- **Saved evidence paths:** <saved evidence paths or none>
+- **Tracked files:** <repo-relative tracked files or none>
+- **Draft PR body source:** <path|generated body|none>
+
+## Branch Plan
+
+- **Push requested:** <true|false>
+- **PR requested:** <true|false>
+- **Git commands approved:** <commands or none>
+
+## Remote Actions
+
+- **gh commands approved:** <commands or none>
+- **gh availability and auth:** <available and authenticated|available but unauthenticated|unavailable>
+
+## Push Or PR Outcome
+
+- **Push outcome:** <not-run|success|failed|blocked>
+- **PR outcome:** <not-run|created|updated|failed|blocked>
+- **gh fallback notes:** <fallback notes or none>
+
+## Manual Fallback Guidance
+
+- **Manual checklist:**
+  1. <manual step one>
+  2. <manual step two>
+  3. <manual step three>
+
+## Next Safe Action
+
+- <manual next action or /blu-progress>
+```
+
+Contract notes:
+- Keep required section names and bold field labels unchanged so `blueprint_artifact_report_write` continues to recognize the canonical ship report contract.
+- Persist this report through `blueprint_artifact_report_write` with the bare report name `ship-latest`.
+- Replacing an existing ship report requires explicit confirmation.
+
+### `reports/undo-latest.md`
+
+Purpose:
+- durable undo report for `/blu-undo`
+- approval and evidence ledger for revert scope, branch state, and mutation outcome
+
+Minimum locked sections:
+- `## Requested Scope`
+- `## Branch State`
+- `## Affected Evidence And Digest Inputs`
+- `## Candidate Revert Set`
+- `## Dependency Impact`
+- `## Approved Revert Commands`
+- `## Mutation Outcome`
+- `## Next Safe Action`
+
+Undo report expectations:
+- must record the requested undo scope, operator-approved reason, execution mode, and pending gate before any revert command is run
+- must preserve current branch, `HEAD`, working tree status, merge state, and report overwrite status so the branch state is auditable
+- must capture digest `inputsUsed`, affected evidence paths, stale-evidence impact, and tracked files to show what downstream artifacts may need refresh
+- must include a commit ledger for the candidate revert set plus dependency risk analysis, even when the final outcome is blocked or preview-only
+- must record pending and approved `git` commands, the forbidden-command safety check, the revert outcome, and blockers instead of collapsing those details into prose
+
+Exact persistence template:
+
+```md
+# Undo Report
+
+## Requested Scope
+
+- **Scope:** <requested undo scope such as commits|report overwrite|phase artifact>
+- **Reason:** <operator-approved reason>
+- **Execution mode:** <preview-only|confirmed-run|blocked>
+- **Pending gate:** <awaiting confirmation|approved|blocked>
+
+## Branch State
+
+- **Current branch:** <current branch>
+- **HEAD:** <commit sha>
+- **Working tree status:** <clean|dirty>
+- **Merge state:** <not in progress|merge in progress|rebase in progress|cherry-pick in progress>
+- **Report overwrite status:** <new report|overwrite approved|overwrite blocked>
+
+## Affected Evidence And Digest Inputs
+
+- **Digest inputs used:** <inputsUsed from blueprint_artifact_summary_digest>
+- **Affected evidence:** <saved evidence paths or none>
+- **Stale evidence impact:** <stale evidence impact or none>
+- **Tracked files:** <repo-relative tracked files or none>
+
+## Candidate Revert Set
+
+- **Commit ledger:**
+
+| Commit | Subject | Scope | Revert action | Notes |
+|---|---|---|---|---|
+| <sha> | <subject> | <scope> | <revert|skip> | <notes> |
+
+## Dependency Impact
+
+- **Dependency risk:** <dependency risk or none>
+
+## Approved Revert Commands
+
+- **Pending git commands:** <commands awaiting approval or none>
+- **Approved git commands:** <approved commands or none>
+- **Forbidden-command check:** <passed|failed with blockers>
+
+## Mutation Outcome
+
+- **Revert outcome:** <not-run|success|failed|blocked>
+- **Blockers:** <blockers or none>
+
+## Next Safe Action
+
+- <manual next action or /blu-progress>
+```
+
+Contract notes:
+- Keep required section names, the commit-ledger table, and bold field labels unchanged so `blueprint_artifact_report_write` continues to recognize the canonical undo report contract.
+- Persist this report through `blueprint_artifact_report_write` with the bare report name `undo-latest`.
+- Replacing an existing undo report requires explicit confirmation.
+
 ### `reports/pause-work-latest.md`
 
 Purpose:
