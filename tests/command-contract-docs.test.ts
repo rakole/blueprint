@@ -807,7 +807,7 @@ test("maintenance skill and pr-branch docs keep the review-branch contract expli
   );
   assert.match(
     migrationMarkdown,
-    /\| `pr-branch` \| `docs\/commands\/pr-branch\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_write` \|/
+    /\| `pr-branch` \| `src\/mcp\/command-runtime-metadata\.ts#pr-branch` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_write` \|/
   );
 });
 
@@ -832,7 +832,7 @@ test("maintenance skill and workstreams docs keep the project-local workstream c
   );
   assert.match(
     migrationMarkdown,
-    /\| `workstreams` \| `docs\/commands\/workstreams\.md` \| `blueprint-maintenance` \| `blueprint_workstream_list`<br>`blueprint_workstream_mutate`<br>`blueprint_state_update` \|/
+    /\| `workstreams` \| `src\/mcp\/command-runtime-metadata\.ts#workstreams` \| `blueprint-maintenance` \| `blueprint_workstream_list`<br>`blueprint_workstream_mutate`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -866,7 +866,7 @@ test("maintenance skill and ship docs keep the shipping contract explicit", asyn
   );
   assert.match(
     migrationMarkdown,
-    /\| `ship` \| `docs\/commands\/ship\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+    /\| `ship` \| `src\/mcp\/command-runtime-metadata\.ts#ship` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -893,7 +893,7 @@ test("maintenance skill and cleanup docs keep the archival contract explicit", a
   );
   assert.match(
     migrationMarkdown,
-    /\| `cleanup` \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+    /\| `cleanup` \| `src\/mcp\/command-runtime-metadata\.ts#cleanup` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
   );
 });
 
@@ -922,7 +922,7 @@ test("maintenance skill and remove-workspace docs keep the workspace-teardown co
   );
   assert.match(
     migrationMarkdown,
-    /\| `remove-workspace` \| `docs\/commands\/remove-workspace\.md` \| `blueprint-maintenance` \| `blueprint_workspace_registry_get`<br>`blueprint_workspace_remove` \|/
+    /\| `remove-workspace` \| `src\/mcp\/command-runtime-metadata\.ts#remove-workspace` \| `blueprint-maintenance` \| `blueprint_workspace_registry_get`<br>`blueprint_workspace_remove` \|/
   );
 });
 
@@ -948,7 +948,7 @@ test("maintenance skill and update docs keep the advisory update contract explic
   );
   assert.match(
     runtimeReference,
-    /\| `update` \| `docs\/commands\/update\.md` \| `blueprint-maintenance` \| `blueprint_update_check`<br>`blueprint_update_plan` \|/
+    /\| `update` \| `src\/mcp\/command-runtime-metadata\.ts#update` \| `blueprint-maintenance` \| `blueprint_update_check`<br>`blueprint_update_plan` \|/
   );
 });
 
@@ -981,7 +981,7 @@ test("maintenance skill and undo docs keep the safe-revert contract explicit", a
   );
   assert.match(
     migrationMarkdown,
-    /\| `undo` \| `docs\/commands\/undo\.md` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
+    /\| `undo` \| `src\/mcp\/command-runtime-metadata\.ts#undo` \| `blueprint-maintenance` \| `blueprint_project_status`<br>`blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \|/
   );
 });
 

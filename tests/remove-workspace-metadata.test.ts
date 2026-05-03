@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -31,10 +35,10 @@ test("remove-workspace manifest references the maintenance skill, workspace MCP 
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("remove-workspace docs, runtime reference, and maintenance skill align to the shipped workspace-teardown contract", async () => {
-  const [commandDoc, runtimeReference, skillDoc, mcpToolsDoc] = await Promise.all([
+test("remove-workspace docs, runtime resource, and maintenance skill align to the shipped workspace-teardown contract", async () => {
+  const [commandDoc, runtimeContract, skillDoc, mcpToolsDoc] = await Promise.all([
     readRepoFile("docs/commands/remove-workspace.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    buildBlueprintCommandRuntimeContractResource("remove-workspace"),
     readRepoFile("skills/blueprint-maintenance/SKILL.md"),
     readRepoFile("docs/MCP-TOOLS.md")
   ]);
@@ -52,13 +56,20 @@ test("remove-workspace docs, runtime reference, and maintenance skill align to t
   assert.match(skillDoc, /blueprint_workspace_remove/);
   assert.match(skillDoc, /remove-workspace-confirmation/);
 
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /remove-workspace-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /\| `remove-workspace` \| `docs\/commands\/remove-workspace\.md` \| `blueprint-maintenance` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /resolve a single registry-backed workspace target/i
   );
-  assert.match(runtimeReference, /High-risk-maintenance profile for confirmation-gated workspace teardown/i);
-  assert.match(runtimeReference, /workspace-path-ambiguity/);
-  assert.match(runtimeReference, /remove-workspace-confirmation/);
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 
   assert.match(mcpToolsDoc, /`blueprint_workspace_remove`/);
   assert.match(

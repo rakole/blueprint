@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -38,10 +42,10 @@ test("new-workspace manifest references the maintenance skill, workspace MCP too
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("new-workspace docs, runtime reference, and maintenance skill align to the shipped high-risk workspace contract", async () => {
-  const [commandDoc, runtimeReference, skillDoc] = await Promise.all([
+test("new-workspace docs, runtime resource, and maintenance skill align to the shipped high-risk workspace contract", async () => {
+  const [commandDoc, runtimeContract, skillDoc] = await Promise.all([
     readRepoFile("docs/commands/new-workspace.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    buildBlueprintCommandRuntimeContractResource("new-workspace"),
     readRepoFile("skills/blueprint-maintenance/SKILL.md")
   ]);
 
@@ -69,17 +73,20 @@ test("new-workspace docs, runtime reference, and maintenance skill align to the 
     /`new-workspace`, `remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable/
   );
 
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /new-workspace-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /\| `new-workspace` \| `docs\/commands\/new-workspace\.md` \| `blueprint-maintenance` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /derive workspace root from config or explicit input/i
   );
-  assert.match(runtimeReference, /High-risk-maintenance profile for confirmation-gated workspace creation/i);
-  assert.match(
-    runtimeReference,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
   );
-  assert.match(runtimeReference, /workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
-  assert.match(runtimeReference, /transactional/i);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("repo-facing status docs treat new-workspace as a shipped Wave 5 command", async () => {

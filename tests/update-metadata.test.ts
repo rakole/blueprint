@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -57,11 +61,11 @@ test("update manifest references the maintenance skill, update MCP tools, and th
   assert.match(commandFile, /restart guidance/i);
 });
 
-test("update docs, maintenance skill, and runtime reference align to the shipped advisory update contract", async () => {
-  const [commandDoc, skillDoc, runtimeReference] = await Promise.all([
+test("update docs, maintenance skill, and runtime resource align to the shipped advisory update contract", async () => {
+  const [commandDoc, skillDoc, runtimeContract] = await Promise.all([
     readRepoFile("docs/commands/update.md"),
     readRepoFile("skills/blueprint-maintenance/SKILL.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    buildBlueprintCommandRuntimeContractResource("update")
   ]);
 
   assert.match(commandDoc, /\| Execution profile \| `interactive-read` \|/);
@@ -93,18 +97,20 @@ test("update docs, maintenance skill, and runtime reference align to the shipped
     /`remove-workspace`, `workstreams`, `update`, and `reapply-patches` remain documented maintenance commands, but they are not routable/
   );
 
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /update-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /\| `update` \| `docs\/commands\/update\.md` \| `blueprint-maintenance` \| `blueprint_update_check`<br>`blueprint_update_plan` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /update-mode-gate for saved checklist versus manual fallback/i
   );
-  assert.match(runtimeReference, /`update`[\s\S]*Interactive-read advisory profile/i);
-  assert.match(
-    runtimeReference,
-    /`update`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
   );
-  assert.match(runtimeReference, /`update`[\s\S]*`ask_user` only for the saved-checklist versus manual-fallback mode gate/i);
-  assert.match(runtimeReference, /`update`[\s\S]*~\/.<host>\/blueprint\/updates\//i);
-  assert.match(runtimeReference, /`update`[\s\S]*restart guidance/i);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("repo-facing status docs treat update as a shipped Wave 5 command", async () => {

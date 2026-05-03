@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -30,10 +34,10 @@ test("workstreams manifest references the maintenance skill, workstream MCP tool
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("workstreams docs, runtime reference, and maintenance skill align to the shipped interactive workstream contract", async () => {
-  const [commandDoc, runtimeReference, skillDoc] = await Promise.all([
+test("workstreams docs, runtime resource, and maintenance skill align to the shipped interactive workstream contract", async () => {
+  const [commandDoc, runtimeContract, skillDoc] = await Promise.all([
     readRepoFile("docs/commands/workstreams.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    buildBlueprintCommandRuntimeContractResource("workstreams"),
     readRepoFile("skills/blueprint-maintenance/SKILL.md")
   ]);
 
@@ -64,17 +68,19 @@ test("workstreams docs, runtime reference, and maintenance skill align to the sh
     /`remove-workspace`, `workstreams`, and `update` remain documented maintenance commands, but they are not routable/
   );
 
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /workstreams-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /\| `workstreams` \| `docs\/commands\/workstreams\.md` \| `blueprint-maintenance` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /switch\/archive confirmation gates before mutation/i
   );
-  assert.match(runtimeReference, /Interactive-read profile for project-local workstream switching/i);
-  assert.match(runtimeReference, /Gemini-native `ask_user`/i);
-  assert.match(runtimeReference, /workstream-switch-confirmation/);
-  assert.match(runtimeReference, /missing-resume-snapshot/);
-  assert.match(
-    runtimeReference,
-    /`blueprint_state_update` only for the final routing patch or returned resume snapshot/i
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
 });
 

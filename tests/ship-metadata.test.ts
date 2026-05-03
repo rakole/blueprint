@@ -4,6 +4,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
 import { validateReportArtifactContent } from "../src/mcp/tools/artifacts.js";
 
 const repoRoot = process.cwd();
@@ -41,16 +44,13 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("ship doc, maintenance skill, and runtime reference capture ship visibility, tracker eligibility, and remote fallback safety", async () => {
+test("ship doc, maintenance skill, and runtime resource capture ship visibility, tracker eligibility, and remote fallback safety", async () => {
   const docFile = await readFile(path.join(repoRoot, "docs/commands/ship.md"), "utf8");
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"),
     "utf8"
   );
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
+  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("ship");
 
   assert.match(docFile, /Execution profile \| `high-risk-maintenance`/);
   assert.match(docFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
@@ -83,14 +83,20 @@ test("ship doc, maintenance skill, and runtime reference capture ship visibility
   assert.match(skillFile, /missing or unauthenticated/i);
   assert.match(skillFile, /overwrite `ship-latest`[\s\S]*actual outcomes, fallback notes, and post-mutation evidence/i);
 
-  assert.match(runtimeReference, /`ship`[\s\S]*High-risk-maintenance profile for branchy shipping flows/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*`update_topic` and `write_todos` for non-trivial shipping runs/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.ship` contract/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*contract\.authoringTemplate/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*local prep plus optional push plus optional PR creation explicit/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*overwrite `ship-latest` after push or PR attempts/i);
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
+  );
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /ship-runtime-contract\.md/);
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /local prep, push, and PR creation as separate approved steps/i
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("ship canonical report contract requires populated contract-backed evidence", () => {

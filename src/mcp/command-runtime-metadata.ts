@@ -352,6 +352,72 @@ const RESUME_WORK_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const PR_BRANCH_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_config_get",
+  "blueprint_artifact_summary_digest",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_report_write"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const SHIP_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_phase_locate",
+  "blueprint_config_get",
+  "blueprint_artifact_list",
+  "blueprint_artifact_summary_digest",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_report_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const UNDO_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_phase_locate",
+  "blueprint_artifact_list",
+  "blueprint_artifact_summary_digest",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_report_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const NEW_WORKSPACE_REQUIRED_TOOLS = [
+  "blueprint_config_get",
+  "blueprint_workspace_registry_get",
+  "blueprint_workspace_create"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const REMOVE_WORKSPACE_REQUIRED_TOOLS = [
+  "blueprint_workspace_registry_get",
+  "blueprint_workspace_remove"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const WORKSTREAMS_REQUIRED_TOOLS = [
+  "blueprint_workstream_list",
+  "blueprint_workstream_mutate",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const CLEANUP_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_roadmap_read",
+  "blueprint_artifact_list",
+  "blueprint_artifact_summary_digest",
+  "blueprint_artifact_report_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const UPDATE_REQUIRED_TOOLS = [
+  "blueprint_update_check",
+  "blueprint_update_plan"
+] as const satisfies readonly BlueprintInternalToolName[];
+
+const REAPPLY_PATCHES_REQUIRED_TOOLS = [
+  "blueprint_patch_list",
+  "blueprint_patch_reapply",
+  "blueprint_patch_record"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
 const VALIDATE_PHASE_SPEC_PATH =
   "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
@@ -381,6 +447,24 @@ const PAUSE_WORK_SPEC_PATH =
   "skills/blueprint-governance/references/pause-work-runtime-contract.md";
 const RESUME_WORK_SPEC_PATH =
   "skills/blueprint-governance/references/resume-work-runtime-contract.md";
+const PR_BRANCH_SPEC_PATH =
+  "skills/blueprint-maintenance/references/pr-branch-runtime-contract.md";
+const SHIP_SPEC_PATH =
+  "skills/blueprint-maintenance/references/ship-runtime-contract.md";
+const UNDO_SPEC_PATH =
+  "skills/blueprint-maintenance/references/undo-runtime-contract.md";
+const NEW_WORKSPACE_SPEC_PATH =
+  "skills/blueprint-maintenance/references/new-workspace-runtime-contract.md";
+const REMOVE_WORKSPACE_SPEC_PATH =
+  "skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md";
+const WORKSTREAMS_SPEC_PATH =
+  "skills/blueprint-maintenance/references/workstreams-runtime-contract.md";
+const CLEANUP_SPEC_PATH =
+  "skills/blueprint-maintenance/references/cleanup-runtime-contract.md";
+const UPDATE_SPEC_PATH =
+  "skills/blueprint-maintenance/references/update-runtime-contract.md";
+const REAPPLY_PATCHES_SPEC_PATH =
+  "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
 
 const VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"] as const;
 const ADD_TESTS_OPTIONAL_AGENTS = [
@@ -1006,6 +1090,387 @@ export const RESUME_WORK_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const PR_BRANCH_RUNTIME_METADATA = {
+  commandName: "pr-branch",
+  sourceId: runtimeMetadataSourceId("pr-branch"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk: "High: git branch mutation."
+  },
+  requiredTools: PR_BRANCH_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [PR_BRANCH_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("pr-branch"),
+    title: "`/blu-pr-branch`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`pr-branch` prepares a clean review branch by filtering Blueprint bookkeeping scope and persists a durable report.",
+    reads: [
+      "Project health, effective git config, active diff, artifact digest scope, and report contract through MCP plus git inspection."
+    ],
+    writes: [".blueprint/reports/pr-branch-latest.md", "confirmed git branch"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("pr-branch"),
+    waveTitle: "Quality And Shipping",
+    command: "pr-branch",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: PR_BRANCH_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const SHIP_RUNTIME_METADATA = {
+  commandName: "ship",
+  sourceId: runtimeMetadataSourceId("ship"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk: "High: remote and git mutation path."
+  },
+  requiredTools: SHIP_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [SHIP_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("ship"),
+    title: "`/blu-ship`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.",
+    reads: [
+      "Project health, optional phase metadata, effective config, saved evidence, artifact digest scope, and report contract through MCP plus git/gh inspection."
+    ],
+    writes: [
+      ".blueprint/reports/ship-latest.md",
+      ".blueprint/STATE.md when routing changes",
+      "approved git remote or PR state"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("ship"),
+    waveTitle: "Quality And Shipping",
+    command: "ship",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: SHIP_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const UNDO_RUNTIME_METADATA = {
+  commandName: "undo",
+  sourceId: runtimeMetadataSourceId("undo"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps."
+  },
+  requiredTools: UNDO_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [UNDO_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("undo"),
+    title: "`/blu-undo`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.",
+    reads: [
+      "Project health, optional phase metadata, affected artifacts, artifact digest scope, and report contract through MCP plus git history inspection."
+    ],
+    writes: [
+      ".blueprint/reports/undo-latest.md",
+      ".blueprint/STATE.md when routing changes",
+      "approved git revert commits"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("undo"),
+    waveTitle: "Quality And Shipping",
+    command: "undo",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: UNDO_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const NEW_WORKSPACE_RUNTIME_METADATA = {
+  commandName: "new-workspace",
+  sourceId: runtimeMetadataSourceId("new-workspace"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "High: filesystem and git worktree mutation outside the current repo."
+  },
+  requiredTools: NEW_WORKSPACE_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [NEW_WORKSPACE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("new-workspace"),
+    title: "`/blu-new-workspace`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`new-workspace` creates a confirmed multi-repo workspace and records it in host-global Blueprint workspace state.",
+    reads: [
+      "Effective config, host-global workspace registry, source repo status, and target path preflight."
+    ],
+    writes: [
+      "workspace manifest under the selected workspace",
+      "~/.<host>/blueprint/workspaces registry"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("new-workspace"),
+    waveTitle: "Workspace And Maintenance",
+    command: "new-workspace",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: NEW_WORKSPACE_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const REMOVE_WORKSPACE_RUNTIME_METADATA = {
+  commandName: "remove-workspace",
+  sourceId: runtimeMetadataSourceId("remove-workspace"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "High: confirmation-gated workspace teardown and registry cleanup."
+  },
+  requiredTools: REMOVE_WORKSPACE_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [REMOVE_WORKSPACE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("remove-workspace"),
+    title: "`/blu-remove-workspace`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`remove-workspace` tears down an exact confirmed workspace and updates the host-global workspace registry.",
+    reads: [
+      "Host-global workspace registry, workspace manifest, recorded repo members, and dirty-tree preflight."
+    ],
+    writes: [
+      "workspace teardown on disk",
+      "~/.<host>/blueprint/workspaces registry"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("remove-workspace"),
+    waveTitle: "Workspace And Maintenance",
+    command: "remove-workspace",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: REMOVE_WORKSPACE_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const WORKSTREAMS_RUNTIME_METADATA = {
+  commandName: "workstreams",
+  sourceId: runtimeMetadataSourceId("workstreams"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "Medium: project-local state mutation with switching semantics."
+  },
+  requiredTools: WORKSTREAMS_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [WORKSTREAMS_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("workstreams"),
+    title: "`/blu-workstreams`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.",
+    reads: ["Project-local workstream index and saved per-stream state."],
+    writes: [
+      ".blueprint/workstreams/WORKSTREAMS.md",
+      ".blueprint/workstreams/<slug>/state.json",
+      ".blueprint/STATE.md for returned resume patches"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("workstreams"),
+    waveTitle: "Workspace And Maintenance",
+    command: "workstreams",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: WORKSTREAMS_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const CLEANUP_RUNTIME_METADATA = {
+  commandName: "cleanup",
+  sourceId: runtimeMetadataSourceId("cleanup"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "High: confirmation-gated phase-directory archival and removal behavior."
+  },
+  requiredTools: CLEANUP_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [CLEANUP_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("cleanup"),
+    title: "`/blu-cleanup`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.",
+    reads: [
+      "Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."
+    ],
+    writes: [
+      ".blueprint/reports/cleanup-latest.md",
+      ".blueprint/STATE.md when routing changes",
+      "confirmed phase archive destination"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("cleanup"),
+    waveTitle: "Workspace And Maintenance",
+    command: "cleanup",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: CLEANUP_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const UPDATE_RUNTIME_METADATA = {
+  commandName: "update",
+  sourceId: runtimeMetadataSourceId("update"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "Low: advisory only; no in-session self-update."
+  },
+  requiredTools: UPDATE_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [UPDATE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("update"),
+    title: "`/blu-update`",
+    executionProfile: "interactive-read",
+    rootRoutable: true,
+    purpose:
+      "`update` inspects the installed Blueprint extension and prepares an advisory out-of-band update checklist.",
+    reads: [
+      "Host, installed extension path, installed version, provenance, latest-version lookup status, and warnings."
+    ],
+    writes: ["~/.<host>/blueprint/updates/ when checklist persistence is chosen"]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("update"),
+    waveTitle: "Workspace And Maintenance",
+    command: "update",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: UPDATE_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const REAPPLY_PATCHES_RUNTIME_METADATA = {
+  commandName: "reapply-patches",
+  sourceId: runtimeMetadataSourceId("reapply-patches"),
+  catalog: {
+    wave: 5,
+    family: "Workspace And Maintenance",
+    primarySkill: "blueprint-maintenance",
+    declaredStatus: "implemented",
+    risk:
+      "High: confirmation-gated patch replay across repo files."
+  },
+  requiredTools: REAPPLY_PATCHES_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [REAPPLY_PATCHES_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("reapply-patches"),
+    title: "`/blu-reapply-patches`",
+    executionProfile: "high-risk-maintenance",
+    rootRoutable: true,
+    purpose:
+      "`reapply-patches` previews, confirms, replays, and records host-global Blueprint patch reapplication.",
+    reads: [
+      "Host-global patch registry, selected patch manifests, target compatibility, and dry-run replay result."
+    ],
+    writes: [
+      "approved git patch replay",
+      "~/.<host>/blueprint/patches replay audit"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("reapply-patches"),
+    waveTitle: "Workspace And Maintenance",
+    command: "reapply-patches",
+    primarySkill: "blueprint-maintenance",
+    exactMcpDestination: REAPPLY_PATCHES_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [],
+    contractNotes:
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const NOTE_RUNTIME_METADATA = {
   commandName: "note",
   sourceId: runtimeMetadataSourceId("note"),
@@ -1255,6 +1720,15 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
   [PAUSE_WORK_RUNTIME_METADATA.commandName]: PAUSE_WORK_RUNTIME_METADATA,
   [RESUME_WORK_RUNTIME_METADATA.commandName]: RESUME_WORK_RUNTIME_METADATA,
+  [PR_BRANCH_RUNTIME_METADATA.commandName]: PR_BRANCH_RUNTIME_METADATA,
+  [SHIP_RUNTIME_METADATA.commandName]: SHIP_RUNTIME_METADATA,
+  [UNDO_RUNTIME_METADATA.commandName]: UNDO_RUNTIME_METADATA,
+  [NEW_WORKSPACE_RUNTIME_METADATA.commandName]: NEW_WORKSPACE_RUNTIME_METADATA,
+  [REMOVE_WORKSPACE_RUNTIME_METADATA.commandName]: REMOVE_WORKSPACE_RUNTIME_METADATA,
+  [WORKSTREAMS_RUNTIME_METADATA.commandName]: WORKSTREAMS_RUNTIME_METADATA,
+  [CLEANUP_RUNTIME_METADATA.commandName]: CLEANUP_RUNTIME_METADATA,
+  [UPDATE_RUNTIME_METADATA.commandName]: UPDATE_RUNTIME_METADATA,
+  [REAPPLY_PATCHES_RUNTIME_METADATA.commandName]: REAPPLY_PATCHES_RUNTIME_METADATA,
   [NOTE_RUNTIME_METADATA.commandName]: NOTE_RUNTIME_METADATA,
   [ADD_TODO_RUNTIME_METADATA.commandName]: ADD_TODO_RUNTIME_METADATA,
   [CHECK_TODOS_RUNTIME_METADATA.commandName]: CHECK_TODOS_RUNTIME_METADATA,

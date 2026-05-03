@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 test("cleanup manifest references the maintenance skill, high-risk maintenance profile, and explicit protected-scope confirmation guards", async () => {
@@ -78,10 +82,10 @@ test("maintenance skill captures cleanup visibility, report persistence, and pro
   assert.match(skillFile, /before filesystem mutation begins/i);
 });
 
-test("cleanup docs and runtime reference expose the protected-scope visibility and waiting-state contract", async () => {
-  const [commandDoc, runtimeReference] = await Promise.all([
+test("cleanup docs and runtime resource expose the protected-scope visibility and waiting-state contract", async () => {
+  const [commandDoc, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/cleanup.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    buildBlueprintCommandRuntimeContractResource("cleanup")
   ]);
 
   assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
@@ -104,17 +108,20 @@ test("cleanup docs and runtime reference expose the protected-scope visibility a
   assert.match(commandDoc, /protected exclusions/i);
   assert.match(commandDoc, /next safe action/i);
 
-  assert.match(runtimeReference, /\| `cleanup` \| `docs\/commands\/cleanup\.md` \| `blueprint-maintenance` \|/);
-  assert.match(runtimeReference, /High-risk-maintenance profile for protected-scope phase-directory archival/i);
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /cleanup-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /protect the current phase and active roadmap references/i
   );
-  assert.match(runtimeReference, /current phase, active roadmap references, evidence-incomplete directories, and final protected exclusions explicit/i);
-  assert.match(runtimeReference, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
-  assert.match(runtimeReference, /cleanup-confirmation/);
-  assert.match(runtimeReference, /archive-destination-confirmation/);
-  assert.match(runtimeReference, /report-overwrite-confirmation/);
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
 
 test("repo-facing status docs treat cleanup as a shipped command", async () => {
