@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { DOCS_UPDATE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { loadBlueprintSkillInputs } from "../src/mcp/skill-metadata.js";
 
 const repoRoot = process.cwd();
 
@@ -50,9 +53,24 @@ test("docs skill captures the long-running docs-update contract", async () => {
     path.join(repoRoot, "skills/blueprint-docs/SKILL.md"),
     "utf8"
   );
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-docs",
+    "/blu-docs-update",
+    async (relativePath) => readFile(path.join(repoRoot, relativePath), "utf8").catch(() => null)
+  );
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-docs-update/);
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /## Runtime Inputs/);
+  assert.doesNotMatch(skillFile, /## Required Inputs/);
+  assert.doesNotMatch(skillFile, /docs\/commands\/docs-update\.md/);
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.match(skillFile, /Execution profile for `docs-update`: `long-running-mutation`/);
   assert.match(
     skillFile,
@@ -76,49 +94,72 @@ test("docs skill captures the long-running docs-update contract", async () => {
   assert.match(skillFile, /Do not rewrite broad internal doc sets/i);
 });
 
-test("docs-update docs and runtime reference describe the docs spine", async () => {
-  const [docFile, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/docs-update.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("docs-update runtime metadata and local reference describe the docs spine", async () => {
+  const [referenceFile, runtimeContract] = await Promise.all([
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    buildBlueprintCommandRuntimeContractResource("docs-update")
   ]);
 
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(
-    docFile,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+  assert.equal(runtimeContract.catalog.specPath, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.equal(runtimeContract.spec?.path, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.equal(runtimeContract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(runtimeContract.spec?.requiredTools, [
+    ...DOCS_UPDATE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.equal(runtimeContract.runtimeReference?.path, DOCS_UPDATE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(runtimeContract.runtimeReference?.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.deepEqual(runtimeContract.skillInputs.effective, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
-  assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(docFile, /shared long-running-mutation posture/i);
-  assert.match(docFile, /repo truth must stay distinct from cited external truth/i);
-  assert.match(docFile, /`update_topic` tool and keep a compact docs-update checklist with `write_todos`/i);
-  assert.match(docFile, /session-local visibility only/i);
-  assert.match(docFile, /broad refresh is blocked because the `\.blueprint\/codebase\/` bundle is missing/i);
 
+  assert.match(referenceFile, /# Docs Update Runtime Contract/);
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*Long-running-mutation profile for scoped repo-doc refresh or verification/i
+    referenceFile,
+    /Keep `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and\s+`Route` visible/
   );
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
+    referenceFile,
+    /Track resolved scope, active stage, pending gate, execution mode/
+  );
+  assert.match(referenceFile, /repo truth/i);
+  assert.match(referenceFile, /cited external truth/i);
+  assert.match(referenceFile, /returned `inputsUsed` as the authoritative digest scope/i);
+  assert.match(referenceFile, /`--verify-only` mode, keep repo documentation read-only/i);
+  assert.match(referenceFile, /bare `reportName`\s+`docs-update-latest`/i);
+  assert.match(referenceFile, /Pending gates are limited/i);
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for scoped repo documentation refresh or verification/i
   );
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*`update_topic` and `write_todos` for non-trivial docs-update runs/i
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /skills\/blueprint-docs\/references\/docs-update-runtime-contract\.md/i
   );
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*selected repo docs, source files, tests, and digest-backed Blueprint artifacts explicit as repo truth/i
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /digest inputsUsed/i
   );
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*cited external truth separate and optional/i
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /bare reportName docs-update-latest/i
   );
   assert.match(
-    runtimeReference,
-    /`docs-update`[\s\S]*route evidence-light broad refreshes to `\/blu-map-codebase`/i
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-map-codebase.*\/blu-progress/i
   );
 });

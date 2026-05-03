@@ -1020,6 +1020,40 @@ export declare const ADD_TESTS_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const DOCS_UPDATE_RUNTIME_METADATA: {
+    readonly commandName: "docs-update";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-docs";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: writes selected repo documentation files and a durable docs-update report.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+    readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-docs/references/docs-update-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-docs-update`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`docs-update` refreshes or verifies selected repo documentation against saved Blueprint and repo evidence, optionally checks current external truth, and persists the durable docs-update report through MCP.";
+        readonly reads: readonly ["Project health, artifact inventory, selected repo documentation, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth."];
+        readonly writes: readonly ["selected repo documentation files when not verify-only", ".blueprint/reports/docs-update-latest.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality And Shipping";
+        readonly command: "docs-update";
+        readonly primarySkill: "blueprint-docs";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const PAUSE_WORK_RUNTIME_METADATA: {
     readonly commandName: "pause-work";
     readonly sourceId: string;
@@ -2641,6 +2675,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "docs-update": {
+        readonly commandName: "docs-update";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-docs";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: writes selected repo documentation files and a durable docs-update report.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-docs/references/docs-update-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-docs-update`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`docs-update` refreshes or verifies selected repo documentation against saved Blueprint and repo evidence, optionally checks current external truth, and persists the durable docs-update report through MCP.";
+            readonly reads: readonly ["Project health, artifact inventory, selected repo documentation, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth."];
+            readonly writes: readonly ["selected repo documentation files when not verify-only", ".blueprint/reports/docs-update-latest.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality And Shipping";
+            readonly command: "docs-update";
+            readonly primarySkill: "blueprint-docs";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+            readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
     readonly "pause-work": {

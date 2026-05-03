@@ -659,7 +659,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     quickCommand,
     quickDoc,
     docsUpdateCommand,
-    docsUpdateDoc,
+    docsUpdateReference,
     prBranchCommand,
     prBranchDoc,
     shipCommand,
@@ -677,7 +677,7 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
     readRepoFile("commands/blu-quick.toml"),
     readRepoFile("docs/commands/quick.md"),
     readRepoFile("commands/blu-docs-update.toml"),
-    readRepoFile("docs/commands/docs-update.md"),
+    readRepoFile("skills/blueprint-docs/references/docs-update-runtime-contract.md"),
     readRepoFile("commands/blu-pr-branch.toml"),
     readRepoFile("docs/commands/pr-branch.md"),
     readRepoFile("commands/blu-ship.toml"),
@@ -740,7 +740,8 @@ test("report-backed and digest-backed commands stay explicit about repo-relative
   assert.match(docsUpdateCommand, /explicit repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, or `testFiles`/i);
   assert.match(docsUpdateCommand, /returned `inputsUsed` list as the authoritative digest scope/i);
   assert.match(docsUpdateCommand, /bare report name `docs-update-latest`/i);
-  assert.match(docsUpdateDoc, /## Digest And Report Contract/);
+  assert.match(docsUpdateReference, /## Evidence Truth/);
+  assert.match(docsUpdateReference, /## Persistence Boundaries/);
 
   assert.match(prBranchCommand, /repo-relative `artifactPaths` and, when useful, repo-relative `trackedFiles`/i);
   assert.match(prBranchCommand, /returned `inputsUsed` list as the authoritative digest scope/i);

@@ -222,6 +222,26 @@ test("review commands resolve docs-free manifest and local runtime-contract inpu
   }
 });
 
+test("docs-update resolves docs-free manifest and local runtime-contract inputs", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-docs",
+    "/blu-docs-update",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-docs");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "commands/blu-docs-update.toml",
+    "skills/blueprint-docs/references/docs-update-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
 test("validation commands resolve only command-scoped local runtime-contract inputs", async () => {
   const expectations = [
     ["validate-phase", "validate-phase-runtime-contract.md"],
