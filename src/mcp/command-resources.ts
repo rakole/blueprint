@@ -2,6 +2,10 @@ import { promises as fs } from "node:fs";
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import {
+  getRuntimeOwnedCommandMetadata,
+  getRuntimeOwnedCommandMetadataBySourceId
+} from "./command-runtime-metadata.js";
 import { loadBlueprintSkillInputs, type BlueprintSkillResolvedInputs } from "./skill-metadata.js";
 import { blueprintCommandCatalog } from "./tools/project.js";
 
@@ -230,15 +234,52 @@ async function readBlueprintRuntimeReferenceRows(): Promise<
   Map<string, BlueprintRuntimeReferenceRowResource>
 > {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
-
-  return runtimeReferenceMarkdown
+  const rows = runtimeReferenceMarkdown
     ? parseRuntimeReferenceRows(runtimeReferenceMarkdown)
     : new Map<string, BlueprintRuntimeReferenceRowResource>();
+  const newProjectMetadata = getRuntimeOwnedCommandMetadata("new-project");
+
+  if (newProjectMetadata) {
+    rows.set(newProjectMetadata.commandName, {
+      path: newProjectMetadata.runtimeReference.path,
+      wave: newProjectMetadata.catalog.wave,
+      waveTitle: newProjectMetadata.runtimeReference.waveTitle,
+      command: newProjectMetadata.runtimeReference.command,
+      commandSpecPath: newProjectMetadata.sourceId,
+      primarySkill: newProjectMetadata.runtimeReference.primarySkill,
+      exactMcpDestination: [...newProjectMetadata.runtimeReference.exactMcpDestination],
+      optionalAgents: [...newProjectMetadata.runtimeReference.optionalAgents],
+      hookInvolvement: [...newProjectMetadata.runtimeReference.hookInvolvement],
+      contractNotes: newProjectMetadata.runtimeReference.contractNotes,
+      evidenceState: [...newProjectMetadata.runtimeReference.evidenceState]
+    });
+  }
+
+  return rows;
 }
 
 async function readBundledCommandSpec(
   entry: CommandCatalogEntry
 ): Promise<BlueprintCommandSpecResource | null> {
+  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
+
+  if (runtimeMetadata) {
+    return {
+      path: runtimeMetadata.spec.path,
+      title: runtimeMetadata.spec.title,
+      wave: runtimeMetadata.catalog.wave,
+      family: runtimeMetadata.catalog.family,
+      executionProfile: runtimeMetadata.spec.executionProfile,
+      rootRoutable: runtimeMetadata.spec.rootRoutable,
+      purpose: runtimeMetadata.spec.purpose,
+      requiredTools: [...runtimeMetadata.requiredTools],
+      primarySkill: runtimeMetadata.catalog.primarySkill,
+      optionalSubagents: [...runtimeMetadata.optionalAgents],
+      reads: [...runtimeMetadata.spec.reads],
+      writes: [...runtimeMetadata.spec.writes]
+    };
+  }
+
   if (!entry.specPath) {
     return null;
   }

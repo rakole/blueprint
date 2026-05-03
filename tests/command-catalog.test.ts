@@ -13,6 +13,10 @@ import {
   buildBlueprintCommandRuntimeContractResource,
   listBlueprintCommandRuntimeContractCommands
 } from "../src/mcp/command-resources.js";
+import {
+  NEW_PROJECT_RUNTIME_METADATA,
+  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+} from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
@@ -138,6 +142,17 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     assert.deepEqual(entry.blockedBy, []);
     assert.deepEqual(catalog.aliases[command], blueprintDirectCommandAliases(command));
   }
+
+  assert.equal(catalog.commands["new-project"].specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.deepEqual(catalog.commands["new-project"].requiredTools, [
+    ...NEW_PROJECT_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(catalog.commands["new-project"].optionalAgents, [
+    ...NEW_PROJECT_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(catalog.commands["new-project"].risk, NEW_PROJECT_RUNTIME_METADATA.catalog.risk);
+  assert.equal(catalog.commands["map-codebase"].specPath, "docs/commands/map-codebase.md");
+  assert.equal(catalog.commands.help.specPath, "docs/commands/help.md");
 
   const listPhaseAssumptions = catalog.commands["list-phase-assumptions"];
 
