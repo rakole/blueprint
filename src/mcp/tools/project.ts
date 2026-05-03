@@ -43,6 +43,10 @@ import {
   type BlueprintInternalToolName
 } from "../runtime-vocabulary.js";
 import {
+  listRuntimeOwnedCommandMetadata,
+  type RuntimeOwnedCommandMetadata
+} from "../command-runtime-metadata.js";
+import {
   blueprintDirectCommand,
   blueprintDirectCommandAliases,
   blueprintPrimaryManifestPath,
@@ -744,6 +748,128 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   };
 }
 
+async function buildRuntimeOwnedCommandCatalogEntry(
+  metadata: RuntimeOwnedCommandMetadata
+): Promise<CommandCatalogEntry> {
+  const manifestPath = blueprintPrimaryManifestPath(metadata.commandName);
+  const manifestExists = await pathExists(bundledUrl(manifestPath));
+  const blockedBy: string[] = [];
+  const requiredInputPaths = [
+    ...new Set([metadata.spec.path, ...metadata.requiredInputPaths])
+  ];
+  const missingInputPaths: string[] = [];
+  const skillResolution = await resolveBlueprintSkillPath(metadata.primarySkill, async (skillPath) =>
+    pathExists(bundledUrl(skillPath))
+  );
+  const skillExists = skillResolution.resolvedPath !== null;
+
+  if (!manifestExists) {
+    blockedBy.push(`Missing command manifest: ${manifestPath}`);
+  }
+
+  if (!skillExists) {
+    blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
+  }
+
+  for (const inputPath of requiredInputPaths) {
+    if (!(await pathExists(bundledUrl(inputPath)))) {
+      missingInputPaths.push(inputPath);
+      blockedBy.push(`Missing runtime input: ${inputPath}`);
+    }
+  }
+
+  const missingTools = metadata.requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
+  const requiredToolsSatisfied = missingTools.length === 0;
+  const requiredInputsSatisfied = missingInputPaths.length === 0;
+
+  for (const toolName of missingTools) {
+    blockedBy.push(`Missing required MCP tool: ${toolName}`);
+  }
+
+  const availableOptionalAgents = await resolveAvailableOptionalAgents(
+    metadata.optionalAgents,
+    async (relativePath) => {
+      try {
+        return await fs.readFile(bundledUrl(relativePath), "utf8");
+      } catch {
+        return null;
+      }
+    }
+  );
+
+  let status: CommandStatus = metadata.declaredStatus;
+
+  if (!(manifestExists && skillExists && requiredInputsSatisfied && requiredToolsSatisfied)) {
+    if (manifestExists || skillExists) {
+      status = "repairing";
+    } else if (blockedBy.length > 0) {
+      status = "blocked";
+    }
+  } else if (metadata.declaredStatus === "blocked") {
+    status = "blocked";
+  } else if (metadata.declaredStatus === "planned") {
+    status = "planned";
+  } else if (metadata.declaredStatus === "repairing") {
+    status = "repairing";
+  }
+
+  return {
+    command: blueprintDirectCommand(metadata.commandName),
+    route: blueprintRouterCommand(metadata.commandName),
+    wave: metadata.wave,
+    family: metadata.family,
+    risk: metadata.risk,
+    primarySkill: metadata.primarySkill,
+    declaredStatus: metadata.declaredStatus,
+    status,
+    implemented: status === "implemented",
+    blockedBy,
+    manifestPath: manifestExists ? manifestPath : null,
+    skillPath: skillResolution.resolvedPath,
+    specPath: requiredInputsSatisfied ? metadata.spec.path : null,
+    requiredTools: metadata.requiredTools,
+    requiredToolsSatisfied,
+    optionalAgents: metadata.optionalAgents,
+    availableOptionalAgents
+  };
+}
+
+async function overlayRuntimeOwnedCommandCatalog(
+  catalog: CommandCatalogResult
+): Promise<CommandCatalogResult> {
+  const commands = { ...catalog.commands };
+  const waves = Object.fromEntries(
+    Object.entries(catalog.waves).map(([wave, commandNames]) => [
+      wave,
+      [...commandNames]
+    ])
+  );
+  const aliases = { ...catalog.aliases };
+
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    if (!metadata.exposeRuntimeContract && commands[metadata.commandName]) {
+      continue;
+    }
+
+    commands[metadata.commandName] = await buildRuntimeOwnedCommandCatalogEntry(metadata);
+
+    for (const commandNames of Object.values(waves)) {
+      const index = commandNames.indexOf(metadata.commandName);
+
+      if (index !== -1) {
+        commandNames.splice(index, 1);
+      }
+    }
+
+    const waveKey = String(metadata.wave);
+    waves[waveKey] ??= [];
+    waves[waveKey].push(metadata.commandName);
+    aliases[metadata.commandName] = blueprintDirectCommandAliases(metadata.commandName);
+  }
+
+  return { commands, waves, aliases };
+}
+
 async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
   const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
 
@@ -790,7 +916,7 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
 }
 
 export async function blueprintCommandCatalog(): Promise<CommandCatalogResult> {
-  return readBundledCommandCatalog();
+  return overlayRuntimeOwnedCommandCatalog(await readBundledCommandCatalog());
 }
 
 export async function blueprintProjectInit(

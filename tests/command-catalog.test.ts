@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 
 import { validateBundledBlueprintAgentDefinition } from "../src/mcp/agent-definition.js";
@@ -13,6 +14,7 @@ import {
   buildBlueprintCommandRuntimeContractResource,
   listBlueprintCommandRuntimeContractCommands
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
@@ -106,6 +108,14 @@ async function readRelativePath(relativePath: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function isBundledPath(value: unknown, relativePath: string): boolean {
+  if (value instanceof URL) {
+    return value.pathname.endsWith(`/${relativePath}`);
+  }
+
+  return typeof value === "string" && value.endsWith(relativePath);
 }
 
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
@@ -944,7 +954,10 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.equal(entry.manifestPath, "commands/blu-code-review.toml");
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(
+    entry.specPath,
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  );
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_phase_locate",
@@ -957,20 +970,70 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("runtime-owned code-review is repairing when its local runtime contract is missing", async (t) => {
+  const metadata = getRuntimeOwnedCommandMetadata("code-review");
+
+  assert.ok(metadata);
+
+  const originalAccess = fs.access;
+  fs.access = (async (...args: Parameters<typeof fs.access>) => {
+    if (isBundledPath(args[0], metadata.spec.path)) {
+      const error = new Error("ENOENT");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      throw error;
+    }
+
+    return originalAccess(...args);
+  }) as typeof fs.access;
+  t.after(() => {
+    fs.access = originalAccess;
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["code-review"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.specPath, null);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing runtime input: skills\/blueprint-review\/references\/code-review-runtime-contract\.md/
+  );
+});
+
 test("code-review runtime reference keeps the long-running review posture explicit", async () => {
-  const runtimeReference = await readRelativePath("docs/RUNTIME-REFERENCE.md");
+  const contract = await buildBlueprintCommandRuntimeContractResource("code-review");
+  const runtimeReference = contract.runtimeReference;
 
   assert.ok(runtimeReference);
- assert.match(
-    runtimeReference,
-    /\| `code-review` \| `docs\/commands\/code-review\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_contract_read`<br>`blueprint_review_scope`<br>`blueprint_review_load_findings`<br>`blueprint_review_validate_model`<br>`blueprint_review_record` \| `blueprint-reviewer` \|/
+  assert.equal(runtimeReference.path, "src/mcp/command-runtime-metadata.ts");
+  assert.equal(
+    runtimeReference.commandSpecPath,
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
   );
-  assert.match(runtimeReference, /Long-running-mutation profile for deterministic phase-scoped review/i);
+  assert.equal(runtimeReference.primarySkill, "blueprint-review");
+  assert.deepEqual(runtimeReference.exactMcpDestination, [
+    "blueprint_phase_locate",
+    "blueprint_artifact_contract_read",
+    "blueprint_review_scope",
+    "blueprint_review_load_findings",
+    "blueprint_review_validate_model",
+    "blueprint_review_record"
+  ]);
+  assert.deepEqual(runtimeReference.optionalAgents, ["blueprint-reviewer"]);
   assert.match(
-    runtimeReference,
+    runtimeReference.contractNotes ?? "",
+    /Long-running-mutation profile for deterministic phase-scoped review/i
+  );
+  assert.match(
+    runtimeReference.contractNotes ?? "",
     /Resolve\/Read\/Decide\/Execute\/Validate\/Persist\/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
   );
-  assert.match(runtimeReference, /use Gemini-native `update_topic` and `write_todos` for non-trivial review runs/i);
+  assert.match(
+    runtimeReference.contractNotes ?? "",
+    /use Gemini-native update_topic and write_todos for non-trivial review runs/i
+  );
 });
 
 test("review is implemented once manifest, review skill, and plan-backed peer-review tools exist", async () => {

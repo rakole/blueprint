@@ -2,6 +2,10 @@ import { promises as fs } from "node:fs";
 
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 
+import {
+  getRuntimeOwnedCommandMetadata,
+  listRuntimeOwnedCommandContractMetadata
+} from "./command-runtime-metadata.js";
 import { loadBlueprintSkillInputs, type BlueprintSkillResolvedInputs } from "./skill-metadata.js";
 import { blueprintCommandCatalog } from "./tools/project.js";
 
@@ -230,10 +234,15 @@ async function readBlueprintRuntimeReferenceRows(): Promise<
   Map<string, BlueprintRuntimeReferenceRowResource>
 > {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
-
-  return runtimeReferenceMarkdown
+  const rows = runtimeReferenceMarkdown
     ? parseRuntimeReferenceRows(runtimeReferenceMarkdown)
     : new Map<string, BlueprintRuntimeReferenceRowResource>();
+
+  for (const metadata of listRuntimeOwnedCommandContractMetadata()) {
+    rows.set(metadata.commandName, { ...metadata.runtimeReference });
+  }
+
+  return rows;
 }
 
 async function readBundledCommandSpec(
@@ -246,6 +255,19 @@ async function readBundledCommandSpec(
   const specMarkdown = await readBundledFile(entry.specPath);
 
   return specMarkdown ? parseCommandSpec(specMarkdown, entry.specPath) : null;
+}
+
+async function readCommandSpec(
+  commandName: string,
+  entry: CommandCatalogEntry
+): Promise<BlueprintCommandSpecResource | null> {
+  const metadata = getRuntimeOwnedCommandMetadata(commandName);
+
+  if (metadata?.exposeRuntimeContract) {
+    return { ...metadata.spec };
+  }
+
+  return readBundledCommandSpec(entry);
 }
 
 export async function buildBlueprintCommandCatalogResource(): Promise<CommandCatalogResult> {
@@ -265,7 +287,7 @@ export async function listBlueprintCommandRuntimeContractCommands(): Promise<str
         return null;
       }
 
-      const spec = await readBundledCommandSpec(entry);
+      const spec = await readCommandSpec(commandName, entry);
 
       return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
     })
@@ -295,7 +317,7 @@ export async function buildBlueprintCommandRuntimeContractResource(
   }
 
   const [spec, runtimeReferenceRows] = await Promise.all([
-    readBundledCommandSpec(entry),
+    readCommandSpec(commandName, entry),
     readBlueprintRuntimeReferenceRows()
   ]);
   const runtimeReference = runtimeReferenceRows.get(commandName);

@@ -12,6 +12,59 @@ commands:
   - /blu-audit-fix
   - /blu-ui-review
   - /blu-review
+input_bundles:
+  shared: []
+  commands:
+    "/blu-code-review":
+      - commands/blu-code-review.toml
+      - skills/blueprint-review/references/code-review-runtime-contract.md
+    "/blu-code-review-fix":
+      - docs/commands/code-review-fix.md
+      - docs/commands/code-review.md
+      - docs/COMMAND-CATALOG.md
+      - docs/SKILLS-AND-AGENTS.md
+      - docs/ARTIFACT-SCHEMA.md
+      - docs/MCP-TOOLS.md
+      - docs/RUNTIME-REFERENCE.md
+      - docs/PHASE-LIFECYCLE.md
+      - skills/blueprint-review/references/code-review-fix-runtime-contract.md
+    "/blu-audit-fix":
+      - docs/commands/audit-fix.md
+      - docs/commands/code-review.md
+      - docs/COMMAND-CATALOG.md
+      - docs/SKILLS-AND-AGENTS.md
+      - docs/ARTIFACT-SCHEMA.md
+      - docs/MCP-TOOLS.md
+      - docs/RUNTIME-REFERENCE.md
+      - docs/PHASE-LIFECYCLE.md
+      - skills/blueprint-review/references/audit-fix-runtime-contract.md
+    "/blu-secure-phase":
+      - docs/commands/secure-phase.md
+      - docs/COMMAND-CATALOG.md
+      - docs/SKILLS-AND-AGENTS.md
+      - docs/ARTIFACT-SCHEMA.md
+      - docs/MCP-TOOLS.md
+      - docs/RUNTIME-REFERENCE.md
+      - docs/PHASE-LIFECYCLE.md
+      - skills/blueprint-review/references/secure-phase-runtime-contract.md
+    "/blu-review":
+      - docs/commands/review.md
+      - docs/COMMAND-CATALOG.md
+      - docs/SKILLS-AND-AGENTS.md
+      - docs/ARTIFACT-SCHEMA.md
+      - docs/MCP-TOOLS.md
+      - docs/RUNTIME-REFERENCE.md
+      - docs/PHASE-LIFECYCLE.md
+      - skills/blueprint-review/references/review-runtime-contract.md
+    "/blu-ui-review":
+      - docs/commands/ui-review.md
+      - docs/COMMAND-CATALOG.md
+      - docs/SKILLS-AND-AGENTS.md
+      - docs/ARTIFACT-SCHEMA.md
+      - docs/MCP-TOOLS.md
+      - docs/RUNTIME-REFERENCE.md
+      - docs/PHASE-LIFECYCLE.md
+      - skills/blueprint-review/references/ui-review-runtime-contract.md
 ---
 
 # Blueprint Review Skill
@@ -47,25 +100,11 @@ non-routable until their extra MCP substrate lands.
 
 ## Required Inputs
 
-- `docs/commands/code-review.md`
-- `docs/commands/code-review-fix.md`
-- `docs/commands/secure-phase.md`
-- `docs/commands/audit-fix.md`
-- `docs/commands/review.md`
-- `docs/commands/ui-review.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- `docs/PHASE-LIFECYCLE.md`
-- `skills/blueprint-review/references/code-review-runtime-contract.md`
-- `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
-- `skills/blueprint-review/references/audit-fix-runtime-contract.md`
-- `skills/blueprint-review/references/review-runtime-contract.md`
-- `skills/blueprint-review/references/secure-phase-runtime-contract.md`
-- `skills/blueprint-review/references/ui-review-runtime-contract.md`
-- saved phase artifacts for the target phase, especially execution summaries
+Command-specific inputs are resolved from the structured `input_bundles`
+frontmatter for the invoking review command. `/blu-code-review` is intentionally
+docs-free at runtime: load its command manifest and local runtime contract, then
+use MCP tools, resources, artifact contracts, saved phase artifacts, and the
+optional `blueprint-reviewer` agent when the command contract allows it.
 
 ## Required MCP Tools
 

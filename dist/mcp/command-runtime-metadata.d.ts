@@ -1,0 +1,46 @@
+export type RuntimeOwnedCommandStatus = "planned" | "implemented" | "blocked" | "repairing";
+export type RuntimeOwnedCommandSpecMetadata = {
+    path: string;
+    title: string | null;
+    wave: number | null;
+    family: string | null;
+    executionProfile: string | null;
+    rootRoutable: boolean | null;
+    purpose: string | null;
+    requiredTools: string[];
+    primarySkill: string | null;
+    optionalSubagents: string[];
+    reads: string[];
+    writes: string[];
+};
+export type RuntimeOwnedReferenceRowMetadata = {
+    path: string;
+    wave: number | null;
+    waveTitle: string | null;
+    command: string;
+    commandSpecPath: string | null;
+    primarySkill: string | null;
+    exactMcpDestination: string[];
+    optionalAgents: string[];
+    hookInvolvement: string[];
+    contractNotes: string | null;
+    evidenceState: string[];
+};
+export type RuntimeOwnedCommandMetadata = {
+    commandName: string;
+    wave: number;
+    family: string;
+    primarySkill: string;
+    declaredStatus: RuntimeOwnedCommandStatus;
+    risk: string;
+    requiredTools: string[];
+    optionalAgents: string[];
+    requiredInputPaths: string[];
+    exposeRuntimeContract: boolean;
+    spec: RuntimeOwnedCommandSpecMetadata;
+    runtimeReference: RuntimeOwnedReferenceRowMetadata;
+};
+export declare const runtimeOwnedCommandMetadata: Record<string, RuntimeOwnedCommandMetadata>;
+export declare function getRuntimeOwnedCommandMetadata(commandName: string): RuntimeOwnedCommandMetadata | null;
+export declare function listRuntimeOwnedCommandMetadata(): RuntimeOwnedCommandMetadata[];
+export declare function listRuntimeOwnedCommandContractMetadata(): RuntimeOwnedCommandMetadata[];
