@@ -37,6 +37,7 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
   assert.match(commandFile, /draft versus ready PR mode/i);
   assert.match(commandFile, /gh/i);
   assert.match(commandFile, /manual fallback/i);
+  assert.match(commandFile, /After the approved push or PR attempt finishes, explicitly overwrite `ship-latest`/);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
@@ -80,6 +81,7 @@ test("ship doc, maintenance skill, and runtime reference capture ship visibility
   assert.match(skillFile, /optional push, and optional PR creation are separate steps/i);
   assert.match(skillFile, /ship-latest/);
   assert.match(skillFile, /missing or unauthenticated/i);
+  assert.match(skillFile, /overwrite `ship-latest`[\s\S]*actual outcomes, fallback notes, and post-mutation evidence/i);
 
   assert.match(runtimeReference, /`ship`[\s\S]*High-risk-maintenance profile for branchy shipping flows/i);
   assert.match(runtimeReference, /`ship`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
@@ -88,6 +90,7 @@ test("ship doc, maintenance skill, and runtime reference capture ship visibility
   assert.match(runtimeReference, /`ship`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.ship` contract/i);
   assert.match(runtimeReference, /`ship`[\s\S]*contract\.authoringTemplate/i);
   assert.match(runtimeReference, /`ship`[\s\S]*local prep plus optional push plus optional PR creation explicit/i);
+  assert.match(runtimeReference, /`ship`[\s\S]*overwrite `ship-latest` after push or PR attempts/i);
 });
 
 test("ship canonical report contract requires populated contract-backed evidence", () => {
@@ -130,6 +133,10 @@ test("ship canonical report contract requires populated contract-backed evidence
   );
   assert.ok(contract.placeholderSignals.includes("<draft|ready>"));
   assert.ok(
+    contract.placeholderSignals.includes("<base branch value>")
+  );
+  assert.ok(contract.placeholderSignals.includes("<branching strategy value>"));
+  assert.ok(
     contract.placeholderSignals.includes(
       "<available and authenticated|available but unauthenticated|unavailable>"
     )
@@ -140,6 +147,10 @@ test("ship canonical report contract requires populated contract-backed evidence
   assert.match(contract.authoringTemplate, /## Saved Evidence/);
   assert.match(contract.authoringTemplate, /## Remote Actions/);
   assert.match(contract.authoringTemplate, /\*\*Draft PR body source:\*\*/);
+  assert.match(
+    contract.authoringTemplate,
+    /\*\*Config used:\*\* git\.base_branch=<base branch value>; git\.branching_strategy=<branching strategy value>; planning\.commit_docs=<true\|false>/
+  );
   assert.match(contract.authoringTemplate, /\*\*Manual checklist:\*\*/);
   assert.match(contract.authoringTemplate, /<manual next action or \/blu-progress>/);
 
@@ -234,4 +245,33 @@ test("ship canonical report contract requires populated contract-backed evidence
   );
 
   assert.equal(populatedValidation.valid, true, populatedValidation.issues.join("\n"));
+
+  const invalidConfigPlaceholderValidation = validateReportArtifactContent(
+    populatedShipReport.replace(
+      "git.base_branch=main; git.branching_strategy=phase; planning.commit_docs=true",
+      "git.base_branch=<base branch value>; git.branching_strategy=phase; planning.commit_docs=true"
+    ),
+    "ship-latest"
+  );
+  assert.equal(invalidConfigPlaceholderValidation.valid, false);
+  assert.match(
+    invalidConfigPlaceholderValidation.issues.join("\n"),
+    /placeholder scaffold text: <base branch value>/i
+  );
+
+  const invalidSemanticValidation = validateReportArtifactContent(
+    populatedShipReport
+      .replace("**Execution mode:** confirmed-run", "**Execution mode:** yolo")
+      .replace("**Push requested:** true", "**Push requested:** maybe"),
+    "ship-latest"
+  );
+  assert.equal(invalidSemanticValidation.valid, false);
+  assert.match(
+    invalidSemanticValidation.issues.join("\n"),
+    /Ship report marker Execution mode must use one of: preview-only, confirmed-run, blocked\./
+  );
+  assert.match(
+    invalidSemanticValidation.issues.join("\n"),
+    /Ship report marker Push requested must use one of: true, false\./
+  );
 });

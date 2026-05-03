@@ -73,7 +73,8 @@
 - Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative preview scope instead of widening revert evidence after the tool returns.
 - Read `blueprint_artifact_contract_read` for `report.undo` before report persistence and use `contract.authoringTemplate` as the canonical `undo-latest` report authority.
-- Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path.
+- Persist the approved undo plan through `blueprint_artifact_report_write` with the bare report name `undo-latest`, not a `.blueprint/reports/...` path, before git mutation begins.
+- After the revert attempt finishes, overwrite `undo-latest` through `blueprint_artifact_report_write` so the durable report captures the actual outcome, blockers, and stale-evidence fallout.
 - Treat the returned report `path` as authoritative.
 
 ## In-Flight Progress Contract
@@ -123,6 +124,7 @@
 - A dry-run summary should exist before any commit-level mutation is attempted.
 - The command should show the resolved revert target set, dependency impact, and report-before-mutate path before confirmation.
 - The command should stop on dirty-tree, detached-head, or in-progress-merge states instead of trying to recover implicitly.
+- Undo should overwrite the saved report after the revert attempt so `undo-latest` reflects the actual outcome and blockers instead of only the pre-mutation plan.
 
 
 ## User Prompts And Confirmation Gates

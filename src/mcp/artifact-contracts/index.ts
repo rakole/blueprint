@@ -2533,7 +2533,7 @@ function renderShipTemplate(): string {
 - **Base branch:** <base branch>
 - **Execution mode:** <preview-only|confirmed-run|blocked>
 - **Draft or ready mode:** <draft|ready>
-- **Config used:** <git.base_branch=<value>; git.branching_strategy=<value>; planning.commit_docs=<true|false>>
+- **Config used:** git.base_branch=<base branch value>; git.branching_strategy=<branching strategy value>; planning.commit_docs=<true|false>
 - **Current branch:** <current branch>
 
 ## Saved Evidence
@@ -4579,7 +4579,8 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<base branch>",
       "<preview-only|confirmed-run|blocked>",
       "<draft|ready>",
-      "<git.base_branch=<value>; git.branching_strategy=<value>; planning.commit_docs=<true|false>>",
+      "<base branch value>",
+      "<branching strategy value>",
       "<current branch>",
       "<inputsUsed from blueprint_artifact_summary_digest>",
       "<saved evidence paths or none>",

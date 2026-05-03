@@ -74,7 +74,8 @@
 - Pass only repo-relative `artifactPaths` and `trackedFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative digest scope instead of widening shipping evidence after the tool returns.
 - Read `blueprint_artifact_contract_read` for `report.ship` before report persistence and use `contract.authoringTemplate` as the canonical `ship-latest` report authority.
-- Persist the approved shipping plan through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path.
+- Persist the approved shipping plan through `blueprint_artifact_report_write` with the bare report name `ship-latest`, not a `.blueprint/reports/...` path, before any approved push or PR step begins.
+- After the approved push or PR attempt finishes, overwrite `ship-latest` through `blueprint_artifact_report_write` so the durable report captures the actual outcomes, fallback notes, and post-mutation evidence.
 - Treat the returned report `path` as authoritative.
 
 ## In-Flight Progress Contract
@@ -138,6 +139,7 @@
 - Shipping should honor normalized `git.*` and `planning.commit_docs` config rather than re-deriving branch policy from git state alone.
 - Shipping should stop on a dirty working tree or branch mismatch instead of guessing through uncommitted or off-scope repo state.
 - Shipping should make the resolved scope, source branch, base branch, and report-before-mutate path explicit before any push or PR step is confirmed.
+- Shipping should overwrite the saved report after remote attempts so `ship-latest` reflects the actual push or PR outcome instead of only the pre-mutation plan.
 - Tracker-backed coordination must remain session-local and must never replace the durable `ship-latest` report or MCP-owned state updates.
 
 
@@ -174,7 +176,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Never executes git, workspace, patch, or cleanup mutation without an explicit confirmation gate.
-- Records the selected scope, branch plan, approved push or PR actions, and manual fallback guidance in `.blueprint/reports/ship-latest.md`.
+- Records the selected scope, branch plan, approved push or PR actions, actual remote outcomes, and manual fallback guidance in `.blueprint/reports/ship-latest.md`.
 - Honors normalized `git.base_branch`, `git.branching_strategy`, and `planning.commit_docs` when building the shipping path and fallback guidance.
 
 

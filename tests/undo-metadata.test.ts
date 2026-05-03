@@ -39,6 +39,7 @@ test("undo manifest references the maintenance skill, high-risk maintenance prof
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /git revert/i);
   assert.match(commandFile, /git reset --hard/i);
+  assert.match(commandFile, /After the revert attempt finishes, explicitly overwrite `undo-latest`/);
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
@@ -72,6 +73,7 @@ test("maintenance skill captures undo visibility, report persistence, and destru
   assert.match(skillFile, /report-overwrite-confirmation/);
   assert.match(skillFile, /git reset --hard/i);
   assert.match(skillFile, /report-before-mutate/i);
+  assert.match(skillFile, /overwrite `undo-latest`[\s\S]*actual outcome, blockers, and stale-evidence fallout/i);
 });
 
 test("undo docs and runtime reference expose the destructive gate, waiting state, and next safe action contract", async () => {
@@ -114,6 +116,7 @@ test("undo docs and runtime reference expose the destructive gate, waiting state
   assert.match(runtimeReference, /report-overwrite-confirmation/);
   assert.match(runtimeReference, /`undo`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.undo` contract/i);
   assert.match(runtimeReference, /`undo`[\s\S]*contract\.authoringTemplate/i);
+  assert.match(runtimeReference, /`undo`[\s\S]*overwrite `undo-latest` after the revert attempt/i);
 });
 
 test("undo canonical report contract requires populated contract-backed revert evidence", () => {
@@ -267,6 +270,22 @@ test("undo canonical report contract requires populated contract-backed revert e
   );
 
   assert.equal(populatedValidation.valid, true, populatedValidation.issues.join("\n"));
+
+  const invalidSemanticValidation = validateReportArtifactContent(
+    populatedUndoReport
+      .replace("**Approved git commands:** git revert --no-edit def5678", "**Approved git commands:** git reset --hard HEAD~1")
+      .replace("**Forbidden-command check:** passed", "**Forbidden-command check:** passed"),
+    "undo-latest"
+  );
+  assert.equal(invalidSemanticValidation.valid, false);
+  assert.match(
+    invalidSemanticValidation.issues.join("\n"),
+    /Undo report marker Approved git commands must not include destructive undo commands: git reset --hard\./
+  );
+  assert.match(
+    invalidSemanticValidation.issues.join("\n"),
+    /Undo report marker Forbidden-command check cannot be `passed` when destructive undo commands appear in the approved revert commands section\./
+  );
 });
 
 test("repo-facing status docs treat undo as a shipped command", async () => {
