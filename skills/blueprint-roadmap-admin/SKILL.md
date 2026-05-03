@@ -14,6 +14,12 @@ commands:
   - /blu-complete-milestone
   - /blu-milestone-summary
   - /blu-new-milestone
+input_bundles:
+  shared: []
+  commands:
+    "/blu-add-phase":
+      - skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md
+legacy_required_inputs_fallback: enabled
 ---
 
 # Blueprint Roadmap Admin Skill
@@ -28,6 +34,7 @@ Orchestrate Blueprint roadmap and milestone management flows so phase mutations,
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
+- Load only the active command's structured `input_bundles.commands[...]` inputs when one is present; unmapped roadmap-admin commands continue to use the legacy Required Inputs section below.
 
 ## Parity Goal
 
@@ -43,7 +50,6 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 
 ## Required Inputs
 
-- `docs/commands/add-phase.md`
 - `docs/commands/insert-phase.md`
 - `docs/commands/remove-phase.md`
 - `docs/commands/plan-milestone-gaps.md`
@@ -56,8 +62,9 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - `docs/ARTIFACT-SCHEMA.md`
 - `docs/MCP-TOOLS.md`
 - `docs/RUNTIME-REFERENCE.md`
-- `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` when running `/blu-add-phase`
 - `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` when running `/blu-insert-phase`
+
+`/blu-add-phase` is resolved from the structured `input_bundles` frontmatter and loads only `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`.
 
 ## Required MCP Tools
 

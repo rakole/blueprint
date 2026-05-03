@@ -98,3 +98,50 @@ test("plan-phase skill resolves its slim command-scoped input bundle", async () 
     "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
   ]);
 });
+
+test("roadmap-admin add-phase resolves docless command-scoped input override", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-roadmap-admin",
+    "/blu-add-phase",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-roadmap-admin");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
+test("roadmap-admin siblings keep legacy Required Inputs fallback", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-roadmap-admin",
+    "/blu-insert-phase",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-roadmap-admin");
+  assert.equal(inputs.commandSpecific.length, 0);
+  assert.deepEqual(inputs.shared, inputs.effective);
+  assert.ok(inputs.effective.includes("docs/commands/insert-phase.md"));
+  assert.ok(inputs.effective.includes("docs/COMMAND-CATALOG.md"));
+  assert.ok(inputs.effective.includes("docs/RUNTIME-REFERENCE.md"));
+  assert.ok(
+    inputs.effective.some((input) =>
+      input.startsWith(
+        "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
+      )
+    )
+  );
+  assert.equal(inputs.effective.includes("docs/commands/add-phase.md"), false);
+  assert.equal(
+    inputs.effective.includes(
+      "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
+    ),
+    false
+  );
+});

@@ -36234,6 +36234,9 @@ var init_agent_definition = __esm({
 });
 
 // src/mcp/command-runtime-metadata.ts
+function listRuntimeOwnedCommandMetadata() {
+  return Object.values(RUNTIME_OWNED_COMMAND_METADATA);
+}
 function getRuntimeOwnedCommandMetadata(commandName) {
   return RUNTIME_OWNED_COMMAND_METADATA[commandName] ?? null;
 }
@@ -36245,7 +36248,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36306,8 +36309,57 @@ var init_command_runtime_metadata = __esm({
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
+    ADD_PHASE_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#add-phase";
+    ADD_PHASE_RUNTIME_METADATA = {
+      commandName: "add-phase",
+      sourceId: ADD_PHASE_RUNTIME_METADATA_SOURCE_ID,
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal."
+      },
+      requiredTools: [
+        "blueprint_roadmap_read",
+        "blueprint_roadmap_add_phase",
+        "blueprint_artifact_scaffold",
+        "blueprint_state_update"
+      ],
+      optionalAgents: [],
+      spec: {
+        path: ADD_PHASE_RUNTIME_METADATA_SOURCE_ID,
+        title: "`/blu-add-phase`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.",
+        reads: [".blueprint/ROADMAP.md"],
+        writes: [
+          ".blueprint/ROADMAP.md",
+          ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: ADD_PHASE_RUNTIME_METADATA_SOURCE_ID,
+        waveTitle: "Roadmap And Milestone",
+        command: "add-phase",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: [
+          "blueprint_roadmap_read",
+          "blueprint_roadmap_add_phase",
+          "blueprint_artifact_scaffold",
+          "blueprint_state_update"
+        ],
+        optionalAgents: [],
+        hookInvolvement: [".blueprint write guard"],
+        contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
     RUNTIME_OWNED_COMMAND_METADATA = {
-      [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA
+      [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
+      [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA
     };
   }
 });
@@ -36672,27 +36724,44 @@ async function buildCommandCatalogEntry(parsedRow) {
     availableOptionalAgents
   };
 }
-async function buildRuntimeOwnedFallbackCommandCatalog() {
-  const parsedRow = {
-    commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
-    wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
-    family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
-    primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
-    declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
-    risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
-  };
-  const entry = await buildCommandCatalogEntry(parsedRow);
+function runtimeOwnedMetadataToParsedRow(metadata) {
   return {
-    commands: {
-      [parsedRow.commandName]: entry
-    },
-    waves: {
-      [String(parsedRow.wave)]: [parsedRow.commandName]
-    },
-    aliases: {
-      [parsedRow.commandName]: blueprintDirectCommandAliases(parsedRow.commandName)
-    }
+    commandName: metadata.commandName,
+    wave: metadata.catalog.wave,
+    family: metadata.catalog.family,
+    primarySkill: metadata.catalog.primarySkill,
+    declaredStatus: metadata.catalog.declaredStatus,
+    risk: metadata.catalog.risk
   };
+}
+async function addRuntimeOwnedCommandCatalogEntry(result, metadata) {
+  const parsedRow = runtimeOwnedMetadataToParsedRow(metadata);
+  const entry = await buildCommandCatalogEntry(parsedRow);
+  const waveKey = String(parsedRow.wave);
+  result.commands[parsedRow.commandName] = entry;
+  result.waves[waveKey] ??= [];
+  if (!result.waves[waveKey].includes(parsedRow.commandName)) {
+    result.waves[waveKey].push(parsedRow.commandName);
+  }
+  result.aliases[parsedRow.commandName] = blueprintDirectCommandAliases(
+    parsedRow.commandName
+  );
+}
+async function addMissingRuntimeOwnedCommandCatalogEntries(result) {
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    if (result.commands[metadata.commandName]) {
+      continue;
+    }
+    await addRuntimeOwnedCommandCatalogEntry(result, metadata);
+  }
+  return result;
+}
+async function buildRuntimeOwnedFallbackCommandCatalog() {
+  return addMissingRuntimeOwnedCommandCatalogEntries({
+    commands: {},
+    waves: {},
+    aliases: {}
+  });
 }
 async function readBundledCommandCatalog() {
   const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
@@ -36718,23 +36787,7 @@ async function readBundledCommandCatalog() {
       waves[waveKey].push(parsedRow.commandName);
       aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
     }
-    if (!commands[NEW_PROJECT_RUNTIME_METADATA.commandName]) {
-      const parsedRow = {
-        commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
-        wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
-        family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
-        primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
-        declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
-        risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
-      };
-      const entry = await buildCommandCatalogEntry(parsedRow);
-      commands[parsedRow.commandName] = entry;
-      const waveKey = String(parsedRow.wave);
-      waves[waveKey] ??= [];
-      waves[waveKey].push(parsedRow.commandName);
-      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
-    }
-    return Object.keys(commands).length > 0 ? { commands, waves, aliases } : await buildRuntimeOwnedFallbackCommandCatalog();
+    return Object.keys(commands).length > 0 ? addMissingRuntimeOwnedCommandCatalogEntries({ commands, waves, aliases }) : await buildRuntimeOwnedFallbackCommandCatalog();
   } catch {
     return buildRuntimeOwnedFallbackCommandCatalog();
   }
@@ -65033,6 +65086,10 @@ function asStringArray(value) {
 function isObject2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+function legacyRequiredInputsFallbackEnabled(frontmatter) {
+  const value = frontmatter.legacy_required_inputs_fallback;
+  return typeof value === "string" && ["enabled", "true"].includes(value.toLowerCase());
+}
 function resolveBlueprintSkillInputsFromContent(skillName, commandPath, content) {
   const extracted = extractFrontmatterBlock2(content);
   if (!extracted) {
@@ -65050,6 +65107,17 @@ function resolveBlueprintSkillInputsFromContent(skillName, commandPath, content)
     const shared = asStringArray(rawBundles.shared);
     const rawCommands = isObject2(rawBundles.commands) ? rawBundles.commands : {};
     const commandSpecific = asStringArray(rawCommands[commandPath]);
+    if (commandSpecific.length === 0 && !(commandPath in rawCommands) && legacyRequiredInputsFallbackEnabled(frontmatter)) {
+      const legacyInputs2 = parseLegacyRequiredInputs(extracted.body);
+      if (legacyInputs2.length > 0) {
+        return {
+          skill: skillName,
+          shared: legacyInputs2,
+          commandSpecific: [],
+          effective: legacyInputs2
+        };
+      }
+    }
     return {
       skill: skillName,
       shared,
@@ -65211,24 +65279,26 @@ function buildExcludedRuntimeContractErrorMessage(commandName) {
 function isExposedRuntimeContractCatalogEntry(entry) {
   return entry.status === "implemented" && entry.implemented;
 }
+function runtimeOwnedMetadataToRuntimeReferenceRow(metadata) {
+  return {
+    path: metadata.runtimeReference.path,
+    wave: metadata.catalog.wave,
+    waveTitle: metadata.runtimeReference.waveTitle,
+    command: metadata.runtimeReference.command,
+    commandSpecPath: metadata.sourceId,
+    primarySkill: metadata.runtimeReference.primarySkill,
+    exactMcpDestination: [...metadata.runtimeReference.exactMcpDestination],
+    optionalAgents: [...metadata.runtimeReference.optionalAgents],
+    hookInvolvement: [...metadata.runtimeReference.hookInvolvement],
+    contractNotes: metadata.runtimeReference.contractNotes,
+    evidenceState: [...metadata.runtimeReference.evidenceState]
+  };
+}
 async function readBlueprintRuntimeReferenceRows() {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
   const rows = runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
-  const newProjectMetadata = getRuntimeOwnedCommandMetadata("new-project");
-  if (newProjectMetadata) {
-    rows.set(newProjectMetadata.commandName, {
-      path: newProjectMetadata.runtimeReference.path,
-      wave: newProjectMetadata.catalog.wave,
-      waveTitle: newProjectMetadata.runtimeReference.waveTitle,
-      command: newProjectMetadata.runtimeReference.command,
-      commandSpecPath: newProjectMetadata.sourceId,
-      primarySkill: newProjectMetadata.runtimeReference.primarySkill,
-      exactMcpDestination: [...newProjectMetadata.runtimeReference.exactMcpDestination],
-      optionalAgents: [...newProjectMetadata.runtimeReference.optionalAgents],
-      hookInvolvement: [...newProjectMetadata.runtimeReference.hookInvolvement],
-      contractNotes: newProjectMetadata.runtimeReference.contractNotes,
-      evidenceState: [...newProjectMetadata.runtimeReference.evidenceState]
-    });
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    rows.set(metadata.commandName, runtimeOwnedMetadataToRuntimeReferenceRow(metadata));
   }
   return rows;
 }

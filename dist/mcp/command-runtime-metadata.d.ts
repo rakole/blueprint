@@ -66,6 +66,40 @@ export declare const NEW_PROJECT_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const ADD_PHASE_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#add-phase";
+export declare const ADD_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "add-phase";
+    readonly sourceId: "src/mcp/command-runtime-metadata.ts#add-phase";
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly title: "`/blu-add-phase`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.";
+        readonly reads: readonly [".blueprint/ROADMAP.md"];
+        readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "add-phase";
+        readonly primarySkill: "blueprint-roadmap-admin";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const RUNTIME_OWNED_COMMAND_METADATA: {
     readonly "new-project": {
         readonly commandName: "new-project";
@@ -100,6 +134,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
+    readonly "add-phase": {
+        readonly commandName: "add-phase";
+        readonly sourceId: "src/mcp/command-runtime-metadata.ts#add-phase";
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: appends the next whole-number phase, scaffolds the matching phase directory, and updates the next-step signal.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+            readonly title: "`/blu-add-phase`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "Append a new whole-number phase to an initialized Blueprint roadmap through MCP-owned roadmap and scaffold writes.";
+            readonly reads: readonly [".blueprint/ROADMAP.md"];
+            readonly writes: readonly [".blueprint/ROADMAP.md", ".blueprint/phases/<phase-slug>/<phase-prefix>-CONTEXT.md", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: "src/mcp/command-runtime-metadata.ts#add-phase";
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "add-phase";
+            readonly primarySkill: "blueprint-roadmap-admin";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
 };
+export declare function listRuntimeOwnedCommandMetadata(): RuntimeOwnedCommandMetadata[];
 export declare function getRuntimeOwnedCommandMetadata(commandName: string): RuntimeOwnedCommandMetadata | null;
 export declare function getRuntimeOwnedCommandMetadataBySourceId(sourceId: string | null): RuntimeOwnedCommandMetadata | null;
