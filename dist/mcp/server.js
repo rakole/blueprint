@@ -36251,7 +36251,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, ADD_TESTS_SPEC_PATH, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, ADD_TESTS_SPEC_PATH, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36443,6 +36443,31 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_load",
       "blueprint_state_update"
     ];
+    NOTE_REQUIRED_TOOLS = [
+      "blueprint_artifact_mutate_index"
+    ];
+    ADD_TODO_REQUIRED_TOOLS = [
+      "blueprint_artifact_mutate_index"
+    ];
+    CHECK_TODOS_REQUIRED_TOOLS = [
+      "blueprint_project_status",
+      "blueprint_artifact_mutate_index"
+    ];
+    ADD_BACKLOG_REQUIRED_TOOLS = [
+      "blueprint_artifact_mutate_index",
+      "blueprint_artifact_scaffold"
+    ];
+    REVIEW_BACKLOG_REQUIRED_TOOLS = [
+      "blueprint_roadmap_promote_backlog",
+      "blueprint_artifact_mutate_index",
+      "blueprint_state_update"
+    ];
+    EXPLORE_REQUIRED_TOOLS = [
+      "blueprint_project_status",
+      "blueprint_artifact_mutate_index",
+      "blueprint_roadmap_add_phase",
+      "blueprint_artifact_scaffold"
+    ];
     PROGRESS_SPEC_PATH = "commands/blu-progress.toml";
     VALIDATE_PHASE_SPEC_PATH = "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
     VERIFY_WORK_SPEC_PATH = "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md";
@@ -36458,6 +36483,7 @@ var init_command_runtime_metadata = __esm({
     CODE_REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     CODE_REVIEW_FIX_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     SECURE_PHASE_OPTIONAL_AGENTS = ["blueprint-security-auditor"];
+    EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"];
     PROGRESS_RUNTIME_METADATA = {
       commandName: "progress",
       sourceId: runtimeMetadataSourceId("progress"),
@@ -36716,6 +36742,218 @@ var init_command_runtime_metadata = __esm({
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
+    NOTE_RUNTIME_METADATA = {
+      commandName: "note",
+      sourceId: runtimeMetadataSourceId("note"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Low: note capture only."
+      },
+      requiredTools: NOTE_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("note"),
+        title: "`/blu-note`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`note` appends explicit project-local notes through the capture index MCP tool while keeping unsupported list, promote, and global-note asks in safe suggestion mode.",
+        reads: ["User-provided note text and duplicate state through MCP."],
+        writes: [".blueprint/notes/NOTES.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("note"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "note",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: NOTE_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    ADD_TODO_RUNTIME_METADATA = {
+      commandName: "add-todo",
+      sourceId: runtimeMetadataSourceId("add-todo"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Low: todo index update only."
+      },
+      requiredTools: ADD_TODO_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("add-todo"),
+        title: "`/blu-add-todo`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`add-todo` appends explicit project-local todo items through the capture index MCP tool.",
+        reads: ["User-provided todo text and duplicate state through MCP."],
+        writes: [".blueprint/todos/TODO.md"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("add-todo"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "add-todo",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: ADD_TODO_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    CHECK_TODOS_RUNTIME_METADATA = {
+      commandName: "check-todos",
+      sourceId: runtimeMetadataSourceId("check-todos"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Low: todo selection and status update only."
+      },
+      requiredTools: CHECK_TODOS_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("check-todos"),
+        title: "`/blu-check-todos`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`check-todos` inspects pending project-local todos and can mark one active or completed through bounded MCP updates.",
+        reads: [
+          "Project readiness and todo queue state through Blueprint MCP tools."
+        ],
+        writes: [".blueprint/todos/TODO.md when status changes are confirmed"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("check-todos"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "check-todos",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: CHECK_TODOS_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    ADD_BACKLOG_RUNTIME_METADATA = {
+      commandName: "add-backlog",
+      sourceId: runtimeMetadataSourceId("add-backlog"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Low: backlog append plus optional stub scaffold."
+      },
+      requiredTools: ADD_BACKLOG_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("add-backlog"),
+        title: "`/blu-add-backlog`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`add-backlog` appends explicit parking-lot ideas and can reserve a confirmed 999.x phase stub through MCP-owned capture and scaffold writes.",
+        reads: ["User-provided backlog text and duplicate state through MCP."],
+        writes: [
+          ".blueprint/backlog/BACKLOG.md",
+          "optional .blueprint/phases/999.x-*/ context stub"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("add-backlog"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "add-backlog",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: ADD_BACKLOG_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    REVIEW_BACKLOG_RUNTIME_METADATA = {
+      commandName: "review-backlog",
+      sourceId: runtimeMetadataSourceId("review-backlog"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Medium: can promote backlog items into active roadmap scope."
+      },
+      requiredTools: REVIEW_BACKLOG_REQUIRED_TOOLS,
+      optionalAgents: [],
+      spec: {
+        path: runtimeMetadataSourceId("review-backlog"),
+        title: "`/blu-review-backlog`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`review-backlog` previews canonical backlog entries, promotes or archives confirmed items, and records the next safe state through MCP-owned transitions.",
+        reads: ["Canonical backlog preview through Blueprint MCP tools."],
+        writes: [
+          ".blueprint/backlog/BACKLOG.md",
+          ".blueprint/ROADMAP.md",
+          ".blueprint/phases/<phase>/",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("review-backlog"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "review-backlog",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: REVIEW_BACKLOG_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    EXPLORE_RUNTIME_METADATA = {
+      commandName: "explore",
+      sourceId: runtimeMetadataSourceId("explore"),
+      catalog: {
+        wave: 3,
+        family: "Capture And Lightweight Execution",
+        primarySkill: "blueprint-capture",
+        declaredStatus: "implemented",
+        risk: "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase."
+      },
+      requiredTools: EXPLORE_REQUIRED_TOOLS,
+      optionalAgents: EXPLORE_OPTIONAL_AGENTS,
+      spec: {
+        path: runtimeMetadataSourceId("explore"),
+        title: "`/blu-explore`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`explore` briefly classifies an idea into note, todo, backlog, roadmap, or no-write and persists only the explicitly confirmed target through MCP tools.",
+        reads: [
+          "Project readiness, user-provided idea text, and optional bounded researcher context."
+        ],
+        writes: [
+          "confirmed target only: .blueprint/notes/NOTES.md, .blueprint/todos/TODO.md, .blueprint/backlog/BACKLOG.md, or .blueprint/ROADMAP.md plus scaffolded phase context"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("explore"),
+        waveTitle: "Capture And Lightweight Execution",
+        command: "explore",
+        primarySkill: "blueprint-capture",
+        exactMcpDestination: EXPLORE_REQUIRED_TOOLS,
+        optionalAgents: EXPLORE_OPTIONAL_AGENTS,
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
     RUNTIME_OWNED_COMMAND_METADATA = {
       [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
       [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
@@ -36725,7 +36963,13 @@ var init_command_runtime_metadata = __esm({
       [CODE_REVIEW_RUNTIME_METADATA.commandName]: CODE_REVIEW_RUNTIME_METADATA,
       [CODE_REVIEW_FIX_RUNTIME_METADATA.commandName]: CODE_REVIEW_FIX_RUNTIME_METADATA,
       [SECURE_PHASE_RUNTIME_METADATA.commandName]: SECURE_PHASE_RUNTIME_METADATA,
-      [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA
+      [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
+      [NOTE_RUNTIME_METADATA.commandName]: NOTE_RUNTIME_METADATA,
+      [ADD_TODO_RUNTIME_METADATA.commandName]: ADD_TODO_RUNTIME_METADATA,
+      [CHECK_TODOS_RUNTIME_METADATA.commandName]: CHECK_TODOS_RUNTIME_METADATA,
+      [ADD_BACKLOG_RUNTIME_METADATA.commandName]: ADD_BACKLOG_RUNTIME_METADATA,
+      [REVIEW_BACKLOG_RUNTIME_METADATA.commandName]: REVIEW_BACKLOG_RUNTIME_METADATA,
+      [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA
     };
   }
 });

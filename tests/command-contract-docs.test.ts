@@ -20,6 +20,23 @@ type CommandSpecEntry = {
   primarySkill: string;
 };
 
+type RuntimeReferenceEntry = {
+  command: string;
+  commandSpecPath: string;
+  primarySkill: string;
+  contractNotes: string;
+  evidenceState: string;
+};
+
+const SOURCE_OWNED_CAPTURE_COMMANDS = [
+  "note",
+  "add-todo",
+  "check-todos",
+  "add-backlog",
+  "review-backlog",
+  "explore"
+] as const;
+
 async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
@@ -61,13 +78,52 @@ function parseMigrationSkills(markdown: string): Map<string, string> {
   const skills = new Map<string, string>();
 
   for (const match of markdown.matchAll(
-    /^\| `([^`]+)` \| `docs\/commands\/[^`]+\.md` \| `([^`]+)` \|/gm
+    /^\| `([^`]+)` \| `(?:docs\/commands\/[^`]+\.md|src\/mcp\/command-runtime-metadata\.ts#[^`]+)` \| `([^`]+)` \|/gm
   )) {
     const [, command, skill] = match;
     skills.set(command, skill);
   }
 
   return skills;
+}
+
+function parseRuntimeReferenceRows(markdown: string): Map<string, RuntimeReferenceEntry> {
+  const entries = new Map<string, RuntimeReferenceEntry>();
+
+  for (const line of markdown.split("\n")) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine.startsWith("| `") || !trimmedLine.endsWith("|")) {
+      continue;
+    }
+
+    const cells = trimmedLine
+      .slice(1, -1)
+      .split(" | ")
+      .map((cell) => cell.trim());
+
+    if (cells.length !== 8) {
+      continue;
+    }
+
+    const commandMatch = cells[0].match(/^`([^`]+)`$/);
+    const commandSpecMatch = cells[1].match(/^`([^`]+)`$/);
+    const primarySkillMatch = cells[2].match(/^`([^`]+)`$/);
+
+    if (!commandMatch || !commandSpecMatch || !primarySkillMatch) {
+      continue;
+    }
+
+    entries.set(commandMatch[1], {
+      command: commandMatch[1],
+      commandSpecPath: commandSpecMatch[1],
+      primarySkill: primarySkillMatch[1],
+      contractNotes: cells[6],
+      evidenceState: cells[7]
+    });
+  }
+
+  return entries;
 }
 
 function parseCommandSpec(markdown: string, command: string): CommandSpecEntry {
@@ -274,6 +330,31 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
   );
 });
 
+test("capture runtime reference rows are source-owned, not docs-aligned active contracts", async () => {
+  const runtimeReference = await readRepoFile("docs/RUNTIME-REFERENCE.md");
+  const runtimeRows = parseRuntimeReferenceRows(runtimeReference);
+
+  assert.match(
+    runtimeReference,
+    /Capture commands `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, and `explore` are source-owned\/docless for live runtime-contract metadata\./
+  );
+  assert.match(
+    runtimeReference,
+    /active runtime contract comes from `src\/mcp\/command-runtime-metadata\.ts`, the matching `commands\/blu-\*\.toml` manifest, and `skills\/blueprint-capture\/SKILL\.md` `input_bundles`/
+  );
+
+  for (const command of SOURCE_OWNED_CAPTURE_COMMANDS) {
+    const row = runtimeRows.get(command);
+
+    assert.ok(row, `Missing runtime reference row for ${command}`);
+    assert.equal(row.commandSpecPath, `src/mcp/command-runtime-metadata.ts#${command}`);
+    assert.equal(row.primarySkill, "blueprint-capture");
+    assert.match(row.evidenceState, /`source-owned`/);
+    assert.doesNotMatch(row.evidenceState, /`docs-aligned`/);
+    assert.doesNotMatch(row.commandSpecPath, /^docs\/commands\//);
+  }
+});
+
 test("do docs and router skill keep the planned freeform-routing contract explicit", async () => {
   const [catalogMarkdown, doDoc, routerSkill, runtimeReference, readme] = await Promise.all([
     readRepoFile("docs/COMMAND-CATALOG.md"),
@@ -418,7 +499,7 @@ test("add-todo docs and catalog metadata are marked implemented with the shipped
   assert.doesNotMatch(addTodoDoc, /`blueprint_state_update`/);
   assert.match(
     migrationMarkdown,
-    /\| `add-todo` \| `docs\/commands\/add-todo\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
+    /\| `add-todo` \| `src\/mcp\/command-runtime-metadata\.ts#add-todo` \| `blueprint-capture` \| `blueprint_artifact_mutate_index` \|/
   );
 });
 
@@ -441,7 +522,7 @@ test("check-todos docs and catalog metadata are marked implemented with the ship
   assert.doesNotMatch(checkTodosDoc, /`blueprint_state_update`/);
   assert.match(
     migrationMarkdown,
-    /\| `check-todos` \| `docs\/commands\/check-todos\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
+    /\| `check-todos` \| `src\/mcp\/command-runtime-metadata\.ts#check-todos` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_project_status` \|/
   );
 });
 
@@ -469,7 +550,7 @@ test("review-backlog docs and catalog metadata are marked implemented with the b
   );
   assert.match(
     migrationMarkdown,
-    /\| `review-backlog` \| `docs\/commands\/review-backlog\.md` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
+    /\| `review-backlog` \| `src\/mcp\/command-runtime-metadata\.ts#review-backlog` \| `blueprint-capture` \| `blueprint_artifact_mutate_index`<br>`blueprint_roadmap_promote_backlog`<br>`blueprint_state_update` \|/
   );
 });
 

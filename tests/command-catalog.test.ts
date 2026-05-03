@@ -84,6 +84,14 @@ const IMPLEMENTED_COMMANDS = [
 const PLANNED_COMMANDS = ["do"] as const;
 const LIST_PHASE_ASSUMPTIONS_MANIFEST = "commands/blu-list-phase-assumptions.toml";
 const RUNTIME_CONTRACT_EXCLUDED_COMMANDS = new Set(["review"]);
+const CAPTURE_RUNTIME_METADATA_COMMANDS = [
+  "note",
+  "add-todo",
+  "check-todos",
+  "add-backlog",
+  "review-backlog",
+  "explore"
+] as const;
 
 async function pathExists(relativePath: string): Promise<boolean> {
   try {
@@ -336,6 +344,46 @@ test("command runtime contract resource stays anchored to live catalog, command 
     addPhaseContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+});
+
+test("capture commands resolve catalog and runtime contract truth from runtime metadata", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const commandName of CAPTURE_RUNTIME_METADATA_COMMANDS) {
+    const metadata = getRuntimeOwnedCommandMetadata(commandName);
+    const entry = catalog.commands[commandName];
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+
+    assert.ok(metadata, `${commandName} should have runtime-owned metadata`);
+    assert.equal(entry.specPath, `src/mcp/command-runtime-metadata.ts#${commandName}`);
+    assert.equal(entry.specPath, metadata.sourceId);
+    assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(entry.optionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(contract.catalog.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.catalog.optionalAgents, [...metadata.optionalAgents]);
+    assert.equal(contract.spec?.path, metadata.sourceId);
+    assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.spec?.optionalSubagents, [...metadata.optionalAgents]);
+    assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+    assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+    assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+      ...metadata.requiredTools
+    ]);
+    assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+      ...metadata.optionalAgents
+    ]);
+    assert.deepEqual(contract.skillInputs.shared, []);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [
+      blueprintPrimaryManifestPath(commandName)
+    ]);
+    assert.deepEqual(contract.skillInputs.effective, [
+      blueprintPrimaryManifestPath(commandName)
+    ]);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
+  }
 });
 
 test("discovery runtime contracts expose command-scoped effective skill inputs", async () => {

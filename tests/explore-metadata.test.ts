@@ -3,6 +3,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  EXPLORE_RUNTIME_METADATA,
+  getRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("explore manifest references capture skill, ideation-routing tools, and confirmation gates", async () => {
@@ -50,19 +56,39 @@ test("blueprint-capture skill captures explore classification and confirmation b
   assert.doesNotMatch(skillFile, /explore stays documented until its own manifest/i);
 });
 
-test("explore docs and runtime reference align to the interactive-read capture contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/explore.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("explore runtime contract is owned by command runtime metadata", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("explore");
+  const contract = await buildBlueprintCommandRuntimeContractResource("explore");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  const exploreRuntimeRow = runtimeFile
-    .split("\n")
-    .find((line) => line.startsWith("| `explore` |"));
-  assert.ok(exploreRuntimeRow, "runtime reference should include the explore row");
-  assert.match(exploreRuntimeRow, /blueprint_artifact_scaffold/);
-  assert.match(exploreRuntimeRow, /Interactive-read profile for short ideation routing:/);
+  assert.deepEqual(metadata, EXPLORE_RUNTIME_METADATA);
+  assert.equal(contract.catalog.specPath, EXPLORE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.catalog.requiredTools, [
+    ...EXPLORE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.catalog.optionalAgents, [
+    ...EXPLORE_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.deepEqual(contract.spec, {
+    path: EXPLORE_RUNTIME_METADATA.spec.path,
+    title: EXPLORE_RUNTIME_METADATA.spec.title,
+    wave: EXPLORE_RUNTIME_METADATA.catalog.wave,
+    family: EXPLORE_RUNTIME_METADATA.catalog.family,
+    executionProfile: EXPLORE_RUNTIME_METADATA.spec.executionProfile,
+    rootRoutable: EXPLORE_RUNTIME_METADATA.spec.rootRoutable,
+    purpose: EXPLORE_RUNTIME_METADATA.spec.purpose,
+    requiredTools: [...EXPLORE_RUNTIME_METADATA.requiredTools],
+    primarySkill: EXPLORE_RUNTIME_METADATA.catalog.primarySkill,
+    optionalSubagents: [...EXPLORE_RUNTIME_METADATA.optionalAgents],
+    reads: [...EXPLORE_RUNTIME_METADATA.spec.reads],
+    writes: [...EXPLORE_RUNTIME_METADATA.spec.writes]
+  });
+  assert.equal(contract.runtimeReference?.path, EXPLORE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    EXPLORE_RUNTIME_METADATA.sourceId
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Docless manifest\+skill-owned runtime/
+  );
 });

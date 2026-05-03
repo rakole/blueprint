@@ -340,6 +340,204 @@ export declare const ADD_TESTS_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const NOTE_RUNTIME_METADATA: {
+    readonly commandName: "note";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: note capture only.";
+    };
+    readonly requiredTools: readonly ["blueprint_artifact_mutate_index"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-note`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`note` appends explicit project-local notes through the capture index MCP tool while keeping unsupported list, promote, and global-note asks in safe suggestion mode.";
+        readonly reads: readonly ["User-provided note text and duplicate state through MCP."];
+        readonly writes: readonly [".blueprint/notes/NOTES.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "note";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const ADD_TODO_RUNTIME_METADATA: {
+    readonly commandName: "add-todo";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: todo index update only.";
+    };
+    readonly requiredTools: readonly ["blueprint_artifact_mutate_index"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-add-todo`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`add-todo` appends explicit project-local todo items through the capture index MCP tool.";
+        readonly reads: readonly ["User-provided todo text and duplicate state through MCP."];
+        readonly writes: readonly [".blueprint/todos/TODO.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "add-todo";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const CHECK_TODOS_RUNTIME_METADATA: {
+    readonly commandName: "check-todos";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: todo selection and status update only.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-check-todos`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`check-todos` inspects pending project-local todos and can mark one active or completed through bounded MCP updates.";
+        readonly reads: readonly ["Project readiness and todo queue state through Blueprint MCP tools."];
+        readonly writes: readonly [".blueprint/todos/TODO.md when status changes are confirmed"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "check-todos";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const ADD_BACKLOG_RUNTIME_METADATA: {
+    readonly commandName: "add-backlog";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: backlog append plus optional stub scaffold.";
+    };
+    readonly requiredTools: readonly ["blueprint_artifact_mutate_index", "blueprint_artifact_scaffold"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-add-backlog`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`add-backlog` appends explicit parking-lot ideas and can reserve a confirmed 999.x phase stub through MCP-owned capture and scaffold writes.";
+        readonly reads: readonly ["User-provided backlog text and duplicate state through MCP."];
+        readonly writes: readonly [".blueprint/backlog/BACKLOG.md", "optional .blueprint/phases/999.x-*/ context stub"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "add-backlog";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index", "blueprint_artifact_scaffold"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const REVIEW_BACKLOG_RUNTIME_METADATA: {
+    readonly commandName: "review-backlog";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: can promote backlog items into active roadmap scope.";
+    };
+    readonly requiredTools: readonly ["blueprint_roadmap_promote_backlog", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-review-backlog`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`review-backlog` previews canonical backlog entries, promotes or archives confirmed items, and records the next safe state through MCP-owned transitions.";
+        readonly reads: readonly ["Canonical backlog preview through Blueprint MCP tools."];
+        readonly writes: readonly [".blueprint/backlog/BACKLOG.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<phase>/", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "review-backlog";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_promote_backlog", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const EXPLORE_RUNTIME_METADATA: {
+    readonly commandName: "explore";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 3;
+        readonly family: "Capture And Lightweight Execution";
+        readonly primarySkill: "blueprint-capture";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+    readonly optionalAgents: readonly ["blueprint-researcher"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-explore`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`explore` briefly classifies an idea into note, todo, backlog, roadmap, or no-write and persists only the explicitly confirmed target through MCP tools.";
+        readonly reads: readonly ["Project readiness, user-provided idea text, and optional bounded researcher context."];
+        readonly writes: readonly ["confirmed target only: .blueprint/notes/NOTES.md, .blueprint/todos/TODO.md, .blueprint/backlog/BACKLOG.md, or .blueprint/ROADMAP.md plus scaffolded phase context"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Capture And Lightweight Execution";
+        readonly command: "explore";
+        readonly primarySkill: "blueprint-capture";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const RUNTIME_OWNED_COMMAND_METADATA: {
     readonly "new-project": {
         readonly commandName: "new-project";
@@ -643,6 +841,204 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly note: {
+        readonly commandName: "note";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: note capture only.";
+        };
+        readonly requiredTools: readonly ["blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-note`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`note` appends explicit project-local notes through the capture index MCP tool while keeping unsupported list, promote, and global-note asks in safe suggestion mode.";
+            readonly reads: readonly ["User-provided note text and duplicate state through MCP."];
+            readonly writes: readonly [".blueprint/notes/NOTES.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "note";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic project-local note capture: require explicit note text, persist only through blueprint_artifact_mutate_index, treat duplicate results and returned ids as authoritative, keep unsupported list, promote, and global-note behavior in safe suggestion mode, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "add-todo": {
+        readonly commandName: "add-todo";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: todo index update only.";
+        };
+        readonly requiredTools: readonly ["blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-add-todo`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`add-todo` appends explicit project-local todo items through the capture index MCP tool.";
+            readonly reads: readonly ["User-provided todo text and duplicate state through MCP."];
+            readonly writes: readonly [".blueprint/todos/TODO.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "add-todo";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for short project-local todo capture: require an explicit description, persist append-only todo entries through blueprint_artifact_mutate_index, report duplicates using returned matching ids instead of creating a second copy, route missing projects and follow-ups only through implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "check-todos": {
+        readonly commandName: "check-todos";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: todo selection and status update only.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-check-todos`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`check-todos` inspects pending project-local todos and can mark one active or completed through bounded MCP updates.";
+            readonly reads: readonly ["Project readiness and todo queue state through Blueprint MCP tools."];
+            readonly writes: readonly [".blueprint/todos/TODO.md when status changes are confirmed"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "check-todos";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic todo inspection and bounded status changes: read blueprint_project_status first, list or update todos only through blueprint_artifact_mutate_index, require explicit confirmation before marking active or completed unless intent is unmistakable, prefer exact ids for updates, report duplicate or reopened-active behavior from MCP results, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "add-backlog": {
+        readonly commandName: "add-backlog";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: backlog append plus optional stub scaffold.";
+        };
+        readonly requiredTools: readonly ["blueprint_artifact_mutate_index", "blueprint_artifact_scaffold"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-add-backlog`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`add-backlog` appends explicit parking-lot ideas and can reserve a confirmed 999.x phase stub through MCP-owned capture and scaffold writes.";
+            readonly reads: readonly ["User-provided backlog text and duplicate state through MCP."];
+            readonly writes: readonly [".blueprint/backlog/BACKLOG.md", "optional .blueprint/phases/999.x-*/ context stub"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "add-backlog";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_artifact_mutate_index", "blueprint_artifact_scaffold"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for parking-lot capture: require explicit backlog text, persist append-only entries through blueprint_artifact_mutate_index, reserve a 999.x phase stub only behind an explicit confirmation gate, scaffold only returned reserved paths through blueprint_artifact_scaffold, report duplicate backlog ids instead of creating a second copy, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "review-backlog": {
+        readonly commandName: "review-backlog";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: can promote backlog items into active roadmap scope.";
+        };
+        readonly requiredTools: readonly ["blueprint_roadmap_promote_backlog", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-review-backlog`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`review-backlog` previews canonical backlog entries, promotes or archives confirmed items, and records the next safe state through MCP-owned transitions.";
+            readonly reads: readonly ["Canonical backlog preview through Blueprint MCP tools."];
+            readonly writes: readonly [".blueprint/backlog/BACKLOG.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<phase>/", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "review-backlog";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_promote_backlog", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for deterministic backlog review: preview through blueprint_roadmap_promote_backlog before decisions, require explicit promote or archive confirmation while keep remains the safe default, promote only confirmed ids through roadmap MCP, persist promoted or archived status transitions through blueprint_artifact_mutate_index instead of deleting history, update state with implemented-only follow-ups, preserve reserved-stub reuse from MCP results, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly explore: {
+        readonly commandName: "explore";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 3;
+            readonly family: "Capture And Lightweight Execution";
+            readonly primarySkill: "blueprint-capture";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-explore`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`explore` briefly classifies an idea into note, todo, backlog, roadmap, or no-write and persists only the explicitly confirmed target through MCP tools.";
+            readonly reads: readonly ["Project readiness, user-provided idea text, and optional bounded researcher context."];
+            readonly writes: readonly ["confirmed target only: .blueprint/notes/NOTES.md, .blueprint/todos/TODO.md, .blueprint/backlog/BACKLOG.md, or .blueprint/ROADMAP.md plus scaffolded phase context"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Capture And Lightweight Execution";
+            readonly command: "explore";
+            readonly primarySkill: "blueprint-capture";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+            readonly optionalAgents: readonly ["blueprint-researcher"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
 };
