@@ -1084,6 +1084,19 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
   assert.match(insertPhaseDoc, /\/blu-discuss-phase <decimal>/);
 });
 
+test("cleanup command docs keep Gemini-native ask_user confirmation gates explicit", async () => {
+  const cleanupDoc = await readRepoFile("docs/commands/cleanup.md");
+
+  assert.match(cleanupDoc, /Primary skill: `blueprint-maintenance`/);
+  assert.match(cleanupDoc, /Use Gemini CLI's built-in `ask_user` interaction tool for cleanup confirmation, archive-destination creation approval, and report-overwrite approval when it is available\./);
+  assert.match(cleanupDoc, /`ask_user` is a Gemini CLI interaction surface, not Blueprint MCP persistence/i);
+  assert.match(cleanupDoc, /`cleanup-confirmation` until the user approves through `ask_user` when available/i);
+  assert.match(cleanupDoc, /if `ask_user` is unavailable, stop honestly with `cleanup-confirmation` still visible/i);
+  assert.match(cleanupDoc, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation` while blocked, use `ask_user` when available/i);
+  assert.match(cleanupDoc, /keep that waiting state visible as `archive-destination-confirmation` while blocked, use `ask_user` when available/i);
+  assert.match(cleanupDoc, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
+});
+
 test("plan-milestone-gaps command docs keep the audit-first grouped gap-closure contract explicit", async () => {
   const planMilestoneGapsDoc = await readRepoFile("docs/commands/plan-milestone-gaps.md");
 

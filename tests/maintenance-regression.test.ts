@@ -88,9 +88,14 @@ test("maintenance manifests keep dirty-tree stops, advisory mode gates, and repo
   assert.match(undo, /next safe action/i);
 
   assert.match(cleanup, /A dirty working tree, missing phase directory root, or obviously inconsistent phase layout is a hard stop for cleanup/i);
+  assert.match(cleanup, /Use Gemini-native `ask_user` for the destructive cleanup confirmation/i);
+  assert.match(cleanup, /use Gemini-native `ask_user` for that approval when available/i);
+  assert.match(cleanup, /If `ask_user` is unavailable for either confirmation, stop honestly with the named pending gate still visible/i);
   assert.match(cleanup, /Keep the destructive approval gate visible as `cleanup-confirmation`/i);
-  assert.match(cleanup, /keep that waiting state visible as `archive-destination-confirmation`/i);
+  assert.match(cleanup, /keep the waiting state visible as `archive-destination-confirmation`/i);
   assert.match(cleanup, /keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i);
+  assert.match(cleanup, /require explicit overwrite confirmation through Gemini-native `ask_user`/i);
+  assert.match(cleanup, /If `ask_user` is unavailable, stop honestly with `report-overwrite-confirmation` still visible/i);
   assert.match(cleanup, /approved cleanup (plan|scope)[\s\S]*before filesystem mutation begins/i);
   assert.match(cleanup, /next safe action/i);
 
@@ -138,6 +143,10 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /Keep the protected scope explicit throughout the run/i);
   assert.match(skill, /`cleanup-confirmation`/);
   assert.match(skill, /`archive-destination-confirmation`/);
+  assert.match(skill, /Use Gemini-native `ask_user` for the destructive cleanup confirmation and archive-destination creation approval/i);
+  assert.match(skill, /if `ask_user` is unavailable stop honestly with the named pending gate still visible/i);
+  assert.match(skill, /require explicit overwrite confirmation through Gemini-native `ask_user`/i);
+  assert.match(skill, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
   assert.match(skill, /before filesystem mutation begins/i);
   assert.match(skill, /\/blu-reapply-patches/);
   assert.match(skill, /`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/);
