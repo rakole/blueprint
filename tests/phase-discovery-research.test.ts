@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
@@ -291,7 +292,8 @@ test("research-phase command references only registered tool names and safe rout
     skillFile,
     /official-doc or external verification|official reference or supplied reference/i
   );
-  assert.match(skillFile, /shared skill can stay command-selective/i);
+  assert.match(skillFile, /Repository docs are not active runtime inputs/i);
+  assert.match(skillFile, /active command's\s+skill-local runtime reference/i);
   assert.match(skillFile, /source title, date, URL, excerpt, claim/i);
   assert.match(skillFile, /not externally checked/i);
   assert.match(skillFile, /single-agent fallback/i);
@@ -305,21 +307,24 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /valid `view`\/`skip`\/`reuse` exit, call `blueprint_state_update` with `base: "synced"`/i);
   assert.doesNotMatch(skillFile, /Require explicit overwrite confirmation before replacing existing research/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
+  const metadata = getRuntimeOwnedCommandMetadata("research-phase");
 
-  assert.deepEqual(contract.skillInputs.shared, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md"
+  assert.ok(metadata);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
   ]);
+  assert.deepEqual(contract.skillInputs.shared, []);
   assert.deepEqual(contract.skillInputs.commandSpecific, [
-    "docs/commands/research-phase.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.deepEqual(contract.skillInputs.effective, [
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/commands/research-phase.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
     false

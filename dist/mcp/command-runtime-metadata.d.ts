@@ -238,6 +238,142 @@ export declare const HEALTH_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const DISCUSS_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "discuss-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: can replace or extend phase context artifacts.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+    readonly optionalAgents: readonly ["blueprint-researcher"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md", "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-discuss-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.";
+        readonly reads: readonly ["Phase resolution, roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP."];
+        readonly writes: readonly ["phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "discuss-phase";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps contract.authoringTemplate as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const RESEARCH_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "research-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: writes research artifacts only.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-researcher"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-research-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.";
+        readonly reads: readonly ["Phase resolution, context, research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state through MCP."];
+        readonly writes: readonly ["phase XX-RESEARCH.md", "optional shared phase checkpoint JSON owned by research-phase", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "research-phase";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, and saved codebase summaries, stop on missing XX-CONTEXT.md instead of drafting from status-only signals, read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, require explicit source dates or a clear not externally checked marker for State Of The Art, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve the single-agent topic-strand fallback when they are not, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const UI_PHASE_RUNTIME_METADATA: {
+    readonly commandName: "ui-phase";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 1;
+        readonly family: "Core Lifecycle";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: writes a UI contract or documented skip rationale only.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-ui-phase`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.";
+        readonly reads: readonly ["Phase resolution, research status, effective config, canonical UI-spec contract, saved context/research/UI artifacts, and state through MCP."];
+        readonly writes: readonly ["phase XX-UI-SPEC.md for either a UI contract or an explicit UI-skip rationale", ".blueprint/STATE.md"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Core Lifecycle";
+        readonly command: "ui-phase";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
+    readonly commandName: "list-phase-assumptions";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 2;
+        readonly family: "Roadmap And Milestone";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: read-only analysis.";
+    };
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+    readonly optionalAgents: readonly ["blueprint-researcher"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-list-phase-assumptions`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.";
+        readonly reads: readonly ["Phase resolution, phase context, roadmap state, and project status through MCP."];
+        readonly writes: readonly [];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Roadmap And Milestone";
+        readonly command: "list-phase-assumptions";
+        readonly primarySkill: "blueprint-phase-discovery";
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const VALIDATE_PHASE_RUNTIME_METADATA: {
     readonly commandName: "validate-phase";
     readonly sourceId: string;
@@ -1011,6 +1147,142 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly [".blueprint write guard"];
             readonly contractNotes: "Docless manifest+skill-owned runtime for health inspection and explicit repair: load skills/blueprint-governance/references/health-runtime-contract.md, gather project/config/state/artifact evidence through MCP, validate artifacts before reporting, run blueprint_config_set and blueprint_state_sync only for requested repair mode, and route follow-ups only to implemented commands.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "discuss-phase": {
+        readonly commandName: "discuss-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: can replace or extend phase context artifacts.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md", "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-discuss-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.";
+            readonly reads: readonly ["Phase resolution, roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP."];
+            readonly writes: readonly ["phase XX-CONTEXT.md", "optional phase XX-DISCUSSION-LOG.md", "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "discuss-phase";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_phase_plan_index", "blueprint_artifact_list", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_scaffold", "blueprint_state_update", "blueprint_state_load"];
+            readonly optionalAgents: readonly ["blueprint-researcher"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps contract.authoringTemplate as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "research-phase": {
+        readonly commandName: "research-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: writes research artifacts only.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-research-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.";
+            readonly reads: readonly ["Phase resolution, context, research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state through MCP."];
+            readonly writes: readonly ["phase XX-RESEARCH.md", "optional shared phase checkpoint JSON owned by research-phase", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "research-phase";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_phase_checkpoint_get", "blueprint_phase_checkpoint_put", "blueprint_phase_checkpoint_delete", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_config_get", "blueprint_state_load", "blueprint_command_catalog", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-researcher"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, and saved codebase summaries, stop on missing XX-CONTEXT.md instead of drafting from status-only signals, read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, require explicit source dates or a clear not externally checked marker for State Of The Art, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve the single-agent topic-strand fallback when they are not, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "ui-phase": {
+        readonly commandName: "ui-phase";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 1;
+            readonly family: "Core Lifecycle";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: writes a UI contract or documented skip rationale only.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-ui-phase`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`ui-phase` creates or reuses the single phase-scoped UI artifact, writing either a UI design contract or an explicit skip rationale through MCP-owned phase artifact persistence.";
+            readonly reads: readonly ["Phase resolution, research status, effective config, canonical UI-spec contract, saved context/research/UI artifacts, and state through MCP."];
+            readonly writes: readonly ["phase XX-UI-SPEC.md for either a UI contract or an explicit UI-skip rationale", ".blueprint/STATE.md"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Core Lifecycle";
+            readonly command: "ui-phase";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_research_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_phase_artifact_read", "blueprint_phase_artifact_write", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly optionalAgents: readonly ["blueprint-ui-designer", "blueprint-checker"];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "list-phase-assumptions": {
+        readonly commandName: "list-phase-assumptions";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 2;
+            readonly family: "Roadmap And Milestone";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: read-only analysis.";
+        };
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+        readonly optionalAgents: readonly ["blueprint-researcher"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-list-phase-assumptions`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.";
+            readonly reads: readonly ["Phase resolution, phase context, roadmap state, and project status through MCP."];
+            readonly writes: readonly [];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Roadmap And Milestone";
+            readonly command: "list-phase-assumptions";
+            readonly primarySkill: "blueprint-phase-discovery";
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+            readonly optionalAgents: readonly ["blueprint-researcher"];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
     readonly "validate-phase": {

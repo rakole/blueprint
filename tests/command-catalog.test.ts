@@ -206,7 +206,10 @@ test("runtime command catalog marks shipped commands as implemented once manifes
       listPhaseAssumptions.skillPath,
       await expectedDiscoverableSkillPath("blueprint-phase-discovery")
     );
-    assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
+    assert.equal(
+      listPhaseAssumptions.specPath,
+      "src/mcp/command-runtime-metadata.ts#list-phase-assumptions"
+    );
     assert.deepEqual(listPhaseAssumptions.blockedBy, []);
   } else {
     assert.equal(listPhaseAssumptions.declaredStatus, "planned");
@@ -217,7 +220,10 @@ test("runtime command catalog marks shipped commands as implemented once manifes
       listPhaseAssumptions.skillPath,
       await expectedDiscoverableSkillPath("blueprint-phase-discovery")
     );
-    assert.equal(listPhaseAssumptions.specPath, "docs/commands/list-phase-assumptions.md");
+    assert.equal(
+      listPhaseAssumptions.specPath,
+      "src/mcp/command-runtime-metadata.ts#list-phase-assumptions"
+    );
     assert.match(
       listPhaseAssumptions.blockedBy.join("\n"),
       /Missing command manifest: commands\/blu-list-phase-assumptions\.toml/
@@ -431,75 +437,68 @@ test("capture commands resolve catalog and runtime contract truth from runtime m
   }
 });
 
-test("discovery runtime contracts expose command-scoped effective skill inputs", async () => {
-  const sharedInputs = ["docs/ARTIFACT-SCHEMA.md", "docs/MCP-TOOLS.md"];
+test("discovery runtime contracts expose runtime-owned metadata and docs-free skill inputs", async () => {
   const expectations = [
     {
       command: "discuss-phase",
-      ownDoc: "docs/commands/discuss-phase.md",
-      extraInputs: [
+      inputs: [
         "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
         "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
-      ],
-      siblingDocs: [
-        "docs/commands/research-phase.md",
-        "docs/commands/ui-phase.md",
-        "docs/commands/list-phase-assumptions.md"
       ]
     },
     {
       command: "research-phase",
-      ownDoc: "docs/commands/research-phase.md",
-      extraInputs: [
+      inputs: [
         "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
-      ],
-      siblingDocs: [
-        "docs/commands/discuss-phase.md",
-        "docs/commands/ui-phase.md",
-        "docs/commands/list-phase-assumptions.md"
       ]
     },
     {
       command: "ui-phase",
-      ownDoc: "docs/commands/ui-phase.md",
-      extraInputs: [
+      inputs: [
         "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
-      ],
-      siblingDocs: [
-        "docs/commands/discuss-phase.md",
-        "docs/commands/research-phase.md",
-        "docs/commands/list-phase-assumptions.md"
       ]
     },
     {
       command: "list-phase-assumptions",
-      ownDoc: "docs/commands/list-phase-assumptions.md",
-      extraInputs: [],
-      siblingDocs: [
-        "docs/commands/discuss-phase.md",
-        "docs/commands/research-phase.md",
-        "docs/commands/ui-phase.md"
+      inputs: [
+        "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
       ]
     }
   ] as const;
+  const catalog = await blueprintCommandCatalog();
 
   for (const expectation of expectations) {
+    const metadata = getRuntimeOwnedCommandMetadata(expectation.command);
+    const entry = catalog.commands[expectation.command];
     const contract = await buildBlueprintCommandRuntimeContractResource(expectation.command);
 
-    assert.deepEqual(contract.skillInputs.shared, sharedInputs);
-    assert.deepEqual(contract.skillInputs.commandSpecific, [
-      expectation.ownDoc,
-      ...expectation.extraInputs
+    assert.ok(metadata, `${expectation.command} should have runtime-owned metadata`);
+    assert.equal(entry.specPath, `src/mcp/command-runtime-metadata.ts#${expectation.command}`);
+    assert.equal(entry.specPath, metadata.sourceId);
+    assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(entry.optionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(entry.availableOptionalAgents, [...metadata.optionalAgents]);
+    assert.equal(contract.catalog.specPath, metadata.sourceId);
+    assert.deepEqual(contract.catalog.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.catalog.optionalAgents, [...metadata.optionalAgents]);
+    assert.equal(contract.spec?.path, metadata.sourceId);
+    assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.spec?.optionalSubagents, [...metadata.optionalAgents]);
+    assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+    assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+    assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+      ...metadata.requiredTools
     ]);
-    assert.deepEqual(contract.skillInputs.effective, [
-      ...sharedInputs,
-      expectation.ownDoc,
-      ...expectation.extraInputs
+    assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+      ...metadata.optionalAgents
     ]);
-
-    for (const siblingDoc of expectation.siblingDocs) {
-      assert.equal(contract.skillInputs.effective.includes(siblingDoc), false);
-    }
+    assert.deepEqual(contract.skillInputs.shared, []);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [...expectation.inputs]);
+    assert.deepEqual(contract.skillInputs.effective, [...expectation.inputs]);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
   }
 });
 
