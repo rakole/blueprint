@@ -3,19 +3,29 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  NEW_PROJECT_RUNTIME_METADATA,
+  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+} from "../src/mcp/command-runtime-metadata.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
+const newProjectRuntimeInputBundle = [
+  "skills/blueprint-bootstrap/references/questioning.md",
+  "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
+  "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+];
 
 test("new-project manifest stays thin while delegating runtime depth to the bootstrap skill package", async () => {
-  const [commandFile, docFile, skillFile, guardrailsRef] = await Promise.all([
+  const [commandFile, skillFile, guardrailsRef, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
       "utf8"
-    )
+    ),
+    buildBlueprintCommandRuntimeContractResource("new-project")
   ]);
 
   assert.ok(
@@ -40,43 +50,34 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
   assert.doesNotMatch(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/i);
-  assert.match(docFile, /## Gemini-Native Internal Tool Guidance/);
-  assert.match(docFile, /Approval must be reviewable in the main Gemini CLI conversation/i);
-  assert.match(docFile, /runtime-guardrails\.md` is the canonical source/i);
-  assert.match(docFile, /visible project brief and roadmap preview in the main conversation/i);
-  assert.match(docFile, /Interactive bootstrap shows the reviewable project brief and roadmap preview/i);
-  assert.match(docFile, /## Research, Requirements, And Roadmap Quality/);
-  assert.match(docFile, /stack, features, architecture, and pitfalls/i);
-  assert.match(docFile, /sequential one-topic-at-a-time work/i);
-  assert.match(docFile, /map every committed requirement exactly once/i);
-  assert.match(docFile, /repair and retry through MCP/i);
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, /## Shared Runtime Contract/);
-  assert.match(docFile, /## Runtime Packaging/);
-  assert.match(docFile, /manifest is intentionally thin/i);
-  assert.match(docFile, /canonical external truth/i);
-  assert.match(docFile, /skills\/blueprint-bootstrap\/references\/bootstrap-runtime-contract\.md/);
-  assert.match(docFile, /skills\/blueprint-bootstrap\/references\/runtime-guardrails\.md/);
-  assert.match(
-    docFile,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+
+  assert.equal(runtimeContract.catalog.specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(runtimeContract.spec?.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(runtimeContract.spec?.executionProfile, "long-running-mutation");
+  assert.equal(runtimeContract.spec?.rootRoutable, true);
+  assert.deepEqual(runtimeContract.spec?.requiredTools, [
+    ...NEW_PROJECT_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(runtimeContract.spec?.optionalSubagents, [
+    ...NEW_PROJECT_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(runtimeContract.runtimeReference?.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(
+    runtimeContract.runtimeReference?.commandSpecPath,
+    NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
   );
-  assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+  assert.deepEqual(runtimeContract.runtimeReference?.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.deepEqual(runtimeContract.skillInputs.shared, []);
+  assert.deepEqual(runtimeContract.skillInputs.commandSpecific, newProjectRuntimeInputBundle);
+  assert.deepEqual(runtimeContract.skillInputs.effective, newProjectRuntimeInputBundle);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
-  assert.match(docFile, /resolved scope:/i);
-  assert.match(docFile, /active stage:/i);
-  assert.match(docFile, /pending gate:/i);
-  assert.match(docFile, /execution mode:/i);
-  assert.match(docFile, /next safe action:/i);
-  assert.match(docFile, /1\. `Resolve`:/);
-  assert.match(docFile, /2\. `Read`:/);
-  assert.match(docFile, /3\. `Decide`:/);
-  assert.match(docFile, /4\. `Execute`:/);
-  assert.match(docFile, /5\. `Persist`:/);
-  assert.match(docFile, /6\. `Validate`:/);
-  assert.match(docFile, /7\. `Route`:/);
 
   for (const toolName of [
     "blueprint_project_init",
@@ -97,7 +98,7 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
 });
 
 test("blueprint-bootstrap skill and questioning reference capture Gemini-native deep bootstrap guidance", async () => {
-  const [skillFile, questioningRef, contractRef, guardrailsRef, runtimeReference] = await Promise.all([
+  const [skillFile, questioningRef, contractRef, guardrailsRef, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/questioning.md"),
@@ -111,13 +112,21 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
       path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
       "utf8"
     ),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    buildBlueprintCommandRuntimeContractResource("new-project")
   ]);
 
   assert.match(skillFile, /name: blueprint-bootstrap/);
   assert.match(skillFile, /status: implemented/);
+  assert.match(skillFile, /input_bundles:/);
   assert.match(skillFile, /## Runtime Self-Sufficiency/);
   assert.doesNotMatch(skillFile, /## Required Inputs/);
+  assert.deepEqual(runtimeContract.skillInputs.shared, []);
+  assert.deepEqual(runtimeContract.skillInputs.commandSpecific, newProjectRuntimeInputBundle);
+  assert.deepEqual(runtimeContract.skillInputs.effective, newProjectRuntimeInputBundle);
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
   assert.match(skillFile, /references\/questioning\.md/);
   assert.match(skillFile, /references\/bootstrap-runtime-contract\.md/);
   assert.match(skillFile, /references\/runtime-guardrails\.md/);
@@ -233,10 +242,10 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(questioningRef, /never rely on shell output,\s*temporary files, or collapsed agent\/tool panes/i);
   assert.match(questioningRef, /Discovery Boundaries/);
   assert.match(questioningRef, /Anti-Patterns/);
-  assert.match(runtimeReference, /Long-running-mutation Gemini-native bootstrap/i);
-  assert.match(runtimeReference, /bootstrap-runtime-contract\.md/i);
-  assert.match(runtimeReference, /runtime-guardrails\.md/i);
-  assert.match(runtimeReference, /unmapped or `mapping-incomplete` states route to `map-codebase`/i);
-  assert.match(runtimeReference, /valid `mapped-only` states may run `new-project`/i);
-  assert.doesNotMatch(runtimeReference, /no-subagent fallback sequentially across stack\/features\/architecture\/pitfalls/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /Long-running-mutation Gemini-native bootstrap/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /bootstrap-runtime-contract\.md/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /runtime-guardrails\.md/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /unmapped or mapping-incomplete states route to map-codebase/i);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /valid mapped-only states may run new-project/i);
+  assert.doesNotMatch(runtimeContract.runtimeReference?.contractNotes ?? "", /no-subagent fallback sequentially across stack\/features\/architecture\/pitfalls/i);
 });

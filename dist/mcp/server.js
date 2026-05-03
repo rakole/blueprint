@@ -36233,6 +36233,85 @@ var init_agent_definition = __esm({
   }
 });
 
+// src/mcp/command-runtime-metadata.ts
+function getRuntimeOwnedCommandMetadata(commandName) {
+  return RUNTIME_OWNED_COMMAND_METADATA[commandName] ?? null;
+}
+function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
+  if (!sourceId) {
+    return null;
+  }
+  return Object.values(RUNTIME_OWNED_COMMAND_METADATA).find(
+    (metadata) => metadata.sourceId === sourceId
+  ) ?? null;
+}
+var NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var init_command_runtime_metadata = __esm({
+  "src/mcp/command-runtime-metadata.ts"() {
+    "use strict";
+    NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#new-project";
+    NEW_PROJECT_RUNTIME_METADATA = {
+      commandName: "new-project",
+      sourceId: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
+      catalog: {
+        wave: 0,
+        family: "Foundation",
+        primarySkill: "blueprint-bootstrap",
+        declaredStatus: "implemented",
+        risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap."
+      },
+      requiredTools: [
+        "blueprint_project_init",
+        "blueprint_project_status",
+        "blueprint_config_get",
+        "blueprint_config_set",
+        "blueprint_state_update",
+        "blueprint_artifact_contract_read",
+        "blueprint_artifact_validate"
+      ],
+      optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+      spec: {
+        path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
+        title: "`/blu-new-project`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "new-project initializes a Blueprint project with deep context gathering and PROJECT.md. It stays host-native and delegates durable persistence to Blueprint MCP tools while preserving the richer bootstrap flow.",
+        reads: ["~/.<host>/blueprint/defaults.json when present"],
+        writes: [
+          ".blueprint/PROJECT.md",
+          ".blueprint/REQUIREMENTS.md",
+          ".blueprint/ROADMAP.md",
+          ".blueprint/STATE.md",
+          ".blueprint/config.json",
+          ".blueprint/phases/"
+        ]
+      },
+      runtimeReference: {
+        path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
+        waveTitle: "Foundation",
+        command: "new-project",
+        primarySkill: "blueprint-bootstrap",
+        exactMcpDestination: [
+          "blueprint_project_init",
+          "blueprint_project_status",
+          "blueprint_config_get",
+          "blueprint_config_set",
+          "blueprint_state_update",
+          "blueprint_artifact_contract_read",
+          "blueprint_artifact_validate"
+        ],
+        optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    RUNTIME_OWNED_COMMAND_METADATA = {
+      [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA
+    };
+  }
+});
+
 // src/mcp/tools/project.ts
 var project_exports = {};
 __export(project_exports, {
@@ -36519,18 +36598,20 @@ function parseCatalogRow(cells) {
   };
 }
 async function buildCommandCatalogEntry(parsedRow) {
-  const specPath = `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
+  const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
+  const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
+  const specPath = runtimeMetadata?.sourceId ?? `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const specUrl = bundledUrl(specPath);
+  const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists5(bundledUrl(manifestPath));
-  const specExists = await pathExists5(specUrl);
-  const specMarkdown = specExists ? await fs5.readFile(specUrl, "utf8") : "";
-  const requiredTools = parseRequiredTools(specMarkdown);
-  const optionalAgents = parseOptionalAgents(specMarkdown, parsedRow.primarySkill);
+  const specExists = runtimeMetadata ? true : await pathExists5(specUrl);
+  const specMarkdown = specExists && specUrl ? await fs5.readFile(specUrl, "utf8") : "";
+  const requiredTools = runtimeMetadata ? [...runtimeMetadata.requiredTools] : parseRequiredTools(specMarkdown);
+  const optionalAgents = runtimeMetadata ? [...runtimeMetadata.optionalAgents] : parseOptionalAgents(specMarkdown, catalogFacts.primarySkill);
   const availableOptionalAgents = [];
   const blockedBy = [];
   const skillResolution = await resolveBlueprintSkillPath(
-    parsedRow.primarySkill,
+    catalogFacts.primarySkill,
     async (skillPath) => pathExists5(bundledUrl(skillPath))
   );
   const skillExists = skillResolution.resolvedPath !== null;
@@ -36557,28 +36638,28 @@ async function buildCommandCatalogEntry(parsedRow) {
       }
     })
   );
-  let status = parsedRow.declaredStatus;
+  let status = catalogFacts.declaredStatus;
   if (!(manifestExists && skillExists && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
       status = "blocked";
     }
-  } else if (parsedRow.declaredStatus === "blocked") {
+  } else if (catalogFacts.declaredStatus === "blocked") {
     status = "blocked";
-  } else if (parsedRow.declaredStatus === "planned") {
+  } else if (catalogFacts.declaredStatus === "planned") {
     status = "planned";
-  } else if (parsedRow.declaredStatus === "repairing") {
+  } else if (catalogFacts.declaredStatus === "repairing") {
     status = "repairing";
   }
   return {
     command: blueprintDirectCommand(parsedRow.commandName),
     route: blueprintRouterCommand(parsedRow.commandName),
-    wave: parsedRow.wave,
-    family: parsedRow.family,
-    risk: parsedRow.risk,
-    primarySkill: parsedRow.primarySkill,
-    declaredStatus: parsedRow.declaredStatus,
+    wave: catalogFacts.wave,
+    family: catalogFacts.family,
+    risk: catalogFacts.risk,
+    primarySkill: catalogFacts.primarySkill,
+    declaredStatus: catalogFacts.declaredStatus,
     status,
     implemented: status === "implemented",
     blockedBy,
@@ -36589,6 +36670,28 @@ async function buildCommandCatalogEntry(parsedRow) {
     requiredToolsSatisfied,
     optionalAgents,
     availableOptionalAgents
+  };
+}
+async function buildRuntimeOwnedFallbackCommandCatalog() {
+  const parsedRow = {
+    commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
+    wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
+    family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
+    primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
+    declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
+    risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
+  };
+  const entry = await buildCommandCatalogEntry(parsedRow);
+  return {
+    commands: {
+      [parsedRow.commandName]: entry
+    },
+    waves: {
+      [String(parsedRow.wave)]: [parsedRow.commandName]
+    },
+    aliases: {
+      [parsedRow.commandName]: blueprintDirectCommandAliases(parsedRow.commandName)
+    }
   };
 }
 async function readBundledCommandCatalog() {
@@ -36615,9 +36718,25 @@ async function readBundledCommandCatalog() {
       waves[waveKey].push(parsedRow.commandName);
       aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
     }
-    return Object.keys(commands).length > 0 ? { commands, waves, aliases } : FALLBACK_COMMAND_CATALOG;
+    if (!commands[NEW_PROJECT_RUNTIME_METADATA.commandName]) {
+      const parsedRow = {
+        commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
+        wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
+        family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
+        primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
+        declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
+        risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
+      };
+      const entry = await buildCommandCatalogEntry(parsedRow);
+      commands[parsedRow.commandName] = entry;
+      const waveKey = String(parsedRow.wave);
+      waves[waveKey] ??= [];
+      waves[waveKey].push(parsedRow.commandName);
+      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
+    }
+    return Object.keys(commands).length > 0 ? { commands, waves, aliases } : await buildRuntimeOwnedFallbackCommandCatalog();
   } catch {
-    return FALLBACK_COMMAND_CATALOG;
+    return buildRuntimeOwnedFallbackCommandCatalog();
   }
 }
 async function blueprintCommandCatalog() {
@@ -36784,7 +36903,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, FALLBACK_COMMAND_CATALOG, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, GENERIC_SUCCESS_CRITERIA_PATTERNS, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, GENERIC_SUCCESS_CRITERIA_PATTERNS, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -36801,6 +36920,7 @@ var init_project = __esm({
     init_runtime_vocabulary();
     init_command_paths();
     init_agent_definition();
+    init_command_runtime_metadata();
     commandCatalogInputSchema = {};
     projectInitInputSchema = {
       cwd: string2().optional(),
@@ -36864,43 +36984,6 @@ var init_project = __esm({
       ...updateToolDefinitions.map((definition) => definition.name),
       ...workspaceToolDefinitions.map((definition) => definition.name)
     ]);
-    FALLBACK_COMMAND_CATALOG = {
-      commands: {
-        "new-project": {
-          command: blueprintDirectCommand("new-project"),
-          route: blueprintRouterCommand("new-project"),
-          wave: 0,
-          family: "Foundation",
-          risk: "Medium",
-          primarySkill: "blueprint-bootstrap",
-          declaredStatus: "implemented",
-          status: "implemented",
-          implemented: true,
-          blockedBy: [],
-          manifestPath: blueprintPrimaryManifestPath("new-project"),
-          skillPath: blueprintDiscoverableSkillPath("blueprint-bootstrap"),
-          specPath: "docs/commands/new-project.md",
-          requiredTools: [
-            "blueprint_project_init",
-            "blueprint_project_status",
-            "blueprint_config_get",
-            "blueprint_config_set",
-            "blueprint_state_update",
-            "blueprint_artifact_contract_read",
-            "blueprint_artifact_validate"
-          ],
-          requiredToolsSatisfied: true,
-          optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
-          availableOptionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"]
-        }
-      },
-      waves: {
-        "0": ["new-project"]
-      },
-      aliases: {
-        "new-project": blueprintDirectCommandAliases("new-project")
-      }
-    };
     MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
     GENERIC_SUCCESS_CRITERIA_PATTERNS = [
@@ -64783,6 +64866,7 @@ async function logThrownMutationError(toolName, args, error2) {
 
 // src/mcp/command-resources.ts
 import { promises as fs10 } from "node:fs";
+init_command_runtime_metadata();
 
 // src/mcp/skill-metadata.ts
 init_runtime_vocabulary();
@@ -65129,9 +65213,43 @@ function isExposedRuntimeContractCatalogEntry(entry) {
 }
 async function readBlueprintRuntimeReferenceRows() {
   const runtimeReferenceMarkdown = await readBundledFile("docs/RUNTIME-REFERENCE.md");
-  return runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
+  const rows = runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
+  const newProjectMetadata = getRuntimeOwnedCommandMetadata("new-project");
+  if (newProjectMetadata) {
+    rows.set(newProjectMetadata.commandName, {
+      path: newProjectMetadata.runtimeReference.path,
+      wave: newProjectMetadata.catalog.wave,
+      waveTitle: newProjectMetadata.runtimeReference.waveTitle,
+      command: newProjectMetadata.runtimeReference.command,
+      commandSpecPath: newProjectMetadata.sourceId,
+      primarySkill: newProjectMetadata.runtimeReference.primarySkill,
+      exactMcpDestination: [...newProjectMetadata.runtimeReference.exactMcpDestination],
+      optionalAgents: [...newProjectMetadata.runtimeReference.optionalAgents],
+      hookInvolvement: [...newProjectMetadata.runtimeReference.hookInvolvement],
+      contractNotes: newProjectMetadata.runtimeReference.contractNotes,
+      evidenceState: [...newProjectMetadata.runtimeReference.evidenceState]
+    });
+  }
+  return rows;
 }
 async function readBundledCommandSpec(entry) {
+  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
+  if (runtimeMetadata) {
+    return {
+      path: runtimeMetadata.spec.path,
+      title: runtimeMetadata.spec.title,
+      wave: runtimeMetadata.catalog.wave,
+      family: runtimeMetadata.catalog.family,
+      executionProfile: runtimeMetadata.spec.executionProfile,
+      rootRoutable: runtimeMetadata.spec.rootRoutable,
+      purpose: runtimeMetadata.spec.purpose,
+      requiredTools: [...runtimeMetadata.requiredTools],
+      primarySkill: runtimeMetadata.catalog.primarySkill,
+      optionalSubagents: [...runtimeMetadata.optionalAgents],
+      reads: [...runtimeMetadata.spec.reads],
+      writes: [...runtimeMetadata.spec.writes]
+    };
+  }
   if (!entry.specPath) {
     return null;
   }

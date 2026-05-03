@@ -9,6 +9,7 @@ import {
   BLUEPRINT_COMMAND_RUNTIME_CONTRACT_URI_TEMPLATE,
   listBlueprintCommandRuntimeContractCommands
 } from "../src/mcp/command-resources.js";
+import { NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID } from "../src/mcp/command-runtime-metadata.js";
 import { createBlueprintServer } from "../src/mcp/server.js";
 import {
   createToolResponseContent,
@@ -246,6 +247,14 @@ test("server exposes read-only command resources without changing tool summaries
         contractPayload.runtimeReference.commandSpecPath,
         contractPayload.catalog.specPath
       );
+      if (contractPayload.command === "new-project") {
+        assert.equal(contractPayload.runtimeReference.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+        assert.deepEqual(contractPayload.runtimeReference.evidenceState, [
+          "locked",
+          "runtime-owned",
+          "needs-behavior-audit"
+        ]);
+      }
     }
   } finally {
     await Promise.all([client.close(), server.close()]);

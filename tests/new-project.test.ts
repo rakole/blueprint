@@ -6,6 +6,11 @@ import path from "node:path";
 import os from "node:os";
 
 import {
+  NEW_PROJECT_RUNTIME_METADATA,
+  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+} from "../src/mcp/command-runtime-metadata.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
   blueprintToolNames,
   createToolResponseContent,
   executeToolHandlerWithFailureLogging,
@@ -1330,10 +1335,9 @@ test("new-project runtime summaries surface the live next action for fresh and b
 });
 
 test("command contract references the same Phase 1 tool names as the MCP server", async () => {
-  const [commandFile, commandDoc, runtimeReference, skillFile, contractRef, guardrailsRef] = await Promise.all([
+  const [commandFile, runtimeContract, skillFile, contractRef, guardrailsRef] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("new-project"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md"),
@@ -1359,8 +1363,17 @@ test("command contract references the same Phase 1 tool names as the MCP server"
       blueprintToolNames.includes(toolName),
       `${toolName} should be registered in the MCP server`
     );
-    assert.match(`${commandDoc}\n${skillFile}\n${contractRef}`, new RegExp(toolName));
+    assert.match(`${skillFile}\n${contractRef}`, new RegExp(toolName));
   }
+
+  assert.equal(runtimeContract.catalog.specPath, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(runtimeContract.spec?.path, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID);
+  assert.equal(runtimeContract.spec?.executionProfile, "long-running-mutation");
+  assert.equal(runtimeContract.spec?.rootRoutable, true);
+  assert.deepEqual(runtimeContract.spec?.requiredTools, [
+    ...NEW_PROJECT_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(runtimeContract.runtimeReference?.exactMcpDestination, requiredTools);
 
   assert.match(commandFile, /--auto/);
   assert.match(commandFile, /\.blueprint\/config\.json/);
@@ -1368,13 +1381,12 @@ test("command contract references the same Phase 1 tool names as the MCP server"
   assert.match(guardrailsRef, /mcp_blueprint_blueprint_project_init/);
   assert.match(guardrailsRef, /Blueprint MCP server is disconnected or undiscovered/i);
   assert.match(guardrailsRef, /Never try to invoke Blueprint MCP tools through shell/i);
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /resolved scope:/i);
-  assert.match(commandDoc, /next safe action:/i);
   assert.match(skillFile, /Execution profile: `long-running-mutation`/);
   assert.match(contractRef, /Execution profile: `long-running-mutation`/);
-  assert.match(runtimeReference, /Long-running-mutation Gemini-native bootstrap/i);
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation Gemini-native bootstrap/i
+  );
 });
 
 test("manifest, command files, and build output line up for installation", async () => {

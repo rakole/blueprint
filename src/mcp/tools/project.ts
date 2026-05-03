@@ -38,7 +38,6 @@ import { impactToolDefinitions } from "./impact.js";
 import { updateToolDefinitions } from "./update.js";
 import { workspaceToolDefinitions } from "./workspace.js";
 import {
-  blueprintDiscoverableSkillPath,
   resolveBlueprintSkillPath,
   type BlueprintInternalToolName
 } from "../runtime-vocabulary.js";
@@ -52,6 +51,10 @@ import {
   blueprintRunDirectCommand
 } from "../command-paths.js";
 import { resolveAvailableOptionalAgents } from "../agent-definition.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  NEW_PROJECT_RUNTIME_METADATA
+} from "../command-runtime-metadata.js";
 
 type CommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 
@@ -212,44 +215,6 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...updateToolDefinitions.map((definition) => definition.name),
   ...workspaceToolDefinitions.map((definition) => definition.name)
 ]);
-
-const FALLBACK_COMMAND_CATALOG: CommandCatalogResult = {
-  commands: {
-    "new-project": {
-      command: blueprintDirectCommand("new-project"),
-      route: blueprintRouterCommand("new-project"),
-      wave: 0,
-      family: "Foundation",
-      risk: "Medium",
-      primarySkill: "blueprint-bootstrap",
-      declaredStatus: "implemented",
-      status: "implemented",
-      implemented: true,
-      blockedBy: [],
-      manifestPath: blueprintPrimaryManifestPath("new-project"),
-      skillPath: blueprintDiscoverableSkillPath("blueprint-bootstrap"),
-      specPath: "docs/commands/new-project.md",
-      requiredTools: [
-        "blueprint_project_init",
-        "blueprint_project_status",
-        "blueprint_config_get",
-        "blueprint_config_set",
-        "blueprint_state_update",
-        "blueprint_artifact_contract_read",
-        "blueprint_artifact_validate"
-      ],
-      requiredToolsSatisfied: true,
-      optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
-      availableOptionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"]
-    }
-  },
-  waves: {
-    "0": ["new-project"]
-  },
-  aliases: {
-    "new-project": blueprintDirectCommandAliases("new-project")
-  }
-};
 
 function bundledUrl(relativePath: string): URL {
   return new URL(`../../../${relativePath}`, import.meta.url);
@@ -663,17 +628,23 @@ function parseCatalogRow(cells: string[]): ParsedCatalogRow | null {
 }
 
 async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<CommandCatalogEntry> {
-  const specPath = `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
+  const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
+  const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
+  const specPath = runtimeMetadata?.sourceId ?? `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const specUrl = bundledUrl(specPath);
+  const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists(bundledUrl(manifestPath));
-  const specExists = await pathExists(specUrl);
-  const specMarkdown = specExists ? await fs.readFile(specUrl, "utf8") : "";
-  const requiredTools = parseRequiredTools(specMarkdown);
-  const optionalAgents = parseOptionalAgents(specMarkdown, parsedRow.primarySkill);
+  const specExists = runtimeMetadata ? true : await pathExists(specUrl!);
+  const specMarkdown = specExists && specUrl ? await fs.readFile(specUrl, "utf8") : "";
+  const requiredTools = runtimeMetadata
+    ? [...runtimeMetadata.requiredTools]
+    : parseRequiredTools(specMarkdown);
+  const optionalAgents = runtimeMetadata
+    ? [...runtimeMetadata.optionalAgents]
+    : parseOptionalAgents(specMarkdown, catalogFacts.primarySkill);
   const availableOptionalAgents: string[] = [];
   const blockedBy: string[] = [];
-  const skillResolution = await resolveBlueprintSkillPath(parsedRow.primarySkill, async (skillPath) =>
+  const skillResolution = await resolveBlueprintSkillPath(catalogFacts.primarySkill, async (skillPath) =>
     pathExists(bundledUrl(skillPath))
   );
   const skillExists = skillResolution.resolvedPath !== null;
@@ -707,7 +678,7 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     }))
   );
 
-  let status = parsedRow.declaredStatus;
+  let status = catalogFacts.declaredStatus;
 
   if (!(manifestExists && skillExists && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
@@ -715,22 +686,22 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     } else if (blockedBy.length > 0) {
       status = "blocked";
     }
-  } else if (parsedRow.declaredStatus === "blocked") {
+  } else if (catalogFacts.declaredStatus === "blocked") {
     status = "blocked";
-  } else if (parsedRow.declaredStatus === "planned") {
+  } else if (catalogFacts.declaredStatus === "planned") {
     status = "planned";
-  } else if (parsedRow.declaredStatus === "repairing") {
+  } else if (catalogFacts.declaredStatus === "repairing") {
     status = "repairing";
   }
 
   return {
     command: blueprintDirectCommand(parsedRow.commandName),
     route: blueprintRouterCommand(parsedRow.commandName),
-    wave: parsedRow.wave,
-    family: parsedRow.family,
-    risk: parsedRow.risk,
-    primarySkill: parsedRow.primarySkill,
-    declaredStatus: parsedRow.declaredStatus,
+    wave: catalogFacts.wave,
+    family: catalogFacts.family,
+    risk: catalogFacts.risk,
+    primarySkill: catalogFacts.primarySkill,
+    declaredStatus: catalogFacts.declaredStatus,
     status,
     implemented: status === "implemented",
     blockedBy,
@@ -741,6 +712,30 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
     requiredToolsSatisfied,
     optionalAgents,
     availableOptionalAgents
+  };
+}
+
+async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalogResult> {
+  const parsedRow = {
+    commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
+    wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
+    family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
+    primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
+    declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
+    risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
+  };
+  const entry = await buildCommandCatalogEntry(parsedRow);
+
+  return {
+    commands: {
+      [parsedRow.commandName]: entry
+    },
+    waves: {
+      [String(parsedRow.wave)]: [parsedRow.commandName]
+    },
+    aliases: {
+      [parsedRow.commandName]: blueprintDirectCommandAliases(parsedRow.commandName)
+    }
   };
 }
 
@@ -781,11 +776,29 @@ async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
       aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
     }
 
+    if (!commands[NEW_PROJECT_RUNTIME_METADATA.commandName]) {
+      const parsedRow = {
+        commandName: NEW_PROJECT_RUNTIME_METADATA.commandName,
+        wave: NEW_PROJECT_RUNTIME_METADATA.catalog.wave,
+        family: NEW_PROJECT_RUNTIME_METADATA.catalog.family,
+        primarySkill: NEW_PROJECT_RUNTIME_METADATA.catalog.primarySkill,
+        declaredStatus: NEW_PROJECT_RUNTIME_METADATA.catalog.declaredStatus,
+        risk: NEW_PROJECT_RUNTIME_METADATA.catalog.risk
+      };
+      const entry = await buildCommandCatalogEntry(parsedRow);
+
+      commands[parsedRow.commandName] = entry;
+      const waveKey = String(parsedRow.wave);
+      waves[waveKey] ??= [];
+      waves[waveKey].push(parsedRow.commandName);
+      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
+    }
+
     return Object.keys(commands).length > 0
       ? { commands, waves, aliases }
-      : FALLBACK_COMMAND_CATALOG;
+      : await buildRuntimeOwnedFallbackCommandCatalog();
   } catch {
-    return FALLBACK_COMMAND_CATALOG;
+    return buildRuntimeOwnedFallbackCommandCatalog();
   }
 }
 
