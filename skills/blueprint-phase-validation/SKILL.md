@@ -9,6 +9,15 @@ commands:
   - /blu-validate-phase
   - /blu-verify-work
   - /blu-add-tests
+input_bundles:
+  shared: []
+  commands:
+    "/blu-validate-phase":
+      - skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md
+    "/blu-verify-work":
+      - skills/blueprint-phase-validation/references/verify-work-runtime-contract.md
+    "/blu-add-tests":
+      - skills/blueprint-phase-validation/references/add-tests-runtime-contract.md
 ---
 
 # Blueprint Phase Validation Skill
@@ -48,34 +57,13 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 
 ## Required Inputs
 
-Load the shared validation inputs first, then load only the command-specific inputs for the command that was actually invoked. Do not preload sibling runtime contracts or command docs from this bundle by default.
+Runtime input resolution is structured and command-scoped:
 
-### Shared validation inputs
-
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- `docs/PHASE-LIFECYCLE.md`
-- saved `XX-YY-SUMMARY.md` artifacts for the target phase
-
-### Command-specific inputs
-
-#### `validate-phase`
-
-- `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md`
-- `docs/commands/validate-phase.md`
-
-#### `verify-work`
-
-- `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`
-- `docs/commands/verify-work.md`
-
-#### `add-tests`
-
-- `skills/blueprint-phase-validation/references/add-tests-runtime-contract.md`
-- `docs/commands/add-tests.md`
+- Load only the active command's `input_bundles.commands[...]` inputs plus `input_bundles.shared` for that invocation. The shared validation bundle is intentionally empty.
+- Do not preload sibling validation runtime contracts by default.
+- For normal runtime execution, treat the active local runtime contract as the only skill-authored input bundle file.
+- Treat structured runtime truth as owned by the command runtime metadata/catalog, the `blueprint://commands/{command}/runtime-contract` resource, MCP tool results, and artifact contracts read through MCP.
+- Treat saved phase summaries, verification artifacts, UAT artifacts, report authoring context, and state as MCP-resolved data, not preloaded prompt files.
 
 ## Required MCP Tools
 
