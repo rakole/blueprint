@@ -480,6 +480,13 @@ const QUICK_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const DEBUG_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_artifact_report_write",
+  "blueprint_artifact_mutate_index",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const FAST_REQUIRED_TOOLS = [
   "blueprint_project_status",
   "blueprint_state_update"
@@ -672,6 +679,8 @@ const UPDATE_SPEC_PATH =
   "skills/blueprint-maintenance/references/update-runtime-contract.md";
 const REAPPLY_PATCHES_SPEC_PATH =
   "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
+const DEBUG_SPEC_PATH =
+  "skills/blueprint-debug/references/debug-runtime-contract.md";
 
 const PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = [
   "blueprint-researcher"
@@ -2673,6 +2682,53 @@ export const QUICK_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const DEBUG_RUNTIME_METADATA = {
+  commandName: "debug",
+  sourceId: runtimeMetadataSourceId("debug"),
+  catalog: {
+    wave: 3,
+    family: "Capture And Lightweight Execution",
+    primarySkill: "blueprint-debug",
+    declaredStatus: "implemented",
+    risk: "Medium: exploratory shell commands and test runs are likely."
+  },
+  requiredTools: DEBUG_REQUIRED_TOOLS,
+  optionalAgents: ["blueprint-debugger"],
+  requiredInputPaths: ["commands/blu-debug.toml", DEBUG_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("debug"),
+    title: "`/blu-debug`",
+    executionProfile: "interactive-read -> long-running-mutation when non-trivial",
+    rootRoutable: true,
+    purpose:
+      "`debug` investigates a concrete issue, persists a durable debug-latest report, and stops at an explicit follow-up gate before todo capture or fix attempts.",
+    reads: [
+      "project status, user-provided issue evidence, relevant local files, command outputs, and prior debug-latest report content when continuing"
+    ],
+    writes: [
+      ".blueprint/reports/debug-latest.md",
+      "optional explicit follow-up todo through .blueprint/todos/TODO.md",
+      ".blueprint/STATE.md"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("debug"),
+    waveTitle: "Capture And Lightweight Execution",
+    command: "debug",
+    primarySkill: "blueprint-debug",
+    exactMcpDestination: DEBUG_REQUIRED_TOOLS,
+    optionalAgents: ["blueprint-debugger"],
+    hookInvolvement: [
+      "read-before-edit",
+      ".blueprint write guard",
+      "workflow advisory"
+    ],
+    contractNotes:
+      "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const FAST_RUNTIME_METADATA = {
   commandName: "fast",
   sourceId: runtimeMetadataSourceId("fast"),
@@ -2766,6 +2822,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [REVIEW_BACKLOG_RUNTIME_METADATA.commandName]: REVIEW_BACKLOG_RUNTIME_METADATA,
   [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA,
   [QUICK_RUNTIME_METADATA.commandName]: QUICK_RUNTIME_METADATA,
+  [DEBUG_RUNTIME_METADATA.commandName]: DEBUG_RUNTIME_METADATA,
   [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
 } as const;
 

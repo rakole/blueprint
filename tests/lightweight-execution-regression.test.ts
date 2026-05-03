@@ -73,11 +73,10 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
 });
 
 test("lightweight execution keeps debug investigative with its own report and follow-up gate", async () => {
-  const [debugToml, debugDoc, debugSkill, runtimeReference] = await Promise.all([
+  const [debugToml, debugSkill, debugRuntimeContract] = await Promise.all([
     readRepoFile("commands/blu-debug.toml"),
-    readRepoFile("docs/commands/debug.md"),
     readRepoFile("skills/blueprint-debug/SKILL.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    readRepoFile("skills/blueprint-debug/references/debug-runtime-contract.md")
   ]);
 
   assert.match(
@@ -85,26 +84,38 @@ test("lightweight execution keeps debug investigative with its own report and fo
     /Execution profile: start in `interactive-read`[\s\S]*escalate to `long-running-mutation` only when the investigation becomes non-trivial/i
   );
   assert.match(debugToml, /debug-latest/);
-  assert.match(debugToml, /report-only, capture a todo, route to `\/blu-quick`, route to `\/blu-plan-phase`, or defer to `\/blu-progress`/);
+  assert.match(
+    debugToml,
+    /explicit follow-up gate after the diagnosis:[\s\S]*report-only,[\s\S]*capture a todo only after an explicit user ask or confirmation,[\s\S]*`\/blu-quick`[\s\S]*`\/blu-plan-phase`[\s\S]*`\/blu-validate-phase`[\s\S]*`\/blu-progress`/i
+  );
+  assert.doesNotMatch(
+    debugToml,
+    /report-only, capture a todo, route to `\/blu-quick`, route to `\/blu-plan-phase`, or defer to `\/blu-progress`/
+  );
   assert.match(debugToml, /must not silently create a todo/i);
   assert.doesNotMatch(debugToml, /tracker-eligible/i);
   assert.doesNotMatch(debugToml, /quick-run-latest/);
 
-  assert.match(debugDoc, /`debug` does not imply tracker-backed branching, hidden fix execution, or silent todo capture\./);
-  assert.match(debugDoc, /Persists a durable `debug-latest` report through MCP/i);
-  assert.match(debugDoc, /stop on an explicit follow-up gate/i);
-  assert.doesNotMatch(debugDoc, /Do not use `update_topic`, `write_todos`, or tracker tools to make a trivial run look long-running\./);
-
+  assert.match(debugSkill, /input_bundles:/);
+  assert.match(debugSkill, /commands\/blu-debug\.toml/);
+  assert.match(debugSkill, /references\/debug-runtime-contract\.md/);
+  assert.doesNotMatch(debugSkill, /## Required Inputs/);
+  assert.match(
+    debugSkill,
+    /Execution profile: start in `interactive-read`[\s\S]*escalate to\s+`long-running-mutation` only when the investigation becomes non-trivial/i
+  );
+  assert.doesNotMatch(debugSkill, /Execution profile: `long-running-mutation`/);
   assert.match(debugSkill, /Treat `--diagnose` as a hard diagnose-only boundary/i);
   assert.match(
     debugSkill,
-    /Stop on an explicit follow-up gate after the diagnosis:[\s\S]*report-only,[\s\S]*capture a todo,[\s\S]*`\/blu-quick`,[\s\S]*`\/blu-plan-phase`,[\s\S]*`\/blu-progress`/
+    /Stop on an explicit follow-up gate after the diagnosis:[\s\S]*report-only,[\s\S]*capture a todo[\s\S]*`\/blu-quick`[\s\S]*`\/blu-plan-phase`[\s\S]*`\/blu-validate-phase`[\s\S]*`\/blu-progress`/
   );
   assert.match(debugSkill, /Keep `debug` investigative/i);
   assert.doesNotMatch(debugSkill, /tracker-eligible/i);
 
-  assert.match(runtimeReference, /`debug`[\s\S]*Interactive-read profile for evidence-backed investigations/i);
-  assert.match(runtimeReference, /`debug`[\s\S]*persist a durable `debug-latest` report/i);
-  assert.match(runtimeReference, /`debug`[\s\S]*require an explicit follow-up gate before todo capture or fix attempts/i);
-  assert.doesNotMatch(runtimeReference, /`debug`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
+  assert.match(debugRuntimeContract, /Require a concrete issue statement/i);
+  assert.match(debugRuntimeContract, /Persist: write the durable report/i);
+  assert.match(debugRuntimeContract, /bare canonical report name `debug-latest`/i);
+  assert.match(debugRuntimeContract, /stop at an explicit follow-up gate/i);
+  assert.doesNotMatch(debugRuntimeContract, /tracker-eligible/i);
 });

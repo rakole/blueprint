@@ -32,8 +32,9 @@ turning an investigation into an unbounded feature implementation.
 - the most relevant repo files, config, and tests implicated by the symptom
 - any existing `.blueprint/reports/debug-latest.md` report when the parent is
   continuing a prior investigation
-- locked Blueprint docs or command constraints when the issue is inside the
-  Blueprint runtime itself
+- the `/blu-debug` command manifest, skill-local runtime contract, live MCP or
+  runtime-contract inputs, and parent-provided command constraints when the
+  issue is inside the Blueprint runtime itself
 
 ## Investigation Protocol
 

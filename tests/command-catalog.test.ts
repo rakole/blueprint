@@ -18,6 +18,7 @@ import {
 import {
   CODE_REVIEW_RUNTIME_METADATA,
   CLEANUP_RUNTIME_METADATA,
+  DEBUG_RUNTIME_METADATA,
   DOCS_UPDATE_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
   MAP_CODEBASE_RUNTIME_METADATA,
@@ -1991,6 +1992,9 @@ test("fast is implemented once manifest, skill, and trivial inline MCP tools exi
 test("debug is implemented once manifest, skill, and report-backed debug MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["debug"];
+  const metadata = getRuntimeOwnedCommandMetadata("debug");
+
+  assert.equal(metadata, DEBUG_RUNTIME_METADATA);
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
@@ -1998,7 +2002,7 @@ test("debug is implemented once manifest, skill, and report-backed debug MCP too
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.equal(entry.manifestPath, blueprintPrimaryManifestPath("debug"));
   assert.ok(entry.skillPath);
-  assert.ok(entry.specPath);
+  assert.equal(entry.specPath, DEBUG_RUNTIME_METADATA.sourceId);
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_report_write",
@@ -2007,4 +2011,58 @@ test("debug is implemented once manifest, skill, and report-backed debug MCP too
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-debugger"]);
   assert.deepEqual(entry.blockedBy, []);
+
+  const contract = await buildBlueprintCommandRuntimeContractResource("debug");
+
+  assert.equal(contract.spec.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.doesNotMatch(JSON.stringify(contract), /docs\/commands\/debug\.md/);
+  assert.doesNotMatch(JSON.stringify(contract), /docs\/RUNTIME-REFERENCE\.md/);
+});
+
+test("debug runtime contract resource survives missing repository docs", async () => {
+  const contract = await buildBlueprintCommandRuntimeContractResource("debug", {
+    readRelativePath: async (relativePath) => {
+      if (relativePath.startsWith("docs/")) {
+        return null;
+      }
+
+      return readRelativePath(relativePath);
+    }
+  });
+
+  assert.equal(contract.catalog.specPath, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference.path, DEBUG_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference.commandSpecPath,
+    DEBUG_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.spec.requiredTools, [
+    ...DEBUG_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
+    ...DEBUG_RUNTIME_METADATA.runtimeReference.exactMcpDestination
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });

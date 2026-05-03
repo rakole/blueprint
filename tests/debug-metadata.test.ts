@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { DEBUG_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
@@ -39,26 +40,56 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   assert.match(commandFile, /\/blu-progress/);
 });
 
-test("debug docs, skill, and runtime reference capture the explicit follow-up gate", async () => {
-  const [commandDoc, skillFile, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/debug.md"), "utf8"),
+test("debug runtime-owned metadata, skill, and local contract capture the explicit follow-up gate", async () => {
+  const [skillFile, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-debug/SKILL.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-debug/references/debug-runtime-contract.md"
+      ),
+      "utf8"
+    )
   ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
-  assert.match(commandDoc, /## Diagnose-Only And Follow-Up Gates/);
-  assert.match(commandDoc, /must not silently create a todo/i);
-  assert.match(commandDoc, /session-local visibility only and do not replace Blueprint MCP persistence or explicit todo capture/i);
-  assert.match(
-    commandDoc,
-    /report-only,[\s\S]*capture a todo only after an explicit user ask or confirmation,[\s\S]*\/blu-quick[\s\S]*\/blu-plan-phase[\s\S]*\/blu-validate-phase[\s\S]*\/blu-progress/i
+  assert.equal(DEBUG_RUNTIME_METADATA.commandName, "debug");
+  assert.equal(DEBUG_RUNTIME_METADATA.catalog.primarySkill, "blueprint-debug");
+  assert.equal(DEBUG_RUNTIME_METADATA.catalog.declaredStatus, "implemented");
+  assert.equal(DEBUG_RUNTIME_METADATA.catalog.wave, 3);
+  assert.equal(
+    DEBUG_RUNTIME_METADATA.catalog.family,
+    "Capture And Lightweight Execution"
   );
+  assert.equal(
+    DEBUG_RUNTIME_METADATA.catalog.risk,
+    "Medium: exploratory shell commands and test runs are likely."
+  );
+  assert.deepEqual([...DEBUG_RUNTIME_METADATA.requiredTools], [
+    "blueprint_project_status",
+    "blueprint_artifact_report_write",
+    "blueprint_artifact_mutate_index",
+    "blueprint_state_update"
+  ]);
+  assert.deepEqual([...DEBUG_RUNTIME_METADATA.optionalAgents], [
+    "blueprint-debugger"
+  ]);
+  assert.deepEqual([...(DEBUG_RUNTIME_METADATA.requiredInputPaths ?? [])], [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /commands\/blu-debug\.toml/);
+  assert.match(skillFile, /skills\/blueprint-debug\/references\/debug-runtime-contract\.md/);
+  assert.doesNotMatch(skillFile, /## Required Inputs/);
+  assert.doesNotMatch(skillFile, /docs\/commands\/debug\.md/);
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-debug/);
-  assert.match(skillFile, /Execution profile: `long-running-mutation`/);
+  assert.match(
+    skillFile,
+    /Execution profile: start in `interactive-read`[\s\S]*escalate to\s+`long-running-mutation` only when the investigation becomes non-trivial/i
+  );
+  assert.doesNotMatch(skillFile, /Execution profile: `long-running-mutation`/);
   assert.match(skillFile, /`update_topic` tool/i);
   assert.match(skillFile, /`write_todos` tool/i);
   assert.match(skillFile, /session-local coordination only/i);
@@ -76,8 +107,15 @@ test("debug docs, skill, and runtime reference capture the explicit follow-up ga
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
 
-  assert.match(runtimeReference, /`debug`[\s\S]*Long-running-mutation profile for non-trivial investigations/i);
-  assert.match(runtimeReference, /`debug`[\s\S]*session-local visibility only/i);
-  assert.match(runtimeReference, /`debug`[\s\S]*explicit follow-up gate before todo capture or fix attempts/i);
-  assert.match(runtimeReference, /`debug`[\s\S]*`--diagnose` honest as diagnose-only/i);
+  assert.match(runtimeContract, /Require a concrete issue statement/i);
+  assert.match(runtimeContract, /repo is not initialized/i);
+  assert.match(runtimeContract, /`--diagnose` as a hard diagnose-only boundary/i);
+  assert.match(runtimeContract, /bare canonical report name `debug-latest`/i);
+  assert.match(runtimeContract, /returned `path` as\s+authoritative/i);
+  assert.match(runtimeContract, /explicit user ask or confirmation/i);
+  assert.match(runtimeContract, /session-local visibility only/i);
+  assert.match(runtimeContract, /\/blu-quick/);
+  assert.match(runtimeContract, /\/blu-plan-phase/);
+  assert.match(runtimeContract, /\/blu-validate-phase/);
+  assert.match(runtimeContract, /\/blu-progress/);
 });

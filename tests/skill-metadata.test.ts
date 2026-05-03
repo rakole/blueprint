@@ -96,6 +96,59 @@ test("structured input bundles resolve docs-free command-specific execution inpu
   }
 });
 
+test("debug resolves docs-free manifest and command-local runtime-contract inputs", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-debug",
+    "/blu-debug",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-debug");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
+test("debug runtime inputs stay available when repository docs are unavailable", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-debug",
+    "/blu-debug",
+    async (relativePath) => {
+      if (relativePath.startsWith("docs/")) {
+        return null;
+      }
+
+      return readRelativePath(relativePath);
+    }
+  );
+
+  assert.deepEqual(inputs.effective, [
+    "commands/blu-debug.toml",
+    "skills/blueprint-debug/references/debug-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
+test("debug structured input bundle does not fall back to legacy docs for unknown commands", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-debug",
+    "/blu-unknown-debug-command",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-debug");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, []);
+  assert.deepEqual(inputs.effective, []);
+});
+
 test("plan-phase skill resolves its slim command-scoped input bundle", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-phase-planning",
