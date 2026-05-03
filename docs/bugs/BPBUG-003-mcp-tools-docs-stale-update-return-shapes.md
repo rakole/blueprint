@@ -4,7 +4,7 @@ title: MCP tool docs advertise stale return shapes for update tools
 severity: low
 confidence: confirmed
 surface: docs
-status: new
+status: fixed
 discovery_phase: 6
 reported: 2026-05-02
 ---
@@ -16,7 +16,7 @@ reported: 2026-05-02
 - Severity: `low`
 - Confidence: `confirmed`
 - Surface: `docs`
-- Status: `new`
+- Status: `fixed`
 
 ## Summary
 
@@ -78,3 +78,154 @@ None known. The mismatch is confirmed by direct comparison of the shared MCP doc
 ## No Fix Applied
 
 No source, manifest, skill, test, generated asset, or runtime behavior fix was applied during this discovery milestone.
+
+## Repair Outcome - 2026-05-03
+
+Status: `fixed`.
+
+Repair commit:
+
+- `cca6b6c` synced `docs/MCP-TOOLS.md` update-tool return-shape rows with the live runtime fields and added row-level regression coverage in `tests/update-metadata.test.ts`.
+
+Verification:
+
+- `npm run typecheck` - pass.
+- `npm run build --silent` - pass.
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts tests/command-contract-docs.test.ts` - pass, `55/55`.
+
+Residual note:
+
+- Review found only low-severity test-hardening notes around future row-extraction brittleness. No CRITICAL, HIGH, or MEDIUM remediation was required.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `PASS`.
+
+Findings:
+
+- `HIGH`: none.
+- `MEDIUM`: none.
+- `LOW`: none.
+
+Evidence checked:
+
+- `docs/MCP-TOOLS.md` rows now list the live `blueprint_update_check` and `blueprint_update_plan` fields.
+- `src/mcp/tools/update.ts` defines `UpdateCheckResult` and `UpdatePlanResult` with the same fields.
+- Stale fields `installSource`, `jsonPath`, and `markdownPath` are absent from the maintenance tool rows.
+- `tests/update-metadata.test.ts` asserts the live field names and rejects the stale field names.
+- The diff scope is limited to `docs/MCP-TOOLS.md`, the BPBUG-003 bug doc, and `tests/update-metadata.test.ts`; no runtime, manifest, skill, global state, or `.blueprint/` state changed.
+
+Tests run:
+
+- `npm ci` - pass.
+- `npm run typecheck` - pass.
+- `npm run build --silent` - pass.
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts tests/command-contract-docs.test.ts` - pass, `55/55`.
+
+### Code Reviewer Report
+
+No `CRITICAL`, `HIGH`, or `MEDIUM` findings.
+
+Low findings:
+
+- `tests/update-metadata.test.ts` row extraction expects the table row to be formatted like ``| `tool` |`` with single spaces; future table reflow could fail the test even if the contract stays correct.
+- `tests/update-metadata.test.ts` interpolates field names directly into `RegExp`; current field names are safe, but future tokens with regex metacharacters would need escaping.
+
+Tests run:
+
+- `npm test --silent -- tests/update-metadata.test.ts` - pass.
+
+Residual risk:
+
+- Low. This repair is docs plus tests only; the main remaining risk is future doc-table formatting changes tripping row extraction.
+
+### Bug Finder Report
+
+No `CRITICAL`, `HIGH`, or `MEDIUM` issues remain for BPBUG-003.
+
+Evidence checked:
+
+- Shared MCP rows expose the live update-check and update-plan fields.
+- Stale fields are gone from the live contract rows.
+- The new regression would catch this docs-row drift in the future.
+- Wording still presents `/blu-update` as advisory and non-self-mutating in `docs/MCP-TOOLS.md` and `docs/commands/update.md`.
+
+Low note:
+
+- The BPBUG-003 seed docs still needed status/outcome cleanup at review time; this section records the final fixed state.
+
+Verification:
+
+- `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts` - pass, `11/11`.
+
+## Repair Plan - 2026-05-03
+
+### Inspection Findings
+
+- Bug report evidence confirms `docs/MCP-TOOLS.md` is stale while command docs, runtime types, and focused tests already use the richer update-tool shapes.
+- `docs/MCP-TOOLS.md` maintenance rows still advertise stale `installSource`, `jsonPath`, and `markdownPath` fields.
+- `docs/commands/update.md` already expects richer check/plan fields and authoritative `savedPaths`.
+- `src/mcp/tools/update.ts` defines `UpdateCheckResult` and `UpdatePlanResult`; the check result returns host/provenance/latest-version/update-availability fields, and the plan result returns `steps`, `notes`, `requiresRestart`, `savedPaths`, `path`, and `status`.
+- `commands/blu-update.toml` already calls `mcp_blueprint_blueprint_update_check` first and `mcp_blueprint_blueprint_update_plan` only after the mode gate.
+- `tests/update-tools.test.ts` already asserts the richer runtime shape.
+- `tests/update-metadata.test.ts` checks update tool names and command summary, but not the documented return shapes.
+
+### Official Gemini CLI Research
+
+- Gemini CLI MCP server docs say MCP servers let Gemini CLI discover tools, execute them with defined arguments, and receive structured responses: <https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md>. Impact: Blueprint's shared MCP return docs are model-facing contract material, so stale field names can mislead callers.
+- The same docs state MCP tools receive JSON arguments and results are processed for model context plus user display, often as JSON. Impact: the return-shape table should match runtime fields the model can actually consume.
+- Gemini CLI assigns MCP tools FQNs like `mcp_{serverName}_{toolName}`. Impact: `commands/blu-update.toml` already uses the correct `mcp_blueprint_blueprint_update_*` placement; no FQN change is needed.
+- Gemini CLI extension reference documents extension management commands and that management changes take effect after restarting the CLI session: <https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/reference.md>. Impact: keep `/blu-update` advisory, restart-oriented, and non-self-mutating; fields like `requiresRestart`, `host`, and `extensionManifestPath` are appropriate to document.
+
+### Minimal Implementation Plan
+
+1. Update only `docs/MCP-TOOLS.md` maintenance rows:
+   - `blueprint_update_check` returns `{host, extensionPath, extensionManifestPath, installedVersion, installProvenance, latestVersionLookupStatus, latestVersion, latestVersionSource, updateAvailable, warnings}`.
+   - `blueprint_update_plan` returns all `blueprint_update_check` fields plus `{mode, steps, notes, requiresRestart, savedPaths: {updatesDir, metadataPath, checklistPath}, path, status}`.
+   - Remove stale `installSource`, `jsonPath`, and `markdownPath`.
+2. Add row-level regression coverage in `tests/update-metadata.test.ts`:
+   - Extract the two `docs/MCP-TOOLS.md` table rows.
+   - Assert live field names are present.
+   - Assert stale field names are absent.
+3. Do not change `src/mcp/tools/update.ts` or command runtime behavior.
+4. Do not change `commands/blu-update.toml` or skill routing unless review asks for additional wording; the current tool placement is already correct.
+
+### Tests To Add/Run
+
+- Add/update `tests/update-metadata.test.ts` with precise return-shape assertions.
+- Targeted verification:
+  - `npm run typecheck`.
+  - `npm run build --silent`.
+  - `npx tsx --test tests/update-metadata.test.ts tests/update-tools.test.ts tests/command-contract-docs.test.ts`.
+- Optional final confidence: `npm test`.
+
+### Gemini CLI Tool Usage Placement
+
+No placement change recommended. Keep:
+
+- `mcp_blueprint_blueprint_update_check` first in `commands/blu-update.toml`.
+- `ask_user` only for the saved-checklist versus manual-fallback gate.
+- `mcp_blueprint_blueprint_update_plan` only after that gate when a saved checklist is desired.
+- Restart guidance at the end of the command flow.
+
+### Waves
+
+- Wave 1, docs: `docs/MCP-TOOLS.md` only. No dependency.
+- Wave 2, tests: `tests/update-metadata.test.ts`. Depends on the final exact row wording from Wave 1.
+- Wave 3, verification: targeted tests above. Depends on Waves 1-2.
+
+### DoD Checklist
+
+- `docs/MCP-TOOLS.md` update rows match runtime fields.
+- No stale `installSource`, `jsonPath`, or `markdownPath` remains in the live MCP tool docs rows.
+- Regression test fails on old rows and passes on updated rows.
+- No runtime, command manifest, skill, global state, installed extension, or `.blueprint/` state changes.
+- Targeted tests and typecheck pass.
+
+### Risks / Uncertainty
+
+- `UpdatePlanResult` extends `UpdateCheckResult`; documenting it as "all check fields plus ..." is clearer and less brittle than duplicating a very long full object.
+- Runtime type aliases are not exported, so the regression should stay doc-row based rather than attempting TypeScript type introspection.
+- Avoid network-dependent update tests; current fixture-based tests already cover runtime shape without live remote lookup.

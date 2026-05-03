@@ -133,8 +133,8 @@ The impact tool family is registered for the implemented additive `/blu-impact` 
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_update_check` | Read advisory update status, installed-version provenance, and environment-specific upgrade guidance without mutating the installed extension | `{status, installedVersion, latestVersion, installSource, extensionPath, warnings}` |
-| `blueprint_update_plan` | Persist the advisory update checklist and manual fallback under `~/.<host>/blueprint/updates/` while keeping the installed extension read-only | `{status, jsonPath, markdownPath, mode, warnings}` |
+| `blueprint_update_check` | Read advisory update status, installed-version provenance, and environment-specific upgrade guidance without mutating the installed extension | `{host, extensionPath, extensionManifestPath, installedVersion, installProvenance, latestVersionLookupStatus, latestVersion, latestVersionSource, updateAvailable, warnings}` |
+| `blueprint_update_plan` | Persist the advisory update checklist and manual fallback under `~/.<host>/blueprint/updates/` while keeping the installed extension read-only | `{host, extensionPath, extensionManifestPath, installedVersion, installProvenance, latestVersionLookupStatus, latestVersion, latestVersionSource, updateAvailable, warnings, mode, steps, notes, requiresRestart, savedPaths: {updatesDir, metadataPath, checklistPath}, path, status}` |
 
 ## Planned Later Tool Families
 
