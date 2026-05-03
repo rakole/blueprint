@@ -22,6 +22,7 @@ import {
   safeJsonParseObject
 } from "../src/shared/security.js";
 import {
+  createGitRepo,
   createCommittedGitRepo,
   createCommittedGitWorktree
 } from "./helpers/git-fixtures.js";
@@ -281,14 +282,43 @@ test("ensureRepoRoot rejects a fake .git directory that is not a Git repository"
 });
 
 test("ensureRepoRoot accepts a real Git worktree root with a valid gitdir file", async (t) => {
-  const { worktreePath } = await createCommittedGitWorktree("blueprint-security-worktree-root-");
+  const { repoPath, worktreePath } = await createCommittedGitWorktree(
+    "blueprint-security-worktree-root-"
+  );
 
   t.after(async () => {
-    await rm(path.dirname(path.dirname(worktreePath)), { recursive: true, force: true });
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
   await assert.doesNotReject(() => ensureRepoRoot(worktreePath));
   assert.equal(await ensureRepoRoot(worktreePath), worktreePath);
+});
+
+test("ensureRepoRoot accepts a symlinked path that resolves to a real repo root", async (t) => {
+  const repoPath = await createGitRepo("blueprint-security-symlink-root-");
+  const tempRoot = path.dirname(repoPath);
+  const symlinkPath = path.join(tempRoot, "repo-symlink");
+
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await symlink(repoPath, symlinkPath);
+
+  assert.equal(await ensureRepoRoot(symlinkPath), symlinkPath);
+});
+
+test("ensureRepoRoot rejects nested directories inside a real repository", async (t) => {
+  const repoPath = await createGitRepo("blueprint-security-nested-root-");
+  const nestedPath = path.join(repoPath, "packages", "app");
+
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(nestedPath, { recursive: true });
+
+  await assert.rejects(() => ensureRepoRoot(nestedPath), /repository root|no \.git entry/i);
 });
 
 test("repo-relative path resolution blocks traversal, absolute-path misuse, and symlink escapes", async (t) => {

@@ -13,17 +13,16 @@ import {
   blueprintReviewRecord,
   blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
 async function createCodeReviewFixRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-code-review-fix-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-code-review-fix-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-review-fix");
 
   await mkdir(path.join(repoPath, "src"), { recursive: true });
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

@@ -12,17 +12,16 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
 async function createExecutionReadyRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-pause-work-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-pause-work-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

@@ -27,6 +27,7 @@ import {
   blueprintStateLoad,
   blueprintStateSync
 } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/help-progress-health");
@@ -129,11 +130,7 @@ async function copyFixtureContents(sourcePath: string, targetPath: string): Prom
 }
 
 async function createRepoFromFixture(fixtureName: string): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-help-progress-health-"));
-  const repoPath = path.join(tempRoot, "repo");
-
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  const repoPath = await createGitRepo("blueprint-help-progress-health-");
 
   const sourcePath = path.join(fixtureRoot, fixtureName);
 
@@ -145,13 +142,11 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
 }
 
 async function createExecutionReadyRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-execute-phase-routing-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-execute-phase-routing-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -357,13 +352,11 @@ Exercise the execute-phase router.
 }
 
 async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-ui-discovery-routing-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-ui-discovery-routing-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/02-phase-discovery"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -517,14 +510,12 @@ async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise
 }
 
 async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-stale-roadmap-state-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-stale-roadmap-state-");
   const completedPhaseRoot = path.join(repoPath, ".blueprint/phases/04-results-dashboard");
   const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/05-rule-management");
 
   await mkdir(completedPhaseRoot, { recursive: true });
   await mkdir(nextPhaseRoot, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -615,8 +606,7 @@ async function createMilestoneCloseoutRepo(
     missingEarlierSummary?: boolean;
   } = {}
 ): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-milestone-closeout-routing-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-milestone-closeout-routing-");
   const reportsDir = path.join(repoPath, ".blueprint/reports");
   const earlierPhaseRoot = path.join(repoPath, ".blueprint/phases/02-validation-hardening");
   const phaseRoot = path.join(repoPath, ".blueprint/phases/03-milestone-closeout");
@@ -624,7 +614,6 @@ async function createMilestoneCloseoutRepo(
   await mkdir(earlierPhaseRoot, { recursive: true });
   await mkdir(phaseRoot, { recursive: true });
   await mkdir(reportsDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
@@ -1347,10 +1336,8 @@ test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
 });
 
 test("read-path tools route unmapped brownfield repos to map-codebase before bootstrap", async (t) => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-brownfield-status-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-brownfield-status-");
   await mkdir(path.join(repoPath, "src"), { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(
     path.join(repoPath, "package.json"),
     JSON.stringify({ name: "brownfield-status", private: true }, null, 2),
@@ -1358,7 +1345,7 @@ test("read-path tools route unmapped brownfield repos to map-codebase before boo
   );
   await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
   t.after(async () => {
-    await rm(tempRoot, { recursive: true, force: true });
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
@@ -1377,10 +1364,8 @@ test("read-path tools route unmapped brownfield repos to map-codebase before boo
 });
 
 test("read-path tools route interrupted empty brownfield Blueprint roots to map-codebase", async (t) => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-brownfield-empty-root-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-brownfield-empty-root-");
   await mkdir(path.join(repoPath, "src"), { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(
     path.join(repoPath, "package.json"),
     JSON.stringify({ name: "brownfield-empty-root", private: true }, null, 2),
@@ -1389,7 +1374,7 @@ test("read-path tools route interrupted empty brownfield Blueprint roots to map-
   await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
   await mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
   t.after(async () => {
-    await rm(tempRoot, { recursive: true, force: true });
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
@@ -2335,16 +2320,14 @@ test("artifact validation flags malformed legacy config and incomplete bundles w
 });
 
 test("artifact validation does not flag an in-progress discovery phase as structurally broken", async (t) => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-discovery-validation-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-discovery-validation-");
   t.after(async () => {
-    await rm(tempRoot, { recursive: true, force: true });
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
   await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
     recursive: true
   });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

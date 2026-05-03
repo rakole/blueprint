@@ -21,6 +21,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintRoadmapRead } from "../src/mcp/tools/phase.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
@@ -77,14 +78,12 @@ async function writeRepoFile(
 }
 
 async function createCleanupBehaviorFixture(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-cleanup-behavior-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-cleanup-behavior-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
   await mkdir(path.join(repoPath, ".blueprint/reports"), { recursive: true });
   await mkdir(path.join(repoPath, ".blueprint/archive/v1"), { recursive: true });
 
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeRepoFile(repoPath, ".blueprint/PROJECT.md", "# Project\n");
   await writeRepoFile(repoPath, ".blueprint/REQUIREMENTS.md", "# Requirements\n");
   await writeRepoFile(

@@ -20,12 +20,18 @@ export async function initializeGitRepo(repoPath: string): Promise<void> {
   }
 }
 
-export async function createCommittedGitRepo(prefix: string): Promise<string> {
+export async function createGitRepo(prefix: string): Promise<string> {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), prefix));
   const repoPath = path.join(tempRoot, "repo");
 
   await mkdir(repoPath, { recursive: true });
   await initializeGitRepo(repoPath);
+
+  return repoPath;
+}
+
+export async function createCommittedGitRepo(prefix: string): Promise<string> {
+  const repoPath = await createGitRepo(prefix);
   await runGit(["config", "user.name", "Blueprint Tests"], repoPath);
   await runGit(["config", "user.email", "blueprint-tests@example.com"], repoPath);
   await writeFile(path.join(repoPath, "README.md"), "# Blueprint Test Repo\n", "utf8");

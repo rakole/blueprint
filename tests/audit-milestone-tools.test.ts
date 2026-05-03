@@ -12,6 +12,7 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
@@ -351,14 +352,12 @@ function milestoneSummaryReportContent(): string {
 }
 
 async function createMilestoneAuditRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-audit-milestone-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-audit-milestone-");
   const priorPhaseDir = path.join(repoPath, ".blueprint/phases/03-execution");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-release-readiness");
 
   await mkdir(priorPhaseDir, { recursive: true });
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

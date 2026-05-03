@@ -10,6 +10,7 @@ import {
   blueprintArtifactMutateIndex,
   blueprintArtifactScaffold
 } from "../src/mcp/tools/artifacts.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -21,11 +22,7 @@ async function pathExists(targetPath: string): Promise<boolean> {
 }
 
 async function createCaptureRepo(initialized = true): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-capture-tools-"));
-  const repoPath = path.join(tempRoot, "repo");
-
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  const repoPath = await createGitRepo("blueprint-capture-tools-");
 
   if (!initialized) {
     return repoPath;

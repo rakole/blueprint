@@ -21,6 +21,7 @@ import {
   blueprintConfigSet,
   blueprintConfigSetProfile
 } from "../src/mcp/tools/config.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/settings-profile");
@@ -57,11 +58,7 @@ async function copyFixtureContents(sourcePath: string, targetPath: string): Prom
 }
 
 async function createRepoFromFixture(fixtureName: string): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-settings-profile-"));
-  const repoPath = path.join(tempRoot, "repo");
-
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  const repoPath = await createGitRepo("blueprint-settings-profile-");
 
   const sourcePath = path.join(fixtureRoot, fixtureName);
 

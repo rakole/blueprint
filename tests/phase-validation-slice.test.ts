@@ -17,6 +17,7 @@ import {
 } from "../src/mcp/tools/phase.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
@@ -83,14 +84,12 @@ function completedSummaryContent(args: {
 }
 
 async function createValidationRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-validation-slice-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-validation-slice-");
   const completedPhaseDir = path.join(repoPath, ".blueprint/phases/03-execution");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-phase-validation");
 
   await mkdir(completedPhaseDir, { recursive: true });
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

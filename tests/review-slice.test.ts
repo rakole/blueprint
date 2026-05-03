@@ -13,6 +13,7 @@ import {
   blueprintReviewRecord,
   blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const peerReviewPlanPath = ".blueprint/phases/03-review-phase/03-01-PLAN.md";
@@ -39,12 +40,10 @@ function peerReviewEvidenceCoverage(
 }
 
 async function createPeerReviewRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-peer-review-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-peer-review-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/03-review-phase");
 
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(

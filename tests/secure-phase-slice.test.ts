@@ -13,6 +13,7 @@ import {
   blueprintReviewRecord,
   blueprintReviewValidateModel
 } from "../src/mcp/tools/review.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 
@@ -179,13 +180,11 @@ async function createSecurePhaseRepo(
     threatId = "T-01",
     threatMitigation = "Persist security evidence through MCP review record."
   } = options;
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-secure-phase-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-secure-phase-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-security-audit");
 
   await mkdir(path.join(repoPath, "src"), { recursive: true });
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, "src/security.ts"), "export const securityReview = true;\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");

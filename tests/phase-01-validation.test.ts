@@ -28,6 +28,7 @@ import {
   shippedExtensionHosts,
   type ExtensionHost
 } from "./helpers/extension-hosts.ts";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
 const fixtureRoot = path.join(repoRoot, "tests/fixtures/new-project");
@@ -64,11 +65,7 @@ async function copyFixtureContents(sourcePath: string, targetPath: string): Prom
 }
 
 async function createRepoFromFixture(fixtureName: string): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-phase-01-validation-"));
-  const repoPath = path.join(tempRoot, "repo");
-
-  await mkdir(repoPath, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
+  const repoPath = await createGitRepo("blueprint-phase-01-validation-");
 
   const sourcePath = path.join(fixtureRoot, fixtureName);
 

@@ -9,6 +9,7 @@ import {
   blueprintArtifactReportWrite,
   blueprintArtifactSummaryDigest
 } from "../src/mcp/tools/artifacts.js";
+import { createGitRepo } from "./helpers/git-fixtures.js";
 
 function cleanupReportContent(nextSafeAction = "/blu-progress"): string {
   return `# Cleanup Report
@@ -36,8 +37,7 @@ function cleanupReportContent(nextSafeAction = "/blu-progress"): string {
 }
 
 async function createCleanupFixtureRepo(): Promise<string> {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-cleanup-tools-"));
-  const repoPath = path.join(tempRoot, "repo");
+  const repoPath = await createGitRepo("blueprint-cleanup-tools-");
   const reportsDir = path.join(repoPath, ".blueprint/reports");
   const phaseDir = path.join(
     repoPath,
@@ -46,7 +46,6 @@ async function createCleanupFixtureRepo(): Promise<string> {
 
   await mkdir(reportsDir, { recursive: true });
   await mkdir(phaseDir, { recursive: true });
-  await writeFile(path.join(repoPath, ".git"), "gitdir: ./.git/worktree-placeholder\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
   await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
   await writeFile(
