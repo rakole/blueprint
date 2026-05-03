@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -35,11 +39,11 @@ test("reapply-patches manifest references the maintenance skill, patch MCP tools
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("reapply-patches docs, runtime reference, and maintenance skill align to the shipped patch-replay contract", async () => {
-  const [commandDoc, runtimeReference, skillDoc, mcpToolsDoc, artifactSchemaDoc] =
+test("reapply-patches docs, runtime resource, and maintenance skill align to the shipped patch-replay contract", async () => {
+  const [commandDoc, runtimeContract, skillDoc, mcpToolsDoc, artifactSchemaDoc] =
     await Promise.all([
       readRepoFile("docs/commands/reapply-patches.md"),
-      readRepoFile("docs/RUNTIME-REFERENCE.md"),
+      buildBlueprintCommandRuntimeContractResource("reapply-patches"),
       readRepoFile("skills/blueprint-maintenance/SKILL.md"),
       readRepoFile("docs/MCP-TOOLS.md"),
       readRepoFile("docs/ARTIFACT-SCHEMA.md")
@@ -67,14 +71,20 @@ test("reapply-patches docs, runtime reference, and maintenance skill align to th
   assert.match(skillDoc, /blueprint_patch_record/);
   assert.match(skillDoc, /reapply-patches-confirmation/);
 
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /reapply-patches-runtime-contract\.md/);
   assert.match(
-    runtimeReference,
-    /\| `reapply-patches` \| `docs\/commands\/reapply-patches\.md` \| `blueprint-maintenance` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /dry-run the exact replay set/i
   );
-  assert.match(runtimeReference, /High-risk-maintenance profile for confirmation-gated patch replay/i);
-  assert.match(runtimeReference, /malformed-patch-registry/);
-  assert.match(runtimeReference, /installed-extension-target/);
-  assert.match(runtimeReference, /preflight -> preview -> confirm -> replay -> record/);
+  assert.deepEqual(
+    runtimeContract.runtimeReference?.exactMcpDestination,
+    runtimeContract.catalog.requiredTools
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 
   assert.match(mcpToolsDoc, /`blueprint_patch_list`/);
   assert.match(mcpToolsDoc, /`blueprint_patch_reapply`/);

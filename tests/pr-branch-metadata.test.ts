@@ -7,6 +7,9 @@ import {
   readArtifactContract
 } from "../src/mcp/artifact-contracts/index.js";
 import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+import {
   validateReportArtifactContent
 } from "../src/mcp/tools/artifacts.js";
 
@@ -105,11 +108,11 @@ test("pr-branch runtime contract locks commit classification, fallback, and repo
 });
 
 test("pr-branch docs and runtime reference expose the richer review-branch contract", async () => {
-  const [docFile, runtimeFile, mcpToolsFile, artifactSchema] = await Promise.all([
+  const [docFile, mcpToolsFile, artifactSchema, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/pr-branch.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
     readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8")
+    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("pr-branch")
   ]);
 
   assert.match(docFile, /\| Execution profile \| `high-risk-maintenance` \|/);
@@ -125,15 +128,18 @@ test("pr-branch docs and runtime reference expose the richer review-branch contr
   assert.match(docFile, /No-subagent fallback is canonical/i);
   assert.match(docFile, /`clean-working-tree`/);
   assert.match(docFile, /report overwrite confirmation/i);
-  assert.match(runtimeFile, /High-risk-maintenance profile for clean review-branch preparation/i);
-  assert.match(runtimeFile, /pr-branch-runtime-contract\.md/);
-  assert.match(runtimeFile, /blueprint_artifact_contract_read/);
-  assert.match(runtimeFile, /`code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`/);
-  assert.match(runtimeFile, /validate clean branch state plus retained file\/commit counts/i);
-  assert.match(runtimeFile, /`clean-working-tree`, `review-branch-confirmation`, or report overwrite approval/);
-  assert.match(runtimeFile, /report-backed pre-mutation posture reviewable/i);
-  assert.match(runtimeFile, /next safe action explicit/i);
-  assert.match(runtimeFile, /never rewrite the source branch in place/i);
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /pr-branch-runtime-contract\.md/);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /clean tree and review-branch confirmation/i);
+  assert.ok(
+    runtimeContract.runtimeReference?.exactMcpDestination.includes(
+      "blueprint_artifact_contract_read"
+    )
+  );
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
   assert.match(mcpToolsFile, /`pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, `blueprint_artifact_contract_read`, and `blueprint_artifact_report_write`/);
   assert.match(mcpToolsFile, /forbid browser\/web-search\/shell-only or generic agents as substitutes/i);
   assert.match(artifactSchema, /### `reports\/pr-branch-latest\.md`/);

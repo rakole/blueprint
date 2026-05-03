@@ -4,6 +4,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
 import { validateReportArtifactContent } from "../src/mcp/tools/artifacts.js";
 
 const repoRoot = process.cwd();
@@ -76,10 +79,10 @@ test("maintenance skill captures undo visibility, report persistence, and destru
   assert.match(skillFile, /overwrite `undo-latest`[\s\S]*actual outcome, blockers, and stale-evidence fallout/i);
 });
 
-test("undo docs and runtime reference expose the destructive gate, waiting state, and next safe action contract", async () => {
-  const [commandDoc, runtimeReference] = await Promise.all([
+test("undo docs and runtime resource expose the destructive gate, waiting state, and next safe action contract", async () => {
+  const [commandDoc, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/undo.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+    buildBlueprintCommandRuntimeContractResource("undo")
   ]);
 
   assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
@@ -98,25 +101,18 @@ test("undo docs and runtime reference expose the destructive gate, waiting state
   assert.match(commandDoc, /contract\.authoringTemplate/);
   assert.match(commandDoc, /next safe action/i);
 
-  assert.match(runtimeReference, /\| `undo` \| `docs\/commands\/undo\.md` \| `blueprint-maintenance` \|/);
-  assert.match(runtimeReference, /High-risk-maintenance profile for confirmation-gated revert flow/);
-  assert.match(
-    runtimeReference,
-    /`Resolve`\/`Read`\/`Decide`\/`Execute`\/`Persist`\/`Validate`\/`Route` narration/
+  assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /undo-runtime-contract\.md/);
+  assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /hard-stop on dirty or unsafe git state/i);
+  assert.ok(
+    runtimeContract.runtimeReference?.exactMcpDestination.includes(
+      "blueprint_artifact_contract_read"
+    )
   );
-  assert.match(
-    runtimeReference,
-    /resolved scope, active stage, pending gate, execution mode, and next safe action visible/
+  assert.equal(
+    runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
   );
-  assert.match(
-    runtimeReference,
-    /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/
-  );
-  assert.match(runtimeReference, /undo-confirmation/);
-  assert.match(runtimeReference, /report-overwrite-confirmation/);
-  assert.match(runtimeReference, /`undo`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.undo` contract/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*contract\.authoringTemplate/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*overwrite `undo-latest` after the revert attempt/i);
 });
 
 test("undo canonical report contract requires populated contract-backed revert evidence", () => {

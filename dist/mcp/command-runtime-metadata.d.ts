@@ -748,6 +748,312 @@ export declare const RESUME_WORK_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
+export declare const PR_BRANCH_RUNTIME_METADATA: {
+    readonly commandName: "pr-branch";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: git branch mutation.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-pr-branch`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`pr-branch` prepares a clean review branch by filtering Blueprint bookkeeping scope and persists a durable report.";
+        readonly reads: readonly ["Project health, effective git config, active diff, artifact digest scope, and report contract through MCP plus git inspection."];
+        readonly writes: readonly [".blueprint/reports/pr-branch-latest.md", "confirmed git branch"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality And Shipping";
+        readonly command: "pr-branch";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const SHIP_RUNTIME_METADATA: {
+    readonly commandName: "ship";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: remote and git mutation path.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/ship-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-ship`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.";
+        readonly reads: readonly ["Project health, optional phase metadata, effective config, saved evidence, artifact digest scope, and report contract through MCP plus git/gh inspection."];
+        readonly writes: readonly [".blueprint/reports/ship-latest.md", ".blueprint/STATE.md when routing changes", "approved git remote or PR state"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality And Shipping";
+        readonly command: "ship";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const UNDO_RUNTIME_METADATA: {
+    readonly commandName: "undo";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/undo-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-undo`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.";
+        readonly reads: readonly ["Project health, optional phase metadata, affected artifacts, artifact digest scope, and report contract through MCP plus git history inspection."];
+        readonly writes: readonly [".blueprint/reports/undo-latest.md", ".blueprint/STATE.md when routing changes", "approved git revert commits"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality And Shipping";
+        readonly command: "undo";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const NEW_WORKSPACE_RUNTIME_METADATA: {
+    readonly commandName: "new-workspace";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: filesystem and git worktree mutation outside the current repo.";
+    };
+    readonly requiredTools: readonly ["blueprint_config_get", "blueprint_workspace_registry_get", "blueprint_workspace_create"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/new-workspace-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-new-workspace`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`new-workspace` creates a confirmed multi-repo workspace and records it in host-global Blueprint workspace state.";
+        readonly reads: readonly ["Effective config, host-global workspace registry, source repo status, and target path preflight."];
+        readonly writes: readonly ["workspace manifest under the selected workspace", "~/.<host>/blueprint/workspaces registry"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "new-workspace";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_config_get", "blueprint_workspace_registry_get", "blueprint_workspace_create"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const REMOVE_WORKSPACE_RUNTIME_METADATA: {
+    readonly commandName: "remove-workspace";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: confirmation-gated workspace teardown and registry cleanup.";
+    };
+    readonly requiredTools: readonly ["blueprint_workspace_registry_get", "blueprint_workspace_remove"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-remove-workspace`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`remove-workspace` tears down an exact confirmed workspace and updates the host-global workspace registry.";
+        readonly reads: readonly ["Host-global workspace registry, workspace manifest, recorded repo members, and dirty-tree preflight."];
+        readonly writes: readonly ["workspace teardown on disk", "~/.<host>/blueprint/workspaces registry"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "remove-workspace";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_workspace_registry_get", "blueprint_workspace_remove"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const WORKSTREAMS_RUNTIME_METADATA: {
+    readonly commandName: "workstreams";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Medium: project-local state mutation with switching semantics.";
+    };
+    readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/workstreams-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-workstreams`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.";
+        readonly reads: readonly ["Project-local workstream index and saved per-stream state."];
+        readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md for returned resume patches"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "workstreams";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const CLEANUP_RUNTIME_METADATA: {
+    readonly commandName: "cleanup";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: confirmation-gated phase-directory archival and removal behavior.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/cleanup-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-cleanup`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.";
+        readonly reads: readonly ["Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."];
+        readonly writes: readonly [".blueprint/reports/cleanup-latest.md", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "cleanup";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const UPDATE_RUNTIME_METADATA: {
+    readonly commandName: "update";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: advisory only; no in-session self-update.";
+    };
+    readonly requiredTools: readonly ["blueprint_update_check", "blueprint_update_plan"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/update-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-update`";
+        readonly executionProfile: "interactive-read";
+        readonly rootRoutable: true;
+        readonly purpose: "`update` inspects the installed Blueprint extension and prepares an advisory out-of-band update checklist.";
+        readonly reads: readonly ["Host, installed extension path, installed version, provenance, latest-version lookup status, and warnings."];
+        readonly writes: readonly ["~/.<host>/blueprint/updates/ when checklist persistence is chosen"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "update";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_update_check", "blueprint_update_plan"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
+export declare const REAPPLY_PATCHES_RUNTIME_METADATA: {
+    readonly commandName: "reapply-patches";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Workspace And Maintenance";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: confirmation-gated patch replay across repo files.";
+    };
+    readonly requiredTools: readonly ["blueprint_patch_list", "blueprint_patch_reapply", "blueprint_patch_record"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-reapply-patches`";
+        readonly executionProfile: "high-risk-maintenance";
+        readonly rootRoutable: true;
+        readonly purpose: "`reapply-patches` previews, confirms, replays, and records host-global Blueprint patch reapplication.";
+        readonly reads: readonly ["Host-global patch registry, selected patch manifests, target compatibility, and dry-run replay result."];
+        readonly writes: readonly ["approved git patch replay", "~/.<host>/blueprint/patches replay audit"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Workspace And Maintenance";
+        readonly command: "reapply-patches";
+        readonly primarySkill: "blueprint-maintenance";
+        readonly exactMcpDestination: readonly ["blueprint_patch_list", "blueprint_patch_reapply", "blueprint_patch_record"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [];
+        readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const NOTE_RUNTIME_METADATA: {
     readonly commandName: "note";
     readonly sourceId: string;
@@ -1657,6 +1963,312 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly [".blueprint write guard"];
             readonly contractNotes: "Docless manifest+skill-owned runtime for handoff restoration: load skills/blueprint-governance/references/resume-work-runtime-contract.md, read project status, state, artifacts, and canonical pause handoff through MCP, restore only from the canonical handoff, persist next safe action through blueprint_state_update, and route follow-ups only to implemented commands.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "pr-branch": {
+        readonly commandName: "pr-branch";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: git branch mutation.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-pr-branch`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`pr-branch` prepares a clean review branch by filtering Blueprint bookkeeping scope and persists a durable report.";
+            readonly reads: readonly ["Project health, effective git config, active diff, artifact digest scope, and report contract through MCP plus git inspection."];
+            readonly writes: readonly [".blueprint/reports/pr-branch-latest.md", "confirmed git branch"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality And Shipping";
+            readonly command: "pr-branch";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/pr-branch-runtime-contract.md, require a clean tree and review-branch confirmation before git mutation, default to excluding .blueprint/** bookkeeping when configured, persist only the durable report through blueprint_artifact_report_write, and route follow-ups only to implemented commands or manual git/PR steps.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly ship: {
+        readonly commandName: "ship";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: remote and git mutation path.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/ship-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-ship`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.";
+            readonly reads: readonly ["Project health, optional phase metadata, effective config, saved evidence, artifact digest scope, and report contract through MCP plus git/gh inspection."];
+            readonly writes: readonly [".blueprint/reports/ship-latest.md", ".blueprint/STATE.md when routing changes", "approved git remote or PR state"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality And Shipping";
+            readonly command: "ship";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly undo: {
+        readonly commandName: "undo";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/undo-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-undo`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.";
+            readonly reads: readonly ["Project health, optional phase metadata, affected artifacts, artifact digest scope, and report contract through MCP plus git history inspection."];
+            readonly writes: readonly [".blueprint/reports/undo-latest.md", ".blueprint/STATE.md when routing changes", "approved git revert commits"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality And Shipping";
+            readonly command: "undo";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_contract_read", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/undo-runtime-contract.md, hard-stop on dirty or unsafe git state, require undo confirmation, write undo-latest before mutation, run only safe git revert style steps, overwrite undo-latest with actual outcome, and update state only after a successful revert changes routing.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "new-workspace": {
+        readonly commandName: "new-workspace";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: filesystem and git worktree mutation outside the current repo.";
+        };
+        readonly requiredTools: readonly ["blueprint_config_get", "blueprint_workspace_registry_get", "blueprint_workspace_create"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/new-workspace-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-new-workspace`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`new-workspace` creates a confirmed multi-repo workspace and records it in host-global Blueprint workspace state.";
+            readonly reads: readonly ["Effective config, host-global workspace registry, source repo status, and target path preflight."];
+            readonly writes: readonly ["workspace manifest under the selected workspace", "~/.<host>/blueprint/workspaces registry"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "new-workspace";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_config_get", "blueprint_workspace_registry_get", "blueprint_workspace_create"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/new-workspace-runtime-contract.md, derive workspace root from config or explicit input, stop on dirty sources or conflicts, require new-workspace-confirmation, and persist only through blueprint_workspace_create and the host-global registry it owns.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "remove-workspace": {
+        readonly commandName: "remove-workspace";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: confirmation-gated workspace teardown and registry cleanup.";
+        };
+        readonly requiredTools: readonly ["blueprint_workspace_registry_get", "blueprint_workspace_remove"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-remove-workspace`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`remove-workspace` tears down an exact confirmed workspace and updates the host-global workspace registry.";
+            readonly reads: readonly ["Host-global workspace registry, workspace manifest, recorded repo members, and dirty-tree preflight."];
+            readonly writes: readonly ["workspace teardown on disk", "~/.<host>/blueprint/workspaces registry"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "remove-workspace";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_workspace_registry_get", "blueprint_workspace_remove"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md, resolve a single registry-backed workspace target, stop on ambiguity, drift, or dirty members, require remove-workspace-confirmation, and persist teardown only through blueprint_workspace_remove.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly workstreams: {
+        readonly commandName: "workstreams";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Medium: project-local state mutation with switching semantics.";
+        };
+        readonly requiredTools: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/workstreams-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-workstreams`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`workstreams` lists, creates, switches, resumes, or completes project-local Blueprint workstreams through MCP-owned state.";
+            readonly reads: readonly ["Project-local workstream index and saved per-stream state."];
+            readonly writes: readonly [".blueprint/workstreams/WORKSTREAMS.md", ".blueprint/workstreams/<slug>/state.json", ".blueprint/STATE.md for returned resume patches"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "workstreams";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_workstream_list", "blueprint_workstream_mutate", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/workstreams-runtime-contract.md, keep read-only operations on blueprint_workstream_list, require explicit targets and switch/archive confirmation gates before mutation, persist workstream changes only through blueprint_workstream_mutate, and apply returned resume statePatch only through blueprint_state_update.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly cleanup: {
+        readonly commandName: "cleanup";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: confirmation-gated phase-directory archival and removal behavior.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/cleanup-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-cleanup`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`cleanup` archives completed Blueprint phase directories through a protected-scope confirmation flow and persists a durable cleanup report.";
+            readonly reads: readonly ["Project health, roadmap references, artifact inventory, cleanup evidence digest, and filesystem preflight."];
+            readonly writes: readonly [".blueprint/reports/cleanup-latest.md", ".blueprint/STATE.md when routing changes", "confirmed phase archive destination"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "cleanup";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/cleanup-runtime-contract.md, protect the current phase and active roadmap references, require cleanup and destination confirmations before filesystem mutation, write cleanup-latest before archival, and update state only after successful approved archival.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly update: {
+        readonly commandName: "update";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: advisory only; no in-session self-update.";
+        };
+        readonly requiredTools: readonly ["blueprint_update_check", "blueprint_update_plan"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/update-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-update`";
+            readonly executionProfile: "interactive-read";
+            readonly rootRoutable: true;
+            readonly purpose: "`update` inspects the installed Blueprint extension and prepares an advisory out-of-band update checklist.";
+            readonly reads: readonly ["Host, installed extension path, installed version, provenance, latest-version lookup status, and warnings."];
+            readonly writes: readonly ["~/.<host>/blueprint/updates/ when checklist persistence is chosen"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "update";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_update_check", "blueprint_update_plan"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/update-runtime-contract.md, keep installed extension handling read-only, use update-mode-gate for saved checklist versus manual fallback, persist only through blueprint_update_plan under host-global update state, and always end with restart guidance.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "reapply-patches": {
+        readonly commandName: "reapply-patches";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Workspace And Maintenance";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: confirmation-gated patch replay across repo files.";
+        };
+        readonly requiredTools: readonly ["blueprint_patch_list", "blueprint_patch_reapply", "blueprint_patch_record"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-reapply-patches`";
+            readonly executionProfile: "high-risk-maintenance";
+            readonly rootRoutable: true;
+            readonly purpose: "`reapply-patches` previews, confirms, replays, and records host-global Blueprint patch reapplication.";
+            readonly reads: readonly ["Host-global patch registry, selected patch manifests, target compatibility, and dry-run replay result."];
+            readonly writes: readonly ["approved git patch replay", "~/.<host>/blueprint/patches replay audit"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Workspace And Maintenance";
+            readonly command: "reapply-patches";
+            readonly primarySkill: "blueprint-maintenance";
+            readonly exactMcpDestination: readonly ["blueprint_patch_list", "blueprint_patch_reapply", "blueprint_patch_record"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [];
+            readonly contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md, list patches first, dry-run the exact replay set through blueprint_patch_reapply, stop on dirty or incompatible targets, require reapply-patches-confirmation, replay only the previewed patch ids, and record the outcome through blueprint_patch_record.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
     readonly note: {

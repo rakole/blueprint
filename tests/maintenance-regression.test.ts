@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  buildBlueprintCommandRuntimeContractResource
+} from "../src/mcp/command-resources.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -155,61 +159,38 @@ test("maintenance skill keeps family-wide preflight, pending-gate, and report-be
   assert.match(skill, /next safe action/i);
 });
 
-test("maintenance runtime reference rows keep dirty-tree aborts, pending approvals, and next safe action visible", async () => {
-  const runtimeReference = await readRepoFile("docs/RUNTIME-REFERENCE.md");
+test("maintenance runtime contract resources keep aborts, approvals, and owned inputs visible", async () => {
+  const expectations = [
+    ["pr-branch", /clean tree and review-branch confirmation/i, /pr-branch-runtime-contract\.md/],
+    ["ship", /local prep, push, and PR creation as separate approved steps/i, /ship-runtime-contract\.md/],
+    ["undo", /hard-stop on dirty or unsafe git state/i, /undo-runtime-contract\.md/],
+    ["new-workspace", /derive workspace root from config or explicit input/i, /new-workspace-runtime-contract\.md/],
+    ["remove-workspace", /resolve a single registry-backed workspace target/i, /remove-workspace-runtime-contract\.md/],
+    ["workstreams", /switch\/archive confirmation gates before mutation/i, /workstreams-runtime-contract\.md/],
+    ["cleanup", /protect the current phase and active roadmap references/i, /cleanup-runtime-contract\.md/],
+    ["update", /update-mode-gate for saved checklist versus manual fallback/i, /update-runtime-contract\.md/],
+    ["reapply-patches", /dry-run the exact replay set/i, /reapply-patches-runtime-contract\.md/]
+  ] as const;
 
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*High-risk-maintenance profile for clean review-branch preparation/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*blueprint_artifact_contract_read/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*pr-branch-runtime-contract\.md/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*classify commits into `code-only`, `blueprint-only`, `mixed`, and `empty-after-filter`/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*`clean-working-tree`, `review-branch-confirmation`, or report overwrite approval/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*report-backed pre-mutation posture reviewable/i);
-  assert.match(runtimeReference, /`pr-branch`[\s\S]*next safe action explicit/i);
+  for (const [commandName, notesPattern, inputPattern] of expectations) {
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+    const notes = contract.runtimeReference?.contractNotes ?? "";
 
-  assert.match(runtimeReference, /`ship`[\s\S]*High-risk-maintenance profile for branchy shipping flows/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*local prep plus optional push plus optional PR creation explicit/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.ship` contract/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*persist `ship-latest`/i);
-  assert.match(runtimeReference, /`ship`[\s\S]*overwrite `ship-latest` after push or PR attempts/i);
-
-  assert.match(runtimeReference, /`undo`[\s\S]*High-risk-maintenance profile for confirmation-gated revert flow/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*`undo-confirmation` and `report-overwrite-confirmation` visible/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*read `blueprint_artifact_contract_read` for the canonical `report\.undo` contract/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*persist `undo-latest` before git mutation/i);
-  assert.match(runtimeReference, /`undo`[\s\S]*overwrite `undo-latest` after the revert attempt/i);
-
-  assert.match(runtimeReference, /`new-workspace`[\s\S]*High-risk-maintenance profile for confirmation-gated workspace creation/i);
-  assert.match(runtimeReference, /`new-workspace`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(runtimeReference, /`new-workspace`[\s\S]*workspace name, path, repo members, strategy, branch, manifest path, and registry mutation plan/i);
-  assert.match(runtimeReference, /`new-workspace`[\s\S]*transactional/i);
-
-  assert.match(runtimeReference, /`remove-workspace`[\s\S]*High-risk-maintenance profile for confirmation-gated workspace teardown/i);
-  assert.match(runtimeReference, /`remove-workspace`[\s\S]*`workspace-not-found`, `workspace-path-ambiguity`, `dirty-working-tree`, `registry-drift`, `malformed-workspace-registry`, `ask-user-unavailable`, and `remove-workspace-confirmation` explicit/i);
-  assert.match(runtimeReference, /`remove-workspace`[\s\S]*workspace manifest, workspace root, and matching host-global registry entry/i);
-  assert.match(runtimeReference, /`remove-workspace`[\s\S]*next safe action visible/i);
-
-  assert.match(runtimeReference, /`update`[\s\S]*Interactive-read advisory profile/i);
-  assert.match(
-    runtimeReference,
-    /`update`[\s\S]*(`ask_user` only for the saved-checklist versus manual-fallback mode gate|update-mode-gate)/i
-  );
-  assert.match(runtimeReference, /`update`[\s\S]*~\/.<host>\/blueprint\/updates\//i);
-  assert.match(runtimeReference, /`update`[\s\S]*restart guidance/i);
-
-  assert.match(runtimeReference, /`workstreams`[\s\S]*Interactive-read profile for project-local workstream switching/i);
-  assert.match(runtimeReference, /`workstreams`[\s\S]*Gemini-native `ask_user`/i);
-  assert.match(runtimeReference, /`workstreams`[\s\S]*`workstream-switch-confirmation`, `workstream-archive-confirmation`, `missing-workstream`, `missing-resume-snapshot`, and `corrupt-workstream-index`/i);
-  assert.match(runtimeReference, /`workstreams`[\s\S]*blueprint_state_update` only for the final routing patch or returned resume snapshot/i);
-
-  assert.match(runtimeReference, /`cleanup`[\s\S]*High-risk-maintenance profile for protected-scope phase-directory archival/i);
-  assert.match(runtimeReference, /`cleanup`[\s\S]*`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/i);
-  assert.match(runtimeReference, /`cleanup`[\s\S]*`cleanup-confirmation`, `archive-destination-confirmation`, and `report-overwrite-confirmation` visible/i);
-  assert.match(runtimeReference, /`cleanup`[\s\S]*next safe action visible/i);
-
-  assert.match(runtimeReference, /`reapply-patches`[\s\S]*High-risk-maintenance profile for confirmation-gated patch replay/i);
-  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`dirty-working-tree`, `malformed-patch-registry`, `missing-patch-target`, `compatibility-mismatch`, or `installed-extension-target`/i);
-  assert.match(runtimeReference, /`reapply-patches`[\s\S]*`preflight -> preview -> confirm -> replay -> record`/i);
-  assert.match(runtimeReference, /`reapply-patches`[\s\S]*next safe action visible/i);
+    assert.equal(contract.catalog.primarySkill, "blueprint-maintenance");
+    assert.equal(contract.catalog.status, "implemented");
+    assert.equal(contract.catalog.implemented, true);
+    assert.equal(contract.runtimeReference?.path, contract.catalog.specPath);
+    assert.equal(contract.runtimeReference?.commandSpecPath, contract.catalog.specPath);
+    assert.deepEqual(
+      contract.runtimeReference?.exactMcpDestination,
+      contract.catalog.requiredTools
+    );
+    assert.match(notes, /Docless manifest\+skill-owned runtime/i);
+    assert.match(notes, notesPattern);
+    assert.match(contract.skillInputs.effective.join("\n"), inputPattern);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
+  }
 });

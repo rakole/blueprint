@@ -16,9 +16,18 @@ import {
 } from "../src/mcp/command-resources.js";
 import {
   CODE_REVIEW_RUNTIME_METADATA,
+  CLEANUP_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
   NEW_PROJECT_RUNTIME_METADATA,
-  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID
+  NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
+  NEW_WORKSPACE_RUNTIME_METADATA,
+  PR_BRANCH_RUNTIME_METADATA,
+  REAPPLY_PATCHES_RUNTIME_METADATA,
+  REMOVE_WORKSPACE_RUNTIME_METADATA,
+  SHIP_RUNTIME_METADATA,
+  UNDO_RUNTIME_METADATA,
+  UPDATE_RUNTIME_METADATA,
+  WORKSTREAMS_RUNTIME_METADATA
 } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -98,6 +107,17 @@ const REVIEW_RUNTIME_METADATA_COMMANDS = [
   "secure-phase",
   "review",
   "ui-review"
+] as const;
+const MAINTENANCE_RUNTIME_METADATA = [
+  PR_BRANCH_RUNTIME_METADATA,
+  SHIP_RUNTIME_METADATA,
+  UNDO_RUNTIME_METADATA,
+  NEW_WORKSPACE_RUNTIME_METADATA,
+  REMOVE_WORKSPACE_RUNTIME_METADATA,
+  WORKSTREAMS_RUNTIME_METADATA,
+  CLEANUP_RUNTIME_METADATA,
+  UPDATE_RUNTIME_METADATA,
+  REAPPLY_PATCHES_RUNTIME_METADATA
 ] as const;
 
 async function pathExists(relativePath: string): Promise<boolean> {
@@ -366,6 +386,51 @@ test("review commands resolve catalog and runtime contract truth from runtime me
     assert.ok(metadata, `${commandName} should have runtime-owned metadata`);
     assert.ok(runtimeContractPath, `${commandName} should require a local runtime contract`);
     assert.equal(entry.specPath, `src/mcp/command-runtime-metadata.ts#${commandName}`);
+    assert.equal(entry.specPath, metadata.sourceId);
+    assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(entry.optionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(entry.availableOptionalAgents, [...metadata.optionalAgents]);
+    assert.deepEqual(contract.catalog.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.catalog.optionalAgents, [...metadata.optionalAgents]);
+    assert.equal(contract.spec?.path, metadata.sourceId);
+    assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
+    assert.deepEqual(contract.spec?.optionalSubagents, [...metadata.optionalAgents]);
+    assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+    assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+    assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+      ...metadata.requiredTools
+    ]);
+    assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+      ...metadata.optionalAgents
+    ]);
+    assert.deepEqual(contract.skillInputs.shared, []);
+    assert.deepEqual(contract.skillInputs.commandSpecific, [
+      manifestPath,
+      runtimeContractPath
+    ]);
+    assert.deepEqual(contract.skillInputs.effective, [manifestPath, runtimeContractPath]);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+      false
+    );
+    assert.doesNotMatch(JSON.stringify(contract), /docs\//);
+  }
+});
+
+test("maintenance commands resolve catalog and runtime contract truth from runtime metadata", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const metadata of MAINTENANCE_RUNTIME_METADATA) {
+    const commandName = metadata.commandName;
+    const lookedUpMetadata = getRuntimeOwnedCommandMetadata(commandName);
+    const entry = catalog.commands[commandName];
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+    const manifestPath = blueprintPrimaryManifestPath(commandName);
+    const runtimeContractPath = metadata.requiredInputPaths?.[0];
+
+    assert.ok(lookedUpMetadata, `${commandName} should have runtime-owned metadata`);
+    assert.equal(lookedUpMetadata, metadata);
+    assert.ok(runtimeContractPath, `${commandName} should require a local runtime contract`);
     assert.equal(entry.specPath, metadata.sourceId);
     assert.deepEqual(entry.requiredTools, [...metadata.requiredTools]);
     assert.deepEqual(entry.optionalAgents, [...metadata.optionalAgents]);

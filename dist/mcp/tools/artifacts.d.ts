@@ -787,9 +787,9 @@ export declare const artifactToolDefinitions: ({
             todo: "todo";
         }>;
         action: z.ZodOptional<z.ZodEnum<{
+            update: "update";
             append: "append";
             list: "list";
-            update: "update";
         }>>;
         entry: z.ZodOptional<z.ZodObject<{
             text: z.ZodString;

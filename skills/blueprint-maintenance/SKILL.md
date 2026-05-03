@@ -16,6 +16,36 @@ commands:
   - /blu-cleanup
   - /blu-update
   - /blu-reapply-patches
+input_bundles:
+  shared: []
+  commands:
+    "/blu-pr-branch":
+      - commands/blu-pr-branch.toml
+      - skills/blueprint-maintenance/references/pr-branch-runtime-contract.md
+    "/blu-ship":
+      - commands/blu-ship.toml
+      - skills/blueprint-maintenance/references/ship-runtime-contract.md
+    "/blu-undo":
+      - commands/blu-undo.toml
+      - skills/blueprint-maintenance/references/undo-runtime-contract.md
+    "/blu-new-workspace":
+      - commands/blu-new-workspace.toml
+      - skills/blueprint-maintenance/references/new-workspace-runtime-contract.md
+    "/blu-remove-workspace":
+      - commands/blu-remove-workspace.toml
+      - skills/blueprint-maintenance/references/remove-workspace-runtime-contract.md
+    "/blu-workstreams":
+      - commands/blu-workstreams.toml
+      - skills/blueprint-maintenance/references/workstreams-runtime-contract.md
+    "/blu-cleanup":
+      - commands/blu-cleanup.toml
+      - skills/blueprint-maintenance/references/cleanup-runtime-contract.md
+    "/blu-update":
+      - commands/blu-update.toml
+      - skills/blueprint-maintenance/references/update-runtime-contract.md
+    "/blu-reapply-patches":
+      - commands/blu-reapply-patches.toml
+      - skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md
 ---
 
 # Blueprint Maintenance Skill
@@ -30,6 +60,7 @@ Orchestrate Blueprint maintenance flows so git, workspace, cleanup, and patch op
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
+- Load only the active command's structured `input_bundles.commands[...]` inputs for that invocation.
 
 ## Parity Goal
 
@@ -42,23 +73,16 @@ Carry forward the useful maintenance intent while preserving Blueprint's host-na
 - source branches, workspaces, and patch registries are never rewritten implicitly
 - follow-up guidance stays inside the implemented Blueprint surface when possible
 
-## Required Inputs
+## Runtime Inputs
 
-- `docs/commands/pr-branch.md`
-- `docs/commands/ship.md`
-- `docs/commands/undo.md`
-- `docs/commands/new-workspace.md`
-- `docs/commands/remove-workspace.md`
-- `docs/commands/workstreams.md`
-- `docs/commands/cleanup.md`
-- `docs/commands/update.md`
-- `docs/commands/reapply-patches.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- `skills/blueprint-maintenance/references/pr-branch-runtime-contract.md`
+Command-specific inputs are resolved from the structured `input_bundles`
+frontmatter for the invoking maintenance command. Shipped maintenance commands
+are docs-free at runtime: load the command manifest and matching local runtime
+contract, then use MCP tools, resources, artifact contracts, repo evidence, git
+inspection, and explicit confirmation gates according to that command contract.
+
+Repository docs are retained as development history and design reference. They
+are not normal execution inputs for the runtime-owned maintenance commands.
 
 ## Required MCP Tools
 
