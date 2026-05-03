@@ -30,6 +30,7 @@ Response requirements:
 - Never archive the current phase, any phase still referenced by the active roadmap, or any phase lacking saved milestone closeout evidence.
 - Do not invent a new persistent archive schema inside `.blueprint/` unless the destination already exists or the user explicitly approves creating it.
 - Preserve a durable report of the approved cleanup scope before filesystem mutation begins.
+- If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly.
 - Keep destructive approval and destination or report-overwrite waiting states visible as `cleanup-confirmation`, `archive-destination-confirmation`, and `report-overwrite-confirmation` instead of smoothing past them.
 - Do not present planned-only commands as runnable follow-ups.
 """

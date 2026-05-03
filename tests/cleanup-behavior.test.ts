@@ -22,9 +22,16 @@ import {
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintRoadmapRead } from "../src/mcp/tools/phase.js";
 
+const repoRoot = process.cwd();
+
 type ProtectedEntry = {
   path: string;
   reason: string;
+};
+
+type CleanupContractFiles = {
+  command: string;
+  skill: string;
 };
 
 type CleanupRunOptions = {
@@ -87,30 +94,20 @@ async function createCleanupBehaviorFixture(): Promise<string> {
 
 ## Milestone
 
-- Active milestone: v1
+- Active milestone: v2
 
 ## Phases
 
-- [x] **Phase 1: Completed Milestone** - Historical closeout already captured
-- [x] **Phase 2: Missing Closeout** - Historical work without milestone-level archival proof
-- [ ] **Phase 3: Active Roadmap** - Still referenced by the active roadmap
-- [ ] **Phase 4: Current Maintenance** - Current execution focus
+- [ ] **Phase 4: Active Roadmap** - Current milestone work stays in the active roadmap
+- [ ] **Phase 5: Current Maintenance** - Current cleanup execution focus
 
 ## Phase Details
 
-### Phase 1: Completed Milestone
-**Goal**: Close the original milestone safely.
-**Requirements**: BP-01
-
-### Phase 2: Missing Closeout
-**Goal**: Preserve incomplete closeout evidence.
-**Requirements**: BP-02
-
-### Phase 3: Active Roadmap
+### Phase 4: Active Roadmap
 **Goal**: Continue planned carry-forward work.
 **Requirements**: BP-03
 
-### Phase 4: Current Maintenance
+### Phase 5: Current Maintenance
 **Goal**: Maintain the current Blueprint surface.
 **Requirements**: BP-04
 `
@@ -121,8 +118,8 @@ async function createCleanupBehaviorFixture(): Promise<string> {
     `# Blueprint State
 
 - Project status: initialized
-- Current milestone: v1
-- Current phase: 4
+- Current milestone: v2
+- Current phase: 5
 - Active command: /blu-cleanup
 - Next action: Run /blu-progress
 - Last updated: 2026-05-03T00:00:00.000Z
@@ -140,7 +137,7 @@ async function createCleanupBehaviorFixture(): Promise<string> {
 
   await writeRepoFile(
     repoPath,
-    ".blueprint/phases/01-completed-milestone/01-01-SUMMARY.md",
+    ".blueprint/phases/01-prior-milestone-alpha/01-01-SUMMARY.md",
     `# Phase 01 Summary
 
 ## Outcome
@@ -154,8 +151,22 @@ async function createCleanupBehaviorFixture(): Promise<string> {
   );
   await writeRepoFile(
     repoPath,
-    ".blueprint/phases/02-missing-closeout/02-02-SUMMARY.md",
+    ".blueprint/phases/02-prior-milestone-beta/02-02-SUMMARY.md",
     `# Phase 02 Summary
+
+## Outcome
+
+- Second historical milestone slice finished with durable closeout evidence.
+
+## Verification
+
+- npx tsx --test tests/cleanup-behavior.test.ts
+`
+  );
+  await writeRepoFile(
+    repoPath,
+    ".blueprint/phases/03-missing-closeout/03-03-SUMMARY.md",
+    `# Phase 03 Summary
 
 ## Outcome
 
@@ -168,8 +179,8 @@ async function createCleanupBehaviorFixture(): Promise<string> {
   );
   await writeRepoFile(
     repoPath,
-    ".blueprint/phases/03-active-roadmap/03-CONTEXT.md",
-    `# Phase 03 Context
+    ".blueprint/phases/04-active-roadmap/04-CONTEXT.md",
+    `# Phase 04 Context
 
 ## Focus
 
@@ -178,8 +189,8 @@ async function createCleanupBehaviorFixture(): Promise<string> {
   );
   await writeRepoFile(
     repoPath,
-    ".blueprint/phases/04-current-maintenance/04-CONTEXT.md",
-    `# Phase 04 Context
+    ".blueprint/phases/05-current-maintenance/05-CONTEXT.md",
+    `# Phase 05 Context
 
 ## Focus
 
@@ -193,12 +204,13 @@ async function createCleanupBehaviorFixture(): Promise<string> {
 
 ## Scope Summary
 
-- .blueprint/phases/01-completed-milestone is fully closed out and safe to archive.
+- .blueprint/phases/01-prior-milestone-alpha is fully closed out and safe to archive.
+- .blueprint/phases/02-prior-milestone-beta is fully closed out and safe to archive.
 
 ## Recommended Carry-Forward Context
 
-- Keep .blueprint/phases/02-missing-closeout in place until milestone evidence is complete.
-- Keep .blueprint/phases/03-active-roadmap and .blueprint/phases/04-current-maintenance active.
+- Keep .blueprint/phases/03-missing-closeout in place until milestone evidence is complete.
+- Keep .blueprint/phases/04-active-roadmap and .blueprint/phases/05-current-maintenance active.
 `
   );
 
@@ -260,6 +272,60 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+async function loadCleanupContractFiles(): Promise<CleanupContractFiles> {
+  const [command, skill] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-cleanup.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"), "utf8")
+  ]);
+
+  return { command, skill };
+}
+
+async function assertCleanupContractInvariants(): Promise<void> {
+  const { command, skill } = await loadCleanupContractFiles();
+
+  assert.match(
+    command,
+    /Only propose phase directories that belong to completed milestones, are no longer referenced by the active roadmap, and are not the current phase directory\./
+  );
+  assert.match(
+    skill,
+    /only archive phase directories from completed milestones, never the current phase or any phase still referenced by the active roadmap/i
+  );
+  assert.match(
+    command,
+    /Treat the current phase and every phase still referenced by the active roadmap as protected cleanup exclusions\./
+  );
+  assert.match(
+    skill,
+    /Read `blueprint_roadmap_read` before proposing any archive scope so the current phase and active roadmap references stay visible as protected exclusions\./
+  );
+  assert.match(
+    command,
+    /After approval, persist the approved cleanup plan[\s\S]*After confirmation and report persistence, run only the approved filesystem operations\./
+  );
+  assert.match(
+    skill,
+    /Persist the approved cleanup plan through `blueprint_artifact_report_write` with the bare report name `cleanup-latest` before filesystem mutation begins/i
+  );
+  assert.match(
+    command,
+    /If `cleanup-latest` would be replaced, keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i
+  );
+  assert.match(
+    skill,
+    /If replacing `cleanup-latest` needs overwrite approval, keep the report-overwrite waiting state visible as `report-overwrite-confirmation`/i
+  );
+  assert.match(
+    command,
+    /If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly\./
+  );
+  assert.match(
+    skill,
+    /If filesystem archival partially fails after report persistence, preserve the written cleanup report, keep already archived and failed directories explicit, and surface the partial failure honestly\./
+  );
+}
+
 function assertReportWrittenBeforeFs(events: string[]): void {
   const reportIndex = events.indexOf("report:write");
   const firstFsIndex = events.findIndex((entry) => entry.startsWith("fs:"));
@@ -287,16 +353,38 @@ async function listPhaseArtifactPaths(
     .sort();
 }
 
-async function milestoneSummaryEvidenceForPhase(
+async function listPhaseDirectories(repoPath: string): Promise<string[]> {
+  const phasesRoot = path.join(repoPath, ".blueprint/phases");
+  const entries = await readdir(phasesRoot, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.posix.join(".blueprint/phases", entry.name))
+    .sort();
+}
+
+function milestoneFromSummaryReportPath(reportPath: string): string | null {
+  const match = path.posix.basename(reportPath).match(/^milestone-summary-(.+)\.md$/);
+  return match?.[1] ?? null;
+}
+
+async function completedMilestoneEvidenceForPhase(
   repoPath: string,
   phaseDir: string,
-  reportPaths: string[]
+  reportPaths: string[],
+  activeMilestone: string | null
 ): Promise<string[]> {
   const matches: string[] = [];
 
   for (const reportPath of reportPaths.filter((value) =>
     path.posix.basename(value).startsWith("milestone-summary-")
   )) {
+    const evidenceMilestone = milestoneFromSummaryReportPath(reportPath);
+
+    if (!evidenceMilestone || evidenceMilestone === activeMilestone) {
+      continue;
+    }
+
     const reportContent = await readRepoFile(repoPath, reportPath);
     const archivalEvidencePattern = new RegExp(
       `${escapeRegExp(phaseDir)}[^\\n]*safe to archive`,
@@ -333,6 +421,8 @@ async function runCleanupBehavior(
   const fsArchiveOperation = options.fsArchiveOperation ?? rename;
   const events: string[] = [];
 
+  await assertCleanupContractInvariants();
+
   events.push("mcp:project-status");
   const projectStatus = await blueprintProjectStatus({ cwd: options.cwd });
   events.push("mcp:roadmap-read");
@@ -341,8 +431,8 @@ async function runCleanupBehavior(
   const artifactList = await blueprintArtifactList({ cwd: options.cwd });
 
   assert.equal(projectStatus.initialized, true);
-  assert.equal(projectStatus.currentPhase, "4");
-  assert.equal(roadmap.milestone, "v1");
+  assert.equal(projectStatus.currentPhase, "5");
+  assert.equal(roadmap.milestone, "v2");
 
   const currentPhaseNumber = normalizePhaseNumber(projectStatus.currentPhase);
   const protectedEntryMap = new Map<string, ProtectedEntry>();
@@ -353,32 +443,36 @@ async function runCleanupBehavior(
     protectedEntryMap.set(phaseDir, { path: phaseDir, reason });
   };
 
-  for (const phase of roadmap.phases) {
-    if (!phase.phaseDir) {
+  const currentPhaseDir =
+    roadmap.phases.find((phase) => phase.phaseNumber === currentPhaseNumber)?.phaseDir ?? null;
+  const activeRoadmapDirs = new Set(
+    roadmap.phases.flatMap((phase) => (phase.phaseDir ? [phase.phaseDir] : []))
+  );
+  const phaseDirs = await listPhaseDirectories(options.cwd);
+
+  for (const phaseDir of phaseDirs) {
+    if (phaseDir === currentPhaseDir) {
+      protectPhase(phaseDir, "current phase");
       continue;
     }
 
-    if (!phase.completed) {
-      protectPhase(phase.phaseDir, "active roadmap");
-    }
-
-    if (phase.phaseNumber === currentPhaseNumber) {
-      protectPhase(phase.phaseDir, "current phase");
+    if (activeRoadmapDirs.has(phaseDir)) {
+      protectPhase(phaseDir, "active roadmap");
+      continue;
     }
   }
 
-  for (const phase of roadmap.phases.filter((entry) => entry.completed && entry.phaseDir)) {
-    const phaseDir = phase.phaseDir as string;
-
+  for (const phaseDir of phaseDirs) {
     if (protectedEntryMap.has(phaseDir)) {
       continue;
     }
 
     const phaseArtifacts = await listPhaseArtifactPaths(options.cwd, phaseDir);
-    const milestoneEvidence = await milestoneSummaryEvidenceForPhase(
+    const milestoneEvidence = await completedMilestoneEvidenceForPhase(
       options.cwd,
       phaseDir,
-      artifactList.reports
+      artifactList.reports,
+      roadmap.milestone
     );
 
     if (phaseArtifacts.length === 0 || milestoneEvidence.length === 0) {
@@ -489,7 +583,7 @@ async function runCleanupBehavior(
   }
 }
 
-test("cleanup archives only the evidence-backed historical phase and persists cleanup-latest before mutation", async (t) => {
+test("cleanup archives only evidence-backed historical phases and persists cleanup-latest before mutation", async (t) => {
   const repoPath = await createCleanupBehaviorFixture();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -499,53 +593,74 @@ test("cleanup archives only the evidence-backed historical phase and persists cl
   const cleanupReport = await readRepoFile(repoPath, ".blueprint/reports/cleanup-latest.md");
 
   assert.equal(result.status, "archived");
-  assert.deepEqual(result.selectedPhaseDirs, [".blueprint/phases/01-completed-milestone"]);
+  assert.deepEqual(result.selectedPhaseDirs, [
+    ".blueprint/phases/01-prior-milestone-alpha",
+    ".blueprint/phases/02-prior-milestone-beta"
+  ]);
   assert.deepEqual(
     result.protectedEntries.map((entry) => entry.path),
     [
-      ".blueprint/phases/02-missing-closeout",
-      ".blueprint/phases/03-active-roadmap",
-      ".blueprint/phases/04-current-maintenance"
+      ".blueprint/phases/03-missing-closeout",
+      ".blueprint/phases/04-active-roadmap",
+      ".blueprint/phases/05-current-maintenance"
     ]
+  );
+  assert.deepEqual(
+    result.protectedEntries.map((entry) => entry.reason),
+    ["missing milestone closeout evidence", "active roadmap", "current phase"]
   );
   assert.ok(
     result.digestInputs.includes(
-      ".blueprint/phases/01-completed-milestone/01-01-SUMMARY.md"
+      ".blueprint/phases/01-prior-milestone-alpha/01-01-SUMMARY.md"
+    )
+  );
+  assert.ok(
+    result.digestInputs.includes(
+      ".blueprint/phases/02-prior-milestone-beta/02-02-SUMMARY.md"
     )
   );
   assert.ok(result.digestInputs.includes(".blueprint/reports/milestone-summary-v1.md"));
   assert.ok(
-    result.digestInputs.includes(".blueprint/phases/02-missing-closeout/02-02-SUMMARY.md")
+    result.digestInputs.includes(".blueprint/phases/03-missing-closeout/03-03-SUMMARY.md")
   );
   assert.ok(
-    result.digestInputs.includes(".blueprint/phases/03-active-roadmap/03-CONTEXT.md")
+    result.digestInputs.includes(".blueprint/phases/04-active-roadmap/04-CONTEXT.md")
   );
   assert.ok(
-    result.digestInputs.includes(".blueprint/phases/04-current-maintenance/04-CONTEXT.md")
+    result.digestInputs.includes(".blueprint/phases/05-current-maintenance/05-CONTEXT.md")
   );
-  assert.match(cleanupReport, /01-completed-milestone/);
-  assert.match(cleanupReport, /02-missing-closeout/);
-  assert.match(cleanupReport, /03-active-roadmap/);
-  assert.match(cleanupReport, /04-current-maintenance/);
+  assert.match(cleanupReport, /01-prior-milestone-alpha/);
+  assert.match(cleanupReport, /02-prior-milestone-beta/);
+  assert.match(cleanupReport, /03-missing-closeout/);
+  assert.match(cleanupReport, /04-active-roadmap/);
+  assert.match(cleanupReport, /05-current-maintenance/);
   assert.match(cleanupReport, /\.blueprint\/archive\/v1/);
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
     true
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
     false
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/02-missing-closeout")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-missing-closeout")),
     true
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/03-active-roadmap")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/04-active-roadmap")),
     true
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/04-current-maintenance")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/05-current-maintenance")),
     true
   );
   assertReportWrittenBeforeFs(result.events);
@@ -579,11 +694,19 @@ test("cleanup blocks on existing cleanup-latest without overwrite and preserves 
   assert.match(result.reason ?? "", /explicit overwrite confirmation/i);
   assert.equal(cleanupReport, existingReport.endsWith("\n") ? existingReport : `${existingReport}\n`);
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
     true
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
+    false
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
     false
   );
   assert.equal(result.events.some((entry) => entry.startsWith("fs:")), false);
@@ -609,37 +732,66 @@ test("cleanup blocks before report persistence when the archive destination need
   );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint/archive/v2")), false);
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
     true
   );
   assert.equal(result.events.includes("report:write"), false);
   assert.equal(result.events.some((entry) => entry.startsWith("fs:")), false);
 });
 
-test("cleanup preserves cleanup-latest and the original phase directory when filesystem archival fails after report persistence", async (t) => {
+test("cleanup preserves cleanup-latest, keeps archived progress explicit, and leaves the failed candidate plus protected dirs in place when filesystem archival partially fails", async (t) => {
   const repoPath = await createCleanupBehaviorFixture();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  let archiveAttempts = 0;
   const result = await runCleanupBehavior({
     cwd: repoPath,
-    fsArchiveOperation: async () => {
-      throw new Error("simulated archive failure");
+    fsArchiveOperation: async (sourcePath, destinationPath) => {
+      archiveAttempts += 1;
+
+      if (archiveAttempts === 1) {
+        await rename(sourcePath, destinationPath);
+        return;
+      }
+
+      throw new Error("simulated archive failure on second candidate");
     }
   });
   const cleanupReport = await readRepoFile(repoPath, ".blueprint/reports/cleanup-latest.md");
 
   assert.equal(result.status, "fs_failed");
-  assert.match(result.reason ?? "", /simulated archive failure/);
-  assert.match(cleanupReport, /01-completed-milestone/);
+  assert.equal(archiveAttempts, 2);
+  assert.match(result.reason ?? "", /simulated archive failure on second candidate/);
+  assert.deepEqual(result.selectedPhaseDirs, [
+    ".blueprint/phases/01-prior-milestone-alpha",
+    ".blueprint/phases/02-prior-milestone-beta"
+  ]);
+  assert.match(cleanupReport, /01-prior-milestone-alpha/);
+  assert.match(cleanupReport, /02-prior-milestone-beta/);
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-prior-milestone-alpha")),
     true
   );
   assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/archive/v1/01-completed-milestone")),
+    await pathExists(path.join(repoPath, ".blueprint/phases/01-prior-milestone-alpha")),
     false
   );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02-prior-milestone-beta")),
+    true
+  );
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/archive/v1/02-prior-milestone-beta")),
+    false
+  );
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/03-missing-closeout")), true);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/04-active-roadmap")), true);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/phases/05-current-maintenance")), true);
   assertReportWrittenBeforeFs(result.events);
 });
