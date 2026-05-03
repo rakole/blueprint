@@ -1122,6 +1122,40 @@ export declare const DOCS_UPDATE_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const IMPACT_RUNTIME_METADATA: {
+    readonly commandName: "impact";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 4;
+        readonly family: "Quality And Shipping";
+        readonly primarySkill: "blueprint-impact";
+        readonly declaredStatus: "implemented";
+        readonly risk: "Low: advisory blast-radius report writes only under .blueprint/impact/.";
+    };
+    readonly requiredTools: readonly ["blueprint_impact_config_get", "blueprint_impact_scope_resolve", "blueprint_impact_context_load", "blueprint_impact_analyze", "blueprint_impact_report_write", "blueprint_impact_output_render"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-impact/references/impact-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-impact`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`impact` performs advisory blast-radius analysis for a resolved change scope, persists an impact report bundle when writing is enabled, and renders the requested output format through the impact MCP substrate.";
+        readonly reads: readonly ["impact config, resolved scope, source files, runtime metadata, Blueprint artifacts, ownership or dependency metadata, PR or deployment context, and command catalog state as read-only evidence"];
+        readonly writes: readonly [".blueprint/impact/<impact-id>/ only through blueprint_impact_report_write when writing is enabled"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Quality And Shipping";
+        readonly command: "impact";
+        readonly primarySkill: "blueprint-impact";
+        readonly exactMcpDestination: readonly ["blueprint_impact_config_get", "blueprint_impact_scope_resolve", "blueprint_impact_context_load", "blueprint_impact_analyze", "blueprint_impact_report_write", "blueprint_impact_output_render"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly [".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for advisory blast-radius analysis with no subagents. Load skills/blueprint-impact/references/impact-runtime-contract.md, resolve scope through the impact MCP tools, keep source files, runtime files, PR metadata, deployment state, and command-catalog state read-only, persist impact bundles only through blueprint_impact_report_write under .blueprint/impact/<impact-id>/, render final human, JSON, Markdown, PR-comment, or summary output only through blueprint_impact_output_render, treat BLOCK as advisory rather than permission to mutate non-impact state, and route follow-up guidance only to implemented commands.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
+    };
+};
 export declare const PAUSE_WORK_RUNTIME_METADATA: {
     readonly commandName: "pause-work";
     readonly sourceId: string;
@@ -2879,6 +2913,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly impact: {
+        readonly commandName: "impact";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 4;
+            readonly family: "Quality And Shipping";
+            readonly primarySkill: "blueprint-impact";
+            readonly declaredStatus: "implemented";
+            readonly risk: "Low: advisory blast-radius report writes only under .blueprint/impact/.";
+        };
+        readonly requiredTools: readonly ["blueprint_impact_config_get", "blueprint_impact_scope_resolve", "blueprint_impact_context_load", "blueprint_impact_analyze", "blueprint_impact_report_write", "blueprint_impact_output_render"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-impact/references/impact-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-impact`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`impact` performs advisory blast-radius analysis for a resolved change scope, persists an impact report bundle when writing is enabled, and renders the requested output format through the impact MCP substrate.";
+            readonly reads: readonly ["impact config, resolved scope, source files, runtime metadata, Blueprint artifacts, ownership or dependency metadata, PR or deployment context, and command catalog state as read-only evidence"];
+            readonly writes: readonly [".blueprint/impact/<impact-id>/ only through blueprint_impact_report_write when writing is enabled"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Quality And Shipping";
+            readonly command: "impact";
+            readonly primarySkill: "blueprint-impact";
+            readonly exactMcpDestination: readonly ["blueprint_impact_config_get", "blueprint_impact_scope_resolve", "blueprint_impact_context_load", "blueprint_impact_analyze", "blueprint_impact_report_write", "blueprint_impact_output_render"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly [".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for advisory blast-radius analysis with no subagents. Load skills/blueprint-impact/references/impact-runtime-contract.md, resolve scope through the impact MCP tools, keep source files, runtime files, PR metadata, deployment state, and command-catalog state read-only, persist impact bundles only through blueprint_impact_report_write under .blueprint/impact/<impact-id>/, render final human, JSON, Markdown, PR-comment, or summary output only through blueprint_impact_output_render, treat BLOCK as advisory rather than permission to mutate non-impact state, and route follow-up guidance only to implemented commands.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "behavior-audited"];
         };
     };
     readonly "pause-work": {

@@ -20,6 +20,7 @@ import {
   CLEANUP_RUNTIME_METADATA,
   DEBUG_RUNTIME_METADATA,
   DOCS_UPDATE_RUNTIME_METADATA,
+  IMPACT_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
   HELP_RUNTIME_METADATA,
   MAP_CODEBASE_RUNTIME_METADATA,
@@ -1178,24 +1179,57 @@ test("docless fallback preserves planned do without exposing a runtime contract"
 test("impact is implemented once its additive command substrate is complete", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands.impact;
+  const metadata = getRuntimeOwnedCommandMetadata("impact");
+
+  assert.equal(metadata, IMPACT_RUNTIME_METADATA);
 
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
   assert.equal(entry.manifestPath, "commands/blu-impact.toml");
   assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
-  assert.equal(entry.specPath, "docs/commands/impact.md");
+  assert.equal(entry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(entry.risk, IMPACT_RUNTIME_METADATA.catalog.risk);
   assert.equal(entry.requiredToolsSatisfied, true);
-  assert.deepEqual(entry.requiredTools, [
-    "blueprint_impact_config_get",
-    "blueprint_impact_scope_resolve",
-    "blueprint_impact_context_load",
-    "blueprint_impact_analyze",
-    "blueprint_impact_report_write",
-    "blueprint_impact_output_render"
+  assert.deepEqual(entry.requiredTools, [...IMPACT_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(entry.optionalAgents, [...IMPACT_RUNTIME_METADATA.optionalAgents]);
+  assert.deepEqual(entry.availableOptionalAgents, [
+    ...IMPACT_RUNTIME_METADATA.optionalAgents
   ]);
   assert.deepEqual(entry.blockedBy, []);
   assert.doesNotMatch(entry.blockedBy.join("\n"), /Missing required MCP tool: blueprint_impact_/);
+});
+
+test("impact runtime contract resource survives missing command docs", async () => {
+  const contract = await buildBlueprintCommandRuntimeContractResource("impact", {
+    readRelativePath: async (relativePath) => {
+      if (relativePath.startsWith("docs/")) {
+        return null;
+      }
+
+      return readRelativePath(relativePath);
+    }
+  });
+
+  assert.equal(contract.catalog.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.spec?.requiredTools, [
+    ...IMPACT_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.spec?.optionalSubagents, [
+    ...IMPACT_RUNTIME_METADATA.optionalAgents
+  ]);
+  assert.equal(contract.runtimeReference?.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    IMPACT_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...IMPACT_RUNTIME_METADATA.runtimeReference.exactMcpDestination
+  ]);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, [
+    ...IMPACT_RUNTIME_METADATA.optionalAgents
+  ]);
 });
 
 test("plan-phase is implemented once manifest, skill, and plan MCP tools exist", async () => {
