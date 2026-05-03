@@ -200,6 +200,16 @@ const projectStatusInputSchema = {
 };
 
 const COMMAND_SPEC_PREFIX = "docs/commands";
+const DOCLESS_FALLBACK_CATALOG_ROWS = [
+  {
+    commandName: "do",
+    wave: 3,
+    family: "Capture And Lightweight Execution",
+    primarySkill: "blueprint-router",
+    declaredStatus: "planned",
+    risk: "Low: routing only."
+  }
+] as const satisfies readonly ParsedCatalogRow[];
 const PROJECT_TOOL_NAMES = [
   "blueprint_command_catalog",
   "blueprint_project_init",
@@ -635,9 +645,18 @@ async function buildCommandCatalogEntry(parsedRow: ParsedCatalogRow): Promise<Co
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
   const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists(bundledUrl(manifestPath));
-  const specExists = runtimeMetadata ? true : await pathExists(specUrl!);
+  let specExists = runtimeMetadata ? true : await pathExists(specUrl!);
   const missingRuntimeInputs: string[] = [];
-  const specMarkdown = specExists && specUrl ? await fs.readFile(specUrl, "utf8") : "";
+  let specMarkdown = "";
+
+  if (specExists && specUrl) {
+    try {
+      specMarkdown = await fs.readFile(specUrl, "utf8");
+    } catch {
+      specExists = false;
+    }
+  }
+
   const requiredTools = runtimeMetadata
     ? [...runtimeMetadata.requiredTools]
     : parseRequiredTools(specMarkdown);
@@ -773,11 +792,29 @@ async function addMissingRuntimeOwnedCommandCatalogEntries(
 }
 
 async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalogResult> {
-  return addMissingRuntimeOwnedCommandCatalogEntries({
+  const result = await addMissingRuntimeOwnedCommandCatalogEntries({
     commands: {},
     waves: {},
     aliases: {}
   });
+
+  for (const parsedRow of DOCLESS_FALLBACK_CATALOG_ROWS) {
+    if (result.commands[parsedRow.commandName]) {
+      continue;
+    }
+
+    const entry = await buildCommandCatalogEntry(parsedRow);
+    const waveKey = String(parsedRow.wave);
+
+    result.commands[parsedRow.commandName] = entry;
+    result.waves[waveKey] ??= [];
+    result.waves[waveKey].push(parsedRow.commandName);
+    result.aliases[parsedRow.commandName] = blueprintDirectCommandAliases(
+      parsedRow.commandName
+    );
+  }
+
+  return result;
 }
 
 async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {

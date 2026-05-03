@@ -1,13 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { promises as fs } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { HELP_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+
 const repoRoot = process.cwd();
 
-test("help manifest, spec, and runtime reference stay aligned on router profile and waiting-state guidance", async () => {
+test("help manifest and runtime reference stay aligned on router profile and waiting-state guidance", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
-  const helpDoc = await readFile(path.join(repoRoot, "docs/commands/help.md"), "utf8");
   const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
   const manifestTools = [
     ...new Set(
@@ -37,31 +41,82 @@ test("help manifest, spec, and runtime reference stay aligned on router profile 
     /Explain blocked commands as blocked; do not present them as runnable\./
   );
 
-  assert.match(helpDoc, /\| Execution profile \| `router` \|/);
-  assert.match(
-    helpDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    helpDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(helpDoc, /aligned to the shared router profile/);
-  assert.match(helpDoc, /waiting state/);
-  assert.match(helpDoc, /pending gate/i);
-  assert.match(helpDoc, /next safe action/);
-  assert.match(
-    helpDoc,
-    /Safe command recommendations must be limited to catalog entries whose `implemented` field is `true`, and blocked or planned commands must be described as not runnable\./
-  );
-  assert.match(helpDoc, /Keeps the shared router profile visible in the command contract\./);
-
   assert.match(
     runtimeReference,
-    /\| `help` \| `docs\/commands\/help\.md` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
+    /\| `help` \| `src\/mcp\/command-runtime-metadata\.ts#help` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
   );
   assert.match(
     runtimeReference,
     /Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable\./
   );
+  assert.match(
+    runtimeReference,
+    /\| `help` [^\n]+ \| `locked`; `source-owned`; `needs-behavior-audit` \|/
+  );
+});
+
+test("help runtime contract is source-owned and uses only the command manifest as active input", async () => {
+  const [catalog, contract] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("help")
+  ]);
+  const entry = catalog.commands.help;
+
+  assert.equal(entry.specPath, HELP_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...HELP_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.spec?.path, HELP_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "router");
+  assert.equal(contract.spec?.primarySkill, "blueprint-router");
+  assert.deepEqual(contract.spec?.requiredTools, [...HELP_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(contract.spec?.writes, []);
+  assert.equal(contract.runtimeReference?.path, HELP_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, HELP_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.evidenceState, [
+    "locked",
+    "source-owned",
+    "needs-behavior-audit"
+  ]);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-router",
+    shared: [],
+    commandSpecific: ["commands/blu-help.toml"],
+    effective: ["commands/blu-help.toml"]
+  });
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+});
+
+test("help remains implemented when docs-backed command specs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (
+      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
+      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
+      normalizedPath.endsWith("/docs/commands/help.md")
+    ) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const contract = await buildBlueprintCommandRuntimeContractResource("help");
+
+  assert.equal(catalog.commands.help.status, "implemented");
+  assert.equal(catalog.commands.help.implemented, true);
+  assert.equal(catalog.commands.help.specPath, HELP_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, HELP_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-help.toml"]);
 });

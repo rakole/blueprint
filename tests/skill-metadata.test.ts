@@ -136,6 +136,63 @@ test("debug runtime inputs stay available when repository docs are unavailable",
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
+test("router commands resolve only command manifests as active inputs", async () => {
+  const expectations = [
+    ["/blu", ["commands/blu.toml"]],
+    ["/blu-help", ["commands/blu-help.toml"]],
+    ["/blu-progress", ["commands/blu-progress.toml"]],
+    ["/blu-next", ["commands/blu-next.toml"]]
+  ] as const;
+
+  for (const [commandPath, commandSpecificInputs] of expectations) {
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-router",
+      commandPath,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-router");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, commandSpecificInputs);
+    assert.deepEqual(inputs.effective, commandSpecificInputs);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
+});
+
+test("router inputs stay docless when repository docs are unavailable", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-router",
+    "/blu-next",
+    async (relativePath) => {
+      if (relativePath.startsWith("docs/")) {
+        return null;
+      }
+
+      return readRelativePath(relativePath);
+    }
+  );
+
+  assert.deepEqual(inputs.effective, ["commands/blu-next.toml"]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
+test("router skill keeps planned do prose out of active runtime inputs", async () => {
+  const raw = await readFile(
+    path.join(repoRoot, "skills/blueprint-router/SKILL.md"),
+    "utf8"
+  );
+  const inputs = resolveBlueprintSkillInputsFromContent(
+    "blueprint-router",
+    "/blu-do",
+    raw
+  );
+
+  assert.match(raw, /## Planned `\/blu-do` Contract/);
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, []);
+  assert.deepEqual(inputs.effective, []);
+});
+
 test("debug structured input bundle does not fall back to legacy docs for unknown commands", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-debug",

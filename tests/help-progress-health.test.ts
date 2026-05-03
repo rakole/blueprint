@@ -2527,16 +2527,16 @@ test("help progress and health command files reference registered MCP tool names
 
 test("progress keeps the shared router waiting-state contract aligned", async () => {
   const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
-  const progressDoc = await readFile(path.join(repoRoot, "docs/commands/progress.md"), "utf8");
   const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
 
   assert.match(progressCommand, /Execution profile: router\./);
   assert.match(progressCommand, /missing artifact, partial repo repair, verification debt, or blocked substrate/i);
-  assert.match(progressDoc, /Execution profile/);
-  assert.match(progressDoc, /## Shared Runtime Contract/);
-  assert.match(progressDoc, /pending gate/);
-  assert.match(progressDoc, /next safe action/);
-  assert.match(runtimeReference, /\|\s*`progress`\s*\|\s*`docs\/commands\/progress\.md`\s*\|/);
+  assert.match(progressCommand, /waiting state/i);
+  assert.match(progressCommand, /next safe action/i);
+  assert.match(
+    runtimeReference,
+    /\|\s*`progress`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#progress`\s*\|/
+  );
   assert.match(runtimeReference, /blockers, pending gates, and config warnings/i);
 });
 
@@ -2544,9 +2544,6 @@ test("root router and help/progress assets keep implemented-only waiting-state g
   const rootRouterCommand = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
   const helpCommand = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
   const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
-  const rootRouterDoc = await readFile(path.join(repoRoot, "docs/commands/root-router.md"), "utf8");
-  const helpDoc = await readFile(path.join(repoRoot, "docs/commands/help.md"), "utf8");
-  const progressDoc = await readFile(path.join(repoRoot, "docs/commands/progress.md"), "utf8");
   const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
 
   assert.match(
@@ -2557,7 +2554,6 @@ test("root router and help/progress assets keep implemented-only waiting-state g
     rootRouterCommand,
     /surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate/
   );
-  assert.match(rootRouterDoc, /Never recommend a command whose catalog entry is not `implemented`/);
   assert.match(
     helpCommand,
     /Only recommend commands whose catalog entry is `implemented: true`/
@@ -2566,18 +2562,21 @@ test("root router and help/progress assets keep implemented-only waiting-state g
     helpCommand,
     /If the safest path is still waiting on a prerequisite, name that waiting state clearly: partial repo repair, missing artifact, verification debt, or blocked substrate/
   );
-  assert.match(helpDoc, /waiting state called out when Blueprint is still uninitialized or partially initialized/);
-  assert.match(helpDoc, /pending gate/);
-  assert.match(helpDoc, /next safe action/);
   assert.match(
     progressCommand,
     /If the repo is waiting on a prerequisite, name the waiting state plainly: missing artifact, partial repo repair, verification debt, or blocked substrate/
   );
-  assert.match(progressDoc, /pending gate/);
-  assert.match(progressDoc, /next safe action/);
-  assert.match(runtimeReference, /\|\s*`\/blu`\s*\|\s*`docs\/commands\/root-router\.md`\s*\|/);
-  assert.match(runtimeReference, /\|\s*`help`\s*\|\s*`docs\/commands\/help\.md`\s*\|/);
-  assert.match(runtimeReference, /\|\s*`progress`\s*\|\s*`docs\/commands\/progress\.md`\s*\|/);
+  assert.match(progressCommand, /waiting state/i);
+  assert.match(progressCommand, /next safe action/i);
+  assert.match(runtimeReference, /\|\s*`\/blu`\s*\|\s*`commands\/blu\.toml`\s*\|/);
+  assert.match(
+    runtimeReference,
+    /\|\s*`help`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#help`\s*\|/
+  );
+  assert.match(
+    runtimeReference,
+    /\|\s*`progress`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#progress`\s*\|/
+  );
 });
 
 test("runtime-facing docs keep host instructions concise while preserving command recall", async () => {

@@ -53,14 +53,12 @@ test("/blu root router manifest keeps implemented-only routing and waiting-state
 });
 
 test("router pilot manifests and docs keep waiting-state reporting explicit", async () => {
-  const [helpToml, progressToml, nextToml, helpDoc, progressDoc, nextDoc] =
+  const [helpToml, progressToml, nextToml, routerSkill] =
     await Promise.all([
       readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8"),
       readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8"),
       readFile(path.join(repoRoot, "commands/blu-next.toml"), "utf8"),
-      readFile(path.join(repoRoot, "docs/commands/help.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/commands/progress.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/commands/next.md"), "utf8")
+      readFile(path.join(repoRoot, "skills/blueprint-router/SKILL.md"), "utf8")
     ]);
 
   assert.match(helpToml, /Return concise routing guidance for the commands that are safe and relevant in the current repo state, including what Blueprint is waiting on and the next safe action\./);
@@ -70,15 +68,14 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.match(nextToml, /Return the next safe direct command for the current repo state, plus a concise explanation of why that step is next\./);
   assert.match(nextToml, /waiting state is present, keep the pending gate explicit and prefer the safest implemented follow-up command/i);
 
-  assert.match(helpDoc, /waiting state/i);
-  assert.match(helpDoc, /pending gate/i);
-  assert.match(helpDoc, /next safe action/i);
-  assert.match(progressDoc, /waiting on a prerequisite/i);
-  assert.match(progressDoc, /pending gate/i);
-  assert.match(progressDoc, /next safe action/i);
-  assert.match(nextDoc, /waiting state/i);
-  assert.match(nextDoc, /pending gate/i);
-  assert.match(nextDoc, /next safe follow-up command/i);
+  assert.match(routerSkill, /input_bundles:/);
+  assert.match(routerSkill, /commands\/blu-help\.toml/);
+  assert.match(routerSkill, /commands\/blu-progress\.toml/);
+  assert.match(routerSkill, /commands\/blu-next\.toml/);
+  assert.match(routerSkill, /waiting state/i);
+  assert.match(routerSkill, /pending gate|missing artifact, approval gate/i);
+  assert.match(routerSkill, /next safe action/i);
+  assert.doesNotMatch(routerSkill, /## Required Inputs/);
 });
 
 test("router pilot runtime reference rows keep the waiting-state contract aligned", async () => {
@@ -86,7 +83,7 @@ test("router pilot runtime reference rows keep the waiting-state contract aligne
 
   assert.match(
     runtimeReference,
-    /\| `\/blu` \| `docs\/commands\/root-router\.md` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status`<br>`blueprint_config_get` \|/
+    /\| `\/blu` \| `commands\/blu\.toml` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status`<br>`blueprint_config_get` \|/
   );
   assert.match(
     runtimeReference,
@@ -94,7 +91,7 @@ test("router pilot runtime reference rows keep the waiting-state contract aligne
   );
   assert.match(
     runtimeReference,
-    /\| `help` \| `docs\/commands\/help\.md` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
+    /\| `help` \| `src\/mcp\/command-runtime-metadata\.ts#help` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
   );
   assert.match(
     runtimeReference,
@@ -102,7 +99,7 @@ test("router pilot runtime reference rows keep the waiting-state contract aligne
   );
   assert.match(
     runtimeReference,
-    /\| `progress` \| `docs\/commands\/progress\.md` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
+    /\| `progress` \| `src\/mcp\/command-runtime-metadata\.ts#progress` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
   );
   assert.match(
     runtimeReference,
@@ -110,7 +107,7 @@ test("router pilot runtime reference rows keep the waiting-state contract aligne
   );
   assert.match(
     runtimeReference,
-    /\| `next` \| `docs\/commands\/next\.md` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
+    /\| `next` \| `src\/mcp\/command-runtime-metadata\.ts#next` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
   );
   assert.match(
     runtimeReference,
