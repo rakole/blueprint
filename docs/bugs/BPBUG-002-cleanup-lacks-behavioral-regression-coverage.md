@@ -168,3 +168,64 @@ Behavior tests to add:
 ### Risks / Uncertainty
 
 `/blu-cleanup` is prompt-orchestrated, so fixture tests cannot prove every live model run will follow the prompt. A dedicated MCP cleanup executor would reduce that risk further, but it would expand the runtime surface and is not minimal for BPBUG-002. The proposed suite still closes the concrete regression gap by exercising the real MCP report/digest/overwrite substrate and real filesystem mutation ordering in a controlled fixture.
+
+## Review Reports - 2026-05-03
+
+### DoD Reviewer Report
+
+Verdict: `PASS`.
+
+Findings:
+
+- `BLOCKER`: none.
+- `HIGH`: none.
+- `MEDIUM`: none.
+- `LOW`: none.
+
+Evidence checked:
+
+- The new behavior regression asserts only `.blueprint/phases/01-completed-milestone` is archived and protected directories remain in place.
+- The event log enforces `report:write` before any `fs:*` event.
+- With `overwriteReport: false`, the behavior run blocks, preserves prior report content, emits no `fs:*` events, and performs no archive.
+- Simulated filesystem failure after report persistence keeps `.blueprint/reports/cleanup-latest.md` and leaves the original phase directory intact.
+- `ask_user` wording is constrained to cleanup confirmation, archive destination, and report overwrite gates.
+- The cleanup Blueprint MCP tool list remains the existing six tools and does not include `ask_user`.
+- The diff did not add a cleanup MCP tool, change command-catalog status, introduce `.planning/` runtime ownership, or mutate global state.
+
+Tests run:
+
+- `npm run typecheck` - pass.
+- `npx tsx --test tests/cleanup-behavior.test.ts tests/cleanup-tools.test.ts tests/cleanup-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts` - pass, `109` tests.
+
+### Code Reviewer Report
+
+Findings:
+
+- `HIGH`: `tests/cleanup-behavior.test.ts` builds its own `runCleanupBehavior` orchestrator that decides protected scope, writes `cleanup-latest`, and performs `fs.rename` itself. The test can pass even if the actual `/blu-cleanup` command prompt or `blueprint-maintenance` skill drifts on ordering, gates, or scope selection, because it only invokes a few MCP helpers directly. Recommended fix: bind the behavior harness to the real command/skill contract as much as possible, so the test fails if manifest/skill guidance drifts away from the tested safety invariants.
+- `MEDIUM`: The partial-failure case injects an `fsArchiveOperation` that always throws and the fixture selects only one phase directory, so it covers total failure after report write rather than a true partial archive where one move succeeds and a later move fails. Recommended fix: add a second evidence-backed candidate, fail on the second move/copy, and assert report preservation plus correct moved/untouched directory state.
+- `LOW`: Some `ask_user` doc/contract assertions are wording-brittle and may fail on harmless editorial rewrites. This is not part of the required high/medium remediation pass.
+
+Tests run:
+
+- `npm run build --silent` - pass.
+- `npx tsx --test tests/cleanup-behavior.test.ts` - pass.
+- `npx tsx --test tests/cleanup-metadata.test.ts tests/maintenance-regression.test.ts tests/command-contract-docs.test.ts` - pass.
+
+Residual risk:
+
+- Because cleanup is prompt-driven rather than a single callable cleanup MCP executor, behavioral tests can improve coverage of intended invariants but cannot fully prove every live model run will follow the prompt.
+
+### Bug Finder Report
+
+Findings:
+
+- `HIGH`: The new behavior happy path validates archiving from the still-active milestone. The fixture marks `v1` as active in roadmap and state, excludes only incomplete entries and current phase, and expects Phase 1 to archive. The command contract says cleanup should only archive directories from completed milestones and never archive the active milestone or phases still referenced by the active roadmap. Recommended fix: remodel the fixture with at least one completed prior milestone and one active milestone, and derive eligibility from completed milestone plus no active-roadmap reference rather than only `[x]` status.
+- `MEDIUM`: Partial-failure coverage never exercises an actual partial archive because only one archival candidate is selected and the failure hook throws before any directory is moved. Recommended fix: add a second evidence-backed candidate and fail on the second move/copy, then assert the report survives, the already-moved directory is accounted for, and untouched directories remain in place.
+- `LOW`: The fixture evidence model is narrower than the cleanup contract because it looks for `milestone-summary-*` reports containing a literal safe-to-archive phrase while the command allows milestone completion or summary reports and latest audit evidence when useful. This is not part of the required high/medium remediation pass.
+
+Tests run:
+
+- `npx tsx --test tests/cleanup-behavior.test.ts` - pass.
+- `npx tsx --test tests/cleanup-metadata.test.ts` - pass.
+- `npx tsx --test tests/maintenance-regression.test.ts` - pass.
+- `node --test --test-name-pattern="cleanup" --import tsx tests/command-contract-docs.test.ts` - pass.
