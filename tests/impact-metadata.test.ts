@@ -1,13 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import {
   buildBlueprintCommandRuntimeContractResource,
   listBlueprintCommandRuntimeContractCommands
 } from "../src/mcp/command-resources.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  IMPACT_RUNTIME_METADATA
+} from "../src/mcp/command-runtime-metadata.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { resolveBlueprintSkillInputsFromContent } from "../src/mcp/skill-metadata.js";
 
 const repoRoot = process.cwd();
 const IMPACT_TOOL_NAMES = [
@@ -18,9 +23,13 @@ const IMPACT_TOOL_NAMES = [
   "blueprint_impact_report_write",
   "blueprint_impact_output_render"
 ] as const;
+const IMPACT_SKILL_INPUTS = [
+  "commands/blu-impact.toml",
+  "skills/blueprint-impact/references/impact-runtime-contract.md"
+] as const;
 
 async function readRepoFile(relativePath: string): Promise<string> {
-  return readFile(path.join(repoRoot, relativePath), "utf8");
+  return fs.readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
 function stripRuntimeToolFqns(markdown: string): string {
@@ -56,15 +65,35 @@ test("impact manifest is thin, runtime-FQN based, and preserves advisory safety 
   assert.doesNotMatch(commandFile, /skills\/blueprint-impact\.md|agents\/blueprint-impact\.md/);
 });
 
-test("impact skill and local runtime contract encode uncertainty and no-subagent rules", async () => {
+test("impact skill uses docs-free input bundles and local runtime contract rules", async () => {
   const [skillFile, runtimeContract] = await Promise.all([
     readRepoFile("skills/blueprint-impact/SKILL.md"),
     readRepoFile("skills/blueprint-impact/references/impact-runtime-contract.md")
   ]);
+  const resolvedInputs = resolveBlueprintSkillInputsFromContent(
+    "blueprint-impact",
+    "/blu-impact",
+    skillFile
+  );
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-impact/);
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /shared: \[\]/);
+  assert.match(skillFile, /commands\/blu-impact\.toml/);
   assert.match(skillFile, /references\/impact-runtime-contract\.md/);
+  assert.match(
+    skillFile,
+    /Command-specific inputs come from the structured `input_bundles` frontmatter/
+  );
+  assert.match(skillFile, /Runtime use is docs-free/);
+  assert.match(skillFile, /MCP tools, MCP resources, artifact\s+contracts, and live repo context provide the structured truth/);
+  assert.doesNotMatch(skillFile, /## Required Inputs/);
+  assert.doesNotMatch(skillFile, /- `docs\//);
+  assert.deepEqual(resolvedInputs.shared, []);
+  assert.deepEqual(resolvedInputs.commandSpecific, [...IMPACT_SKILL_INPUTS]);
+  assert.deepEqual(resolvedInputs.effective, [...IMPACT_SKILL_INPUTS]);
+  assert.equal(resolvedInputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.match(skillFile, /mcp_blueprint_blueprint_project_status/);
   assert.match(skillFile, /Translate any shorthand tool ids like `blueprint_project_status`/);
   assert.match(skillFile, /Treat Blueprint skills as loaded guidance, not callable tools\./);
@@ -99,65 +128,32 @@ test("impact skill and local runtime contract encode uncertainty and no-subagent
   assert.match(runtimeContract, /Existing changed report bundle: ask for overwrite confirmation/);
 });
 
-test("impact docs, catalog, MCP docs, and artifact contract agree on implemented status", async () => {
-  const [
-    catalog,
-    commandDoc,
-    skillsAndAgents,
-    mcpTools,
-    runtimeReference,
-    artifactSchema,
-    artifactContracts,
-    readme,
-    progress,
-    memory
-  ] = await Promise.all([
-    readRepoFile("docs/COMMAND-CATALOG.md"),
-    readRepoFile("docs/commands/impact.md"),
-    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
-    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
-    readRepoFile("src/mcp/artifact-contracts/index.ts"),
-    readRepoFile("README.md"),
-    readRepoFile("PROGRESS.md"),
-    readRepoFile("MEMORY.md")
-  ]);
+test("impact runtime-owned metadata is canonical and docs are not runtime inputs", () => {
+  const metadata = getRuntimeOwnedCommandMetadata("impact");
 
-  assert.match(
-    catalog,
-    /\| `impact` \| 4 \| `Quality And Shipping` \| `blueprint-impact` \| `implemented` \|/
+  assert.equal(metadata, IMPACT_RUNTIME_METADATA);
+  assert.equal(IMPACT_RUNTIME_METADATA.sourceId, "src/mcp/command-runtime-metadata.ts#impact");
+  assert.equal(IMPACT_RUNTIME_METADATA.spec.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    IMPACT_RUNTIME_METADATA.runtimeReference.path,
+    IMPACT_RUNTIME_METADATA.sourceId
   );
-  assert.match(commandDoc, /impact-runtime-contract\.md/);
-  assert.match(commandDoc, /Live catalog marks `impact` as `implemented`/);
-  assert.match(
-    skillsAndAgents,
-    /\| `blueprint-impact` \| `implemented` \| Advisory blast-radius analysis and impact report orchestration \| `impact` \|/
-  );
-  assert.doesNotMatch(skillsAndAgents, /\| `blueprint-impact` \| `planned` \|/);
-  assert.match(mcpTools, /implemented additive `\/blu-impact` command/);
-  assert.match(mcpTools, /skills\/blueprint-impact\/references\/impact-runtime-contract\.md/);
-  assert.match(
-    runtimeReference,
-    /\| `impact` \| `docs\/commands\/impact\.md` \| `blueprint-impact` \| `blueprint_impact_config_get`<br>`blueprint_impact_scope_resolve`<br>`blueprint_impact_context_load`<br>`blueprint_impact_analyze`<br>`blueprint_impact_report_write`<br>`blueprint_impact_output_render` \| none \|/
-  );
-  assert.match(runtimeReference, /impact-runtime-contract\.md/);
-  assert.match(runtimeReference, /`behavior-audited`: final hardening/);
-  assert.match(
-    runtimeReference,
-    /\| `impact` \|[\s\S]*\| `locked`; `docs-aligned`; `behavior-audited` \|/
-  );
-  assert.match(artifactSchema, /durable blast-radius report bundle for implemented `\/blu-impact`/);
-  assert.match(artifactContracts, /\/blu-impact is implemented as an advisory command/);
-  assert.match(readme, /\/blu-impact`: compute an evidence-backed blast-radius report/);
-  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-impact/);
-  assert.match(progress, /\| 42 \| `impact` \| ✅ \| `implemented` \| 4 \| `Quality And Shipping` \| Low \|/);
-  assert.match(memory, /`impact`[\s\S]*are implemented/);
+  assert.deepEqual(IMPACT_RUNTIME_METADATA.requiredInputPaths, [
+    "skills/blueprint-impact/references/impact-runtime-contract.md"
+  ]);
+  assert.deepEqual(IMPACT_RUNTIME_METADATA.requiredTools, [...IMPACT_TOOL_NAMES]);
+  assert.deepEqual(IMPACT_RUNTIME_METADATA.optionalAgents, []);
+  assert.deepEqual(IMPACT_RUNTIME_METADATA.runtimeReference.evidenceState, [
+    "locked",
+    "runtime-owned",
+    "behavior-audited"
+  ]);
 });
 
 test("impact runtime-contract resource is exposed from implemented catalog truth", async () => {
   const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
   const contract = await buildBlueprintCommandRuntimeContractResource("impact");
+  const contractJson = JSON.stringify(contract);
 
   assert.ok(advertisedCommands.includes("impact"));
   assert.equal(contract.command, "impact");
@@ -167,23 +163,83 @@ test("impact runtime-contract resource is exposed from implemented catalog truth
   assert.deepEqual(contract.catalog.blockedBy, []);
   assert.equal(contract.catalog.manifestPath, "commands/blu-impact.toml");
   assert.equal(contract.catalog.skillPath, "skills/blueprint-impact/SKILL.md");
-  assert.equal(contract.spec.path, "docs/commands/impact.md");
-  assert.equal(contract.spec.primarySkill, "blueprint-impact");
+  assert.equal(contract.catalog.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec.primarySkill, IMPACT_RUNTIME_METADATA.catalog.primarySkill);
+  assert.equal(contract.runtimeReference.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference.commandSpecPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.deepEqual(contract.runtimeReference.evidenceState, [
     "locked",
-    "docs-aligned",
+    "runtime-owned",
     "behavior-audited"
   ]);
-  assert.deepEqual(contract.spec.requiredTools, [...IMPACT_TOOL_NAMES]);
-  assert.deepEqual(contract.runtimeReference.exactMcpDestination, [...IMPACT_TOOL_NAMES]);
-  assert.deepEqual(contract.runtimeReference.optionalAgents, []);
-  assert.deepEqual(contract.skillInputs.effective, [
-    "docs/commands/impact.md",
-    "docs/COMMAND-CATALOG.md",
-    "docs/SKILLS-AND-AGENTS.md",
-    "docs/ARTIFACT-SCHEMA.md",
-    "docs/MCP-TOOLS.md",
-    "docs/RUNTIME-REFERENCE.md",
-    "skills/blueprint-impact/references/impact-runtime-contract.md"
+  assert.deepEqual(contract.catalog.requiredTools, [...IMPACT_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(contract.spec.requiredTools, [...IMPACT_RUNTIME_METADATA.requiredTools]);
+  assert.deepEqual(contract.runtimeReference.exactMcpDestination, [
+    ...IMPACT_RUNTIME_METADATA.requiredTools
   ]);
+  assert.deepEqual(contract.spec.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference.optionalAgents, []);
+  assert.deepEqual(contract.skillInputs, {
+    skill: "blueprint-impact",
+    shared: [],
+    commandSpecific: [...IMPACT_SKILL_INPUTS],
+    effective: [...IMPACT_SKILL_INPUTS]
+  });
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+  assert.doesNotMatch(contractJson, /docs\/commands\/impact\.md/);
+  assert.doesNotMatch(contractJson, /docs\/COMMAND-CATALOG\.md/);
+  assert.doesNotMatch(contractJson, /docs\/RUNTIME-REFERENCE\.md/);
+  assert.doesNotMatch(contractJson, /docs\/MCP-TOOLS\.md/);
+  assert.doesNotMatch(contractJson, /docs\/ARTIFACT-SCHEMA\.md/);
+  assert.doesNotMatch(contractJson, /docs\/SKILLS-AND-AGENTS\.md/);
+});
+
+test("impact remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (
+      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
+      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
+      normalizedPath.includes("/docs/commands/")
+    ) {
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+  const contract = await buildBlueprintCommandRuntimeContractResource("impact", {
+    readRelativePath: async (relativePath) => {
+      if (relativePath.startsWith("docs/")) {
+        return null;
+      }
+
+      return readRepoFile(relativePath);
+    }
+  });
+  const contractJson = JSON.stringify(contract);
+
+  assert.ok(advertisedCommands.includes("impact"));
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.implemented, true);
+  assert.equal(contract.catalog.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec.path, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.skillInputs.effective, [
+    ...IMPACT_SKILL_INPUTS
+  ]);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+  assert.doesNotMatch(contractJson, /docs\/commands\/impact\.md/);
+  assert.doesNotMatch(contractJson, /docs\/COMMAND-CATALOG\.md/);
+  assert.doesNotMatch(contractJson, /docs\/RUNTIME-REFERENCE\.md/);
 });

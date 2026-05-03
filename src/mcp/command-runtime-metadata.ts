@@ -442,6 +442,15 @@ const DOCS_UPDATE_REQUIRED_TOOLS = [
   "blueprint_artifact_report_write"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const IMPACT_REQUIRED_TOOLS = [
+  "blueprint_impact_config_get",
+  "blueprint_impact_scope_resolve",
+  "blueprint_impact_context_load",
+  "blueprint_impact_analyze",
+  "blueprint_impact_report_write",
+  "blueprint_impact_output_render"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const NOTE_REQUIRED_TOOLS = [
   "blueprint_artifact_mutate_index"
 ] as const satisfies readonly BlueprintInternalToolName[];
@@ -651,6 +660,8 @@ const ADD_TESTS_SPEC_PATH =
   "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md";
 const DOCS_UPDATE_SPEC_PATH =
   "skills/blueprint-docs/references/docs-update-runtime-contract.md";
+const IMPACT_SPEC_PATH =
+  "skills/blueprint-impact/references/impact-runtime-contract.md";
 const SETTINGS_SPEC_PATH =
   "skills/blueprint-governance/references/settings-runtime-contract.md";
 const SET_PROFILE_SPEC_PATH =
@@ -1949,6 +1960,48 @@ export const DOCS_UPDATE_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const IMPACT_RUNTIME_METADATA = {
+  commandName: "impact",
+  sourceId: runtimeMetadataSourceId("impact"),
+  catalog: {
+    wave: 4,
+    family: "Quality And Shipping",
+    primarySkill: "blueprint-impact",
+    declaredStatus: "implemented",
+    risk:
+      "Low: advisory blast-radius report writes only under .blueprint/impact/."
+  },
+  requiredTools: IMPACT_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [IMPACT_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("impact"),
+    title: "`/blu-impact`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`impact` performs advisory blast-radius analysis for a resolved change scope, persists an impact report bundle when writing is enabled, and renders the requested output format through the impact MCP substrate.",
+    reads: [
+      "impact config, resolved scope, source files, runtime metadata, Blueprint artifacts, ownership or dependency metadata, PR or deployment context, and command catalog state as read-only evidence"
+    ],
+    writes: [
+      ".blueprint/impact/<impact-id>/ only through blueprint_impact_report_write when writing is enabled"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("impact"),
+    waveTitle: "Quality And Shipping",
+    command: "impact",
+    primarySkill: "blueprint-impact",
+    exactMcpDestination: IMPACT_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: [".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for advisory blast-radius analysis with no subagents. Load skills/blueprint-impact/references/impact-runtime-contract.md, resolve scope through the impact MCP tools, keep source files, runtime files, PR metadata, deployment state, and command-catalog state read-only, persist impact bundles only through blueprint_impact_report_write under .blueprint/impact/<impact-id>/, render final human, JSON, Markdown, PR-comment, or summary output only through blueprint_impact_output_render, treat BLOCK as advisory rather than permission to mutate non-impact state, and route follow-up guidance only to implemented commands.",
+    evidenceState: ["locked", "runtime-owned", "behavior-audited"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const PAUSE_WORK_RUNTIME_METADATA = {
   commandName: "pause-work",
   sourceId: runtimeMetadataSourceId("pause-work"),
@@ -2804,6 +2857,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [UI_REVIEW_RUNTIME_METADATA.commandName]: UI_REVIEW_RUNTIME_METADATA,
   [ADD_TESTS_RUNTIME_METADATA.commandName]: ADD_TESTS_RUNTIME_METADATA,
   [DOCS_UPDATE_RUNTIME_METADATA.commandName]: DOCS_UPDATE_RUNTIME_METADATA,
+  [IMPACT_RUNTIME_METADATA.commandName]: IMPACT_RUNTIME_METADATA,
   [PAUSE_WORK_RUNTIME_METADATA.commandName]: PAUSE_WORK_RUNTIME_METADATA,
   [RESUME_WORK_RUNTIME_METADATA.commandName]: RESUME_WORK_RUNTIME_METADATA,
   [PR_BRANCH_RUNTIME_METADATA.commandName]: PR_BRANCH_RUNTIME_METADATA,
