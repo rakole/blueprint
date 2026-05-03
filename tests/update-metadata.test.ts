@@ -9,6 +9,30 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
+function extractToolRow(markdown: string, toolName: string): string {
+  const escapedToolName = toolName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(new RegExp(`^\\| \`${escapedToolName}\` \\|.*$`, "m"));
+
+  assert.ok(match, `Missing MCP tools row for ${toolName}`);
+  return match[0];
+}
+
+function assertRowContainsFields(row: string, fieldNames: string[]): void {
+  for (const fieldName of fieldNames) {
+    assert.match(row, new RegExp(`\\b${fieldName}\\b`), `Expected field ${fieldName} in row: ${row}`);
+  }
+}
+
+function assertRowOmitsFields(row: string, fieldNames: string[]): void {
+  for (const fieldName of fieldNames) {
+    assert.doesNotMatch(
+      row,
+      new RegExp(`\\b${fieldName}\\b`),
+      `Unexpected stale field ${fieldName} in row: ${row}`
+    );
+  }
+}
+
 test("update manifest references the maintenance skill, update MCP tools, and the ask_user mode gate", async () => {
   const commandFile = await readRepoFile("commands/blu-update.toml");
 
@@ -118,4 +142,48 @@ test("repo-facing status docs treat update as a shipped Wave 5 command", async (
     skillsFile,
     /`update` remains skill-led on `blueprint-maintenance`, uses no dedicated subagents, keeps extension-path handling read-only, and routes host-global advisory checklist persistence through the dedicated update MCP tools\./
   );
+});
+
+test("maintenance MCP docs rows match the live update tool return fields", async () => {
+  const mcpToolsFile = await readRepoFile("docs/MCP-TOOLS.md");
+  const checkRow = extractToolRow(mcpToolsFile, "blueprint_update_check");
+  const planRow = extractToolRow(mcpToolsFile, "blueprint_update_plan");
+
+  assertRowContainsFields(checkRow, [
+    "host",
+    "extensionPath",
+    "extensionManifestPath",
+    "installedVersion",
+    "installProvenance",
+    "latestVersionLookupStatus",
+    "latestVersion",
+    "latestVersionSource",
+    "updateAvailable",
+    "warnings"
+  ]);
+  assertRowOmitsFields(checkRow, ["installSource", "jsonPath", "markdownPath"]);
+
+  assertRowContainsFields(planRow, [
+    "host",
+    "extensionPath",
+    "extensionManifestPath",
+    "installedVersion",
+    "installProvenance",
+    "latestVersionLookupStatus",
+    "latestVersion",
+    "latestVersionSource",
+    "updateAvailable",
+    "warnings",
+    "mode",
+    "steps",
+    "notes",
+    "requiresRestart",
+    "savedPaths",
+    "updatesDir",
+    "metadataPath",
+    "checklistPath",
+    "path",
+    "status"
+  ]);
+  assertRowOmitsFields(planRow, ["installSource", "jsonPath", "markdownPath"]);
 });
