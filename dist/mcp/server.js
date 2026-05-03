@@ -36251,7 +36251,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, PROGRESS_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -36314,6 +36314,7 @@ var init_command_runtime_metadata = __esm({
       }
     };
     ADD_PHASE_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#add-phase";
+    ADD_PHASE_SPEC_PATH = "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md";
     ADD_PHASE_RUNTIME_METADATA = {
       commandName: "add-phase",
       sourceId: ADD_PHASE_RUNTIME_METADATA_SOURCE_ID,
@@ -36331,6 +36332,7 @@ var init_command_runtime_metadata = __esm({
         "blueprint_state_update"
       ],
       optionalAgents: [],
+      requiredInputPaths: [ADD_PHASE_SPEC_PATH],
       spec: {
         path: ADD_PHASE_RUNTIME_METADATA_SOURCE_ID,
         title: "`/blu-add-phase`",
@@ -36450,6 +36452,57 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_context",
       "blueprint_roadmap_read",
       "blueprint_project_status"
+    ];
+    INSERT_PHASE_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_roadmap_insert_phase",
+      "blueprint_artifact_scaffold",
+      "blueprint_state_update"
+    ];
+    REMOVE_PHASE_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_phase_locate",
+      "blueprint_roadmap_remove_phase",
+      "blueprint_state_update"
+    ];
+    PLAN_MILESTONE_GAPS_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_artifact_list",
+      "blueprint_artifact_summary_digest",
+      "blueprint_roadmap_add_phase",
+      "blueprint_state_update"
+    ];
+    AUDIT_MILESTONE_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_phase_summary_index",
+      "blueprint_artifact_list",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_summary_digest",
+      "blueprint_artifact_report_write"
+    ];
+    COMPLETE_MILESTONE_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_artifact_list",
+      "blueprint_state_load",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_summary_digest",
+      "blueprint_artifact_report_write",
+      "blueprint_state_update"
+    ];
+    MILESTONE_SUMMARY_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_artifact_list",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_summary_digest",
+      "blueprint_artifact_report_write",
+      "blueprint_state_update"
+    ];
+    NEW_MILESTONE_REQUIRED_TOOLS = [
+      "blueprint_roadmap_read",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_summary_digest",
+      "blueprint_artifact_scaffold",
+      "blueprint_state_update"
     ];
     VALIDATE_PHASE_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
@@ -36689,6 +36742,13 @@ var init_command_runtime_metadata = __esm({
     RESEARCH_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md";
     UI_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md";
     LIST_PHASE_ASSUMPTIONS_SPEC_PATH = "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md";
+    INSERT_PHASE_SPEC_PATH = "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md";
+    REMOVE_PHASE_SPEC_PATH = "commands/blu-remove-phase.toml";
+    PLAN_MILESTONE_GAPS_SPEC_PATH = "commands/blu-plan-milestone-gaps.toml";
+    AUDIT_MILESTONE_SPEC_PATH = "commands/blu-audit-milestone.toml";
+    COMPLETE_MILESTONE_SPEC_PATH = "commands/blu-complete-milestone.toml";
+    MILESTONE_SUMMARY_SPEC_PATH = "commands/blu-milestone-summary.toml";
+    NEW_MILESTONE_SPEC_PATH = "commands/blu-new-milestone.toml";
     VALIDATE_PHASE_SPEC_PATH = "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md";
     VERIFY_WORK_SPEC_PATH = "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md";
     CODE_REVIEW_SPEC_PATH = "skills/blueprint-review/references/code-review-runtime-contract.md";
@@ -36738,6 +36798,16 @@ var init_command_runtime_metadata = __esm({
     ];
     REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
     UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"];
+    ROADMAP_ADMIN_HOOKS = [
+      "read-before-edit",
+      ".blueprint write guard"
+    ];
+    ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS = [
+      "blueprint-roadmapper"
+    ];
+    ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS = [
+      "blueprint-verifier"
+    ];
     EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"];
     QUICK_OPTIONAL_AGENTS = [
       "blueprint-researcher",
@@ -36745,6 +36815,298 @@ var init_command_runtime_metadata = __esm({
       "blueprint-executor",
       "blueprint-verifier"
     ];
+    INSERT_PHASE_RUNTIME_METADATA = {
+      commandName: "insert-phase",
+      sourceId: runtimeMetadataSourceId("insert-phase"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Medium: inserts the next decimal phase after an integer phase without renumbering later roadmap entries."
+      },
+      requiredTools: INSERT_PHASE_REQUIRED_TOOLS,
+      optionalAgents: [],
+      requiredInputPaths: [INSERT_PHASE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("insert-phase"),
+        title: "`/blu-insert-phase`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.",
+        reads: [
+          "The current roadmap and milestone inventory through blueprint_roadmap_read."
+        ],
+        writes: [
+          ".blueprint/ROADMAP.md",
+          ".blueprint/phases/<phasePrefix>-<phaseSlug>/",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("insert-phase"),
+        waveTitle: "Roadmap And Milestone",
+        command: "insert-phase",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: INSERT_PHASE_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    REMOVE_PHASE_RUNTIME_METADATA = {
+      commandName: "remove-phase",
+      sourceId: runtimeMetadataSourceId("remove-phase"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "High: deletes a future phase and renumbers later roadmap references plus phase artifacts."
+      },
+      requiredTools: REMOVE_PHASE_REQUIRED_TOOLS,
+      optionalAgents: [],
+      requiredInputPaths: [REMOVE_PHASE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("remove-phase"),
+        title: "`/blu-remove-phase`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`remove-phase` removes a future roadmap phase, deletes its phase directory, renumbers subsequent roadmap and phase artifacts, and re-anchors state on the safest implemented follow-up.",
+        reads: [
+          "The current roadmap and milestone inventory through blueprint_roadmap_read.",
+          "Existing target-phase artifacts and drift through blueprint_phase_locate."
+        ],
+        writes: [
+          ".blueprint/ROADMAP.md",
+          "renamed phase directories and phase-scoped artifact filenames under .blueprint/phases/",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("remove-phase"),
+        waveTitle: "Roadmap And Milestone",
+        command: "remove-phase",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: REMOVE_PHASE_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded roadmap removal: preview the target phase through phase location, prefer ask_user for the destructive confirmation gates, keep the waiting state explicit as future-phase-guard, remove-phase-confirmation, or force-remove-confirmation, allow force: true only after execution evidence triggers the second explicit approval path, and re-anchor state on /blu-progress without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    PLAN_MILESTONE_GAPS_RUNTIME_METADATA = {
+      commandName: "plan-milestone-gaps",
+      sourceId: runtimeMetadataSourceId("plan-milestone-gaps"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Medium: can add multiple phases in one pass."
+      },
+      requiredTools: PLAN_MILESTONE_GAPS_REQUIRED_TOOLS,
+      optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
+      requiredInputPaths: [PLAN_MILESTONE_GAPS_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("plan-milestone-gaps"),
+        title: "`/blu-plan-milestone-gaps`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`plan-milestone-gaps` creates grouped roadmap phases to close actionable gaps identified by the saved milestone audit, keeping persistence on roadmap and state MCP tools.",
+        reads: [
+          "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+          "blueprint_artifact_list -> {artifacts, reports, missing}",
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+        ],
+        writes: [
+          ".blueprint/ROADMAP.md",
+          "new phase directories for approved gaps",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("plan-milestone-gaps"),
+        waveTitle: "Roadmap And Milestone",
+        command: "plan-milestone-gaps",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: PLAN_MILESTONE_GAPS_REQUIRED_TOOLS,
+        optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    AUDIT_MILESTONE_RUNTIME_METADATA = {
+      commandName: "audit-milestone",
+      sourceId: runtimeMetadataSourceId("audit-milestone"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Low: report generation only."
+      },
+      requiredTools: AUDIT_MILESTONE_REQUIRED_TOOLS,
+      optionalAgents: ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS,
+      requiredInputPaths: [AUDIT_MILESTONE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("audit-milestone"),
+        title: "`/blu-audit-milestone`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`audit-milestone` compares original milestone intent against saved phase evidence and writes a durable milestone audit report with grouped gaps and traceability notes.",
+        reads: [
+          "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+          "blueprint_phase_summary_index -> phase summary evidence",
+          "blueprint_artifact_list -> {artifacts, reports, missing}",
+          "blueprint_artifact_contract_read -> report.milestone-audit contract",
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+        ],
+        writes: ["milestone audit report in .blueprint/reports/"]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("audit-milestone"),
+        waveTitle: "Roadmap And Milestone",
+        command: "audit-milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: AUDIT_MILESTONE_REQUIRED_TOOLS,
+        optionalAgents: ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS,
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    COMPLETE_MILESTONE_RUNTIME_METADATA = {
+      commandName: "complete-milestone",
+      sourceId: runtimeMetadataSourceId("complete-milestone"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Medium: writes milestone closeout evidence and advances archival routing."
+      },
+      requiredTools: COMPLETE_MILESTONE_REQUIRED_TOOLS,
+      optionalAgents: [],
+      requiredInputPaths: [COMPLETE_MILESTONE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("complete-milestone"),
+        title: "`/blu-complete-milestone`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.",
+        reads: [
+          "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+          "blueprint_artifact_list -> {artifacts, reports, missing}",
+          "blueprint_state_load -> derivedStatus.milestoneAudit readiness",
+          "blueprint_artifact_contract_read -> report.milestone-complete contract",
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+        ],
+        writes: [
+          ".blueprint/reports/milestone-complete-<version>.md",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("complete-milestone"),
+        waveTitle: "Roadmap And Milestone",
+        command: "complete-milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: COMPLETE_MILESTONE_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    MILESTONE_SUMMARY_RUNTIME_METADATA = {
+      commandName: "milestone-summary",
+      sourceId: runtimeMetadataSourceId("milestone-summary"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Low: report generation and routing only."
+      },
+      requiredTools: MILESTONE_SUMMARY_REQUIRED_TOOLS,
+      optionalAgents: [],
+      requiredInputPaths: [MILESTONE_SUMMARY_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("milestone-summary"),
+        title: "`/blu-milestone-summary`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.",
+        reads: [
+          "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+          "blueprint_artifact_list -> {artifacts, reports, missing}",
+          "blueprint_artifact_contract_read -> report.milestone-summary contract",
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+        ],
+        writes: [
+          ".blueprint/reports/milestone-summary-<version>.md",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("milestone-summary"),
+        waveTitle: "Roadmap And Milestone",
+        command: "milestone-summary",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: MILESTONE_SUMMARY_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    NEW_MILESTONE_RUNTIME_METADATA = {
+      commandName: "new-milestone",
+      sourceId: runtimeMetadataSourceId("new-milestone"),
+      catalog: {
+        wave: 2,
+        family: "Roadmap And Milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        declaredStatus: "implemented",
+        risk: "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts."
+      },
+      requiredTools: NEW_MILESTONE_REQUIRED_TOOLS,
+      optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
+      requiredInputPaths: [NEW_MILESTONE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("new-milestone"),
+        title: "`/blu-new-milestone`",
+        executionProfile: "interactive-read",
+        rootRoutable: true,
+        purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.",
+        reads: [
+          "blueprint_roadmap_read -> {roadmap, milestone, phases}",
+          "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts",
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+        ],
+        writes: [
+          ".blueprint/PROJECT.md",
+          ".blueprint/REQUIREMENTS.md",
+          ".blueprint/ROADMAP.md",
+          ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>",
+          ".blueprint/STATE.md"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("new-milestone"),
+        waveTitle: "Roadmap And Milestone",
+        command: "new-milestone",
+        primarySkill: "blueprint-roadmap-admin",
+        exactMcpDestination: NEW_MILESTONE_REQUIRED_TOOLS,
+        optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
+        hookInvolvement: ROADMAP_ADMIN_HOOKS,
+        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
     PROGRESS_RUNTIME_METADATA = {
       commandName: "progress",
       sourceId: runtimeMetadataSourceId("progress"),
@@ -38197,6 +38559,13 @@ var init_command_runtime_metadata = __esm({
     RUNTIME_OWNED_COMMAND_METADATA = {
       [NEW_PROJECT_RUNTIME_METADATA.commandName]: NEW_PROJECT_RUNTIME_METADATA,
       [ADD_PHASE_RUNTIME_METADATA.commandName]: ADD_PHASE_RUNTIME_METADATA,
+      [INSERT_PHASE_RUNTIME_METADATA.commandName]: INSERT_PHASE_RUNTIME_METADATA,
+      [REMOVE_PHASE_RUNTIME_METADATA.commandName]: REMOVE_PHASE_RUNTIME_METADATA,
+      [PLAN_MILESTONE_GAPS_RUNTIME_METADATA.commandName]: PLAN_MILESTONE_GAPS_RUNTIME_METADATA,
+      [AUDIT_MILESTONE_RUNTIME_METADATA.commandName]: AUDIT_MILESTONE_RUNTIME_METADATA,
+      [COMPLETE_MILESTONE_RUNTIME_METADATA.commandName]: COMPLETE_MILESTONE_RUNTIME_METADATA,
+      [MILESTONE_SUMMARY_RUNTIME_METADATA.commandName]: MILESTONE_SUMMARY_RUNTIME_METADATA,
+      [NEW_MILESTONE_RUNTIME_METADATA.commandName]: NEW_MILESTONE_RUNTIME_METADATA,
       [PROGRESS_RUNTIME_METADATA.commandName]: PROGRESS_RUNTIME_METADATA,
       [SETTINGS_RUNTIME_METADATA.commandName]: SETTINGS_RUNTIME_METADATA,
       [SET_PROFILE_RUNTIME_METADATA.commandName]: SET_PROFILE_RUNTIME_METADATA,

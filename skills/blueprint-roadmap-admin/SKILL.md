@@ -19,7 +19,20 @@ input_bundles:
   commands:
     "/blu-add-phase":
       - skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md
-legacy_required_inputs_fallback: enabled
+    "/blu-insert-phase":
+      - skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
+    "/blu-remove-phase":
+      - commands/blu-remove-phase.toml
+    "/blu-plan-milestone-gaps":
+      - commands/blu-plan-milestone-gaps.toml
+    "/blu-audit-milestone":
+      - commands/blu-audit-milestone.toml
+    "/blu-complete-milestone":
+      - commands/blu-complete-milestone.toml
+    "/blu-milestone-summary":
+      - commands/blu-milestone-summary.toml
+    "/blu-new-milestone":
+      - commands/blu-new-milestone.toml
 ---
 
 # Blueprint Roadmap Admin Skill
@@ -34,7 +47,7 @@ Orchestrate Blueprint roadmap and milestone management flows so phase mutations,
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Only invoke optional subagents when the current command contract explicitly allows them.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- Load only the active command's structured `input_bundles.commands[...]` inputs when one is present; unmapped roadmap-admin commands continue to use the legacy Required Inputs section below.
+- Load only the active command's structured `input_bundles.commands[...]` inputs when one is present; roadmap-admin commands do not use docs as active runtime inputs.
 
 ## Parity Goal
 
@@ -48,23 +61,20 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - follow-up routing stays inside the implemented Blueprint surface
 - persistent writes remain scoped to `.blueprint/`
 
-## Required Inputs
+## Runtime Inputs
 
-- `docs/commands/insert-phase.md`
-- `docs/commands/remove-phase.md`
-- `docs/commands/plan-milestone-gaps.md`
-- `docs/commands/audit-milestone.md`
-- `docs/commands/complete-milestone.md`
-- `docs/commands/milestone-summary.md`
-- `docs/commands/new-milestone.md`
-- `docs/COMMAND-CATALOG.md`
-- `docs/SKILLS-AND-AGENTS.md`
-- `docs/ARTIFACT-SCHEMA.md`
-- `docs/MCP-TOOLS.md`
-- `docs/RUNTIME-REFERENCE.md`
-- `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` when running `/blu-insert-phase`
+Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter:
 
-`/blu-add-phase` is resolved from the structured `input_bundles` frontmatter and loads only `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`.
+- `/blu-add-phase`: `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md`
+- `/blu-insert-phase`: `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`
+- `/blu-remove-phase`: `commands/blu-remove-phase.toml`
+- `/blu-plan-milestone-gaps`: `commands/blu-plan-milestone-gaps.toml`
+- `/blu-audit-milestone`: `commands/blu-audit-milestone.toml`
+- `/blu-complete-milestone`: `commands/blu-complete-milestone.toml`
+- `/blu-milestone-summary`: `commands/blu-milestone-summary.toml`
+- `/blu-new-milestone`: `commands/blu-new-milestone.toml`
+
+The earlier repository-doc-backed Required Inputs list is retained only in repository history. It is intentionally not a parsed section of this skill, so runtime skill input resolution cannot activate internal documentation paths for roadmap-admin commands.
 
 ## Required MCP Tools
 
@@ -75,9 +85,12 @@ Carry forward the useful roadmap and milestone intent while preserving Blueprint
 - `blueprint_roadmap_remove_phase`
 - `blueprint_artifact_scaffold`
 - `blueprint_state_update`
+- `blueprint_phase_locate`
+- `blueprint_state_load`
 - `blueprint_phase_summary_index`
 - `blueprint_artifact_summary_digest`
 - `blueprint_artifact_report_write`
+- `blueprint_artifact_contract_read`
 
 ## Optional Agents
 

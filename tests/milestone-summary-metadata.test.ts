@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 test("milestone-summary manifest references saved report evidence and new-milestone routing", async () => {
@@ -51,17 +54,24 @@ test("roadmap-admin skill keeps milestone-summary skill-led and Wave 2 local", a
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
 });
 
-test("milestone-summary docs and runtime reference align to the interactive-read summary contract", async () => {
-  const [docFile, runtimeFile] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/milestone-summary.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8"),
-  ]);
+test("milestone-summary runtime-owned metadata aligns to the interactive-read summary contract", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("milestone-summary");
+  const contract =
+    await buildBlueprintCommandRuntimeContractResource("milestone-summary");
 
-  assert.match(docFile, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(docFile, /shared interactive-read classification/i);
-  assert.match(docFile, /missing-milestone-audit/);
-  assert.match(docFile, /missing-milestone-complete/);
-  assert.match(docFile, /milestone-summary-overwrite-confirmation/);
-  assert.match(docFile, /does not expose the long-running progress layer/i);
-  assert.match(runtimeFile, /`milestone-summary` .*Interactive-read profile for bounded milestone summarization:/);
+  assert.ok(metadata);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing-milestone-audit[\s\S]*missing-milestone-complete[\s\S]*milestone-summary-overwrite-confirmation/
+  );
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-milestone-summary.toml"
+  ]);
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
 });
