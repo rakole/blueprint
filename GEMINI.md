@@ -22,9 +22,9 @@ Blueprint should feel like a calm workflow control panel: precise, state-aware, 
 
   ```text
   +----------------------------------------------------------------+
-  | BLUEPRINT                                             B         |
-  | Command: /blu-plan-phase                              L         |
-  | Mode: Shape                                           U         |
+  | BLUEPRINT                                             B  L  U  |
+  | Command: /blu-plan-phase                                       |
+  | Mode: Shape                                                    |
   +----------------------------------------------------------------+
   ```
 
