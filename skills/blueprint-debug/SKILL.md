@@ -154,3 +154,35 @@ and output-quality criteria.
   rerouted into another implemented command.
 - Name the `debug-latest` report and any captured todo follow-up explicitly.
 - End on the safest implemented next action.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active `/blu-debug` runtime contract was loaded with
+  `commands/blu-debug.toml`; no sibling command references or repository docs
+  were treated as active runtime input.
+- `mcp_blueprint_blueprint_project_status` ran first, and persistent debug
+  work stopped or degraded honestly when Blueprint state was uninitialized.
+- Any non-trivial run kept the declared stage, gate, execution mode, and next
+  safe action visible without treating `update_topic` or `write_todos` as
+  Blueprint persistence.
+- Durable writes used only the owning MCP tools:
+  `mcp_blueprint_blueprint_artifact_report_write` for `debug-latest`,
+  `mcp_blueprint_blueprint_artifact_mutate_index` only for explicitly approved
+  todo capture, and `mcp_blueprint_blueprint_state_update` for `STATE.md`.
+- MCP-returned `status`, `written`, `created`, `updated`, `path`, ids,
+  validation, warnings, and reasons were treated as authoritative; rejected,
+  invalid, partial, skipped, or blocked work was repaired or reported plainly.
+- The overwrite gate for an existing debug report, the `--diagnose` fix gate,
+  and the follow-up todo capture gate were satisfied before any gated action.
+- The run stayed inside `.blueprint/reports/debug-latest.md`, optional
+  `.blueprint/todos/TODO.md`, and `.blueprint/STATE.md`; it did not mutate
+  source files, installed extension directories, hidden state, `.planning/`,
+  planned-only surfaces, or unrelated Blueprint state.
+- Final routing named only implemented commands that fit the evidence:
+  `/blu-quick`, `/blu-plan-phase`, `/blu-validate-phase`, or `/blu-progress`
+  when the safe next action was ambiguous.
+- The final response named the MCP-returned report path or no-write status,
+  any approved todo ids, warnings or blockers, diagnose-only/fix status, and
+  the next safe implemented action.
