@@ -38,7 +38,10 @@ import {
   UPDATE_RUNTIME_METADATA,
   WORKSTREAMS_RUNTIME_METADATA
 } from "../src/mcp/command-runtime-metadata.js";
-import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import {
+  blueprintCommandCatalog,
+  blueprintRuntimeOwnedCommandCatalog
+} from "../src/mcp/tools/project.js";
 import {
   blueprintDiscoverableSkillPath,
   resolveBlueprintSkillPath
@@ -165,6 +168,18 @@ function isBundledPath(value: unknown, relativePath: string): boolean {
   }
 
   return typeof value === "string" && value.endsWith(relativePath);
+}
+
+function catalogDocsPath(value: unknown): string | null {
+  const normalized =
+    value instanceof URL ? value.pathname : path.resolve(String(value));
+  const relativePath = path.relative(process.cwd(), normalized).split(path.sep).join("/");
+
+  return relativePath === "docs/COMMAND-CATALOG.md" ||
+    relativePath === "docs/RUNTIME-REFERENCE.md" ||
+    relativePath.startsWith("docs/commands/")
+    ? relativePath
+    : null;
 }
 
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
@@ -1116,12 +1131,13 @@ test("planned commands stay non-routable until their dedicated manifest exists",
 test("docless fallback preserves planned do without exposing a runtime contract", async (t) => {
   const realAccess = fs.access.bind(fs);
   const realReadFile = fs.readFile.bind(fs);
+  const docsTouches: string[] = [];
 
   t.mock.method(fs, "access", async (filePath, mode) => {
-    const normalizedPath =
-      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+    const docsPath = catalogDocsPath(filePath);
 
-    if (normalizedPath.includes("/docs/")) {
+    if (docsPath) {
+      docsTouches.push(`access:${docsPath}`);
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;
@@ -1134,10 +1150,10 @@ test("docless fallback preserves planned do without exposing a runtime contract"
   });
 
   t.mock.method(fs, "readFile", async (filePath, options) => {
-    const normalizedPath =
-      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+    const docsPath = catalogDocsPath(filePath);
 
-    if (normalizedPath.includes("/docs/")) {
+    if (docsPath) {
+      docsTouches.push(`readFile:${docsPath}`);
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;
@@ -1163,7 +1179,11 @@ test("docless fallback preserves planned do without exposing a runtime contract"
     entry.blockedBy.join("\n"),
     /Missing command manifest: commands\/blu-do\.toml/
   );
-  assert.match(entry.blockedBy.join("\n"), /Missing command spec: docs\/commands\/do\.md/);
+  assert.doesNotMatch(entry.blockedBy.join("\n"), /docs\/commands\/do\.md/);
+  assert.deepEqual(
+    docsTouches.filter((touch) => touch.endsWith("docs/commands/do.md")),
+    []
+  );
   assert.deepEqual(catalog.aliases.do, blueprintDirectCommandAliases("do"));
   assert.ok(catalog.waves["3"].includes("do"));
 
@@ -1174,6 +1194,56 @@ test("docless fallback preserves planned do without exposing a runtime contract"
     buildBlueprintCommandRuntimeContractResource("do"),
     /Blueprint runtime-contract resources are available only for implemented commands: do/
   );
+});
+
+test("runtime-owned command catalog projection does not touch command docs", async (t) => {
+  const realAccess = fs.access.bind(fs);
+  const realReadFile = fs.readFile.bind(fs);
+  const docsTouches: string[] = [];
+
+  t.mock.method(fs, "access", async (filePath, mode) => {
+    const docsPath = catalogDocsPath(filePath);
+
+    if (docsPath) {
+      docsTouches.push(`access:${docsPath}`);
+    }
+
+    return realAccess(
+      filePath as Parameters<typeof fs.access>[0],
+      mode as Parameters<typeof fs.access>[1]
+    );
+  });
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const docsPath = catalogDocsPath(filePath);
+
+    if (docsPath) {
+      docsTouches.push(`readFile:${docsPath}`);
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintRuntimeOwnedCommandCatalog();
+  const impactEntry = catalog.commands.impact;
+  const doEntry = catalog.commands.do;
+
+  assert.deepEqual(docsTouches, []);
+  assert.ok(impactEntry);
+  assert.equal(impactEntry.declaredStatus, "implemented");
+  assert.equal(impactEntry.status, "implemented");
+  assert.equal(impactEntry.implemented, true);
+  assert.equal(impactEntry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.ok(doEntry);
+  assert.equal(doEntry.declaredStatus, "planned");
+  assert.notEqual(doEntry.status, "implemented");
+  assert.equal(doEntry.implemented, false);
+  assert.equal(doEntry.specPath, null);
+  assert.equal(catalog.waves[String(impactEntry.wave)].includes("impact"), true);
+  assert.equal(catalog.waves[String(doEntry.wave)].includes("do"), true);
 });
 
 test("impact is implemented once its additive command substrate is complete", async () => {

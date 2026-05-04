@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile as execFileCallback } from "node:child_process";
+import { promises as fs } from "node:fs";
 import {
   access,
   mkdir,
@@ -84,6 +85,18 @@ function surfaceFor(
 
   assert.ok(surface, `${filePath} should have a classified surface`);
   return surface;
+}
+
+function catalogDocsPath(value: unknown): string | null {
+  const normalized =
+    value instanceof URL ? value.pathname : path.resolve(String(value));
+  const relativePath = path.relative(repoRoot, normalized).split(path.sep).join("/");
+
+  return relativePath === "docs/COMMAND-CATALOG.md" ||
+    relativePath === "docs/RUNTIME-REFERENCE.md" ||
+    relativePath.startsWith("docs/commands/")
+    ? relativePath
+    : null;
 }
 
 type ImpactAnalysis = Awaited<ReturnType<typeof blueprintImpactAnalyze>>;
@@ -632,6 +645,59 @@ test("impact context load derives impact command assets from runtime-owned metad
   assert.equal(context.commandAssets.impact.specPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.ok(context.commandAssets.specPaths.includes(IMPACT_RUNTIME_METADATA.sourceId));
   assert.equal(context.commandAssets.specPaths.includes("docs/commands/impact.md"), false);
+});
+
+test("impact context load avoids command docs while preserving runtime catalog awareness", async (t) => {
+  const realAccess = fs.access.bind(fs);
+  const realReadFile = fs.readFile.bind(fs);
+  const docsTouches: string[] = [];
+
+  t.mock.method(fs, "access", async (filePath, mode) => {
+    const docsPath = catalogDocsPath(filePath);
+
+    if (docsPath) {
+      docsTouches.push(`access:${docsPath}`);
+    }
+
+    return realAccess(
+      filePath as Parameters<typeof fs.access>[0],
+      mode as Parameters<typeof fs.access>[1]
+    );
+  });
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const docsPath = catalogDocsPath(filePath);
+
+    if (docsPath) {
+      docsTouches.push(`readFile:${docsPath}`);
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const context = await blueprintImpactContextLoad({
+    cwd: repoRoot,
+    includeArtifacts: false
+  });
+
+  assert.deepEqual(docsTouches, []);
+  assert.equal(context.status, "loaded");
+  assert.ok(context.commandAssets);
+  assert.ok(context.commandAssets.implementedCommands.includes("impact"));
+  assert.ok(context.commandAssets.nonRoutableCommands.includes("do"));
+  assert.equal(context.commandAssets.impact.specPath, IMPACT_RUNTIME_METADATA.sourceId);
+  assert.ok(context.commandAssets.specPaths.includes(IMPACT_RUNTIME_METADATA.sourceId));
+  assert.equal(
+    context.commandAssets.specPaths.some((specPath) =>
+      specPath.startsWith("docs/commands/")
+    ),
+    false
+  );
+  assert.equal(context.catalog.commands.impact.implemented, true);
+  assert.equal(context.catalog.commands.do.implemented, false);
 });
 
 test("impact context load returns partial for requested target failures and malformed package metadata", async () => {

@@ -75,6 +75,7 @@ type ProjectStatusResult = {
         warnings: string[];
     };
 };
+export declare function blueprintRuntimeOwnedCommandCatalog(): Promise<CommandCatalogResult>;
 export declare function blueprintCommandCatalog(): Promise<CommandCatalogResult>;
 export declare function blueprintProjectInit(args?: ProjectInitArgs): Promise<ProjectInitResult>;
 export declare function blueprintProjectStatus(args?: ProjectStatusArgs): Promise<ProjectStatusResult>;
