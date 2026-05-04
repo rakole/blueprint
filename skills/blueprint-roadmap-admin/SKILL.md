@@ -232,3 +232,17 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - For `complete-milestone`, report the milestone resolved, the audit readiness, audit report, and evidence used, whether the completion report was created or replaced, and the next safe implemented action.
 - For `milestone-summary`, report the milestone resolved, the source reports and evidence used, whether the summary report was created or replaced, and the next safe implemented action.
 - For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, and the next safe implemented action.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active roadmap-admin command loaded only its structured `input_bundles.commands[...]` input: the add/insert runtime contract or the active `commands/blu-*.toml` manifest. Sibling command references were not treated as active requirements.
+- Required MCP calls ran in the active contract's order through runtime FQNs (`mcp_blueprint_blueprint_*`), with roadmap, report, contract, digest, artifact, or phase-locate reads completed before any roadmap, scaffold, report, or state write.
+- Persistence used only the owning MCP tools for the active command: roadmap mutation, artifact scaffold/report write, and state update. No direct edits were made to `.blueprint/ROADMAP.md`, `.blueprint/STATE.md`, `.blueprint/phases/`, `.blueprint/reports/`, runtime files, installed extension directories, or planned-only surfaces.
+- Returned MCP fields were treated as authoritative, including `status`, `written`, `created`, `updated`, `createdFiles`, `reusedFiles`, `path`, `phaseNumber`, `phasePrefix`, `phaseDir`, `inputsUsed`, validation results, warnings, recovery guidance, and `reason`.
+- Every required confirmation gate was satisfied before mutation: phase-number append, decimal insert, future/destructive removal, grouped gap plan, overwrite or replacement, carry-forward versus reset, and starter-doc regeneration.
+- Missing inputs, no-actionable-gap states, invalid anchors, stale phase numbers, conflicting directories, missing reports, audit-not-ready states, validation failures, tool rejections, partial writes, or skipped steps were repaired through the active reference or reported as blockers/no-write status, not described as successful completion.
+- The command stayed inside its write boundary: roadmap surgery only for add/insert/remove/gap phases, reports only through `.blueprint/reports/`, new-milestone starter scaffolds only through `blueprint_artifact_scaffold`, and no source, test, git, hook, catalog-status, or installed-extension mutation.
+- Final routing named only implemented Blueprint commands from the active contract; `/blu-progress` was used when the safe next action was ambiguous, blocked, declined, or not implemented.
+- The final response named concrete returned artifact, report, scaffold, roadmap, or state paths, or explicitly stated that no write occurred, and included warnings, reuse/drift notes, blockers, and the next safe implemented action.
