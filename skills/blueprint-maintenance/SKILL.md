@@ -313,3 +313,16 @@ Shared in-flight contract for `cleanup`:
 - For `cleanup`, report the archived phase directories, protected exclusions, chosen archive destination, any active pending gate or waiting state, the report status, any skipped safety blockers, and the safest implemented follow-up or manual next step.
 - For `update`, report the resolved host, extension path, installed version, latest-version lookup status, whether an update appears available, any active pending gate or waiting state, the saved checklist status when applicable, and the restart-focused next safe action.
 - For `reapply-patches`, report the selected patch ids, preview or replay outcome, registry path, audit status, any active pending gate or waiting state, any conflict or compatibility warnings, and the safest implemented follow-up or manual next step.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active command's manifest and matching `skills/blueprint-maintenance/references/*-runtime-contract.md` from `input_bundles.commands[...]` were loaded, and no sibling maintenance reference was treated as active input.
+- Required MCP calls used runtime FQNs and followed contract order: project/config/registry/list/check preflight first, digest and contract reads before report writes, dry-run before patch replay, and state updates only after the owning report or mutation result exists.
+- Blueprint-owned persistence went only through the owning MCP tools, with returned `status`, `written`, `created`, `updated`, `path`, `savedPaths`, `affectedPaths`, `workspacePath`, `manifestPath`, `registryPath`, `inputsUsed`, `warnings`, `waitingState`, `nextAction`, and `reason` fields treated as authoritative.
+- Every required gate cleared before mutation: git or remote changes, workspace create/remove, workstream switch/archive, cleanup/archive/report overwrite, update checklist mode, patch replay, and any overwrite, repair, destructive, host-global, or strategy-change write.
+- Dirty-tree, drift, validation, model-check, dry-run conflict, tool rejection, or partial-failure results were repaired through the named MCP path or reported as blockers; invalid, skipped, partial, or blocked work was not described as successful completion.
+- The command stayed inside its write boundary: no direct `.blueprint/` edits, no hidden registries, no installed-extension mutation, no prompt-only persistence, no planned-only routing surface, and no unrelated Blueprint runtime, source, docs, or sibling-skill changes.
+- Post-mutation validation matched the active contract, including clean git state when required, retained/excluded path checks for `pr-branch`, returned workspace/workstream/patch/update paths, and report or state reload evidence when the tool provides it.
+- The final response named concrete artifact paths or the no-write status, active pending gates, warnings/blockers, the authoritative next action, and only implemented Blueprint follow-ups, using `/blu-progress` when the safe follow-up was ambiguous or not implemented.
