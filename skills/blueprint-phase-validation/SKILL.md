@@ -174,3 +174,16 @@ Runtime input resolution is structured and command-scoped:
 - Do not mutate arbitrary repo files from validation commands.
 - Do not invent or switch test frameworks when the repo has no clear test convention.
 - Do not present planned-only lifecycle commands as runnable just because they are documented.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active command's runtime contract (`validate-phase`, `verify-work`, or `add-tests`) was loaded from this skill's command-scoped bundle, and sibling validation contracts were not treated as active input.
+- Required Blueprint MCP calls used runtime FQNs and followed the active contract's order: resolve phase, read summary/validation/report/state evidence, load canonical contracts and authoring context, validate or render the structured payload, persist only from a ready result, then post-write validate/read and sync state.
+- Persistence went only through the owning MCP tools: `blueprint_phase_validation_write` for `verification` or `uat`, `blueprint_artifact_report_write` for `add-tests`, and `blueprint_state_update` for `STATE.md`; returned `status`, `written`, `created`, `updated`, `path`, `summaryPaths`, validation diagnostics, warnings, and reasons drove the final claim.
+- Required gates were satisfied before action: overwrite or replacement for existing verification, UAT, or add-tests report; UAT view/resume/update and review/skip/stop choices; add-tests scope/classification/test-plan/broader-suite decisions; and any follow-up-fix capture.
+- Invalid model checks, non-ready renders, writer rejections, failed post-write validation, blocked prerequisites, and skipped or stopped UAT were repaired once as the active contract allows or reported as blocked, partial, or no-write instead of success.
+- The run stayed within write boundaries: validation/UAT touched only the selected phase artifacts plus `STATE.md` (and `ROADMAP.md` only when verify-work completion evidence requires it); add-tests repo edits stayed inside the approved test scope or minimal helpers while Blueprint writes stayed in the selected phase, `.blueprint/reports/`, and `STATE.md`; no runtime files, installed extension directories, hidden state, direct `.blueprint/` writes, or planned-only surfaces changed.
+- Final routing used only implemented Blueprint commands authorized by saved artifacts and the active contract; when the safe next action was ambiguous or not implemented, routing fell back to `/blu-progress`.
+- The final response named the MCP-returned artifact paths or no-write status, reported the targeted test command and result for `add-tests`, included warnings, blockers, or unsaved findings, and stated the next safe implemented action.
