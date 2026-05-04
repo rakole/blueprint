@@ -149,3 +149,16 @@ Treat capture as short interactive routing or index mutation, not as long-runnin
 - Report created entry IDs plainly.
 - Mention duplicate detection and recovery warnings when they occur.
 - Keep parking-lot summaries short and action-oriented.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active `/blu-*` command's manifest was loaded from `input_bundles.commands[...]`, and sibling capture manifests were not treated as active input.
+- Required MCP calls for the active command were made in manifest order, using runtime FQNs such as `mcp_blueprint_blueprint_artifact_mutate_index`.
+- Persistence went only through the owning MCP tools, with returned `status`, ids, `created`, `updated`, `written`, `path`, `warnings`, and `reason` fields treated as authoritative.
+- Any required confirmation gate was satisfied before stub reservation, todo status changes, backlog promotion/removal, roadmap capture, scaffolding, or state updates.
+- Duplicate, `project_missing`, unhealthy, invalid, rejected, partial, or skipped results were repaired or reported honestly, not described as successful capture.
+- Writes stayed inside the active command's allowed `.blueprint/` paths and did not touch installed extension files, unrelated Blueprint state, runtime docs, manifests, or planned-only surfaces.
+- Follow-up routing named only implemented Blueprint commands, using `/blu-progress` when the safe next action was ambiguous.
+- The final response reported concrete artifact paths or no-write status, authoritative ids or phase numbers, warnings/blockers, and the next safe implemented action.
