@@ -132,3 +132,35 @@ Blueprint deltas:
 13. Validate the resulting bundle before treating the mapping pass as complete.
 14. Mention created, reused, repaired, and blocked artifacts separately.
 15. End with the next implemented Blueprint action, not a planned-only command. A successful map-first brownfield run should leave `mapped-only` status and route to `/blu-new-project`.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- `/blu-map-codebase` was the active command, `commands/blu-map-codebase.toml`
+  and `skills/blueprint-map/references/map-runtime-contract.md` were loaded,
+  and no sibling command reference was treated as active input.
+- Required Blueprint MCP calls used runtime FQNs and followed the contract order:
+  `mcp_blueprint_blueprint_project_status`, contract read, artifact list before
+  writes, scaffold, summary digest, codebase artifact writes, then bundle
+  validation.
+- Persistence stayed inside the owning MCP tools: scaffolds used repo-relative
+  `.blueprint/codebase/*.md` paths, substantive content used
+  `mcp_blueprint_blueprint_codebase_artifact_write`, and returned `status`,
+  `written`, `created`, `updated`, `path`, `issues`, `warnings`, and `reason`
+  fields were treated as authoritative.
+- Any reuse-versus-refresh, replace, overwrite, repair, or other high-risk gate
+  was explicitly satisfied before writing over existing codebase artifacts.
+- Invalid writes, validation failures, tool rejections, blocked project status,
+  and skipped artifacts were repaired through the returned issues or reported
+  honestly; none were described as a successful map.
+- The run stayed within the seven `.blueprint/codebase/` artifacts and did not
+  mutate unrelated Blueprint state, runtime files, installed extension
+  directories, host-global state, or planned-only routing surfaces.
+- Final routing named only implemented Blueprint commands: usually
+  `/blu-new-project` after a successful map-first brownfield run, `/blu-health`
+  for broken partial core state, or `/blu-progress` when the safe next action
+  was ambiguous.
+- The final response reported exact artifact paths or the no-write status,
+  created/reused/repaired/blocked outcomes, validation warnings or blockers,
+  and the next safe implemented action.
