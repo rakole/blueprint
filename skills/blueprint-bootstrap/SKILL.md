@@ -118,3 +118,32 @@ carry-forward evidence, then continue.
   auto-synthesized.
 - Explain any overwrite or repair risk before writes.
 - Keep the user anchored on the next safe implemented command.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- `references/bootstrap-runtime-contract.md` was the active `/blu-new-project`
+  contract; `questioning.md` and `runtime-guardrails.md` were only support
+  references.
+- Required MCP calls used runtime FQNs in the expected order: status/config and
+  artifact-contract reads, `mcp_blueprint_blueprint_project_init` as the first
+  persistent write, validation, then final status routing.
+- Persistence stayed inside the owning Blueprint MCP tools, with returned
+  `status`, `createdPaths`, `configPath`, `nextAction`, validation, warnings,
+  and reason fields treated as authoritative.
+- Map-first brownfield routing, overwrite approval, visible interactive
+  approval or sufficient `--auto` brief, saved-default choices, and any
+  saved-defaults update approval were satisfied before writes.
+- Invalid, placeholder, missing-heading, missing-success-criteria,
+  traceability, model-check, or tool-rejection results were repaired through the
+  approved seed/MCP path or reported as blockers.
+- The command did not hand-edit `.blueprint/`, create `.planning/` runtime
+  state, generate project instruction files, mutate installed extensions, or
+  route through planned-only or shell-invoked `/blu-*` surfaces.
+- Final routing named only implemented Blueprint commands from the final status
+  result, using `/blu-progress` when the safe next action was ambiguous or
+  unavailable.
+- The final response reported concrete `.blueprint/` paths or no-write status,
+  defaults provenance, approval posture, warnings or blockers, and the next
+  safe implemented action.
