@@ -228,6 +228,20 @@ It preserves the exact `workflow.ui_safety_gate` rationale confirmation gate.
 It preserves the rejection of browser-only, web-search-only, shell-only, or generic agents.
 It preserves `artifactId: "phase.ui-spec"` as the canonical UI-spec contract id.
 
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active command's skill-local runtime reference from `input_bundles.commands[...]` was loaded, and sibling discovery references were not treated as active input; for `/blu-discuss-phase`, the long-running profile was also loaded.
+- The active command used only its command-scoped MCP allowlist, translated to `mcp_blueprint_*` runtime FQNs, and reached the contract's required milestones in order: resolve, read evidence/config/contracts, decide gates, persist or no-write, validate, and route.
+- Any artifact work used `blueprint_artifact_contract_read` for the active contract id (`phase.context`, `phase.discussion-log`, `phase.research`, or `phase.ui-spec`) before drafting or writing; scaffold text, status booleans, and prompt-local templates were not treated as finished content.
+- Persistence, when allowed, happened only through the owning MCP tools; returned `status`, `written`, `created`, `updated`, `path`, `validation`, `warnings`, and `reason` fields were treated as authoritative. For `/blu-list-phase-assumptions`, verify no write-capable MCP tool, task tracker, or hidden planning helper was called.
+- Required gates were satisfied before action: artifact overwrite/reuse/update, discuss checkpoint resume-versus-discard, research external-source policy, UI contract-versus-skip, `workflow.ui_safety_gate` rationale, checker-requested revisions, and checkpoint owner/mode cleanup guards.
+- Validation, checker, model-check, or MCP rejection results were repaired through the same normalized draft and retried when the active contract allows it; otherwise the run stopped with a checkpoint or waiting state and an honest blocker. Invalid, partial, scaffold-only, skipped, or silently reused invalid work was not described as successful completion.
+- The command stayed inside its write boundary, limited to `.blueprint/phases/<phase>/` plus `.blueprint/STATE.md` when mutation is allowed, and did not mutate source files, runtime contracts, installed extension directories, host-global Blueprint state, planned-only surfaces, or prompt-only hidden state.
+- Routing and the final response came from refreshed MCP state and, when required, `blueprint_command_catalog`; recommend only implemented commands, using `/blu-progress` when the safe next action is missing, blocked, or ambiguous.
+- The final response named the phase, MCP-returned artifact paths or explicit no-write outcome, checkpoint and state-update behavior, warnings or blockers, and the next safe implemented action.
+
 ## Non-Negotiables
 
 - All persistent writes must go through MCP tools only.
