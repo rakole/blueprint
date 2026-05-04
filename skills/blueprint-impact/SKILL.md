@@ -73,17 +73,20 @@ unknowns, and output paths.
 9. Preserve implemented-only routing in follow-up guidance. Prefer `/blu-progress` when the safest next command is ambiguous, and never present planned, blocked, or repairing commands as runnable.
 10. Do not use subagents for V1 impact analysis. MCP tools own deterministic scope, findings, risk, confidence, status, and output paths.
 
-## Self-Check
+## Completion Self-Check
 
-Before ending a `/blu-impact` run, verify:
+Before claiming a `/blu-impact` run is complete, verify these `## Self-Check`
+invariants from the active impact contract:
 
-- Every required impact MCP tool was called in the prescribed order, except that report writing was intentionally skipped for `--no-write`.
-- Source files, runtime files, PR metadata, deployment state, command-catalog state, and installed extension files stayed read-only.
-- Risk and confidence are reported separately.
-- Missing metadata is surfaced as unknown or warning, not as safety.
-- Every finding has evidence references or an explicit unknown reason.
-- Planned-only commands were not recommended.
-- The final answer includes artifact paths or clearly states that writing was skipped.
+- The `/blu-impact` manifest and `references/impact-runtime-contract.md` were loaded as the active contract; no sibling or planned command reference was treated as active input.
+- Required impact MCP calls used runtime FQNs and followed the impact contract order: config, scope, context, analysis, optional write, render, or stopped at the exact MCP-returned reason.
+- Persistence, when enabled, happened only through `mcp_blueprint_blueprint_impact_report_write`; returned `status`, `written`, `created`, `updated`, reuse fields, artifact `path` values, validation, warnings, and reasons were treated as authoritative.
+- Any existing changed bundle paused for explicit overwrite confirmation before retrying with overwrite enabled.
+- Invalid config, unresolved scope, report validation failure, tool rejection, or model-check failure was repaired once through MCP-owned inputs or reported honestly; partial, skipped, blocked, or `--no-write` output was not described as persisted success.
+- Missing metadata is surfaced as unknown or warning, not as safety; every non-unknown finding or obligation has MCP evidence refs or an explicit unknown reason.
+- `.blueprint/impact/<impact-id>/` was the only write boundary; source files, roadmap or phase state, command catalog, PR or deployment state, runtime files, installed extension directories, and planned-only surfaces stayed unchanged.
+- Final routing named only implemented Blueprint commands and used `/blu-progress` when the safe next action was ambiguous or not implemented.
+- The final response reported impact status, risk, confidence, artifact paths or explicit no-write status, warnings, blockers, unknowns, and the next safe implemented action from rendered MCP output.
 
 ## Output Style
 
