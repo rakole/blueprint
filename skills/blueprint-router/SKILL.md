@@ -98,3 +98,16 @@ Runtime input resolution is structured and command-scoped through the `input_bun
 - Explain why a command is or is not currently available.
 - Keep recommendations inside the implemented Blueprint surface.
 - Never hallucinate omitted legacy commands or future Blueprint commands.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active router input was only the current command (`/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`); sibling manifests/docs and the planned `/blu-do` taxonomy did not add active reads, writes, agents, or routable commands.
+- The active command's manifest/runtime contract was loaded, and the required MCP read set used runtime FQNs: `/blu-help` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`; `/blu-progress` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu-next` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`, plus `mcp_blueprint_blueprint_config_get` only when config affects routing.
+- Every recommendation was checked against the live catalog result with `implemented: true`; planned, blocked, or repairing commands were described with `status`/`blockedBy`, and `/blu-do` remained non-runnable.
+- Project status, config warnings, state, artifacts, blockers, `derivedStatus`, `nextAction`, `missing`, `reason`, and source/path fields from MCP results were treated as authoritative; missing or rejected reads were repaired or reported as blockers.
+- The router stayed read-only: no files, `.blueprint/` artifacts, host-global `~/.<host>/blueprint/`, installed extension directories, shell slash commands, or write-oriented MCP tools were mutated or invoked.
+- High-risk, destructive, host-global, maintenance, shipping, undo, cleanup, workspace, or patch asks were not hidden behind freeform routing; any confirmation gate belongs to the explicit implemented direct command, not this router response.
+- Waiting states were named concretely as mapping prerequisites, partial repair, missing artifacts, verification debt, approval gates, or blocked substrate, with `/blu-progress` as the fallback when no safer implemented command is unambiguous.
+- The final response reported no-write status when relevant, material warnings/blockers, and the next safe implemented direct command or a clear blocker instead of claiming completion from prompt-following alone.
