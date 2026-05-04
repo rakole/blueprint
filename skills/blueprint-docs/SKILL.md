@@ -135,3 +135,35 @@ artifacts, and optional docs agents when the command contract allows them.
   that scope.
 - Do not present planned-only review, shipping, or maintenance commands as
   runnable just because they are documented.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active `/blu-docs-update` manifest and docs-update runtime contract were
+  loaded; no sibling command reference or chat memory was treated as active
+  input.
+- Required MCP calls used runtime FQNs and followed the command order:
+  `mcp_blueprint_blueprint_project_status`,
+  `mcp_blueprint_blueprint_artifact_list`,
+  `mcp_blueprint_blueprint_artifact_summary_digest`, then
+  `mcp_blueprint_blueprint_artifact_report_write` when a report was written.
+- Repo-truth evidence came from explicit digest inputs, and returned
+  `inputsUsed`, report `status`, `path`, write metadata, warnings, and reasons
+  were treated as authoritative.
+- Any broad-scope, doc-overwrite, or report-overwrite confirmation gate was
+  satisfied before writing, unless the user passed `--force` for that resolved
+  docs-update scope.
+- Verification findings, validation failures, MCP rejections, partial writes,
+  or skipped external checks were repaired or reported honestly; none were
+  described as successful completion.
+- Writes stayed inside the resolved documentation files and the MCP-owned
+  `.blueprint/reports/docs-update-latest.md` report path; no code, tests,
+  unrelated Blueprint state, installed extension directory, git state, or
+  planned-only surface was mutated.
+- Final routing named only implemented Blueprint commands, preferring
+  `/blu-map-codebase` for missing broad-refresh evidence and `/blu-progress`
+  when no narrower safe implemented action was clear.
+- The final response reported the doc scope, verify-only versus update mode,
+  concrete report path or no-write status, warnings or blockers, and next safe
+  implemented action.
