@@ -241,3 +241,40 @@ initialized projects, and no quick-run report persistence.
 - Explain the selected scope and why it fits the active command.
 - Explain any overwrite, blocker, or boundedness risk before writes.
 - Keep the user anchored on the next safe implemented action.
+
+## Completion Self-Check
+
+Before claiming completion, verify the active command's loaded manifest and
+runtime contract support the result:
+
+- Active input stayed command-scoped: only the invoking command's
+  `input_bundles` files, plus `long-running-execution-profile.md` when
+  applicable, were treated as active requirements.
+- Required Blueprint MCP calls were made in the active contract's order through
+  runtime FQNs; no `/blu-*` command ran in the shell and no shorthand tool id
+  was treated as callable.
+- Persistence used only the owning MCP tools:
+  `mcp_blueprint_blueprint_phase_summary_write` for execute summaries,
+  `mcp_blueprint_blueprint_artifact_report_write` for the quick report, and
+  `mcp_blueprint_blueprint_state_update` for allowed state refreshes.
+- Returned command-specific fields such as summary `path`, `linkedPlanPath`,
+  report `path`, `written`, `overwritten`, state `statePath`,
+  `updatedFields`, validation results, warnings, issues, statuses, and
+  `reason` values were treated as authoritative evidence.
+- Required gates were satisfied before writes: execute summary replacement or
+  overlapping execution, quick optional-depth expansion or report replacement,
+  and fast persistence only through healthy initialized Blueprint state.
+- Validation, model-check, and tool rejection results were repaired or reported
+  honestly: execute uses valid `PARTIAL` or `BLOCKED` summaries when needed,
+  while quick and fast report warnings, deferred follow-up, reroute, or
+  no-write status instead of claiming success.
+- The run stayed inside the active command's write boundary and did not mutate
+  unrelated Blueprint state, runtime files, installed extension directories,
+  hidden state, direct `.blueprint/` paths, or planned-only surfaces.
+- Final routing stayed inside the implemented Blueprint surface, using
+  command-catalog evidence only when the active command loaded it, with
+  `/blu-progress` as the fallback when the next safe action was ambiguous or
+  unavailable.
+- The final response named the concrete executed scope and authoritative
+  artifact paths or no-write status, included warnings or blockers, and did
+  not claim phase completion from `/blu-execute-phase`.
