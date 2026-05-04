@@ -605,3 +605,45 @@ artifacts, and optional review agents when the command contract allows them.
     `/blu-execute-phase <phase>` when execution evidence is missing,
     `/blu-code-review <phase>` when code review is missing, and
     `/blu-progress` otherwise.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The invoked command's manifest and matching runtime contract from
+  `input_bundles` were loaded; sibling review-command references were not
+  treated as active input.
+- Required MCP calls for the active command ran in the contract order using
+  runtime FQNs (`mcp_blueprint_blueprint_*`), and missing or invalid phase,
+  scope, plan, summary, finding, reviewer, or evidence results stopped or
+  routed exactly as that contract requires.
+- Review artifacts were authored as the structured model the active artifact
+  expects; `report.audit-fix` used the report model plus the same
+  `auditFixContext`; Markdown `content` or copied templates were not used for
+  model-only persistence.
+- Persistence stayed inside the owning MCP tools:
+  `blueprint_review_record` for review artifacts,
+  `blueprint_artifact_report_write` for audit-fix reports,
+  `blueprint_state_update` for state, and `blueprint_artifact_mutate_index`
+  only for confirmed todos. Returned `status`, `created`, `updated`, `reused`,
+  `reportPath`, `path`, `counts`, `followUps`, `warnings`, and `reason` fields
+  were treated as authoritative.
+- Every required confirmation gate cleared first: overwrite, broad/deep scope,
+  finding selection, non-trivial mutation, open-threat verify/accept, reviewer
+  availability, report overwrite, and todo capture. Unclear gates stayed
+  visible as blockers.
+- Validation diagnostics, tool rejections, failed verification, stale context,
+  open threats, unavailable reviewers, dry-run boundaries, skipped mutation, and
+  partial or blocked outcomes were repaired once when allowed or reported
+  honestly; they were not described as completed writes.
+- The run stayed within the active command's write boundaries and resolved
+  scope: no direct `.blueprint/` edits, unrelated repo/runtime/manifest/doc
+  mutations, installed-extension changes, planned-only agents or commands, or
+  hidden git automation.
+- Final routing named only implemented Blueprint commands allowed by the active
+  contract; when the safe next action was ambiguous, blocked, open-threat,
+  reviewer-availability, or not implemented, it fell back to `/blu-progress` or
+  the contract's waiting action.
+- The final response named the resolved phase and concrete artifact, report,
+  state, or todo paths, or the no-write status; it also summarized warnings,
+  blockers, verification, and the next safe implemented action.
