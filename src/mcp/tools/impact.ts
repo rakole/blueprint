@@ -6128,10 +6128,10 @@ async function loadProjectStatus(projectRoot: string): Promise<unknown> {
 
 async function loadCommandCatalog(): Promise<unknown> {
   const projectModule = (await import("./project.js")) as {
-    blueprintCommandCatalog: () => Promise<unknown>;
+    blueprintRuntimeOwnedCommandCatalog: () => Promise<unknown>;
   };
 
-  return projectModule.blueprintCommandCatalog();
+  return projectModule.blueprintRuntimeOwnedCommandCatalog();
 }
 
 export async function blueprintImpactContextLoad(

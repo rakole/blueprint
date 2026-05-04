@@ -803,15 +803,94 @@ async function buildRuntimeOwnedFallbackCommandCatalog(): Promise<CommandCatalog
       continue;
     }
 
-    const entry = await buildCommandCatalogEntry(parsedRow);
-    const waveKey = String(parsedRow.wave);
+    await addDoclessFallbackCommandCatalogEntry(result, parsedRow);
+  }
 
-    result.commands[parsedRow.commandName] = entry;
-    result.waves[waveKey] ??= [];
+  return result;
+}
+
+async function buildDoclessFallbackCommandCatalogEntry(
+  parsedRow: ParsedCatalogRow
+): Promise<CommandCatalogEntry> {
+  const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
+  const manifestExists = await pathExists(bundledUrl(manifestPath));
+  const skillResolution = await resolveBlueprintSkillPath(
+    parsedRow.primarySkill,
+    async (skillPath) => pathExists(bundledUrl(skillPath))
+  );
+  const skillExists = skillResolution.resolvedPath !== null;
+  const blockedBy: string[] = [];
+  let status = parsedRow.declaredStatus;
+
+  if (!manifestExists) {
+    blockedBy.push(`Missing command manifest: ${manifestPath}`);
+  }
+
+  if (!skillExists) {
+    blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
+  }
+
+  if (!(manifestExists && skillExists)) {
+    if (manifestExists || skillExists) {
+      status = "repairing";
+    } else if (blockedBy.length > 0) {
+      status = "blocked";
+    }
+  }
+
+  return {
+    command: blueprintDirectCommand(parsedRow.commandName),
+    route: blueprintRouterCommand(parsedRow.commandName),
+    wave: parsedRow.wave,
+    family: parsedRow.family,
+    risk: parsedRow.risk,
+    primarySkill: parsedRow.primarySkill,
+    declaredStatus: parsedRow.declaredStatus,
+    status,
+    implemented: status === "implemented",
+    blockedBy,
+    manifestPath: manifestExists ? manifestPath : null,
+    skillPath: skillResolution.resolvedPath,
+    specPath: null,
+    requiredTools: [],
+    requiredToolsSatisfied: true,
+    optionalAgents: [],
+    availableOptionalAgents: []
+  };
+}
+
+async function addDoclessFallbackCommandCatalogEntry(
+  result: CommandCatalogResult,
+  parsedRow: ParsedCatalogRow
+): Promise<void> {
+  const entry = await buildDoclessFallbackCommandCatalogEntry(parsedRow);
+  const waveKey = String(parsedRow.wave);
+
+  result.commands[parsedRow.commandName] = entry;
+  result.waves[waveKey] ??= [];
+
+  if (!result.waves[waveKey].includes(parsedRow.commandName)) {
     result.waves[waveKey].push(parsedRow.commandName);
-    result.aliases[parsedRow.commandName] = blueprintDirectCommandAliases(
-      parsedRow.commandName
-    );
+  }
+
+  result.aliases[parsedRow.commandName] = blueprintDirectCommandAliases(
+    parsedRow.commandName
+  );
+}
+
+export async function blueprintRuntimeOwnedCommandCatalog(): Promise<CommandCatalogResult> {
+  const result = await addMissingRuntimeOwnedCommandCatalogEntries({
+    commands: {},
+    waves: {},
+    aliases: {}
+  });
+
+  for (const parsedRow of DOCLESS_FALLBACK_CATALOG_ROWS) {
+    if (result.commands[parsedRow.commandName]) {
+      continue;
+    }
+
+    await addDoclessFallbackCommandCatalogEntry(result, parsedRow);
   }
 
   return result;
