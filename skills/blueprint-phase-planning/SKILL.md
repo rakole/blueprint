@@ -98,3 +98,16 @@ does not grant broader tool scope to a command.
 - Explain which gates were enabled or skipped because normalized config said so.
 - Explain overwrite, replace, or revision risk before writes when saved plan bodies would change.
 - Keep the user anchored on the next safe implemented action after planning.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- `/blu-plan-phase` loaded `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`, its `Completion Criteria` were satisfied, and no sibling command reference was treated as active input.
+- Required reads and writes ran in the contract order through runtime FQNs, including phase locate, `phase.plan` contract, authoring context, phase context, research readiness, saved artifact bodies, validation/review evidence when present, plan inventory/read when revising, effective config, model validation, plan write, scoped validation, and synced state update.
+- Persistence used only `mcp_blueprint_blueprint_phase_plan_write` with the validated structured model, `authoringMode: "model-only"`, and `validationMode: "strict"`; no raw `.blueprint/` writes, Markdown fallback, installed-extension edits, runtime file mutations, or unrelated Blueprint state changes occurred.
+- MCP `status`, `written`, `created`, `updated`, `path`, validation diagnostics, warnings, and `reason` fields were treated as authoritative; rejected, invalid, partial, blocked, or skipped work was repaired through MCP or reported honestly.
+- `ask_user` confirmation was satisfied before revising or replacing saved plan bodies or plan sets; additive auto-assigned plan ids did not invent an overwrite gate.
+- Normalized config gates for research, UI, UI safety, and plan check matched the final behavior, and checker output or the inline fallback was resolved, deferred truthfully, or reported as a blocker.
+- Final routing named only implemented Blueprint commands, using `/blu-progress` when the safe next action was ambiguous or not implemented.
+- The final response named the phase, plan ids and returned artifact paths or no-write status, gate decisions, checker/validation result, warnings or blockers, and the next safe implemented action.
