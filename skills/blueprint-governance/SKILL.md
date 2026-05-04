@@ -89,3 +89,17 @@ Load only the active command's structured `input_bundles.commands[...]` referenc
 7. `pause-work` must persist a single durable handoff in `.blueprint/reports/` through MCP and require explicit confirmation before replacing it.
 8. `pause-work` should preserve resumable context without silently creating a git commit; keep the next implemented follow-up on `/blu-resume-work`.
 9. `resume-work` must restore the canonical pause handoff context, clear an active pause condition through `blueprint_state_update`, and then re-anchor `STATE.md` on the live next safe implemented action.
+
+## Completion Self-Check
+
+Before claiming completion, verify:
+
+- The active `/blu-settings`, `/blu-set-profile`, `/blu-health`, `/blu-pause-work`, or `/blu-resume-work` reference from `input_bundles.commands[...]` was loaded and used as the authority; sibling governance references were not treated as active input.
+- Required MCP calls from the active reference ran in order through `mcp_blueprint_*` runtime FQNs, including any required post-write `project_status` or `state_load` reload before final routing.
+- Persistence, when allowed, happened only through the owning MCP tools: config writes through `config_set` or `config_set_profile`, health repair through `config_set` or `state_sync`, pause through `pause_handoff_write` then `state_update`, and resume through `state_update` only.
+- Returned MCP fields were treated as authoritative evidence: `status`, `configPath`, `path`, `handoff`, `updatedKeys`, validation issues, `suggestedRepairs`, warnings, blockers, and reasons determined success, no-write status, or stoppage.
+- Any required `ask_user` confirmation was satisfied before broad resets, saved-defaults writes, `health --repair` writes, or pause handoff replacement; without confirmation, the command reported a no-write result.
+- Validation failures, tool rejections, partial or uninitialized project status, missing config or handoff, skipped repairs, and blockers were repaired only through the active contract's MCP path or reported honestly, not described as successful completion.
+- The command stayed inside its write boundary: no direct `.blueprint/` edits, no roadmap, phase, code, runtime, installed-extension, hidden-state, or planned-only surface mutations, and no defaults write except `/blu-settings` explicit opt-in.
+- Final routing named only implemented Blueprint commands; use `/blu-progress` when the safe next action is ambiguous, read-only, or not implemented.
+- The final response reported concrete returned artifact/config/state paths or no-write status, warnings/blockers, and the next safe implemented action required by the active contract.
