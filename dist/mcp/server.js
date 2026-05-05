@@ -38914,7 +38914,8 @@ __export(project_exports, {
 import { promises as fs5 } from "node:fs";
 import path8 from "node:path";
 function bundledUrl(relativePath) {
-  return new URL(`../../../${relativePath}`, import.meta.url);
+  const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
+  return new URL(`${rootDepth}${relativePath}`, import.meta.url);
 }
 async function pathExists5(targetPath) {
   try {

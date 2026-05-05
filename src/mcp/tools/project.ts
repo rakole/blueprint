@@ -228,7 +228,9 @@ const AVAILABLE_TOOL_NAMES = new Set([
 ]);
 
 function bundledUrl(relativePath: string): URL {
-  return new URL(`../../../${relativePath}`, import.meta.url);
+  const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
+
+  return new URL(`${rootDepth}${relativePath}`, import.meta.url);
 }
 
 async function pathExists(targetPath: string | URL): Promise<boolean> {
