@@ -74,9 +74,9 @@
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_review_scope` -> `{status, phase, files, reviewMode, confirmationRecommended, artifacts, reason, warnings}`
 - `blueprint_artifact_contract_read` -> `{id, requiredHeadings, lockedMarkers, authoringTemplate, modelContract, notes}`
-- `blueprint_artifact_report_authoring_context` -> `{status, reportName, path, phase, schemaPath, baseSchema, taskSchema, allowedNextActions, prerequisiteBlockers, warnings}` with optional `auditFixContext {source, severity, maxAttempts, dryRun, scopeFiles}` for `report.audit-fix`
-- `blueprint_artifact_report_validate_model` -> `{status, valid, reportName, path, phase, schemaPath, taskSchema, diagnostics, normalizedModel, renderPreview, warnings}` with the same `auditFixContext` for `report.audit-fix`
-- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}` with the same `auditFixContext` for `report.audit-fix`
+- `blueprint_artifact_report_authoring_context` -> `{status, reportName, path, phase, schemaPath, baseSchema, taskSchema, writeArgs, allowedNextActions, prerequisiteBlockers, warnings}` with optional `auditFixContext {source, severity, maxAttempts, dryRun, scopeFiles}` for `report.audit-fix`
+- `blueprint_artifact_report_validate_model` -> `{status, valid, reportName, path, phase, schemaPath, taskSchema, diagnostics, repairSummary, normalizedModel, renderPreview, warnings}` with the same `auditFixContext` for `report.audit-fix`
+- `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, issues, diagnostics, suggestedRepairs, warnings}` with the same `auditFixContext` for `report.audit-fix`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
@@ -93,7 +93,7 @@
 - Author only the structured `report.audit-fix` model fields `status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`, then validate that model with `blueprint_artifact_report_validate_model` using the same `auditFixContext`.
 - Persist the durable remediation report through `blueprint_artifact_report_write` with the same validated `model`, the same `auditFixContext`, and bare report name `audit-fix-<phase>`, not Markdown `content` and not a `.blueprint/reports/...` path. Treat the returned `path` as authoritative.
 - Keep the locked wording `Status`, `Readiness`, `Completion State`, `Source`, `Severity Filter`, `Max Attempts`, `Dry Run`, `Evidence Used`, `Fix Scope`, `Changes Applied`, `Remaining Gaps`, and `Next Safe Action` unchanged. Use the extra subheadings `Scope Files`, `Summary Evidence`, `Evidence Ledger`, and `Follow-Up Fixes` only through the canonical render flow.
-- If report model validation or persistence is rejected, repair the structured model against the canonical `report.audit-fix` contract, the narrowed `taskSchema`, and returned diagnostics, then retry once through MCP. If the retry still fails, stop without hand-editing `.blueprint/`.
+- If report model validation or persistence is rejected, repair the structured model against the canonical `report.audit-fix` contract, the narrowed `taskSchema`, `repairSummary`, and returned diagnostics by exact `path`, `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`, then retry once through MCP. If `repairSummary.action` is `reread_authoring_context`, reread authoring context with the complete `auditFixContext` including `scopeFiles` before changing the model. If the retry still fails, stop with the top three diagnostics and `suggestedRepairs` without hand-editing `.blueprint/`.
 - Include commit traceability in the report: pre-fix HEAD reference, any commit SHA(s) created during the run, or `none` when no commit was created.
 - When capturing a todo follow-up, append through `blueprint_artifact_mutate_index` and treat the returned `createdEntryIds` as authoritative instead of inventing todo ids manually.
 

@@ -243,6 +243,8 @@ type ArtifactReportWriteResult = {
     overwritten: boolean;
     status: "created" | "updated" | "reused" | "invalid";
     issues: string[];
+    diagnostics?: McpWriteDiagnostic[];
+    suggestedRepairs?: string[];
     warnings: string[];
 };
 type AddTestsReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -415,13 +417,27 @@ type AuditFixReportModel = {
     nextSafeAction: string;
 };
 type ArtifactReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-type ArtifactReportDiagnostic = {
-    source: ArtifactReportDiagnosticSource;
+type McpWriteDiagnostic = {
     path: string;
     code: string;
     message: string;
+    received?: unknown;
+    allowedValues?: unknown[];
+    missing?: string[];
+    repair: string;
+    retryable: boolean;
+    argsPatch?: Record<string, unknown>;
+};
+type ArtifactReportDiagnostic = McpWriteDiagnostic & {
+    source: ArtifactReportDiagnosticSource;
     context: Record<string, unknown>;
     suggestion: string;
+};
+type ArtifactRepairSummary = {
+    topBlockers: string[];
+    fieldsToChange: string[];
+    action: "retry_validation" | "reread_authoring_context" | "stop";
+    retryable: boolean;
 };
 type ArtifactReportAuthoringContextResult = {
     status: "ready" | "invalid";
@@ -456,7 +472,18 @@ type ArtifactReportAuthoringContextResult = {
         severity: AuditFixReportSeverityFilter;
         maxAttempts: number;
         dryRun: boolean;
+        scopeFiles: string[];
     } | null;
+    writeArgs: {
+        reportName: string;
+        auditFixContext?: {
+            source: AuditFixReportSource;
+            severity: AuditFixReportSeverityFilter;
+            maxAttempts: number;
+            dryRun: boolean;
+            scopeFiles: string[];
+        };
+    };
     allowedNextActions: string[];
     schemaPath: string | null;
     baseSchema: Record<string, unknown> | null;
@@ -475,6 +502,7 @@ type ArtifactReportValidateModelResult = {
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
     diagnostics: ArtifactReportDiagnostic[];
+    repairSummary: ArtifactRepairSummary;
     normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
     renderPreview: string | null;
     warnings: string[];
@@ -494,6 +522,8 @@ type ArtifactCodebaseWriteResult = {
     reused: boolean;
     status: "created" | "updated" | "reused" | "invalid";
     issues: string[];
+    diagnostics?: McpWriteDiagnostic[];
+    suggestedRepairs?: string[];
     warnings: string[];
 };
 type TextWriteOptions = {

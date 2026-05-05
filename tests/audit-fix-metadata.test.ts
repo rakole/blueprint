@@ -110,7 +110,7 @@ test("audit-fix manifest references the remediation tools, agents, and safe rout
   assert.match(commandFile, /Do not duplicate `auditFixContext` or rendered marker values inside the model/i);
   assert.match(
     commandFile,
-    /repair the structured model against the returned diagnostics and retry the MCP flow once/i
+    /repair the structured model against the returned structured diagnostics and retry the MCP flow once/i
   );
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_list")));
@@ -261,8 +261,9 @@ test("audit-fix runtime contract preserves retained classification, fallback, an
   );
   assert.match(
     runtimeContract,
-    /`contract\.modelContract\.schemaPath`, the narrowed `taskSchema`, and\s+MCP diagnostics/i
+    /`contract\.modelContract\.schemaPath`, the narrowed `taskSchema`,\s+`repairSummary`, and structured MCP diagnostics/i
   );
+  assert.match(runtimeContract, /Failed retry: stop with the top three diagnostics plus `suggestedRepairs`/i);
   assert.match(runtimeContract, /No browser\/web\/search-only or generic agent was used as a substitute/i);
   assert.match(runtimeContract, /`blueprint-fixer` remained planned-only and non-routable/);
 });
