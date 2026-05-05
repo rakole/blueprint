@@ -3254,14 +3254,16 @@ const IMPACT_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
 
 const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.verification.model",
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.1.0",
   schemaPath: "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json",
   jsonSchema: readJsonSchemaAsset("phase.verification.model.schema.json"),
   qualityRules: [
     "Do not include model-owned identity keys such as cwd, phase, artifact, path, or content; the write tool owns identity and path derivation.",
     "Cite every completed execution summary from context.summaryPaths in evidenceReviewedSummaryPaths unless the renderer is intentionally allowed to include the complete summary set.",
-    "Keep gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
+    "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
     "Use only allowed coverage states, manual coverage statuses, and gap classes from blueprint_phase_validation_authoring_context.allowedValues.",
+    "Use COVERED or PASS for completed verification rows; lowercase covered is accepted for model ergonomics and normalized to COVERED during rendering.",
+    "Preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when the host/model has that detail.",
     "Use concrete saved-summary, command, artifact, or repo-path evidence; do not leave placeholders, copied examples, or generic none values where real gaps exist."
   ],
   contextBindings: [
@@ -3280,22 +3282,30 @@ const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
     "Gap Classification",
     "Gaps Found",
     "Suggested Repairs",
+    "Session State",
+    "Checkpoint",
+    "Validation Test Matrix",
+    "Result Summary",
+    "Observed Behavior",
+    "Unresolved Gaps",
+    "Structured Gaps",
+    "Follow-Up Fixes",
     "Next Safe Action"
   ],
   minimalValidExample: {
     coverageSummary:
       "Reviewed `.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md`; saved execution evidence supports UAT handoff.",
+    status: "PASS",
     gateState: "PASS",
     signOff: "validated by Blueprint",
-    validationSummary: [
-      "Completed summary 03-01 shows implementation, verification command, and saved evidence for the phase objective."
-    ],
+    validationSummary:
+      "Completed summary 03-01 shows implementation, verification command, and saved evidence for the phase objective.",
     requirementCoverage: [
       {
         requirement: "VAL-01",
         taskOrCheck: "Persist validation evidence",
         evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
-        coverageState: "PASS",
+        coverageState: "COVERED",
         notes: "The summary records the command and artifact evidence used for validation."
       }
     ],
@@ -3306,24 +3316,43 @@ const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
       "Evidence type: saved execution summary",
       "Test infrastructure status: available"
     ],
-    manualOrDeferredCoverage: [
+    manualOrDeferredCoverage: [],
+    gapClassification: [],
+    gapsFound: [],
+    suggestedRepairs: [],
+    sessionState: ["Validation session state: completed from saved summaries."],
+    checkpoint: "none",
+    testMatrix: [
       {
-        item: "none",
-        whyManualOrDeferred: "none",
-        followUp: "none",
-        status: "NONE"
+        number: "1",
+        test: "Saved execution summary review",
+        expectedBehavior: "Summary evidence supports the phase validation claim.",
+        evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+        result: "pass",
+        notes: "Validated from saved Blueprint evidence."
       }
     ],
-    gapClassification: [
+    resultSummary: {
+      total: 1,
+      passed: 1,
+      issues: 0,
+      pending: 0,
+      skipped: 0,
+      blocked: 0
+    },
+    observedBehavior: ["Observed saved summary evidence supports UAT handoff."],
+    unresolvedGaps: ["none"],
+    structuredGaps: [
       {
-        gapClass: "none",
-        scope: "none",
-        evidence: "none",
-        repair: "none"
+        test: "none",
+        truth: "none",
+        status: "none",
+        severity: "none",
+        reason: "none",
+        followUp: "none"
       }
     ],
-    gapsFound: ["none"],
-    suggestedRepairs: ["none"],
+    followUpFixes: ["none"],
     nextSafeAction: "/blu-verify-work 3"
   },
   exampleLeakageSignals: [

@@ -558,7 +558,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(verificationContract.authoringTemplate, /\*\*Gate State:\*\*/);
   assert.match(verificationContract.authoringTemplate, /\*\*Sign-off:\*\*/);
   assert.equal(verificationContract.modelContract?.schemaId, "blueprint.phase.verification.model");
-  assert.equal(verificationContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(verificationContract.modelContract?.schemaVersion, "1.1.0");
   assert.equal(
     verificationContract.modelContract?.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json"
@@ -569,13 +569,18 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     )
   );
   assert.ok(
+    verificationContract.modelContract?.renderedHeadings.includes(
+      "Validation Test Matrix"
+    )
+  );
+  assert.ok(
     verificationContract.modelContract?.qualityRules.some((rule) =>
       /Do not include model-owned identity keys/i.test(rule)
     )
   );
   assert.deepEqual(
     (verificationContract.modelContract?.jsonSchema.required as string[]).slice(0, 3),
-    ["coverageSummary", "gateState", "signOff"]
+    ["coverageSummary", "status", "gateState"]
   );
   assert.deepEqual(verificationContract.lockedMarkers, [
     "**Coverage:**",

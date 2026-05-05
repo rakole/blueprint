@@ -31,14 +31,14 @@ the authority for control flow.
 |------|----------|
 | `blueprint_phase_locate` | Target phase resolution, unresolved-phase recovery, and phase-scoped write boundaries. |
 | `blueprint_phase_summary_index` | Input state, completed versus pending execution evidence, and summary list for detailed reads. |
-| `blueprint_phase_summary_read` | Source evidence for every completed summary; never validate from chat memory alone. |
-| `blueprint_phase_validation_read` with `artifact: "verification"` | State A baseline and overwrite/reuse decision. |
+| `blueprint_phase_summary_read` | Source evidence for every completed summary; never validate from chat memory alone. Its MCP text response includes the full summary body for hosts whose generic file tools ignore `.blueprint/`. |
+| `blueprint_phase_validation_read` with `artifact: "verification"` | State A baseline and overwrite/reuse decision. Its MCP text response includes the full validation artifact body when present. |
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style coverage expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
-| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. |
-| `blueprint_phase_validation_validate_model` with `artifact: "verification"` | AJV task-schema validation, residual quality checks, and canonical markdown render preview from the structured verification payload. |
+| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. Its MCP text response includes the full model schema when present. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. Its MCP text response includes schemas and existing validation content for hosts that expose only text. |
+| `blueprint_phase_validation_validate_model` with `artifact: "verification"` | AJV task-schema validation, residual quality checks, all diagnostics, normalized model, and canonical markdown render preview from the structured verification payload. |
 | `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`; `/blu-validate-phase` passes the validated model with `authoringMode: "model-only"`. |
 | `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
 
@@ -69,7 +69,7 @@ Build a compact but explicit validation map before writing:
 - existing test commands, verification notes, or evidence files cited by
   summaries
 - test infrastructure metadata when visible in saved evidence or repo context
-- coverage state per row: `PASS`, `MANUAL`, `DEFERRED`, or `BLOCKED`
+- coverage state per row: `PASS`, `COVERED`, `MANUAL`, `DEFERRED`, or `BLOCKED`
 - gap class per row: `missing-evidence`, `partial-coverage`,
   `manual-only`, `deferred-test`, `contradiction`, or `none`
 
@@ -108,7 +108,8 @@ the need explicit.
     for implementation/behavior gaps or `/blu-add-tests <phase>` for
     test-generation gaps.
 12. Call `blueprint_phase_validation_validate_model` with the structured evidence payload and treat `status: "valid"` plus `renderPreview` as the pre-write self-check.
-13. Call `blueprint_phase_validation_write` only with the same ready structured `model` and `authoringMode: "model-only"`; do not hand-build or pass the final markdown body from `/blu-validate-phase`. Model writes must not include identity fields such as `phase`, `artifact`, `path`, or `content`.
+13. Author against `phase.verification` model schema `1.1.0`: include `status` equal to `gateState`, use `COVERED` or `PASS` for completed coverage rows, preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when that detail exists, and let MCP normalize scalar `validationSummary`, lowercase `covered`, and empty passing no-gap arrays.
+14. Call `blueprint_phase_validation_write` only with the same ready structured `model` and `authoringMode: "model-only"`; do not hand-build or pass the final markdown body from `/blu-validate-phase`. Model writes must not include identity fields such as `phase`, `artifact`, `path`, or `content`.
 
 ## Capability-Gated Subagent Path
 

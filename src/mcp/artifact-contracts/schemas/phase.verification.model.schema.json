@@ -7,6 +7,7 @@
   "additionalProperties": false,
   "required": [
     "coverageSummary",
+    "status",
     "gateState",
     "signOff",
     "validationSummary",
@@ -24,6 +25,10 @@
       "$ref": "#/$defs/nonEmptyString",
       "description": "Single-line summary rendered in the top Validation Summary metadata."
     },
+    "status": {
+      "$ref": "#/$defs/gateState",
+      "description": "Model-visible verification status. Must match gateState; runtime renderers keep the Gate section and top marker aligned."
+    },
     "gateState": {
       "$ref": "#/$defs/gateState"
     },
@@ -32,12 +37,20 @@
       "description": "Single-line sign-off text rendered in metadata and the Gate State section."
     },
     "validationSummary": {
-      "type": "array",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      ],
       "description": "Concrete validation observations rendered as Markdown bullets.",
-      "minItems": 1,
-      "items": {
-        "$ref": "#/$defs/nonEmptyString"
-      }
+      "x-blueprint-normalizesTo": "array"
     },
     "requirementCoverage": {
       "type": "array",
@@ -67,7 +80,7 @@
     "manualOrDeferredCoverage": {
       "type": "array",
       "description": "Manual-only or deferred coverage rows rendered into a Markdown table. Use an explicit NONE row when no manual or deferred coverage remains.",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "$ref": "#/$defs/manualOrDeferredCoverageRow"
       }
@@ -75,7 +88,7 @@
     "gapClassification": {
       "type": "array",
       "description": "Gap classification rows rendered into a Markdown table. Use an explicit none row when no gaps remain.",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "$ref": "#/$defs/gapClassificationRow"
       }
@@ -83,7 +96,7 @@
     "gapsFound": {
       "type": "array",
       "description": "Concrete gaps or a single explicit none value rendered as Markdown bullets.",
-      "minItems": 1,
+      "minItems": 0,
       "items": {
         "$ref": "#/$defs/nonEmptyString"
       }
@@ -91,6 +104,62 @@
     "suggestedRepairs": {
       "type": "array",
       "description": "Concrete repairs or a single explicit none value rendered as Markdown bullets.",
+      "minItems": 0,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "sessionState": {
+      "type": "array",
+      "description": "Optional validation session state retained from host/model context and rendered as Markdown bullets when present.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "checkpoint": {
+      "$ref": "#/$defs/nonEmptyString",
+      "description": "Optional validation checkpoint label rendered when present."
+    },
+    "testMatrix": {
+      "type": "array",
+      "description": "Optional validation test or evidence matrix rendered into a Markdown table when present.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/testMatrixRow"
+      }
+    },
+    "resultSummary": {
+      "$ref": "#/$defs/resultSummary",
+      "description": "Optional validation result counts rendered when present."
+    },
+    "observedBehavior": {
+      "type": "array",
+      "description": "Optional observed behavior notes rendered as Markdown bullets when present.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "unresolvedGaps": {
+      "type": "array",
+      "description": "Optional unresolved validation gaps rendered as Markdown bullets when present.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "structuredGaps": {
+      "type": "array",
+      "description": "Optional structured gap rows rendered into a Markdown table when present.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/structuredGapRow"
+      }
+    },
+    "followUpFixes": {
+      "type": "array",
+      "description": "Optional follow-up fix candidates rendered as Markdown bullets when present.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/nonEmptyString"
@@ -101,6 +170,65 @@
       "description": "One single-line Blueprint command token with optional arguments. The task schema may narrow this to the allowed next actions for the current phase."
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PASS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gateState": {
+            "const": "PASS"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "PARTIAL"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gateState": {
+            "const": "PARTIAL"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "const": "BLOCKED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "gateState": {
+            "const": "BLOCKED"
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "nonEmptyString": {
       "type": "string",
@@ -138,6 +266,8 @@
       "type": "string",
       "enum": [
         "PASS",
+        "COVERED",
+        "covered",
         "MANUAL",
         "DEFERRED",
         "BLOCKED"
@@ -159,6 +289,35 @@
         "manual-only",
         "deferred-test",
         "contradiction",
+        "none"
+      ]
+    },
+    "testResult": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "pass",
+        "issue",
+        "skipped",
+        "blocked"
+      ]
+    },
+    "structuredGapStatus": {
+      "type": "string",
+      "enum": [
+        "failed",
+        "partial",
+        "blocked",
+        "none"
+      ]
+    },
+    "structuredGapSeverity": {
+      "type": "string",
+      "enum": [
+        "blocker",
+        "major",
+        "minor",
+        "cosmetic",
         "none"
       ]
     },
@@ -234,6 +393,108 @@
           "$ref": "#/$defs/markdownTableCellString"
         },
         "repair": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      }
+    },
+    "testMatrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "test",
+        "expectedBehavior",
+        "evidence",
+        "result",
+        "notes"
+      ],
+      "properties": {
+        "number": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "test": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "expectedBehavior": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "evidence": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "result": {
+          "$ref": "#/$defs/testResult"
+        },
+        "notes": {
+          "$ref": "#/$defs/markdownTableCellString"
+        }
+      }
+    },
+    "resultSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "passed",
+        "issues",
+        "pending",
+        "skipped",
+        "blocked"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "structuredGapRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "test",
+        "truth",
+        "status",
+        "severity",
+        "reason",
+        "followUp"
+      ],
+      "properties": {
+        "test": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "truth": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "status": {
+          "$ref": "#/$defs/structuredGapStatus"
+        },
+        "severity": {
+          "$ref": "#/$defs/structuredGapSeverity"
+        },
+        "reason": {
+          "$ref": "#/$defs/markdownTableCellString"
+        },
+        "followUp": {
           "$ref": "#/$defs/markdownTableCellString"
         }
       }

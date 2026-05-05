@@ -18278,14 +18278,16 @@ var init_artifact_contracts = __esm({
     };
     PHASE_VERIFICATION_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.verification.model",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       schemaPath: "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json",
       jsonSchema: readJsonSchemaAsset("phase.verification.model.schema.json"),
       qualityRules: [
         "Do not include model-owned identity keys such as cwd, phase, artifact, path, or content; the write tool owns identity and path derivation.",
         "Cite every completed execution summary from context.summaryPaths in evidenceReviewedSummaryPaths unless the renderer is intentionally allowed to include the complete summary set.",
-        "Keep gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
+        "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
         "Use only allowed coverage states, manual coverage statuses, and gap classes from blueprint_phase_validation_authoring_context.allowedValues.",
+        "Use COVERED or PASS for completed verification rows; lowercase covered is accepted for model ergonomics and normalized to COVERED during rendering.",
+        "Preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when the host/model has that detail.",
         "Use concrete saved-summary, command, artifact, or repo-path evidence; do not leave placeholders, copied examples, or generic none values where real gaps exist."
       ],
       contextBindings: [
@@ -18304,21 +18306,28 @@ var init_artifact_contracts = __esm({
         "Gap Classification",
         "Gaps Found",
         "Suggested Repairs",
+        "Session State",
+        "Checkpoint",
+        "Validation Test Matrix",
+        "Result Summary",
+        "Observed Behavior",
+        "Unresolved Gaps",
+        "Structured Gaps",
+        "Follow-Up Fixes",
         "Next Safe Action"
       ],
       minimalValidExample: {
         coverageSummary: "Reviewed `.blueprint/phases/03-phase-discovery/03-01-SUMMARY.md`; saved execution evidence supports UAT handoff.",
+        status: "PASS",
         gateState: "PASS",
         signOff: "validated by Blueprint",
-        validationSummary: [
-          "Completed summary 03-01 shows implementation, verification command, and saved evidence for the phase objective."
-        ],
+        validationSummary: "Completed summary 03-01 shows implementation, verification command, and saved evidence for the phase objective.",
         requirementCoverage: [
           {
             requirement: "VAL-01",
             taskOrCheck: "Persist validation evidence",
             evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
-            coverageState: "PASS",
+            coverageState: "COVERED",
             notes: "The summary records the command and artifact evidence used for validation."
           }
         ],
@@ -18329,24 +18338,43 @@ var init_artifact_contracts = __esm({
           "Evidence type: saved execution summary",
           "Test infrastructure status: available"
         ],
-        manualOrDeferredCoverage: [
+        manualOrDeferredCoverage: [],
+        gapClassification: [],
+        gapsFound: [],
+        suggestedRepairs: [],
+        sessionState: ["Validation session state: completed from saved summaries."],
+        checkpoint: "none",
+        testMatrix: [
           {
-            item: "none",
-            whyManualOrDeferred: "none",
-            followUp: "none",
-            status: "NONE"
+            number: "1",
+            test: "Saved execution summary review",
+            expectedBehavior: "Summary evidence supports the phase validation claim.",
+            evidence: ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+            result: "pass",
+            notes: "Validated from saved Blueprint evidence."
           }
         ],
-        gapClassification: [
+        resultSummary: {
+          total: 1,
+          passed: 1,
+          issues: 0,
+          pending: 0,
+          skipped: 0,
+          blocked: 0
+        },
+        observedBehavior: ["Observed saved summary evidence supports UAT handoff."],
+        unresolvedGaps: ["none"],
+        structuredGaps: [
           {
-            gapClass: "none",
-            scope: "none",
-            evidence: "none",
-            repair: "none"
+            test: "none",
+            truth: "none",
+            status: "none",
+            severity: "none",
+            reason: "none",
+            followUp: "none"
           }
         ],
-        gapsFound: ["none"],
-        suggestedRepairs: ["none"],
+        followUpFixes: ["none"],
         nextSafeAction: "/blu-verify-work 3"
       },
       exampleLeakageSignals: [
@@ -37709,7 +37737,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: VALIDATE_PHASE_REQUIRED_TOOLS,
         optionalAgents: VALIDATION_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.",
+        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use schema/evidence-rich MCP text from the validation and contract tools when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -44829,7 +44857,7 @@ function buildPhaseVerificationTaskSchema(args) {
               type: "object",
               required: ["coverageState"],
               properties: {
-                coverageState: { const: "PASS" }
+                coverageState: { enum: ["PASS", "COVERED", "covered"] }
               }
             }
           },
@@ -44877,6 +44905,9 @@ function buildPhaseVerificationTaskSchema(args) {
       then: {
         properties: {
           nextSafeAction: { enum: args.repairActions },
+          manualOrDeferredCoverage: {
+            minItems: 1
+          },
           gapClassification: {
             contains: {
               type: "object",
@@ -45221,10 +45252,85 @@ function normalizeRenderList(value) {
   }
   return value === void 0 ? [] : [value];
 }
+function normalizeVerificationCoverageState(value) {
+  const normalized = String(value ?? "").trim();
+  return normalized.toLowerCase() === "covered" ? "COVERED" : normalized;
+}
+function normalizeVerificationStructuredModel(model) {
+  return {
+    ...model,
+    validationSummary: normalizeRenderList(model.validationSummary),
+    requirementCoverage: model.requirementCoverage.map((row) => ({
+      ...row,
+      coverageState: normalizeVerificationCoverageState(row.coverageState)
+    }))
+  };
+}
+function renderVerificationOptionalSections(args) {
+  const sections = [];
+  if ((args.sessionState ?? []).length > 0) {
+    sections.push(`## Session State
+
+${renderBulletList2(args.sessionState)}`);
+  }
+  if (args.checkpoint?.trim()) {
+    sections.push(`## Checkpoint
+
+- ${args.checkpoint.trim()}`);
+  }
+  if ((args.testMatrix ?? []).length > 0) {
+    const testRows = (args.testMatrix ?? []).map(
+      (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+    ).join("\n");
+    sections.push(`## Validation Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+${testRows}`);
+  }
+  if (args.resultSummary) {
+    sections.push(`## Result Summary
+
+- Total: ${args.resultSummary.total ?? ""}
+- Passed: ${args.resultSummary.passed ?? ""}
+- Issues: ${args.resultSummary.issues ?? ""}
+- Pending: ${args.resultSummary.pending ?? ""}
+- Skipped: ${args.resultSummary.skipped ?? ""}
+- Blocked: ${args.resultSummary.blocked ?? ""}`);
+  }
+  if ((args.observedBehavior ?? []).length > 0) {
+    sections.push(`## Observed Behavior
+
+${renderBulletList2(args.observedBehavior)}`);
+  }
+  if ((args.unresolvedGaps ?? []).length > 0) {
+    sections.push(`## Unresolved Gaps
+
+${renderBulletList2(args.unresolvedGaps)}`);
+  }
+  if ((args.structuredGaps ?? []).length > 0) {
+    const structuredGapRows = (args.structuredGaps ?? []).map(
+      (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+    ).join("\n");
+    sections.push(`## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+${structuredGapRows}`);
+  }
+  if ((args.followUpFixes ?? []).length > 0) {
+    sections.push(`## Follow-Up Fixes
+
+${renderBulletList2(args.followUpFixes)}`);
+  }
+  return sections.length > 0 ? `
+
+${sections.join("\n\n")}` : "";
+}
 function renderVerificationContent(args, resolved, summaryPaths) {
   const evidenceReviewedSummaryPaths = args.evidenceReviewedSummaryPaths ?? summaryPaths;
   const requirementRows = (args.requirementCoverage ?? []).map(
-    (row) => `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(row.coverageState)} | ${markdownCell(row.notes)} |`
+    (row) => `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(normalizeVerificationCoverageState(row.coverageState))} | ${markdownCell(row.notes)} |`
   ).join("\n");
   const manualRows = (args.manualOrDeferredCoverage ?? []).length > 0 ? (args.manualOrDeferredCoverage ?? []).map(
     (row) => `| ${markdownCell(row.item)} | ${markdownCell(row.whyManualOrDeferred)} | ${markdownCell(row.followUp)} | ${markdownCell(row.status)} |`
@@ -45280,7 +45386,7 @@ ${renderBulletList2(args.gapsFound)}
 
 ## Suggested Repairs
 
-${renderBulletList2(args.suggestedRepairs)}
+${renderBulletList2(args.suggestedRepairs)}${renderVerificationOptionalSections(args)}
 
 ## Next Safe Action
 
@@ -45607,7 +45713,7 @@ async function blueprintPhaseValidationValidateModel(args) {
       );
     }
     if (schemaValid) {
-      normalizedModel = args.artifact === "verification" ? modelObject : modelObject;
+      normalizedModel = args.artifact === "verification" ? normalizeVerificationStructuredModel(modelObject) : modelObject;
     }
   }
   let renderPreview = null;
@@ -49363,7 +49469,7 @@ var init_phase = __esm({
     PHASE_VALIDATION_ALLOWED_VALUES = {
       verification: {
         gateStates: ["PASS", "PARTIAL", "BLOCKED"],
-        coverageStates: ["PASS", "MANUAL", "DEFERRED", "BLOCKED"],
+        coverageStates: ["PASS", "COVERED", "covered", "MANUAL", "DEFERRED", "BLOCKED"],
         manualCoverageStatuses: ["MANUAL", "DEFERRED", "NONE"],
         gapClasses: [
           "missing-evidence",
@@ -51994,6 +52100,48 @@ function hasActionableValidationListSignal(section) {
 function isLiteralNoneValidationCell(value) {
   return normalizeValidationSignal(value ?? "") === "none";
 }
+function hasMarkdownSection(content, heading) {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*(?:\\n|$)`).test(content);
+}
+function validateOptionalVerificationListSection(content, heading, issues) {
+  if (!hasMarkdownSection(content, heading)) {
+    return;
+  }
+  const section = extractMarkdownSection5(content, heading);
+  if (!hasActionableValidationListSignal(section) && !/\bnone\b/i.test(section)) {
+    issues.push(`Verification artifact optional section ${heading} must include at least one populated bullet.`);
+  }
+}
+function validateOptionalVerificationTableSection(content, heading, requiredColumns, issues) {
+  if (!hasMarkdownSection(content, heading)) {
+    return;
+  }
+  const rows = extractMarkdownTableDataRows(extractMarkdownSection5(content, heading));
+  if (rows.length === 0) {
+    issues.push(`Verification artifact optional section ${heading} must include at least one populated table row.`);
+    return;
+  }
+  if (rows.some((cells) => cells.length < requiredColumns)) {
+    issues.push(`Verification artifact optional section ${heading} must keep all expected table columns populated.`);
+  }
+}
+function hasActionableVerificationStructuredGapSignal(content) {
+  if (!hasMarkdownSection(content, "Structured Gaps")) {
+    return false;
+  }
+  return extractMarkdownTableDataRows(extractMarkdownSection5(content, "Structured Gaps")).some((cells) => cells.some((cell) => !isLiteralNoneValidationCell(cell)));
+}
+function hasActionableVerificationResultCounts(content) {
+  if (!hasMarkdownSection(content, "Result Summary")) {
+    return false;
+  }
+  const resultSummary = extractMarkdownSection5(content, "Result Summary");
+  return ["Issues", "Pending", "Blocked"].some((label) => {
+    const match = resultSummary.match(new RegExp(`^\\s*-\\s*${label}:\\s*(\\d+)\\s*$`, "mi"));
+    return match ? Number.parseInt(match[1] ?? "0", 10) > 0 : false;
+  });
+}
 function validateModelExampleLeakage(content, contractId, artifactLabel) {
   const modelContract = readArtifactContract(contractId).modelContract;
   if (!modelContract) {
@@ -52159,9 +52307,39 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
   }
   const gapsFound = extractMarkdownSection5(content, "Gaps Found");
   const suggestedRepairs = extractMarkdownSection5(content, "Suggested Repairs");
+  const unresolvedGaps = extractMarkdownSection5(content, "Unresolved Gaps");
+  const followUpFixes = extractMarkdownSection5(content, "Follow-Up Fixes");
   const hasActionableGapsFound = hasActionableValidationListSignal(gapsFound);
   const hasActionableRepairs = hasActionableValidationListSignal(suggestedRepairs);
-  const hasUnresolvedValidationGap = hasUnresolvedCoverageState || hasUnresolvedManualCoverage || hasActionableGapClass || hasActionableGapsFound || hasActionableRepairs;
+  const hasActionableUnresolvedGaps = hasActionableValidationListSignal(unresolvedGaps);
+  const hasActionableFollowUpFixes = hasActionableValidationListSignal(followUpFixes);
+  const hasActionableStructuredGaps = hasActionableVerificationStructuredGapSignal(content);
+  const hasActionableResultCounts = hasActionableVerificationResultCounts(content);
+  validateOptionalVerificationListSection(content, "Session State", issues);
+  validateOptionalVerificationListSection(content, "Observed Behavior", issues);
+  validateOptionalVerificationListSection(content, "Unresolved Gaps", issues);
+  validateOptionalVerificationListSection(content, "Follow-Up Fixes", issues);
+  validateOptionalVerificationTableSection(content, "Validation Test Matrix", 6, issues);
+  validateOptionalVerificationTableSection(content, "Structured Gaps", 6, issues);
+  if (hasMarkdownSection(content, "Checkpoint")) {
+    const checkpoint = extractMarkdownSection5(content, "Checkpoint");
+    if (!hasActionableValidationListSignal(checkpoint) && !/\bnone\b/i.test(checkpoint)) {
+      issues.push("Verification artifact optional section Checkpoint must include a concrete checkpoint bullet.");
+    }
+  }
+  if (hasMarkdownSection(content, "Result Summary")) {
+    const resultSummary = extractMarkdownSection5(content, "Result Summary");
+    const requiredResultLabels = ["Total", "Passed", "Issues", "Pending", "Skipped", "Blocked"];
+    const missingLabels = requiredResultLabels.filter(
+      (label) => !new RegExp(`^\\s*-\\s*${label}:\\s*\\d+\\s*$`, "mi").test(resultSummary)
+    );
+    if (missingLabels.length > 0) {
+      issues.push(
+        `Verification artifact optional section Result Summary must include numeric ${missingLabels.join(", ")} count(s).`
+      );
+    }
+  }
+  const hasUnresolvedValidationGap = hasUnresolvedCoverageState || hasUnresolvedManualCoverage || hasActionableGapClass || hasActionableGapsFound || hasActionableRepairs || hasActionableUnresolvedGaps || hasActionableFollowUpFixes || hasActionableStructuredGaps || hasActionableResultCounts;
   const nextSafeAction = extractMarkdownSection5(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
@@ -57696,7 +57874,13 @@ var init_artifacts = __esm({
       "Explicit blocker, follow-up, or `none`.",
       "Explicit next repair, follow-up, or `none`."
     ];
-    VALID_VERIFICATION_COVERAGE_STATES = /* @__PURE__ */ new Set(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]);
+    VALID_VERIFICATION_COVERAGE_STATES = /* @__PURE__ */ new Set([
+      "PASS",
+      "COVERED",
+      "MANUAL",
+      "DEFERRED",
+      "BLOCKED"
+    ]);
     VALID_VERIFICATION_MANUAL_COVERAGE_STATES = /* @__PURE__ */ new Set(["MANUAL", "DEFERRED", "NONE"]);
     VALID_VERIFICATION_GAP_CLASSES = /* @__PURE__ */ new Set([
       "missing-evidence",
@@ -68694,11 +68878,109 @@ function summarizeToolResult(toolName, result) {
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
+var RICH_TEXT_TOOL_NAMES = /* @__PURE__ */ new Set([
+  "blueprint_artifact_contract_read",
+  "blueprint_phase_validation_authoring_context",
+  "blueprint_phase_validation_validate_model",
+  "blueprint_phase_summary_read",
+  "blueprint_phase_validation_read"
+]);
+function stringifyForToolText(value) {
+  return JSON.stringify(value, null, 2);
+}
+function appendJsonSection(sections, heading, value) {
+  if (value === void 0 || value === null) {
+    return;
+  }
+  sections.push(`## ${heading}
+
+\`\`\`json
+${stringifyForToolText(value)}
+\`\`\``);
+}
+function appendMarkdownSection(sections, heading, value) {
+  if (typeof value !== "string" || value.length === 0) {
+    return;
+  }
+  sections.push(`## ${heading}
+
+\`\`\`\`markdown
+${value}
+\`\`\`\``);
+}
+function appendNestedMarkdownSection(sections, heading, value, key) {
+  const record2 = asRecord2(value);
+  appendMarkdownSection(sections, heading, record2?.[key]);
+}
+function getContractFromResult(result) {
+  return asRecord2(result.contract);
+}
+function appendArtifactContractReadDetails(sections, result) {
+  const contract = getContractFromResult(result);
+  const modelContract = asRecord2(contract?.modelContract);
+  appendMarkdownSection(sections, "Authoring Template", contract?.authoringTemplate);
+  appendJsonSection(sections, "Model Contract", modelContract);
+  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
+}
+function appendValidationAuthoringContextDetails(sections, result) {
+  const contract = getContractFromResult(result);
+  const modelContract = asRecord2(contract?.modelContract);
+  appendJsonSection(sections, "Allowed Values", result.allowedValues);
+  appendJsonSection(sections, "Summary Evidence", result.summaryEvidence);
+  appendJsonSection(sections, "Base Model Schema", result.baseSchema);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
+  appendNestedMarkdownSection(sections, "Existing Validation Artifact", result.existing, "content");
+  appendNestedMarkdownSection(sections, "Ready Verification Artifact", result.verification, "content");
+}
+function appendValidationModelDetails(sections, result) {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
+  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
+}
+function appendRichToolText(toolName, result, summary) {
+  if (!RICH_TEXT_TOOL_NAMES.has(toolName)) {
+    return summary;
+  }
+  const sections = [];
+  if (toolName === "blueprint_artifact_contract_read") {
+    appendArtifactContractReadDetails(sections, result);
+  }
+  if (toolName === "blueprint_phase_validation_authoring_context") {
+    appendValidationAuthoringContextDetails(sections, result);
+  }
+  if (toolName === "blueprint_phase_validation_validate_model") {
+    appendValidationModelDetails(sections, result);
+  }
+  if (toolName === "blueprint_phase_summary_read") {
+    appendMarkdownSection(sections, "Summary Artifact Body", result.content);
+    appendJsonSection(sections, "Summary Validation", result.validation);
+    appendJsonSection(sections, "Summary Metadata", result.metadata);
+  }
+  if (toolName === "blueprint_phase_validation_read") {
+    appendMarkdownSection(sections, "Validation Artifact Body", result.content);
+    appendJsonSection(sections, "Validation State", {
+      validation: result.validation,
+      verificationReadyForUat: result.verificationReadyForUat,
+      uatStatus: result.uatStatus,
+      resumeState: result.resumeState,
+      checkpoint: result.checkpoint,
+      complete: result.complete,
+      summaryPaths: result.summaryPaths
+    });
+  }
+  return sections.length > 0 ? `${summary}
+
+${sections.join("\n\n")}` : summary;
+}
 function createToolResponseContent(toolName, result) {
+  const summary = summarizeToolResult(toolName, result);
   return [
     {
       type: "text",
-      text: summarizeToolResult(toolName, result)
+      text: appendRichToolText(toolName, result, summary)
     }
   ];
 }

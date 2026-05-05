@@ -218,9 +218,44 @@ type VerificationGapClassificationRow = {
   repair?: string;
 };
 
+type VerificationCoverageState =
+  | "PASS"
+  | "COVERED"
+  | "MANUAL"
+  | "DEFERRED"
+  | "BLOCKED";
+
+type VerificationTestMatrixRow = {
+  number?: string;
+  test?: string;
+  expectedBehavior?: string;
+  evidence?: string;
+  result?: "pending" | "pass" | "issue" | "skipped" | "blocked";
+  notes?: string;
+};
+
+type VerificationResultSummary = {
+  total?: number;
+  passed?: number;
+  issues?: number;
+  pending?: number;
+  skipped?: number;
+  blocked?: number;
+};
+
+type VerificationStructuredGapRow = {
+  test?: string;
+  truth?: string;
+  status?: "failed" | "partial" | "blocked" | "none";
+  severity?: "blocker" | "major" | "minor" | "cosmetic" | "none";
+  reason?: string;
+  followUp?: string;
+};
+
 type VerificationRenderArgs = PhaseLookupArgs & {
   artifact: "verification";
   coverageSummary?: string;
+  status?: string;
   gateState?: string;
   signOff?: string;
   validationSummary?: string | string[];
@@ -231,19 +266,28 @@ type VerificationRenderArgs = PhaseLookupArgs & {
   gapClassification?: VerificationGapClassificationRow[];
   gapsFound?: string[];
   suggestedRepairs?: string[];
+  sessionState?: string[];
+  checkpoint?: string;
+  testMatrix?: VerificationTestMatrixRow[];
+  resultSummary?: VerificationResultSummary;
+  observedBehavior?: string[];
+  unresolvedGaps?: string[];
+  structuredGaps?: VerificationStructuredGapRow[];
+  followUpFixes?: string[];
   nextSafeAction?: string;
 };
 
 type PhaseVerificationStructuredModel = {
   coverageSummary: string;
+  status: "PASS" | "PARTIAL" | "BLOCKED";
   gateState: "PASS" | "PARTIAL" | "BLOCKED";
   signOff: string;
-  validationSummary: string[];
+  validationSummary: string | string[];
   requirementCoverage: Array<{
     requirement: string;
     taskOrCheck: string;
     evidence: string;
-    coverageState: "PASS" | "MANUAL" | "DEFERRED" | "BLOCKED";
+    coverageState: VerificationCoverageState | "covered";
     notes: string;
   }>;
   evidenceReviewedSummaryPaths: string[];
@@ -268,6 +312,14 @@ type PhaseVerificationStructuredModel = {
   }>;
   gapsFound: string[];
   suggestedRepairs: string[];
+  sessionState?: string[];
+  checkpoint?: string;
+  testMatrix?: Array<Required<VerificationTestMatrixRow>>;
+  resultSummary?: Required<VerificationResultSummary>;
+  observedBehavior?: string[];
+  unresolvedGaps?: string[];
+  structuredGaps?: Array<Required<VerificationStructuredGapRow>>;
+  followUpFixes?: string[];
   nextSafeAction: string;
 };
 
@@ -5611,7 +5663,7 @@ ${renderSummaryTable(["Kind", "Source", "Summary"], evidenceRows)}
 const PHASE_VALIDATION_ALLOWED_VALUES: PhaseValidationAllowedValues = {
   verification: {
     gateStates: ["PASS", "PARTIAL", "BLOCKED"],
-    coverageStates: ["PASS", "MANUAL", "DEFERRED", "BLOCKED"],
+    coverageStates: ["PASS", "COVERED", "covered", "MANUAL", "DEFERRED", "BLOCKED"],
     manualCoverageStatuses: ["MANUAL", "DEFERRED", "NONE"],
     gapClasses: [
       "missing-evidence",
@@ -7001,7 +7053,7 @@ function buildPhaseVerificationTaskSchema(args: {
               type: "object",
               required: ["coverageState"],
               properties: {
-                coverageState: { const: "PASS" }
+                coverageState: { enum: ["PASS", "COVERED", "covered"] }
               }
             }
           },
@@ -7049,6 +7101,9 @@ function buildPhaseVerificationTaskSchema(args: {
       then: {
         properties: {
           nextSafeAction: { enum: args.repairActions },
+          manualOrDeferredCoverage: {
+            minItems: 1
+          },
           gapClassification: {
             contains: {
               type: "object",
@@ -7511,6 +7566,92 @@ function normalizeRenderList(value: string | string[] | undefined): string[] {
   return value === undefined ? [] : [value];
 }
 
+function normalizeVerificationCoverageState(value: unknown): string {
+  const normalized = String(value ?? "").trim();
+
+  return normalized.toLowerCase() === "covered" ? "COVERED" : normalized;
+}
+
+function normalizeVerificationStructuredModel(
+  model: PhaseVerificationStructuredModel
+): PhaseVerificationStructuredModel {
+  return {
+    ...model,
+    validationSummary: normalizeRenderList(model.validationSummary),
+    requirementCoverage: model.requirementCoverage.map((row) => ({
+      ...row,
+      coverageState: normalizeVerificationCoverageState(row.coverageState) as
+        | VerificationCoverageState
+        | "covered"
+    }))
+  };
+}
+
+function renderVerificationOptionalSections(args: VerificationRenderArgs): string {
+  const sections: string[] = [];
+
+  if ((args.sessionState ?? []).length > 0) {
+    sections.push(`## Session State\n\n${renderBulletList(args.sessionState)}`);
+  }
+
+  if (args.checkpoint?.trim()) {
+    sections.push(`## Checkpoint\n\n- ${args.checkpoint.trim()}`);
+  }
+
+  if ((args.testMatrix ?? []).length > 0) {
+    const testRows = (args.testMatrix ?? [])
+      .map((row, index) =>
+        `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+      )
+      .join("\n");
+
+    sections.push(`## Validation Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+${testRows}`);
+  }
+
+  if (args.resultSummary) {
+    sections.push(`## Result Summary
+
+- Total: ${args.resultSummary.total ?? ""}
+- Passed: ${args.resultSummary.passed ?? ""}
+- Issues: ${args.resultSummary.issues ?? ""}
+- Pending: ${args.resultSummary.pending ?? ""}
+- Skipped: ${args.resultSummary.skipped ?? ""}
+- Blocked: ${args.resultSummary.blocked ?? ""}`);
+  }
+
+  if ((args.observedBehavior ?? []).length > 0) {
+    sections.push(`## Observed Behavior\n\n${renderBulletList(args.observedBehavior)}`);
+  }
+
+  if ((args.unresolvedGaps ?? []).length > 0) {
+    sections.push(`## Unresolved Gaps\n\n${renderBulletList(args.unresolvedGaps)}`);
+  }
+
+  if ((args.structuredGaps ?? []).length > 0) {
+    const structuredGapRows = (args.structuredGaps ?? [])
+      .map((row) =>
+        `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+      )
+      .join("\n");
+
+    sections.push(`## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+${structuredGapRows}`);
+  }
+
+  if ((args.followUpFixes ?? []).length > 0) {
+    sections.push(`## Follow-Up Fixes\n\n${renderBulletList(args.followUpFixes)}`);
+  }
+
+  return sections.length > 0 ? `\n\n${sections.join("\n\n")}` : "";
+}
+
 function renderVerificationContent(
   args: VerificationRenderArgs,
   resolved: ResolvedPhaseLocation,
@@ -7520,7 +7661,7 @@ function renderVerificationContent(
   const requirementRows = (args.requirementCoverage ?? [])
     .map(
       (row) =>
-        `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(row.coverageState)} | ${markdownCell(row.notes)} |`
+        `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(normalizeVerificationCoverageState(row.coverageState))} | ${markdownCell(row.notes)} |`
     )
     .join("\n");
   const manualRows =
@@ -7592,7 +7733,7 @@ ${renderBulletList(args.gapsFound)}
 
 ## Suggested Repairs
 
-${renderBulletList(args.suggestedRepairs)}
+${renderBulletList(args.suggestedRepairs)}${renderVerificationOptionalSections(args)}
 
 ## Next Safe Action
 
@@ -7989,7 +8130,7 @@ export async function blueprintPhaseValidationValidateModel(
     if (schemaValid) {
       normalizedModel =
         args.artifact === "verification"
-          ? modelObject as PhaseVerificationStructuredModel
+          ? normalizeVerificationStructuredModel(modelObject as PhaseVerificationStructuredModel)
           : modelObject as PhaseUatStructuredModel;
     }
   }

@@ -57,6 +57,7 @@
 - existing validation artifacts through `blueprint_phase_validation_read`
 - schema-first validation authoring inputs through `blueprint_phase_validation_authoring_context`
 - canonical authoring templates, optional structured `modelContract`, and required-tool derivation through `blueprint_artifact_contract_read`
+- For Tabnine or other hosts that expose only MCP `content.text`, the contract, summary-read, validation-read, authoring-context, and validate-model tools include full schemas, diagnostics, render previews, and evidence bodies in their text response; do not fall back to shell reads of `.blueprint/`.
 
 
 ## Blueprint And Global State Writes
@@ -91,6 +92,7 @@
 - Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
 - Read `blueprint_phase_validation_authoring_context` before final authoring so the mandatory completed-summary citations, allowed values, routing rules, existing baseline, prerequisite blockers, `schemaPath`, base schema, and narrowed `taskSchema` are explicit.
 - Build a structured verification evidence payload, call `blueprint_phase_validation_validate_model` for the pre-write self-check, and call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
+- The `phase.verification` model contract is version `1.1.0`: include `status` plus `gateState` with matching values, use `COVERED` or `PASS` for passing coverage rows (`covered` is accepted and normalized), scalar `validationSummary` is accepted and normalized, empty no-gap arrays are allowed only for passing gates, and optional session state, checkpoint, test matrix, result summary, observed behavior, unresolved gaps, structured gaps, and follow-up fixes are preserved in rendered `XX-VERIFICATION.md`.
 - Keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and treat `blueprint_phase_validation_validate_model.diagnostics` plus `renderPreview` as the pre-write self-check result.
 - Build the concrete requirement/task coverage map, verifier behavior, no-subagent fallback, and retry path from the detailed runtime reference instead of duplicating that step-by-step contract in this doc.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.

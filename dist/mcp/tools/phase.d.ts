@@ -147,9 +147,35 @@ type VerificationGapClassificationRow = {
     evidence?: string;
     repair?: string;
 };
+type VerificationCoverageState = "PASS" | "COVERED" | "MANUAL" | "DEFERRED" | "BLOCKED";
+type VerificationTestMatrixRow = {
+    number?: string;
+    test?: string;
+    expectedBehavior?: string;
+    evidence?: string;
+    result?: "pending" | "pass" | "issue" | "skipped" | "blocked";
+    notes?: string;
+};
+type VerificationResultSummary = {
+    total?: number;
+    passed?: number;
+    issues?: number;
+    pending?: number;
+    skipped?: number;
+    blocked?: number;
+};
+type VerificationStructuredGapRow = {
+    test?: string;
+    truth?: string;
+    status?: "failed" | "partial" | "blocked" | "none";
+    severity?: "blocker" | "major" | "minor" | "cosmetic" | "none";
+    reason?: string;
+    followUp?: string;
+};
 type VerificationRenderArgs = PhaseLookupArgs & {
     artifact: "verification";
     coverageSummary?: string;
+    status?: string;
     gateState?: string;
     signOff?: string;
     validationSummary?: string | string[];
@@ -160,18 +186,27 @@ type VerificationRenderArgs = PhaseLookupArgs & {
     gapClassification?: VerificationGapClassificationRow[];
     gapsFound?: string[];
     suggestedRepairs?: string[];
+    sessionState?: string[];
+    checkpoint?: string;
+    testMatrix?: VerificationTestMatrixRow[];
+    resultSummary?: VerificationResultSummary;
+    observedBehavior?: string[];
+    unresolvedGaps?: string[];
+    structuredGaps?: VerificationStructuredGapRow[];
+    followUpFixes?: string[];
     nextSafeAction?: string;
 };
 type PhaseVerificationStructuredModel = {
     coverageSummary: string;
+    status: "PASS" | "PARTIAL" | "BLOCKED";
     gateState: "PASS" | "PARTIAL" | "BLOCKED";
     signOff: string;
-    validationSummary: string[];
+    validationSummary: string | string[];
     requirementCoverage: Array<{
         requirement: string;
         taskOrCheck: string;
         evidence: string;
-        coverageState: "PASS" | "MANUAL" | "DEFERRED" | "BLOCKED";
+        coverageState: VerificationCoverageState | "covered";
         notes: string;
     }>;
     evidenceReviewedSummaryPaths: string[];
@@ -190,6 +225,14 @@ type PhaseVerificationStructuredModel = {
     }>;
     gapsFound: string[];
     suggestedRepairs: string[];
+    sessionState?: string[];
+    checkpoint?: string;
+    testMatrix?: Array<Required<VerificationTestMatrixRow>>;
+    resultSummary?: Required<VerificationResultSummary>;
+    observedBehavior?: string[];
+    unresolvedGaps?: string[];
+    structuredGaps?: Array<Required<VerificationStructuredGapRow>>;
+    followUpFixes?: string[];
     nextSafeAction: string;
 };
 type PhaseUatStructuredModel = {

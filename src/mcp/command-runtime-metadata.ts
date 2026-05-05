@@ -1677,7 +1677,7 @@ export const VALIDATE_PHASE_RUNTIME_METADATA = {
     optionalAgents: VALIDATION_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.",
+      "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use schema/evidence-rich MCP text from the validation and contract tools when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

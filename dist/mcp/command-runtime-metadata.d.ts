@@ -812,7 +812,7 @@ export declare const VALIDATE_PHASE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.";
+        readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use schema/evidence-rich MCP text from the validation and contract tools when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.";
         readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
     };
 };
@@ -2605,7 +2605,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_validate_model", "blueprint_phase_validation_write", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_validate", "blueprint_state_load", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate and route only to implemented follow-up commands.";
+            readonly contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use schema/evidence-rich MCP text from the validation and contract tools when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.";
             readonly evidenceState: readonly ["locked", "source-owned", "needs-behavior-audit"];
         };
     };
