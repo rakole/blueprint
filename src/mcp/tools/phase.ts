@@ -1802,6 +1802,101 @@ function parseRequirements(value: string | null): string[] {
     );
 }
 
+function parseRoadmapPhaseTitle(value: string): {
+  phaseName: string;
+  requirements: string[];
+} {
+  const unbolded = value.trim().replace(/\*\*$/u, "").trim();
+  const requirementsMatch = unbolded.match(/\s*\(\s*Requirements:\s*([^)]+)\)\s*$/i);
+
+  if (!requirementsMatch) {
+    return {
+      phaseName: unbolded,
+      requirements: []
+    };
+  }
+
+  return {
+    phaseName: unbolded.slice(0, requirementsMatch.index).trim(),
+    requirements: parseRequirements(requirementsMatch[1] ?? null)
+  };
+}
+
+function parseRoadmapPhaseLine(line: string): {
+  completed: boolean;
+  phaseNumber: string;
+  phaseName: string;
+  summary: string | null;
+  requirements: string[];
+} | null {
+  const match = line.match(
+    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const title = parseRoadmapPhaseTitle(match[3] ?? "");
+
+  return {
+    completed: (match[1] ?? "").toLowerCase() === "x",
+    phaseNumber: normalizePhaseNumber(match[2] ?? ""),
+    phaseName: title.phaseName,
+    summary: match[4]?.trim() ?? null,
+    requirements: title.requirements
+  };
+}
+
+function parseRoadmapPhaseChildLines(lines: string[]): {
+  goal: string | null;
+  successCriteria: string | null;
+} {
+  let goal: string | null = null;
+  const successCriteria: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const objectiveMatch = lines[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
+
+    if (objectiveMatch) {
+      goal = objectiveMatch[1]?.trim() ?? null;
+      continue;
+    }
+
+    const successCriteriaMatch = lines[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
+
+    if (!successCriteriaMatch) {
+      continue;
+    }
+
+    const labelIndent = successCriteriaMatch[1]?.length ?? 0;
+    const inlineCriterion = successCriteriaMatch[2]?.trim() ?? "";
+
+    if (inlineCriterion.length > 0) {
+      successCriteria.push(inlineCriterion);
+    }
+
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nestedMatch = lines[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
+
+      if (!nestedMatch || (nestedMatch[1]?.length ?? 0) <= labelIndent) {
+        break;
+      }
+
+      successCriteria.push(nestedMatch[2]?.trim() ?? "");
+      index = nextIndex;
+    }
+  }
+
+  return {
+    goal,
+    successCriteria:
+      successCriteria.length > 0
+        ? successCriteria.filter((value) => value.length > 0).join("; ")
+        : null
+  };
+}
+
 function parseRoadmapDocument(raw: string): {
   milestone: string | null;
   phases: ParsedRoadmapPhase[];
@@ -1838,23 +1933,46 @@ function parseRoadmapDocument(raw: string): {
   }
 
   const phases: ParsedRoadmapPhase[] = [];
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
 
-  for (const match of raw.matchAll(
-    /^- \[([ xX])\] (?:\*\*)?Phase (\d+(?:\.\d+)?): ([^\n*]+?)(?:\*\*)?(?: - (.+))?$/gm
-  )) {
-    const phaseNumber = normalizePhaseNumber(match[2]);
-    const phaseName = match[3].trim();
+  for (let index = 0; index < lines.length; index += 1) {
+    const inlinePhase = parseRoadmapPhaseLine(lines[index] ?? "");
+
+    if (!inlinePhase) {
+      continue;
+    }
+
+    const childLines: string[] = [];
+
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex] ?? "";
+
+      if (parseRoadmapPhaseLine(nextLine) || /^#{1,6}\s+/.test(nextLine)) {
+        break;
+      }
+
+      if (nextLine.trim().length === 0 || /^\s+-\s+/.test(nextLine)) {
+        childLines.push(nextLine);
+        index = nextIndex;
+        continue;
+      }
+
+      break;
+    }
+
+    const phaseNumber = inlinePhase.phaseNumber;
+    const phaseChildren = parseRoadmapPhaseChildLines(childLines);
     const detail = details.get(phaseNumber);
 
     phases.push({
       phaseNumber,
       phasePrefix: formatPhasePrefix(phaseNumber),
-      phaseName,
-      completed: match[1].toLowerCase() === "x",
-      summary: match[4]?.trim() ?? null,
-      goal: detail?.goal ?? null,
-      successCriteria: detail?.successCriteria ?? null,
-      requirements: detail?.requirements ?? []
+      phaseName: inlinePhase.phaseName,
+      completed: inlinePhase.completed,
+      summary: inlinePhase.summary,
+      goal: detail ? detail.goal : phaseChildren.goal,
+      successCriteria: detail ? detail.successCriteria : phaseChildren.successCriteria,
+      requirements: detail ? detail.requirements : inlinePhase.requirements
     });
   }
 

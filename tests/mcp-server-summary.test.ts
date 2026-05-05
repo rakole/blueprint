@@ -86,7 +86,60 @@ test("invalid write results do not claim an artifact was saved", () => {
 
   assert.equal(
     summary,
-    "Did not save Phase 3 verification at `.blueprint/phases/03-validation-engine/03-VERIFICATION.md` status: invalid (1 summary links, 1 warnings)."
+    "Did not save Phase 3 verification at `.blueprint/phases/03-validation-engine/03-VERIFICATION.md` status: invalid (1 summary links, 1 warnings). Diagnostics: Missing required sections."
+  );
+});
+
+test("invalid write summaries surface nested validation issues", () => {
+  const summary = summarizeToolResult("blueprint_phase_plan_write", {
+    phaseNumber: "3",
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    validation: {
+      valid: false,
+      issues: [
+        "Phase plan model requirementCoverage must include exactly one row for LIFE-02.",
+        "Modified file src/mcp/tools/phase.ts is missing from fileSurfaceCoverage.",
+        "Plan dependency cycle detected: 01 -> 02 -> 01.",
+        "Acceptance criterion is not objectively verifiable."
+      ],
+      warnings: []
+    },
+    warnings: []
+  });
+
+  assert.equal(
+    summary,
+    "Did not save Phase 3 plan 01 at `.blueprint/phases/03-validation-engine/03-01-PLAN.md` status: invalid. Diagnostics: Phase plan model requirementCoverage must include exactly one row for LIFE-02; Modified file src/mcp/tools/phase.ts is missing from fileSurfaceCoverage; Plan dependency cycle detected: 01 -> 02 -> 01 (+1 more)."
+  );
+});
+
+test("invalid model validation summaries surface diagnostic messages", () => {
+  const summary = summarizeToolResult("blueprint_phase_plan_validate_model", {
+    status: "invalid",
+    valid: false,
+    phase: null,
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    diagnostics: [
+      {
+        source: "schema",
+        path: "model.evidenceCoverage",
+        code: "schema.exactCoverage",
+        message:
+          "Phase plan model evidenceCoverage must include exactly one row for known saved evidence artifact .blueprint/phases/03-validation-engine/03-CONTEXT.md."
+      }
+    ],
+    warnings: []
+  });
+
+  assert.equal(
+    summary,
+    "Completed phase plan validate model at `.blueprint/phases/03-validation-engine/03-01-PLAN.md` status: invalid. Diagnostics: Phase plan model evidenceCoverage must include exactly one row for known saved evidence artifact .blueprint/phases/03-validation-engine/03-CONTEXT.md."
   );
 });
 

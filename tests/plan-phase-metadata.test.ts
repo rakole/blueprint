@@ -69,6 +69,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /Use saved research for unstable technical decisions/i);
   assert.match(commandFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
   assert.match(commandFile, /repair all diagnostics against the live task schema and contract/i);
+  assert.match(commandFile, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
+  assert.match(commandFile, /previously saved plan files become intentional known evidence artifacts/i);
   assert.match(commandFile, /validationMode: "strict"/);
   assert.match(commandFile, /authoringMode: "model-only"/);
   assert.match(commandFile, /validationMode: "warn"/);
@@ -133,6 +135,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /saved research for unstable technical decisions instead of browsing live web docs/i);
   assert.match(skillFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
+  assert.match(skillFile, /Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
+  assert.match(skillFile, /previously saved plan files become intentional known evidence artifacts/i);
   assert.match(skillFile, /validationMode: "strict"/);
   assert.match(skillFile, /authoringMode: "model-only"/);
   assert.doesNotMatch(skillFile, /docs\/COMMAND-CATALOG\.md|docs\/SKILLS-AND-AGENTS\.md|docs\/ARTIFACT-SCHEMA\.md/);
@@ -161,6 +165,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_validate/);
   assert.match(runtimeContract, /validationMode:\s+"strict"/);
   assert.match(runtimeContract, /authoringMode:\s+"model-only"/);
+  assert.match(runtimeContract, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately/i);
+  assert.match(runtimeContract, /saved `XX-YY-PLAN\.md` files are intentional known evidence artifacts/i);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
   assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
   assert.match(runtimeContract, /taskSchema/);
@@ -267,6 +273,8 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
   assert.match(metadata.runtimeReference.contractNotes, /Long-running-mutation profile/i);
   assert.match(metadata.runtimeReference.contractNotes, /planningReadiness/i);
   assert.match(metadata.runtimeReference.contractNotes, /taskSchema/i);
+  assert.match(metadata.runtimeReference.contractNotes, /re-read blueprint_phase_plan_authoring_context immediately before each model validation\/write/i);
+  assert.match(metadata.runtimeReference.contractNotes, /saved plan files are intentional later-slot evidence artifacts/i);
   assert.match(metadata.runtimeReference.contractNotes, /validationMode: "strict"/);
   assert.match(metadata.runtimeReference.contractNotes, /authoringMode: "model-only"/);
   assert.match(metadata.runtimeReference.contractNotes, /additive new plan ids/i);
@@ -370,6 +378,8 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(mcpToolsDoc, /gates reuse\/revise\/replace only for writes that would overwrite saved plans/i);
   assert.match(mcpToolsDoc, /treats checker review as config-gated/i);
   assert.match(mcpToolsDoc, /repairs model-validation\/write\/scoped-validation diagnostics through MCP/i);
+  assert.match(mcpToolsDoc, /re-reads that authoring context immediately before each model validation\/write/i);
+  assert.match(mcpToolsDoc, /saved plan files are intentional later-slot evidence artifacts/i);
   assert.match(mcpToolsDoc, /synced state recomputation/i);
 
   assert.match(contractFile, /Plan authoring should stay execution-ready/i);
