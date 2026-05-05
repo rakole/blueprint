@@ -23,7 +23,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
     /Review-family commands must use runtime-owned contract context before drafting or updating/i
   );
   assert.match(mcpToolsDoc, /For code-review-fix, `blueprint_review_authoring_context\.authoringContext\.taskSchema` is the model-authoring authority/i);
-  assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, and a validated structured summary `model`/i);
+  assert.match(mcpToolsDoc, /`blueprint_phase_summary_write` requires numeric `phase`, numeric `planId`, Markdown summary `content`, and an explicit `Status` marker/i);
   assert.match(mcpToolsDoc, /blueprint_phase_summary_authoring_context/);
   assert.match(mcpToolsDoc, /blueprint_phase_summary_validate_model/);
   assert.match(mcpToolsDoc, /`blueprint_review_scope` accepts repo-relative file paths only/i);

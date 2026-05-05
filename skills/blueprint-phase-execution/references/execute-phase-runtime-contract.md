@@ -48,8 +48,9 @@ helper guidance.
 - Existing valid summaries require explicit overwrite confirmation before
   replacement. Reuse is the default only when the summary is valid and marked
   `COMPLETED`.
-- Treat malformed summaries as repair or replace targets, not reusable
-  execution evidence.
+- Treat summaries with semantic completion blockers as repair or replace
+  targets. Formatting drift, heading casing, or missing optional sections are
+  warnings, not execution blockers.
 - Treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward
   evidence, but keep those plans pending.
 - If no plans exist, route to `/blu-plan-phase`. If selected plans are stale,
@@ -88,17 +89,18 @@ helper guidance.
   selected `planId` before final drafting. If it returns `status: "invalid"`,
   stop with the prerequisite blockers instead of inventing acceptance checks,
   dependency rows, plan provenance, or next actions.
-- Author the structured `phase.summary` model against the returned
-  `taskSchema`, then call `mcp_blueprint_blueprint_phase_summary_validate_model`
-  and repair all diagnostics together before persistence. The task schema is
-  the truth source for exact targeted verification rows, dependency-plan rows,
-  status/readiness/completion consistency, sentinel rows, and allowed next
-  actions.
+- Draft Markdown `phase.summary` content against the returned contract and
+  authoring context, then call
+  `mcp_blueprint_blueprint_phase_summary_validate_model` with `content` and
+  repair semantic diagnostics together before persistence. The Markdown
+  contract is the authoring guide; exact heading shape and marker casing are
+  quality warnings, while missing linkage, missing/invalid status on new
+  writes, dependency completion for `COMPLETED`, and explicit failed
+  verification remain blockers.
 - Persist one `XX-YY-SUMMARY.md` artifact per executed plan through
   `mcp_blueprint_blueprint_phase_summary_write`.
 - Pass the resolved numeric `phase`, the numeric `planId` for the matching
-  saved plan, and the same validated structured `model`. Do not pass Markdown
-  `content`.
+  saved plan, and Markdown `content` with an explicit `Status` marker.
 - The matching plan must already exist before the summary write.
 - Treat the returned `path` and `linkedPlanPath` as authoritative instead of
   rebuilding summary filenames manually.
@@ -184,8 +186,8 @@ When suitable execution agents are unavailable, continue sequentially:
   not executed.
 - The canonical `phase.summary` contract was read before summary authoring or
   replacement.
-- The summary authoring context and model validator were used before every new
-  summary write.
+- The summary authoring context and Markdown draft validator were used before
+  every new summary write.
 - One summary per executed plan was persisted only through
   `mcp_blueprint_blueprint_phase_summary_write`.
 - Valid `PARTIAL` and `BLOCKED` summaries remained pending carry-forward
