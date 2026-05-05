@@ -15684,7 +15684,7 @@ function renderResearchTemplate(context) {
 
 ## State Of The Art
 
-- <current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>
+- <current ecosystem or repo update relevant to this phase>
 
 ## Common Pitfalls
 
@@ -18888,7 +18888,7 @@ var init_artifact_contracts = __esm({
           "<durable implementation pattern>",
           "<existing tool, helper, or platform feature>",
           "<anti-pattern detail or implementation to avoid>",
-          "<current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>",
+          "<current ecosystem or repo update relevant to this phase>",
           "<failure mode or regression risk>",
           "<open question that still needs an answer>",
           "<topic>",
@@ -18901,8 +18901,7 @@ var init_artifact_contracts = __esm({
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
-          "State Of The Art should cite explicit source dates for freshness-sensitive claims, or say that external currency was not checked."
+          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
@@ -37581,7 +37580,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, and saved codebase summaries, stop on missing XX-CONTEXT.md instead of drafting from status-only signals, read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, require explicit source dates or a clear not externally checked marker for State Of The Art, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve the single-agent topic-strand fallback when they are not, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, and saved codebase summaries, stop on missing XX-CONTEXT.md instead of drafting from status-only signals, read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve the single-agent topic-strand fallback when they are not, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -50827,14 +50826,6 @@ function hasSubstantiveResearchSection(section, heading) {
   }
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
-function hasExplicitFreshnessDate(section) {
-  return /\b\d{4}-\d{2}-\d{2}\b/.test(section) || /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4}\b/.test(
-    section
-  );
-}
-function marksExternalCurrencyUnchecked(section) {
-  return /not externally checked|external currency (?:was )?not checked/i.test(section);
-}
 function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
@@ -50886,12 +50877,6 @@ function validateResearchArtifactContent(content) {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
-    );
-  }
-  const stateOfTheArt = extractMarkdownSection5(content, "State Of The Art");
-  if (!marksExternalCurrencyUnchecked(stateOfTheArt) && !hasExplicitFreshnessDate(stateOfTheArt)) {
-    issues.push(
-      "Research artifact section State Of The Art must include an explicit source date for freshness-sensitive claims or say that external currency was not checked."
     );
   }
   const codeExamples = extractMarkdownSection5(content, "Code Examples");

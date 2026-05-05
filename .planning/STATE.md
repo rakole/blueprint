@@ -5,7 +5,7 @@ milestone_name: milestone
 current_phase: Phase 9 - Bug Index Priority Review
 status: ready_to_audit_milestone
 stopped_at: Phase 9 validated
-last_updated: "2026-05-02T15:06:32Z"
+last_updated: "2026-05-05T15:16:01Z"
 progress:
   total_phases: 9
   completed_phases: 9
@@ -22,7 +22,7 @@ progress:
 **Active command:** none
 **Last successful command:** $gsd-validate-phase 9
 **Next suggested action:** Audit the milestone with `$gsd-audit-milestone`
-**Last updated:** 2026-05-02
+**Last updated:** 2026-05-05
 
 ## Project Reference
 
@@ -76,6 +76,7 @@ ready for milestone audit without applying fixes.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260505-remove-research-freshness-validation | Remove MCP enforcement of research State Of The Art freshness markers while keeping runtime guidance advisory | 2026-05-05 | pending | [260505-remove-research-freshness-validation](./quick/260505-remove-research-freshness-validation/) |
 | 260502-bpbug-004-dist-refresh | Repair BPBUG-004 by refreshing the tracked dist bundle so it includes the audit-fix generated schema asset | 2026-05-02 | 350e87a | [260502-bpbug-004-dist-refresh](./quick/260502-bpbug-004-dist-refresh/) |
 
 ## Recent Activity
@@ -129,6 +130,7 @@ ready for milestone audit without applying fixes.
 - 2026-05-02: Planned Phase 9 with research, validation strategy, pattern map, and four executable plans covering inventory/status freshness, duplicate and related-bug review, repair-priority batches, verification questions, and no-fix closeout.
 - 2026-05-02: Executed Phase 9 by reconciling BPBUG-004 into verified repaired/history evidence, recording that no duplicate reports or open verification questions remain, adding repair-priority bands and repair batches, and routing the milestone to `$gsd-validate-phase 9`.
 - 2026-05-02: Re-ran the targeted Phase 9 Nyquist validation checks, confirmed no new gaps, advanced Phases 8 and 9 to validated bookkeeping, and routed the milestone to `$gsd-audit-milestone`.
+- 2026-05-05: Completed quick task 260505-remove-research-freshness-validation by removing the MCP research freshness-marker validation, softening related contract text to advisory guidance, rebuilding `dist/`, and passing typecheck plus focused research/lifecycle tests.
 
 ## Session Continuity
 

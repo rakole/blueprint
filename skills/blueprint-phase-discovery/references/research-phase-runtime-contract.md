@@ -124,9 +124,10 @@ Quality rules for `XX-RESEARCH.md`:
   recommendation is preferred.
 - `## Architecture Patterns`, `## Don't Hand-Roll`, and `## Anti-Patterns`
   give planner-usable implementation structure and verification risks.
-- `## State Of The Art` identifies current guidance, repo-local currency, or
-  explicitly says external currency was not checked. Freshness-sensitive claims
-  in this section need explicit source dates when external evidence is cited.
+- `## State Of The Art` identifies current guidance or repo-local context. As
+  advisory provenance guidance, prefer explicit source dates near
+  freshness-sensitive external evidence, or say when live external checking did
+  not happen; MCP validation does not require either marker.
 - `## Common Pitfalls` describes failure modes, why they happen, and how a plan
   should prevent them.
 - `## Open Questions` lists only unresolved questions that matter downstream,
@@ -204,8 +205,7 @@ This fallback is the required single-agent path, not a degraded emergency mode.
   explicit `update` selection as the overwrite gate; do not default overwrite
   or ask for a second confirmation unless the user's intent remains ambiguous.
 - If `research.external_sources` is `off`, do not perform live external lookup.
-  Keep the run repo-only and mark freshness-sensitive claims as not externally
-  checked.
+  Keep the run repo-only and avoid implying that upstream guidance was checked.
 - If `research.external_sources` is `ask`, stop for confirmation before any
   official-doc or external verification.
 - If existing research is invalid, do not allow skip, default reuse, or an
@@ -238,8 +238,8 @@ and planner-ready:
 - pitfalls are tied to prevention or validation steps
 - code examples or pseudocode are useful, or their omission is justified
 - sources include at least one repo path, URL, or cited file reference
-- `## State Of The Art` includes explicit source dates for freshness-sensitive
-  claims, or clearly says external currency was not checked
+- `## State Of The Art` uses clear provenance for freshness-sensitive claims
+  when helpful; absence of a date or unchecked marker is not an MCP blocker
 - confidence is honest and scoped by topic
 - unresolved questions are visible instead of hidden by confident language
 

@@ -123,8 +123,8 @@ phase-research artifact mode.
 - Make it clear which conclusions came from repo evidence, which came from
   official docs or supplied external references, and which remain informed
   inference.
-- Keep `## State Of The Art` freshness-sensitive claims dated, or say `not
-  externally checked` when the parent did not supply approved external
+- Keep `## State Of The Art` freshness-sensitive claims clear about their
+  evidence basis, especially when the parent did not supply approved external
   verification evidence.
 - When comparing against official docs, call out the exact reference and the
   resulting delta or match so the parent can assess whether repo behavior or
@@ -164,8 +164,7 @@ phase-research artifact mode.
   reference`, `Supplied reference`, or `Inference`. Never present inference or
   stale training knowledge as verified fact.
 - If the parent did not supply external evidence for a freshness-sensitive
-  claim, say `not externally checked` instead of implying that current upstream
-  guidance was confirmed.
+  claim, avoid implying that current upstream guidance was confirmed.
 - Lower confidence and add `## Open Questions` entries when sources conflict,
   evidence is missing, or an external claim was not verified.
 - Do not substitute browser-only, web-search-only, shell-only, or generic-agent
