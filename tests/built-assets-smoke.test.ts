@@ -8,7 +8,7 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-import { blueprintToolNames } from "../dist/mcp/server.js";
+import { blueprintToolNames, blueprintToolRegistry } from "../dist/mcp/server.js";
 
 const repoRoot = process.cwd();
 
@@ -223,4 +223,40 @@ test("built MCP server starts over stdio and exposes the expected tool set", asy
     "the built MCP entrypoint should advertise the same registered tools"
   );
   assert.equal(stderr.trim(), "", "the built MCP entrypoint should start without stderr noise");
+});
+
+test("built MCP command catalog resolves implemented commands from bundled assets", async () => {
+  const catalog = await blueprintToolRegistry.blueprint_command_catalog.handler({});
+  const commands = catalog.commands as Record<
+    string,
+    {
+      implemented?: boolean;
+      status?: string;
+      manifestPath?: string | null;
+      skillPath?: string | null;
+      blockedBy?: string[];
+    }
+  >;
+  const implementedCommands = Object.entries(commands)
+    .filter(([, entry]) => entry.implemented)
+    .map(([command]) => command);
+
+  assert.ok(
+    implementedCommands.length > 0,
+    "the built catalog should not collapse to an empty implemented command set"
+  );
+
+  for (const command of ["progress", "execute-phase", "validate-phase"]) {
+    const entry = commands[command];
+
+    assert.ok(entry, `Missing built catalog entry for ${command}`);
+    assert.equal(
+      entry.implemented,
+      true,
+      `${command} should remain implemented in the built catalog: ${entry.blockedBy?.join("; ") ?? "no blockers"}`
+    );
+    assert.equal(entry.status, "implemented");
+    assert.ok(entry.manifestPath, `${command} should resolve its command manifest`);
+    assert.ok(entry.skillPath, `${command} should resolve its primary skill`);
+  }
 });
