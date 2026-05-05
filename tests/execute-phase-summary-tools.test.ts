@@ -1327,6 +1327,68 @@ test("phase summary models allow piped acceptance criteria while preserving tabl
   assert.deepEqual(index.completedPlans, ["01"]);
 });
 
+test("phase summary models allow piped verification commands from live acceptance criteria", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const pipedCommand =
+    "npm test -- tests/phase-planning-tools.test.ts | tee /tmp/blueprint-phase-planning.log";
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    executionPlanContent("01", 1).replace(
+      "tests/phase-planning-tools.test.ts exits 0",
+      pipedCommand
+    ),
+    "utf8"
+  );
+
+  const model = validSummaryModel("01", "COMPLETED", {
+    targetedVerification: [
+      {
+        check: pipedCommand,
+        command: pipedCommand,
+        result: "pass",
+        evidence: "Focused plan tooling tests passed through the tee pipeline.",
+        notes: "The selected piped acceptance criterion passed."
+      }
+    ],
+    evidence: [
+      {
+        kind: "test",
+        source: "npm test -- tests/phase-planning-tools.test.ts",
+        summary: "Focused plan tooling tests passed through the tee pipeline."
+      }
+    ]
+  });
+
+  const validation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model
+  });
+  const created = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model
+  });
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(validation.status, "valid");
+  assert.equal(created.status, "created");
+  assert.equal(read.validation?.valid, true);
+  assert.match(read.content ?? "", /phase-planning-tools\.test\.ts \\\| tee/);
+  assert.deepEqual(index.completedPlans, ["01"]);
+});
+
 test("completed raw summaries must match live plan checks, dependency rows, and next action", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
