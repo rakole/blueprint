@@ -460,7 +460,8 @@ type PhaseSummaryAuthoringContextArgs = PhaseLookupArgs & {
     planId: NumericInput;
 };
 type PhaseSummaryValidateModelArgs = PhaseSummaryAuthoringContextArgs & {
-    model: unknown;
+    content?: string;
+    model?: unknown;
 };
 type ResolvedPhaseLocation = {
     phaseNumber: string;
@@ -1596,7 +1597,8 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
-        model: z.ZodUnknown;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodUnknown>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseSummaryValidateModelResult>;
 } | {
@@ -1606,7 +1608,12 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         planId: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
-        model: z.ZodUnknown;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodUnknown>;
+        authoringMode: z.ZodOptional<z.ZodEnum<{
+            "content-compatible": "content-compatible";
+            "model-only": "model-only";
+        }>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseSummaryWriteResult>;

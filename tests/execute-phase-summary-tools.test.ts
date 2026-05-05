@@ -908,8 +908,8 @@ test("execute-phase summary tools are registered in the Blueprint server", () =>
   );
   assert.ok(writeTool);
   assert.ok("model" in writeTool.inputSchema);
-  assert.equal("content" in writeTool.inputSchema, false);
-  assert.match(writeTool.description, /Markdown content fallback is not supported/i);
+  assert.equal("content" in writeTool.inputSchema, true);
+  assert.match(writeTool.description, /Markdown content/i);
 });
 
 test("phase context indexes execution summaries alongside plans", async (t) => {
@@ -969,7 +969,7 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.deepEqual(read.validation?.issues, []);
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
-  assert.match(invalid.issues.join("\n"), /model-only|content is invalid/i);
+  assert.match(invalid.issues.join("\n"), /explicit Status marker/i);
   assert.deepEqual(context.phase?.artifacts.plans, [planPath]);
   assert.deepEqual(context.phase?.artifacts.summaries, [summaryPath]);
   assert.ok(context.phase?.artifacts.all.includes(summaryPath));
@@ -1024,10 +1024,10 @@ test("completed first-wave summaries route back to execute-phase while later wav
     "valid",
     firstWaveValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
   );
-  assert.equal(prematureValidation.status, "invalid");
+  assert.equal(prematureValidation.status, "valid");
   assert.match(
-    JSON.stringify(prematureValidation.taskSchema),
-    /not-ready-for-validation|\/blu-execute-phase 3/
+    prematureValidation.warnings.join("\n"),
+    /should use .*\/blu-execute-phase 3/i
   );
   assert.equal(firstWaveWrite.status, "created");
   assert.deepEqual(firstWaveIndex.completedPlans, ["01"]);
@@ -1077,12 +1077,12 @@ test("phase summary authoring context narrows optional empty dependency context 
     phase: "3",
     planId: "01"
   });
-  const taskSchemaText = JSON.stringify(context.taskSchema);
 
   assert.equal(context.status, "ready");
   assert.deepEqual(context.dependencyPlans, []);
-  assert.match(taskSchemaText, /"dependencyPlans"/);
-  assert.match(taskSchemaText, /"maxItems":0/);
+  assert.equal(context.taskSchema, null);
+  assert.equal(context.schemaPath, null);
+  assert.equal(context.modelOnly, false);
 
   const invalid = await blueprintPhaseSummaryValidateModel({
     cwd: repoPath,
@@ -1100,10 +1100,10 @@ test("phase summary authoring context narrows optional empty dependency context 
     })
   });
 
-  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.status, "valid");
   assert.match(
-    invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have more than 0 items/i
+    invalid.warnings.join("\n"),
+    /Dependency Plans section should use the none/i
   );
 });
 
@@ -1135,59 +1135,37 @@ test("phase summary authoring context blocks missing required upstream plan cont
   );
 });
 
-test("phase summary schema rejects unsupported fields, missing required fields, and unsafe rendered sinks", async (t) => {
+test("phase summary draft validation rejects missing status and semantic contradictions", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const unsupported = await blueprintPhaseSummaryValidateModel({
+  const missingStatus = await blueprintPhaseSummaryValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    model: validSummaryModel("01", "COMPLETED", {
-      linkedPlanPath: "03-99-PLAN.md"
-    })
+    content: validSummaryContent("01").replace("**Status:** COMPLETED\n", "")
   });
-  const missingModel = validSummaryModel("01");
-  delete missingModel.evidence;
-  const missing = await blueprintPhaseSummaryValidateModel({
+  const failedVerification = await blueprintPhaseSummaryValidateModel({
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    model: missingModel
-  });
-  const injected = await blueprintPhaseSummaryValidateModel({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01",
-    model: validSummaryModel("01", "COMPLETED", {
-      targetedVerification: [
-        {
-          check: "tests/phase-planning-tools.test.ts exits 0",
-          command: "npm test -- tests/phase-planning-tools.test.ts\n## Injected",
-          result: "pass",
-          evidence: "targeted output",
-          notes: "safe note"
-        }
-      ]
-    })
+    content: validSummaryContent("01").replace(
+      "| tests/phase-planning-tools.test.ts exits 0 | npm test -- tests/phase-planning-tools.test.ts | pass |",
+      "| tests/phase-planning-tools.test.ts exits 0 | npm test -- tests/phase-planning-tools.test.ts | fail |"
+    )
   });
 
-  assert.equal(unsupported.status, "invalid");
+  assert.equal(missingStatus.status, "invalid");
   assert.match(
-    unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties/i
+    missingStatus.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /explicit Status marker/i
   );
-  assert.equal(missing.status, "invalid");
+  assert.equal(failedVerification.status, "invalid");
   assert.match(
-    missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must have required property 'evidence'/i
-  );
-  assert.equal(injected.status, "invalid");
-  assert.match(
-    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must match pattern/i
+    failedVerification.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /cannot include explicit fail/i
   );
 });
 
@@ -1250,13 +1228,14 @@ test("phase summary runtime narrowing rejects out-of-scope acceptance criteria w
 
   assert.equal(contextOne.status, "ready");
   assert.equal(contextTwo.status, "ready");
-  assert.match(JSON.stringify(contextOne.taskSchema), /phase-planning-tools/);
-  assert.doesNotMatch(JSON.stringify(contextTwo.taskSchema), /phase-planning-tools/);
-  assert.match(JSON.stringify(contextTwo.taskSchema), /execute-phase-summary-tools/);
-  assert.equal(invalidTwo.status, "invalid");
+  assert.equal(contextOne.taskSchema, null);
+  assert.equal(contextTwo.taskSchema, null);
+  assert.match(contextOne.acceptanceCriteria.join("\n"), /phase-planning-tools/);
+  assert.match(contextTwo.acceptanceCriteria.join("\n"), /execute-phase-summary-tools/);
+  assert.equal(invalidTwo.status, "valid");
   assert.match(
-    invalidTwo.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /allowed values|must be equal to one of|must be equal to constant/i
+    invalidTwo.warnings.join("\n"),
+    /Verification checks.*missing live plan|Verification checks.*out-of-scope/i
   );
   assert.equal(validTwo.status, "valid");
   assert.match(
@@ -1327,6 +1306,81 @@ test("phase summary models allow piped acceptance criteria while preserving tabl
   assert.deepEqual(index.completedPlans, ["01"]);
 });
 
+test("completed raw summaries warn on live plan drift without blocking evidence", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  );
+
+  await writeFile(
+    summaryPath,
+    validSummaryContent("01").replace(
+      "tests/phase-planning-tools.test.ts exits 0",
+      "unrelated acceptance criterion"
+    ),
+    "utf8"
+  );
+  const unrelatedRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const unrelatedIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(unrelatedRead.validation?.valid, true);
+  assert.match(
+    unrelatedRead.validation?.warnings.join("\n") ?? "",
+    /Verification checks.*out-of-scope|Verification checks.*missing live plan/i
+  );
+  assert.deepEqual(unrelatedIndex.completedPlans, ["01"]);
+
+  await writeFile(
+    summaryPath,
+    validSummaryContent("01").replace(
+      "| none | none | none |",
+      "| 99 (.blueprint/phases/03-phase-discovery/03-99-PLAN.md) | satisfied | Bogus dependency evidence. |"
+    ),
+    "utf8"
+  );
+  const bogusDependencyRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const bogusDependencyIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(bogusDependencyRead.validation?.valid, true);
+  assert.match(
+    bogusDependencyRead.validation?.warnings.join("\n") ?? "",
+    /Dependency Plans section should use the none/i
+  );
+  assert.deepEqual(bogusDependencyIndex.completedPlans, ["01"]);
+
+  await writeFile(
+    summaryPath,
+    validSummaryContent("01").replace("/blu-validate-phase 3", "/blu-validate-phase 99"),
+    "utf8"
+  );
+  const wrongActionRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const wrongActionIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(wrongActionRead.validation?.valid, true);
+  assert.match(
+    wrongActionRead.validation?.warnings.join("\n") ?? "",
+    /should use .*\/blu-validate-phase 3/i
+  );
+  assert.deepEqual(wrongActionIndex.completedPlans, ["01"]);
+});
+
 test("phase summary models allow piped verification commands from live acceptance criteria", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -1389,82 +1443,7 @@ test("phase summary models allow piped verification commands from live acceptanc
   assert.deepEqual(index.completedPlans, ["01"]);
 });
 
-test("completed raw summaries must match live plan checks, dependency rows, and next action", async (t) => {
-  const repoPath = await createExecutionRepo();
-  t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
-  });
-
-  const summaryPath = path.join(
-    repoPath,
-    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
-  );
-
-  await writeFile(
-    summaryPath,
-    validSummaryContent("01").replace(
-      "tests/phase-planning-tools.test.ts exits 0",
-      "unrelated acceptance criterion"
-    ),
-    "utf8"
-  );
-  const unrelatedRead = await blueprintPhaseSummaryRead({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01"
-  });
-  const unrelatedIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
-
-  assert.equal(unrelatedRead.validation?.valid, false);
-  assert.match(
-    unrelatedRead.validation?.issues.join("\n") ?? "",
-    /Verification checks.*out-of-scope|Verification checks.*missing live plan/i
-  );
-  assert.deepEqual(unrelatedIndex.completedPlans, []);
-
-  await writeFile(
-    summaryPath,
-    validSummaryContent("01").replace(
-      "| none | none | none |",
-      "| 99 (.blueprint/phases/03-phase-discovery/03-99-PLAN.md) | satisfied | Bogus dependency evidence. |"
-    ),
-    "utf8"
-  );
-  const bogusDependencyRead = await blueprintPhaseSummaryRead({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01"
-  });
-  const bogusDependencyIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
-
-  assert.equal(bogusDependencyRead.validation?.valid, false);
-  assert.match(
-    bogusDependencyRead.validation?.issues.join("\n") ?? "",
-    /Dependency Plans section must use exactly the none/i
-  );
-  assert.deepEqual(bogusDependencyIndex.completedPlans, []);
-
-  await writeFile(
-    summaryPath,
-    validSummaryContent("01").replace("/blu-validate-phase 3", "/blu-validate-phase 99"),
-    "utf8"
-  );
-  const wrongActionRead = await blueprintPhaseSummaryRead({
-    cwd: repoPath,
-    phase: "3",
-    planId: "01"
-  });
-  const wrongActionIndex = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
-
-  assert.equal(wrongActionRead.validation?.valid, false);
-  assert.match(
-    wrongActionRead.validation?.issues.join("\n") ?? "",
-    /requires .*\/blu-validate-phase 3/i
-  );
-  assert.deepEqual(wrongActionIndex.completedPlans, []);
-});
-
-test("phase summary writer rejects markdown fallback and repo validation reports malformed summaries as issues", async (t) => {
+test("phase summary writer accepts Markdown but rejects placeholder summaries as issues", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1522,8 +1501,8 @@ test("phase summary writer rejects markdown fallback and repo validation reports
   assert.equal(invalidRead.found, true);
   assert.equal(invalidRead.metadata?.linkedPlanPath, "03-01-PLAN.md");
   assert.equal(invalidRead.validation?.valid, false);
-  assert.match(invalidRead.validation?.issues.join("\n") ?? "", /placeholder scaffold text|must start|locked marker/i);
-  assert.match(rejected.issues.join("\n"), /model-only|content is invalid/i);
+  assert.match(invalidRead.validation?.issues.join("\n") ?? "", /Status marker|placeholder scaffold text/i);
+  assert.match(rejected.issues.join("\n"), /Status marker|placeholder scaffold text/i);
 });
 
 test("add-tests report authoring blocks missing required upstream validation context early", async (t) => {
@@ -2420,6 +2399,33 @@ test("legacy concise raw summaries stay visible but cannot close execution debt"
   assert.match(index.warnings.join("\n"), /legacy concise format/i);
 });
 
+test("legacy no-status summaries count as completed evidence with warnings", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    validSummaryContent("01").replace(/\*\*Status:\*\* COMPLETED\n/, ""),
+    "utf8"
+  );
+
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+
+  assert.equal(read.found, true);
+  assert.equal(read.validation?.valid, true);
+  assert.match(read.validation?.warnings.join("\n") ?? "", /no Status marker/i);
+  assert.deepEqual(index.completedPlans, ["01"]);
+  assert.deepEqual(index.pendingPlans, []);
+  assert.match(index.warnings.join("\n"), /legacy summary has no Status marker/i);
+});
+
 test("phase summary reads expose mismatched plan markers without inventing linked plan paths", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -2466,17 +2472,17 @@ test("phase summary reads expose mismatched plan markers without inventing linke
 
   assert.equal(read.found, true);
   assert.equal(read.metadata?.linkedPlanPath, "03-02-PLAN.md");
-  assert.equal(read.validation?.valid, false);
+  assert.equal(read.validation?.valid, true);
   assert.match(
-    read.validation?.issues.join("\n") ?? "",
+    read.validation?.warnings.join("\n") ?? "",
     /does not match linked plan path/i
   );
   assert.equal(index.summaries[0]?.linkedPlanPath, "03-02-PLAN.md");
-  assert.deepEqual(index.completedPlans, []);
-  assert.deepEqual(index.pendingPlans, ["01"]);
+  assert.deepEqual(index.completedPlans, ["01"]);
+  assert.deepEqual(index.pendingPlans, []);
 });
 
-test("phase summary reads reject summaries whose H1 appears after body text", async (t) => {
+test("phase summary reads warn when H1 appears after body text", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -2517,11 +2523,11 @@ test("phase summary reads reject summaries whose H1 appears after body text", as
   );
   const read = await blueprintPhaseSummaryRead({ cwd: repoPath, phase: "3", planId: "01" });
 
-  assert.equal(read.validation?.valid, false);
-  assert.match(read.validation?.issues.join("\n") ?? "", /must start with a '# \.\.\. - Summary' heading/i);
+  assert.equal(read.validation?.valid, true);
+  assert.match(read.validation?.warnings.join("\n") ?? "", /should start with a Markdown heading/i);
 });
 
-test("phase summary reads reject summaries whose Plan marker does not match the linked plan path", async (t) => {
+test("phase summary reads warn when Plan marker does not match the linked plan path", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -2560,8 +2566,8 @@ test("phase summary reads reject summaries whose Plan marker does not match the 
   );
   const read = await blueprintPhaseSummaryRead({ cwd: repoPath, phase: "3", planId: "01" });
 
-  assert.equal(read.validation?.valid, false);
-  assert.match(read.validation?.issues.join("\n") ?? "", /does not match linked plan path/i);
+  assert.equal(read.validation?.valid, true);
+  assert.match(read.validation?.warnings.join("\n") ?? "", /does not match linked plan path/i);
 });
 
 test("phase summary reads reject raw markdown that contradicts lifecycle truth table", async (t) => {
@@ -2589,7 +2595,7 @@ test("phase summary reads reject raw markdown that contradicts lifecycle truth t
   assert.equal(read.validation?.valid, false);
   assert.match(
     read.validation?.issues.join("\n") ?? "",
-    /status COMPLETED requires \*\*Readiness:\*\* ready-for-validation or not-ready-for-validation/i
+    /cannot declare blocked Readiness/i
   );
   assert.deepEqual(index.completedPlans, []);
   assert.deepEqual(index.pendingPlans, ["01"]);
@@ -2731,16 +2737,16 @@ test("dependency plans must have completed summaries before dependent summaries 
     planId: "02"
   });
 
-  assert.equal(context.status, "invalid");
-  assert.match(context.reason ?? "", /dependency plan summaries are not completed/i);
+  assert.equal(context.status, "ready");
+  assert.match(context.warnings.join("\n"), /dependency plan summaries are completed/i);
   assert.equal(validation.status, "invalid");
   assert.match(
     validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /dependency plan summaries are not completed|runtime task schema/i
+    /depends on incomplete execution plan/i
   );
   assert.equal(rejected.status, "invalid");
   assert.equal(rejected.written, false);
-  assert.match(rejected.issues.join("\n"), /dependency plan summaries are not completed/i);
+  assert.match(rejected.issues.join("\n"), /depends on incomplete execution plan/i);
   assert.deepEqual(index.completedPlans, []);
   assert.deepEqual(index.pendingPlans, ["01", "02"]);
   assert.match(index.warnings.join("\n"), /depends on incomplete execution plan\(s\): 01/i);
@@ -2764,7 +2770,7 @@ test("phase summary schema rejects invalid summary statuses", async (t) => {
   assert.equal(rejected.status, "invalid");
   assert.match(
     rejected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to one of the allowed values/i
+    /Status marker must be COMPLETED, PARTIAL, or BLOCKED/i
   );
 });
 

@@ -716,7 +716,7 @@ async function collectValidatedSummaryPathsForPhase(
   return {
     summaryIds: [...completedPlanIds].sort(),
     summaryPaths: summaryIndex.summaries
-      .filter((summary) => summary.status === "COMPLETED" && completedPlanIds.has(summary.planId))
+      .filter((summary) => completedPlanIds.has(summary.planId))
       .map((summary) => summary.path)
       .sort((left, right) => left.localeCompare(right)),
     pendingPlanIds: [...summaryIndex.pendingPlans],

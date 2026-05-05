@@ -791,7 +791,8 @@ test("ui-review authoring context exposes plan dependency and verification prove
   };
 
   assert.deepEqual(authoringContext.completedPlans, [
-    { planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" }
+    { planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" },
+    { planId: "02", path: ".blueprint/phases/06-ui-audit/06-02-PLAN.md" }
   ]);
   assert.deepEqual(authoringContext.dependencyPlans, [
     { planId: "01", path: ".blueprint/phases/06-ui-audit/06-01-PLAN.md" }

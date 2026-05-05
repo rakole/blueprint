@@ -116,15 +116,15 @@ and no-subagent fallback behavior, read the rich runtime contract in
 - Pass `phase` as the resolved numeric phase reference and `planId` as the
   numeric id of the matching saved plan.
 - Read `blueprint_phase_summary_authoring_context` before final summary
-  drafting so the exact acceptance criteria, dependency plan rows, linked plan
-  provenance, summary path, allowed next actions, `schemaPath`, base schema,
-  and narrowed `taskSchema` are explicit.
-- Validate the structured `phase.summary` model through
-  `blueprint_phase_summary_validate_model`; repair all diagnostics together
-  and persist the same model through `blueprint_phase_summary_write`.
-- New summary writes are model-only. Markdown content fallback is rejected by
-  the writer, while existing Markdown summaries may still be read and indexed
-  for compatibility.
+  drafting so acceptance criteria, dependency plan rows, linked plan
+  provenance, summary path, and allowed next actions are explicit.
+- Validate Markdown summary `content` through
+  `blueprint_phase_summary_validate_model`; repair semantic diagnostics
+  together and persist the same Markdown content through
+  `blueprint_phase_summary_write`.
+- New summary writes are Markdown-first and must include an explicit `Status`
+  marker. Heading shape, casing, and optional section drift are warnings, not
+  validation blockers.
 - The matching `XX-YY-PLAN.md` must already exist before a summary can be
   written.
 - Treat the returned `path` plus `linkedPlanPath` as authoritative instead of

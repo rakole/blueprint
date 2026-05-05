@@ -2122,7 +2122,7 @@ test("project status requires milestone-wide validation evidence before closeout
   assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
 });
 
-test("project status blocks milestone closeout when earlier summary evidence is malformed", async (t) => {
+test("project status tolerates earlier summary shape drift during milestone closeout", async (t) => {
   const repoPath = await createMilestoneCloseoutRepo("none", {
     malformedEarlierSummary: true
   });
@@ -2133,10 +2133,10 @@ test("project status blocks milestone closeout when earlier summary evidence is 
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });
 
-  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone/);
-  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
-  assert.match(status.nextAction, /\/blu-validate-phase 2/);
-  assert.match(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
+  assert.match(status.nextAction, /\/blu-audit-milestone/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 2/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 2/);
 });
 
 test("project status blocks milestone closeout when verification evidence lacks a valid summary link", async (t) => {

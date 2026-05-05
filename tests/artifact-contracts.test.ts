@@ -182,25 +182,10 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     uatContract.contract.modelContract?.renderedHeadings.includes("Structured Gaps")
   );
 
-  assert.equal(
-    summaryContract.contract.modelContract?.schemaId,
-    "blueprint.phase.summary.model"
-  );
-  assert.equal(summaryContract.contract.modelContract?.schemaVersion, "1.0.0");
-  assert.equal(
-    summaryContract.contract.modelContract?.schemaPath,
-    "src/mcp/artifact-contracts/schemas/phase.summary.model.schema.json"
-  );
-  assert.deepEqual(
-    (summaryContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
-    ["status", "readiness", "completionState", "outcome"]
-  );
+  assert.equal(summaryContract.contract.modelContract, undefined);
   assert.ok(
-    summaryContract.contract.modelContract?.renderedHeadings.includes("Gap / Repair Routes")
-  );
-  assert.ok(
-    summaryContract.contract.modelContract?.qualityRules.some((rule) =>
-      /COMPLETED summaries must prove/i.test(rule)
+    summaryContract.contract.notes.some((note) =>
+      /Markdown-first/i.test(note)
     )
   );
 
@@ -225,10 +210,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
   assert.equal(listedUatContract?.modelContract?.schemaId, "blueprint.phase.uat.model");
-  assert.equal(
-    listedSummaryContract?.modelContract?.schemaId,
-    "blueprint.phase.summary.model"
-  );
+  assert.equal(listedSummaryContract?.modelContract, undefined);
   assert.equal(
     listedQuickRunContract?.modelContract?.schemaId,
     "blueprint.report.quick-run.model"

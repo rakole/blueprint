@@ -113,7 +113,8 @@ test("execute-phase command docs point at the rich runtime contract and keep the
     /## Summary Persistence Contract/,
     /blueprint_phase_summary_authoring_context/,
     /blueprint_phase_summary_validate_model/,
-    /model-only/i,
+    /Markdown-first/i,
+    /explicit `Status`/,
     /Do not pass summary filenames, phase slugs, phase directories/i,
     /`COMPLETED` is the only summary status that closes execution debt/i,
     /base: "synced"/

@@ -631,7 +631,7 @@ test("phase execution skill and bounded execution agent are marked implemented i
   );
 });
 
-test("execute-phase runtime references keep the topic/todo contract, summary model tools, and lower-wave gating explicit", async () => {
+test("execute-phase runtime references keep the topic/todo contract, summary draft tools, and lower-wave gating explicit", async () => {
   const [runtimeReference, migrationMarkdown] = await Promise.all([
     readRepoFile("docs/RUNTIME-REFERENCE.md"),
     readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
@@ -643,8 +643,8 @@ test("execute-phase runtime references keep the topic/todo contract, summary mod
   );
   assert.match(runtimeReference, /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i);
   assert.match(runtimeReference, /pair Gemini-native `update_topic` and `write_todos` for long execution runs without turning them into persistence/i);
-  assert.match(runtimeReference, /read the canonical `phase\.summary` contract plus the schema-first summary authoring context before any summary write or replacement/i);
-  assert.match(runtimeReference, /validate structured summary models before persistence/i);
+  assert.match(runtimeReference, /read the canonical `phase\.summary` contract plus the Markdown-first summary authoring context before any summary write or replacement/i);
+  assert.match(runtimeReference, /validate Markdown summary drafts before persistence/i);
   assert.match(runtimeReference, /keep later-wave work blocked until any lower-wave pending plan is closed/i);
   assert.match(
     runtimeReference,

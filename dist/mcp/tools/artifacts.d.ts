@@ -595,8 +595,10 @@ type SummaryValidationOptions = {
     linkedPlanPath?: string | null;
     requirePlanMarker?: boolean;
 };
+export type SummaryStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+export declare function extractSummaryMarkerValue(content: string, marker: string): string | null;
 export declare function extractSummaryPlanReference(content: string): string | null;
-export declare function extractSummaryStatus(content: string): "COMPLETED" | "PARTIAL" | "BLOCKED" | null;
+export declare function extractSummaryStatus(content: string): SummaryStatus | null;
 export declare function validateSummaryArtifactContent(content: string): {
     valid: boolean;
     issues: string[];

@@ -26,6 +26,7 @@ import {
   validateResearchArtifactContent,
   extractSummaryPlanReference,
   extractSummaryStatus,
+  extractSummaryMarkerValue,
   readUatArtifactState,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
@@ -582,7 +583,8 @@ type PhaseSummaryAuthoringContextArgs = PhaseLookupArgs & {
 };
 
 type PhaseSummaryValidateModelArgs = PhaseSummaryAuthoringContextArgs & {
-  model: unknown;
+  content?: string;
+  model?: unknown;
 };
 
 type ResolvedPhaseLocation = {
@@ -1666,13 +1668,16 @@ const phaseSummaryValidateModelInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   planId: numericBlueprintInputSchema,
-  model: z.unknown()
+  content: z.string().optional(),
+  model: z.unknown().optional()
 };
 const phaseSummaryWriteInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   planId: numericBlueprintInputSchema,
-  model: z.unknown(),
+  content: z.string().optional(),
+  model: z.unknown().optional(),
+  authoringMode: z.enum(["content-compatible", "model-only"]).optional(),
   overwrite: z.boolean().optional()
 };
 
@@ -4879,8 +4884,8 @@ function validateSummaryAgainstLivePlanInventory(
           nextSafeAction !== null &&
           !uniqueExpectedRoutes.some((route) => routesMatch({ readiness, nextSafeAction }, route))
         ) {
-          issues.push(
-            `Summary artifact status ${status} requires ${uniqueExpectedRoutes
+          warnings.push(
+            `Summary artifact status ${status} should use ${uniqueExpectedRoutes
               .map(formatCompletedSummaryRoute)
               .join(" or ")} for phase ${args.resolved.phaseNumber}.`
           );
@@ -4893,8 +4898,8 @@ function validateSummaryAgainstLivePlanInventory(
       }[status];
 
       if (nextSafeAction !== null && nextSafeAction !== expectedNextSafeAction) {
-        issues.push(
-          `Summary artifact status ${status} requires **Next Safe Action:** ${expectedNextSafeAction} for phase ${args.resolved.phaseNumber}.`
+        warnings.push(
+          `Summary artifact status ${status} should use **Next Safe Action:** ${expectedNextSafeAction} for phase ${args.resolved.phaseNumber}.`
         );
       }
     }
@@ -4908,8 +4913,8 @@ function validateSummaryAgainstLivePlanInventory(
   }
 
   if (!args.plan.valid) {
-    issues.push(
-      `linked plan ${args.plan.path} is invalid, so the summary cannot count as execution evidence.`
+    warnings.push(
+      `linked plan ${args.plan.path} has validation issues; existing summary evidence remains usable, but execute-phase should repair the plan before new writes.`
     );
   }
 
@@ -4934,7 +4939,7 @@ function validateSummaryAgainstLivePlanInventory(
   );
   const verificationChecks = verificationRows.map((row) => row[0] ?? "");
 
-  issues.push(
+  warnings.push(
     ...collectExactInventoryIssues(
       verificationChecks,
       args.plan.acceptanceCriteria,
@@ -4960,8 +4965,8 @@ function validateSummaryAgainstLivePlanInventory(
       dependencyRows[0][2] === "none";
 
     if (!isExactNoneSentinel) {
-      issues.push(
-        "Summary artifact Dependency Plans section must use exactly the none | none | none sentinel when the live plan has no dependencies."
+      warnings.push(
+        "Summary artifact Dependency Plans section should use the none | none | none sentinel when the live plan has no dependencies."
       );
     }
   } else {
@@ -4970,7 +4975,7 @@ function validateSummaryAgainstLivePlanInventory(
     );
     const actualDependencyCells = dependencyRows.map((row) => row[0] ?? "");
 
-    issues.push(
+    warnings.push(
       ...collectExactInventoryIssues(
         actualDependencyCells,
         expectedDependencyCells,
@@ -4980,8 +4985,8 @@ function validateSummaryAgainstLivePlanInventory(
 
     for (const row of dependencyRows) {
       if (row[1] !== "satisfied") {
-        issues.push(
-          "Summary artifact Dependency Plans rows for live dependencies must use status satisfied."
+        warnings.push(
+          "Summary artifact Dependency Plans rows for live dependencies should use status satisfied."
         );
       }
     }
@@ -5054,6 +5059,14 @@ function toPhaseSummaryRecord(
   };
 }
 
+function isLegacySummaryWithoutStatus(content: string): boolean {
+  return extractSummaryMarkerValue(content, "Status") === null;
+}
+
+function summaryCountsAsCompleted(status: PhaseSummaryRecord["status"], content: string): boolean {
+  return status === "COMPLETED" || (status === null && isLegacySummaryWithoutStatus(content));
+}
+
 async function collectValidatedSummaryPaths(
   projectRoot: string,
   summaries: PhaseSummaryRecord[]
@@ -5091,7 +5104,6 @@ function completedSummaryRecords(
 ): PhaseSummaryRecord[] {
   return summaries.filter(
     (summary) =>
-      summary.status === "COMPLETED" &&
       (completedPlanIds === undefined || completedPlanIds.has(summary.planId))
   );
 }
@@ -5192,50 +5204,6 @@ function formatPhaseSummaryDiagnostic(diagnostic: PhaseSummaryModelDiagnostic): 
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
 
-function schemaDiagnosticFromPhaseSummaryAjvError(
-  error: ErrorObject
-): PhaseSummaryModelDiagnostic {
-  const missingProperty =
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "missingProperty" in error.params &&
-    typeof error.params.missingProperty === "string"
-      ? error.params.missingProperty
-      : null;
-  const additionalProperty =
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "additionalProperty" in error.params &&
-    typeof error.params.additionalProperty === "string"
-      ? error.params.additionalProperty
-      : null;
-  const basePath = ajvPathToPhasePlanModelPath(error.instancePath);
-  const pathValue =
-    missingProperty !== null
-      ? `${basePath}.${missingProperty}`
-      : additionalProperty !== null
-        ? `${basePath}.${additionalProperty}`
-        : basePath;
-
-  return phaseSummaryDiagnostic({
-    source: "schema",
-    path: pathValue,
-    code: `schema.${error.keyword}`,
-    message: error.message ?? "Model does not match the phase.summary task schema.",
-    context: {
-      keyword: error.keyword,
-      params: error.params,
-      schemaPath: error.schemaPath
-    },
-    suggestion:
-      missingProperty !== null
-        ? `Add required field ${missingProperty}.`
-        : additionalProperty !== null
-          ? `Remove unsupported field ${additionalProperty}.`
-          : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_summary_authoring_context."
-  });
-}
-
 async function buildPhaseSummaryAllowedNextActions(phaseNumber: string): Promise<{
   readyAction: string;
   partialAction: string;
@@ -5270,181 +5238,6 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber: string): Promise
     partialAction: implemented.includes(partialAction) ? partialAction : partialAction,
     blockedAction: implemented.includes(blockedAction) ? blockedAction : blockedAction,
     allowedActions: implemented.length > 0 ? implemented : fallback
-  };
-}
-
-function buildPhaseSummaryTaskSchema(args: {
-  baseSchema: Record<string, unknown>;
-  acceptanceCriteria: string[];
-  dependencyPlans: Array<{ planId: string; path: string }>;
-  readyAction: string;
-  partialAction: string;
-  blockedAction: string;
-  completedRoute: PhaseSummaryCompletedRoute;
-  allowedActions: string[];
-  summaryPath: string;
-  linkedPlanPath: string;
-}): Record<string, unknown> {
-  const schema = cloneJsonObject(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-
-  if (properties) {
-    const targetedVerification = getJsonObjectProperty(properties, "targetedVerification");
-    if (targetedVerification) {
-      targetedVerification.minItems = args.acceptanceCriteria.length;
-      targetedVerification.maxItems = args.acceptanceCriteria.length;
-      if (args.acceptanceCriteria.length === 0) {
-        targetedVerification.maxItems = 0;
-      }
-
-      const items = getJsonObjectProperty(targetedVerification, "items");
-      const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
-      const check = itemProperties ? getJsonObjectProperty(itemProperties, "check") : null;
-      if (check && args.acceptanceCriteria.length > 0) {
-        check.enum = args.acceptanceCriteria;
-      }
-      targetedVerification.allOf = args.acceptanceCriteria.map((criterion) =>
-        exactObjectPropertyContains("check", criterion)
-      );
-    }
-
-    const dependencyPlans = getJsonObjectProperty(properties, "dependencyPlans");
-    if (dependencyPlans) {
-      if (args.dependencyPlans.length === 0) {
-        allowOnlyEmptyArray(dependencyPlans);
-      } else {
-        dependencyPlans.minItems = args.dependencyPlans.length;
-        dependencyPlans.maxItems = args.dependencyPlans.length;
-        const items = getJsonObjectProperty(dependencyPlans, "items");
-        const itemProperties = items ? getJsonObjectProperty(items, "properties") : null;
-        const planId = itemProperties ? getJsonObjectProperty(itemProperties, "planId") : null;
-        const pathProperty = itemProperties ? getJsonObjectProperty(itemProperties, "path") : null;
-        if (planId) {
-          planId.enum = args.dependencyPlans.map((dependency) => dependency.planId);
-        }
-        if (pathProperty) {
-          pathProperty.enum = args.dependencyPlans.map((dependency) => dependency.path);
-        }
-        dependencyPlans.allOf = args.dependencyPlans.map((dependency) => ({
-          contains: {
-            type: "object",
-            required: ["planId", "path", "status"],
-            properties: {
-              planId: { const: dependency.planId },
-              path: { const: dependency.path },
-              status: { const: "satisfied" }
-            }
-          },
-          minContains: 1,
-          maxContains: 1
-        }));
-      }
-    }
-
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
-    if (nextSafeAction) {
-      nextSafeAction.enum = args.allowedActions;
-    }
-  }
-
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
-    ...existingAllOf,
-    {
-      if: {
-        required: ["status"],
-        properties: {
-          status: { const: "COMPLETED" }
-        }
-      },
-      then: {
-        properties: {
-          readiness: { const: args.completedRoute.readiness },
-          nextSafeAction: { const: args.completedRoute.nextSafeAction }
-        }
-      }
-    },
-    {
-      if: {
-        required: ["status"],
-        properties: {
-          status: { const: "PARTIAL" }
-        }
-      },
-      then: {
-        properties: {
-          nextSafeAction: { const: args.partialAction }
-        }
-      }
-    },
-    {
-      if: {
-        required: ["status"],
-        properties: {
-          status: { const: "BLOCKED" }
-        }
-      },
-      then: {
-        properties: {
-          nextSafeAction: { const: args.blockedAction }
-        }
-      }
-    }
-  ];
-
-  schema["x-blueprint-runtimeContext"] = {
-    summaryPath: args.summaryPath,
-    linkedPlanPath: args.linkedPlanPath,
-    acceptanceCriteria: args.acceptanceCriteria,
-    dependencyPlans: args.dependencyPlans,
-    readyAction: args.readyAction,
-    partialAction: args.partialAction,
-    blockedAction: args.blockedAction,
-    completedRoute: args.completedRoute,
-    allowedActions: args.allowedActions
-  };
-
-  return schema;
-}
-
-async function phaseSummaryModelSchemas(args: {
-  contract: ArtifactContractReadResult;
-  phaseNumber: string;
-  acceptanceCriteria: string[];
-  dependencyPlans: Array<{ planId: string; path: string }>;
-  completedRoute: PhaseSummaryCompletedRoute;
-  summaryPath: string;
-  linkedPlanPath: string;
-}): Promise<{
-  schemaPath: string;
-  baseSchema: Record<string, unknown>;
-  taskSchema: Record<string, unknown>;
-}> {
-  const modelContract = args.contract.modelContract;
-
-  if (!modelContract) {
-    throw new Error("phase.summary does not expose a modelContract.");
-  }
-  if (!modelContract.schemaPath) {
-    throw new Error("phase.summary modelContract does not expose a schemaPath.");
-  }
-
-  const baseSchema = cloneJsonObject(modelContract.jsonSchema);
-  const allowedNextActions = await buildPhaseSummaryAllowedNextActions(args.phaseNumber);
-  const taskSchema = buildPhaseSummaryTaskSchema({
-    baseSchema,
-    acceptanceCriteria: args.acceptanceCriteria,
-    dependencyPlans: args.dependencyPlans,
-    completedRoute: args.completedRoute,
-    summaryPath: args.summaryPath,
-    linkedPlanPath: args.linkedPlanPath,
-    ...allowedNextActions
-  });
-
-  return {
-    schemaPath: modelContract.schemaPath,
-    baseSchema,
-    taskSchema
   };
 }
 
@@ -5594,109 +5387,6 @@ function normalizePhaseSummaryModel(
     evidence: normalizedEvidence as PhaseSummaryStructuredModel["evidence"],
     nextSafeAction: model.nextSafeAction.trim()
   };
-}
-
-function phaseSummaryModelResidualDiagnostics(
-  model: Record<string, unknown>,
-  modelContract: ArtifactContractReadResult["modelContract"]
-): PhaseSummaryModelDiagnostic[] {
-  const diagnostics: PhaseSummaryModelDiagnostic[] = [];
-
-  if (!modelContract) {
-    return [
-      phaseSummaryDiagnostic({
-        source: "scope",
-        path: "model",
-        code: "contract.missing",
-        message: "phase.summary does not support structured model writes.",
-        context: {},
-        suggestion: "Read the live phase.summary artifact contract before authoring."
-      })
-    ];
-  }
-
-  const stringEntries = collectModelStringEntries(model);
-  const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
-    stringEntries.some((entry) => entry.value.includes(signal))
-  );
-
-  for (const signal of leakedSignals) {
-    diagnostics.push(
-      phaseSummaryDiagnostic({
-        source: "residual",
-        path: "model",
-        code: "content.example_leakage",
-        message: `Phase summary model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
-        context: { signal },
-        suggestion: "Replace copied example wording with evidence from the selected plan execution."
-      })
-    );
-  }
-
-  for (const entry of stringEntries) {
-    if (hasPhaseValidationPlaceholderLanguage(entry.value)) {
-      diagnostics.push(
-        phaseSummaryDiagnostic({
-          source: "residual",
-          path: entry.path,
-          code: "content.placeholder",
-          message: `Phase summary model contains placeholder language: ${entry.value}.`,
-          context: { value: entry.value },
-          suggestion: "Replace placeholder language with concrete execution evidence."
-        })
-      );
-    }
-
-    if (
-      isGenericNoneValue(entry.value) &&
-      /^(?:model\.outcome|model\.changesMade|model\.targetedVerification|model\.evidence)/.test(
-        entry.path
-      )
-    ) {
-      diagnostics.push(
-        phaseSummaryDiagnostic({
-          source: "residual",
-          path: entry.path,
-          code: "content.generic_text",
-          message: "Phase summary model must use concrete execution evidence instead of generic none.",
-          context: { value: entry.value },
-          suggestion: "Replace the generic value with a command, artifact, or targeted verification result."
-        })
-      );
-    }
-  }
-
-  return diagnostics;
-}
-
-async function validatePhaseSummaryModelCommands(
-  model: Record<string, unknown>
-): Promise<string[]> {
-  const commands = [
-    ...new Set(
-      collectModelStringValues(model).flatMap((value) => extractBlueprintDirectCommands(value))
-    )
-  ];
-
-  if (commands.length === 0) {
-    return [];
-  }
-
-  const implementedCommands = await getPhasePlanImplementedCommandNames();
-
-  if (implementedCommands === null || implementedCommands.size === 0) {
-    return [
-      "Phase summary model Blueprint command references could not be checked because the implemented command catalog was unavailable."
-    ];
-  }
-
-  const nonImplementedCommands = commands.filter((command) => !implementedCommands.has(command));
-
-  return nonImplementedCommands.length > 0
-    ? [
-        `Phase summary model references non-implemented Blueprint command(s): ${nonImplementedCommands.join(", ")}.`
-      ]
-    : [];
 }
 
 function renderSummaryTable(headers: string[], rows: string[][]): string {
@@ -7619,8 +7309,50 @@ function phaseValidationRoutingRules(phaseNumber: string | null): string[] {
   ];
 }
 
+function normalizeSummaryEvidenceHeading(value: string): string {
+  return value
+    .replace(/\s+#+\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function extractSummaryEvidenceSection(markdown: string, heading: string): string {
+  const expectedHeading = normalizeSummaryEvidenceHeading(heading);
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let startIndex = -1;
+  let startLevel = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+
+    if (match && normalizeSummaryEvidenceHeading(match[2]) === expectedHeading) {
+      startIndex = index + 1;
+      startLevel = match[1].length;
+      break;
+    }
+  }
+
+  if (startIndex < 0) {
+    return "";
+  }
+
+  let endIndex = lines.length;
+
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{1,6})\s+/);
+
+    if (match && match[1].length <= startLevel) {
+      endIndex = index;
+      break;
+    }
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n").trim();
+}
+
 function mergeSummarySections(content: string, headings: string[]): string[] {
-  return headings.flatMap((heading) => sectionToList(extractMarkdownSection(content, heading)));
+  return headings.flatMap((heading) => sectionToList(extractSummaryEvidenceSection(content, heading)));
 }
 
 async function collectValidationAuthoringSummaryEvidence(
@@ -10938,6 +10670,8 @@ export async function blueprintPhaseSummaryIndex(
     path: string;
     content: string;
     status: PhaseSummaryRecord["status"];
+    completedEvidence: boolean;
+    legacyCompletedEvidence: boolean;
     strictValidation: { valid: boolean; issues: string[]; warnings: string[] };
     validation: { valid: boolean; issues: string[]; warnings: string[] };
     linkedPlan: PhasePlanRecord | null;
@@ -10974,12 +10708,16 @@ export async function blueprintPhaseSummaryIndex(
     summaries.push(toPhaseSummaryRecord(planId, summaryPath, content, linkedPlanPath));
 
     const summaryStatus = extractSummaryStatus(content);
+    const completedEvidence = summaryCountsAsCompleted(summaryStatus, content);
+    const legacyCompletedEvidence = completedEvidence && summaryStatus === null;
 
     loadedSummaries.push({
       planId,
       path: summaryPath,
       content,
       status: summaryStatus,
+      completedEvidence,
+      legacyCompletedEvidence,
       strictValidation,
       validation,
       linkedPlan,
@@ -10997,10 +10735,9 @@ export async function blueprintPhaseSummaryIndex(
       for (const loaded of loadedSummaries) {
         if (
           derivedCompletedPlans.has(loaded.planId) ||
-          loaded.status !== "COMPLETED" ||
+          !loaded.completedEvidence ||
           !loaded.validation.valid ||
-          !loaded.linkedPlan ||
-          !loaded.linkedPlan.valid
+          !loaded.linkedPlan
         ) {
           continue;
         }
@@ -11053,12 +10790,16 @@ export async function blueprintPhaseSummaryIndex(
   }
 
   for (const loaded of loadedSummaries) {
-    if (loaded.validation.valid && loaded.status === "COMPLETED") {
+    if (loaded.validation.valid && loaded.completedEvidence) {
       if (!completedPlans.has(loaded.planId)) {
         warnings.push(
           `${loaded.path}: linked plan ${loaded.linkedPlan?.path ?? loaded.planId} depends on incomplete execution plan(s): ${loaded.dependencyPlanIds
             .filter((dependencyPlanId) => !completedPlans.has(dependencyPlanId))
             .join(", ")}, so this summary does not close execution coverage.`
+        );
+      } else if (loaded.legacyCompletedEvidence) {
+        warnings.push(
+          `${loaded.path}: legacy summary has no Status marker; treating it as completed execution evidence because the canonical plan link and semantic checks passed.`
         );
       }
     } else if (loaded.validation.valid && loaded.status) {
@@ -11115,9 +10856,9 @@ export async function blueprintPhaseSummaryAuthoringContext(
       acceptanceCriteria: [],
       allowedNextActions: [],
       schemaPath: null,
-      baseSchema: contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null,
+      baseSchema: null,
       taskSchema: null,
-      modelOnly: true,
+      modelOnly: false,
       prerequisiteBlockers: [reason],
       reason,
       warnings: []
@@ -11178,22 +10919,17 @@ export async function blueprintPhaseSummaryAuthoringContext(
     (dependency) => !completedDependencyPlanIds.has(dependency.planId)
   );
   const blockers: string[] = [];
+  const warnings = [...planIndex.warnings, ...summaryIndex.warnings];
 
   if (!planRead.found || !planRead.path) {
     blockers.push(
-      `${linkedPlanPath} does not exist yet. Create the matching plan before authoring a summary model.`
+      `${linkedPlanPath} does not exist yet. Create the matching plan before authoring a summary.`
     );
   } else if (!planRead.validation?.valid) {
     const planIssues = planRead.validation?.issues.length
       ? planRead.validation.issues
       : ["Linked plan artifact is invalid and must be repaired before execution can be summarized."];
     blockers.push(...planIssues.map((issue) => `${planRead.path}: ${issue}`));
-  }
-
-  if (acceptanceCriteria.length === 0) {
-    blockers.push(
-      `${linkedPlanPath}: selected plan has no acceptance criteria, so summary targeted verification cannot be narrowed safely.`
-    );
   }
 
   if (missingDependencyPlans.length > 0) {
@@ -11203,26 +10939,14 @@ export async function blueprintPhaseSummaryAuthoringContext(
   }
 
   if (unsatisfiedDependencyPlans.length > 0) {
-    blockers.push(
-      `${linkedPlanPath}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
+    warnings.push(
+      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
         .join(", ")}`
     );
   }
 
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(resolved.phaseNumber);
-  const schemas =
-    blockers.length === 0
-      ? await phaseSummaryModelSchemas({
-          contract,
-          phaseNumber: resolved.phaseNumber,
-          acceptanceCriteria,
-          dependencyPlans,
-          completedRoute,
-          summaryPath,
-          linkedPlanPath
-        })
-      : null;
 
   return {
     status: blockers.length === 0 ? "ready" : "invalid",
@@ -11235,13 +10959,13 @@ export async function blueprintPhaseSummaryAuthoringContext(
     dependencyPlans,
     acceptanceCriteria,
     allowedNextActions: allowedNextActions.allowedActions,
-    schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
-    baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
-    taskSchema: schemas?.taskSchema ?? null,
-    modelOnly: true,
+    schemaPath: null,
+    baseSchema: null,
+    taskSchema: null,
+    modelOnly: false,
     prerequisiteBlockers: blockers,
     reason: blockers.length > 0 ? blockers.join(" ") : null,
-    warnings: [...planIndex.warnings, ...summaryIndex.warnings]
+    warnings
   };
 }
 
@@ -11264,86 +10988,103 @@ export async function blueprintPhaseSummaryValidateModel(
         "Repair the selected saved plan and dependency inventory before authoring phase.summary evidence."
     })
   );
-  const modelObject = asJsonObject(args.model);
+  const hasContent = args.content !== undefined;
+  const hasModel = args.model !== undefined;
 
-  if (!modelObject) {
-    diagnostics.push(
-      phaseSummaryDiagnostic({
-        source: "schema",
-        path: "model",
-        code: "schema.type",
-        message: "Phase summary model must be a JSON object.",
-        context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
-        suggestion: "Return a JSON object that matches taskSchema."
-      })
-    );
-  }
-
-  if (!context.taskSchema) {
+  if (hasContent === hasModel) {
     diagnostics.push(
       phaseSummaryDiagnostic({
         source: "scope",
-        path: "taskSchema",
-        code: "contract.missing_schema",
-        message: "phase.summary did not expose a runtime task schema.",
-        context: {},
-        suggestion: "Read the live phase.summary contract and authoring context before writing."
+        path: "summary",
+        code: "scope.input_mode",
+        message: "Phase summary draft validation expects exactly one of Markdown content or legacy model.",
+        context: { hasContent, hasModel },
+        suggestion: "Pass Markdown content for the streamlined summary path."
       })
     );
   }
 
   let normalizedModel: PhaseSummaryStructuredModel | null = null;
+  let renderPreview: string | null = null;
+  const draftWarnings: string[] = [];
 
-  if (modelObject && context.taskSchema) {
-    const validate = createAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+  if (hasContent && typeof args.content === "string") {
+    renderPreview = normalizeTextContent(args.content);
+  } else if (hasModel) {
+    const modelObject = asJsonObject(args.model);
 
-    if (!schemaValid) {
-      diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseSummaryAjvError)
-      );
-    }
-
-    diagnostics.push(
-      ...phaseSummaryModelResidualDiagnostics(modelObject, readArtifactContract("phase.summary").modelContract)
-    );
-
-    for (const issue of await validatePhaseSummaryModelCommands(modelObject)) {
+    if (!modelObject) {
       diagnostics.push(
         phaseSummaryDiagnostic({
-          source: "residual",
+          source: "schema",
           path: "model",
-          code: "content.non_implemented_command",
-          message: issue,
-          context: {},
-          suggestion: "Use only implemented Blueprint command references from the task schema."
+          code: "schema.type",
+          message: "Legacy phase summary model must be a JSON object.",
+          context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+          suggestion: "Pass Markdown content instead of a structured summary model."
         })
       );
-    }
-
-    if (schemaValid) {
+    } else {
       normalizedModel = normalizePhaseSummaryModel(modelObject);
+
+      if (!normalizedModel) {
+        diagnostics.push(
+          phaseSummaryDiagnostic({
+            source: "schema",
+            path: "model",
+            code: "schema.legacy_shape",
+            message: "Legacy phase summary model cannot be rendered as Markdown.",
+            context: {},
+            suggestion: "Pass Markdown content, or provide the legacy model fields needed for rendering."
+          })
+        );
+      } else if (context.phase && context.planId && context.path && context.linkedPlanPath) {
+        renderPreview = renderPhaseSummaryModelContent({
+          model: normalizedModel,
+          resolved: context.phase,
+          planId: context.planId,
+          linkedPlanPath: context.linkedPlanPath,
+          summaryPath: context.path
+        });
+      }
     }
   }
 
-  let renderPreview: string | null = null;
-
   if (
-    diagnostics.length === 0 &&
-    normalizedModel &&
+    renderPreview &&
     context.phase &&
     context.planId &&
     context.path &&
     context.linkedPlanPath
   ) {
-    const rendered = renderPhaseSummaryModelContent({
-      model: normalizedModel,
-      resolved: context.phase,
-      planId: context.planId,
-      linkedPlanPath: context.linkedPlanPath,
-      summaryPath: context.path
-    });
-    const validation = validateStrictSummaryArtifactContent(rendered, {
+    const statusMarker = extractSummaryMarkerValue(renderPreview, "Status");
+    const status = extractSummaryStatus(renderPreview);
+
+    if (!statusMarker) {
+      diagnostics.push(
+        phaseSummaryDiagnostic({
+          source: "markdown",
+          path: "content",
+          code: "markdown.missing_status",
+          message: "New phase summaries must include an explicit Status marker.",
+          context: {},
+          suggestion: "Add Status: COMPLETED, Status: PARTIAL, or Status: BLOCKED near the top of the summary."
+        })
+      );
+    } else if (!status) {
+      diagnostics.push(
+        phaseSummaryDiagnostic({
+          source: "markdown",
+          path: "content",
+          code: "markdown.invalid_status",
+          message: "Phase summary Status marker must be COMPLETED, PARTIAL, or BLOCKED.",
+          context: { status: statusMarker },
+          suggestion: "Use one of the supported status values."
+        })
+      );
+    }
+
+    const validation = validateStrictSummaryArtifactContent(renderPreview, {
       linkedPlanPath: context.linkedPlanPath,
       requirePlanMarker: true
     });
@@ -11361,7 +11102,7 @@ export async function blueprintPhaseSummaryValidateModel(
       completedPlanIds: new Set(summaryIndex.completedPlans),
       selectedPlanId: context.planId
     });
-    const livePlanValidation = validateSummaryAgainstLivePlanInventory(rendered, {
+    const livePlanValidation = validateSummaryAgainstLivePlanInventory(renderPreview, {
       resolved: context.phase,
       planId: context.planId,
       plan: context.plan,
@@ -11373,23 +11114,20 @@ export async function blueprintPhaseSummaryValidateModel(
       }
     });
     const markdownIssues = [...validation.issues, ...livePlanValidation.issues];
+    draftWarnings.push(...validation.warnings, ...livePlanValidation.warnings);
 
     for (const issue of markdownIssues) {
       diagnostics.push(
         phaseSummaryDiagnostic({
           source: "markdown",
-          path: "renderPreview",
+          path: "content",
           code: "markdown.invalid_render",
           message: issue,
           context: {},
           suggestion:
-            "Repair the model so MCP-rendered Markdown satisfies the phase.summary artifact contract."
+            "Repair the summary so semantic completion evidence is truthful."
         })
       );
-    }
-
-    if (markdownIssues.length === 0) {
-      renderPreview = rendered;
     }
   }
 
@@ -11404,11 +11142,15 @@ export async function blueprintPhaseSummaryValidateModel(
     taskSchema: context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhaseSummaryDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
-      ? null
-      : normalizedModel,
-    renderPreview,
-    warnings: context.warnings
+    normalizedModel,
+    renderPreview: diagnostics.length === 0 ? renderPreview : null,
+    warnings: hasModel
+      ? [
+          ...context.warnings,
+          ...draftWarnings,
+          "phase.summary structured models are deprecated; Markdown content is now the primary summary authoring path."
+        ]
+      : [...context.warnings, ...draftWarnings]
   };
 }
 
@@ -11984,33 +11726,11 @@ export async function blueprintPhaseSummaryWrite(
     (dependency) => !completedDependencyPlanIds.has(dependency.planId)
   );
 
-  if (unsatisfiedDependencyPlans.length > 0) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      linkedPlanPath: plan.path,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      issues: [
-        `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
-          .map((dependency) => `${dependency.planId} (${dependency.path})`)
-          .join(", ")}`
-      ],
-      warnings: [...(plan.validation?.warnings ?? []), ...summaryIndex.warnings]
-    };
-  }
-
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
 
-  if (hasContent) {
+  if (hasContent === hasModel) {
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -12024,27 +11744,7 @@ export async function blueprintPhaseSummaryWrite(
       overwritten: false,
       status: "invalid",
       issues: [
-        "phase.summary is model-only; content is invalid. Call blueprint_phase_summary_validate_model with JSON first, then persist the same model through blueprint_phase_summary_write."
-      ],
-      warnings: []
-    };
-  }
-
-  if (!hasModel) {
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
-      planId,
-      path: pathValue,
-      linkedPlanPath: plan.path,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      issues: [
-        "phase.summary requires a structured model. Markdown content fallback is not supported."
+        "Phase summary writes must supply exactly one of Markdown content or legacy model."
       ],
       warnings: []
     };
@@ -12053,14 +11753,57 @@ export async function blueprintPhaseSummaryWrite(
   let normalizedContent: string;
   const modelWarnings: string[] = [];
 
-  const modelValidation = await blueprintPhaseSummaryValidateModel({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber,
-    planId,
-    model: args.model
-  });
+  if (hasContent && typeof args.content === "string") {
+    normalizedContent = normalizeTextContent(args.content);
+  } else {
+    const modelValidation = await blueprintPhaseSummaryValidateModel({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber,
+      planId,
+      model: args.model
+    });
 
-  if (!modelValidation.valid || !modelValidation.renderPreview) {
+    if (!modelValidation.valid || !modelValidation.renderPreview) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId,
+        path: pathValue,
+        linkedPlanPath: plan.path,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        issues: modelValidation.diagnostics.map(formatPhaseSummaryDiagnostic),
+        warnings: modelValidation.warnings
+      };
+    }
+
+    normalizedContent = normalizeTextContent(modelValidation.renderPreview);
+    modelWarnings.push(...modelValidation.warnings);
+  }
+
+  const statusMarker = extractSummaryMarkerValue(normalizedContent, "Status");
+  const summaryStatus = extractSummaryStatus(normalizedContent);
+  const writeModeIssues: string[] = [];
+
+  if (!statusMarker) {
+    writeModeIssues.push("New phase summaries must include an explicit Status marker.");
+  } else if (!summaryStatus) {
+    writeModeIssues.push("Phase summary Status marker must be COMPLETED, PARTIAL, or BLOCKED.");
+  }
+
+  if (summaryStatus === "COMPLETED" && unsatisfiedDependencyPlans.length > 0) {
+    writeModeIssues.push(
+      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
+        .map((dependency) => `${dependency.planId} (${dependency.path})`)
+        .join(", ")}`
+    );
+  }
+
+  if (writeModeIssues.length > 0) {
     return {
       phaseNumber: resolved.phaseNumber,
       phasePrefix: resolved.phasePrefix,
@@ -12073,13 +11816,10 @@ export async function blueprintPhaseSummaryWrite(
       created: false,
       overwritten: false,
       status: "invalid",
-      issues: modelValidation.diagnostics.map(formatPhaseSummaryDiagnostic),
-      warnings: modelValidation.warnings
+      issues: writeModeIssues,
+      warnings: [...modelWarnings, ...(plan.validation?.warnings ?? []), ...summaryIndex.warnings]
     };
   }
-
-  normalizedContent = normalizeTextContent(modelValidation.renderPreview);
-  modelWarnings.push(...modelValidation.warnings);
 
   const strictValidation = validateStrictSummaryArtifactContent(normalizedContent, {
     linkedPlanPath: plan.path,
@@ -12631,7 +12371,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_summary_authoring_context",
     description:
-      "Return the schema-first phase.summary authoring context, including the base model schema and runtime-narrowed task schema for the selected plan.",
+      "Return Markdown-first phase.summary authoring context for the selected plan, including linked plan, dependency, acceptance, existing-summary, and allowed next-action guidance.",
     inputSchema: phaseSummaryAuthoringContextInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseSummaryAuthoringContext(args as PhaseSummaryAuthoringContextArgs)
@@ -12639,7 +12379,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_summary_validate_model",
     description:
-      "Validate a structured phase.summary model against the runtime-narrowed task schema and return a canonical SUMMARY markdown preview without writing files.",
+      "Validate Markdown phase.summary draft content, or render a legacy structured model, and return semantic diagnostics plus a SUMMARY preview without writing files.",
     inputSchema: phaseSummaryValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseSummaryValidateModel(args as PhaseSummaryValidateModelArgs)
@@ -12647,7 +12387,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_summary_write",
     description:
-      "Persist a phase-scoped SUMMARY artifact from a validated structured phase.summary model for an existing plan with overwrite protection; Markdown content fallback is not supported.",
+      "Persist a phase-scoped SUMMARY artifact from Markdown content for an existing plan with overwrite protection and semantic completion checks.",
     inputSchema: phaseSummaryWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseSummaryWrite(args as PhaseSummaryWriteArgs)
