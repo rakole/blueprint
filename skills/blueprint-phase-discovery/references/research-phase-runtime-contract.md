@@ -259,3 +259,12 @@ and planner-ready:
 - refreshed state and command catalog were used for the next safe action
 - the effective `research.external_sources` policy was honored before any
   external verification step
+
+## Phase Context Ownership And Repair Loop
+
+- Blueprint does not create, manage, or repair repo-root `CONTEXT.md`.
+- Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
+- `/blu-research-phase` reads phase context only from `.blueprint/phases/<phase>/<XX>-CONTEXT.md` and must not repair, overwrite, synthesize, or mirror it.
+- Missing, invalid, contradictory, or unusable context routes to `/blu-discuss-phase <phase>` with exact diagnostics before any research drafting.
+- If research validation returns diagnostics, repair the same normalized research draft once and retry the same MCP write path.
+- If the retry returns identical diagnostics, stop, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.

@@ -36,6 +36,7 @@ Follow this flow exactly:
    - `"artifacts": [".blueprint/codebase/STACK.md", ".blueprint/codebase/ARCHITECTURE.md", ".blueprint/codebase/STRUCTURE.md", ".blueprint/codebase/CONVENTIONS.md", ".blueprint/codebase/TESTING.md", ".blueprint/codebase/INTEGRATIONS.md", ".blueprint/codebase/CONCERNS.md"]`
    - Never pass bare names like `"STACK"` and never pass absolute filesystem paths.
    - Do not replace existing codebase docs unless the user explicitly confirms a replace path.
+   - Do not create, read, update, or recommend a repo-root `CONTEXT.md`; brownfield mapping writes only the `.blueprint/codebase/*.md` bundle.
 8. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
 9. Choose the authoring execution path:
    - If a suitable code-analysis subagent or task mechanism is available, run capability-gated mapper lanes for tech, architecture, quality, and concerns. Do not use browser, web, generic page-inspection, or search-only agents as substitutes for codebase mapper agents.
@@ -57,4 +58,5 @@ Response requirements:
 - Treat `replace` as a deliberate confirmation path, not the default behavior.
 - Keep focused mapping language explicit: the requested focus area deepens the same seven-artifact bundle instead of creating a separate suffix-driven flow.
 - Recommend `/blu-new-project` when mapping completes before project bootstrap, or `/blu-progress` or the appropriate documented discovery/planning flow when the project is already initialized.
+- Keep phase context distinct from mapping output: phase context is authored later by `/blu-discuss-phase` at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`, not in the repo root.
 """

@@ -22,6 +22,13 @@ Blueprint-managed repositories store project state here:
   workstreams/
 ```
 
+Blueprint does not create, own, or repair a repository-root `CONTEXT.md`.
+Brownfield mapping persists only the canonical `.blueprint/codebase/*.md`
+bundle. Phase-specific context lives only under
+`.blueprint/phases/<phase>/<XX>-CONTEXT.md`; commands must not mirror it to the
+repo root, infer it from a root context file, or treat root-level context files
+as Blueprint-managed state.
+
 ## Bootstrap Readiness States
 
 `blueprint_project_status` and related read tools use these project readiness states:

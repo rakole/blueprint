@@ -282,6 +282,17 @@ type ArtifactValidateResult = {
   warnings: string[];
 };
 
+export type PhaseArtifactValidationDiagnostic = {
+  path: string;
+  code: string;
+  message: string;
+  heading?: string;
+  missing?: string[];
+  repair: string;
+  retryable: boolean;
+  nextTool?: string;
+};
+
 type ArtifactSummaryDigestArgs = {
   cwd?: string;
   focusArea?: string;
@@ -537,6 +548,7 @@ type McpWriteDiagnostic = {
   missing?: string[];
   repair: string;
   retryable: boolean;
+  nextTool?: string;
   argsPatch?: Record<string, unknown>;
 };
 
@@ -4158,6 +4170,54 @@ function hasSubstantiveContractSection(section: string): boolean {
   return hasBootstrapText(section, 3);
 }
 
+function phaseArtifactRepairInstruction(args: {
+  artifact: "context" | "discussion-log" | "research" | "ui-spec";
+  heading?: string;
+}): string {
+  if (args.artifact === "context") {
+    return args.heading
+      ? `Populate ## ${args.heading} with substantive downstream-planning detail, then retry blueprint_phase_artifact_write. Context requires every required heading to be present and substantive; one populated section is not enough.`
+      : "Read the phase.context contract, repair every required heading with substantive downstream-planning detail, then retry blueprint_phase_artifact_write.";
+  }
+
+  if (args.artifact === "ui-spec") {
+    return args.heading
+      ? `Populate ## ${args.heading}, or provide a valid explicit UI skip rationale where the contract allows it, then retry blueprint_phase_artifact_write.`
+      : "Read the phase.ui-spec contract, repair the UI spec or explicit skip rationale, then retry blueprint_phase_artifact_write.";
+  }
+
+  if (args.artifact === "discussion-log") {
+    return args.heading
+      ? `Populate ## ${args.heading} with concrete discussion evidence, then retry blueprint_phase_artifact_write.`
+      : "Read the phase.discussion-log contract, repair the discussion log, then retry blueprint_phase_artifact_write.";
+  }
+
+  return "Read the phase.research contract, repair the research artifact, then retry blueprint_phase_artifact_write.";
+}
+
+function phaseArtifactDiagnostic(args: {
+  artifact: "context" | "discussion-log" | "research" | "ui-spec";
+  path: string;
+  code: string;
+  message: string;
+  heading?: string;
+  missing?: string[];
+}): PhaseArtifactValidationDiagnostic {
+  return {
+    path: args.path,
+    code: args.code,
+    message: args.message,
+    heading: args.heading,
+    missing: args.missing,
+    repair: phaseArtifactRepairInstruction({
+      artifact: args.artifact,
+      heading: args.heading
+    }),
+    retryable: true,
+    nextTool: "blueprint_phase_artifact_write"
+  };
+}
+
 function hasRequirementTableRows(section: string): boolean {
   const lines = section
     .split("\n")
@@ -4384,9 +4444,22 @@ export function validatePhaseArtifactContent(
   valid: boolean;
   issues: string[];
   warnings: string[];
+  diagnostics: PhaseArtifactValidationDiagnostic[];
 } {
   if (artifact === "research") {
-    return validateResearchArtifactContent(content);
+    const validation = validateResearchArtifactContent(content);
+
+    return {
+      ...validation,
+      diagnostics: validation.issues.map((issue) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "research.invalid",
+          message: issue
+        })
+      )
+    };
   }
 
   const contractId = resolvePhaseArtifactContractId(artifact);
@@ -4399,16 +4472,35 @@ export function validatePhaseArtifactContent(
         : "UI spec artifact";
   const issues: string[] = [];
   const warnings: string[] = [];
+  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
 
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
-    issues.push(`${artifactLabel} must start with a markdown H1 title.`);
+    const issue = `${artifactLabel} must start with a markdown H1 title.`;
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.title",
+        code: "markdown.missing_h1",
+        message: issue
+      })
+    );
   }
 
-  issues.push(
-    ...contract.placeholderSignals
-      .filter((signal) => signal.length > 0 && content.includes(signal))
-      .map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
-  );
+  for (const signal of contract.placeholderSignals.filter(
+    (value) => value.length > 0 && content.includes(value)
+  )) {
+    const issue = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content",
+        code: "markdown.placeholder_text",
+        message: issue
+      })
+    );
+  }
 
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
   const missingRequiredSections = contract.requiredHeadings.filter(
@@ -4417,29 +4509,88 @@ export function validatePhaseArtifactContent(
 
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
     if (extractMarkdownSection(content, "Outcome Mode").trim().length === 0) {
-      issues.push("UI spec artifact section Outcome Mode must not be empty.");
+      const issue = "UI spec artifact section Outcome Mode must not be empty.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Outcome Mode",
+          code: "ui-spec.empty_outcome_mode",
+          message: issue,
+          heading: "Outcome Mode"
+        })
+      );
     }
     if (extractMarkdownSection(content, "Rationale").trim().length === 0) {
-      issues.push(
-        "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
+      const issue =
+        "UI spec artifact using explicit skip rationale must include a non-empty Rationale section.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Rationale",
+          code: "ui-spec.empty_skip_rationale",
+          message: issue,
+          heading: "Rationale"
+        })
       );
     }
   } else if (artifact === "context" && missingRequiredSections.length > 0) {
-    issues.push(
-      `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    const issue = `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue);
+    diagnostics.push(
+      ...missingRequiredSections.map((heading) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "context.missing_required_section",
+          message: `Context artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
     );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
-    issues.push(
-      `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    const issue = `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue);
+    diagnostics.push(
+      ...missingRequiredSections.map((heading) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "ui-spec.missing_required_section",
+          message: `UI spec artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
     );
   } else if (presentRequiredSections === 0) {
-    issues.push(
-      `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
+    const issue = `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`;
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections",
+        code: "markdown.no_populated_contract_sections",
+        message: issue,
+        missing: [...contract.requiredHeadings]
+      })
     );
   }
 
   if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
-    issues.push("UI spec artifact section Outcome Mode must not be empty.");
+    const issue = "UI spec artifact section Outcome Mode must not be empty.";
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections.Outcome Mode",
+        code: "ui-spec.empty_outcome_mode",
+        message: issue,
+        heading: "Outcome Mode"
+      })
+    );
   }
 
   if (artifact === "context") {
@@ -4451,20 +4602,48 @@ export function validatePhaseArtifactContent(
       }
 
       if (!hasSubstantiveContractSection(section)) {
-        issues.push(
-          `Context artifact section ${heading} must contain substantive downstream-planning detail.`
+        const issue = `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
+        issues.push(issue);
+        diagnostics.push(
+          phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.non_substantive_required_section",
+            message: issue,
+            heading
+          })
         );
       }
     }
 
     const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
     issues.push(...discussValidation.issues);
+    diagnostics.push(
+      ...discussValidation.issues.map((issue) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "context.unsupported_claim",
+          message: issue
+        })
+      )
+    );
     warnings.push(...discussValidation.warnings);
   }
 
   if (artifact === "discussion-log") {
     const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
     issues.push(...discussValidation.issues);
+    diagnostics.push(
+      ...discussValidation.issues.map((issue) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "discussion-log.unsupported_claim",
+          message: issue
+        })
+      )
+    );
     warnings.push(...discussValidation.warnings);
   }
 
@@ -4477,7 +4656,8 @@ export function validatePhaseArtifactContent(
   return {
     valid: issues.length === 0,
     issues,
-    warnings
+    warnings,
+    diagnostics
   };
 }
 
@@ -7921,10 +8101,34 @@ export async function blueprintArtifactValidate(
     );
   }
 
-  for (const artifact of inspection.phases.filter((value) => value.endsWith("-RESEARCH.md"))) {
+  const phaseArtifactValidationTargets = [
+    {
+      suffix: "-CONTEXT.md",
+      kind: "context",
+      repair: "Regenerate or update malformed phase context through /blu-discuss-phase before planning."
+    },
+    {
+      suffix: "-DISCUSSION-LOG.md",
+      kind: "discussion-log",
+      repair: "Regenerate or update malformed phase discussion logs through /blu-discuss-phase."
+    },
+    {
+      suffix: "-RESEARCH.md",
+      kind: "research",
+      repair: "Regenerate or update malformed phase research through /blu-research-phase before planning."
+    },
+    {
+      suffix: "-UI-SPEC.md",
+      kind: "ui-spec",
+      repair: "Regenerate or update malformed phase UI specs through /blu-ui-phase before planning."
+    }
+  ] as const;
+
+  for (const target of phaseArtifactValidationTargets) {
+    for (const artifact of inspection.phases.filter((value) => value.endsWith(target.suffix))) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const raw = await fs.readFile(absolutePath, "utf8");
-    const validation = validateResearchArtifactContent(raw);
+      const validation = validatePhaseArtifactContent(raw, target.kind);
 
     for (const issue of validation.issues) {
       issues.push(`${artifact}: ${issue}`);
@@ -7935,9 +8139,8 @@ export async function blueprintArtifactValidate(
     }
 
     if (!validation.valid) {
-      suggestedRepairs.add(
-        "Regenerate or update malformed phase research through /blu-research-phase before planning."
-      );
+        suggestedRepairs.add(target.repair);
+      }
     }
   }
 

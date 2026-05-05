@@ -38,6 +38,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes only declared `.blueprint/` phase artifacts, checkpoints, and `STATE.md` through MCP tools.
+- Blueprint does not create or manage repo-root `CONTEXT.md`; this command authors or repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
 - In-flight discovery follows the shared profile until the run concludes or stops on a checkpoint or overwrite decision.
 - The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`.
 
@@ -66,6 +67,7 @@
 - `optional shared phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
 - The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, or dropped deferred ideas are corrected before save. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft from those returned issues and retry before treating the discussion as complete.
+- Retry validation repair at most once for the same draft. If the same diagnostics repeat, stop, preserve the discuss checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as the repair strategy.
 
 
 ## Required MCP Tools
@@ -100,6 +102,7 @@
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`; for discuss checkpoints, `mode` must be `"discuss"`. Treat the returned checkpoint `path` as authoritative, do not try to serialize resumable state into markdown fields, and remember that the filename is a shared phase checkpoint path rather than proof of discuss ownership.
 - Delete checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"` so cleanup only removes discuss-owned continuation state from the shared checkpoint path.
 - Rich context authoring should preserve evidence behind decisions: options considered, selected answer or assumption, rationale, repo paths or saved artifacts used as evidence, consequences if an assumption is wrong, canonical refs, and deferred ideas. This density is required even when the command falls back to a single main agent with no subagent support.
+- `/blu-discuss-phase` is the only lifecycle command that authors or repairs phase context. Research, UI, and planning commands read this artifact and route back here when it is missing, invalid, or unusable.
 
 
 ## Skills And Subagents

@@ -32,6 +32,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 
 - The target phase must exist.
 - Saved `XX-CONTEXT.md` content is required before drafting research.
+- Phase context is read-only for this command. If `XX-CONTEXT.md` is missing, invalid, or unusable, route back to `/blu-discuss-phase <phase>`; do not repair, overwrite, synthesize, or mirror context, and never use repo-root `CONTEXT.md` as Blueprint state.
 - The effective `research.external_sources` policy controls whether official-doc or other external verification is allowed.
 
 ## Outputs
@@ -82,6 +83,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 
 - Read `blueprint_config_get` with `scope: "effective"` before any external verification decision. Treat `config.research.external_sources` as the source of truth and `workflowPosture.research.externalSources` as the mirrored convenience field.
 - Read the actual current `XX-CONTEXT.md` content before drafting. If the context read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
+- Treat invalid or unusable context the same as missing context: stop and route to `/blu-discuss-phase <phase>` with the precise diagnostics. `/blu-research-phase` owns `XX-RESEARCH.md` only and must not rewrite `XX-CONTEXT.md`.
 - When saved research is already valid, prefer `ask_user` for an explicit `view`/`skip`/`update` choice. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `skip`, `view`, default reuse, or unchanged invalid writes are not successful exits.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
 - Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker.
@@ -96,6 +98,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Bare names such as `RESEARCH` and absolute paths are invalid tool inputs; the tool owns the final repo-relative path.
 - Use the returned `path` as authoritative after writes.
 - Failed validation requires validation repair/retry before the command can treat research as complete.
+- Retry research validation repair at most once for the same draft. If the retry returns identical diagnostics, stop, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as the repair strategy.
 
 ## Skills And Subagents
 
@@ -152,6 +155,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Reads and writes only the selected phase scope plus `.blueprint/STATE.md`.
 - Reads the actual saved context content before drafting or revising research.
 - Stops on missing context until the user repairs or confirms the recovery route.
+- Does not create, repair, overwrite, or infer phase context; missing or unusable context routes to `/blu-discuss-phase <phase>`.
 - Uses `contract.authoringTemplate` as the direct drafting seed and reserves scaffold for deliberate placeholder creation only.
 - Honors the effective `research.external_sources` policy before any external verification step.
 - Keeps repo truth explicit and distinct from official-doc or user-supplied external evidence.

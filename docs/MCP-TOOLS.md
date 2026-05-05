@@ -242,6 +242,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 - Do not pass bare artifact names such as `STACK`, absolute filesystem paths, or ad hoc report filenames.
 - Use scaffolding only for first-write seeding or template regeneration. Do not treat scaffold output as the final persistent content for filled-in research, context, UI-spec, plan, summary, validation, or report artifacts.
 - Treat returned `createdFiles` and `reusedFiles` as authoritative for what the tool actually touched.
+- Blueprint does not manage a repository-root `CONTEXT.md`. Brownfield mapping scaffolds and writes only `.blueprint/codebase/*.md`; phase context scaffolding and writes are limited to `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
 
 ### Roadmap Creation And Insertion
 
@@ -255,9 +256,11 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 - `blueprint_phase_artifact_write` accepts numeric `phase`, enum `artifact`, and full `content`.
 - Do not pass artifact filenames, `phaseDir`, or `phasePrefix` into `blueprint_phase_artifact_write`; the tool owns the artifact path.
+- `/blu-discuss-phase` owns authoring and repair of `artifact: "context"`. `/blu-research-phase`, `/blu-ui-phase`, and `/blu-plan-phase` may read `XX-CONTEXT.md` and route back to `/blu-discuss-phase <phase>` when it is missing, invalid, or unusable; they must not repair, overwrite, or synthesize context themselves.
 - When normalizing authored phase artifacts, prefer `blueprint_artifact_contract_read` over copied prompt-local templates.
 - Research writes validate in `strict` mode by default. Use `validationMode: "warn"` only when the command intentionally wants warnings without blocking the write attempt.
 - Research writes should be normalized to Blueprint's exact `XX-RESEARCH.md` template before calling the tool, and angle-bracket placeholders must be replaced with real content.
+- Validation repair loops are bounded. After validation diagnostics, repair the same draft once and retry the same MCP path; if the retry returns identical diagnostics, stop, preserve any command checkpoint, report the exact diagnostics plus the next safe action, and do not inspect MCP source files as a repair strategy.
 - `blueprint_phase_checkpoint_get` accepts optional `expectedOwnerCommand` and `expectedMode` fields so commands can deterministically avoid resuming stale or foreign continuation state. Legacy saved checkpoints remain readable, but reads include `warnings` and `safeToResume`.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object that includes `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `ownerCommand` must match `resumeMeta.mode` (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`). The tool owns the shared checkpoint filename and location, and rejects overwriting a checkpoint owned by a different command or mode.
 - `blueprint_phase_checkpoint_delete` accepts the same `expectedOwnerCommand` and `expectedMode` guard fields. When a checkpoint exists, the tool refuses unguarded deletes and refuses to delete a foreign shared checkpoint, reporting the ownership/mode blocker in `reason`.
