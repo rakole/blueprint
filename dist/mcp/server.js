@@ -41284,6 +41284,31 @@ function parseRequirements(value) {
     (entry) => entry.length > 0 && !["none", "none yet", "n/a", "not yet mapped"].includes(entry.toLowerCase())
   );
 }
+function uniqueRequirements(values) {
+  return [...new Set(values)];
+}
+function extractDurableRequirementIds(value) {
+  return [...value.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1] ?? "").filter((requirementId) => requirementId.length > 0);
+}
+function parseRoadmapRequirements(value) {
+  return uniqueRequirements(
+    parseRequirements(value).flatMap((entry) => {
+      const durableIds = extractDurableRequirementIds(entry);
+      return durableIds.length > 0 ? durableIds : [entry];
+    })
+  );
+}
+function extractRoadmapDetailRequirements(body) {
+  return uniqueRequirements(
+    body.replace(/\r\n/g, "\n").split("\n").flatMap((line) => {
+      const normalized = line.trim().replace(/^[-*+]\s+/, "").replace(/\*\*/g, "").trim();
+      const match = normalized.match(
+        /^(?:mapped\s+)?requirements?(?:\s+ids?)?\s*:\s*(.+)$/i
+      );
+      return match ? parseRoadmapRequirements(match[1] ?? null) : [];
+    })
+  );
+}
 function parseRoadmapPhaseTitle(value) {
   const unbolded = value.trim().replace(/\*\*$/u, "").trim();
   const requirementsMatch = unbolded.match(/\s*\(\s*Requirements:\s*([^)]+)\)\s*$/i);
@@ -41295,7 +41320,7 @@ function parseRoadmapPhaseTitle(value) {
   }
   return {
     phaseName: unbolded.slice(0, requirementsMatch.index).trim(),
-    requirements: parseRequirements(requirementsMatch[1] ?? null)
+    requirements: parseRoadmapRequirements(requirementsMatch[1] ?? null)
   };
 }
 function parseRoadmapPhaseLine(line) {
@@ -41346,8 +41371,67 @@ function parseRoadmapPhaseChildLines(lines) {
     successCriteria: successCriteria.length > 0 ? successCriteria.filter((value) => value.length > 0).join("; ") : null
   };
 }
+function parseSimpleMarkdownTableCells(line) {
+  const trimmed = line.trim();
+  if (!/^\|.*\|$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+}
+function isSimpleMarkdownTableSeparator(cells) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+function normalizeRoadmapTableHeader(value) {
+  return value.replace(/[`*_]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+function isRoadmapPhaseTableHeader(value) {
+  return ["phase", "phase #", "phase number", "#"].includes(
+    normalizeRoadmapTableHeader(value)
+  );
+}
+function isRoadmapRequirementsTableHeader(value) {
+  return /^(?:mapped\s+)?requirements?(?:\s+ids?)?$/.test(
+    normalizeRoadmapTableHeader(value)
+  );
+}
+function extractRoadmapPhaseTableRequirements(raw) {
+  const requirementsByPhase = /* @__PURE__ */ new Map();
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const headers = parseSimpleMarkdownTableCells(lines[index] ?? "");
+    if (!headers) {
+      continue;
+    }
+    const separator = parseSimpleMarkdownTableCells(lines[index + 1] ?? "");
+    if (!separator || !isSimpleMarkdownTableSeparator(separator)) {
+      continue;
+    }
+    const phaseIndex = headers.findIndex(isRoadmapPhaseTableHeader);
+    const requirementsIndex = headers.findIndex(isRoadmapRequirementsTableHeader);
+    if (phaseIndex < 0 || requirementsIndex < 0) {
+      continue;
+    }
+    for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
+      const cells = parseSimpleMarkdownTableCells(lines[rowIndex] ?? "");
+      if (!cells) {
+        break;
+      }
+      if (isSimpleMarkdownTableSeparator(cells)) {
+        continue;
+      }
+      const phaseNumber = extractPhaseNumberToken(cells[phaseIndex] ?? "");
+      const requirements = parseRoadmapRequirements(cells[requirementsIndex] ?? null);
+      if (!phaseNumber || requirements.length === 0) {
+        continue;
+      }
+      requirementsByPhase.set(phaseNumber, requirements);
+    }
+  }
+  return requirementsByPhase;
+}
 function parseRoadmapDocument(raw) {
   const milestone2 = raw.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  const tableRequirements = extractRoadmapPhaseTableRequirements(raw);
   const details = /* @__PURE__ */ new Map();
   for (const block of raw.split(/^### Phase /gm).slice(1)) {
     const newlineIndex = block.indexOf("\n");
@@ -41360,9 +41444,7 @@ function parseRoadmapDocument(raw) {
     const phaseNumber = normalizePhaseNumber2(headerMatch[1]);
     const goal = body.match(/^\*\*Goal\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
     const successCriteria = body.match(/^\*\*Success Criteria\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
-    const requirements = parseRequirements(
-      body.match(/^\*\*Requirements\*\*:\s*(.+)$/m)?.[1] ?? null
-    );
+    const requirements = extractRoadmapDetailRequirements(body);
     details.set(phaseNumber, { goal, successCriteria, requirements });
   }
   const phases = [];
@@ -41388,6 +41470,7 @@ function parseRoadmapDocument(raw) {
     const phaseNumber = inlinePhase.phaseNumber;
     const phaseChildren = parseRoadmapPhaseChildLines(childLines);
     const detail = details.get(phaseNumber);
+    const requirements = detail && detail.requirements.length > 0 ? detail.requirements : inlinePhase.requirements.length > 0 ? inlinePhase.requirements : tableRequirements.get(phaseNumber) ?? [];
     phases.push({
       phaseNumber,
       phasePrefix: formatPhasePrefix2(phaseNumber),
@@ -41396,7 +41479,7 @@ function parseRoadmapDocument(raw) {
       summary: inlinePhase.summary,
       goal: detail ? detail.goal : phaseChildren.goal,
       successCriteria: detail ? detail.successCriteria : phaseChildren.successCriteria,
-      requirements: detail ? detail.requirements : inlinePhase.requirements
+      requirements
     });
   }
   return { milestone: milestone2, phases };
