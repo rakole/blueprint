@@ -908,6 +908,87 @@ test("phase plan authoring rejects invented requirement coverage when roadmap re
   assert.deepEqual(index.plans, []);
 });
 
+test("phase plan authoring accepts mapped requirements detail labels", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 3: Phase Discovery
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+**Mapped requirements:** LIFE-01, LIFE-02
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-01/);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
+});
+
+test("phase plan authoring accepts roadmap overview table requirements", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phase Overview
+
+| Phase | Name | Goal | Requirements | Status |
+|-------|------|------|--------------|--------|
+| 3 | Phase Discovery | Add the planning slice. | LIFE-01, LIFE-02 | planned |
+
+## Phases
+
+- [ ] Phase 3: Phase Discovery
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-01/);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
+});
+
 test("phase plan authoring accepts list-only roadmap requirement clauses", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
