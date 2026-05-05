@@ -525,6 +525,7 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
 }
 
 const RICH_TEXT_TOOL_NAMES = new Set([
+  "blueprint_artifact_validate",
   "blueprint_artifact_contract_read",
   "blueprint_phase_plan_authoring_context",
   "blueprint_phase_plan_validate_model",
@@ -649,12 +650,21 @@ function appendPhasePlanWriteModelValidationDetails(
   appendJsonSection(sections, "Model Runtime Task Schema", modelValidation.taskSchema);
 }
 
+function appendArtifactValidateDetails(sections: string[], result: ToolResult): void {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Suggested Repairs", result.suggestedRepairs);
+}
+
 function appendRichToolText(toolName: string, result: ToolResult, summary: string): string {
   if (!RICH_TEXT_TOOL_NAMES.has(toolName)) {
     return summary;
   }
 
   const sections: string[] = [];
+
+  if (toolName === "blueprint_artifact_validate") {
+    appendArtifactValidateDetails(sections, result);
+  }
 
   if (toolName === "blueprint_artifact_contract_read") {
     appendArtifactContractReadDetails(sections, result);

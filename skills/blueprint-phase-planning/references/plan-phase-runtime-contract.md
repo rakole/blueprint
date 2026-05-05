@@ -300,6 +300,7 @@ When planner/checker agents are unavailable, continue sequentially:
 - Blueprint does not create, manage, or repair repo-root `CONTEXT.md`.
 - Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
 - `/blu-plan-phase` reads phase context only from `.blueprint/phases/<phase>/<XX>-CONTEXT.md` and must not repair, overwrite, synthesize, or mirror it.
+- The canonical phase context filename shape is `XX-CONTEXT.md` inside the resolved phase directory.
 - Missing, invalid, contradictory, or unusable context routes to `/blu-discuss-phase <phase>` with exact diagnostics before any planning draft.
 - If plan model validation, plan write, or scoped plan validation returns diagnostics, repair the same structured model once and retry the same MCP path.
 - If the retry returns identical diagnostics, stop, preserve the planning checkpoint or best safe no-write state, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.

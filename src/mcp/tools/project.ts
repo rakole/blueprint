@@ -94,8 +94,13 @@ type ProjectInitArgs = {
   bootstrapSeed?: BootstrapSeed;
 };
 
-type ProjectInitResult = {
+type ProjectInitSuccessResult = {
   projectRoot: string;
+  status?: never;
+  written?: never;
+  issues?: never;
+  diagnostics?: never;
+  suggestedRepairs?: never;
   createdPaths: string[];
   seededState: {
     updatedFields: string[];
@@ -114,6 +119,27 @@ type ProjectInitResult = {
   nextAction: string;
   warnings: string[];
 };
+
+type ProjectInitDiagnostic = {
+  path: string;
+  code: string;
+  message: string;
+  repair: string;
+  retryable: boolean;
+  allowedValues?: string[];
+  argsPatch?: unknown;
+};
+
+type ProjectInitInvalidResult = {
+  projectRoot: string;
+  status: "invalid";
+  written: false;
+  issues: string[];
+  diagnostics: ProjectInitDiagnostic[];
+  suggestedRepairs: string[];
+};
+
+type ProjectInitResult = ProjectInitSuccessResult | ProjectInitInvalidResult;
 
 type ProjectStatusArgs = {
   cwd?: string;
@@ -388,30 +414,51 @@ function normalizedPhaseRef(value: string): string {
   return value.trim().replace(/\.0+$/, "").toLowerCase();
 }
 
-function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
-  const issues: string[] = [];
+function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): ProjectInitDiagnostic[] {
+  const diagnostics: ProjectInitDiagnostic[] = [];
   const requirementIds = new Set<string>();
   const committedRequirementIds = new Set<string>();
   const committedCoverageCounts = new Map<string, number>();
   const phaseRefs = new Set<string>();
 
   if (!isSubstantiveText(seed.vision)) {
-    issues.push("bootstrapSeed.vision must contain a substantive project brief before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_vision_not_substantive",
+      message: "bootstrapSeed.vision must contain a substantive project brief before the first write.",
+      repair: "Replace placeholder vision text with a concrete project brief of at least six meaningful words."
+    }));
   }
 
   if (!isSubstantiveText(seed.currentMilestone, 1)) {
-    issues.push("bootstrapSeed.currentMilestone must name the active milestone before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.currentMilestone",
+      code: "seed_current_milestone_missing",
+      message: "bootstrapSeed.currentMilestone must name the active milestone before the first write.",
+      repair: "Set bootstrapSeed.currentMilestone to the active milestone label, for example v1."
+    }));
   }
 
-  for (const requirement of seed.requirements) {
+  for (const [requirementIndex, requirement] of seed.requirements.entries()) {
     if (requirementIds.has(requirement.id)) {
-      issues.push(`bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.requirements[${requirementIndex}].id`,
+        code: "seed_duplicate_requirement_id",
+        message: `bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`,
+        repair: "Give each requirement a unique durable ID and update phase requirementIds to match.",
+        argsPatch: { bootstrapSeed: { requirements: [{ index: requirementIndex, id: `${requirement.id}-2` }] } }
+      }));
     }
 
     requirementIds.add(requirement.id);
 
     if (!isSubstantiveText(requirement.requirement, 5)) {
-      issues.push(`Requirement ${requirement.id} must be substantive before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.requirements[${requirementIndex}].requirement`,
+        code: "seed_requirement_not_substantive",
+        message: `Requirement ${requirement.id} must be substantive before the first write.`,
+        repair: "Rewrite the requirement as a concrete, testable product or workflow expectation."
+      }));
     }
 
     if (requirement.scope === "committed") {
@@ -421,14 +468,27 @@ function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
   }
 
   if (committedRequirementIds.size === 0) {
-    issues.push("bootstrapSeed must include at least one committed requirement before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.requirements",
+      code: "seed_no_committed_requirements",
+      message: "bootstrapSeed must include at least one committed requirement before the first write.",
+      repair: "Mark at least one requirement scope as committed.",
+      allowedValues: ["committed", "deferred", "out_of_scope"],
+      argsPatch: { bootstrapSeed: { requirements: [{ index: 0, scope: "committed" }] } }
+    }));
   }
 
-  for (const phase of seed.roadmapPhases) {
+  for (const [phaseIndex, phase] of seed.roadmapPhases.entries()) {
     const phaseRef = normalizedPhaseRef(phase.phase);
 
     if (phaseRefs.has(phaseRef)) {
-      issues.push(`bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].phase`,
+        code: "seed_duplicate_phase_ref",
+        message: `bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`,
+        repair: "Give every roadmap phase a distinct normalized phase reference.",
+        argsPatch: { bootstrapSeed: { roadmapPhases: [{ index: phaseIndex, phase: `${phase.phase}.1` }] } }
+      }));
     }
 
     phaseRefs.add(phaseRef);
@@ -438,13 +498,23 @@ function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
 
     for (const requirementId of phaseRequirementIds) {
       if (uniquePhaseRequirementIds.has(requirementId)) {
-        issues.push(`Phase ${phase.phase} references requirement ${requirementId} more than once.`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_duplicate_phase_requirement_ref",
+          message: `Phase ${phase.phase} references requirement ${requirementId} more than once.`,
+          repair: "Remove duplicate requirement IDs from the phase requirementIds list."
+        }));
       }
 
       uniquePhaseRequirementIds.add(requirementId);
 
       if (!requirementIds.has(requirementId)) {
-        issues.push(`Phase ${phase.phase} references undeclared requirement ${requirementId}.`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_undeclared_requirement_ref",
+          message: `Phase ${phase.phase} references undeclared requirement ${requirementId}.`,
+          repair: "Declare the requirement in bootstrapSeed.requirements or remove it from the phase."
+        }));
       }
 
       if (committedCoverageCounts.has(requirementId)) {
@@ -455,17 +525,27 @@ function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
     const successCriteria = phase.successCriteria ?? [];
 
     if (successCriteria.length < 2 || successCriteria.length > 5) {
-      issues.push(`Phase ${phase.phase} must include 2-5 success criteria before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
+        code: "seed_success_criteria_count_invalid",
+        message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
+        repair: "Provide between 2 and 5 observable success criteria for the phase."
+      }));
     }
 
-    for (const criterion of successCriteria) {
+    for (const [criterionIndex, criterion] of successCriteria.entries()) {
       const trimmedCriterion = criterion.trim();
 
       if (
         !isSubstantiveText(trimmedCriterion) ||
         GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))
       ) {
-        issues.push(`Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria[${criterionIndex}]`,
+          code: "seed_success_criterion_generic",
+          message: `Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`,
+          repair: "Replace generic success criteria with observable evidence that can be verified later."
+        }));
       }
     }
   }
@@ -474,49 +554,82 @@ function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
     const coverageCount = committedCoverageCounts.get(requirementId) ?? 0;
 
     if (coverageCount !== 1) {
-      issues.push(
-        `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`
-      );
+      diagnostics.push(seedDiagnostic({
+        path: "bootstrapSeed.roadmapPhases[].requirementIds",
+        code: "seed_committed_requirement_coverage_invalid",
+        message: `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`,
+        repair: "Adjust roadmap phase requirementIds so each committed requirement appears in exactly one phase."
+      }));
     }
   }
 
-  return issues;
+  return diagnostics;
 }
 
-function assertBootstrapSeedPreflight(seed: NormalizedBootstrapSeed): void {
-  const issues = bootstrapSeedPreflightIssues(seed);
-
-  if (issues.length > 0) {
-    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
-  }
+function bootstrapSeedPreflightIssues(seed: NormalizedBootstrapSeed): string[] {
+  return bootstrapSeedPreflightDiagnostics(seed).map((diagnostic) => diagnostic.message);
 }
 
-function bootstrapSeedExplicitGapIssues(seed: BootstrapSeed): string[] {
-  const issues: string[] = [];
+function seedDiagnostic(
+  diagnostic: Omit<ProjectInitDiagnostic, "retryable">
+): ProjectInitDiagnostic {
+  return {
+    ...diagnostic,
+    retryable: true
+  };
+}
 
-  for (const phase of seed.roadmapPhases ?? []) {
+function bootstrapSeedExplicitGapDiagnostics(seed: BootstrapSeed): ProjectInitDiagnostic[] {
+  const diagnostics: ProjectInitDiagnostic[] = [];
+
+  for (const [phaseIndex, phase] of (seed.roadmapPhases ?? []).entries()) {
     const phaseLabel = phase.phase.trim() || "(blank)";
     const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
     const successCriteria = phase.successCriteria?.map((value) => value.trim()).filter(Boolean) ?? [];
 
     if (requirementIds.length === 0) {
-      issues.push(`Phase ${phaseLabel} must include explicit requirementIds before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+        code: "seed_phase_requirement_ids_missing",
+        message: `Phase ${phaseLabel} must include explicit requirementIds before the first write.`,
+        repair: "Add requirementIds that reference committed or deferred bootstrapSeed.requirements before retrying."
+      }));
     }
 
     if (successCriteria.length === 0) {
-      issues.push(`Phase ${phaseLabel} must include explicit successCriteria before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
+        code: "seed_phase_success_criteria_missing",
+        message: `Phase ${phaseLabel} must include explicit successCriteria before the first write.`,
+        repair: "Add at least two concrete success criteria before retrying."
+      }));
     }
   }
 
-  return issues;
+  return diagnostics;
 }
 
-function assertBootstrapSeedHasNoExplicitGaps(seed: BootstrapSeed): void {
-  const issues = bootstrapSeedExplicitGapIssues(seed);
+function bootstrapSeedExplicitGapIssues(seed: BootstrapSeed): string[] {
+  return bootstrapSeedExplicitGapDiagnostics(seed).map((diagnostic) => diagnostic.message);
+}
 
-  if (issues.length > 0) {
-    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
-  }
+function buildInvalidProjectInitResult(args: {
+  projectRoot: string;
+  diagnostics: ProjectInitDiagnostic[];
+}): ProjectInitResult {
+  const issues = args.diagnostics.map((diagnostic) => diagnostic.message);
+
+  return {
+    projectRoot: args.projectRoot,
+    status: "invalid",
+    written: false,
+    issues,
+    diagnostics: args.diagnostics,
+    suggestedRepairs: [
+      "Repair bootstrapSeed using the diagnostics paths, then re-run /blu-new-project with the corrected seed.",
+      "Do not delete .blueprint/ only for this result; no bootstrap artifacts were written."
+    ]
+  };
 }
 
 function assertBootstrapCanWrite(args: {
@@ -560,10 +673,62 @@ function assertBootstrapCanWrite(args: {
     args.bootstrapMode === "interactive" &&
     !bootstrapSeedIsSufficient(args.bootstrapSeed)
   ) {
-    throw new Error(
-      "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Keep questioning until the seed is ready; auto mode also requires enough project context before persistence."
-    );
+    return;
   }
+}
+
+function bootstrapSeedSufficiencyDiagnostics(seed: BootstrapSeed | undefined): ProjectInitDiagnostic[] {
+  const diagnostics: ProjectInitDiagnostic[] = [];
+
+  if (!seed?.vision?.trim()) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_vision_missing",
+      message: "Interactive project bootstrap requires bootstrapSeed.vision before any writes.",
+      repair: "Ask for or provide a concise project vision before retrying."
+    }));
+  }
+
+  if (!seed?.currentMilestone?.trim()) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.currentMilestone",
+      code: "seed_current_milestone_missing",
+      message: "Interactive project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
+      repair: "Set the active milestone label before retrying."
+    }));
+  }
+
+  if (!seed?.requirements || seed.requirements.length === 0) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.requirements",
+      code: "seed_requirements_missing",
+      message: "Interactive project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
+      repair: "Capture at least one durable requirement with id, requirement, status, and notes before retrying."
+    }));
+  }
+
+  if (!seed?.roadmapPhases || seed.roadmapPhases.length === 0) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.roadmapPhases",
+      code: "seed_roadmap_phases_missing",
+      message: "Interactive project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
+      repair: "Capture at least one roadmap phase with phase, title, objective, requirementIds, and successCriteria before retrying."
+    }));
+  }
+
+  return diagnostics;
+}
+
+function bootstrapSeedAutoContextDiagnostics(): ProjectInitDiagnostic[] {
+  return [
+    seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_auto_context_missing",
+      message:
+        "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
+      repair: "Provide bootstrapSeed.vision or add README/package description context before retrying."
+    })
+  ];
 }
 
 function buildBootstrapStatus(
@@ -964,6 +1129,16 @@ export async function blueprintProjectInit(
     bootstrapSeed: args.bootstrapSeed
   });
 
+  if (
+    bootstrapMode === "interactive" &&
+    !bootstrapSeedIsSufficient(args.bootstrapSeed)
+  ) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: bootstrapSeedSufficiencyDiagnostics(args.bootstrapSeed)
+    });
+  }
+
   const projectName = await inferProjectName(projectRoot, args.projectName);
   const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
   const repoSummary = await readRepoSummary(projectRoot);
@@ -972,9 +1147,10 @@ export async function blueprintProjectInit(
     bootstrapMode === "auto" &&
     !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)
   ) {
-    throw new Error(
-      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes. Provide bootstrapSeed.vision or add README/package description context."
-    );
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: bootstrapSeedAutoContextDiagnostics()
+    });
   }
 
   const autoBaseSeed =
@@ -989,11 +1165,25 @@ export async function blueprintProjectInit(
     bootstrapMode === "auto"
       ? mergeBootstrapSeed(autoBaseSeed!, args.bootstrapSeed)
       : args.bootstrapSeed!;
-  assertBootstrapSeedHasNoExplicitGaps(seedInput);
+  const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
+
+  if (explicitGapDiagnostics.length > 0) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: explicitGapDiagnostics
+    });
+  }
 
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
 
-  assertBootstrapSeedPreflight(bootstrapSeed);
+  const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
+
+  if (preflightDiagnostics.length > 0) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: preflightDiagnostics
+    });
+  }
 
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase
     ? normalizeBlueprintPhaseRef(

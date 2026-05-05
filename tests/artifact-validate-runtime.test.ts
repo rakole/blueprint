@@ -4,11 +4,13 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  blueprintArtifactScaffold,
   blueprintArtifactValidate,
   inspectBootstrapArtifacts,
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
+import { createToolResponseContent } from "../src/mcp/server.js";
 import { createCommittedGitRepo } from "./helpers/git-fixtures.js";
 
 async function createVerifyWorkFixtureRepo(): Promise<string> {
@@ -622,6 +624,43 @@ test("blueprint artifact validation rejects thin bootstrap PROJECT, REQUIREMENTS
     runtimeValidation.suggestedRepairs.join("\n"),
     /Re-run \/blu-new-project or \/blu-health --repair to regenerate the bootstrap artifacts from the canonical contract\./
   );
+  assert.ok(
+    runtimeValidation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.artifactId === "bootstrap.project" &&
+        diagnostic.path === ".blueprint/PROJECT.md" &&
+        diagnostic.section === "Vision" &&
+        diagnostic.retryable &&
+        diagnostic.repair.includes("/blu-new-project")
+    )
+  );
+  assert.ok(
+    runtimeValidation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.artifactId === "bootstrap.roadmap" &&
+        diagnostic.path === ".blueprint/ROADMAP.md" &&
+        diagnostic.section === "Phases" &&
+        diagnostic.expected?.includes("phase entry")
+    )
+  );
+});
+
+test("blueprint artifact validation exposes diagnostics and repairs in rich server text", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const runtimeValidation = await blueprintArtifactValidate({ cwd: repoPath });
+  const responseText = createToolResponseContent(
+    "blueprint_artifact_validate",
+    runtimeValidation
+  )[0].text;
+
+  assert.match(responseText, /## Diagnostics/);
+  assert.match(responseText, /"artifactId": "bootstrap\.project"/);
+  assert.match(responseText, /## Suggested Repairs/);
+  assert.match(responseText, /\/blu-new-project/);
 });
 
 test("blueprint artifact validation still inspects bootstrap docs when phase artifacts already exist", async (t) => {
@@ -767,6 +806,10 @@ test("bootstrap roadmap validation requires per-phase requirement mapping and su
     validation.issues.join("\n"),
     /ROADMAP\.md: Phase 1 \(Bootstrap Seed\) must include at least two success criteria\. Repair Phase 1 field Success Criteria by listing 2-5 observable criteria\./
   );
+  assert.match(
+    validation.issues.join("\n"),
+    /ROADMAP\.md: Roadmap artifact phase entries must include 2-5 success criteria bullets\./
+  );
 });
 
 test("bootstrap roadmap validation treats bold and unbolded phase lines consistently", async (t) => {
@@ -909,6 +952,37 @@ test("bootstrap requirements validation reconciles requirement IDs across summar
     validation.issues.join("\n"),
     /REQUIREMENTS\.md: Requirements artifact section Deferred Scope must list the same requirement IDs as Scope Summary\./
   );
+});
+
+test("scaffold-only bootstrap artifacts render into validation-compatible PROJECT and ROADMAP docs", async (t) => {
+  const repoPath = await createCommittedGitRepo("blueprint-scaffold-only-");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    "{\n  \"name\": \"scaffold-only-fixture\"\n}\n",
+    "utf8"
+  );
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    projectName: "Scaffold Only Fixture",
+    artifacts: [
+      ".blueprint/PROJECT.md",
+      ".blueprint/REQUIREMENTS.md",
+      ".blueprint/ROADMAP.md"
+    ]
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases"), { recursive: true });
+  await writeFile(path.join(repoPath, ".blueprint/STATE.md"), "# Blueprint State\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
+  assert.deepEqual(validation.diagnostics, []);
 });
 
 test("blueprint artifact validation stays compatible with legacy initialized and in-progress discovery repos", async (t) => {

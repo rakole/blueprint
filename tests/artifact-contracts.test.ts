@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   artifactContractIds,
@@ -909,6 +910,35 @@ test("artifact contract registry exposes canonical contract ids and templates", 
       "Context Notes"
     ]
   );
+});
+
+test("bootstrap PROJECT.md docs stay aligned with the runtime Markdown contract", async () => {
+  const projectContract = readArtifactContract("bootstrap.project");
+  const artifactSchemaDoc = await readFile(
+    new URL("../docs/ARTIFACT-SCHEMA.md", import.meta.url),
+    "utf8"
+  );
+  const mcpToolsDoc = await readFile(new URL("../docs/MCP-TOOLS.md", import.meta.url), "utf8");
+  const commandDoc = await readFile(
+    new URL("../docs/commands/new-project.md", import.meta.url),
+    "utf8"
+  );
+
+  const projectSection = artifactSchemaDoc.match(
+    /### `PROJECT\.md`[\s\S]*?(?=### `REQUIREMENTS\.md`)/
+  )?.[0];
+
+  assert.ok(projectSection, "ARTIFACT-SCHEMA.md must document PROJECT.md");
+  assert.equal(projectContract.modelContract, undefined);
+  for (const heading of projectContract.requiredHeadings) {
+    assert.match(projectSection, new RegExp(`- \`${heading}\``));
+  }
+  assert.match(projectSection, /Markdown artifact contract/i);
+  assert.match(projectSection, /does not expose a `modelContract`/);
+  assert.match(mcpToolsDoc, /bootstrap contracts such as `bootstrap\.project` are not schema-first/i);
+  assert.match(mcpToolsDoc, /`diagnostics` gives structured repair metadata/i);
+  assert.match(commandDoc, /`bootstrap\.project` is Markdown-contract-backed/i);
+  assert.match(commandDoc, /recoverable seed\/preflight invalid/i);
 });
 
 test("canonical lifecycle contracts allow additional top-level headings without breaking validation", () => {

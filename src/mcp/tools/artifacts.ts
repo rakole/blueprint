@@ -278,6 +278,7 @@ type ArtifactValidateArgs = {
 type ArtifactValidateResult = {
   valid: boolean;
   issues: string[];
+  diagnostics: ArtifactValidationDiagnostic[];
   suggestedRepairs: string[];
   warnings: string[];
 };
@@ -291,6 +292,18 @@ export type PhaseArtifactValidationDiagnostic = {
   repair: string;
   retryable: boolean;
   nextTool?: string;
+};
+
+type ArtifactValidationDiagnostic = {
+  artifactId: ArtifactContractId | "blueprint.config" | "blueprint.core" | "blueprint.phase";
+  path: string;
+  section: string | null;
+  code: string;
+  message: string;
+  allowedValues?: string[];
+  expected?: string;
+  repair: string;
+  retryable: boolean;
 };
 
 type ArtifactSummaryDigestArgs = {
@@ -2615,6 +2628,7 @@ export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
   warnings: string[];
+  diagnostics: PhaseArtifactValidationDiagnostic[];
 } {
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -2693,7 +2707,15 @@ export function validateResearchArtifactContent(content: string): {
   return {
     valid: issues.length === 0,
     issues,
-    warnings
+    warnings,
+    diagnostics: issues.map((issue) =>
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.invalid",
+        message: issue
+      })
+    )
   };
 }
 
@@ -3724,6 +3746,10 @@ type BootstrapValidationOptions = {
   allowLegacyShell?: boolean;
 };
 
+function bootstrapRepoShapePattern(): RegExp {
+  return /Repository shape:\s*(?:greenfield|scaffold(?:[- ]only)?|brownfield)/i;
+}
+
 function isBootstrapProjectArtifact(content: string): boolean {
   return (
     extractMarkdownSection(content, "Bootstrap Shape").trim().length > 0 ||
@@ -3800,7 +3826,7 @@ function validateBootstrapProjectArtifact(
     }
 
     if (
-      !/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapShape) ||
+      !bootstrapRepoShapePattern().test(bootstrapShape) ||
       !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapShape) ||
       !/Bootstrap posture:\s*\S+/i.test(bootstrapShape)
     ) {
@@ -3826,17 +3852,17 @@ function validateBootstrapProjectArtifact(
     if (!hasNonEmptyBulletedList(assumptions)) {
       issues.push("Project artifact section Assumptions must include at least one assumption bullet.");
     }
-  } else if (options.allowLegacyShell) {
-    if (!/^# .+\S\s*$/m.test(content)) {
-      issues.push("Project artifact must start with a markdown H1 title.");
-    }
-  } else {
+  } else if (!options.allowLegacyShell) {
     if (!hasBootstrapText(vision, 1)) {
       issues.push("Project artifact section Vision must contain substantive project direction.");
     }
 
     if (!hasBootstrapText(content, 3)) {
       issues.push("Project artifact must include substantive bootstrap guidance.");
+    }
+  } else if (options.allowLegacyShell) {
+    if (!/^# .+\S\s*$/m.test(content)) {
+      issues.push("Project artifact must start with a markdown H1 title.");
     }
   }
 
@@ -4234,7 +4260,7 @@ function validateBootstrapRoadmapArtifact(
     }
 
     if (
-      !/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapStatus) ||
+      !bootstrapRepoShapePattern().test(bootstrapStatus) ||
       !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapStatus) ||
       !/Roadmap confidence:\s*\S+/i.test(bootstrapStatus)
     ) {
@@ -4320,6 +4346,8 @@ function validateBootstrapRoadmapArtifact(
       }
 
       if (successCriteria.length < 2 || successCriteria.length > 5) {
+        issues.push("Roadmap artifact phase entries must include 2-5 success criteria bullets.");
+
         if (successCriteria.length === 0) {
           issues.push(
             "Roadmap artifact phase entries must include at least one success criteria bullet."
@@ -4714,6 +4742,26 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
   return { issues, warnings };
 }
 
+function isLegacyPhaseContextShell(content: string): boolean {
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
+    return false;
+  }
+
+  const contextContract = readArtifactContract("phase.context");
+
+  const hasNoModernContextSections = contextContract.requiredHeadings.every(
+    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+  );
+
+  if (!hasNoModernContextSections) {
+    return false;
+  }
+
+  const bodyWithoutTitle = content.replace(/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/, "");
+
+  return hasBootstrapText(bodyWithoutTitle, 3);
+}
+
 export function validatePhaseArtifactContent(
   content: string,
   artifact: "context" | "discussion-log" | "research" | "ui-spec"
@@ -4726,17 +4774,7 @@ export function validatePhaseArtifactContent(
   if (artifact === "research") {
     const validation = validateResearchArtifactContent(content);
 
-    return {
-      ...validation,
-      diagnostics: validation.issues.map((issue) =>
-        phaseArtifactDiagnostic({
-          artifact,
-          path: "content",
-          code: "research.invalid",
-          message: issue
-        })
-      )
-    };
+    return validation;
   }
 
   const contractId = resolvePhaseArtifactContractId(artifact);
@@ -8284,12 +8322,118 @@ async function isActiveDiscussPhaseDraft(
   }
 }
 
+const BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
+  ".blueprint/PROJECT.md": "bootstrap.project",
+  ".blueprint/REQUIREMENTS.md": "bootstrap.requirements",
+  ".blueprint/ROADMAP.md": "bootstrap.roadmap"
+} as const satisfies Record<string, ArtifactContractId>;
+
+const BOOTSTRAP_REPAIR =
+  "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract.";
+
+function diagnosticCodeFromIssue(message: string): string {
+  const normalized = message
+    .replace(/`[^`]+`/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+
+  return normalized.length > 0 ? normalized.slice(0, 80) : "artifact_validation_failed";
+}
+
+function sectionFromIssue(message: string): string | null {
+  return (
+    message.match(/\bsection ([A-Za-z0-9][A-Za-z0-9 -]+?) (?:must|is|may|should|requires)/i)?.[1]?.trim() ??
+    message.match(/required section: ([A-Za-z0-9][A-Za-z0-9 -]+)\./i)?.[1]?.trim() ??
+    null
+  );
+}
+
+function expectedFromBootstrapIssue(message: string): string | undefined {
+  if (/required section/i.test(message)) {
+    return "Create the required markdown section with non-placeholder content.";
+  }
+
+  if (/Requirements Table/i.test(message)) {
+    return "A markdown table with populated ID, Requirement, Status, and Notes columns.";
+  }
+
+  if (/requirement identifier|requirement IDs|Requirements clause/i.test(message)) {
+    return "Durable requirement IDs such as RQ-01 that are declared in .blueprint/REQUIREMENTS.md.";
+  }
+
+  if (/success criteria/i.test(message)) {
+    return "Each roadmap phase has a Success Criteria list with 2-5 concrete bullets.";
+  }
+
+  if (/concrete phase entry|numbered phase title|objective/i.test(message)) {
+    return "At least one roadmap phase entry with a numbered title, requirement mapping, objective, and success criteria.";
+  }
+
+  if (/repository shape|mapping state|bootstrap posture|roadmap confidence/i.test(message)) {
+    return "Repository shape, codebase mapping state, and bootstrap posture/confidence lines.";
+  }
+
+  return undefined;
+}
+
+function allowedValuesFromBootstrapIssue(message: string): string[] | undefined {
+  if (/repository shape/i.test(message)) {
+    return ["greenfield", "scaffold-only", "scaffold only", "brownfield"];
+  }
+
+  if (/Codebase mapping/i.test(message)) {
+    return ["ready", "pending"];
+  }
+
+  return undefined;
+}
+
+function createArtifactValidationDiagnostic(options: {
+  artifactId: ArtifactValidationDiagnostic["artifactId"];
+  path: string;
+  message: string;
+  section?: string | null;
+  code?: string;
+  allowedValues?: string[];
+  expected?: string;
+  repair: string;
+  retryable?: boolean;
+}): ArtifactValidationDiagnostic {
+  return {
+    artifactId: options.artifactId,
+    path: options.path,
+    section: options.section ?? sectionFromIssue(options.message),
+    code: options.code ?? diagnosticCodeFromIssue(options.message),
+    message: options.message,
+    ...(options.allowedValues ? { allowedValues: options.allowedValues } : {}),
+    ...(options.expected ? { expected: options.expected } : {}),
+    repair: options.repair,
+    retryable: options.retryable ?? true
+  };
+}
+
+function createBootstrapValidationDiagnostic(
+  artifact: keyof typeof BOOTSTRAP_ARTIFACT_IDS_BY_PATH,
+  message: string
+): ArtifactValidationDiagnostic {
+  return createArtifactValidationDiagnostic({
+    artifactId: BOOTSTRAP_ARTIFACT_IDS_BY_PATH[artifact],
+    path: artifact,
+    message,
+    allowedValues: allowedValuesFromBootstrapIssue(message),
+    expected: expectedFromBootstrapIssue(message),
+    repair: BOOTSTRAP_REPAIR
+  });
+}
+
 export async function blueprintArtifactValidate(
   args: ArtifactValidateArgs = {}
 ): Promise<ArtifactValidateResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const issues: string[] = [];
+  const diagnostics: ArtifactValidationDiagnostic[] = [];
   const suggestedRepairs = new Set<string>();
   const warnings: string[] = [];
   const bootstrapContents = new Map<string, string>();
@@ -8435,6 +8579,11 @@ export async function blueprintArtifactValidate(
 
       const absolutePath = resolveBlueprintPath(projectRoot, artifact);
       const raw = await fs.readFile(absolutePath, "utf8");
+
+      if (target.kind === "context" && isLegacyPhaseContextShell(raw)) {
+        continue;
+      }
+
       const validation = validatePhaseArtifactContent(raw, target.kind);
 
       for (const issue of validation.issues) {
@@ -8455,7 +8604,7 @@ export async function blueprintArtifactValidate(
     `${BLUEPRINT_DIR}/PROJECT.md`,
     `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
     `${BLUEPRINT_DIR}/ROADMAP.md`
-  ] as const) {
+  ] as const satisfies ReadonlyArray<keyof typeof BOOTSTRAP_ARTIFACT_IDS_BY_PATH>) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
 
     if (!(await pathExists(absolutePath))) {
@@ -8475,6 +8624,7 @@ export async function blueprintArtifactValidate(
 
     for (const issue of validation.issues) {
       issues.push(`${artifact}: ${issue}`);
+      diagnostics.push(createBootstrapValidationDiagnostic(artifact, issue));
     }
 
     for (const warning of validation.warnings) {
@@ -8482,9 +8632,7 @@ export async function blueprintArtifactValidate(
     }
 
     if (!validation.valid) {
-      suggestedRepairs.add(
-        "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract."
-      );
+      suggestedRepairs.add(BOOTSTRAP_REPAIR);
     }
   }
 
@@ -8499,6 +8647,18 @@ export async function blueprintArtifactValidate(
 
     for (const issue of traceability.issues) {
       issues.push(issue);
+      diagnostics.push(
+        createArtifactValidationDiagnostic({
+          artifactId: "bootstrap.roadmap",
+          path: `${BLUEPRINT_DIR}/ROADMAP.md`,
+          section: "Requirement Coverage",
+          code: diagnosticCodeFromIssue(issue),
+          message: issue,
+          expected:
+            "ROADMAP.md references only requirement IDs declared in REQUIREMENTS.md, and every declared requirement is covered.",
+          repair: BOOTSTRAP_REPAIR
+        })
+      );
     }
   }
 
@@ -8599,6 +8759,7 @@ export async function blueprintArtifactValidate(
   return {
     valid: issues.length === 0,
     issues,
+    diagnostics,
     suggestedRepairs: [...suggestedRepairs],
     warnings
   };

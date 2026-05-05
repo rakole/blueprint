@@ -39166,25 +39166,46 @@ function bootstrapSeedHasAutoContext(seed, repoSummary) {
 function normalizedPhaseRef(value) {
   return value.trim().replace(/\.0+$/, "").toLowerCase();
 }
-function bootstrapSeedPreflightIssues(seed) {
-  const issues = [];
+function bootstrapSeedPreflightDiagnostics(seed) {
+  const diagnostics = [];
   const requirementIds = /* @__PURE__ */ new Set();
   const committedRequirementIds = /* @__PURE__ */ new Set();
   const committedCoverageCounts = /* @__PURE__ */ new Map();
   const phaseRefs = /* @__PURE__ */ new Set();
   if (!isSubstantiveText(seed.vision)) {
-    issues.push("bootstrapSeed.vision must contain a substantive project brief before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_vision_not_substantive",
+      message: "bootstrapSeed.vision must contain a substantive project brief before the first write.",
+      repair: "Replace placeholder vision text with a concrete project brief of at least six meaningful words."
+    }));
   }
   if (!isSubstantiveText(seed.currentMilestone, 1)) {
-    issues.push("bootstrapSeed.currentMilestone must name the active milestone before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.currentMilestone",
+      code: "seed_current_milestone_missing",
+      message: "bootstrapSeed.currentMilestone must name the active milestone before the first write.",
+      repair: "Set bootstrapSeed.currentMilestone to the active milestone label, for example v1."
+    }));
   }
-  for (const requirement of seed.requirements) {
+  for (const [requirementIndex, requirement] of seed.requirements.entries()) {
     if (requirementIds.has(requirement.id)) {
-      issues.push(`bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.requirements[${requirementIndex}].id`,
+        code: "seed_duplicate_requirement_id",
+        message: `bootstrapSeed requirements contain duplicate requirement ID ${requirement.id}.`,
+        repair: "Give each requirement a unique durable ID and update phase requirementIds to match.",
+        argsPatch: { bootstrapSeed: { requirements: [{ index: requirementIndex, id: `${requirement.id}-2` }] } }
+      }));
     }
     requirementIds.add(requirement.id);
     if (!isSubstantiveText(requirement.requirement, 5)) {
-      issues.push(`Requirement ${requirement.id} must be substantive before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.requirements[${requirementIndex}].requirement`,
+        code: "seed_requirement_not_substantive",
+        message: `Requirement ${requirement.id} must be substantive before the first write.`,
+        repair: "Rewrite the requirement as a concrete, testable product or workflow expectation."
+      }));
     }
     if (requirement.scope === "committed") {
       committedRequirementIds.add(requirement.id);
@@ -39192,23 +39213,46 @@ function bootstrapSeedPreflightIssues(seed) {
     }
   }
   if (committedRequirementIds.size === 0) {
-    issues.push("bootstrapSeed must include at least one committed requirement before the first write.");
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.requirements",
+      code: "seed_no_committed_requirements",
+      message: "bootstrapSeed must include at least one committed requirement before the first write.",
+      repair: "Mark at least one requirement scope as committed.",
+      allowedValues: ["committed", "deferred", "out_of_scope"],
+      argsPatch: { bootstrapSeed: { requirements: [{ index: 0, scope: "committed" }] } }
+    }));
   }
-  for (const phase of seed.roadmapPhases) {
+  for (const [phaseIndex, phase] of seed.roadmapPhases.entries()) {
     const phaseRef = normalizedPhaseRef(phase.phase);
     if (phaseRefs.has(phaseRef)) {
-      issues.push(`bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].phase`,
+        code: "seed_duplicate_phase_ref",
+        message: `bootstrapSeed roadmapPhases contain duplicate phase reference ${phase.phase}.`,
+        repair: "Give every roadmap phase a distinct normalized phase reference.",
+        argsPatch: { bootstrapSeed: { roadmapPhases: [{ index: phaseIndex, phase: `${phase.phase}.1` }] } }
+      }));
     }
     phaseRefs.add(phaseRef);
     const phaseRequirementIds = phase.requirementIds ?? [];
     const uniquePhaseRequirementIds = /* @__PURE__ */ new Set();
     for (const requirementId of phaseRequirementIds) {
       if (uniquePhaseRequirementIds.has(requirementId)) {
-        issues.push(`Phase ${phase.phase} references requirement ${requirementId} more than once.`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_duplicate_phase_requirement_ref",
+          message: `Phase ${phase.phase} references requirement ${requirementId} more than once.`,
+          repair: "Remove duplicate requirement IDs from the phase requirementIds list."
+        }));
       }
       uniquePhaseRequirementIds.add(requirementId);
       if (!requirementIds.has(requirementId)) {
-        issues.push(`Phase ${phase.phase} references undeclared requirement ${requirementId}.`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_undeclared_requirement_ref",
+          message: `Phase ${phase.phase} references undeclared requirement ${requirementId}.`,
+          repair: "Declare the requirement in bootstrapSeed.requirements or remove it from the phase."
+        }));
       }
       if (committedCoverageCounts.has(requirementId)) {
         committedCoverageCounts.set(requirementId, (committedCoverageCounts.get(requirementId) ?? 0) + 1);
@@ -39216,51 +39260,82 @@ function bootstrapSeedPreflightIssues(seed) {
     }
     const successCriteria = phase.successCriteria ?? [];
     if (successCriteria.length < 2 || successCriteria.length > 5) {
-      issues.push(`Phase ${phase.phase} must include 2-5 success criteria before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
+        code: "seed_success_criteria_count_invalid",
+        message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
+        repair: "Provide between 2 and 5 observable success criteria for the phase."
+      }));
     }
-    for (const criterion of successCriteria) {
+    for (const [criterionIndex, criterion] of successCriteria.entries()) {
       const trimmedCriterion = criterion.trim();
       if (!isSubstantiveText(trimmedCriterion) || GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))) {
-        issues.push(`Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`);
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria[${criterionIndex}]`,
+          code: "seed_success_criterion_generic",
+          message: `Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`,
+          repair: "Replace generic success criteria with observable evidence that can be verified later."
+        }));
       }
     }
   }
   for (const requirementId of committedRequirementIds) {
     const coverageCount = committedCoverageCounts.get(requirementId) ?? 0;
     if (coverageCount !== 1) {
-      issues.push(
-        `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`
-      );
+      diagnostics.push(seedDiagnostic({
+        path: "bootstrapSeed.roadmapPhases[].requirementIds",
+        code: "seed_committed_requirement_coverage_invalid",
+        message: `Committed requirement ${requirementId} must be mapped to exactly one roadmap phase before the first write; found ${coverageCount}.`,
+        repair: "Adjust roadmap phase requirementIds so each committed requirement appears in exactly one phase."
+      }));
     }
   }
-  return issues;
+  return diagnostics;
 }
-function assertBootstrapSeedPreflight(seed) {
-  const issues = bootstrapSeedPreflightIssues(seed);
-  if (issues.length > 0) {
-    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
-  }
+function seedDiagnostic(diagnostic) {
+  return {
+    ...diagnostic,
+    retryable: true
+  };
 }
-function bootstrapSeedExplicitGapIssues(seed) {
-  const issues = [];
-  for (const phase of seed.roadmapPhases ?? []) {
+function bootstrapSeedExplicitGapDiagnostics(seed) {
+  const diagnostics = [];
+  for (const [phaseIndex, phase] of (seed.roadmapPhases ?? []).entries()) {
     const phaseLabel2 = phase.phase.trim() || "(blank)";
     const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
     const successCriteria = phase.successCriteria?.map((value) => value.trim()).filter(Boolean) ?? [];
     if (requirementIds.length === 0) {
-      issues.push(`Phase ${phaseLabel2} must include explicit requirementIds before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+        code: "seed_phase_requirement_ids_missing",
+        message: `Phase ${phaseLabel2} must include explicit requirementIds before the first write.`,
+        repair: "Add requirementIds that reference committed or deferred bootstrapSeed.requirements before retrying."
+      }));
     }
     if (successCriteria.length === 0) {
-      issues.push(`Phase ${phaseLabel2} must include explicit successCriteria before the first write.`);
+      diagnostics.push(seedDiagnostic({
+        path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
+        code: "seed_phase_success_criteria_missing",
+        message: `Phase ${phaseLabel2} must include explicit successCriteria before the first write.`,
+        repair: "Add at least two concrete success criteria before retrying."
+      }));
     }
   }
-  return issues;
+  return diagnostics;
 }
-function assertBootstrapSeedHasNoExplicitGaps(seed) {
-  const issues = bootstrapSeedExplicitGapIssues(seed);
-  if (issues.length > 0) {
-    throw new Error(`Bootstrap seed preflight failed before any writes: ${issues.join(" ")}`);
-  }
+function buildInvalidProjectInitResult(args) {
+  const issues = args.diagnostics.map((diagnostic) => diagnostic.message);
+  return {
+    projectRoot: args.projectRoot,
+    status: "invalid",
+    written: false,
+    issues,
+    diagnostics: args.diagnostics,
+    suggestedRepairs: [
+      "Repair bootstrapSeed using the diagnostics paths, then re-run /blu-new-project with the corrected seed.",
+      "Do not delete .blueprint/ only for this result; no bootstrap artifacts were written."
+    ]
+  };
 }
 function assertBootstrapCanWrite(args) {
   if (args.inspection.readiness === "partial") {
@@ -39284,10 +39359,54 @@ function assertBootstrapCanWrite(args) {
     );
   }
   if (args.bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
-    throw new Error(
-      "Interactive project bootstrap requires a sufficient bootstrapSeed with vision, currentMilestone, requirements, and roadmapPhases before any writes. Keep questioning until the seed is ready; auto mode also requires enough project context before persistence."
-    );
+    return;
   }
+}
+function bootstrapSeedSufficiencyDiagnostics(seed) {
+  const diagnostics = [];
+  if (!seed?.vision?.trim()) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_vision_missing",
+      message: "Interactive project bootstrap requires bootstrapSeed.vision before any writes.",
+      repair: "Ask for or provide a concise project vision before retrying."
+    }));
+  }
+  if (!seed?.currentMilestone?.trim()) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.currentMilestone",
+      code: "seed_current_milestone_missing",
+      message: "Interactive project bootstrap requires bootstrapSeed.currentMilestone before any writes.",
+      repair: "Set the active milestone label before retrying."
+    }));
+  }
+  if (!seed?.requirements || seed.requirements.length === 0) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.requirements",
+      code: "seed_requirements_missing",
+      message: "Interactive project bootstrap requires at least one bootstrapSeed.requirements entry before any writes.",
+      repair: "Capture at least one durable requirement with id, requirement, status, and notes before retrying."
+    }));
+  }
+  if (!seed?.roadmapPhases || seed.roadmapPhases.length === 0) {
+    diagnostics.push(seedDiagnostic({
+      path: "bootstrapSeed.roadmapPhases",
+      code: "seed_roadmap_phases_missing",
+      message: "Interactive project bootstrap requires at least one bootstrapSeed.roadmapPhases entry before any writes.",
+      repair: "Capture at least one roadmap phase with phase, title, objective, requirementIds, and successCriteria before retrying."
+    }));
+  }
+  return diagnostics;
+}
+function bootstrapSeedAutoContextDiagnostics() {
+  return [
+    seedDiagnostic({
+      path: "bootstrapSeed.vision",
+      code: "seed_auto_context_missing",
+      message: "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
+      repair: "Provide bootstrapSeed.vision or add README/package description context before retrying."
+    })
+  ];
 }
 function buildBootstrapStatus(diagnostics) {
   return {
@@ -39587,13 +39706,20 @@ async function blueprintProjectInit(args = {}) {
     bootstrapMode,
     bootstrapSeed: args.bootstrapSeed
   });
+  if (bootstrapMode === "interactive" && !bootstrapSeedIsSufficient(args.bootstrapSeed)) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: bootstrapSeedSufficiencyDiagnostics(args.bootstrapSeed)
+    });
+  }
   const projectName = await inferProjectName(projectRoot, args.projectName);
   const bootstrapAssessment = initialBootstrapDiagnostics.brownfield;
   const repoSummary = await readRepoSummary(projectRoot);
   if (bootstrapMode === "auto" && !bootstrapSeedHasAutoContext(args.bootstrapSeed, repoSummary)) {
-    throw new Error(
-      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes. Provide bootstrapSeed.vision or add README/package description context."
-    );
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: bootstrapSeedAutoContextDiagnostics()
+    });
   }
   const autoBaseSeed = bootstrapMode === "auto" ? buildDefaultBootstrapSeed(
     projectName,
@@ -39601,9 +39727,21 @@ async function blueprintProjectInit(args = {}) {
     repoSummary ? { vision: repoSummary } : void 0
   ) : void 0;
   const seedInput = bootstrapMode === "auto" ? mergeBootstrapSeed(autoBaseSeed, args.bootstrapSeed) : args.bootstrapSeed;
-  assertBootstrapSeedHasNoExplicitGaps(seedInput);
+  const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
+  if (explicitGapDiagnostics.length > 0) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: explicitGapDiagnostics
+    });
+  }
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
-  assertBootstrapSeedPreflight(bootstrapSeed);
+  const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
+  if (preflightDiagnostics.length > 0) {
+    return buildInvalidProjectInitResult({
+      projectRoot,
+      diagnostics: preflightDiagnostics
+    });
+  }
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase ? normalizeBlueprintPhaseRef(
     bootstrapSeed.roadmapPhases[0].phase,
     "Initial roadmap phase"
@@ -51288,7 +51426,15 @@ function validateResearchArtifactContent(content) {
   return {
     valid: issues.length === 0,
     issues,
-    warnings
+    warnings,
+    diagnostics: issues.map(
+      (issue2) => phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.invalid",
+        message: issue2
+      })
+    )
   };
 }
 function collectReferencedSummaryPaths(section, summaryPaths) {
@@ -51931,6 +52077,9 @@ function hasBootstrapText(section, minimumWords = 3) {
     section.replace(/\r\n/g, "\n").replace(/<[^>]+>/g, "").replace(/^(?:[-*]\s*)+/gm, "")
   ) >= minimumWords;
 }
+function bootstrapRepoShapePattern() {
+  return /Repository shape:\s*(?:greenfield|scaffold(?:[- ]only)?|brownfield)/i;
+}
 function isBootstrapProjectArtifact(content) {
   return extractMarkdownSection5(content, "Bootstrap Shape").trim().length > 0 || extractMarkdownSection5(content, "Scope Posture").trim().length > 0;
 }
@@ -51976,7 +52125,7 @@ function validateBootstrapProjectArtifact(content, options = {}) {
     if (!hasBootstrapText(currentMilestone, 1)) {
       issues.push("Project artifact section Current Milestone must name the active bootstrap milestone.");
     }
-    if (!/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapShape) || !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapShape) || !/Bootstrap posture:\s*\S+/i.test(bootstrapShape)) {
+    if (!bootstrapRepoShapePattern().test(bootstrapShape) || !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapShape) || !/Bootstrap posture:\s*\S+/i.test(bootstrapShape)) {
       issues.push(
         "Project artifact section Bootstrap Shape must summarize repository shape, mapping state, and bootstrap posture."
       );
@@ -51992,16 +52141,16 @@ function validateBootstrapProjectArtifact(content, options = {}) {
     if (!hasNonEmptyBulletedList(assumptions)) {
       issues.push("Project artifact section Assumptions must include at least one assumption bullet.");
     }
-  } else if (options.allowLegacyShell) {
-    if (!/^# .+\S\s*$/m.test(content)) {
-      issues.push("Project artifact must start with a markdown H1 title.");
-    }
-  } else {
+  } else if (!options.allowLegacyShell) {
     if (!hasBootstrapText(vision, 1)) {
       issues.push("Project artifact section Vision must contain substantive project direction.");
     }
     if (!hasBootstrapText(content, 3)) {
       issues.push("Project artifact must include substantive bootstrap guidance.");
+    }
+  } else if (options.allowLegacyShell) {
+    if (!/^# .+\S\s*$/m.test(content)) {
+      issues.push("Project artifact must start with a markdown H1 title.");
     }
   }
   if (isBootstrapProjectArtifact(content) && extractRequirementIdsFromMarkdown(content).length === 0) {
@@ -52283,7 +52432,7 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
     if (!hasBootstrapText(milestone2)) {
       issues.push("Roadmap artifact section Milestone must name the active bootstrap milestone.");
     }
-    if (!/Repository shape:\s*(?:greenfield|scaffold-only|brownfield)/i.test(bootstrapStatus) || !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapStatus) || !/Roadmap confidence:\s*\S+/i.test(bootstrapStatus)) {
+    if (!bootstrapRepoShapePattern().test(bootstrapStatus) || !/Codebase mapping:\s*(?:ready|pending)/i.test(bootstrapStatus) || !/Roadmap confidence:\s*\S+/i.test(bootstrapStatus)) {
       issues.push(
         "Roadmap artifact section Bootstrap Status must capture repository shape, mapping state, and roadmap confidence."
       );
@@ -52342,6 +52491,7 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
         }
       }
       if (successCriteria.length < 2 || successCriteria.length > 5) {
+        issues.push("Roadmap artifact phase entries must include 2-5 success criteria bullets.");
         if (successCriteria.length === 0) {
           issues.push(
             "Roadmap artifact phase entries must include at least one success criteria bullet."
@@ -52598,20 +52748,24 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
   }
   return { issues, warnings };
 }
+function isLegacyPhaseContextShell(content) {
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
+    return false;
+  }
+  const contextContract = readArtifactContract("phase.context");
+  const hasNoModernContextSections = contextContract.requiredHeadings.every(
+    (heading) => extractMarkdownSection5(content, heading).trim().length === 0
+  );
+  if (!hasNoModernContextSections) {
+    return false;
+  }
+  const bodyWithoutTitle = content.replace(/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/, "");
+  return hasBootstrapText(bodyWithoutTitle, 3);
+}
 function validatePhaseArtifactContent(content, artifact) {
   if (artifact === "research") {
     const validation = validateResearchArtifactContent(content);
-    return {
-      ...validation,
-      diagnostics: validation.issues.map(
-        (issue2) => phaseArtifactDiagnostic({
-          artifact,
-          path: "content",
-          code: "research.invalid",
-          message: issue2
-        })
-      )
-    };
+    return validation;
   }
   const contractId = resolvePhaseArtifactContractId(artifact);
   const contract = readArtifactContract(contractId);
@@ -55179,10 +55333,71 @@ async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
     return false;
   }
 }
+function diagnosticCodeFromIssue(message) {
+  const normalized = message.replace(/`[^`]+`/g, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
+  return normalized.length > 0 ? normalized.slice(0, 80) : "artifact_validation_failed";
+}
+function sectionFromIssue(message) {
+  return message.match(/\bsection ([A-Za-z0-9][A-Za-z0-9 -]+?) (?:must|is|may|should|requires)/i)?.[1]?.trim() ?? message.match(/required section: ([A-Za-z0-9][A-Za-z0-9 -]+)\./i)?.[1]?.trim() ?? null;
+}
+function expectedFromBootstrapIssue(message) {
+  if (/required section/i.test(message)) {
+    return "Create the required markdown section with non-placeholder content.";
+  }
+  if (/Requirements Table/i.test(message)) {
+    return "A markdown table with populated ID, Requirement, Status, and Notes columns.";
+  }
+  if (/requirement identifier|requirement IDs|Requirements clause/i.test(message)) {
+    return "Durable requirement IDs such as RQ-01 that are declared in .blueprint/REQUIREMENTS.md.";
+  }
+  if (/success criteria/i.test(message)) {
+    return "Each roadmap phase has a Success Criteria list with 2-5 concrete bullets.";
+  }
+  if (/concrete phase entry|numbered phase title|objective/i.test(message)) {
+    return "At least one roadmap phase entry with a numbered title, requirement mapping, objective, and success criteria.";
+  }
+  if (/repository shape|mapping state|bootstrap posture|roadmap confidence/i.test(message)) {
+    return "Repository shape, codebase mapping state, and bootstrap posture/confidence lines.";
+  }
+  return void 0;
+}
+function allowedValuesFromBootstrapIssue(message) {
+  if (/repository shape/i.test(message)) {
+    return ["greenfield", "scaffold-only", "scaffold only", "brownfield"];
+  }
+  if (/Codebase mapping/i.test(message)) {
+    return ["ready", "pending"];
+  }
+  return void 0;
+}
+function createArtifactValidationDiagnostic(options) {
+  return {
+    artifactId: options.artifactId,
+    path: options.path,
+    section: options.section ?? sectionFromIssue(options.message),
+    code: options.code ?? diagnosticCodeFromIssue(options.message),
+    message: options.message,
+    ...options.allowedValues ? { allowedValues: options.allowedValues } : {},
+    ...options.expected ? { expected: options.expected } : {},
+    repair: options.repair,
+    retryable: options.retryable ?? true
+  };
+}
+function createBootstrapValidationDiagnostic(artifact, message) {
+  return createArtifactValidationDiagnostic({
+    artifactId: BOOTSTRAP_ARTIFACT_IDS_BY_PATH[artifact],
+    path: artifact,
+    message,
+    allowedValues: allowedValuesFromBootstrapIssue(message),
+    expected: expectedFromBootstrapIssue(message),
+    repair: BOOTSTRAP_REPAIR
+  });
+}
 async function blueprintArtifactValidate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const issues = [];
+  const diagnostics = [];
   const suggestedRepairs = /* @__PURE__ */ new Set();
   const warnings = [];
   const bootstrapContents = /* @__PURE__ */ new Map();
@@ -55291,6 +55506,9 @@ async function blueprintArtifactValidate(args = {}) {
       }
       const absolutePath = resolveBlueprintPath(projectRoot, artifact);
       const raw = await fs8.readFile(absolutePath, "utf8");
+      if (target.kind === "context" && isLegacyPhaseContextShell(raw)) {
+        continue;
+      }
       const validation = validatePhaseArtifactContent(raw, target.kind);
       for (const issue2 of validation.issues) {
         issues.push(`${artifact}: ${issue2}`);
@@ -55319,14 +55537,13 @@ async function blueprintArtifactValidate(args = {}) {
     }) : validateBootstrapRoadmapArtifact(raw, { allowLegacyShell: allowLegacyBootstrapShell });
     for (const issue2 of validation.issues) {
       issues.push(`${artifact}: ${issue2}`);
+      diagnostics.push(createBootstrapValidationDiagnostic(artifact, issue2));
     }
     for (const warning of validation.warnings) {
       warnings.push(`${artifact}: ${warning}`);
     }
     if (!validation.valid) {
-      suggestedRepairs.add(
-        "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract."
-      );
+      suggestedRepairs.add(BOOTSTRAP_REPAIR);
     }
   }
   const requirementsContent = bootstrapContents.get(`${BLUEPRINT_DIR}/REQUIREMENTS.md`);
@@ -55338,6 +55555,17 @@ async function blueprintArtifactValidate(args = {}) {
     );
     for (const issue2 of traceability.issues) {
       issues.push(issue2);
+      diagnostics.push(
+        createArtifactValidationDiagnostic({
+          artifactId: "bootstrap.roadmap",
+          path: `${BLUEPRINT_DIR}/ROADMAP.md`,
+          section: "Requirement Coverage",
+          code: diagnosticCodeFromIssue(issue2),
+          message: issue2,
+          expected: "ROADMAP.md references only requirement IDs declared in REQUIREMENTS.md, and every declared requirement is covered.",
+          repair: BOOTSTRAP_REPAIR
+        })
+      );
     }
   }
   for (const artifact of inspection.phases.filter((value) => value.endsWith("-VERIFICATION.md"))) {
@@ -55420,6 +55648,7 @@ async function blueprintArtifactValidate(args = {}) {
   return {
     valid: issues.length === 0,
     issues,
+    diagnostics,
     suggestedRepairs: [...suggestedRepairs],
     warnings
   };
@@ -58612,7 +58841,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -59076,6 +59305,12 @@ var init_artifacts = __esm({
       "low",
       "unknown"
     ];
+    BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
+      ".blueprint/PROJECT.md": "bootstrap.project",
+      ".blueprint/REQUIREMENTS.md": "bootstrap.requirements",
+      ".blueprint/ROADMAP.md": "bootstrap.roadmap"
+    };
+    BOOTSTRAP_REPAIR = "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract.";
     artifactToolDefinitions = [
       {
         name: "blueprint_artifact_contract_read",
@@ -70018,6 +70253,7 @@ function summarizeToolResult(toolName, result) {
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
 var RICH_TEXT_TOOL_NAMES = /* @__PURE__ */ new Set([
+  "blueprint_artifact_validate",
   "blueprint_artifact_contract_read",
   "blueprint_phase_plan_authoring_context",
   "blueprint_phase_plan_validate_model",
@@ -70121,11 +70357,18 @@ function appendPhasePlanWriteModelValidationDetails(sections, result) {
   appendJsonSection(sections, "Model Repair Summary", modelValidation.repairSummary);
   appendJsonSection(sections, "Model Runtime Task Schema", modelValidation.taskSchema);
 }
+function appendArtifactValidateDetails(sections, result) {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Suggested Repairs", result.suggestedRepairs);
+}
 function appendRichToolText(toolName, result, summary) {
   if (!RICH_TEXT_TOOL_NAMES.has(toolName)) {
     return summary;
   }
   const sections = [];
+  if (toolName === "blueprint_artifact_validate") {
+    appendArtifactValidateDetails(sections, result);
+  }
   if (toolName === "blueprint_artifact_contract_read") {
     appendArtifactContractReadDetails(sections, result);
   }

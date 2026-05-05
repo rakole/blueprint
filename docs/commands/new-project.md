@@ -74,7 +74,7 @@
 - When project research is useful, the bootstrap contract uses the GSD-inspired dimensions that are relevant to the repo: stack, features, architecture, and pitfalls. These are synthesis inputs, not a `.planning/research/` runtime dependency.
 - When subagents are unavailable, the parent command falls back to sequential one-topic-at-a-time work: classify repo shape, handle stack/features/architecture/pitfalls as needed, scope one requirement group at a time, compress carry-forward evidence, then perform a final coverage pass.
 - Requirements must be specific, user-centered, atomic, grouped, and traceable.
-- Roadmap phases must map every committed requirement exactly once, include dependency notes, and carry 2-5 observable success criteria per phase.
+- Roadmap phases must map every committed requirement exactly once and carry 2-5 observable success criteria per phase.
 - Validation or MCP write failures caused by thin content, missing headings, placeholders, missing success criteria, or traceability gaps trigger seed repair and retry through MCP. The command must not hand-edit `.blueprint/` artifacts around the MCP owner.
 
 ## Blueprint And Global State Reads
@@ -92,13 +92,13 @@
 
 ## Required MCP Tools
 
-- `blueprint_project_init` -> `{projectRoot, createdPaths, seededState, configPath, configProvenance}` with `bootstrapMode: "interactive" | "auto"` and default `interactive`
+- `blueprint_project_init` -> success `{projectRoot, createdPaths, seededState, configPath, configProvenance, brownfield, bootstrapDiagnostics, nextAction, warnings}` or recoverable seed/preflight invalid `{projectRoot, status, written, issues, diagnostics, suggestedRepairs}` with `bootstrapMode: "interactive" | "auto"` and default `interactive`; repair invalid seed diagnostics and retry through MCP instead of writing artifacts by hand
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set` -> `{scope, updatedKeys, config, provenance, configPath, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
-- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
+- `blueprint_artifact_validate` -> `{valid, issues, diagnostics, suggestedRepairs, warnings}`; treat `diagnostics`, `issues`, and `warnings` as validation feedback and `suggestedRepairs` as command-safe repair guidance
 
 ## Gemini-Native Internal Tool Guidance
 
@@ -109,6 +109,7 @@
 ## Bootstrap Contract
 
 - Read the canonical bootstrap artifact contracts for `bootstrap.project`, `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first authored drafts.
+- `bootstrap.project` is Markdown-contract-backed: use the returned `requiredHeadings`, `authoringTemplate`, notes, and placeholder signals as authority. Do not assume a PROJECT.md JSON schema or model-authoring flow unless the returned contract includes a first-class `modelContract`.
 - `blueprint_project_init` is the first persistent core bootstrap write. Require explicit overwrite confirmation before calling it with `overwrite: true`.
 - Brownfield map-first gating happens before this write: unmapped brownfield repos and `mapping-incomplete` codebase-only bundles must route to `/blu-map-codebase`.
 - `mapped-only` is not an overwrite conflict; call `blueprint_project_init` with an explicit seed and preserve existing `.blueprint/codebase/*.md`.

@@ -84,8 +84,12 @@ Map the bootstrap workflow to the shared stages like this:
    `mcp_blueprint_blueprint_artifact_contract_read` for `bootstrap.project`,
    `bootstrap.requirements`, and `bootstrap.roadmap` before shaping the first
    authored drafts.
-   - Treat each returned `contract.authoringTemplate` as the heading and schema
-     authority for the authored content.
+   - Treat each returned `contract.requiredHeadings`,
+     `contract.authoringTemplate`, notes, and placeholder signals as the
+     Markdown contract authority for the authored content.
+   - Bootstrap artifacts such as `bootstrap.project` are not schema-first; do
+     not assume a JSON Schema model or model-authoring flow unless the returned
+     contract includes a first-class `modelContract`.
    - Do not use scaffold output as the finished artifact when the command has
      enough context to author a substantive bootstrap seed.
 4. If any Gemini-native tool detail is unclear while you shape the flow, verify
@@ -150,7 +154,9 @@ Map the bootstrap workflow to the shared stages like this:
 6. Draft requirements and roadmap structure before writing, then run a revision
    loop if the user wants adjustments.
 7. Interactive mode must call `mcp_blueprint_blueprint_project_init` with a
-   sufficient `bootstrapSeed`. If the seed is missing or too thin, keep
+   sufficient `bootstrapSeed`. If the response returns `status: "invalid"`,
+   use the returned `diagnostics[].path`, `code`, `repair`, and
+   `suggestedRepairs` to fix the seed and retry once through MCP. Keep
    questioning instead of asking the MCP layer to synthesize purpose,
    requirements, roadmap, state, config, or phases.
 8. `--auto` skips the extra confirmation loop only when the project brief is
@@ -241,15 +247,19 @@ session instead of degrading to shallow synthesis.
      use durable IDs like `IV-01`, map each committed requirement exactly once,
      and replace empty recap or polish phases with a real owned requirement or
      remove them from the first persisted roadmap.
-3. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
-4. Require explicit overwrite confirmation before calling
+3. If `mcp_blueprint_blueprint_project_init` returns `status: "invalid"` and
+   `written: false`, no bootstrap artifacts were written. Repair the
+   `bootstrapSeed` from the returned diagnostics and retry through the same MCP
+   tool instead of editing `.blueprint/` directly.
+4. Treat returned `createdPaths`, `configPath`, and `nextAction` as authoritative instead of rebuilding bootstrap paths manually.
+5. Require explicit overwrite confirmation before calling
    `mcp_blueprint_blueprint_project_init` with `overwrite: true`.
-5. Do not call `mcp_blueprint_blueprint_artifact_scaffold` before initialization. Call it only when you deliberately need additional bootstrap artifacts after `mcp_blueprint_blueprint_project_init`, and pass only supported repo-relative Blueprint artifact paths.
-6. Treat scaffold output as seeding, not final authored persistence.
-7. After initialization, use `mcp_blueprint_blueprint_config_set` only with a
+6. Do not call `mcp_blueprint_blueprint_artifact_scaffold` before initialization. Call it only when you deliberately need additional bootstrap artifacts after `mcp_blueprint_blueprint_project_init`, and pass only supported repo-relative Blueprint artifact paths.
+7. Treat scaffold output as seeding, not final authored persistence.
+8. After initialization, use `mcp_blueprint_blueprint_config_set` only with a
    JSON-object `patch`, default repo writes to `scope: "project"`, and touch
    saved defaults only when explicitly approved.
-8. Use `mcp_blueprint_blueprint_state_update` only when the command needs to
+9. Use `mcp_blueprint_blueprint_state_update` only when the command needs to
    refine status, active command, or next-step guidance after initialization.
 
 ## Validate
@@ -260,9 +270,11 @@ session instead of degrading to shallow synthesis.
    substance, traceability, or contract violations.
 3. If validation or the `blueprint_project_init` response reports invalid,
    placeholder, missing-heading, missing-success-criteria, or traceability
-   issues, repair the authored `bootstrapSeed` or approval-packet source and
-   retry the MCP write only after the user approves any material scope change.
-   Do not patch `.blueprint/` files by hand.
+   issues, prefer returned `diagnostics` over source-code inspection. Repair the
+   authored `bootstrapSeed` or approval-packet source and retry the MCP write
+   only after the user approves any material scope change. Do not patch
+   `.blueprint/` files by hand.
+   In short: retry the MCP write only after the user approves any material scope change.
    A failed mutating MCP call may leave `.blueprint/mcp-write-failures.ndjson`;
    treat that as an operational diagnostic, not a core bootstrap artifact to
    delete through shell commands.
@@ -277,8 +289,8 @@ session instead of degrading to shallow synthesis.
   constraints, assumptions, and any evidence limits.
 - Requirements are grouped, testable, atomic, and written from the user or
   maintainer perspective.
-- The roadmap derives phases from requirement coverage and dependencies rather
-  than imposing a generic setup/core/polish template.
+- The roadmap derives phases from requirement coverage and explicit sequencing
+  rationale rather than imposing a generic setup/core/polish template.
 - Each committed requirement is covered exactly once in the roadmap.
 - Each phase has a concrete objective and 2-5 observable success criteria.
 - Deferred and out-of-scope work is visible enough to prevent accidental
