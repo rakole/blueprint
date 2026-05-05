@@ -426,7 +426,7 @@ Exact persistence template:
 
 ## State Of The Art
 
-- <current ecosystem or repo update with source date YYYY-MM-DD, or say not externally checked>
+- <current ecosystem or repo update relevant to this phase>
 
 ## Common Pitfalls
 
@@ -461,7 +461,6 @@ Contract notes:
 - Keep the `**Confidence:**` marker exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_artifact_write` passes current research validation.
 - Replace every angle-bracket placeholder before persisting the artifact through MCP.
-- `## State Of The Art` should include explicit source dates for freshness-sensitive claims, or state that external currency was not checked.
 
 ### `XX-VERIFICATION.md`
 

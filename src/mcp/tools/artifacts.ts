@@ -2563,19 +2563,6 @@ function hasSubstantiveResearchSection(section: string, heading: string): boolea
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
 
-function hasExplicitFreshnessDate(section: string): boolean {
-  return (
-    /\b\d{4}-\d{2}-\d{2}\b/.test(section) ||
-    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]* \d{1,2}, \d{4}\b/.test(
-      section
-    )
-  );
-}
-
-function marksExternalCurrencyUnchecked(section: string): boolean {
-  return /not externally checked|external currency (?:was )?not checked/i.test(section);
-}
-
 export function validateResearchArtifactContent(content: string): {
   valid: boolean;
   issues: string[];
@@ -2646,17 +2633,6 @@ export function validateResearchArtifactContent(content: string): {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
-    );
-  }
-
-  const stateOfTheArt = extractMarkdownSection(content, "State Of The Art");
-
-  if (
-    !marksExternalCurrencyUnchecked(stateOfTheArt) &&
-    !hasExplicitFreshnessDate(stateOfTheArt)
-  ) {
-    issues.push(
-      "Research artifact section State Of The Art must include an explicit source date for freshness-sensitive claims or say that external currency was not checked."
     );
   }
 

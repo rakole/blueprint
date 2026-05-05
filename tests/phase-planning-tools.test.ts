@@ -214,7 +214,7 @@ function validResearchContent(): string {
 
 ## State Of The Art
 
-- Plan-phase consumes saved discovery artifacts through MCP-backed readiness checks; external currency was not checked.
+- Plan-phase consumes saved discovery artifacts through MCP-backed readiness checks.
 
 ## Common Pitfalls
 

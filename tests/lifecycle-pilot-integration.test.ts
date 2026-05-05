@@ -185,7 +185,7 @@ function validResearchContent(): string {
 
 ## State Of The Art
 
-- Lifecycle commands consume saved discovery, execution, and validation artifacts through MCP-backed readiness checks; external currency was not checked.
+- Lifecycle commands consume saved discovery, execution, and validation artifacts through MCP-backed readiness checks.
 
 ## Common Pitfalls
 

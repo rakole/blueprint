@@ -46,7 +46,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 3. `Decide`: keep valid-reuse versus `view`/`skip`/`update`, invalid-research repair, checkpoint resume posture, and `research.external_sources` policy explicit before branching.
 4. `Execute`: research one topic strand at a time, grounding repo truth first and keeping external evidence distinct when policy allows it.
 5. `Persist`: draft directly from the canonical template, checkpoint only resumable or inconclusive work, and persist final research through MCP only.
-6. `Validate`: normalize the draft to the canonical `phase.research` template, block on placeholders or missing sections, and require explicit dates or a clear `not externally checked` marker for `## State Of The Art`.
+6. `Validate`: normalize the draft to the canonical `phase.research` template and block on placeholders, missing sections, missing evidence, or other MCP-owned structural issues.
 7. `Route`: sync `STATE.md`, reload refreshed state, and report only implemented follow-up commands.
 
 ## Blueprint And Global State Reads
@@ -84,7 +84,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Read the actual current `XX-CONTEXT.md` content before drafting. If the context read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
 - When saved research is already valid, prefer `ask_user` for an explicit `view`/`skip`/`update` choice. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `skip`, `view`, default reuse, or unchanged invalid writes are not successful exits.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
-- Keep repo evidence distinct from official docs or explicitly supplied external references. If external verification does not happen, say `not externally checked` plainly. When `## State Of The Art` cites freshness-sensitive external evidence, include explicit source dates nearby.
+- Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker.
 - `blueprint-researcher` is optional and capability-gated. Use it only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps; otherwise use the runtime contract's single-agent topic-strand fallback. Any official-doc or other external evidence packet must come from the parent command or user, not from the subagent fetching it on its own.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
 - After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
@@ -155,7 +155,6 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Uses `contract.authoringTemplate` as the direct drafting seed and reserves scaffold for deliberate placeholder creation only.
 - Honors the effective `research.external_sources` policy before any external verification step.
 - Keeps repo truth explicit and distinct from official-doc or user-supplied external evidence.
-- Requires `## State Of The Art` freshness claims to carry explicit dates or a clear `not externally checked` marker.
 - Handles long-running or inconclusive research through checkpointed continuation rather than a single all-or-nothing pass.
 - Reports the next safe action from refreshed runtime state instead of assuming `blueprint_state_update` returned it.
 - Uses only documented MCP tools for persistent state changes.
