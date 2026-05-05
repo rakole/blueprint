@@ -53,6 +53,10 @@ test("tracked dist schema inventory mirrors source artifact-contract schemas", a
     .sort();
 
   assert.ok(sourceSchemaFiles.length > 0, "source artifact-contract schemas should exist");
+  assert.ok(
+    sourceSchemaFiles.includes("bootstrap.roadmap.model.schema.json"),
+    "bootstrap.roadmap must expose a source model schema so roadmap authoring can be validated against the same contract as other structured artifacts."
+  );
 
   for (const schemaFile of sourceSchemaFiles) {
     const distRelativePath = path.join(

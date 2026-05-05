@@ -294,11 +294,105 @@ function renderBootstrapRoadmapTemplate(): string {
   - Objective: <phase objective>
   - Success Criteria:
     - <success criterion>
+    - <success criterion>
+
+## Phase Details
+
+### Phase 1: <phase title>
+**Goal**: <phase objective>
+**Requirements**: REQ-01
+**Depends on**: none
+**Success Criteria**: <success criterion>; <success criterion>
+**Status**: planned
 
 ## Notes
 
 - <bootstrap assumption>`;
 }
+
+const BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE = "bootstrap.roadmap.model.schema.json";
+const BOOTSTRAP_ROADMAP_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/bootstrap.roadmap.model.schema.json";
+
+const BOOTSTRAP_ROADMAP_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.bootstrap.roadmap.model",
+  schemaVersion: "1.0.0",
+  schemaPath: BOOTSTRAP_ROADMAP_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Author the roadmap as the canonical milestone-to-phase traceability model before rendering Markdown; do not invent phase numbers, requirement ids, status labels, dependency labels, or inserted markers outside the schema vocabulary.",
+    "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and 2-5 concrete success criteria; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
+    "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
+    "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
+    "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
+    "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+  ],
+  contextBindings: [
+    ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
+    ".blueprint/REQUIREMENTS.md supplies durable requirement ids; roadmap phases must reference those ids rather than creating ad hoc ids.",
+    "blueprint_project_init owns the first ROADMAP.md write and path derivation; roadmap-admin tools own later add, insert, remove, and backlog-promotion mutations.",
+    "blueprint_roadmap_add_phase and blueprint_roadmap_insert_phase remain authoritative for committed phase numbers, decimal insertion, phase directories, and inserted marker preservation after bootstrap.",
+    "blueprint_phase_context and planning tools consume roadmap phase goals, dependencies, requirement ids, and success criteria as downstream grounding."
+  ],
+  renderedHeadings: [
+    "Milestone",
+    "Bootstrap Status",
+    "Requirement Coverage",
+    "Phases",
+    "Phase Details",
+    "Notes"
+  ],
+  minimalValidExample: {
+    schemaVersion: "blueprint.roadmap.v1",
+    milestone: {
+      active: "v1 Workflow Bootstrap"
+    },
+    bootstrapStatus: {
+      repositoryShape: "brownfield",
+      codebaseMapping: "ready",
+      roadmapConfidence: "ready for progress review"
+    },
+    requirementCoverage: {
+      committedV1: ["REQ-01"],
+      deferred: [],
+      outOfScope: []
+    },
+    phases: [
+      {
+        phaseNumber: "1",
+        title: "Initialize Blueprint project state",
+        status: "planned",
+        requirements: ["REQ-01"],
+        dependsOn: [],
+        objective: "Create the durable project bootstrap artifacts needed for normal workflow routing.",
+        successCriteria: [
+          "PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md are present under .blueprint/.",
+          "The first phase has requirement traceability and can be located by blueprint_phase_context."
+        ]
+      }
+    ],
+    phaseDetails: [
+      {
+        phaseNumber: "1",
+        goal: "Create the durable project bootstrap artifacts needed for normal workflow routing.",
+        requirements: ["REQ-01"],
+        dependsOn: [],
+        inserted: false,
+        successCriteria: [
+          "PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md are present under .blueprint/.",
+          "The first phase has requirement traceability and can be located by blueprint_phase_context."
+        ],
+        status: "planned"
+      }
+    ],
+    notes: ["Initial roadmap is grounded in committed v1 requirements."]
+  },
+  exampleLeakageSignals: [
+    "Initialize Blueprint project state",
+    "Initial roadmap is grounded in committed v1 requirements.",
+    "Workflow Bootstrap"
+  ]
+};
 
 type CodebaseTemplateSection = {
   heading: string;
@@ -3577,8 +3671,10 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Roadmap bootstrap should keep phase ordering, requirement coverage, and confidence posture visible.",
-      "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria."
+      "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria.",
+      "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and 2-5 success criteria."
     ],
+    modelContract: BOOTSTRAP_ROADMAP_MODEL_CONTRACT,
     renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
     renderAuthoringTemplate: renderBootstrapRoadmapTemplate
   },

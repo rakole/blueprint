@@ -239,6 +239,7 @@ These notes are the shared prompt-facing contract for the current runtime. Comma
 
 - `blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths.
 - `blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract object for a given artifact id such as `phase.research`, `phase.verification`, or `report.debug`; `contract.authoringTemplate` holds the authoring template, and `contract.modelContract` is present when the artifact also supports strict structured model authoring.
+- For `bootstrap.roadmap`, `contract.modelContract` is the ROADMAP parity authority: it exposes `schemaPath`, `jsonSchema`, `minimalValidExample`, `renderedHeadings`, `qualityRules`, and `contextBindings` for milestone, bootstrap status, requirement coverage, phases, optional phase details, phase status vocabulary, dependencies, inserted marker, durable requirement IDs, and 2-5 success criteria.
 - Do not pass bare artifact names such as `STACK`, absolute filesystem paths, or ad hoc report filenames.
 - Use scaffolding only for first-write seeding or template regeneration. Do not treat scaffold output as the final persistent content for filled-in research, context, UI-spec, plan, summary, validation, or report artifacts.
 - Treat returned `createdFiles` and `reusedFiles` as authoritative for what the tool actually touched.

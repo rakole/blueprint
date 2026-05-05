@@ -131,9 +131,9 @@ export declare const projectToolDefinitions: ({
                 notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             }, z.core.$strip>>>;
             brownfieldMode: z.ZodOptional<z.ZodEnum<{
+                brownfield: "brownfield";
                 greenfield: "greenfield";
                 "scaffold-only": "scaffold-only";
-                brownfield: "brownfield";
             }>>;
             assumptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>>;

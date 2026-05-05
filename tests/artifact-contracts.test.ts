@@ -380,6 +380,32 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Phases",
     "Notes"
   ]);
+  assert.equal(
+    roadmapContract.modelContract?.schemaId,
+    "blueprint.bootstrap.roadmap.model"
+  );
+  assert.equal(roadmapContract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(
+    roadmapContract.modelContract?.schemaPath,
+    "src/mcp/artifact-contracts/schemas/bootstrap.roadmap.model.schema.json"
+  );
+  assert.deepEqual(roadmapContract.modelContract?.renderedHeadings, [
+    "Milestone",
+    "Bootstrap Status",
+    "Requirement Coverage",
+    "Phases",
+    "Phase Details",
+    "Notes"
+  ]);
+  assert.deepEqual(
+    (roadmapContract.modelContract?.jsonSchema.required as string[]).slice(0, 5),
+    ["schemaVersion", "milestone", "bootstrapStatus", "requirementCoverage", "phases"]
+  );
+  assert.ok(
+    roadmapContract.modelContract?.qualityRules.some((rule) =>
+      /success criteria/i.test(rule)
+    )
+  );
   assert.match(roadmapContract.authoringTemplate, /## Bootstrap Status/);
   assert.match(roadmapContract.authoringTemplate, /## Phases/);
   assert.deepEqual(researchContract.requiredHeadings, [

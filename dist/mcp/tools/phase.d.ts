@@ -1,5 +1,6 @@
 import * as z from "zod/v4";
 import { type ArtifactContractReadResult } from "../artifact-contracts/index.js";
+import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -659,10 +660,13 @@ type PhaseResearchStatusResult = {
     uiSpecPath: string | null;
     contextValid: boolean | null;
     contextIssues: string[];
+    contextDiagnostics: PhaseArtifactValidationDiagnostic[];
     researchValid: boolean | null;
     researchIssues: string[];
+    researchDiagnostics: PhaseArtifactValidationDiagnostic[];
     uiSpecValid: boolean | null;
     uiSpecIssues: string[];
+    uiSpecDiagnostics: PhaseArtifactValidationDiagnostic[];
     suggestedRepairs: string[];
     planningReadiness: PhasePlanningReadiness;
     warnings: string[];
@@ -674,6 +678,7 @@ type PhasePlanningReadiness = {
     readyForPlanPhase: boolean;
     nextSafeAction: string;
     blockers: string[];
+    diagnostics?: PhaseArtifactValidationDiagnostic[];
 };
 type PhaseArtifactReadResult = {
     phaseFound: boolean;
@@ -703,8 +708,18 @@ type PhaseArtifactWriteResult = {
         issues: string[];
         warnings: string[];
         suggestedRepairs: string[];
+        diagnostics?: PhaseArtifactValidationDiagnostic[];
+        retryPlan?: PhaseArtifactRetryPlan | null;
     } | null;
+    diagnostics?: PhaseArtifactValidationDiagnostic[];
+    suggestedRepairs?: string[];
+    retryPlan?: PhaseArtifactRetryPlan | null;
     warnings: string[];
+};
+type PhaseArtifactRetryPlan = {
+    retryable: boolean;
+    nextTool: string;
+    steps: string[];
 };
 type PhaseValidationReadResult = {
     phaseFound: boolean;

@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.bootstrap.roadmap.model",
+  "title": "Blueprint Bootstrap Roadmap Model",
+  "description": "Structured model-authored payload for bootstrap.roadmap. Runtime persistence renders .blueprint/ROADMAP.md with Milestone, Bootstrap Status, Requirement Coverage, Phases, optional Phase Details, and Notes while preserving durable requirement ids, phase dependencies, decimal insertions, and status vocabulary.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "milestone",
+    "bootstrapStatus",
+    "requirementCoverage",
+    "phases",
+    "notes"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "blueprint.roadmap.v1"
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active"
+      ],
+      "properties": {
+        "active": {
+          "$ref": "#/$defs/nonEmptyString",
+          "description": "Active milestone label rendered under ## Milestone."
+        },
+        "summary": {
+          "$ref": "#/$defs/nonEmptyString",
+          "description": "Optional single-line milestone framing note."
+        }
+      }
+    },
+    "bootstrapStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repositoryShape",
+        "codebaseMapping",
+        "roadmapConfidence"
+      ],
+      "properties": {
+        "repositoryShape": {
+          "type": "string",
+          "enum": [
+            "greenfield",
+            "scaffold-only",
+            "brownfield"
+          ]
+        },
+        "codebaseMapping": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "pending"
+          ]
+        },
+        "roadmapConfidence": {
+          "type": "string",
+          "enum": [
+            "ready for progress review",
+            "provisional until /blu-map-codebase"
+          ]
+        }
+      }
+    },
+    "requirementCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "committedV1",
+        "deferred",
+        "outOfScope"
+      ],
+      "properties": {
+        "committedV1": {
+          "$ref": "#/$defs/requirementIdArray",
+          "description": "Requirement ids committed to the active milestone. Every phase requirement must come from this durable set unless a documented traceability repair is pending."
+        },
+        "deferred": {
+          "$ref": "#/$defs/requirementIdArray"
+        },
+        "outOfScope": {
+          "$ref": "#/$defs/requirementIdArray"
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    },
+    "phaseDetails": {
+      "type": "array",
+      "description": "Optional richer records rendered under ## Phase Details. Each record must correspond to a phase entry and uses the same phase-number, status, dependency, inserted-marker, requirement-id, and success-criteria vocabulary.",
+      "items": {
+        "$ref": "#/$defs/phaseDetail"
+      }
+    },
+    "notes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n]+$",
+      "description": "Non-empty single-line string. CR/LF is rejected because model strings render into Markdown headings, bullets, or inline labels."
+    },
+    "requirementId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+$",
+      "description": "Durable requirement identifier such as REQ-01."
+    },
+    "requirementIdArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/requirementId"
+      }
+    },
+    "phaseNumber": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]+)?$",
+      "description": "Canonical phase number as rendered in ROADMAP.md. Kept as a string so inserted decimal phases such as 1.1 preserve exact identity."
+    },
+    "phaseStatus": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "completed",
+        "done"
+      ]
+    },
+    "successCriteria": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseNumber",
+        "title",
+        "status",
+        "requirements",
+        "dependsOn",
+        "objective",
+        "successCriteria"
+      ],
+      "properties": {
+        "phaseNumber": {
+          "$ref": "#/$defs/phaseNumber"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "$ref": "#/$defs/phaseStatus"
+        },
+        "requirements": {
+          "$ref": "#/$defs/requirementIdArray",
+          "description": "Durable requirement ids. Whole-number bootstrap phases should include at least one id; inserted decimal phases may be empty only while discovery has not assigned requirement grounding yet."
+        },
+        "dependsOn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/phaseNumber"
+          }
+        },
+        "inserted": {
+          "type": "boolean",
+          "description": "True when the rendered phase detail should preserve the inserted marker, written as Inserted: yes."
+        },
+        "objective": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "successCriteria": {
+          "$ref": "#/$defs/successCriteria"
+        }
+      }
+    },
+    "phaseDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseNumber",
+        "goal",
+        "requirements",
+        "dependsOn",
+        "inserted",
+        "successCriteria",
+        "status"
+      ],
+      "properties": {
+        "phaseNumber": {
+          "$ref": "#/$defs/phaseNumber"
+        },
+        "goal": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "requirements": {
+          "$ref": "#/$defs/requirementIdArray"
+        },
+        "dependsOn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/phaseNumber"
+          }
+        },
+        "inserted": {
+          "type": "boolean",
+          "description": "Boolean representation of the optional Inserted: yes roadmap marker."
+        },
+        "successCriteria": {
+          "$ref": "#/$defs/successCriteria"
+        },
+        "status": {
+          "$ref": "#/$defs/phaseStatus"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    }
+  }
+}

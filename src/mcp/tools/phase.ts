@@ -24,7 +24,6 @@ import {
   parseCaptureIndexDocument,
   validatePhaseArtifactContent,
   validatePlanArtifactContent,
-  validateResearchArtifactContent,
   extractSummaryPlanReference,
   extractSummaryStatus,
   extractSummaryMarkerValue,
@@ -2399,7 +2398,7 @@ function appendPhaseLineToRoadmap(
 
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phases" while appending Phase ${phaseNumber}. Repair by adding a top-level "## Phases" section containing checkbox phase lines such as "- [ ] Phase ${phaseNumber}: ${phaseName} (Requirements: REQ-01)", then re-run /blu-add-phase.`
     );
   }
 
@@ -2422,7 +2421,7 @@ function insertPhaseLineToRoadmap(
 
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phases" while inserting Phase ${phaseNumber} after Phase ${insertAfterPhaseNumber}. Repair by adding a top-level "## Phases" section with checkbox phase lines such as "- [ ] Phase ${insertAfterPhaseNumber}: <title>", then re-run /blu-insert-phase.`
     );
   }
 
@@ -2449,7 +2448,7 @@ function insertPhaseLineToRoadmap(
 
   if (!inserted) {
     throw new Error(
-      `Phase ${insertAfterPhaseNumber} could not be located in the roadmap phases list.`
+      `Phase ${insertAfterPhaseNumber} could not be located in ${BLUEPRINT_DIR}/ROADMAP.md field "## Phases" while inserting Phase ${phaseNumber}. Repair by adding or normalizing the anchor line to "- [ ] Phase ${insertAfterPhaseNumber}: <title>" or "- [ ] **Phase ${insertAfterPhaseNumber}: <title>**", then re-run /blu-insert-phase.`
     );
   }
 
@@ -2525,13 +2524,34 @@ function renderRequirementTraceabilityRepairSection(
 ${rows}`;
 }
 
+function normalizeRoadmapSuccessCriteriaField(value: string | undefined): string {
+  const criteria = (value?.trim()
+    ? value
+    : "Persist context, planning, execution, validation, and UAT evidence for this phase.; Keep roadmap requirements, dependencies, and follow-up evidence traceable."
+  )
+    .split(/\s*;\s*/)
+    .map((criterion) => criterion.trim())
+    .filter((criterion) => criterion.length > 0);
+
+  if (criteria.length === 0) {
+    return [
+      "Persist context, planning, execution, validation, and UAT evidence for this phase.",
+      "Keep roadmap requirements, dependencies, and follow-up evidence traceable."
+    ].join("; ");
+  }
+
+  if (criteria.length === 1) {
+    criteria.push("Keep roadmap requirements, dependencies, and follow-up evidence traceable.");
+  }
+
+  return criteria.slice(0, 5).join("; ");
+}
+
 function buildPhaseDetailBlock(options: PhaseDetailBlockOptions): string {
   const goal =
     options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
   const requirements = normalizeRoadmapDetailList(options.requirements);
-  const successCriteria =
-    options.successCriteria?.trim() ||
-    "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const successCriteria = normalizeRoadmapSuccessCriteriaField(options.successCriteria);
   const auditBackedDetails = options.auditBackedDetails ?? null;
   const auditSections = auditBackedDetails
     ? [
@@ -2771,7 +2791,7 @@ function insertPhaseDetailsToRoadmap(
 
   if (!phaseDetailsSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phase Details" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding a top-level "## Phase Details" section with a "### Phase ${dependsOnPhaseNumber}: <title>" block before re-running /blu-insert-phase.`
     );
   }
 
@@ -2780,9 +2800,7 @@ function insertPhaseDetailsToRoadmap(
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header: string, body: string) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
 
       let insertIndex = -1;
 
@@ -2798,7 +2816,7 @@ function insertPhaseDetailsToRoadmap(
 
       if (insertIndex === -1) {
         throw new Error(
-          `Phase ${dependsOnPhaseNumber} is missing a matching entry under the roadmap's "## Phase Details" section. Resolve roadmap drift before inserting a decimal phase.`
+          `Phase ${dependsOnPhaseNumber} is missing field "Phase Details" block under ${BLUEPRINT_DIR}/ROADMAP.md "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding "### Phase ${dependsOnPhaseNumber}: <title>" with Goal, Requirements, Depends on, Success Criteria, and Status fields, then re-run /blu-insert-phase.`
         );
       }
 
@@ -2811,11 +2829,18 @@ function insertPhaseDetailsToRoadmap(
 
   if (!inserted) {
     throw new Error(
-      `Phase ${phaseNumber} could not be inserted into the roadmap's "## Phase Details" section.`
+      `Phase ${phaseNumber} could not be inserted into ${BLUEPRINT_DIR}/ROADMAP.md field "## Phase Details". Repair by ensuring Phase ${dependsOnPhaseNumber} and any decimal siblings have valid "### Phase N: <title>" detail headings, then re-run /blu-insert-phase.`
     );
   }
 
   return content;
+}
+
+function splitRoadmapPhaseDetailBlocks(body: string): string[] {
+  return body
+    .split(/^### Phase /gm)
+    .slice(1)
+    .map((block) => `### Phase ${block}`.trimEnd());
 }
 
 function removePhaseLineFromRoadmap(
@@ -2882,9 +2907,7 @@ function removePhaseDetailsFromRoadmap(
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header: string, body: string) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.filter((block) => {
         const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
 
@@ -2968,9 +2991,7 @@ function replacePhaseDetailStatus(
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header: string, body: string) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.map((block) => {
         const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
 
@@ -9891,7 +9912,7 @@ export async function blueprintPhaseResearchStatus(
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs.readFile(absolutePath, "utf8");
-      const validation = validateResearchArtifactContent(raw);
+      const validation = validatePhaseArtifactContent(raw, "research");
 
       researchValid = validation.valid;
       researchIssues = validation.issues;

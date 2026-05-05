@@ -15290,6 +15290,16 @@ function renderBootstrapRoadmapTemplate() {
   - Objective: <phase objective>
   - Success Criteria:
     - <success criterion>
+    - <success criterion>
+
+## Phase Details
+
+### Phase 1: <phase title>
+**Goal**: <phase objective>
+**Requirements**: REQ-01
+**Depends on**: none
+**Success Criteria**: <success criterion>; <success criterion>
+**Status**: planned
 
 ## Notes
 
@@ -17056,10 +17066,172 @@ function resolveReportContractId(name) {
   }
   return null;
 }
-var PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, PEER_REVIEW_MODEL_SCHEMA_FILE, PEER_REVIEW_MODEL_SCHEMA_PATH, PEER_REVIEW_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, UI_REVIEW_MODEL_SCHEMA_FILE, UI_REVIEW_MODEL_SCHEMA_PATH, UI_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, ADD_TESTS_REPORT_MODEL_SCHEMA_FILE, ADD_TESTS_REPORT_MODEL_SCHEMA_PATH, ADD_TESTS_REPORT_MODEL_CONTRACT, AUDIT_FIX_REPORT_MODEL_SCHEMA_FILE, AUDIT_FIX_REPORT_MODEL_SCHEMA_PATH, AUDIT_FIX_REPORT_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
+var BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE, BOOTSTRAP_ROADMAP_MODEL_SCHEMA_PATH, BOOTSTRAP_ROADMAP_MODEL_CONTRACT, PHASE_CONTEXT_MODEL_SCHEMA_FILE, PHASE_CONTEXT_MODEL_SCHEMA_PATH, PHASE_CONTEXT_MODEL_CONTRACT, PHASE_PLAN_MODEL_SCHEMA_FILE, PHASE_PLAN_MODEL_SCHEMA_PATH, PHASE_PLAN_MODEL_CONTRACT, CODE_REVIEW_MODEL_SCHEMA_FILE, CODE_REVIEW_MODEL_SCHEMA_PATH, CODE_REVIEW_MODEL_CONTRACT, REVIEW_FIX_MODEL_SCHEMA_FILE, REVIEW_FIX_MODEL_SCHEMA_PATH, REVIEW_FIX_MODEL_CONTRACT, PEER_REVIEW_MODEL_SCHEMA_FILE, PEER_REVIEW_MODEL_SCHEMA_PATH, PEER_REVIEW_MODEL_CONTRACT, SECURITY_MODEL_SCHEMA_FILE, SECURITY_MODEL_SCHEMA_PATH, SECURITY_MODEL_CONTRACT, UI_REVIEW_MODEL_SCHEMA_FILE, UI_REVIEW_MODEL_SCHEMA_PATH, UI_REVIEW_MODEL_CONTRACT, QUICK_RUN_MODEL_CONTRACT, ADD_TESTS_REPORT_MODEL_SCHEMA_FILE, ADD_TESTS_REPORT_MODEL_SCHEMA_PATH, ADD_TESTS_REPORT_MODEL_CONTRACT, AUDIT_FIX_REPORT_MODEL_SCHEMA_FILE, AUDIT_FIX_REPORT_MODEL_SCHEMA_PATH, AUDIT_FIX_REPORT_MODEL_CONTRACT, IMPACT_REPORT_MODEL_SCHEMA_FILE, IMPACT_REPORT_MODEL_SCHEMA_PATH, IMPACT_REPORT_MODEL_CONTRACT, PHASE_VERIFICATION_MODEL_CONTRACT, PHASE_UAT_MODEL_CONTRACT, ARTIFACT_CONTRACTS, artifactContractIds;
 var init_artifact_contracts = __esm({
   "src/mcp/artifact-contracts/index.ts"() {
     "use strict";
+    BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE = "bootstrap.roadmap.model.schema.json";
+    BOOTSTRAP_ROADMAP_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/bootstrap.roadmap.model.schema.json";
+    BOOTSTRAP_ROADMAP_MODEL_CONTRACT = {
+      schemaId: "blueprint.bootstrap.roadmap.model",
+      schemaVersion: "1.0.0",
+      schemaPath: BOOTSTRAP_ROADMAP_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(BOOTSTRAP_ROADMAP_MODEL_SCHEMA_FILE),
+      qualityRules: [
+        "Author the roadmap as the canonical milestone-to-phase traceability model before rendering Markdown; do not invent phase numbers, requirement ids, status labels, dependency labels, or inserted markers outside the schema vocabulary.",
+        "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and 2-5 concrete success criteria; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
+        "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
+        "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
+        "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
+        "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+      ],
+      contextBindings: [
+        ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
+        ".blueprint/REQUIREMENTS.md supplies durable requirement ids; roadmap phases must reference those ids rather than creating ad hoc ids.",
+        "blueprint_project_init owns the first ROADMAP.md write and path derivation; roadmap-admin tools own later add, insert, remove, and backlog-promotion mutations.",
+        "blueprint_roadmap_add_phase and blueprint_roadmap_insert_phase remain authoritative for committed phase numbers, decimal insertion, phase directories, and inserted marker preservation after bootstrap.",
+        "blueprint_phase_context and planning tools consume roadmap phase goals, dependencies, requirement ids, and success criteria as downstream grounding."
+      ],
+      renderedHeadings: [
+        "Milestone",
+        "Bootstrap Status",
+        "Requirement Coverage",
+        "Phases",
+        "Phase Details",
+        "Notes"
+      ],
+      minimalValidExample: {
+        schemaVersion: "blueprint.roadmap.v1",
+        milestone: {
+          active: "v1 Workflow Bootstrap"
+        },
+        bootstrapStatus: {
+          repositoryShape: "brownfield",
+          codebaseMapping: "ready",
+          roadmapConfidence: "ready for progress review"
+        },
+        requirementCoverage: {
+          committedV1: ["REQ-01"],
+          deferred: [],
+          outOfScope: []
+        },
+        phases: [
+          {
+            phaseNumber: "1",
+            title: "Initialize Blueprint project state",
+            status: "planned",
+            requirements: ["REQ-01"],
+            dependsOn: [],
+            objective: "Create the durable project bootstrap artifacts needed for normal workflow routing.",
+            successCriteria: [
+              "PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md are present under .blueprint/.",
+              "The first phase has requirement traceability and can be located by blueprint_phase_context."
+            ]
+          }
+        ],
+        phaseDetails: [
+          {
+            phaseNumber: "1",
+            goal: "Create the durable project bootstrap artifacts needed for normal workflow routing.",
+            requirements: ["REQ-01"],
+            dependsOn: [],
+            inserted: false,
+            successCriteria: [
+              "PROJECT.md, REQUIREMENTS.md, ROADMAP.md, and STATE.md are present under .blueprint/.",
+              "The first phase has requirement traceability and can be located by blueprint_phase_context."
+            ],
+            status: "planned"
+          }
+        ],
+        notes: ["Initial roadmap is grounded in committed v1 requirements."]
+      },
+      exampleLeakageSignals: [
+        "Initialize Blueprint project state",
+        "Initial roadmap is grounded in committed v1 requirements.",
+        "Workflow Bootstrap"
+      ]
+    };
+    PHASE_CONTEXT_MODEL_SCHEMA_FILE = "phase.context.model.schema.json";
+    PHASE_CONTEXT_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.context.model.schema.json";
+    PHASE_CONTEXT_MODEL_CONTRACT = {
+      schemaId: "blueprint.phase.context.model",
+      schemaVersion: "1.0.0",
+      schemaPath: PHASE_CONTEXT_MODEL_SCHEMA_PATH,
+      jsonSchema: readJsonSchemaAsset(PHASE_CONTEXT_MODEL_SCHEMA_FILE),
+      qualityRules: [
+        "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, or content; the write tool owns identity and path derivation.",
+        "Preserve phase boundary separation: goal, in-scope work, out-of-scope work, and success criteria must stay distinct so downstream planning can narrow safely.",
+        "Discovery grounding must cite concrete project brief, requirements, workflow posture, and confirmed decisions rather than placeholder or generic process prose.",
+        "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
+        "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
+        "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
+        "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
+        "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
+      ],
+      contextBindings: [
+        "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_artifact_write arguments.",
+        "phase boundary and requirements grounding come from the selected roadmap phase, current project artifacts, and user discussion.",
+        "confirmed decisions and deferred ideas should align with prior context, discussion logs, research, UI specs, plans, summaries, or validation artifacts when available.",
+        "canonical references are evidence pointers for downstream planning and should use repo-relative paths, command outputs, docs, or explicitly labeled external sources.",
+        "the model supplies structured context content only; MCP renders and persists the Markdown artifact."
+      ],
+      renderedHeadings: [
+        "Phase Boundary",
+        "Discovery Grounding",
+        "Implementation Decisions",
+        "Specific Ideas",
+        "Existing Code Insights",
+        "Dependencies",
+        "Open Questions",
+        "Deferred Ideas",
+        "Canonical References"
+      ],
+      minimalValidExample: {
+        phaseBoundary: {
+          goal: "Add structured context model metadata for phase.context.",
+          inScope: ["Define schema-backed context content fields."],
+          outOfScope: ["Change phase artifact write behavior."],
+          successCriteria: ["Artifact contract reads expose a phase.context model contract."]
+        },
+        discoveryGrounding: {
+          projectBrief: "Blueprint stores phase planning artifacts under .blueprint/.",
+          requirementsGrounding: ["phase.context must keep its existing Markdown heading intent."],
+          workflowPosture: "Discovery context remains phase-scoped and MCP-owned.",
+          confirmedDecisions: ["Keep commands thin and delegate durable state writes to MCP tools."]
+        },
+        implementationDecisions: [
+          {
+            decision: "Attach a model contract without changing the Markdown template.",
+            tradeoffOrConstraint: "Existing scaffold and authoring behavior must remain compatible."
+          }
+        ],
+        specificIdeas: [
+          "Represent every existing required heading as a structured top-level field."
+        ],
+        existingCodeInsights: [
+          "src/mcp/artifact-contracts/index.ts owns artifact registry metadata."
+        ],
+        dependencies: {
+          priorPhaseArtifacts: ["Existing phase.context required headings"],
+          externalConstraints: ["No docs or phase/artifacts tool changes in this slice."],
+          requiredFollowUpReads: ["src/mcp/artifact-contracts/index.ts"]
+        },
+        openQuestions: ["none"],
+        deferredIdeas: ["Renderer-specific model persistence can be handled by a later slice."],
+        canonicalReferences: [
+          {
+            source: "src/mcp/artifact-contracts/index.ts",
+            relevance: "Defines required headings and model contract registry shape."
+          }
+        ]
+      },
+      exampleLeakageSignals: [
+        "Add structured context model metadata for phase.context.",
+        "Renderer-specific model persistence can be handled by a later slice.",
+        "src/mcp/artifact-contracts/index.ts owns artifact registry metadata.",
+        "Existing phase.context required headings"
+      ]
+    };
     PHASE_PLAN_MODEL_SCHEMA_FILE = "phase.plan.model.schema.json";
     PHASE_PLAN_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json";
     PHASE_PLAN_MODEL_CONTRACT = {
@@ -18516,8 +18688,10 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Roadmap bootstrap should keep phase ordering, requirement coverage, and confidence posture visible.",
-          "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria."
+          "Validation expects at least one concrete phase entry with objective, requirement mapping, and success criteria.",
+          "Structured roadmap authoring is schema-first: use bootstrap.roadmap modelContract metadata for milestone, bootstrap status, requirement coverage, phase status, dependencies, inserted markers, requirement ids, and 2-5 success criteria."
         ],
+        modelContract: BOOTSTRAP_ROADMAP_MODEL_CONTRACT,
         renderScaffoldTemplate: renderBootstrapRoadmapTemplate,
         renderAuthoringTemplate: renderBootstrapRoadmapTemplate
       },
@@ -18762,6 +18936,7 @@ var init_artifact_contracts = __esm({
           "Discovery context is phase-scoped and MCP-owned.",
           "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
         ],
+        modelContract: PHASE_CONTEXT_MODEL_CONTRACT,
         renderScaffoldTemplate: renderContextTemplate,
         renderAuthoringTemplate: renderContextTemplate
       },
@@ -41514,7 +41689,7 @@ function appendPhaseLineToRoadmap(raw, phaseNumber, phaseName) {
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phases" while appending Phase ${phaseNumber}. Repair by adding a top-level "## Phases" section containing checkbox phase lines such as "- [ ] Phase ${phaseNumber}: ${phaseName} (Requirements: REQ-01)", then re-run /blu-add-phase.`
     );
   }
   return raw.replace(phasesSectionPattern, (_full, header, body) => {
@@ -41531,7 +41706,7 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phases" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phases" while inserting Phase ${phaseNumber} after Phase ${insertAfterPhaseNumber}. Repair by adding a top-level "## Phases" section with checkbox phase lines such as "- [ ] Phase ${insertAfterPhaseNumber}: <title>", then re-run /blu-insert-phase.`
     );
   }
   let inserted = false;
@@ -41551,7 +41726,7 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   });
   if (!inserted) {
     throw new Error(
-      `Phase ${insertAfterPhaseNumber} could not be located in the roadmap phases list.`
+      `Phase ${insertAfterPhaseNumber} could not be located in ${BLUEPRINT_DIR}/ROADMAP.md field "## Phases" while inserting Phase ${phaseNumber}. Repair by adding or normalizing the anchor line to "- [ ] Phase ${insertAfterPhaseNumber}: <title>" or "- [ ] **Phase ${insertAfterPhaseNumber}: <title>**", then re-run /blu-insert-phase.`
     );
   }
   return content;
@@ -41590,10 +41765,23 @@ function renderRequirementTraceabilityRepairSection(requirementIds, phaseNumber,
 |----------------|--------|------------|-------|
 ${rows}`;
 }
+function normalizeRoadmapSuccessCriteriaField(value) {
+  const criteria = (value?.trim() ? value : "Persist context, planning, execution, validation, and UAT evidence for this phase.; Keep roadmap requirements, dependencies, and follow-up evidence traceable.").split(/\s*;\s*/).map((criterion) => criterion.trim()).filter((criterion) => criterion.length > 0);
+  if (criteria.length === 0) {
+    return [
+      "Persist context, planning, execution, validation, and UAT evidence for this phase.",
+      "Keep roadmap requirements, dependencies, and follow-up evidence traceable."
+    ].join("; ");
+  }
+  if (criteria.length === 1) {
+    criteria.push("Keep roadmap requirements, dependencies, and follow-up evidence traceable.");
+  }
+  return criteria.slice(0, 5).join("; ");
+}
 function buildPhaseDetailBlock(options) {
   const goal = options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
   const requirements = normalizeRoadmapDetailList(options.requirements);
-  const successCriteria = options.successCriteria?.trim() || "Persist context, planning, execution, validation, and UAT evidence for this phase.";
+  const successCriteria = normalizeRoadmapSuccessCriteriaField(options.successCriteria);
   const auditBackedDetails = options.auditBackedDetails ?? null;
   const auditSections = auditBackedDetails ? [
     "## Audit-Backed Gap Details",
@@ -41754,7 +41942,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phaseDetailsSectionPattern.test(raw)) {
     throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing a usable "## Phase Details" section.`
+      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding a top-level "## Phase Details" section with a "### Phase ${dependsOnPhaseNumber}: <title>" block before re-running /blu-insert-phase.`
     );
   }
   const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber2(value)));
@@ -41762,9 +41950,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header, body) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
       let insertIndex = -1;
       for (let index = blocks.length - 1; index >= 0; index -= 1) {
         const blockMatch = blocks[index]?.match(/^### Phase (\d+(?:\.\d+)?): /m);
@@ -41776,7 +41962,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
       }
       if (insertIndex === -1) {
         throw new Error(
-          `Phase ${dependsOnPhaseNumber} is missing a matching entry under the roadmap's "## Phase Details" section. Resolve roadmap drift before inserting a decimal phase.`
+          `Phase ${dependsOnPhaseNumber} is missing field "Phase Details" block under ${BLUEPRINT_DIR}/ROADMAP.md "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding "### Phase ${dependsOnPhaseNumber}: <title>" with Goal, Requirements, Depends on, Success Criteria, and Status fields, then re-run /blu-insert-phase.`
         );
       }
       blocks.splice(insertIndex, 0, detailBlock);
@@ -41787,10 +41973,13 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   );
   if (!inserted) {
     throw new Error(
-      `Phase ${phaseNumber} could not be inserted into the roadmap's "## Phase Details" section.`
+      `Phase ${phaseNumber} could not be inserted into ${BLUEPRINT_DIR}/ROADMAP.md field "## Phase Details". Repair by ensuring Phase ${dependsOnPhaseNumber} and any decimal siblings have valid "### Phase N: <title>" detail headings, then re-run /blu-insert-phase.`
     );
   }
   return content;
+}
+function splitRoadmapPhaseDetailBlocks(body) {
+  return body.split(/^### Phase /gm).slice(1).map((block) => `### Phase ${block}`.trimEnd());
 }
 function removePhaseLineFromRoadmap(raw, phaseNumber) {
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
@@ -41832,9 +42021,7 @@ function removePhaseDetailsFromRoadmap(raw, phaseNumber) {
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header, body) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.filter((block) => {
         const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
         if (!match) {
@@ -41891,9 +42078,7 @@ function replacePhaseDetailStatus(raw, phaseNumber, nextStatus) {
   const content = raw.replace(
     phaseDetailsSectionPattern,
     (_full, header, body) => {
-      const blocks = [...body.matchAll(/(^### Phase [\s\S]*?)(?=^### Phase |\s*$)/gm)].map(
-        (match) => match[1].trimEnd()
-      );
+      const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.map((block) => {
         const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
         if (!match || normalizePhaseNumber2(match[1]) !== phaseNumber) {
@@ -42400,6 +42585,7 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
       valid: null,
       usable: false,
       issues: [],
+      diagnostics: [],
       warnings: [],
       unreadable: false
     };
@@ -42413,6 +42599,7 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
       valid: validation.valid,
       usable: validation.valid,
       issues: validation.issues,
+      diagnostics: validation.diagnostics,
       warnings: validation.warnings,
       unreadable: false
     };
@@ -42423,6 +42610,16 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
       valid: false,
       usable: false,
       issues: [`${artifactPath} could not be read: ${reason}.`],
+      diagnostics: [
+        {
+          path: artifactPath,
+          code: `${artifact}.unreadable`,
+          message: `${artifactPath} could not be read: ${reason}.`,
+          repair: `Restore or regenerate ${artifactPath}, then retry the readiness check.`,
+          retryable: true,
+          nextTool: "blueprint_phase_research_status"
+        }
+      ],
       warnings: [`${artifactPath} is stale, deleted, or unreadable: ${reason}.`],
       unreadable: true
     };
@@ -42444,6 +42641,7 @@ function buildPhasePlanningReadiness(args) {
     };
   }
   if (!args.contextStatus.usable) {
+    const contextIssueBlockers = args.contextStatus.issues.map((issue2) => `Context validation: ${issue2}`);
     return {
       workflowResearchRequired: workflow.research,
       workflowUiPhaseRequired: workflow.uiPhase,
@@ -42451,8 +42649,10 @@ function buildPhasePlanningReadiness(args) {
       readyForPlanPhase: false,
       nextSafeAction: `Run /blu-discuss-phase${phaseSuffix} to rebuild the current phase context`,
       blockers: [
-        args.contextStatus.present ? "Saved phase context exists but is not usable for planning." : "Phase planning requires a usable XX-CONTEXT.md artifact."
-      ]
+        args.contextStatus.present ? "Saved phase context exists but is not usable for planning." : "Phase planning requires a usable XX-CONTEXT.md artifact.",
+        ...contextIssueBlockers
+      ],
+      ...args.contextStatus.diagnostics.length > 0 ? { diagnostics: args.contextStatus.diagnostics } : {}
     };
   }
   if (workflow.research && args.researchValid !== true) {
@@ -42468,6 +42668,7 @@ function buildPhasePlanningReadiness(args) {
     };
   }
   if (workflow.uiPhase && !args.uiSpecStatus.usable) {
+    const uiSpecIssueBlockers = args.uiSpecStatus.issues.map((issue2) => `UI spec validation: ${issue2}`);
     return {
       workflowResearchRequired: workflow.research,
       workflowUiPhaseRequired: workflow.uiPhase,
@@ -42475,8 +42676,10 @@ function buildPhasePlanningReadiness(args) {
       readyForPlanPhase: false,
       nextSafeAction: `Run /blu-ui-phase${phaseSuffix} to draft the phase UI contract`,
       blockers: [
-        args.uiSpecStatus.present ? "workflow.ui_phase=true but the saved XX-UI-SPEC.md artifact is not usable." : "workflow.ui_phase=true but no XX-UI-SPEC.md artifact is saved."
-      ]
+        args.uiSpecStatus.present ? "workflow.ui_phase=true but the saved XX-UI-SPEC.md artifact is not usable." : "workflow.ui_phase=true but no XX-UI-SPEC.md artifact is saved.",
+        ...uiSpecIssueBlockers
+      ],
+      ...args.uiSpecStatus.diagnostics.length > 0 ? { diagnostics: args.uiSpecStatus.diagnostics } : {}
     };
   }
   return {
@@ -46894,15 +47097,17 @@ async function blueprintPhaseResearchStatus(args = {}) {
   const researchPath = artifacts?.research ?? null;
   let researchValid = null;
   let researchIssues = [];
+  let researchDiagnostics = [];
   let researchUnreadable = false;
   const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs7.readFile(absolutePath, "utf8");
-      const validation = validateResearchArtifactContent(raw);
+      const validation = validatePhaseArtifactContent(raw, "research");
       researchValid = validation.valid;
       researchIssues = validation.issues;
+      researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
     } catch (error2) {
       researchUnreadable = true;
@@ -46910,6 +47115,16 @@ async function blueprintPhaseResearchStatus(args = {}) {
       const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
       researchIssues = [
         `Research artifact at ${researchPath} could not be read: ${reason}.`
+      ];
+      researchDiagnostics = [
+        {
+          path: researchPath,
+          code: "research.unreadable",
+          message: `Research artifact at ${researchPath} could not be read: ${reason}.`,
+          repair: `Restore or regenerate ${researchPath} with /blu-research-phase before planning.`,
+          retryable: true,
+          nextTool: "blueprint_phase_research_status"
+        }
       ];
       warnings.push(
         `Research artifact at ${researchPath} is stale, deleted, or unreadable: ${reason}.`
@@ -46951,10 +47166,13 @@ async function blueprintPhaseResearchStatus(args = {}) {
     uiSpecPath: artifacts?.uiSpec ?? null,
     contextValid: contextStatus.valid,
     contextIssues: contextStatus.issues,
+    contextDiagnostics: contextStatus.diagnostics,
     researchValid,
     researchIssues,
+    researchDiagnostics,
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
+    uiSpecDiagnostics: uiSpecStatus.diagnostics,
     suggestedRepairs,
     planningReadiness,
     warnings
@@ -47007,6 +47225,68 @@ async function blueprintPhaseArtifactRead(args) {
     reason: null
   };
 }
+function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
+  if (diagnostics.length > 0) {
+    return [...new Set(diagnostics.map((diagnostic) => diagnostic.repair))];
+  }
+  if (artifact === "research") {
+    return ["Add the required research sections, confidence marker, and at least one cited source before retrying."];
+  }
+  if (artifact === "ui-spec") {
+    return [
+      "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
+    ];
+  }
+  if (artifact === "context") {
+    return [
+      "Add a real context artifact title, remove scaffold placeholders, and populate every required context section with substantive downstream-planning detail before retrying."
+    ];
+  }
+  return [
+    `Add a real ${artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
+  ];
+}
+function phaseArtifactRetryPlan(artifact, diagnostics) {
+  const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, diagnostics);
+  const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : "/blu-ui-phase";
+  return {
+    retryable: diagnostics.length === 0 || diagnostics.every((diagnostic) => diagnostic.retryable),
+    nextTool: "blueprint_phase_artifact_write",
+    steps: [
+      `Read blueprint_artifact_contract_read for phase.${artifact === "discussion-log" ? "discussion-log" : artifact}.`,
+      ...suggestedRepairs,
+      `Use ${command} orchestration or retry blueprint_phase_artifact_write with repaired content.`
+    ]
+  };
+}
+function invalidPhaseArtifactWriteResult(args) {
+  const suggestedRepairs = phaseArtifactSuggestedRepairs(args.artifact, args.validation.diagnostics);
+  const retryPlan = phaseArtifactRetryPlan(args.artifact, args.validation.diagnostics);
+  return {
+    phaseNumber: args.resolved.phaseNumber,
+    phasePrefix: args.resolved.phasePrefix,
+    phaseName: args.resolved.phaseName,
+    phaseDir: args.resolved.phaseDir,
+    artifact: args.artifact,
+    path: args.path,
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    validation: {
+      valid: false,
+      issues: args.validation.issues,
+      warnings: args.validation.warnings,
+      suggestedRepairs,
+      diagnostics: args.validation.diagnostics,
+      retryPlan
+    },
+    diagnostics: args.validation.diagnostics,
+    suggestedRepairs,
+    retryPlan,
+    warnings: [...args.warnings, ...args.validation.warnings]
+  };
+}
 async function blueprintPhaseArtifactWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const artifactPath = artifactPathFor(resolved, args.artifact);
@@ -47020,25 +47300,13 @@ async function blueprintPhaseArtifactWrite(args) {
     const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
-        return {
-          phaseNumber: resolved.phaseNumber,
-          phasePrefix: resolved.phasePrefix,
-          phaseName: resolved.phaseName,
-          phaseDir: resolved.phaseDir,
+        return invalidPhaseArtifactWriteResult({
+          resolved,
           artifact: args.artifact,
           path: artifactPath,
-          written: false,
-          created: false,
-          overwritten: false,
-          status: "invalid",
-          validation: {
-            valid: false,
-            issues: validation.issues,
-            warnings: validation.warnings,
-            suggestedRepairs: []
-          },
-          warnings: [...warnings, ...validation.warnings]
-        };
+          validation,
+          warnings
+        });
       }
       warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       return {
@@ -47075,30 +47343,13 @@ async function blueprintPhaseArtifactWrite(args) {
     }
   }
   if (!validation.valid && (args.validationMode ?? "strict") === "strict") {
-    const suggestedRepairs = args.artifact === "research" ? ["Add the required research sections, confidence marker, and at least one cited source before retrying."] : args.artifact === "ui-spec" ? [
-      "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
-    ] : [
-      `Add a real ${args.artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
-    ];
-    return {
-      phaseNumber: resolved.phaseNumber,
-      phasePrefix: resolved.phasePrefix,
-      phaseName: resolved.phaseName,
-      phaseDir: resolved.phaseDir,
+    return invalidPhaseArtifactWriteResult({
+      resolved,
       artifact: args.artifact,
       path: artifactPath,
-      written: false,
-      created: false,
-      overwritten: false,
-      status: "invalid",
-      validation: {
-        valid: false,
-        issues: validation.issues,
-        warnings: validation.warnings,
-        suggestedRepairs
-      },
-      warnings: [...warnings, ...validation.warnings]
-    };
+      validation,
+      warnings
+    });
   }
   warnings.push(
     ...await writeTextFile(absolutePath, normalizedContent, {
@@ -51914,7 +52165,90 @@ function validateBootstrapRequirementsArtifact(content, options = {}) {
 }
 function extractBootstrapRoadmapPhaseBlocks(content) {
   const phasesSection = extractMarkdownSection5(content, "Phases");
-  return phasesSection.split(/\n(?=- \[(?: |x)\] Phase )/g).map((block) => block.trim()).filter((block) => block.startsWith("- ["));
+  const blocks = [];
+  let currentBlock = [];
+  for (const line of phasesSection.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock.join("\n").trim());
+      }
+      currentBlock = [line];
+      continue;
+    }
+    if (currentBlock.length > 0) {
+      currentBlock.push(line);
+    }
+  }
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join("\n").trim());
+  }
+  return blocks;
+}
+function parseBootstrapRoadmapPhaseBlock(phaseBlock) {
+  const line = phaseBlock.split("\n")[0] ?? "";
+  const match = line.match(
+    /^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+.+)?\s*$/
+  );
+  if (!match) {
+    return null;
+  }
+  const rawPhaseName = (match[2] ?? "").replace(/\s*\(\s*Requirements:\s*[^)]+\)\s*$/i, "").trim();
+  return {
+    phaseNumber: match[1] ?? "",
+    phaseName: rawPhaseName,
+    requirementIds: extractBootstrapRoadmapPhaseRequirementIds(phaseBlock),
+    successCriteria: extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock)
+  };
+}
+function extractBootstrapRoadmapScopedRequirementIds(section, scopePattern) {
+  const ids = [];
+  for (const line of section.split("\n")) {
+    const match = line.match(/^\s*-\s*([^:]+):\s*(.+)$/);
+    if (!match || !scopePattern.test(match[1] ?? "")) {
+      continue;
+    }
+    ids.push(...extractRequirementIdsFromMarkdown(match[2] ?? ""));
+  }
+  return [...new Set(ids)];
+}
+function normalizeRoadmapPhaseDetailStatus(value) {
+  return value.trim().toLowerCase().replace(/-/g, "_");
+}
+function extractBoldFieldValue(block, field) {
+  const match = block.match(new RegExp(`^\\*\\*${field}\\*\\*:\\s*(.+)$`, "im"));
+  return match ? match[1]?.trim() ?? null : null;
+}
+function parseRoadmapDetailSuccessCriteria(value) {
+  if (!value) {
+    return [];
+  }
+  return value.split(/\s*;\s*|\s*,\s*(?=[A-Z0-9])/).map((criterion) => criterion.trim()).filter((criterion) => criterion.length > 0 && !/^none(?:\s+yet)?$/i.test(criterion));
+}
+function extractBootstrapRoadmapPhaseDetails(content) {
+  const phaseDetails = extractMarkdownSection5(content, "Phase Details");
+  if (phaseDetails.trim().length === 0) {
+    return [];
+  }
+  return phaseDetails.split(/^### Phase /gm).slice(1).map((rawBlock) => {
+    const newlineIndex = rawBlock.indexOf("\n");
+    const header = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
+    const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
+    const headerMatch = header.match(/^(\d+(?:\.\d+)?):\s+(.+)$/);
+    if (!headerMatch) {
+      return null;
+    }
+    const requirements = extractBoldFieldValue(body, "Requirements");
+    const status = extractBoldFieldValue(body, "Status");
+    return {
+      phaseNumber: headerMatch[1] ?? "",
+      goal: extractBoldFieldValue(body, "Goal"),
+      requirementIds: requirements ? extractRequirementIdsFromMarkdownAll(requirements) : [],
+      successCriteria: parseRoadmapDetailSuccessCriteria(
+        extractBoldFieldValue(body, "Success Criteria")
+      ),
+      status
+    };
+  }).filter((block) => block !== null);
 }
 function validateBootstrapRoadmapArtifact(content, options = {}) {
   const issues = [];
@@ -51931,9 +52265,18 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
   const requirementCoverage = extractMarkdownSection5(content, "Requirement Coverage");
   const notes = extractMarkdownSection5(content, "Notes");
   const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+  const parsedPhaseBlocks = phaseBlocks.map((phaseBlock) => parseBootstrapRoadmapPhaseBlock(phaseBlock)).filter((phaseBlock) => phaseBlock !== null);
+  const phaseDetails = extractBootstrapRoadmapPhaseDetails(content);
+  const phaseDetailByNumber = new Map(
+    phaseDetails.map((detail) => [detail.phaseNumber, detail])
+  );
   const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
-  const phaseRequirementRefs = phaseBlocks.flatMap(
-    (phaseBlock) => extractBootstrapRoadmapPhaseRequirementIds(phaseBlock)
+  const committedCoverageIds = extractBootstrapRoadmapScopedRequirementIds(
+    requirementCoverage,
+    /\bcommitted\b/i
+  );
+  const phaseRequirementRefs = parsedPhaseBlocks.flatMap(
+    (phaseBlock) => phaseBlock.requirementIds.length > 0 ? phaseBlock.requirementIds : phaseDetailByNumber.get(phaseBlock.phaseNumber)?.requirementIds ?? []
   );
   const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
   if (isBootstrapRoadmapArtifact(content)) {
@@ -51955,29 +52298,120 @@ function validateBootstrapRoadmapArtifact(content, options = {}) {
     }
     if (duplicatePhaseRequirementRefs.length > 0) {
       issues.push(
-        `Roadmap artifact phase entries must not reference a requirement ID more than once: ${duplicatePhaseRequirementRefs.join(", ")}.`
+        `Roadmap artifact field Phases has duplicate requirement mapping IDs ${duplicatePhaseRequirementRefs.join(", ")}. Repair by assigning each committed requirement ID to exactly one phase.`
       );
     }
     for (const phaseBlock of phaseBlocks) {
-      if (!/^- \[(?: |x)\] Phase \d+(?:\.\d+)?:\s+\S+/m.test(phaseBlock)) {
-        issues.push("Roadmap artifact phase entries must include a numbered phase title.");
-      }
-      if (!/Objective:\s*\S+/m.test(phaseBlock)) {
-        issues.push("Roadmap artifact phase entries must include an objective.");
-      }
-      const phaseRequirementIds = extractBootstrapRoadmapPhaseRequirementIds(phaseBlock);
-      const successCriteria = extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock);
-      if (phaseRequirementIds.length === 0) {
+      const parsedPhaseBlock = parseBootstrapRoadmapPhaseBlock(phaseBlock);
+      const phaseLabel2 = parsedPhaseBlock ? `Phase ${parsedPhaseBlock.phaseNumber}` : "an unknown phase";
+      if (!parsedPhaseBlock) {
         issues.push(
-          "Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause."
-        );
-      } else if (phaseRequirementIds.some((requirementId) => !coverageIds.includes(requirementId))) {
-        issues.push(
-          "Roadmap artifact phase entries may only reference requirement IDs listed in Requirement Coverage."
+          "Roadmap artifact field Phases contains a malformed phase checkbox line. Repair by using `- [ ] Phase N: Title (Requirements: REQ-01)` or `- [ ] **Phase N: Title** (Requirements: REQ-01)`."
         );
       }
-      if (successCriteria.length === 0) {
-        issues.push("Roadmap artifact phase entries must include at least one success criteria bullet.");
+      const detail = parsedPhaseBlock ? phaseDetailByNumber.get(parsedPhaseBlock.phaseNumber) : void 0;
+      const objective = phaseBlock.match(/Objective:\s*(\S.+)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
+      if (objective.length === 0) {
+        issues.push(
+          `Roadmap artifact ${phaseLabel2} field Objective is missing or empty. Repair by adding an Objective child bullet under ${phaseLabel2} or \`**Goal**: <phase goal>\` in ${phaseLabel2}'s Phase Details block.`
+        );
+      }
+      const phaseRequirementIds = parsedPhaseBlock && parsedPhaseBlock.requirementIds.length > 0 ? parsedPhaseBlock.requirementIds : detail?.requirementIds ?? [];
+      const successCriteria = parsedPhaseBlock && parsedPhaseBlock.successCriteria.length > 0 ? parsedPhaseBlock.successCriteria : detail?.successCriteria ?? [];
+      const allowsDeferredRequirementMapping = parsedPhaseBlock !== null && parsedPhaseBlock.phaseNumber.includes(".") && detail !== void 0 && detail.requirementIds.length === 0;
+      if (phaseRequirementIds.length === 0 && !allowsDeferredRequirementMapping) {
+        issues.push(
+          `Roadmap artifact ${phaseLabel2} field Requirements is missing requirement IDs. Repair by adding a Requirements clause with IDs from Requirement Coverage.`
+        );
+        issues.push(
+          `Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause. ${phaseLabel2} field Requirements is missing requirement IDs; repair by adding a Requirements clause with IDs from Requirement Coverage.`
+        );
+      } else {
+        const unknownRequirementIds = phaseRequirementIds.filter(
+          (requirementId) => !coverageIds.includes(requirementId)
+        );
+        if (unknownRequirementIds.length > 0) {
+          issues.push(
+            `Roadmap artifact ${phaseLabel2} field Requirements references unknown IDs ${unknownRequirementIds.join(", ")}. Repair by adding those IDs to Requirement Coverage or replacing them with declared requirement IDs.`
+          );
+          issues.push(
+            ...unknownRequirementIds.map(
+              (requirementId) => `${phaseLabel2}${parsedPhaseBlock?.phaseName ? ` (${parsedPhaseBlock.phaseName})` : ""} references requirement ${requirementId} which is not declared in Requirement Coverage. Repair ${phaseLabel2} field Requirements by adding ${requirementId} to Requirement Coverage or replacing it with a declared requirement ID.`
+            )
+          );
+        }
+      }
+      if (successCriteria.length < 2 || successCriteria.length > 5) {
+        if (successCriteria.length === 0) {
+          issues.push(
+            "Roadmap artifact phase entries must include at least one success criteria bullet."
+          );
+        }
+        if (parsedPhaseBlock) {
+          issues.push(
+            `Roadmap artifact ${phaseLabel2} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel2}.`
+          );
+          issues.push(
+            successCriteria.length < 2 ? `${phaseLabel2} (${parsedPhaseBlock.phaseName}) must include at least two success criteria. Repair ${phaseLabel2} field Success Criteria by listing 2-5 observable criteria.` : `${phaseLabel2} (${parsedPhaseBlock.phaseName}) must include no more than five success criteria. Repair ${phaseLabel2} field Success Criteria by trimming it to 2-5 observable criteria.`
+          );
+          continue;
+        }
+        issues.push(
+          `Roadmap artifact ${phaseLabel2} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel2}.`
+        );
+      }
+    }
+    if (committedCoverageIds.length > 0) {
+      const mappedRequirementIds = new Set(phaseRequirementRefs);
+      const missingCommittedIds = committedCoverageIds.filter(
+        (requirementId) => !mappedRequirementIds.has(requirementId)
+      );
+      if (missingCommittedIds.length > 0) {
+        issues.push(
+          `Roadmap artifact field Phases is missing committed requirement IDs ${missingCommittedIds.join(", ")}. Repair by assigning each missing ID to exactly one phase Requirements clause.`
+        );
+      }
+    }
+    const phaseByNumber = new Map(
+      parsedPhaseBlocks.map((phaseBlock) => [phaseBlock.phaseNumber, phaseBlock])
+    );
+    for (const detail of phaseDetails) {
+      const matchingPhase = phaseByNumber.get(detail.phaseNumber);
+      const detailLabel = `Phase ${detail.phaseNumber}`;
+      if (!matchingPhase) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details references a phase absent from Phases. Repair by adding ${detailLabel} to Phases or removing the orphan Phase Details block.`
+        );
+        continue;
+      }
+      if (detail.goal === null || detail.goal.length === 0) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Goal is missing or empty. Repair by adding \`**Goal**: <phase goal>\` to the Phase Details block.`
+        );
+      }
+      const matchingPhaseRequirementIds = matchingPhase.requirementIds.length > 0 ? matchingPhase.requirementIds : detail.requirementIds;
+      const phaseRequirementSet = new Set(matchingPhaseRequirementIds);
+      const detailRequirementSet = new Set(detail.requirementIds);
+      const missingDetailIds = matchingPhaseRequirementIds.filter(
+        (requirementId) => !detailRequirementSet.has(requirementId)
+      );
+      const extraDetailIds = detail.requirementIds.filter(
+        (requirementId) => !phaseRequirementSet.has(requirementId)
+      );
+      if (missingDetailIds.length > 0 || extraDetailIds.length > 0) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details Requirements does not match Phases. Offending IDs: missing ${missingDetailIds.join(", ") || "none"}; extra ${extraDetailIds.join(", ") || "none"}. Repair by making \`**Requirements**\` match ${detailLabel}'s Requirements clause exactly.`
+        );
+      }
+      if (detail.successCriteria.length < 2 || detail.successCriteria.length > 5) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording 2-5 semicolon-separated observable criteria.`
+        );
+      }
+      if (detail.status !== null && !ROADMAP_PHASE_DETAIL_STATUSES.has(normalizeRoadmapPhaseDetailStatus(detail.status))) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Status uses unsupported value \`${detail.status}\`. Repair by using one of: planned, in_progress, completed, done.`
+        );
       }
     }
     if (!hasNonEmptyBulletedList(notes)) {
@@ -52006,6 +52440,33 @@ function countNonEmptyContractSections(content, headings) {
 }
 function hasSubstantiveContractSection(section) {
   return hasBootstrapText(section, 3);
+}
+function phaseArtifactRepairInstruction(args) {
+  if (args.artifact === "context") {
+    return args.heading ? `Populate ## ${args.heading} with substantive downstream-planning detail, then retry blueprint_phase_artifact_write. Context requires every required heading to be present and substantive; one populated section is not enough.` : "Read the phase.context contract, repair every required heading with substantive downstream-planning detail, then retry blueprint_phase_artifact_write.";
+  }
+  if (args.artifact === "ui-spec") {
+    return args.heading ? `Populate ## ${args.heading}, or provide a valid explicit UI skip rationale where the contract allows it, then retry blueprint_phase_artifact_write.` : "Read the phase.ui-spec contract, repair the UI spec or explicit skip rationale, then retry blueprint_phase_artifact_write.";
+  }
+  if (args.artifact === "discussion-log") {
+    return args.heading ? `Populate ## ${args.heading} with concrete discussion evidence, then retry blueprint_phase_artifact_write.` : "Read the phase.discussion-log contract, repair the discussion log, then retry blueprint_phase_artifact_write.";
+  }
+  return "Read the phase.research contract, repair the research artifact, then retry blueprint_phase_artifact_write.";
+}
+function phaseArtifactDiagnostic(args) {
+  return {
+    path: args.path,
+    code: args.code,
+    message: args.message,
+    heading: args.heading,
+    missing: args.missing,
+    repair: phaseArtifactRepairInstruction({
+      artifact: args.artifact,
+      heading: args.heading
+    }),
+    retryable: true,
+    nextTool: "blueprint_phase_artifact_write"
+  };
 }
 function hasRequirementTableRows(section) {
   const lines = section.split("\n").map((line) => line.trim()).filter((line) => /^\|.*\|$/.test(line));
@@ -52139,47 +52600,137 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
 }
 function validatePhaseArtifactContent(content, artifact) {
   if (artifact === "research") {
-    return validateResearchArtifactContent(content);
+    const validation = validateResearchArtifactContent(content);
+    return {
+      ...validation,
+      diagnostics: validation.issues.map(
+        (issue2) => phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "research.invalid",
+          message: issue2
+        })
+      )
+    };
   }
   const contractId = resolvePhaseArtifactContractId(artifact);
   const contract = readArtifactContract(contractId);
   const artifactLabel = artifact === "context" ? "Context artifact" : artifact === "discussion-log" ? "Discussion log artifact" : "UI spec artifact";
   const issues = [];
   const warnings = [];
+  const diagnostics = [];
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
-    issues.push(`${artifactLabel} must start with a markdown H1 title.`);
+    const issue2 = `${artifactLabel} must start with a markdown H1 title.`;
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.title",
+        code: "markdown.missing_h1",
+        message: issue2
+      })
+    );
   }
-  issues.push(
-    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal)).map((signal) => `${artifactLabel} still contains placeholder scaffold text: ${signal}.`)
-  );
+  for (const signal of contract.placeholderSignals.filter(
+    (value) => value.length > 0 && content.includes(value)
+  )) {
+    const issue2 = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content",
+        code: "markdown.placeholder_text",
+        message: issue2
+      })
+    );
+  }
   const presentRequiredSections = countNonEmptyContractSections(content, contract.requiredHeadings);
   const missingRequiredSections = contract.requiredHeadings.filter(
     (heading) => extractMarkdownSection5(content, heading).trim().length === 0
   );
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
     if (extractMarkdownSection5(content, "Outcome Mode").trim().length === 0) {
-      issues.push("UI spec artifact section Outcome Mode must not be empty.");
+      const issue2 = "UI spec artifact section Outcome Mode must not be empty.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Outcome Mode",
+          code: "ui-spec.empty_outcome_mode",
+          message: issue2,
+          heading: "Outcome Mode"
+        })
+      );
     }
     if (extractMarkdownSection5(content, "Rationale").trim().length === 0) {
-      issues.push(
-        "UI spec artifact using explicit skip rationale must include a non-empty Rationale section."
+      const issue2 = "UI spec artifact using explicit skip rationale must include a non-empty Rationale section.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Rationale",
+          code: "ui-spec.empty_skip_rationale",
+          message: issue2,
+          heading: "Rationale"
+        })
       );
     }
   } else if (artifact === "context" && missingRequiredSections.length > 0) {
-    issues.push(
-      `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    const issue2 = `Context artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      ...missingRequiredSections.map(
+        (heading) => phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "context.missing_required_section",
+          message: `Context artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
     );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
-    issues.push(
-      `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`
+    const issue2 = `UI spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      ...missingRequiredSections.map(
+        (heading) => phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "ui-spec.missing_required_section",
+          message: `UI spec artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
     );
   } else if (presentRequiredSections === 0) {
-    issues.push(
-      `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`
+    const issue2 = `${artifactLabel} must include at least one populated contract section: ${contract.requiredHeadings.join(", ")}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections",
+        code: "markdown.no_populated_contract_sections",
+        message: issue2,
+        missing: [...contract.requiredHeadings]
+      })
     );
   }
   if (artifact === "ui-spec" && missingRequiredSections.includes("Outcome Mode")) {
-    issues.push("UI spec artifact section Outcome Mode must not be empty.");
+    const issue2 = "UI spec artifact section Outcome Mode must not be empty.";
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections.Outcome Mode",
+        code: "ui-spec.empty_outcome_mode",
+        message: issue2,
+        heading: "Outcome Mode"
+      })
+    );
   }
   if (artifact === "context") {
     for (const heading of contract.requiredHeadings) {
@@ -52188,18 +52739,46 @@ function validatePhaseArtifactContent(content, artifact) {
         continue;
       }
       if (!hasSubstantiveContractSection(section)) {
-        issues.push(
-          `Context artifact section ${heading} must contain substantive downstream-planning detail.`
+        const issue2 = `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
+        issues.push(issue2);
+        diagnostics.push(
+          phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.non_substantive_required_section",
+            message: issue2,
+            heading
+          })
         );
       }
     }
     const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
     issues.push(...discussValidation.issues);
+    diagnostics.push(
+      ...discussValidation.issues.map(
+        (issue2) => phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "context.unsupported_claim",
+          message: issue2
+        })
+      )
+    );
     warnings.push(...discussValidation.warnings);
   }
   if (artifact === "discussion-log") {
     const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
     issues.push(...discussValidation.issues);
+    diagnostics.push(
+      ...discussValidation.issues.map(
+        (issue2) => phaseArtifactDiagnostic({
+          artifact,
+          path: "content",
+          code: "discussion-log.unsupported_claim",
+          message: issue2
+        })
+      )
+    );
     warnings.push(...discussValidation.warnings);
   }
   if (artifact !== "ui-spec" && artifact !== "context" && missingRequiredSections.length > 0) {
@@ -52210,7 +52789,8 @@ function validatePhaseArtifactContent(content, artifact) {
   return {
     valid: issues.length === 0,
     issues,
-    warnings
+    warnings,
+    diagnostics
   };
 }
 function parseVerificationGateState(content) {
@@ -54582,6 +55162,23 @@ function collectPhaseSummaryPathsForArtifact(phaseArtifacts, artifactPath) {
     (value) => value.startsWith(phaseRoot) && value.endsWith("-SUMMARY.md")
   );
 }
+function readStateLineValue(raw, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = raw.match(new RegExp(`^-\\s*${escapedLabel}:\\s*(.+)$`, "im"));
+  return match?.[1]?.trim() ?? null;
+}
+async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
+  if (!inspection.core.present.includes(BLUEPRINT_STATE_PATH)) {
+    return false;
+  }
+  try {
+    const raw = await fs8.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
+    const activeCommand2 = readStateLineValue(raw, "Active command");
+    return activeCommand2 === blueprintDirectCommand("discuss-phase");
+  } catch {
+    return false;
+  }
+}
 async function blueprintArtifactValidate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
@@ -54593,6 +55190,7 @@ async function blueprintArtifactValidate(args = {}) {
     (artifact) => /phase-discovery/i.test(artifact)
   );
   const bootstrapAssessment = await assessBootstrapRepoShape(projectRoot, inspection);
+  const activeDiscussPhaseDraft = await isActiveDiscussPhaseDraft(projectRoot, inspection);
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
     suggestedRepairs.add(
@@ -54664,23 +55262,48 @@ async function blueprintArtifactValidate(args = {}) {
       "Existing codebase artifacts are present and should be reused unless replace is explicitly confirmed."
     );
   }
-  for (const artifact of inspection.phases.filter((value) => value.endsWith("-RESEARCH.md"))) {
-    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs8.readFile(absolutePath, "utf8");
-    const validation = validateResearchArtifactContent(raw);
-    for (const issue2 of validation.issues) {
-      issues.push(`${artifact}: ${issue2}`);
+  const phaseArtifactValidationTargets = [
+    {
+      suffix: "-CONTEXT.md",
+      kind: "context",
+      repair: "Regenerate or update malformed phase context through /blu-discuss-phase before planning."
+    },
+    {
+      suffix: "-DISCUSSION-LOG.md",
+      kind: "discussion-log",
+      repair: "Regenerate or update malformed phase discussion logs through /blu-discuss-phase."
+    },
+    {
+      suffix: "-RESEARCH.md",
+      kind: "research",
+      repair: "Regenerate or update malformed phase research through /blu-research-phase before planning."
+    },
+    {
+      suffix: "-UI-SPEC.md",
+      kind: "ui-spec",
+      repair: "Regenerate or update malformed phase UI specs through /blu-ui-phase before planning."
     }
-    for (const warning of validation.warnings) {
-      warnings.push(`${artifact}: ${warning}`);
-    }
-    if (!validation.valid) {
-      suggestedRepairs.add(
-        "Regenerate or update malformed phase research through /blu-research-phase before planning."
-      );
+  ];
+  for (const target of phaseArtifactValidationTargets) {
+    for (const artifact of inspection.phases.filter((value) => value.endsWith(target.suffix))) {
+      if (activeDiscussPhaseDraft && target.kind === "context") {
+        continue;
+      }
+      const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+      const raw = await fs8.readFile(absolutePath, "utf8");
+      const validation = validatePhaseArtifactContent(raw, target.kind);
+      for (const issue2 of validation.issues) {
+        issues.push(`${artifact}: ${issue2}`);
+      }
+      for (const warning of validation.warnings) {
+        warnings.push(`${artifact}: ${warning}`);
+      }
+      if (!validation.valid) {
+        suggestedRepairs.add(target.repair);
+      }
     }
   }
-  for (const artifact of [
+  for (const artifact of activeDiscussPhaseDraft ? [] : [
     `${BLUEPRINT_DIR}/PROJECT.md`,
     `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
     `${BLUEPRINT_DIR}/ROADMAP.md`
@@ -57989,7 +58612,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
+var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -58366,6 +58989,12 @@ var init_artifacts = __esm({
       },
       { pattern: /\bPASS\|FAIL\|PARTIAL\b/i, signal: "PASS|FAIL|PARTIAL" }
     ];
+    ROADMAP_PHASE_DETAIL_STATUSES = /* @__PURE__ */ new Set([
+      "planned",
+      "in_progress",
+      "completed",
+      "done"
+    ]);
     UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS = [
       { mode: "power mode", pattern: /\bpower[\s-]?mode\b/i },
       { mode: "chain mode", pattern: /\bchain[\s-]?mode\b/i },
