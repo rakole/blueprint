@@ -13,6 +13,7 @@ Keep this manifest focused on host entrypoint routing:
 - Use the required MCP tool set and optional agent names declared by the `blueprint-bootstrap` skill package.
 - Do not require `docs/commands/new-project.md` before running the command.
 - Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
+- Do not create, repair, or recommend repo-root `CONTEXT.md`; Blueprint-managed context is either the brownfield `.blueprint/codebase/*.md` bundle or phase-scoped `.blueprint/phases/<phase>/<XX>-CONTEXT.md` authored by `/blu-discuss-phase`.
 - Avoid invented auto-advance chaining or slash-command self-invocation.
 - Keep persistent writes inside Blueprint MCP runtime tools only.
 

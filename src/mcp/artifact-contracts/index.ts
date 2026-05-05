@@ -664,6 +664,90 @@ function renderContextTemplate(context?: ArtifactTemplateContext): string {
 - Source 1: <source 1>`;
 }
 
+const PHASE_CONTEXT_MODEL_SCHEMA_FILE = "phase.context.model.schema.json";
+const PHASE_CONTEXT_MODEL_SCHEMA_PATH =
+  "src/mcp/artifact-contracts/schemas/phase.context.model.schema.json";
+
+const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
+  schemaId: "blueprint.phase.context.model",
+  schemaVersion: "1.0.0",
+  schemaPath: PHASE_CONTEXT_MODEL_SCHEMA_PATH,
+  jsonSchema: readJsonSchemaAsset(PHASE_CONTEXT_MODEL_SCHEMA_FILE),
+  qualityRules: [
+    "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, or content; the write tool owns identity and path derivation.",
+    "Preserve phase boundary separation: goal, in-scope work, out-of-scope work, and success criteria must stay distinct so downstream planning can narrow safely.",
+    "Discovery grounding must cite concrete project brief, requirements, workflow posture, and confirmed decisions rather than placeholder or generic process prose.",
+    "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
+    "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
+    "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
+    "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
+    "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
+  ],
+  contextBindings: [
+    "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_artifact_write arguments.",
+    "phase boundary and requirements grounding come from the selected roadmap phase, current project artifacts, and user discussion.",
+    "confirmed decisions and deferred ideas should align with prior context, discussion logs, research, UI specs, plans, summaries, or validation artifacts when available.",
+    "canonical references are evidence pointers for downstream planning and should use repo-relative paths, command outputs, docs, or explicitly labeled external sources.",
+    "the model supplies structured context content only; MCP renders and persists the Markdown artifact."
+  ],
+  renderedHeadings: [
+    "Phase Boundary",
+    "Discovery Grounding",
+    "Implementation Decisions",
+    "Specific Ideas",
+    "Existing Code Insights",
+    "Dependencies",
+    "Open Questions",
+    "Deferred Ideas",
+    "Canonical References"
+  ],
+  minimalValidExample: {
+    phaseBoundary: {
+      goal: "Add structured context model metadata for phase.context.",
+      inScope: ["Define schema-backed context content fields."],
+      outOfScope: ["Change phase artifact write behavior."],
+      successCriteria: ["Artifact contract reads expose a phase.context model contract."]
+    },
+    discoveryGrounding: {
+      projectBrief: "Blueprint stores phase planning artifacts under .blueprint/.",
+      requirementsGrounding: ["phase.context must keep its existing Markdown heading intent."],
+      workflowPosture: "Discovery context remains phase-scoped and MCP-owned.",
+      confirmedDecisions: ["Keep commands thin and delegate durable state writes to MCP tools."]
+    },
+    implementationDecisions: [
+      {
+        decision: "Attach a model contract without changing the Markdown template.",
+        tradeoffOrConstraint: "Existing scaffold and authoring behavior must remain compatible."
+      }
+    ],
+    specificIdeas: [
+      "Represent every existing required heading as a structured top-level field."
+    ],
+    existingCodeInsights: [
+      "src/mcp/artifact-contracts/index.ts owns artifact registry metadata."
+    ],
+    dependencies: {
+      priorPhaseArtifacts: ["Existing phase.context required headings"],
+      externalConstraints: ["No docs or phase/artifacts tool changes in this slice."],
+      requiredFollowUpReads: ["src/mcp/artifact-contracts/index.ts"]
+    },
+    openQuestions: ["none"],
+    deferredIdeas: ["Renderer-specific model persistence can be handled by a later slice."],
+    canonicalReferences: [
+      {
+        source: "src/mcp/artifact-contracts/index.ts",
+        relevance: "Defines required headings and model contract registry shape."
+      }
+    ]
+  },
+  exampleLeakageSignals: [
+    "Add structured context model metadata for phase.context.",
+    "Renderer-specific model persistence can be handled by a later slice.",
+    "src/mcp/artifact-contracts/index.ts owns artifact registry metadata.",
+    "Existing phase.context required headings"
+  ]
+};
+
 function renderDiscussionLogTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Discussion Log
 
@@ -3739,6 +3823,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Discovery context is phase-scoped and MCP-owned.",
       "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
     ],
+    modelContract: PHASE_CONTEXT_MODEL_CONTRACT,
     renderScaffoldTemplate: renderContextTemplate,
     renderAuthoringTemplate: renderContextTemplate
   },

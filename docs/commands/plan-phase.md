@@ -38,6 +38,7 @@ Interactive planning UX rules:
 
 
 - The target phase must exist and usually should already have context and research.
+- Phase context must be the saved `.blueprint/phases/<phase>/<XX>-CONTEXT.md` artifact. `/blu-plan-phase` reads it but does not repair, overwrite, synthesize, or replace it; missing, invalid, or unusable context routes back to `/blu-discuss-phase <phase>`. Blueprint does not use repo-root `CONTEXT.md`.
 
 
 ## Outputs
@@ -87,10 +88,12 @@ Interactive planning UX rules:
 
 - Read the canonical `phase.plan` contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.plan"` and the narrowed task schema through `blueprint_phase_plan_authoring_context` before drafting or revising plans. Use `contract.modelContract.schemaPath`, `contract.modelContract.jsonSchema`, and `phase_plan_authoring_context.taskSchema` as the model-authoring authority rather than a copied local template.
 - Read the actual current `XX-CONTEXT.md` content and any relevant discovery artifacts through `blueprint_phase_artifact_read` before drafting or revising plans; do not rely on readiness metadata alone. Read saved validation evidence through `blueprint_phase_validation_read` and saved review findings through `blueprint_review_load_findings` when those artifacts exist before replanning around them.
+- If the context read reports missing, invalid, unusable, or contradictory context, stop before drafting and route to `/blu-discuss-phase <phase>` with the exact diagnostics. Do not repair `XX-CONTEXT.md`, do not inspect MCP source to infer a repair, and do not substitute repo-root `CONTEXT.md`.
 - Use saved research for unstable technical choices. If needed research is missing or stale under the active gates, route to `/blu-research-phase` instead of browsing live web docs during planning.
 - Treat `blueprint_phase_research_status.planningReadiness` as the config-aware pre-draft handoff gate. If it reports `readyForPlanPhase=false`, route to its `nextSafeAction` before drafting. If it reports `readyForPlanPhase=true`, do not block only because raw missing-artifact or suggested-repair fields mention research or UI artifacts that normalized config disabled.
 - Validate the structured model through `blueprint_phase_plan_validate_model`, then persist the same model through `blueprint_phase_plan_write`; do not write raw `.blueprint/` plan files directly. Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation/write, especially after a successful plan write, because saved plan files are intentional known evidence artifacts for later plan slots. `/blu-plan-phase` writes must use `validationMode: "strict"` and `authoringMode: "model-only"`, and must not pass Markdown `content`; do not use warn-mode writes or Markdown fallback from this command.
 - After the final write, run `blueprint_phase_plan_validate` so scoped dependency drift, slot/title mismatches, cycles, and roadmap coverage gaps are surfaced before completion. If model validation, `blueprint_phase_plan_write`, or final scoped plan validation rejects a plan, repair all diagnostics against the live task schema and contract in one pass and retry through MCP before presenting completion.
+- Retry rejected plan validation/write diagnostics at most once for the same draft. If identical diagnostics repeat, stop, preserve the planning checkpoint or best safe no-write state, report the exact diagnostics and next safe action, and do not inspect MCP source as a repair strategy.
 - When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `model` as the full validated structured `phase.plan` JSON object, not scaffold placeholder text or Markdown.
@@ -170,6 +173,7 @@ Interactive planning UX rules:
 - Uses the plan index plus dedicated plan read/schema-context/model-validation/write/validate tools to persist actual plan content instead of scaffold-only placeholders.
 - Uses the scoped plan validation tool to validate the saved plan set instead of relying on a global artifact sweep.
 - Reads actual current context content and relevant discovery artifact content before drafting or revising plans instead of relying on status-only discovery signals.
+- Treats phase context as read-only and routes missing or unusable context to `/blu-discuss-phase <phase>`.
 - Reads the canonical `phase.plan` contract and narrowed task schema before writing.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

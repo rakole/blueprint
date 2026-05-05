@@ -12,6 +12,7 @@ Treat the referenced runtime contract as the source of truth for the detailed fl
 Command-local constraints:
 - Use only the MCP tools listed in the response requirements for persistent state work.
 - The live `phase.context` and `phase.discussion-log` `contract.authoringTemplate` values remain the schema authority for saved artifacts.
+- `/blu-discuss-phase` is the sole lifecycle command that authors or repairs phase context, and it writes only `.blueprint/phases/<phase>/<XX>-CONTEXT.md`; Blueprint does not create or manage repo-root `CONTEXT.md`.
 - Require explicit confirmation before replacing substantive user-authored artifacts; scaffold-generated placeholders may be replaced by validated authored content.
 - Use host-supported structured choices for interactive overwrite confirmation, next-area branching, resume-versus-discard decisions, and focused discovery tradeoffs when a structured choice will help.
 - Keep the final user response concise: phase, reused versus replaced artifacts, checkpoint behavior, plan-inventory warning if any, deferred ideas, progress recap, and the next safe action loaded from refreshed state. Do not infer a direct `/blu-plan-phase` handoff from successful context capture; repeat `mcp_blueprint_blueprint_state_load.derivedStatus.nextAction` exactly, so enabled research or UI gates continue to route through `/blu-research-phase` or `/blu-ui-phase` first.
@@ -24,4 +25,5 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Capture real phase decisions, not just placeholder headings or scaffold text.
 - Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, or artifact filenames back into the phase-write tools.
+- If validation rejects context or discussion content, repair the same normalized draft once and retry; if identical diagnostics repeat, preserve the checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as a repair strategy.
 """

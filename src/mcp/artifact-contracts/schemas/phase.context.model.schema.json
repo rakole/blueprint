@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blueprint.phase.context.model",
+  "title": "Blueprint Phase Context Model",
+  "description": "Model-authored payload for phase.context. Runtime-owned phase identity, artifact kind, paths, canonical filename, and final Markdown persistence are supplied by MCP tools.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "phaseBoundary",
+    "discoveryGrounding",
+    "implementationDecisions",
+    "specificIdeas",
+    "existingCodeInsights",
+    "dependencies",
+    "openQuestions",
+    "deferredIdeas",
+    "canonicalReferences"
+  ],
+  "properties": {
+    "phaseBoundary": {
+      "$ref": "#/$defs/phaseBoundary",
+      "description": "Content rendered under Phase Boundary."
+    },
+    "discoveryGrounding": {
+      "$ref": "#/$defs/discoveryGrounding",
+      "description": "Content rendered under Discovery Grounding."
+    },
+    "implementationDecisions": {
+      "type": "array",
+      "description": "Decision rows rendered under Implementation Decisions.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/implementationDecision"
+      }
+    },
+    "specificIdeas": {
+      "type": "array",
+      "description": "Concrete ideas rendered under Specific Ideas.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "existingCodeInsights": {
+      "type": "array",
+      "description": "Concrete codebase observations, reusable patterns, gaps, or cautions rendered under Existing Code Insights.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "dependencies": {
+      "$ref": "#/$defs/dependencies",
+      "description": "Dependency context rendered under Dependencies."
+    },
+    "openQuestions": {
+      "type": "array",
+      "description": "Open questions rendered under Open Questions. Use an explicit none value only when no open questions remain.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "deferredIdeas": {
+      "type": "array",
+      "description": "Deferred ideas, scope creep, or later follow-ups rendered under Deferred Ideas.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "canonicalReferences": {
+      "type": "array",
+      "description": "Evidence pointers rendered under Canonical References.",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/canonicalReference"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line string with at least one non-whitespace character. CR/LF is rejected because model strings are rendered into Markdown bullets."
+    },
+    "repoOrSourceReference": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Single-line repo-relative path, command output label, document reference, or explicitly labeled external source."
+    },
+    "phaseBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "goal",
+        "inScope",
+        "outOfScope",
+        "successCriteria"
+      ],
+      "properties": {
+        "goal": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "inScope": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "outOfScope": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "successCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "discoveryGrounding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectBrief",
+        "requirementsGrounding",
+        "workflowPosture",
+        "confirmedDecisions"
+      ],
+      "properties": {
+        "projectBrief": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "requirementsGrounding": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "workflowPosture": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "confirmedDecisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "implementationDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "tradeoffOrConstraint"
+      ],
+      "properties": {
+        "decision": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "tradeoffOrConstraint": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "priorPhaseArtifacts",
+        "externalConstraints",
+        "requiredFollowUpReads"
+      ],
+      "properties": {
+        "priorPhaseArtifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repoOrSourceReference"
+          }
+        },
+        "externalConstraints": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "requiredFollowUpReads": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/repoOrSourceReference"
+          }
+        }
+      }
+    },
+    "canonicalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "relevance"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/repoOrSourceReference"
+        },
+        "relevance": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}
