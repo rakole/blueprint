@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "blueprint.phase.plan.model",
   "title": "Blueprint Phase Plan Model",
-  "description": "Model-authored payload for phase.plan. Runtime-owned phase identity, plan id, phase directory, canonical filename, output path, and final Markdown persistence are supplied by MCP tools.",
+  "description": "Strict model-authored payload for phase.plan. Runtime-owned phase identity, plan id, phase directory, canonical filename, output path, and final Markdown persistence are supplied by MCP tools. The model renders Goal, Scope, Tasks, Verification, Must Haves, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -61,7 +61,7 @@
     },
     "requirements": {
       "type": "array",
-      "description": "Roadmap requirement ids this plan will cover. The task schema narrows values to the selected phase's known roadmap requirements.",
+      "description": "Roadmap requirement ids this specific plan covers now. This is a covered-now subset; do not include deferred or irrelevant requirements here. The task schema narrows values to the selected phase's known roadmap requirements, while requirementCoverage accounts for every known phase requirement exactly once.",
       "minItems": 1,
       "uniqueItems": true,
       "items": {
@@ -128,7 +128,7 @@
     },
     "requirementCoverage": {
       "type": "array",
-      "description": "Coverage decisions for the selected phase's roadmap requirements. The task schema requires every known requirement exactly once.",
+      "description": "Complete coverage ledger for the selected phase's roadmap requirements. The task schema requires every known phase requirement exactly once, with status covered, deferred, or irrelevant. Requirements covered by this plan also appear in top-level requirements; deferred and irrelevant requirements do not.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/requirementCoverageRow"
@@ -136,7 +136,7 @@
     },
     "evidenceCoverage": {
       "type": "array",
-      "description": "Coverage decisions for saved phase evidence artifacts. The task schema narrows artifact values and requires every known saved evidence artifact exactly once.",
+      "description": "Complete coverage ledger for the runtime-narrowed saved evidence inventory. The task schema narrows artifact values and requires every currently known saved evidence artifact exactly once. This inventory is dynamic: after a successful plan write, saved plan files can become evidence artifacts for later plan slots, so agents must re-read authoring context before each validation/write.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/evidenceCoverageRow"

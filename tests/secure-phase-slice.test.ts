@@ -110,6 +110,30 @@ ${threatModel}
 ## Must Haves
 
 - Keep security evidence MCP-owned.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| SEC-01 | covered | task-1 | tests/secure-phase-slice.test.ts | The security phase fixture covers saved security evidence routing. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/security.ts | used | The source fixture grounds the threat model review. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/security.ts | task-1 | npm test -- tests/security.test.ts exits 0 | The focused security fixture covers the declared source surface. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for security plan ${planId}. | none | The fixture has the threat evidence needed by the tests. | No follow-up required after the focused test passes. |
 `;
 }
 

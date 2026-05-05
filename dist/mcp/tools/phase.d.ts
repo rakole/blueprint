@@ -860,6 +860,7 @@ type PhasePlanWriteResult = {
         issues: string[];
         warnings: string[];
     };
+    modelValidation?: PhasePlanValidateModelResult | null;
     warnings: string[];
 };
 type PhasePlanAuthoringContextResult = {
@@ -878,17 +879,55 @@ type PhasePlanAuthoringContextResult = {
     warnings: string[];
 };
 type PhasePlanModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type PhasePlanModelDiagnosticSeverity = "error" | "warning";
+type PhasePlanModelRepairAction = "add" | "remove" | "replace" | "dedupe" | "reroute" | "make-verifiable" | "re-read-context";
+type PhasePlanModelPatchHint = {
+    op: "add" | "remove" | "replace";
+    path: string;
+    value?: unknown;
+};
 type PhasePlanModelDiagnostic = {
+    id?: string;
+    severity?: PhasePlanModelDiagnosticSeverity;
     source: PhasePlanModelDiagnosticSource;
     path: string;
+    modelPath?: string;
+    jsonPointer?: string | null;
+    markdownPath?: string;
     code: string;
     message: string;
     context: Record<string, unknown>;
+    expected?: unknown;
+    actual?: unknown;
+    allowedValues?: unknown[];
+    repairAction?: PhasePlanModelRepairAction;
+    patchHint?: PhasePlanModelPatchHint;
     suggestion: string;
+};
+type PhasePlanValidateModelTarget = {
+    artifact: "phase.plan";
+    phaseNumber: string | null;
+    phasePrefix: string | null;
+    phaseName: string | null;
+    planId: string | null;
+    path: string | null;
+    schemaPath: string | null;
+};
+type PhasePlanRepairSummary = {
+    blockingCount: number;
+    firstPassActions: string[];
+    reReadAuthoringContext: boolean;
+    retryInstruction: string;
 };
 type PhasePlanValidateModelResult = {
     status: "valid" | "invalid";
     valid: boolean;
+    target: PhasePlanValidateModelTarget;
+    repairBudget: {
+        maxAttempts: 2;
+        recommendedStrategy: "repair-all-diagnostics-before-retry";
+    };
+    repairSummary: PhasePlanRepairSummary;
     phase: ResolvedPhaseLocation | null;
     planId: string | null;
     path: string | null;

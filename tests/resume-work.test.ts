@@ -93,6 +93,58 @@ autonomous: true
 ## Goal
 
 Exercise the pause/resume handoff flow.
+
+## Scope
+
+- Resume from the saved handoff context.
+
+## Tasks
+
+### Task 1: Restore handoff context
+
+#### Read First
+
+- .blueprint/phases/03-phase-discovery/03-CONTEXT.md
+
+#### Action
+
+- Keep resume routing attached to the saved phase plan.
+
+#### Acceptance Criteria
+
+- tests/resume-work.test.ts exits 0
+
+## Verification
+
+- Run the focused resume-work test.
+
+## Must Haves
+
+- Resume-work keeps the existing phase plan as the active context.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| resume-work fixture route | covered | task-1 | tests/resume-work.test.ts | The fixture covers resuming from saved handoff context. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | The context artifact anchors the resume flow. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | task-1 | tests/resume-work.test.ts exits 0 | The focused test covers resume context loading. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the resume-work fixture. | none | The fixture has the saved context needed for resume. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

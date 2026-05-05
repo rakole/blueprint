@@ -141,6 +141,30 @@ Ship the dashboard UI surface for review.
 ## Must Haves
 
 - Preserve desktop and mobile hierarchy.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| UI-01 | covered | task-1 | tests/ui-review-slice.test.ts | The UI review fixture covers the dashboard review requirement. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/ui/dashboard.tsx | used | The dashboard source fixture grounds the UI audit. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/ui/dashboard.tsx | task-1 | npm test -- tests/ui-review-slice.test.ts exits 0 | The focused UI review test covers the declared dashboard surface. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for UI review plan ${planId}. | none | The fixture only seeds deterministic UI review evidence. | No follow-up required after the focused test passes. |
 `;
 }
 

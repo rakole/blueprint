@@ -195,6 +195,31 @@ Ship the plan-phase runtime.
 
 - Add phase plan indexing and writing support.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/phase.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the MCP-owned planning decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the plan-phase runtime evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/phase.ts | Task 1 | tests/phase-plan-write-locking.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| No open plan-locking unknowns remain. | none | Confirm indexed plan IDs after concurrent writes. |
+
 ## Tasks
 
 ### Task 1: Add the MCP plan tools

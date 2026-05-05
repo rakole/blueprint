@@ -134,6 +134,30 @@ Capture cross-CLI peer review for the saved plan.
 ## Must Haves
 
 - Peer review persistence remains phase-scoped.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REV-01 | covered | task-1 | tests/review-slice.test.ts | Peer review persistence is exercised by the focused review slice. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| docs/commands/review.md | used | The command spec defines the peer review persistence route. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/project.ts | task-1 | npm test -- tests/review-slice.test.ts | The focused test covers the peer-review routing surface. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the peer review fixture. | none | The fixture only seeds saved review evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

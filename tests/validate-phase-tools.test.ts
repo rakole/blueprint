@@ -306,6 +306,30 @@ Exercise validation routing.
 ## Must Haves
 
 - Keep validation evidence grounded in the saved summary artifact.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| VAL-01 | Validate completed execution evidence before writing downstream artifacts. | tests/validate-phase-tools.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| 03-01-SUMMARY.md | Use the completed summary as validation input. | Blueprint validation tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Validation routing consumes saved summary evidence. | Focused validation tool tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Additional validation plans | Keep out of this completed plan. | Cover with separate plan artifacts. |
 `,
     "utf8"
   );
@@ -368,6 +392,30 @@ Exercise invalid summary indexing.
 ## Must Haves
 
 - Partial summaries must not close execution coverage.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| VAL-02 | Preserve pending execution debt when the paired summary remains partial. | tests/validate-phase-tools.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| 03-02-SUMMARY.md | Keep the partial summary visible to validation readiness checks. | Blueprint validation tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Summary indexing keeps incomplete execution evidence open. | Focused validation tool tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Completion evidence | Defer until the summary is intentionally marked completed. | Resume validation after execution closes. |
 `,
     "utf8"
   );
@@ -3097,6 +3145,30 @@ Capture the second completed validation summary.
 ## Must Haves
 
 - Keep every completed summary linked to a matching plan artifact.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| VAL-01 | Validate the second completed summary alongside the first. | tests/validate-phase-tools.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| 03-02-SUMMARY.md | Persist a completed summary linked to plan 02. | Blueprint validation tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Roadmap completion checks include every completed summary. | Focused validation tool tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Extra phase summaries | Keep outside this fixture. | Add separate plans when needed. |
 `,
     "utf8"
   );

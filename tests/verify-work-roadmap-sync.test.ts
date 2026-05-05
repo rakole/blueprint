@@ -163,6 +163,30 @@ Persist verification and UAT evidence.
 ## Must Haves
 
 - Keep verification and UAT writes grounded in the saved summary artifact.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| EXEC-01 | Preserve roadmap sync from saved verification and UAT evidence. | tests/verify-work-roadmap-sync.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| Verification and UAT artifacts | Write saved validation state before invalid overwrite checks. | Blueprint verify-work tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Roadmap sync reads saved validation evidence. | Focused verify-work roadmap sync tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Remaining UAT follow-up states | Exercise separately with partial UAT fixtures. | Resume verify-work after follow-up review. |
 `,
     "utf8"
   );

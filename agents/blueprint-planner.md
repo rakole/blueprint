@@ -59,8 +59,8 @@ content through MCP without guessing plan structure or dependency order.
    gate, stop and return a blocker instead of inventing plan content.
 4. Derive the plan set from phase requirements, locked decisions, and
    must-haves the later execution and validation steps cannot safely drop, and
-   produce an explicit requirements-coverage map so each requirement is either
-   covered by a task or called out as a blocker.
+   produce an explicit requirements-coverage map so each known phase
+   requirement appears exactly once as covered, deferred, or irrelevant.
 5. Split work into dependency-aware plans and waves. Use one plan when the work
    is naturally atomic; use multiple plans when dependency order, ownership, or
    verification boundaries justify it. If the phase is too broad for one
@@ -115,6 +115,18 @@ content through MCP without guessing plan structure or dependency order.
   `autonomous`, `goal`, `scope`, `tasks`, `verification`, `mustHaves`,
   `requirementCoverage`, `evidenceCoverage`, `fileSurfaceCoverage`, and
   `unknownsAndDeferrals`.
+- Top-level `requirements` is only the requirement-id subset this plan covers
+  now. `requirementCoverage` is the complete ledger and must account for every
+  known phase requirement exactly once as `covered`, `deferred`, or
+  `irrelevant`.
+- `evidenceCoverage` must match the runtime-narrowed saved evidence inventory
+  supplied in the latest task schema. Treat it as dynamic: after the parent
+  command writes a plan, saved plan files can become evidence rows for later
+  slots, so ask the parent to re-read authoring context before validating or
+  writing the next model.
+- Rendered plan output must preserve these headings exactly: `Goal`, `Scope`,
+  `Tasks`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence
+  Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`.
 - Every task object must include `id`, `title`, `readFirst`, `action`,
   `acceptanceCriteria`, `requirements`, and `filesModified`.
 - `#### Read First` must cite exact repo-relative paths for files being

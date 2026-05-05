@@ -1019,6 +1019,7 @@ type PhasePlanWriteResult = {
     issues: string[];
     warnings: string[];
   };
+  modelValidation?: PhasePlanValidateModelResult | null;
   warnings: string[];
 };
 
@@ -1039,19 +1040,67 @@ type PhasePlanAuthoringContextResult = {
 };
 
 type PhasePlanModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
+type PhasePlanModelDiagnosticSeverity = "error" | "warning";
+type PhasePlanModelRepairAction =
+  | "add"
+  | "remove"
+  | "replace"
+  | "dedupe"
+  | "reroute"
+  | "make-verifiable"
+  | "re-read-context";
+
+type PhasePlanModelPatchHint = {
+  op: "add" | "remove" | "replace";
+  path: string;
+  value?: unknown;
+};
 
 type PhasePlanModelDiagnostic = {
+  id?: string;
+  severity?: PhasePlanModelDiagnosticSeverity;
   source: PhasePlanModelDiagnosticSource;
   path: string;
+  modelPath?: string;
+  jsonPointer?: string | null;
+  markdownPath?: string;
   code: string;
   message: string;
   context: Record<string, unknown>;
+  expected?: unknown;
+  actual?: unknown;
+  allowedValues?: unknown[];
+  repairAction?: PhasePlanModelRepairAction;
+  patchHint?: PhasePlanModelPatchHint;
   suggestion: string;
+};
+
+type PhasePlanValidateModelTarget = {
+  artifact: "phase.plan";
+  phaseNumber: string | null;
+  phasePrefix: string | null;
+  phaseName: string | null;
+  planId: string | null;
+  path: string | null;
+  schemaPath: string | null;
+};
+
+type PhasePlanRepairSummary = {
+  blockingCount: number;
+  firstPassActions: string[];
+  reReadAuthoringContext: boolean;
+  retryInstruction: string;
 };
 
 type PhasePlanValidateModelResult = {
   status: "valid" | "invalid";
   valid: boolean;
+  target: PhasePlanValidateModelTarget;
+  repairBudget: {
+    maxAttempts: 2;
+    recommendedStrategy: "repair-all-diagnostics-before-retry";
+  };
+  repairSummary: PhasePlanRepairSummary;
   phase: ResolvedPhaseLocation | null;
   planId: string | null;
   path: string | null;
@@ -5626,7 +5675,21 @@ function createAjvValidator(): Ajv2020 {
 }
 
 function phasePlanDiagnostic(args: PhasePlanModelDiagnostic): PhasePlanModelDiagnostic {
-  return args;
+  const modelPath =
+    args.modelPath ?? (args.path === "model" || args.path.startsWith("model.") ? args.path : undefined);
+  const jsonPointer =
+    args.jsonPointer !== undefined
+      ? args.jsonPointer
+      : modelPath
+        ? phasePlanModelPathToJsonPointer(modelPath)
+        : null;
+
+  return {
+    severity: "error",
+    ...args,
+    modelPath,
+    jsonPointer
+  };
 }
 
 function emptyPhasePlanDiagnosticCounts(): PhasePlanValidateModelResult["diagnosticCounts"] {
@@ -5656,8 +5719,57 @@ function countPhasePlanDiagnostics(
   return counts;
 }
 
+function phasePlanValidateModelTarget(args: {
+  phase: ResolvedPhaseLocation | null;
+  planId: string | null;
+  path: string | null;
+  schemaPath: string | null;
+}): PhasePlanValidateModelTarget {
+  return {
+    artifact: "phase.plan",
+    phaseNumber: args.phase?.phaseNumber ?? null,
+    phasePrefix: args.phase?.phasePrefix ?? null,
+    phaseName: args.phase?.phaseName ?? null,
+    planId: args.planId,
+    path: args.path,
+    schemaPath: args.schemaPath
+  };
+}
+
+function summarizePhasePlanRepairs(
+  diagnostics: PhasePlanModelDiagnostic[]
+): PhasePlanRepairSummary {
+  const firstPassActions = uniquePreservingOrder(
+    diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
+  );
+  const reReadAuthoringContext = diagnostics.some(
+    (diagnostic) =>
+      diagnostic.repairAction === "re-read-context" ||
+      diagnostic.code === "schema.exactCoverage" ||
+      diagnostic.source === "scope"
+  );
+  const retryInstruction =
+    diagnostics.length === 0
+      ? "No repair is required; the model is ready to render."
+      : reReadAuthoringContext
+        ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once."
+        : "Repair every diagnostic in the returned model before retrying validation once.";
+
+  return {
+    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
+    firstPassActions,
+    reReadAuthoringContext,
+    retryInstruction
+  };
+}
+
 function formatPhasePlanDiagnostic(diagnostic: PhasePlanModelDiagnostic): string {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+  const pathHint = diagnostic.jsonPointer
+    ? `${diagnostic.path} (${diagnostic.jsonPointer})`
+    : diagnostic.path;
+  const actionHint = diagnostic.repairAction ? ` Action: ${diagnostic.repairAction}.` : "";
+
+  return `${diagnostic.source}:${pathHint}:${diagnostic.code}: ${diagnostic.message}${actionHint} Suggestion: ${diagnostic.suggestion}`;
 }
 
 function ajvPathToPhasePlanModelPath(instancePath: string): string {
@@ -5675,7 +5787,125 @@ function ajvPathToPhasePlanModelPath(instancePath: string): string {
     .join("")}`;
 }
 
-function schemaDiagnosticFromAjvError(error: ErrorObject): PhasePlanModelDiagnostic {
+function phasePlanModelPathToJsonPointer(pathValue: string): string | null {
+  if (pathValue === "model") {
+    return "";
+  }
+
+  if (!pathValue.startsWith("model.")) {
+    return null;
+  }
+
+  const pathWithoutRoot = pathValue.slice("model.".length);
+  const segments = pathWithoutRoot
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .filter((segment) => segment.length > 0)
+    .map((segment) => segment.replace(/~/g, "~0").replace(/\//g, "~1"));
+
+  return `/${segments.join("/")}`;
+}
+
+function appendJsonPointerSegment(pointer: string, segment: string): string {
+  const encoded = segment.replace(/~/g, "~0").replace(/\//g, "~1");
+
+  return pointer.length === 0 ? `/${encoded}` : `${pointer}/${encoded}`;
+}
+
+function getValueAtJsonPointer(value: unknown, pointer: string | null): unknown {
+  if (pointer === null) {
+    return undefined;
+  }
+
+  if (pointer === "") {
+    return value;
+  }
+
+  let current: unknown = value;
+  const segments = pointer
+    .split("/")
+    .slice(1)
+    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"));
+
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number.parseInt(segment, 10);
+      current = Number.isInteger(index) ? current[index] : undefined;
+      continue;
+    }
+
+    if (typeof current === "object" && current !== null) {
+      current = (current as Record<string, unknown>)[segment];
+      continue;
+    }
+
+    return undefined;
+  }
+
+  return current;
+}
+
+function ajvAllowedValues(error: ErrorObject): unknown[] | undefined {
+  if (
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "allowedValues" in error.params &&
+    Array.isArray(error.params.allowedValues)
+  ) {
+    return error.params.allowedValues;
+  }
+
+  if (
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "allowedValue" in error.params
+  ) {
+    return [error.params.allowedValue];
+  }
+
+  return undefined;
+}
+
+function phasePlanSchemaRepairAction(error: ErrorObject): PhasePlanModelRepairAction {
+  if (error.keyword === "required" || error.keyword === "contains" || error.keyword === "minItems") {
+    return "add";
+  }
+
+  if (error.keyword === "additionalProperties" || error.keyword === "maxItems") {
+    return "remove";
+  }
+
+  if (error.keyword === "uniqueItems") {
+    return "dedupe";
+  }
+
+  return "replace";
+}
+
+function phasePlanSchemaExpected(error: ErrorObject, allowedValues?: unknown[]): unknown {
+  if (allowedValues && allowedValues.length > 0) {
+    return allowedValues;
+  }
+
+  if (error.keyword === "pattern" && "pattern" in error.params) {
+    return `Value matching pattern ${String(error.params.pattern)}`;
+  }
+
+  if (error.keyword === "minItems" && "limit" in error.params) {
+    return `At least ${String(error.params.limit)} item(s)`;
+  }
+
+  if (error.keyword === "maxItems" && "limit" in error.params) {
+    return `At most ${String(error.params.limit)} item(s)`;
+  }
+
+  return error.keyword;
+}
+
+function schemaDiagnosticFromAjvError(
+  error: ErrorObject,
+  model: unknown
+): PhasePlanModelDiagnostic {
   const missingProperty =
     typeof error.params === "object" &&
     error.params !== null &&
@@ -5697,10 +5927,27 @@ function schemaDiagnosticFromAjvError(error: ErrorObject): PhasePlanModelDiagnos
       : additionalProperty !== null
         ? `${basePath}.${additionalProperty}`
         : basePath;
+  const jsonPointer =
+    missingProperty !== null
+      ? appendJsonPointerSegment(error.instancePath, missingProperty)
+      : additionalProperty !== null
+        ? appendJsonPointerSegment(error.instancePath, additionalProperty)
+        : error.instancePath;
+  const allowedValues = ajvAllowedValues(error);
+  const actual = getValueAtJsonPointer(model, jsonPointer);
+  const repairAction = phasePlanSchemaRepairAction(error);
+  const patchHint =
+    additionalProperty !== null
+      ? { op: "remove" as const, path: jsonPointer }
+      : allowedValues && allowedValues.length > 0 && actual !== undefined
+        ? { op: "replace" as const, path: jsonPointer, value: allowedValues[0] }
+        : undefined;
 
   return phasePlanDiagnostic({
     source: "schema",
     path: pathValue,
+    modelPath: pathValue,
+    jsonPointer,
     code: `schema.${error.keyword}`,
     message: error.message ?? "Model does not match the phase.plan task schema.",
     context: {
@@ -5708,18 +5955,26 @@ function schemaDiagnosticFromAjvError(error: ErrorObject): PhasePlanModelDiagnos
       params: error.params,
       schemaPath: error.schemaPath
     },
+    expected: phasePlanSchemaExpected(error, allowedValues),
+    actual,
+    allowedValues,
+    repairAction,
+    patchHint,
     suggestion:
       missingProperty !== null
         ? `Add required field ${missingProperty}.`
         : additionalProperty !== null
           ? `Remove unsupported field ${additionalProperty}.`
+          : allowedValues && allowedValues.length > 0
+            ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.`
           : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
   });
 }
 
 function schemaDiagnosticFromPhasePlanAjvError(
   error: ErrorObject,
-  taskSchema: Record<string, unknown>
+  taskSchema: Record<string, unknown>,
+  model: unknown
 ): PhasePlanModelDiagnostic {
   const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
   const knownRequirements = Array.isArray(runtimeContext?.knownRequirements)
@@ -5751,6 +6006,8 @@ function schemaDiagnosticFromPhasePlanAjvError(
       return phasePlanDiagnostic({
         source: "schema",
         path: `model.${collection}`,
+        modelPath: `model.${collection}`,
+        jsonPointer: `/${collection}`,
         code: "schema.exactCoverage",
         message: `Phase plan model ${collection} must include exactly one row for ${noun} ${requiredValue}.`,
         context: {
@@ -5759,12 +6016,49 @@ function schemaDiagnosticFromPhasePlanAjvError(
           params: error.params,
           schemaPath: error.schemaPath
         },
-        suggestion: `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
+        expected:
+          collection === "requirementCoverage"
+            ? {
+                requirement: requiredValue,
+                status: "deferred",
+                coveredByTasks: [],
+                evidence: "Concrete evidence or rationale from the selected phase.",
+                rationale: "Explain why this requirement is deferred, irrelevant, or covered."
+              }
+            : {
+                artifact: requiredValue,
+                status: "used",
+                rationale: "Explain how this saved evidence artifact informed the plan."
+              },
+        actual: getValueAtJsonPointer(model, `/${collection}`),
+        repairAction: collection === "evidenceCoverage" ? "re-read-context" : "add",
+        patchHint: {
+          op: "add",
+          path: `/${collection}/-`,
+          value:
+            collection === "requirementCoverage"
+              ? {
+                  requirement: requiredValue,
+                  status: "deferred",
+                  coveredByTasks: [],
+                  evidence: "Concrete evidence or rationale from the selected phase.",
+                  rationale: "Explain why this requirement is deferred, irrelevant, or covered."
+                }
+              : {
+                  artifact: requiredValue,
+                  status: "used",
+                  rationale: "Explain how this saved evidence artifact informed the plan."
+                }
+        },
+        suggestion:
+          collection === "evidenceCoverage"
+            ? `Re-read blueprint_phase_plan_authoring_context and add one evidenceCoverage row for saved artifact ${requiredValue}, or remove duplicate rows for that artifact.`
+            : `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
       });
     }
   }
 
-  return schemaDiagnosticFromAjvError(error);
+  return schemaDiagnosticFromAjvError(error, model);
 }
 
 async function getPhasePlanImplementedCommandNames(): Promise<Set<string> | null> {
@@ -6370,6 +6664,191 @@ function validatePhasePlanStructuredModelCoverage(
   return { issues, warnings };
 }
 
+function findPhasePlanTaskIndex(model: PhasePlanStructuredModel, taskId: string): number {
+  return model.tasks.findIndex((task) => task.id === taskId);
+}
+
+function findPhasePlanRequirementCoverageIndex(
+  model: PhasePlanStructuredModel,
+  requirementId: string
+): number {
+  return model.requirementCoverage.findIndex((row) => row.requirement === requirementId);
+}
+
+function findPhasePlanFileSurfaceCoverageIndex(
+  model: PhasePlanStructuredModel,
+  surface: string
+): number {
+  const normalizedSurface = normalizePhasePlanModelSurface(surface);
+
+  return model.fileSurfaceCoverage.findIndex(
+    (row) => normalizePhasePlanModelSurface(row.surface) === normalizedSurface
+  );
+}
+
+function phasePlanCoverageDiagnosticFromIssue(
+  issue: string,
+  model: PhasePlanStructuredModel
+): PhasePlanModelDiagnostic {
+  const taskCriterionMatch = issue.match(
+    /^Task (.+?) acceptance criterion is not objectively verifiable: (.+)\.$/
+  );
+  if (taskCriterionMatch) {
+    const taskId = taskCriterionMatch[1] ?? "";
+    const criterion = taskCriterionMatch[2] ?? "";
+    const taskIndex = findPhasePlanTaskIndex(model, taskId);
+    const criterionIndex =
+      taskIndex >= 0
+        ? model.tasks[taskIndex].acceptanceCriteria.findIndex((item) => item === criterion)
+        : -1;
+    const pathValue =
+      taskIndex >= 0 && criterionIndex >= 0
+        ? `model.tasks[${taskIndex}].acceptanceCriteria[${criterionIndex}]`
+        : "model.tasks";
+
+    return phasePlanDiagnostic({
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_acceptance_criterion",
+      message: issue,
+      context: { taskId, criterion },
+      actual: criterion,
+      expected:
+        "A grep, test, command, file-read, or artifact-validation-verifiable acceptance criterion.",
+      repairAction: "make-verifiable",
+      patchHint:
+        taskIndex >= 0 && criterionIndex >= 0
+          ? {
+              op: "replace",
+              path: phasePlanModelPathToJsonPointer(pathValue) ?? "",
+              value: "npm test -- tests/<focused-test>.test.ts exits 0"
+            }
+          : undefined,
+      suggestion:
+        "Replace the vague acceptance criterion with an objective command, file-read, grep, test, or artifact-validation check."
+    });
+  }
+
+  const missingSurfaceMatch = issue.match(
+    /^Modified file (.+) is missing from fileSurfaceCoverage\.$/
+  );
+  if (missingSurfaceMatch) {
+    const surface = missingSurfaceMatch[1] ?? "";
+    const coveringTask = model.tasks.find((task) =>
+      task.filesModified.some(
+        (filePath) => normalizePhasePlanModelSurface(filePath) === surface
+      )
+    );
+
+    return phasePlanDiagnostic({
+      source: "residual",
+      path: "model.fileSurfaceCoverage",
+      code: "coverage.missing_file_surface",
+      message: issue,
+      context: { surface, suggestedTaskId: coveringTask?.id ?? null },
+      actual: model.fileSurfaceCoverage.map((row) => row.surface),
+      expected: surface,
+      repairAction: "add",
+      patchHint: {
+        op: "add",
+        path: "/fileSurfaceCoverage/-",
+        value: {
+          surface,
+          coveredByTasks: coveringTask ? [coveringTask.id] : [],
+          verification: `file-read ${surface}`,
+          rationale: "This row proves the declared modified surface is owned and verifiable."
+        }
+      },
+      suggestion:
+        "Add exactly one fileSurfaceCoverage row for the modified file and point it at a task that modifies that file."
+    });
+  }
+
+  const topLevelRequirementStatusMatch = issue.match(
+    /^Top-level requirement (.+) must have covered status in requirementCoverage\.$/
+  );
+  if (topLevelRequirementStatusMatch) {
+    const requirementId = topLevelRequirementStatusMatch[1] ?? "";
+    const coverageIndex = findPhasePlanRequirementCoverageIndex(model, requirementId);
+    const pathValue =
+      coverageIndex >= 0
+        ? `model.requirementCoverage[${coverageIndex}].status`
+        : "model.requirementCoverage";
+
+    return phasePlanDiagnostic({
+      source: "residual",
+      path: pathValue,
+      code: "coverage.top_level_requirement_not_covered",
+      message: issue,
+      context: { requirementId },
+      actual: coverageIndex >= 0 ? model.requirementCoverage[coverageIndex].status : undefined,
+      expected:
+        "Top-level requirements may include only requirements this plan covers now; deferred or irrelevant requirements belong only in requirementCoverage.",
+      repairAction: "remove",
+      suggestion:
+        `Remove ${requirementId} from top-level requirements, or change its requirementCoverage row to covered and attach concrete coveredByTasks.`
+    });
+  }
+
+  const coverageTaskRequirementMismatch = issue.match(
+    /^Requirement coverage for (.+) references task "(.+)", but that task does not list the requirement\.$/
+  );
+  if (coverageTaskRequirementMismatch) {
+    const requirementId = coverageTaskRequirementMismatch[1] ?? "";
+    const taskId = coverageTaskRequirementMismatch[2] ?? "";
+    const taskIndex = findPhasePlanTaskIndex(model, taskId);
+    const pathValue = taskIndex >= 0 ? `model.tasks[${taskIndex}].requirements` : "model.tasks";
+
+    return phasePlanDiagnostic({
+      source: "residual",
+      path: pathValue,
+      code: "coverage.task_requirement_mismatch",
+      message: issue,
+      context: { requirementId, taskId },
+      actual: taskIndex >= 0 ? model.tasks[taskIndex].requirements : undefined,
+      expected: requirementId,
+      repairAction: "add",
+      suggestion:
+        `Add ${requirementId} to task ${taskId}.requirements, or remove ${taskId} from that requirementCoverage row.`
+    });
+  }
+
+  const fileSurfaceVerificationMatch = issue.match(
+    /^File surface coverage for (.+) has unverifiable verification: (.+)\.$/
+  );
+  if (fileSurfaceVerificationMatch) {
+    const surface = fileSurfaceVerificationMatch[1] ?? "";
+    const verification = fileSurfaceVerificationMatch[2] ?? "";
+    const rowIndex = findPhasePlanFileSurfaceCoverageIndex(model, surface);
+    const pathValue =
+      rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
+
+    return phasePlanDiagnostic({
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_file_surface",
+      message: issue,
+      context: { surface, verification },
+      actual: verification,
+      expected: "A command, grep, file-read, test, or artifact-validation check.",
+      repairAction: "make-verifiable",
+      suggestion:
+        "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
+    });
+  }
+
+  return phasePlanDiagnostic({
+    source: "residual",
+    path: "model",
+    code: "coverage.invalid",
+    message: issue,
+    context: {},
+    repairAction: "replace",
+    suggestion:
+      "Repair the cross-field requirement, task, file, verification, or deferral coverage named in the diagnostic."
+  });
+}
+
 function quoteYamlScalar(value: string): string {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
 }
@@ -6548,7 +7027,7 @@ async function validatePhasePlanModelWithContext(args: {
     if (!schemaValid) {
       diagnostics.push(
         ...(validate.errors ?? []).map((error) =>
-          schemaDiagnosticFromPhasePlanAjvError(error, args.context.taskSchema)
+          schemaDiagnosticFromPhasePlanAjvError(error, args.context.taskSchema, args.model)
         )
       );
     }
@@ -6573,16 +7052,7 @@ async function validatePhasePlanModelWithContext(args: {
       const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
 
       for (const issue of coverage.issues) {
-        diagnostics.push(
-          phasePlanDiagnostic({
-            source: "residual",
-            path: "model",
-            code: "coverage.invalid",
-            message: issue,
-            context: {},
-            suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage."
-          })
-        );
+        diagnostics.push(phasePlanCoverageDiagnosticFromIssue(issue, normalizedModel));
       }
     }
   }
@@ -6620,6 +7090,17 @@ async function validatePhasePlanModelWithContext(args: {
   return {
     status: diagnostics.length === 0 ? "valid" : "invalid",
     valid: diagnostics.length === 0,
+    target: phasePlanValidateModelTarget({
+      phase: args.context.resolved,
+      planId: args.context.planId,
+      path: args.context.pathValue,
+      schemaPath: args.context.schemaPath
+    }),
+    repairBudget: {
+      maxAttempts: 2,
+      recommendedStrategy: "repair-all-diagnostics-before-retry"
+    },
+    repairSummary: summarizePhasePlanRepairs(diagnostics),
     phase: args.context.resolved,
     planId: args.context.planId,
     path: args.context.pathValue,
@@ -6642,13 +7123,15 @@ async function phasePlanModelToContent(
   content: string | null;
   issues: string[];
   warnings: string[];
+  validation: PhasePlanValidateModelResult;
 }> {
   const validation = await validatePhasePlanModelWithContext({ model, context });
 
   return {
     content: validation.renderPreview,
     issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
-    warnings: validation.warnings
+    warnings: validation.warnings,
+    validation
   };
 }
 
@@ -10297,6 +10780,17 @@ export async function blueprintPhasePlanValidateModel(
     return {
       status: "invalid",
       valid: false,
+      target: phasePlanValidateModelTarget({
+        phase: null,
+        planId: null,
+        path: null,
+        schemaPath: null
+      }),
+      repairBudget: {
+        maxAttempts: 2,
+        recommendedStrategy: "repair-all-diagnostics-before-retry"
+      },
+      repairSummary: summarizePhasePlanRepairs(diagnostics),
       phase: null,
       planId: null,
       path: null,
@@ -10388,6 +10882,7 @@ export async function blueprintPhasePlanWrite(
     let normalizedContent: string;
     let modelCoverageIssues: string[] = [];
     let modelWarnings: string[] = [];
+    let modelValidation: PhasePlanValidateModelResult | null = null;
 
     if (hasModel) {
       const authoringContext = await resolvePhasePlanAuthoringContextData({
@@ -10396,6 +10891,7 @@ export async function blueprintPhasePlanWrite(
         planId
       });
       const modelRender = await phasePlanModelToContent(args.model, authoringContext);
+      modelValidation = modelRender.validation;
 
       if (!modelRender.content) {
         return {
@@ -10414,6 +10910,7 @@ export async function blueprintPhasePlanWrite(
             issues: modelRender.issues,
             warnings: modelRender.warnings
           },
+          modelValidation,
           warnings: modelRender.warnings
         };
       }
@@ -10507,6 +11004,7 @@ export async function blueprintPhasePlanWrite(
           issues: validationIssues,
           warnings: validation.warnings
         },
+        modelValidation,
         warnings: [...warnings, ...validation.warnings]
       };
     }

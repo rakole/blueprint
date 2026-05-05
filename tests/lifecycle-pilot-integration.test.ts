@@ -270,6 +270,30 @@ Ship the lifecycle pilot integration coverage.
 ## Must Haves
 
 - Lifecycle persistence stays MCP-backed.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| LIFE-01 | Exercise the saved plan to execute, validate, verify, and add-tests lifecycle. | tests/lifecycle-pilot-integration.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| Lifecycle summary, verification, UAT, and add-tests report | Persist each artifact through the MCP-backed lifecycle flow. | Blueprint lifecycle tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| tests/lifecycle-pilot-integration.test.ts | Integration fixture covers the lifecycle handoff. | Focused lifecycle pilot tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Broader command routing coverage | Keep outside the lifecycle fixture. | Cover in command contract tests. |
 `;
 }
 

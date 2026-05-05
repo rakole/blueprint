@@ -526,6 +526,9 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
 
 const RICH_TEXT_TOOL_NAMES = new Set([
   "blueprint_artifact_contract_read",
+  "blueprint_phase_plan_authoring_context",
+  "blueprint_phase_plan_validate_model",
+  "blueprint_phase_plan_write",
   "blueprint_phase_validation_authoring_context",
   "blueprint_phase_validation_validate_model",
   "blueprint_phase_summary_read",
@@ -542,6 +545,14 @@ function appendJsonSection(sections: string[], heading: string, value: unknown):
   }
 
   sections.push(`## ${heading}\n\n\`\`\`json\n${stringifyForToolText(value)}\n\`\`\``);
+}
+
+function appendTextSection(sections: string[], heading: string, value: unknown): void {
+  if (typeof value !== "string" || value.length === 0) {
+    return;
+  }
+
+  sections.push(`## ${heading}\n\n${value}`);
 }
 
 function appendMarkdownSection(sections: string[], heading: string, value: unknown): void {
@@ -589,12 +600,53 @@ function appendValidationAuthoringContextDetails(sections: string[], result: Too
   appendNestedMarkdownSection(sections, "Ready Verification Artifact", result.verification, "content");
 }
 
+function appendPhasePlanAuthoringContextDetails(sections: string[], result: ToolResult): void {
+  appendJsonSection(sections, "Known Requirements", result.knownRequirements);
+  appendJsonSection(sections, "Known Evidence Artifacts", result.knownEvidenceArtifacts);
+  appendJsonSection(sections, "Allowed Dependency Plan IDs", result.allowedDependencyPlanIds);
+  appendJsonSection(sections, "Base Model Schema", result.baseSchema);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+
+  if (getString(result, "status") === "invalid") {
+    appendTextSection(sections, "Invalid Reason", result.reason);
+  }
+}
+
 function appendValidationModelDetails(sections: string[], result: ToolResult): void {
   appendJsonSection(sections, "Diagnostics", result.diagnostics);
   appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
   appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
   appendJsonSection(sections, "Normalized Model", result.normalizedModel);
   appendMarkdownSection(sections, "Render Preview", result.renderPreview);
+}
+
+function appendPhasePlanModelDetails(sections: string[], result: ToolResult): void {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
+  appendJsonSection(sections, "Repair Summary", result.repairSummary);
+  appendJsonSection(sections, "Target", result.target);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
+  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
+}
+
+function appendPhasePlanWriteModelValidationDetails(
+  sections: string[],
+  result: ToolResult
+): void {
+  if (getString(result, "status") !== "invalid") {
+    return;
+  }
+
+  const modelValidation = asRecord(result.modelValidation);
+
+  if (!modelValidation) {
+    return;
+  }
+
+  appendJsonSection(sections, "Model Diagnostics", modelValidation.diagnostics);
+  appendJsonSection(sections, "Model Repair Summary", modelValidation.repairSummary);
+  appendJsonSection(sections, "Model Runtime Task Schema", modelValidation.taskSchema);
 }
 
 function appendRichToolText(toolName: string, result: ToolResult, summary: string): string {
@@ -614,6 +666,18 @@ function appendRichToolText(toolName: string, result: ToolResult, summary: strin
 
   if (toolName === "blueprint_phase_validation_validate_model") {
     appendValidationModelDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_plan_authoring_context") {
+    appendPhasePlanAuthoringContextDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_plan_validate_model") {
+    appendPhasePlanModelDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_plan_write") {
+    appendPhasePlanWriteModelValidationDetails(sections, result);
   }
 
   if (toolName === "blueprint_phase_summary_read") {
