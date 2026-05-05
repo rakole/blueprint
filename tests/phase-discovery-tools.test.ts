@@ -17,6 +17,7 @@ import {
   blueprintPhaseContext,
   blueprintPhaseCheckpointPut,
   blueprintPhaseLocate,
+  blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex,
   blueprintPhaseResearchStatus,
   blueprintRoadmapRead
@@ -448,6 +449,117 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
     /MCP tools and command manifests anchor the runtime layout/i
   );
   assert.match(context.warnings.join("\n"), /Mapped codebase summaries are available/i);
+});
+
+test("phase tools resolve list-only roadmap requirements and child details", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 3: Phase Discovery (Requirements: LIFE-01, LIFE-02, LIFE-03)
+  - Objective: Add discovery tooling from inline roadmap.
+  - Success Criteria:
+    - Planner sees inline criteria before writing.
+    - Requirements parse without Phase Details.
+  - Notes:
+    - Retain list-only bootstrap compatibility.
+`,
+    "utf8"
+  );
+
+  const roadmap = await blueprintRoadmapRead({ cwd: repoPath });
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+  const authoringContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(roadmap.phases[0]?.phaseName, "Phase Discovery");
+  assert.deepEqual(roadmap.phases[0]?.requirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+  assert.equal(roadmap.phases[0]?.goal, "Add discovery tooling from inline roadmap.");
+  assert.equal(
+    roadmap.phases[0]?.successCriteria,
+    "Planner sees inline criteria before writing.; Requirements parse without Phase Details."
+  );
+  assert.equal(located.found, true);
+  assert.equal(located.phaseName, "Phase Discovery");
+  assert.deepEqual(context.requirementsGrounding.roadmapRequirementIds, [
+    "LIFE-01",
+    "LIFE-02",
+    "LIFE-03"
+  ]);
+  assert.deepEqual(context.phase?.roadmap, {
+    completed: false,
+    summary: null,
+    goal: "Add discovery tooling from inline roadmap.",
+    successCriteria: "Planner sees inline criteria before writing.; Requirements parse without Phase Details."
+  });
+  assert.equal(authoringContext.status, "ready");
+  assert.deepEqual(authoringContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+});
+
+test("phase detail blocks override list-format roadmap fallbacks", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 3: Phase Discovery (Requirements: BAD-01)
+  - Objective: Inline objective should not win.
+  - Success Criteria:
+    - Inline criteria should not win.
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add discovery tooling.
+**Success Criteria**: Planner sees roadmap goal and readiness gates before writing.
+**Requirements**: LIFE-01, LIFE-02, LIFE-03
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+  const authoringContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(context.requirementsGrounding.roadmapRequirementIds, [
+    "LIFE-01",
+    "LIFE-02",
+    "LIFE-03"
+  ]);
+  assert.deepEqual(context.phase?.roadmap, {
+    completed: false,
+    summary: null,
+    goal: "Add discovery tooling.",
+    successCriteria: "Planner sees roadmap goal and readiness gates before writing."
+  });
+  assert.equal(authoringContext.status, "ready");
+  assert.deepEqual(authoringContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
 });
 
 test("phase locate reports missing roadmap phases without escaping the Blueprint root", async (t) => {

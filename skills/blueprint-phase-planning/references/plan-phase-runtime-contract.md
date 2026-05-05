@@ -97,6 +97,10 @@ Blueprint-native.
   before persistence.
 - Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the same
   validated `model` payload and `authoringMode: "model-only"`.
+- Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately
+  before each model validation/write, especially after any successful plan write;
+  saved `XX-YY-PLAN.md` files are intentional known evidence artifacts for later
+  plan slots and must be covered by the refreshed task schema.
 - Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
   "warn"` is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `model` as the complete

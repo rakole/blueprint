@@ -908,6 +908,41 @@ test("phase plan authoring rejects invented requirement coverage when roadmap re
   assert.deepEqual(index.plans, []);
 });
 
+test("phase plan authoring accepts list-only roadmap requirement clauses", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 3: Phase Discovery (Requirements: LIFE-01, LIFE-02)
+  - Objective: Add the planning slice.
+  - Success Criteria:
+    - Structured plan authoring sees roadmap requirements.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(context.status, "ready");
+  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-01/);
+  assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
+});
+
 test("phase plan task schema permits empty evidence coverage only when no saved evidence exists", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

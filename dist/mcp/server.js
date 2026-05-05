@@ -37513,7 +37513,7 @@ var init_command_runtime_metadata = __esm({
         ],
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: "strict" and authoringMode: "model-only", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups.',
+        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, re-read blueprint_phase_plan_authoring_context immediately before each model validation/write after any successful plan write because saved plan files are intentional later-slot evidence artifacts, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: "strict" and authoringMode: "model-only", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -41256,6 +41256,68 @@ function parseRequirements(value) {
     (entry) => entry.length > 0 && !["none", "none yet", "n/a", "not yet mapped"].includes(entry.toLowerCase())
   );
 }
+function parseRoadmapPhaseTitle(value) {
+  const unbolded = value.trim().replace(/\*\*$/u, "").trim();
+  const requirementsMatch = unbolded.match(/\s*\(\s*Requirements:\s*([^)]+)\)\s*$/i);
+  if (!requirementsMatch) {
+    return {
+      phaseName: unbolded,
+      requirements: []
+    };
+  }
+  return {
+    phaseName: unbolded.slice(0, requirementsMatch.index).trim(),
+    requirements: parseRequirements(requirementsMatch[1] ?? null)
+  };
+}
+function parseRoadmapPhaseLine(line) {
+  const match = line.match(
+    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
+  );
+  if (!match) {
+    return null;
+  }
+  const title = parseRoadmapPhaseTitle(match[3] ?? "");
+  return {
+    completed: (match[1] ?? "").toLowerCase() === "x",
+    phaseNumber: normalizePhaseNumber2(match[2] ?? ""),
+    phaseName: title.phaseName,
+    summary: match[4]?.trim() ?? null,
+    requirements: title.requirements
+  };
+}
+function parseRoadmapPhaseChildLines(lines) {
+  let goal = null;
+  const successCriteria = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const objectiveMatch = lines[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
+    if (objectiveMatch) {
+      goal = objectiveMatch[1]?.trim() ?? null;
+      continue;
+    }
+    const successCriteriaMatch = lines[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
+    if (!successCriteriaMatch) {
+      continue;
+    }
+    const labelIndent = successCriteriaMatch[1]?.length ?? 0;
+    const inlineCriterion = successCriteriaMatch[2]?.trim() ?? "";
+    if (inlineCriterion.length > 0) {
+      successCriteria.push(inlineCriterion);
+    }
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nestedMatch = lines[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
+      if (!nestedMatch || (nestedMatch[1]?.length ?? 0) <= labelIndent) {
+        break;
+      }
+      successCriteria.push(nestedMatch[2]?.trim() ?? "");
+      index = nextIndex;
+    }
+  }
+  return {
+    goal,
+    successCriteria: successCriteria.length > 0 ? successCriteria.filter((value) => value.length > 0).join("; ") : null
+  };
+}
 function parseRoadmapDocument(raw) {
   const milestone2 = raw.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
   const details = /* @__PURE__ */ new Map();
@@ -41276,21 +41338,37 @@ function parseRoadmapDocument(raw) {
     details.set(phaseNumber, { goal, successCriteria, requirements });
   }
   const phases = [];
-  for (const match of raw.matchAll(
-    /^- \[([ xX])\] (?:\*\*)?Phase (\d+(?:\.\d+)?): ([^\n*]+?)(?:\*\*)?(?: - (.+))?$/gm
-  )) {
-    const phaseNumber = normalizePhaseNumber2(match[2]);
-    const phaseName = match[3].trim();
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const inlinePhase = parseRoadmapPhaseLine(lines[index] ?? "");
+    if (!inlinePhase) {
+      continue;
+    }
+    const childLines = [];
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex] ?? "";
+      if (parseRoadmapPhaseLine(nextLine) || /^#{1,6}\s+/.test(nextLine)) {
+        break;
+      }
+      if (nextLine.trim().length === 0 || /^\s+-\s+/.test(nextLine)) {
+        childLines.push(nextLine);
+        index = nextIndex;
+        continue;
+      }
+      break;
+    }
+    const phaseNumber = inlinePhase.phaseNumber;
+    const phaseChildren = parseRoadmapPhaseChildLines(childLines);
     const detail = details.get(phaseNumber);
     phases.push({
       phaseNumber,
       phasePrefix: formatPhasePrefix2(phaseNumber),
-      phaseName,
-      completed: match[1].toLowerCase() === "x",
-      summary: match[4]?.trim() ?? null,
-      goal: detail?.goal ?? null,
-      successCriteria: detail?.successCriteria ?? null,
-      requirements: detail?.requirements ?? []
+      phaseName: inlinePhase.phaseName,
+      completed: inlinePhase.completed,
+      summary: inlinePhase.summary,
+      goal: detail ? detail.goal : phaseChildren.goal,
+      successCriteria: detail ? detail.successCriteria : phaseChildren.successCriteria,
+      requirements: detail ? detail.requirements : inlinePhase.requirements
     });
   }
   return { milestone: milestone2, phases };
@@ -68161,6 +68239,8 @@ var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "rejected",
   "error"
 ]);
+var DIAGNOSTIC_SUMMARY_LIMIT = 3;
+var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 240;
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
     throw new Error(`Missing required config tool registration: ${toolName}`);
@@ -68268,6 +68348,60 @@ function formatByteCount(byteCount) {
 }
 function cleanSentenceFragment(value) {
   return value.trim().replace(/[.!\s]+$/u, "");
+}
+function asRecord2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function truncateDiagnosticSummary(value) {
+  if (value.length <= MAX_DIAGNOSTIC_SUMMARY_LENGTH) {
+    return value;
+  }
+  return `${value.slice(0, MAX_DIAGNOSTIC_SUMMARY_LENGTH - 3).trimEnd()}...`;
+}
+function collectStringArray(value) {
+  return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
+}
+function addDiagnosticMessage(messages, value) {
+  if (typeof value !== "string") {
+    return;
+  }
+  const normalized = cleanSentenceFragment(value.replace(/\s+/g, " "));
+  if (normalized.length > 0 && !messages.includes(normalized)) {
+    messages.push(truncateDiagnosticSummary(normalized));
+  }
+}
+function collectResultDiagnostics(result) {
+  const messages = [];
+  const validation = asRecord2(result.validation);
+  for (const issue2 of collectStringArray(validation?.issues)) {
+    addDiagnosticMessage(messages, issue2);
+  }
+  for (const issue2 of collectStringArray(result.issues)) {
+    addDiagnosticMessage(messages, issue2);
+  }
+  if (Array.isArray(result.diagnostics)) {
+    for (const diagnostic of result.diagnostics) {
+      if (typeof diagnostic === "string") {
+        addDiagnosticMessage(messages, diagnostic);
+      } else {
+        addDiagnosticMessage(messages, asRecord2(diagnostic)?.message);
+      }
+    }
+  }
+  return messages;
+}
+function buildDiagnosticSuffix(status, result) {
+  if (!status || !MUTATION_FAILURE_STATUSES.has(status)) {
+    return "";
+  }
+  const diagnostics = collectResultDiagnostics(result);
+  if (diagnostics.length === 0) {
+    return "";
+  }
+  const visibleDiagnostics = diagnostics.slice(0, DIAGNOSTIC_SUMMARY_LIMIT);
+  const remainingCount = diagnostics.length - visibleDiagnostics.length;
+  const remainingSuffix = remainingCount > 0 ? ` (+${remainingCount} more)` : "";
+  return ` Diagnostics: ${visibleDiagnostics.join("; ")}${remainingSuffix}.`;
 }
 function buildSubject(toolName, result) {
   const phaseNumber = getString(result, "phaseNumber");
@@ -68433,7 +68567,8 @@ function summarizeToolResult(toolName, result) {
   }
   const detailSuffix = details.length > 0 ? ` ${details.join(" ")}` : "";
   const guidanceSuffix = nextAction && (toolName === "blueprint_project_init" || toolName === "blueprint_project_status") ? ` Next action: ${cleanSentenceFragment(nextAction)}.` : "";
-  return `${operationVerb} ${subject}${detailSuffix}.${guidanceSuffix}`;
+  const diagnosticSuffix = buildDiagnosticSuffix(status, result);
+  return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
 function createToolResponseContent(toolName, result) {
   return [

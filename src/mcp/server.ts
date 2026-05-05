@@ -92,6 +92,8 @@ const MUTATION_FAILURE_STATUSES = new Set([
   "rejected",
   "error"
 ]);
+const DIAGNOSTIC_SUMMARY_LIMIT = 3;
+const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 240;
 
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
@@ -221,6 +223,81 @@ function formatByteCount(byteCount: number): string {
 
 function cleanSentenceFragment(value: string): string {
   return value.trim().replace(/[.!\s]+$/u, "");
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function truncateDiagnosticSummary(value: string): string {
+  if (value.length <= MAX_DIAGNOSTIC_SUMMARY_LENGTH) {
+    return value;
+  }
+
+  return `${value.slice(0, MAX_DIAGNOSTIC_SUMMARY_LENGTH - 3).trimEnd()}...`;
+}
+
+function collectStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+function addDiagnosticMessage(messages: string[], value: unknown): void {
+  if (typeof value !== "string") {
+    return;
+  }
+
+  const normalized = cleanSentenceFragment(value.replace(/\s+/g, " "));
+
+  if (normalized.length > 0 && !messages.includes(normalized)) {
+    messages.push(truncateDiagnosticSummary(normalized));
+  }
+}
+
+function collectResultDiagnostics(result: ToolResult): string[] {
+  const messages: string[] = [];
+  const validation = asRecord(result.validation);
+
+  for (const issue of collectStringArray(validation?.issues)) {
+    addDiagnosticMessage(messages, issue);
+  }
+
+  for (const issue of collectStringArray(result.issues)) {
+    addDiagnosticMessage(messages, issue);
+  }
+
+  if (Array.isArray(result.diagnostics)) {
+    for (const diagnostic of result.diagnostics) {
+      if (typeof diagnostic === "string") {
+        addDiagnosticMessage(messages, diagnostic);
+      } else {
+        addDiagnosticMessage(messages, asRecord(diagnostic)?.message);
+      }
+    }
+  }
+
+  return messages;
+}
+
+function buildDiagnosticSuffix(status: string | null, result: ToolResult): string {
+  if (!status || !MUTATION_FAILURE_STATUSES.has(status)) {
+    return "";
+  }
+
+  const diagnostics = collectResultDiagnostics(result);
+
+  if (diagnostics.length === 0) {
+    return "";
+  }
+
+  const visibleDiagnostics = diagnostics.slice(0, DIAGNOSTIC_SUMMARY_LIMIT);
+  const remainingCount = diagnostics.length - visibleDiagnostics.length;
+  const remainingSuffix = remainingCount > 0 ? ` (+${remainingCount} more)` : "";
+
+  return ` Diagnostics: ${visibleDiagnostics.join("; ")}${remainingSuffix}.`;
 }
 
 function buildSubject(toolName: string, result: ToolResult): string {
@@ -442,8 +519,9 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
     nextAction && (toolName === "blueprint_project_init" || toolName === "blueprint_project_status")
       ? ` Next action: ${cleanSentenceFragment(nextAction)}.`
       : "";
+  const diagnosticSuffix = buildDiagnosticSuffix(status, result);
 
-  return `${operationVerb} ${subject}${detailSuffix}.${guidanceSuffix}`;
+  return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
 
 export function createToolResponseContent(
