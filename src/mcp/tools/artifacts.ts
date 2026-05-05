@@ -5932,17 +5932,17 @@ function validateSummaryLifecycleContract(content: string): string[] {
   );
   const expected = {
     COMPLETED: {
-      readiness: "ready-for-validation",
+      readiness: ["ready-for-validation", "not-ready-for-validation"],
       completionState: "complete",
-      nextSafeActionPattern: /^\/blu-validate-phase(?:\s+\S+)?$/
+      nextSafeActionPattern: /^\/blu-(?:validate-phase|execute-phase)(?:\s+\S+)?$/
     },
     PARTIAL: {
-      readiness: "not-ready-for-validation",
+      readiness: ["not-ready-for-validation"],
       completionState: "pending",
       nextSafeActionPattern: /^\/blu-execute-phase(?:\s+\S+)?$/
     },
     BLOCKED: {
-      readiness: "blocked",
+      readiness: ["blocked"],
       completionState: "blocked",
       nextSafeActionPattern: /^\/blu-progress$/
     }
@@ -5950,9 +5950,9 @@ function validateSummaryLifecycleContract(content: string): string[] {
 
   if (readiness === null) {
     issues.push("Summary artifact must include a **Readiness:** marker.");
-  } else if (readiness !== expected.readiness) {
+  } else if (!expected.readiness.includes(readiness)) {
     issues.push(
-      `Summary artifact status ${status} requires **Readiness:** ${expected.readiness}.`
+      `Summary artifact status ${status} requires **Readiness:** ${expected.readiness.join(" or ")}.`
     );
   }
 
