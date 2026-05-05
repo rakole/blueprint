@@ -886,7 +886,31 @@ Replace with a concrete, execution-ready goal.
 
 ## Must Haves
 
-- Replace with the goal-backward must-haves this plan cannot drop.`;
+- Replace with the goal-backward must-haves this plan cannot drop.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| Replace with a known requirement id. | covered | task-1 | Replace with concrete evidence. | Replace with why this disposition is correct. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| Replace with a runtime-narrowed evidence artifact path. | used | Replace with how this evidence shaped the plan. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| Replace with a declared files_modified path. | task-1 | Replace with a concrete check. | Replace with why task and verification coverage are sufficient. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| Replace with a real unknown, deferral, blocker, or no-open-items row. | none | Replace with concrete rationale. | Replace with the next action or no follow-up required. |`;
 }
 
 const PHASE_PLAN_MODEL_SCHEMA_FILE = "phase.plan.model.schema.json";
@@ -901,17 +925,19 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, planId, artifact, path, or content; the write tool owns identity and path derivation.",
     "Author against the narrowed taskSchema returned by blueprint_phase_plan_authoring_context or blueprint_phase_plan_validate_model so roadmap requirements, saved evidence artifacts, and dependency ids stay deterministic.",
-    "Every known in-scope requirement must appear exactly once in requirementCoverage as covered, deferred, or irrelevant with a concrete rationale.",
-    "Every known context, research, UI, review, or prior evidence artifact used for planning must appear in evidenceCoverage, or be explicitly deferred or marked irrelevant with rationale.",
+    "Top-level requirements contains only the known requirement ids this specific plan covers now; requirementCoverage is the complete ledger and must account for every known phase requirement exactly once as covered, deferred, or irrelevant with a concrete rationale.",
+    "Evidence coverage is runtime-narrowed and dynamic: every saved context, research, UI, review, prior plan, summary, validation, or other evidence artifact in the current task schema must appear in evidenceCoverage as used, deferred, irrelevant, or unavailable with rationale.",
+    "Re-read blueprint_phase_plan_authoring_context immediately before each validation/write because saved plan files become intentional known evidence artifacts for later plan slots.",
     "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
+    "The rendered plan must preserve the exact headings in renderedHeadings, including Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
     "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
     "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
   ],
   contextBindings: [
     "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus blueprint_phase_plan_write arguments.",
     "planId is supplied by blueprint_phase_plan_write or auto-assigned by the existing phase plan writer; the model must not derive paths or filenames.",
-    "known requirements come from the selected roadmap phase and any resolved phase context or research artifacts.",
-    "known evidence artifacts come from saved phase context, research, UI spec, review, existing plan index, summaries, and validation artifacts when present.",
+    "known requirements come from the selected roadmap phase and any resolved phase context or research artifacts; top-level requirements is only this plan's covered-now subset, while requirementCoverage covers every known phase requirement exactly once.",
+    "known evidence artifacts come from the runtime-narrowed authoring context and may change after each write because saved plan files join the evidence inventory for later plan slots.",
     "dependency options and used plan ids come from blueprint_phase_plan_index; dependsOn must reference existing plan ids or remain empty for the first plan."
   ],
   renderedHeadings: [
@@ -3877,7 +3903,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Phase Plan",
     canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-YY-PLAN.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Goal", "Scope", "Tasks", "Verification", "Must Haves"],
+    requiredHeadings: [...PHASE_PLAN_MODEL_CONTRACT.renderedHeadings],
     lockedMarkers: [
       "phase:",
       "plan_id:",
@@ -3901,8 +3927,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     notes: [
       "Plan frontmatter keys and task subsections are locked for MCP parsing.",
       "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
-      "Additional top-level headings are allowed, but required plan sections must remain unchanged.",
+      "Additional top-level headings are allowed, but required plan sections must remain unchanged and match the model-rendered heading list.",
+      "Required plan sections include coverage ledgers for Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
       "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+      "Top-level `requirements` lists only requirements this plan covers now; `requirementCoverage` accounts for every known phase requirement exactly once as covered, deferred, or irrelevant.",
+      "Evidence coverage is runtime-narrowed and dynamic; re-read `blueprint_phase_plan_authoring_context` after each plan write because saved plans become evidence for later slots.",
       "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",
       "Do not silently reduce locked context decisions with `v1`, placeholder, static-for-now, future-wiring, or stub language; split or block when full fidelity does not fit."
     ],

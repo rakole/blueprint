@@ -137,6 +137,45 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
   if (await pathExists(sourcePath)) {
     await copyFixtureContents(sourcePath, repoPath);
   }
+  if (fixtureName === "initialized-repo") {
+    const planPath = path.join(
+      repoPath,
+      ".blueprint/phases/02-router-health-and-mapping/02-01-PLAN.md"
+    );
+    const planContent = await readFile(planPath, "utf8");
+    if (!planContent.includes("## Requirement Coverage")) {
+      await writeFile(
+        planPath,
+        `${planContent}
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| LIFE-01 | covered | task-1 | tests/help-progress-health.test.ts | The initialized fixture covers healthy router status. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/project.ts | used | The project status tool surface grounds the initialized repo health check. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/project.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers initialized repo routing health. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the initialized repo fixture. | none | The fixture has complete health and routing artifacts. | No follow-up required after the focused test passes. |
+`,
+        "utf8"
+      );
+    }
+  }
 
   return repoPath;
 }
@@ -344,6 +383,30 @@ Exercise the execute-phase router.
 ## Must Haves
 
 - Keep lifecycle routing limited to implemented commands.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| EXEC-01 | covered | task-1 | tests/help-progress-health.test.ts | The fixture covers execute-phase routing readiness. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds progress routing. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers lifecycle routing state. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for execute-phase routing. | none | The fixture has the saved artifacts needed for routing. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -733,6 +796,30 @@ Exercise milestone closeout routing.
 ## Must Haves
 
 - Keep earlier milestone validation evidence reviewable.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| CLOSE-01 | covered | task-1 | tests/help-progress-health.test.ts | The earlier plan fixture covers milestone closeout prerequisites. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds closeout routing. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers closeout routing state. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the earlier closeout fixture. | none | The fixture has completed earlier phase evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -791,6 +878,30 @@ Exercise milestone closeout summary coverage.
 ## Must Haves
 
 - Keep pending summary debt visible in routing.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| CLOSE-02 | covered | task-1 | tests/help-progress-health.test.ts | The pending plan fixture covers missing summary routing. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds pending summary detection. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers pending summary routing. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| Completed summary is intentionally deferred for this fixture. | deferred | The test needs pending summary debt visible. | Run execution before closeout in a real workflow. |
 `,
       "utf8"
     );
@@ -1090,6 +1201,30 @@ Close the milestone.
 ## Must Haves
 
 - Keep writes inside .blueprint/.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| CLOSE-03 | covered | task-1 | tests/help-progress-health.test.ts | The milestone closeout fixture covers closeout report routing. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/ROADMAP.md | used | The roadmap artifact grounds milestone closeout. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers closeout routing state. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for milestone closeout routing. | none | The fixture has complete closeout evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -1679,6 +1814,30 @@ Exercise the execute-phase router.
 ## Must Haves
 
 - Missing dependency plan artifacts must keep execution coverage open.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| EXEC-01 | covered | task-1 | tests/help-progress-health.test.ts | The fixture covers routing when dependency plans are missing. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds dependency routing checks. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers missing dependency routing. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| Dependency plan 02 is intentionally missing. | deferred | The test verifies routing remains open without the dependency artifact. | Add the dependency plan before validation in a real workflow. |
 `,
     "utf8"
   );

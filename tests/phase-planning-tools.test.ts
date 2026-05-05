@@ -286,6 +286,31 @@ Ship the plan-phase runtime.
 
 - Add phase plan indexing and writing support.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/phase.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the MCP-owned planning decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the plan-phase runtime evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/phase.ts | Task 1 | tests/phase-planning-tools.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| No open planning-runtime unknowns remain. | none | Run /blu-progress after execution. |
+
 ## Tasks
 
 ### Task 1: Add the MCP plan tools
@@ -481,6 +506,31 @@ Ship the plan-phase runtime.
 ## Scope
 
 - Add phase plan indexing and writing support.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/phase.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the MCP-owned planning decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the plan-phase runtime evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/phase.ts | Task 1 | tests/phase-planning-tools.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Hollow verification remains intentional for this invalid fixture. | open | Replace the hollow sections before strict persistence. |
 
 ## Tasks
 
@@ -761,6 +811,19 @@ test("phase plan model schema rejects unsupported, missing, and out-of-scope val
   });
 
   assert.equal(unsupported.status, "invalid");
+  assert.equal(unsupported.target.artifact, "phase.plan");
+  assert.equal(unsupported.target.phaseNumber, "3");
+  assert.equal(unsupported.repairBudget.maxAttempts, 2);
+  assert.equal(unsupported.repairSummary.blockingCount > 0, true);
+  assert.ok(unsupported.repairSummary.firstPassActions.includes("remove"));
+  const unsupportedDiagnostic = unsupported.diagnostics.find(
+    (diagnostic) => diagnostic.code === "schema.additionalProperties"
+  );
+  assert.ok(unsupportedDiagnostic);
+  assert.equal(unsupportedDiagnostic.severity, "error");
+  assert.equal(unsupportedDiagnostic.modelPath, "model.unexpectedRuntimeField");
+  assert.equal(unsupportedDiagnostic.jsonPointer, "/unexpectedRuntimeField");
+  assert.equal(unsupportedDiagnostic.repairAction, "remove");
   assert.match(
     unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /additional properties/i
@@ -775,6 +838,13 @@ test("phase plan model schema rejects unsupported, missing, and out-of-scope val
     /schema\.required/
   );
   assert.equal(outOfScopeRequirement.status, "invalid");
+  const requirementDiagnostic = outOfScopeRequirement.diagnostics.find(
+    (diagnostic) => diagnostic.allowedValues?.includes("LIFE-01")
+  );
+  assert.ok(requirementDiagnostic);
+  assert.equal(requirementDiagnostic.jsonPointer, "/requirements/0");
+  assert.equal(requirementDiagnostic.repairAction, "replace");
+  assert.deepEqual(requirementDiagnostic.allowedValues, ["LIFE-01", "LIFE-02"]);
   assert.match(
     outOfScopeRequirement.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /allowed values|must be equal to one of/i
@@ -1188,9 +1258,22 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
     /acceptance criterion is not objectively verifiable/
   );
   assert.equal(missingEvidence.status, "invalid");
+  assert.ok(missingEvidence.modelValidation);
+  assert.equal(missingEvidence.modelValidation.status, "invalid");
+  assert.equal(missingEvidence.modelValidation.target.artifact, "phase.plan");
+  assert.ok(missingEvidence.modelValidation.diagnostics.length > 0);
+  assert.match(
+    missingEvidence.modelValidation.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n"),
+    /Re-read blueprint_phase_plan_authoring_context/
+  );
+  assert.equal(missingEvidence.modelValidation.repairSummary.reReadAuthoringContext, true);
   assert.match(
     missingEvidence.validation.issues.join("\n"),
     /evidenceCoverage must include exactly one row for known saved evidence artifact .*03-UI-SPEC\.md/
+  );
+  assert.match(
+    missingEvidence.validation.issues.join("\n"),
+    /schema\.exactCoverage/
   );
   assert.equal(badSurface.status, "invalid");
   assert.match(

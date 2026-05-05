@@ -268,6 +268,31 @@ Harden plan validation.
 
 - Tighten plan write checks without changing the contract shape.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| No open validation-hardening unknowns remain. | none | Keep focused validation tests green. |
+
 ## Tasks
 
 ### Task 1: Strengthen plan validation
@@ -323,6 +348,31 @@ Harden plan validation.
 ## Scope
 
 - Reject non-repo-relative paths.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Path violation remains intentional for this invalid fixture. | open | Replace outside-repo paths before strict persistence. |
 
 ## Tasks
 
@@ -380,6 +430,31 @@ Harden plan validation.
 
 - Reject obvious outside-repo task file references.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Task path violation remains intentional for this invalid fixture. | open | Replace task path escapes before strict persistence. |
+
 ## Tasks
 
 ### Task 1: Reject task file escapes
@@ -436,6 +511,31 @@ Harden plan validation.
 
 - Keep command mentions textual inside task guidance.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| No open command-mention unknowns remain. | none | Keep /blu-progress as prose, not a path. |
+
 ## Tasks
 
 ### Task 1: Confirm command mentions stay valid
@@ -491,6 +591,31 @@ Harden plan validation.
 ## Scope
 
 - Keep the plan body honest.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Weak task prose remains intentional for this invalid fixture. | open | Replace placeholder prose before strict persistence. |
 
 ## Tasks
 
@@ -549,6 +674,31 @@ Harden plan validation.
 
 - Keep malformed dependency metadata visible without blocking warn-mode writes.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Malformed dependency remains intentional for warn-mode coverage. | open | Replace bogus depends_on values before strict persistence. |
+
 ## Tasks
 
 ### Task 1: Surface malformed depends_on in warn mode
@@ -606,6 +756,31 @@ Harden plan validation.
 
 - Keep the wave/dependency model coherent.
 
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Wave dependency incoherence remains intentional for this invalid fixture. | open | Move dependencies to a later coherent wave. |
+
 ## Tasks
 
 ### Task 1: Check wave coherence
@@ -661,6 +836,31 @@ Harden plan validation.
 ## Scope
 
 - Reject glob-style path entries.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| Glob path violation remains intentional for this invalid fixture. | open | Replace glob paths with concrete repo-relative paths. |
 
 ## Tasks
 
@@ -718,6 +918,31 @@ Harden plan validation without blocking route examples.
 ## Scope
 
 - Keep repo path lists concrete while allowing endpoint and code examples in task prose.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| No open route-example unknowns remain. | none | Keep endpoint strings distinct from repo path lists. |
 
 ## Tasks
 

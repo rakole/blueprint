@@ -143,6 +143,148 @@ test("invalid model validation summaries surface diagnostic messages", () => {
   );
 });
 
+test("phase plan model tools include repairable schema and diagnostics in MCP text", () => {
+  const planDiagnostics = [
+    {
+      source: "schema",
+      path: "model.requirementCoverage",
+      code: "schema.exactCoverage",
+      message: "Phase plan model requirementCoverage must include exactly one row for LIFE-02.",
+      suggestion: "Add a requirementCoverage row for LIFE-02."
+    },
+    {
+      source: "schema",
+      path: "model.fileSurfaceCoverage",
+      code: "schema.exactCoverage",
+      message: "Modified file src/mcp/tools/phase.ts is missing from fileSurfaceCoverage.",
+      suggestion: "Add src/mcp/tools/phase.ts to fileSurfaceCoverage."
+    },
+    {
+      source: "scope",
+      path: "model.dependsOn",
+      code: "scope.dependencyCycle",
+      message: "Plan dependency cycle detected: 01 -> 02 -> 01.",
+      suggestion: "Remove the cyclic dependency."
+    },
+    {
+      source: "residual",
+      path: "model.tasks[0].acceptanceCriteria[0]",
+      code: "residual.verifiability",
+      message: "Acceptance criterion is not objectively verifiable.",
+      suggestion: "Rewrite the acceptance criterion as an observable check."
+    }
+  ];
+  const repairSummary = {
+    blockingCount: 4,
+    firstPassActions: ["add", "remove", "make-verifiable"],
+    reReadAuthoringContext: true,
+    retryInstruction:
+      "Repair all diagnostics against the runtime task schema, then re-read authoring context before retrying."
+  };
+  const taskSchema = {
+    properties: {
+      requirements: { items: { enum: ["LIFE-01", "LIFE-02"] } },
+      dependsOn: { items: { enum: ["02"] } }
+    }
+  };
+  const authoringText = createToolResponseContent("blueprint_phase_plan_authoring_context", {
+    status: "invalid",
+    phase: { phaseNumber: "3" },
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    schemaPath: "schemas/phase-plan.schema.json",
+    knownRequirements: ["LIFE-01", "LIFE-02"],
+    knownEvidenceArtifacts: [
+      ".blueprint/phases/03-validation-engine/03-CONTEXT.md",
+      ".blueprint/phases/03-validation-engine/03-RESEARCH.md"
+    ],
+    allowedDependencyPlanIds: ["02"],
+    baseSchema: { $id: "blueprint.phase.plan.model" },
+    taskSchema,
+    reason: "Phase plan authoring requires at least one roadmap requirement."
+  })[0].text;
+  const validateText = createToolResponseContent("blueprint_phase_plan_validate_model", {
+    status: "invalid",
+    valid: false,
+    target: {
+      artifact: "phase.plan",
+      phaseNumber: "3",
+      phasePrefix: "03",
+      phaseName: "Validation Engine",
+      planId: "01",
+      path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+      schemaPath: "schemas/phase-plan.schema.json"
+    },
+    repairSummary,
+    phase: { phaseNumber: "3" },
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    schemaPath: "schemas/phase-plan.schema.json",
+    taskSchema,
+    diagnostics: planDiagnostics,
+    diagnosticCounts: {
+      total: 4,
+      bySource: { schema: 2, scope: 1, residual: 1 },
+      byCode: {
+        "schema.exactCoverage": 2,
+        "scope.dependencyCycle": 1,
+        "residual.verifiability": 1
+      }
+    },
+    normalizedModel: { title: "Repair validation plan" },
+    renderPreview: "# Phase 03: Validation Engine - Plan 01\n",
+    warnings: []
+  })[0].text;
+  const writeText = createToolResponseContent("blueprint_phase_plan_write", {
+    phaseNumber: "3",
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    validation: {
+      valid: false,
+      issues: planDiagnostics.map((diagnostic) => diagnostic.message),
+      warnings: []
+    },
+    modelValidation: {
+      diagnostics: planDiagnostics,
+      repairSummary,
+      taskSchema
+    },
+    warnings: []
+  })[0].text;
+
+  assert.match(authoringText, /## Known Requirements/);
+  assert.match(authoringText, /LIFE-02/);
+  assert.match(authoringText, /## Known Evidence Artifacts/);
+  assert.match(authoringText, /03-CONTEXT\.md/);
+  assert.match(authoringText, /## Allowed Dependency Plan IDs/);
+  assert.match(authoringText, /## Base Model Schema/);
+  assert.match(authoringText, /## Runtime Task Schema/);
+  assert.match(authoringText, /## Invalid Reason/);
+  assert.match(authoringText, /requires at least one roadmap requirement/);
+  assert.match(validateText, /## Diagnostics/);
+  assert.match(validateText, /Acceptance criterion is not objectively verifiable/);
+  assert.match(validateText, /## Diagnostic Counts/);
+  assert.match(validateText, /## Repair Summary/);
+  assert.match(validateText, /repair all diagnostics/i);
+  assert.match(validateText, /## Target/);
+  assert.match(validateText, /phase\.plan/);
+  assert.match(validateText, /## Runtime Task Schema/);
+  assert.match(validateText, /## Normalized Model/);
+  assert.match(validateText, /Repair validation plan/);
+  assert.match(validateText, /## Render Preview/);
+  assert.match(writeText, /\(\+1 more\)\./);
+  assert.match(writeText, /## Model Diagnostics/);
+  assert.match(writeText, /Acceptance criterion is not objectively verifiable/);
+  assert.match(writeText, /## Model Repair Summary/);
+  assert.match(writeText, /re-read authoring context before retrying/i);
+  assert.match(writeText, /## Model Runtime Task Schema/);
+  assert.match(writeText, /LIFE-02/);
+});
+
 test("schema-first validation tools append task schemas, diagnostics, previews, and evidence bodies to text responses", () => {
   const contractText = createToolResponseContent("blueprint_artifact_contract_read", {
     artifactId: "phase.verification",

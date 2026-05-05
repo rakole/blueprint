@@ -94,6 +94,9 @@ Interactive planning UX rules:
 - When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `model` as the full validated structured `phase.plan` JSON object, not scaffold placeholder text or Markdown.
+- Preserve the strict rendered heading set from the contract: `Goal`, `Scope`, `Tasks`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`.
+- In the model, top-level `requirements` is only the covered-now subset for this plan; `requirementCoverage` must account for every known phase requirement exactly once as `covered`, `deferred`, or `irrelevant`.
+- Treat `evidenceCoverage` as a runtime-narrowed, dynamic inventory. Re-read `blueprint_phase_plan_authoring_context` after each successful plan write because saved plan files can become required evidence rows for later slots.
 - Omit `planId` to let Blueprint auto-assign the next available plan slot.
 - If targeting a specific plan, pass only the numeric plan id. Use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`.
 - Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.

@@ -889,6 +889,30 @@ Ship the plan-phase runtime.
 ## Must Haves
 
 - Preserve lower-wave debt until earlier waves are completed.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| LIFE-01 | Exercise execution targeting and summary indexing for plan ${planId}. | tests/phase-planning-tools.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| Summary target index | Run execute-phase summary tooling against saved plan ${planId}. | Blueprint MCP tests |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Plan-aware execution surfaces remain covered. | Focused phase planning tests |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Lower-wave debt state | Preserve as explicit pending execution debt. | Resume after earlier wave summaries complete. |
 `;
 }
 

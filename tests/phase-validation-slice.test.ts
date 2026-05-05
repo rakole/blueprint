@@ -186,6 +186,30 @@ Exercise verification and UAT handoff.
 ## Must Haves
 
 - Keep downstream validation grounded in the completed execution summary.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| EXEC-01 | Preserve completed execution evidence for validation and UAT handoff. | tests/phase-validation-slice.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| 03-01-SUMMARY.md | Save a completed execution summary for downstream reads. | Blueprint validation slice |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Validation and UAT tools consume completed summary evidence. | Focused phase validation slice |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Later validation phase artifacts | Defer to phase 4 plan fixtures. | Continue with saved summaries. |
 `,
     "utf8"
   );
@@ -384,6 +408,30 @@ Exercise validation artifact routing.
 ## Must Haves
 
 - Keep the validation routing grounded in saved summary evidence.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| EXEC-01 | Persist verification and UAT artifacts from saved summary evidence. | tests/phase-validation-slice.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| Phase 4 verification and UAT artifacts | Write validation artifacts through MCP tools. | Blueprint validation slice |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Phase 4 validation artifact routing remains covered. | Focused phase validation slice |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Cross-phase replanning | Exclude from this validation artifact fixture. | Replan only through separate phase work. |
 `,
     "utf8"
   );
@@ -441,6 +489,30 @@ Exercise secondary validation summary routing.
 ## Must Haves
 
 - Keep validation routing grounded in live saved summary evidence.
+
+## Requirement Coverage
+
+| Requirement | Planned Coverage | Evidence |
+| --- | --- | --- |
+| EXEC-01 | Validate multi-summary artifact routing for phase 4. | tests/phase-validation-slice.test.ts exits 0 |
+
+## Evidence Coverage
+
+| Evidence | How It Will Be Produced | Owner |
+| --- | --- | --- |
+| Second validation summary | Persist a second valid summary for validation coverage. | Blueprint validation slice |
+
+## File / Surface Coverage
+
+| File / Surface | Expected Change | Verification |
+| --- | --- | --- |
+| src/mcp/tools/phase.ts | Multi-summary validation routing remains covered. | Focused phase validation slice |
+
+## Unknowns And Deferrals
+
+| Unknown / Deferral | Handling | Follow-Up |
+| --- | --- | --- |
+| Additional summaries beyond plan 02 | Keep out of this fixture. | Add explicit plans before broadening coverage. |
 `,
     "utf8"
   );

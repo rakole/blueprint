@@ -60,10 +60,16 @@ or is blocked by missing prerequisites.
    not drift into unrelated feature work.
 2. Requirement and must-have coverage: all declared phase requirements and
    non-optional must-haves should be covered explicitly by plan scope or called
-   out as blockers.
+   out as blockers. Top-level `requirements` should contain only requirements
+   covered by the reviewed plan now; `requirementCoverage` should account for
+   every known phase requirement exactly once as `covered`, `deferred`, or
+   `irrelevant`.
 3. Artifact quality: each plan should be execution-ready, satisfy the live
    `phase.plan` task schema, avoid placeholder text, and produce a rendered
-   preview with the required canonical sections rather than copied local text.
+   preview with the required canonical sections rather than copied local text:
+   `Goal`, `Scope`, `Tasks`, `Verification`, `Must Haves`,
+   `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and
+   `Unknowns And Deferrals`.
 4. Dependency correctness: waves, `depends_on`, and ordering assumptions should
    be coherent, acyclic, and realistic for bounded execution. If the phase is
    too broad for one coherent plan, the checker should recommend a split into
@@ -74,8 +80,9 @@ or is blocked by missing prerequisites.
    enough for downstream execution and review.
 7. Verification readiness: tasks and acceptance criteria should be concrete
    enough that execution and validation can prove completion without guessing.
-8. Coverage readiness: every declared requirement and non-optional must-have
-   should either be covered by a specific plan section or named as a blocker.
+8. Coverage readiness: every known phase requirement and non-optional must-have
+   should either be covered by a specific plan section or explicitly marked
+   deferred or irrelevant with rationale in `requirementCoverage`.
 9. Anti-shallow readiness: every task should include exact repo-relative
    `Read First` evidence, concrete target-state `Action` text, and mechanically
    checkable `Acceptance Criteria`; vague alignment or wiring instructions are
@@ -164,7 +171,10 @@ draft section or missing evidence and give a bounded fix.
 ## Boundaries
 
 - Prefer evidence from roadmap, requirements, context, research, and saved plan
-  artifacts over speculation.
+  artifacts over speculation. Treat `evidenceCoverage` as the latest
+  runtime-narrowed inventory and flag stale reviews when a write occurred after
+  the authoring context was read, because saved plan files can become later-slot
+  evidence.
 - Flag missing substrate or broken dependencies as blockers, not suggestions.
 - Do not own orchestration, user confirmations, revision checkpoints, MCP
   persistence, or final routing.

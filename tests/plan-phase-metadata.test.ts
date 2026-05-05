@@ -137,6 +137,12 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
   assert.match(skillFile, /Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
   assert.match(skillFile, /previously saved plan files become intentional known evidence artifacts/i);
+  assert.match(skillFile, /strict model-rendered heading set/i);
+  assert.match(skillFile, /File \/ Surface Coverage/i);
+  assert.match(skillFile, /Unknowns And Deferrals/i);
+  assert.match(skillFile, /Top-level `requirements` lists only requirements this plan covers now/i);
+  assert.match(skillFile, /`requirementCoverage` accounts for every known phase requirement exactly once/i);
+  assert.match(skillFile, /`evidenceCoverage` as the current runtime-narrowed inventory/i);
   assert.match(skillFile, /validationMode: "strict"/);
   assert.match(skillFile, /authoringMode: "model-only"/);
   assert.doesNotMatch(skillFile, /docs\/COMMAND-CATALOG\.md|docs\/SKILLS-AND-AGENTS\.md|docs\/ARTIFACT-SCHEMA\.md/);
@@ -184,6 +190,13 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
     /workflow\.plan_check=false[\s\S]*(checker review was skipped by|skip checker\s+review entirely)/i
   );
   assert.match(runtimeContract, /Artifact Authoring Rules/);
+  assert.match(runtimeContract, /`## Requirement Coverage`/);
+  assert.match(runtimeContract, /`## Evidence Coverage`/);
+  assert.match(runtimeContract, /`## File \/ Surface Coverage`/);
+  assert.match(runtimeContract, /`## Unknowns And Deferrals`/);
+  assert.match(runtimeContract, /Frontmatter\/top-level model `requirements` must list only requirements this\s+specific plan covers now/i);
+  assert.match(runtimeContract, /`requirementCoverage` is the all-requirements ledger/i);
+  assert.match(runtimeContract, /`evidenceCoverage` is runtime-narrowed and dynamic/i);
   assert.match(runtimeContract, /goal-backward must-haves/i);
   assert.match(runtimeContract, /observable truths, required\s+artifacts,\s+and\s+key links/i);
   assert.match(runtimeContract, /Subagent Path/);
@@ -336,6 +349,10 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(plannerFile, /concrete target behavior and values/i);
   assert.match(plannerFile, /mechanically checkable/i);
   assert.match(plannerFile, /observable truths, required\s+artifacts,\s+and\s+key links/i);
+  assert.match(plannerFile, /Top-level `requirements` is only the requirement-id subset this plan covers\s+now/i);
+  assert.match(plannerFile, /saved plan files can become evidence rows for later\s+slots/i);
+  assert.match(plannerFile, /File \/ Surface Coverage/i);
+  assert.match(plannerFile, /Unknowns And Deferrals/i);
 
   assert.match(checkerFile, /live phase\.plan contract/i);
   assert.match(checkerFile, /task schema/i);
@@ -366,6 +383,9 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(checkerFile, /Scope budget/i);
   assert.match(checkerFile, /Must-have derivation/i);
   assert.match(checkerFile, /v1`, `simplified`, `static for now`, `placeholder`/i);
+  assert.match(checkerFile, /Top-level `requirements` should contain only requirements\s+covered by the reviewed plan now/i);
+  assert.match(checkerFile, /`requirementCoverage` should account for\s+every known phase requirement exactly once/i);
+  assert.match(checkerFile, /saved plan files can become later-slot\s+evidence/i);
   assert.match(checkerFile, /## UI-Spec Review Addendum/);
 
   assert.match(
@@ -385,4 +405,7 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(contractFile, /Plan authoring should stay execution-ready/i);
   assert.match(contractFile, /grep\/test\/CLI\/file-read-verifiable `Acceptance Criteria`/i);
   assert.match(contractFile, /Do not silently reduce locked context decisions/i);
+  assert.match(contractFile, /requiredHeadings: \[\.\.\.PHASE_PLAN_MODEL_CONTRACT\.renderedHeadings\]/);
+  assert.match(contractFile, /Top-level `requirements` lists only requirements this plan covers now/i);
+  assert.match(contractFile, /saved plans become evidence for later slots/i);
 });

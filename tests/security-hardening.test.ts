@@ -133,6 +133,30 @@ Ship the security audit UI surface for review.
 ## Must Haves
 
 - Preserve prompt-boundary hardening evidence.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| SEC-01 | covered | task-1 | tests/security-hardening.test.ts | The fixture covers prompt-boundary hardening evidence. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/security-audit.ts | used | The source fixture defines the security audit surface. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/security-audit.ts | task-1 | npm test -- tests/security-hardening.test.ts exits 0 | The focused test covers the security audit surface. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the security hardening fixture. | none | The fixture only seeds hardening evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

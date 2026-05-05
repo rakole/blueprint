@@ -141,7 +141,9 @@ Blueprint-native.
   `status`, `objective`, `depends_on`, `requirements`, `files_modified`,
   `read_first`, `acceptance_criteria`, and `autonomous`.
 - Preserve the exact required sections `## Goal`, `## Scope`, `## Tasks`,
-  `## Verification`, and `## Must Haves`.
+  `## Verification`, `## Must Haves`, `## Requirement Coverage`,
+  `## Evidence Coverage`, `## File / Surface Coverage`, and
+  `## Unknowns And Deferrals`.
 - Every task must include `#### Read First`, `#### Action`, and
   `#### Acceptance Criteria`.
 - `#### Read First` must include concrete repo-relative paths: the file being
@@ -163,8 +165,19 @@ Blueprint-native.
 - Prefer vertical slices when independent features can run in parallel. Use
   horizontal foundations only when downstream interfaces or shared state really
   require it.
-- Frontmatter `requirements` must map every declared phase requirement to at
-  least one plan. Plans with no requirement coverage are invalid for acceptance.
+- Frontmatter/top-level model `requirements` must list only requirements this
+  specific plan covers now. Do not put deferred or irrelevant requirements in
+  that top-level list.
+- `requirementCoverage` is the all-requirements ledger: every known phase
+  requirement from the runtime-narrowed task schema must appear exactly once as
+  `covered`, `deferred`, or `irrelevant` with concrete rationale. Plans with no
+  covered requirement are invalid for acceptance unless the plan is an explicit
+  blocker/deferral artifact accepted by the parent command.
+- `evidenceCoverage` is runtime-narrowed and dynamic. It must cover every saved
+  evidence artifact in the current authoring context exactly once as `used`,
+  `deferred`, `irrelevant`, or `unavailable`; after each successful plan write,
+  re-read `blueprint_phase_plan_authoring_context` because saved plan files can
+  become evidence for later plan slots.
 - Include goal-backward must-haves: observable truths, required artifacts, and
   key links or wiring points. If the canonical template uses prose rather than
   nested YAML for `## Must Haves`, preserve the section while keeping those

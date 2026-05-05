@@ -119,6 +119,30 @@ Seed completed execution evidence for review-fix tests.
 ## Must Haves
 
 - Review-fix validation can cite a completed execution summary.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REVFIX-01 | covered | task-1 | tests/code-review-fix-slice.test.ts | The fixture seeds completed evidence for review-fix validation. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/feature.ts | used | The source fixture grounds the review-fix evidence. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/feature.ts | task-1 | npm test -- tests/code-review-fix-slice.test.ts exits 0 | The focused test covers the fixture source. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the review-fix fixture. | none | The fixture has completed execution evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -326,6 +350,30 @@ Leave a pending execution plan for review-fix debt checks.
 ## Must Haves
 
 - Review-fix authoring remains available while COMPLETED review-fix status is disallowed.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REVFIX-01 | covered | task-1 | tests/code-review-fix-slice.test.ts | The pending plan fixture covers review-fix debt routing. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/feature.ts | used | The source fixture grounds the pending plan. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/feature.ts | task-1 | /blu-execute-phase 5 should be the next safe repair route for this pending plan. | The pending plan remains tied to the fixture source. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| Completed summary is intentionally deferred for this pending fixture. | deferred | The test needs live execution debt. | Run /blu-execute-phase 5 when repairing the pending plan. |
 `,
     "utf8"
   );
@@ -1134,6 +1182,30 @@ Add a second completed summary to change live evidence inventory.
 ## Must Haves
 
 - Review-fix validation must reject stale evidence that omits the second plan and summary.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REVFIX-01 | covered | task-1 | tests/code-review-fix-slice.test.ts | The second plan changes live evidence inventory for stale validation. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/feature.ts | used | The source fixture grounds the second completed plan. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/feature.ts | task-1 | npm test -- tests/code-review-fix-slice.test.ts exits 0 | The focused test covers the second evidence row. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the second review-fix fixture. | none | The fixture is complete enough for stale evidence checks. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

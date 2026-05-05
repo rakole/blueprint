@@ -147,12 +147,22 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     (planContract.contract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
     ["title", "wave", "status", "objective"]
   );
-  assert.ok(
-    planContract.contract.modelContract?.renderedHeadings.includes("Requirement Coverage")
-  );
-  assert.ok(
-    planContract.contract.modelContract?.renderedHeadings.includes("Unknowns And Deferrals")
-  );
+  const expectedPlanHeadings = [
+    "Goal",
+    "Scope",
+    "Tasks",
+    "Verification",
+    "Must Haves",
+    "Requirement Coverage",
+    "Evidence Coverage",
+    "File / Surface Coverage",
+    "Unknowns And Deferrals"
+  ];
+  assert.deepEqual(planContract.contract.requiredHeadings, expectedPlanHeadings);
+  assert.deepEqual(planContract.contract.modelContract?.renderedHeadings, expectedPlanHeadings);
+  for (const heading of expectedPlanHeadings) {
+    assert.match(planContract.contract.authoringTemplate, new RegExp(`## ${heading}`));
+  }
   assert.ok(
     planContract.contract.modelContract?.contextBindings.some((binding) =>
       /auto-assigned by the existing phase plan writer/i.test(binding)
@@ -164,6 +174,14 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   assert.equal(Boolean(planModelProperties && "planId" in planModelProperties), false);
   assert.ok(planModelProperties && "requirementCoverage" in planModelProperties);
   assert.ok(planModelProperties && "fileSurfaceCoverage" in planModelProperties);
+  assert.match(
+    JSON.stringify(planModelProperties?.requirements),
+    /covers now.*requirementCoverage accounts for every known phase requirement exactly once/i
+  );
+  assert.match(
+    JSON.stringify(planModelProperties?.evidenceCoverage),
+    /runtime-narrowed.*saved plan files can become evidence artifacts/i
+  );
 
   assert.equal(uatContract.contract.modelContract?.schemaId, "blueprint.phase.uat.model");
   assert.equal(uatContract.contract.modelContract?.schemaVersion, "1.0.0");

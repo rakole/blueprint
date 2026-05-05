@@ -457,6 +457,30 @@ Preserve earlier milestone execution evidence.
 ## Must Haves
 
 - Earlier milestone closeout evidence must remain reviewable.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| MILESTONE-00 | covered | task-1 | tests/audit-milestone-tools.test.ts | The prior phase fixture covers earlier milestone evidence. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds the milestone audit fixture. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/audit-milestone-tools.test.ts exits 0 | The focused test covers milestone audit routing evidence. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the prior milestone fixture. | none | The earlier evidence fixture is complete for audit routing. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -651,6 +675,30 @@ Prepare the milestone for the final audit.
 ## Must Haves
 
 - Release-readiness evidence must be durable enough for milestone audit routing.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| MILESTONE-01 | covered | task-1 | tests/audit-milestone-tools.test.ts | The release-readiness fixture covers milestone audit readiness. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds release-readiness routing evidence. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/audit-milestone-tools.test.ts exits 0 | The focused test covers release-readiness audit routing. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the release-readiness fixture. | none | The fixture has completed evidence for milestone audit routing. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

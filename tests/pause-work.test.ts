@@ -204,6 +204,30 @@ Exercise the pause-work router.
 ## Must Haves
 
 - Keep writes inside .blueprint/.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| pause-work fixture route | covered | task-1 | tests/pause-work.test.ts | The fixture covers the pause-work report route. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-UI-SPEC.md | used | The UI spec fixture provides saved phase evidence. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| .blueprint/ | task-1 | Confirm routing and report content. | The pause fixture only writes Blueprint-owned artifacts. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the pause-work fixture. | none | The fixture only seeds a handoff route. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );

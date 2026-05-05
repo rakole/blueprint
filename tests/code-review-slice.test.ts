@@ -269,6 +269,30 @@ Review the changed repo files.
 ## Must Haves
 
 - Keep review scope deterministic.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REV-01 | covered | task-1 | tests/code-review-slice.test.ts | The review scope fixture covers the declared review requirement. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/feature.ts | used | The source fixture defines the file under review. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+${planFilesModified.map((file) => `| ${file} | task-1 | rg "calculateValue" src/feature.ts | The code-review scope fixture includes this declared file. |`).join("\n")}
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the code review scope fixture. | none | The fixture only seeds deterministic review scope evidence. | No follow-up required after the focused test passes. |
 `,
       "utf8"
     );
@@ -497,6 +521,31 @@ Exercise code-review follow-up routing.
 ## Must Haves
 
 - Keep review routing grounded in the saved review artifact.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REV-01 | covered | task-1 | tests/code-review-slice.test.ts | The saved review evidence covers the review routing requirement. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/feature.ts | used | The saved source fixture grounds the review scope. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/feature.ts | task-1 | tests/code-review-slice.test.ts exits 0 | The focused test covers the source routing surface. |
+| tests/feature.test.ts | task-1 | tests/code-review-slice.test.ts exits 0 | The focused test covers the test routing surface. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for saved review evidence. | none | The fixture has complete plan and summary artifacts. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
@@ -1019,6 +1068,30 @@ Expand the changed repo files.
 ## Must Haves
 
 - Keep review scope deterministic.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+| REV-01 | covered | task-1 | tests/code-review-slice.test.ts | The additional review plan covers the declared review requirement. |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/six.ts | used | The additional source fixture defines the expanded review scope. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/six.ts | task-1 | rg "six" src/six.ts | The focused grep covers the added source file. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for the additional review fixture. | none | The fixture only expands deterministic scope evidence. | No follow-up required after the focused test passes. |
 `,
     "utf8"
   );
