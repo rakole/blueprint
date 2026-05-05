@@ -95,10 +95,15 @@ bounded agents classify or verify only when they are suitable.
   same `auditFixContext`.
 - If validation or `blueprint_artifact_report_write` returns `status: "invalid"`
   or warns about schema, marker, or rendered-heading issues, repair the model
-  against `contract.modelContract.schemaPath`, the narrowed `taskSchema`, and
-  MCP diagnostics, then retry once through MCP.
-- If the retry still fails, stop with the exact MCP warnings or thrown error and
-  do not write the report by hand.
+  against `contract.modelContract.schemaPath`, the narrowed `taskSchema`,
+  `repairSummary`, and structured MCP diagnostics. Use each diagnostic's `path`,
+  `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`.
+- If `repairSummary.action` is `reread_authoring_context`, reread
+  `blueprint_artifact_report_authoring_context` with the complete
+  `auditFixContext`, including `scopeFiles`, before editing the model.
+- Retry once through MCP. If the retry still fails, stop with the top three
+  structured diagnostics and `suggestedRepairs`; do not start a second repair
+  loop and do not write the report by hand.
 - If verification could not run, failed, or was reread-only, make that explicit
   in `Changes Applied` or `Remaining Gaps` and route accordingly.
 - Use `blueprint-verifier` for a bounded second pass when post-fix verification
@@ -220,9 +225,14 @@ evidence citations, verification notes, or report richness.
 - Failed fix or failed required verification: stop the mutation loop, preserve
   evidence, and leave remaining candidates unattempted.
 - Invalid report model or write: repair once against `report.audit-fix`,
-  `contract.modelContract.schemaPath`, the narrowed `taskSchema`, and MCP
-  diagnostics, then retry through the validate/write flow.
-- Failed retry: stop without manual `.blueprint/` writes.
+  `contract.modelContract.schemaPath`, the narrowed `taskSchema`,
+  `repairSummary`, and structured MCP diagnostics, then retry through the
+  validate/write flow.
+- Missing or stale runtime context: reread the authoring context with the
+  complete `auditFixContext`, especially `scopeFiles` from
+  `blueprint_review_scope.files`, before changing the model.
+- Failed retry: stop with the top three diagnostics plus `suggestedRepairs`
+  and without manual `.blueprint/` writes.
 
 ## Stop-On-First-Failure Behavior
 
@@ -276,7 +286,7 @@ the report must be traceable either way:
   `blueprint_artifact_report_validate_model` with the same `auditFixContext`
   passed to authoring and persistence, and it was then persisted through
   `blueprint_artifact_report_write`, or the run stopped after one failed MCP
-  repair retry.
+  repair retry with exact diagnostic paths and repair guidance.
 - Optional todo capture used `blueprint_artifact_mutate_index` only after
   explicit confirmation.
 - State was updated through `blueprint_state_update` after durable persistence.

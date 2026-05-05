@@ -360,6 +360,8 @@ type ArtifactReportWriteResult = {
   overwritten: boolean;
   status: "created" | "updated" | "reused" | "invalid";
   issues: string[];
+  diagnostics?: McpWriteDiagnostic[];
+  suggestedRepairs?: string[];
   warnings: string[];
 };
 
@@ -526,13 +528,33 @@ type AuditFixReportModel = {
 
 type ArtifactReportDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 
-type ArtifactReportDiagnostic = {
-  source: ArtifactReportDiagnosticSource;
+type McpWriteDiagnostic = {
   path: string;
   code: string;
   message: string;
+  received?: unknown;
+  allowedValues?: unknown[];
+  missing?: string[];
+  repair: string;
+  retryable: boolean;
+  argsPatch?: Record<string, unknown>;
+};
+
+type ArtifactReportDiagnostic = McpWriteDiagnostic & {
+  source: ArtifactReportDiagnosticSource;
   context: Record<string, unknown>;
   suggestion: string;
+};
+
+type ArtifactReportDiagnosticInput =
+  Omit<ArtifactReportDiagnostic, "repair" | "retryable"> &
+  Partial<Pick<ArtifactReportDiagnostic, "repair" | "retryable">>;
+
+type ArtifactRepairSummary = {
+  topBlockers: string[];
+  fieldsToChange: string[];
+  action: "retry_validation" | "reread_authoring_context" | "stop";
+  retryable: boolean;
 };
 
 type ArtifactReportAuthoringContextResult = {
@@ -561,7 +583,18 @@ type ArtifactReportAuthoringContextResult = {
     severity: AuditFixReportSeverityFilter;
     maxAttempts: number;
     dryRun: boolean;
+    scopeFiles: string[];
   } | null;
+  writeArgs: {
+    reportName: string;
+    auditFixContext?: {
+      source: AuditFixReportSource;
+      severity: AuditFixReportSeverityFilter;
+      maxAttempts: number;
+      dryRun: boolean;
+      scopeFiles: string[];
+    };
+  };
   allowedNextActions: string[];
   schemaPath: string | null;
   baseSchema: Record<string, unknown> | null;
@@ -581,6 +614,7 @@ type ArtifactReportValidateModelResult = {
   schemaPath: string | null;
   taskSchema: Record<string, unknown> | null;
   diagnostics: ArtifactReportDiagnostic[];
+  repairSummary: ArtifactRepairSummary;
   normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
   renderPreview: string | null;
   warnings: string[];
@@ -602,6 +636,8 @@ type ArtifactCodebaseWriteResult = {
   reused: boolean;
   status: "created" | "updated" | "reused" | "invalid";
   issues: string[];
+  diagnostics?: McpWriteDiagnostic[];
+  suggestedRepairs?: string[];
   warnings: string[];
 };
 
@@ -8584,8 +8620,22 @@ export async function blueprintArtifactContractRead(
 function artifactReportWriteInvalidResult(
   pathValue: string,
   issues: string[],
-  warnings: string[] = []
+  warnings: string[] = [],
+  diagnostics: McpWriteDiagnostic[] = []
 ): ArtifactReportWriteResult {
+  const fallbackDiagnostics =
+    diagnostics.length > 0
+      ? diagnostics
+      : issues.map((issue) =>
+          mcpWriteDiagnostic({
+            path: pathValue,
+            code: "write.invalid",
+            message: issue,
+            repair: "Read the relevant artifact contract, repair the rejected content or model, then retry the MCP write once.",
+            retryable: true
+          })
+        );
+
   return {
     path: pathValue,
     written: false,
@@ -8593,6 +8643,8 @@ function artifactReportWriteInvalidResult(
     overwritten: false,
     status: "invalid",
     issues,
+    diagnostics: fallbackDiagnostics,
+    suggestedRepairs: suggestedRepairsFromDiagnostics(fallbackDiagnostics),
     warnings
   };
 }
@@ -8703,12 +8755,170 @@ function setArrayItemEnum(
   schema.minItems = options.minItems ?? (options.allowEmpty ? 0 : 1);
 }
 
-function artifactReportDiagnostic(args: ArtifactReportDiagnostic): ArtifactReportDiagnostic {
+function mcpWriteDiagnostic(args: McpWriteDiagnostic): McpWriteDiagnostic {
   return args;
 }
 
+function artifactReportDiagnostic(args: ArtifactReportDiagnosticInput): ArtifactReportDiagnostic {
+  return {
+    ...args,
+    repair: args.repair ?? args.suggestion,
+    retryable: args.retryable ?? true
+  };
+}
+
 function formatArtifactReportDiagnostic(diagnostic: ArtifactReportDiagnostic): string {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Repair: ${diagnostic.repair}`;
+}
+
+function suggestedRepairsFromDiagnostics(diagnostics: readonly McpWriteDiagnostic[]): string[] {
+  return [...new Set(diagnostics.map((diagnostic) => diagnostic.repair).filter(Boolean))];
+}
+
+function reportMarkdownWriteDiagnostics(args: {
+  pathValue: string;
+  reportName: string;
+  issues: string[];
+}): McpWriteDiagnostic[] {
+  const contractId = resolveReportContractId(args.reportName);
+  const contract = contractId ? readArtifactContract(contractId) : null;
+
+  return args.issues.map((issue) => {
+    const missingSection = issue.match(/missing required section:\s*([^.]+)\./i)?.[1]?.trim();
+    const emptySection = issue.match(/section\s+(.+?)\s+must not be empty/i)?.[1]?.trim();
+    const heading = missingSection ?? emptySection;
+    const expectedHeadings = contract?.requiredHeadings ?? [];
+
+    return mcpWriteDiagnostic({
+      path: heading ? `content.sections.${heading}` : args.pathValue,
+      code: missingSection
+        ? "markdown.missing_required_section"
+        : emptySection
+          ? "markdown.empty_required_section"
+          : "markdown.invalid",
+      message: issue,
+      missing: missingSection ? [missingSection] : undefined,
+      allowedValues: expectedHeadings.length > 0 ? [...expectedHeadings] : undefined,
+      repair: heading
+        ? `Add and populate the ## ${heading} section. Expected sections for ${contractId ?? args.reportName}: ${expectedHeadings.join(", ")}. Read blueprint_artifact_contract_read before retrying; do not hand-write .blueprint directly.`
+        : `Repair the Markdown against ${contractId ?? args.reportName}; read blueprint_artifact_contract_read for the canonical scaffold before retrying.`,
+      retryable: true
+    });
+  });
+}
+
+function codebaseWriteDiagnostics(args: {
+  pathValue: string;
+  artifactId: CodebaseArtifactContractId;
+  issues: string[];
+}): McpWriteDiagnostic[] {
+  const contract = readArtifactContract(args.artifactId);
+
+  return args.issues.map((issue) => {
+    const missingSection = issue.match(/missing required section:\s*([^.]+)\./i)?.[1]?.trim();
+    const emptySection = issue.match(/section\s+(.+?)\s+must/i)?.[1]?.trim();
+    const heading = missingSection ?? emptySection;
+
+    return mcpWriteDiagnostic({
+      path: heading ? `content.sections.${heading}` : args.pathValue,
+      code: missingSection
+        ? "codebase.missing_required_section"
+        : emptySection
+          ? "codebase.invalid_required_section"
+          : "codebase.invalid",
+      message: issue,
+      missing: missingSection ? [missingSection] : undefined,
+      allowedValues: [...contract.requiredHeadings],
+      repair: heading
+        ? `Add and populate the ## ${heading} section using concrete repository evidence. Expected sections for ${args.artifactId}: ${contract.requiredHeadings.join(", ")}. Use blueprint_artifact_contract_read or blueprint_artifact_scaffold before retrying.`
+        : `Repair ${args.artifactId} against its artifact contract and retry through the MCP write tool.`,
+      retryable: true
+    });
+  });
+}
+
+function repairSummaryFromDiagnostics(
+  diagnostics: readonly ArtifactReportDiagnostic[]
+): ArtifactRepairSummary {
+  const topDiagnostics = diagnostics.slice(0, 3);
+  const fieldsToChange = [...new Set(
+    diagnostics
+      .filter((diagnostic) => diagnostic.path.startsWith("model"))
+      .map((diagnostic) => diagnostic.path)
+  )];
+  const hasScopeBlocker = diagnostics.some((diagnostic) => diagnostic.source === "scope");
+  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.retryable);
+
+  return {
+    topBlockers: topDiagnostics.map((diagnostic) => `${diagnostic.path}: ${diagnostic.message}`),
+    fieldsToChange,
+    action: hasScopeBlocker ? "reread_authoring_context" : retryable ? "retry_validation" : "stop",
+    retryable
+  };
+}
+
+function normalizeAllowedValues(value: unknown): unknown[] | undefined {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value === undefined ? undefined : [value];
+}
+
+function valueAtJsonPointer(root: unknown, pointer: string): unknown {
+  if (pointer.length === 0) {
+    return root;
+  }
+
+  return pointer
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .reduce<unknown>((current, segment) => {
+      const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+
+      if (Array.isArray(current) && /^\d+$/.test(key)) {
+        return current[Number(key)];
+      }
+
+      if (typeof current === "object" && current !== null && key in current) {
+        return (current as Record<string, unknown>)[key];
+      }
+
+      return undefined;
+    }, root);
+}
+
+function minimalArtifactReportModelValue(fieldName: string): unknown {
+  switch (fieldName) {
+    case "remediationSummary":
+    case "classification":
+    case "changesApplied":
+    case "verification":
+    case "manualOrDeferredWork":
+    case "gapRoutes":
+    case "followUpFixes":
+    case "evidence":
+      return ["replace with concrete run-specific evidence"];
+    case "summaryEvidence":
+      return {
+        "<exact completed summary path from taskSchema>": {
+          planId: "<taskSchema planId>",
+          linkedPlanPath: "<taskSchema linkedPlanPath>",
+          summaryStatus: "COMPLETED",
+          targetedVerification: ["<taskSchema targeted verification>"],
+          coverageNote: "Explain what this saved summary proves."
+        }
+      };
+    case "pendingPlans":
+    case "dependencyPlans":
+      return [];
+    case "commitTraceability":
+      return { preFixHead: "<current HEAD or unknown>", createdCommits: ["none"] };
+    case "todoCapture":
+      return { status: "not-needed", evidence: "No todo capture was needed." };
+    default:
+      return `<${fieldName}>`;
+  }
 }
 
 function ajvPathToArtifactReportModelPath(instancePath: string): string {
@@ -8728,7 +8938,8 @@ function ajvPathToArtifactReportModelPath(instancePath: string): string {
 
 function schemaDiagnosticFromArtifactReportAjvError(
   error: ErrorObject,
-  reportLabel: string
+  reportLabel: string,
+  modelObject?: Record<string, unknown>
 ): ArtifactReportDiagnostic {
   const missingProperty =
     typeof error.params === "object" &&
@@ -8751,23 +8962,72 @@ function schemaDiagnosticFromArtifactReportAjvError(
       : additionalProperty !== null
         ? `${basePath}.${additionalProperty}`
         : basePath;
+  const params = typeof error.params === "object" && error.params !== null
+    ? error.params as Record<string, unknown>
+    : {};
+  const allowedValues =
+    error.keyword === "enum"
+      ? normalizeAllowedValues(params.allowedValues)
+      : error.keyword === "const"
+        ? normalizeAllowedValues(params.allowedValue)
+        : undefined;
+  const missing = missingProperty !== null ? [missingProperty] : undefined;
+  const limit = typeof params.limit === "number" ? params.limit : null;
+  const received =
+    (error as ErrorObject & { data?: unknown }).data ??
+    (modelObject ? valueAtJsonPointer(modelObject, error.instancePath) : undefined);
+  let message = error.message ?? `Model does not match the ${reportLabel} task schema.`;
+  let repair =
+    missingProperty !== null
+      ? `Add required field ${missingProperty}.`
+      : additionalProperty !== null
+        ? `Remove unsupported field ${additionalProperty}; MCP owns report identity, paths, rendered headings, and context markers.`
+        : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context.";
+  let argsPatch: Record<string, unknown> | undefined;
+
+  if (missingProperty !== null) {
+    argsPatch = {
+      modelPatch: {
+        [missingProperty]: minimalArtifactReportModelValue(missingProperty)
+      }
+    };
+  }
+
+  if ((error.keyword === "enum" || error.keyword === "const") && allowedValues && allowedValues.length > 0) {
+    message = `${pathValue} must be one of: ${allowedValues.map(String).join(", ")}.`;
+    repair = `Set ${pathValue} to one of the allowed values from the current taskSchema: ${allowedValues.map(String).join(", ")}.`;
+  } else if (error.keyword === "maxItems" && limit === 0) {
+    message = `${pathValue} must be empty because the current runtime authoring context exposes no allowed items for this array.`;
+    repair = `Set ${pathValue} to [] or reread blueprint_artifact_report_authoring_context if you expected pending or dependency items.`;
+    argsPatch = { modelPatch: { [pathValue.replace(/^model\./, "")]: [] } };
+  } else if (error.keyword === "minItems") {
+    message = `${pathValue} must include at least ${String(limit ?? "the required number of")} item(s) from the current taskSchema.`;
+    repair = `Populate ${pathValue} with concrete values allowed by the current taskSchema; do not invent paths or ids.`;
+  } else if (error.keyword === "required" && missingProperty !== null) {
+    message = `${pathValue} is required by ${reportLabel}.`;
+    repair = `Add ${pathValue} using the current taskSchema. Minimal shape: ${JSON.stringify(minimalArtifactReportModelValue(missingProperty))}.`;
+  } else if (error.keyword === "additionalProperties" && additionalProperty !== null) {
+    message = `${pathValue} is not supported by ${reportLabel}.`;
+    repair = `Remove ${pathValue}; MCP owns report identity, report paths, rendered Markdown, and auditFixContext marker values.`;
+  }
 
   return artifactReportDiagnostic({
     source: "schema",
     path: pathValue,
     code: `schema.${error.keyword}`,
-    message: error.message ?? `Model does not match the ${reportLabel} task schema.`,
+    message,
+    received,
+    allowedValues,
+    missing,
     context: {
       keyword: error.keyword,
       params: error.params,
       schemaPath: error.schemaPath
     },
-    suggestion:
-      missingProperty !== null
-        ? `Add required field ${missingProperty}.`
-        : additionalProperty !== null
-          ? `Remove unsupported field ${additionalProperty}.`
-          : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context."
+    repair,
+    retryable: true,
+    argsPatch,
+    suggestion: repair
   });
 }
 
@@ -8777,6 +9037,21 @@ function addTestsDiagnostic(args: AddTestsReportDiagnostic): AddTestsReportDiagn
 
 function formatAddTestsReportDiagnostic(diagnostic: AddTestsReportDiagnostic): string {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
+function artifactReportDiagnosticFromAddTests(
+  diagnostic: AddTestsReportDiagnostic
+): ArtifactReportDiagnostic {
+  return artifactReportDiagnostic({
+    source: diagnostic.source,
+    path: diagnostic.path,
+    code: diagnostic.code,
+    message: diagnostic.message,
+    context: diagnostic.context,
+    repair: diagnostic.suggestion,
+    retryable: true,
+    suggestion: diagnostic.suggestion
+  });
 }
 
 function ajvPathToAddTestsReportModelPath(instancePath: string): string {
@@ -9959,6 +10234,7 @@ async function collectAuditFixReportContext(args: {
   const normalizedSource = args.auditFixContext.source;
   const normalizedSeverity = args.auditFixContext.severity;
   const maxAttempts = args.auditFixContext.maxAttempts;
+  const rawScopeFiles = (args.auditFixContext as { scopeFiles?: unknown }).scopeFiles;
   if (!["review", "security", "verification", "uat", "all"].includes(normalizedSource)) {
     blockers.push(`Unsupported report.audit-fix source "${normalizedSource}".`);
   }
@@ -9968,10 +10244,15 @@ async function collectAuditFixReportContext(args: {
   if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
     blockers.push("report.audit-fix maxAttempts must be a positive integer.");
   }
+  if (!Array.isArray(rawScopeFiles)) {
+    blockers.push(
+      "report.audit-fix auditFixContext.scopeFiles is required; pass the authoritative blueprint_review_scope.files array through authoring, validation, and write."
+    );
+  }
 
   const scopeValidation = await validateAuditFixScopeFiles({
     projectRoot: args.projectRoot,
-    scopeFiles: args.auditFixContext.scopeFiles
+    scopeFiles: Array.isArray(rawScopeFiles) ? rawScopeFiles.filter((entry): entry is string => typeof entry === "string") : []
   });
   blockers.push(...scopeValidation.blockers);
 
@@ -10337,6 +10618,9 @@ export async function blueprintArtifactReportAuthoringContext(
       selectedEvidencePaths: [],
       scopeFiles: [],
       auditFixContext: null,
+      writeArgs: {
+        reportName: normalizeReportSlug(args.reportName)
+      },
       allowedNextActions: [],
       schemaPath: null,
       baseSchema: null,
@@ -10370,6 +10654,9 @@ export async function blueprintArtifactReportAuthoringContext(
       selectedEvidencePaths: [],
       scopeFiles: [],
       auditFixContext: null,
+      writeArgs: {
+        reportName: normalizeReportSlug(args.reportName)
+      },
       allowedNextActions: schemas?.allowedNextActions ?? [],
       schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
       baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
@@ -10426,8 +10713,23 @@ export async function blueprintArtifactReportAuthoringContext(
             source: runtimeContext.source,
             severity: runtimeContext.severity,
             maxAttempts: runtimeContext.maxAttempts,
-            dryRun: runtimeContext.dryRun
+            dryRun: runtimeContext.dryRun,
+            scopeFiles: contextData.scopeFiles
           },
+    writeArgs: {
+      reportName: normalizeReportSlug(args.reportName),
+      ...(contextData.auditFixContext
+        ? {
+            auditFixContext: {
+              source: contextData.auditFixContext.source,
+              severity: contextData.auditFixContext.severity,
+              maxAttempts: contextData.auditFixContext.maxAttempts,
+              dryRun: contextData.auditFixContext.dryRun,
+              scopeFiles: contextData.scopeFiles
+            }
+          }
+        : {})
+    },
     allowedNextActions: schemas?.allowedNextActions ?? [],
     schemaPath: schemas?.schemaPath ?? contract.modelContract?.schemaPath ?? null,
     baseSchema: schemas?.baseSchema ?? (contract.modelContract ? cloneJsonObject(contract.modelContract.jsonSchema) : null),
@@ -11542,12 +11844,23 @@ export async function blueprintArtifactReportValidateModel(
   const diagnostics: ArtifactReportDiagnostic[] = context.prerequisiteBlockers.map((message) =>
     artifactReportDiagnostic({
       source: "scope",
-      path: contractId ?? "report",
-      code: "scope.prerequisite_blocker",
+      path: /scopeFiles/.test(message) ? "auditFixContext.scopeFiles" : contractId ?? "report",
+      code: /scopeFiles/.test(message) ? "scope.missing_scope_files" : "scope.prerequisite_blocker",
       message,
+      missing: /scopeFiles/.test(message) ? ["auditFixContext.scopeFiles"] : undefined,
       context: { reportName: context.reportName, phase: context.phase?.phaseNumber ?? null },
-      suggestion:
-        contractId === "report.audit-fix"
+      repair: /scopeFiles/.test(message)
+        ? "Pass auditFixContext.scopeFiles from the authoritative blueprint_review_scope.files array, then reread blueprint_artifact_report_authoring_context before editing the model."
+        : contractId === "report.audit-fix"
+          ? "Repair required source evidence, summary provenance, or scope context before authoring report.audit-fix."
+          : "Repair required completed summary and validation/UAT context before authoring report.add-tests.",
+      retryable: /scopeFiles/.test(message),
+      argsPatch: /scopeFiles/.test(message)
+        ? { auditFixContext: { scopeFiles: "Use blueprint_review_scope.files exactly." } }
+        : undefined,
+      suggestion: /scopeFiles/.test(message)
+        ? "Pass auditFixContext.scopeFiles from the authoritative blueprint_review_scope.files array, then reread blueprint_artifact_report_authoring_context before editing the model."
+        : contractId === "report.audit-fix"
           ? "Repair required source evidence, summary provenance, or scope context before authoring report.audit-fix."
           : "Repair required completed summary and validation/UAT context before authoring report.add-tests."
     })
@@ -11565,6 +11878,8 @@ export async function blueprintArtifactReportValidateModel(
             ? "Audit-fix report model must be a JSON object."
             : "Add-tests report model must be a JSON object.",
         context: { receivedType: Array.isArray(args.model) ? "array" : typeof args.model },
+        repair: "Return a JSON object that matches taskSchema.",
+        retryable: true,
         suggestion: "Return a JSON object that matches taskSchema."
       })
     );
@@ -11578,6 +11893,11 @@ export async function blueprintArtifactReportValidateModel(
         code: "contract.missing_schema",
         message: `${contractId ?? "report"} did not expose a runtime task schema.`,
         context: {},
+        repair:
+          contractId === "report.audit-fix"
+            ? "Read the live report.audit-fix authoring context before writing."
+            : "Read the live report.add-tests authoring context before writing.",
+        retryable: true,
         suggestion:
           contractId === "report.audit-fix"
             ? "Read the live report.audit-fix authoring context before writing."
@@ -11597,7 +11917,8 @@ export async function blueprintArtifactReportValidateModel(
         ...(validate.errors ?? []).map((error) =>
           schemaDiagnosticFromArtifactReportAjvError(
             error,
-            contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests"
+            contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests",
+            modelObject
           )
         )
       );
@@ -11619,7 +11940,7 @@ export async function blueprintArtifactReportValidateModel(
         ...addTestsReportResidualDiagnostics(
           modelObject,
           readArtifactContract("report.add-tests").modelContract
-        )
+        ).map(artifactReportDiagnosticFromAddTests)
       );
 
       if (schemaValid) {
@@ -11651,6 +11972,11 @@ export async function blueprintArtifactReportValidateModel(
           code: "markdown.invalid_render",
           message: issue,
           context: {},
+          repair:
+            contractId === "report.audit-fix"
+              ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract."
+              : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract.",
+          retryable: true,
           suggestion:
             contractId === "report.audit-fix"
               ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract."
@@ -11673,6 +11999,7 @@ export async function blueprintArtifactReportValidateModel(
     schemaPath: context.schemaPath,
     taskSchema: context.taskSchema,
     diagnostics,
+    repairSummary: repairSummaryFromDiagnostics(diagnostics),
     normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
       ? null
       : normalizedModel,
@@ -11732,12 +12059,28 @@ export async function blueprintArtifactReportWrite(
   if (hasContent === hasModel) {
     return artifactReportWriteInvalidResult(pathValue, [
       "Artifact report writes must supply exactly one of content or model."
+    ], [], [
+      mcpWriteDiagnostic({
+        path: "args",
+        code: "write.exactly_one_input",
+        message: "Artifact report writes must supply exactly one of content or model.",
+        repair: "Call blueprint_artifact_report_write with either Markdown content or a structured model, not both and not neither.",
+        retryable: true
+      })
     ]);
   }
 
   if ((contractId === "report.add-tests" || contractId === "report.audit-fix") && hasContent) {
     return artifactReportWriteInvalidResult(pathValue, [
       `${contractId} is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write.`
+    ], [], [
+      mcpWriteDiagnostic({
+        path: "args.content",
+        code: "write.model_only",
+        message: `${contractId} is model-only; Markdown content fallback is not supported.`,
+        repair: `Remove content, pass model instead, validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write.`,
+        retryable: true
+      })
     ]);
   }
 
@@ -11757,11 +12100,12 @@ export async function blueprintArtifactReportWrite(
     });
 
     if (!modelValidation.valid || !modelValidation.renderPreview) {
-        return artifactReportWriteInvalidResult(
-          pathValue,
+      return artifactReportWriteInvalidResult(
+        pathValue,
         modelValidation.diagnostics.map(formatArtifactReportDiagnostic),
-          modelValidation.warnings
-        );
+        modelValidation.warnings,
+        modelValidation.diagnostics
+      );
     }
 
     const renderPreview = modelValidation.renderPreview.endsWith("\n")
@@ -11806,7 +12150,12 @@ export async function blueprintArtifactReportWrite(
       return artifactReportWriteInvalidResult(
         pathValue,
         renderedValidation.issues,
-        [...warnings, ...renderedValidation.warnings]
+        [...warnings, ...renderedValidation.warnings],
+        reportMarkdownWriteDiagnostics({
+          pathValue,
+          reportName: args.reportName,
+          issues: renderedValidation.issues
+        })
       );
     }
 
@@ -11838,11 +12187,28 @@ export async function blueprintArtifactReportWrite(
   const validation = validateReportArtifactContent(normalizedContent, args.reportName);
 
   if (normalizedContent.trim().length === 0) {
-    return artifactReportWriteInvalidResult(pathValue, ["Report content must not be empty."]);
+    return artifactReportWriteInvalidResult(pathValue, ["Report content must not be empty."], [], [
+      mcpWriteDiagnostic({
+        path: "content",
+        code: "markdown.empty",
+        message: "Report content must not be empty.",
+        repair: "Draft report content from the canonical artifact contract before retrying the MCP write.",
+        retryable: true
+      })
+    ]);
   }
 
   if (!validation.valid) {
-    return artifactReportWriteInvalidResult(pathValue, validation.issues, validation.warnings);
+    return artifactReportWriteInvalidResult(
+      pathValue,
+      validation.issues,
+      validation.warnings,
+      reportMarkdownWriteDiagnostics({
+        pathValue,
+        reportName: args.reportName,
+        issues: validation.issues
+      })
+    );
   }
 
   if (exists) {
@@ -11921,6 +12287,15 @@ export async function blueprintCodebaseArtifactWrite(
   const validation = validateCodebaseArtifactContent(normalizedContent, args.artifactId);
 
   if (normalizedContent.trim().length === 0) {
+    const diagnostics = [
+      mcpWriteDiagnostic({
+        path: "content",
+        code: "codebase.empty",
+        message: "Codebase artifact content must not be empty.",
+        repair: "Use blueprint_artifact_contract_read or blueprint_artifact_scaffold to draft the required codebase artifact sections before retrying.",
+        retryable: true
+      })
+    ];
     return {
       path: pathValue,
       artifactId: args.artifactId,
@@ -11930,11 +12305,19 @@ export async function blueprintCodebaseArtifactWrite(
       reused: false,
       status: "invalid",
       issues: ["Codebase artifact content must not be empty."],
+      diagnostics,
+      suggestedRepairs: suggestedRepairsFromDiagnostics(diagnostics),
       warnings: []
     };
   }
 
   if (!validation.valid) {
+    const diagnostics = codebaseWriteDiagnostics({
+      pathValue,
+      artifactId: args.artifactId,
+      issues: validation.issues
+    });
+
     return {
       path: pathValue,
       artifactId: args.artifactId,
@@ -11944,6 +12327,8 @@ export async function blueprintCodebaseArtifactWrite(
       reused: false,
       status: "invalid",
       issues: [...validation.issues],
+      diagnostics,
+      suggestedRepairs: suggestedRepairsFromDiagnostics(diagnostics),
       warnings: [...validation.warnings]
     };
   }

@@ -45,7 +45,7 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(
     auditFixDoc,
-    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, and returned diagnostics/i
+    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, `repairSummary`, and returned diagnostics by exact `path`, `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`/i
   );
   assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(auditFixDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
@@ -88,7 +88,7 @@ test("audit-fix docs and catalog metadata promote the remediation slice to imple
   );
   assert.match(
     runtimeReference,
-    /`audit-fix`[\s\S]*repair invalid `report\.audit-fix` models once against the narrowed contract/i
+    /`audit-fix`[\s\S]*repair invalid models by exact diagnostic `path`, `code`, `repair`, `allowedValues`, `missing`, `argsPatch`, and `repairSummary` guidance/i
   );
 });
 

@@ -545,7 +545,7 @@ test("review contracts stay explicit across code-review, remediation, and review
   assert.match(auditFixDoc, /classification table before mutation/i);
   assert.match(
     auditFixDoc,
-    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, and returned diagnostics/i
+    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, `repairSummary`, and returned diagnostics by exact `path`, `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`/i
   );
   assert.match(auditFixContract, /## No-Subagent Fallback/i);
   assert.match(auditFixContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);

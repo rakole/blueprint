@@ -9,7 +9,8 @@ import {
   blueprintArtifactList,
   blueprintArtifactReportAuthoringContext,
   blueprintArtifactReportValidateModel,
-  blueprintArtifactReportWrite
+  blueprintArtifactReportWrite,
+  blueprintCodebaseArtifactWrite
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
@@ -1789,12 +1790,12 @@ test("add-tests report model validates and writes with exact empty optional depe
   assert.equal(invalidDependency.status, "invalid");
   assert.match(
     invalidDependency.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have more than 0 items/i
+    /must be empty because the current runtime authoring context exposes no allowed items/i
   );
   assert.equal(wrongLinkedPlan.status, "invalid");
   assert.match(
     wrongLinkedPlan.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to constant/i
+    /must be one of|constant|allowed/i
   );
 });
 
@@ -1949,12 +1950,12 @@ test("add-tests report schema rejects unsupported fields, missing required field
   assert.equal(unsupported.status, "invalid");
   assert.match(
     unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties/i
+    /not supported by report\.add-tests/i
   );
   assert.equal(missing.status, "invalid");
   assert.match(
     missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must have required property 'evidenceUsed'/i
+    /model\.evidenceUsed is required by report\.add-tests/i
   );
   assert.equal(injected.status, "invalid");
   assert.match(
@@ -1964,7 +1965,7 @@ test("add-tests report schema rejects unsupported fields, missing required field
   assert.equal(nestedExtraField.status, "invalid");
   assert.match(
     nestedExtraField.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties/i
+    /not supported by report\.add-tests|additional/i
   );
   assert.equal(nonStringCoverageNote.status, "invalid");
   assert.match(
@@ -1979,7 +1980,7 @@ test("add-tests report schema rejects unsupported fields, missing required field
   assert.equal(blockedNoGeneratedChangedFiles.status, "invalid");
   assert.match(
     blockedNoGeneratedChangedFiles.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to constant/i
+    /must be one of|constant|allowed/i
   );
   assert.equal(
     blockedNotRunCountsAsBlocked.status,
@@ -2061,12 +2062,12 @@ test("add-tests report runtime narrowing rejects stale summaries and impossible 
   assert.equal(staleValidation.status, "invalid");
   assert.match(
     staleValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have fewer than 1 items|must have required property|must be equal to one of/i
+    /must include at least 1 item|must be one of|required/i
   );
   assert.equal(impossibleCompleted.status, "invalid");
   assert.match(
     impossibleCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have more than 0 items/i
+    /must be empty because the current runtime authoring context exposes no allowed items/i
   );
   assert.equal(
     partialWithPending.status,
@@ -2076,7 +2077,7 @@ test("add-tests report runtime narrowing rejects stale summaries and impossible 
   assert.equal(blockedInvalidVerificationWrite.status, "invalid");
   assert.match(
     blockedInvalidVerificationWrite.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to constant/i
+    /must be one of|constant|allowed/i
   );
 });
 
@@ -2113,12 +2114,68 @@ test("audit-fix authoring context blocks missing required runtime context and na
   assert.match(missingRuntime.reason ?? "", /required upstream context/i);
   assert.equal(missingRuntime.taskSchema, null);
   assert.equal(context.status, "ready", context.reason ?? context.warnings.join("\n"));
+  assert.deepEqual(context.auditFixContext?.scopeFiles, [scopeFile]);
+  assert.deepEqual(context.writeArgs.auditFixContext?.scopeFiles, [scopeFile]);
   assert.deepEqual(context.pendingPlans, []);
   assert.deepEqual(context.dependencyPlans, []);
   assert.match(taskSchemaText, /"pendingPlans".*"maxItems":0/s);
   assert.match(taskSchemaText, /"dependencyPlans".*"maxItems":0/s);
   assert.match(taskSchemaText, /"selectedEvidencePaths":"required upstream context"/);
   assert.match(taskSchemaText, /"scopeFiles":"required upstream context"/);
+});
+
+test("audit-fix diagnostics preserve exact repair metadata for missing runtime scope files", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    validVerificationContent(),
+    "utf8"
+  );
+  const scopeFile = await seedAuditFixScopeFile(repoPath);
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: auditFixRuntimeContext(scopeFile)
+  });
+  const model = validAuditFixReportModel(context);
+  const missingScopeContext = {
+    source: "verification",
+    severity: "high",
+    maxAttempts: 1,
+    dryRun: false
+  } as never;
+  const validation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: missingScopeContext,
+    model
+  });
+  const write = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: missingScopeContext,
+    model
+  });
+
+  assert.equal(validation.status, "invalid");
+  assert.equal(validation.repairSummary.action, "reread_authoring_context");
+  assert.ok(validation.repairSummary.fieldsToChange.length === 0);
+  assert.ok(validation.diagnostics.some((diagnostic) => diagnostic.code === "scope.missing_scope_files"));
+  assert.match(validation.diagnostics.map((diagnostic) => diagnostic.repair).join("\n"), /blueprint_review_scope\.files/);
+  assert.equal(write.status, "invalid");
+  assert.match(write.issues.join("\n"), /scopeFiles/i);
+  assert.ok(write.diagnostics?.some((diagnostic) => diagnostic.code === "scope.missing_scope_files"));
+  assert.match(write.suggestedRepairs?.join("\n") ?? "", /scopeFiles/);
 });
 
 test("audit-fix report model validates and writes in one shot while preserving runtime provenance", async (t) => {
@@ -2189,6 +2246,44 @@ test("audit-fix report model validates and writes in one shot while preserving r
   assert.match(savedReport, new RegExp(`- ${scopeFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
   assert.match(savedReport, /Report write status: created for \.blueprint\/reports\/audit-fix-3\.md/);
   assert.equal(reused.status, "reused");
+});
+
+test("invalid report and codebase writes return structured repair guidance", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidReport = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "cleanup-latest",
+    content: `# Cleanup Report
+
+## Selected Phase Directories
+
+- .blueprint/phases/01-old-phase
+`
+  });
+  const invalidCodebase = await blueprintCodebaseArtifactWrite({
+    cwd: repoPath,
+    artifactId: "codebase.stack",
+    content: `# Technology Stack
+
+## Purpose
+
+- Runtime evidence exists.
+`
+  });
+
+  assert.equal(invalidReport.status, "invalid");
+  assert.match(invalidReport.issues.join("\n"), /missing required section/i);
+  assert.ok(invalidReport.diagnostics?.some((diagnostic) => diagnostic.code === "markdown.missing_required_section"));
+  assert.match(invalidReport.suggestedRepairs?.join("\n") ?? "", /blueprint_artifact_contract_read/);
+  assert.match(invalidReport.suggestedRepairs?.join("\n") ?? "", /do not hand-write \.blueprint directly/i);
+  assert.equal(invalidCodebase.status, "invalid");
+  assert.ok(invalidCodebase.diagnostics?.some((diagnostic) => diagnostic.code === "codebase.missing_required_section"));
+  assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /blueprint_artifact_scaffold/);
+  assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /Runtime/);
 });
 
 test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale inventory, impossible completed pending debt, and dry-run mutation claims", async (t) => {
@@ -2332,12 +2427,12 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
   assert.equal(unsupported.status, "invalid");
   assert.match(
     unsupported.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties/i
+    /not supported by report\.audit-fix/i
   );
   assert.equal(missing.status, "invalid");
   assert.match(
     missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must have required property 'remediationSummary'/i
+    /model\.remediationSummary is required by report\.audit-fix/i
   );
   assert.equal(injected.status, "invalid");
   assert.match(
@@ -2345,15 +2440,22 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
     /must match pattern/i
   );
   assert.equal(outOfScopeSeverity.status, "invalid");
-  assert.match(
-    outOfScopeSeverity.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to one of the allowed values|must be equal to one of/i
+  const severityDiagnostic = outOfScopeSeverity.diagnostics.find(
+    (diagnostic) => diagnostic.path === "model.classification[0].severity"
   );
+  assert.ok(severityDiagnostic);
+  assert.equal(severityDiagnostic.received, "low");
+  assert.deepEqual(severityDiagnostic.allowedValues, ["critical", "high"]);
+  assert.match(severityDiagnostic.repair, /allowed values.*critical, high/i);
   assert.deepEqual(pendingContext.pendingPlans.map((plan) => plan.planId), ["02"]);
   assert.equal(impossibleCompleted.status, "invalid");
-  assert.match(
-    impossibleCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have more than 0 items/i
+  assert.ok(
+    impossibleCompleted.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.path === "model.pendingPlans" &&
+        /must be empty because the current runtime authoring context exposes no allowed items/i.test(diagnostic.message) &&
+        /Set model\.pendingPlans to \[\]/.test(diagnostic.repair)
+    )
   );
   assert.equal(
     partialWithPending.status,
@@ -2361,14 +2463,17 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
     partialWithPending.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
   );
   assert.equal(staleValidation.status, "invalid");
-  assert.match(
-    staleValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /requires a valid saved verification artifact|did not expose a runtime task schema|must have required property|must NOT have fewer than/i
+  assert.ok(
+    staleValidation.diagnostics.length > 0 &&
+      staleValidation.diagnostics.every((diagnostic) => diagnostic.repair.length > 0)
   );
   assert.equal(dryRunMutationClaim.status, "invalid");
-  assert.match(
-    dryRunMutationClaim.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must be equal to one of the allowed values|dry-run audit-fix reports must not claim applied file mutations or created commits/i
+  assert.ok(
+    dryRunMutationClaim.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "content.dry_run_mutation_claim" &&
+        /empty changedFiles arrays/.test(diagnostic.repair)
+    )
   );
 });
 
