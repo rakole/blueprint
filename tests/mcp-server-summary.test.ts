@@ -143,6 +143,126 @@ test("invalid model validation summaries surface diagnostic messages", () => {
   );
 });
 
+test("schema-first validation tools append task schemas, diagnostics, previews, and evidence bodies to text responses", () => {
+  const contractText = createToolResponseContent("blueprint_artifact_contract_read", {
+    artifactId: "phase.verification",
+    contract: {
+      authoringTemplate: "# Phase {{phasePrefix}}: {{phaseName}} - Verification\n",
+      modelContract: {
+        schemaVersion: "1.1.0",
+        schemaId: "blueprint.phase.verification.model",
+        jsonSchema: {
+          required: ["coverageSummary", "status", "gateState"]
+        }
+      }
+    }
+  })[0].text;
+  const authoringText = createToolResponseContent("blueprint_phase_validation_authoring_context", {
+    status: "ready",
+    phaseFound: true,
+    phaseNumber: "3",
+    artifact: "verification",
+    path: ".blueprint/phases/03-validation-engine/03-VERIFICATION.md",
+    allowedValues: { verification: { coverageStates: ["PASS", "COVERED"] } },
+    summaryEvidence: [{ path: ".blueprint/phases/03-validation-engine/03-01-SUMMARY.md" }],
+    baseSchema: { $id: "blueprint.phase.verification.model" },
+    taskSchema: {
+      properties: {
+        evidenceReviewedSummaryPaths: {
+          items: {
+            enum: [".blueprint/phases/03-validation-engine/03-01-SUMMARY.md"]
+          }
+        }
+      }
+    },
+    contract: {
+      modelContract: {
+        jsonSchema: {
+          required: ["coverageSummary", "status", "gateState"]
+        }
+      }
+    },
+    existing: {
+      content: "# Phase 03: Validation Engine - Verification\n"
+    }
+  })[0].text;
+  const validateText = createToolResponseContent("blueprint_phase_validation_validate_model", {
+    status: "invalid",
+    valid: false,
+    phase: { phaseNumber: "3" },
+    artifact: "verification",
+    path: ".blueprint/phases/03-validation-engine/03-VERIFICATION.md",
+    taskSchema: { additionalProperties: false },
+    diagnostics: [
+      {
+        source: "schema",
+        path: "model.status",
+        code: "schema.required",
+        message: "must have required property status"
+      },
+      {
+        source: "schema",
+        path: "model.validationSummary",
+        code: "schema.oneOf",
+        message: "must match exactly one schema in oneOf"
+      }
+    ],
+    diagnosticCounts: {
+      total: 2,
+      bySource: { schema: 2 },
+      byCode: { "schema.required": 1, "schema.oneOf": 1 }
+    },
+    normalizedModel: null,
+    renderPreview: "# Phase 03: Validation Engine - Verification\n"
+  })[0].text;
+
+  assert.match(contractText, /## Authoring Template/);
+  assert.match(contractText, /## Model Contract/);
+  assert.match(contractText, /schemaVersion/);
+  assert.match(contractText, /## Model JSON Schema/);
+  assert.match(contractText, /"status"/);
+  assert.match(authoringText, /## Runtime Task Schema/);
+  assert.match(authoringText, /03-01-SUMMARY\.md/);
+  assert.match(authoringText, /## Model JSON Schema/);
+  assert.match(authoringText, /## Existing Validation Artifact/);
+  assert.match(validateText, /## Diagnostics/);
+  assert.match(validateText, /must have required property status/);
+  assert.match(validateText, /must match exactly one schema in oneOf/);
+  assert.match(validateText, /## Runtime Task Schema/);
+  assert.match(validateText, /## Render Preview/);
+});
+
+test("summary and validation reads include artifact bodies when hosts expose only MCP text", () => {
+  const summaryText = createToolResponseContent("blueprint_phase_summary_read", {
+    phaseFound: true,
+    found: true,
+    phaseNumber: "3",
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-SUMMARY.md",
+    content: "# Phase 03: Validation Engine - Summary 01\n\n## Outcome\n\n- Done.\n",
+    validation: { valid: true, issues: [], warnings: [] },
+    metadata: { status: "COMPLETED" }
+  })[0].text;
+  const validationText = createToolResponseContent("blueprint_phase_validation_read", {
+    phaseFound: true,
+    found: true,
+    phaseNumber: "3",
+    artifact: "verification",
+    path: ".blueprint/phases/03-validation-engine/03-VERIFICATION.md",
+    content: "# Phase 03: Validation Engine - Verification\n\n## Validation Summary\n\n- Done.\n",
+    validation: { valid: true, issues: [], warnings: [] },
+    verificationReadyForUat: true,
+    summaryPaths: [".blueprint/phases/03-validation-engine/03-01-SUMMARY.md"]
+  })[0].text;
+
+  assert.match(summaryText, /## Summary Artifact Body/);
+  assert.match(summaryText, /## Outcome/);
+  assert.match(summaryText, /## Summary Validation/);
+  assert.match(validationText, /## Validation Artifact Body/);
+  assert.match(validationText, /## Validation Summary/);
+  assert.match(validationText, /## Validation State/);
+});
+
 test("reused write results report preservation instead of a fresh save", () => {
   const summary = summarizeToolResult("blueprint_phase_validation_write", {
     phaseNumber: "3",

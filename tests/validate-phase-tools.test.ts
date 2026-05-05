@@ -521,6 +521,7 @@ function verificationRenderInput(
     artifact: "verification",
     phase: "3",
     coverageSummary: `Reviewed ${summaryPaths.map((summaryPath) => `\`${summaryPath.split("/").pop() ?? summaryPath}\``).join(", ")} for completed execution evidence.`,
+    status: "PASS",
     gateState: "PASS",
     signOff: "validation lead",
     validationSummary: ["Execution evidence matches the expected phase outcome."],
@@ -672,6 +673,8 @@ test("validation authoring context and render produce write-ready VERIFICATION c
   assert.match(JSON.stringify(context.taskSchema), /x-blueprint-runtimeContext/);
   assert.deepEqual(context.allowedValues.verification.coverageStates, [
     "PASS",
+    "COVERED",
+    "covered",
     "MANUAL",
     "DEFERRED",
     "BLOCKED"
@@ -1065,6 +1068,179 @@ test("validation PASS task schema rejects manual coverage and non-empty none row
     nonEmptyNoneRows.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
     /model\.gapClassification\[0\]\.scope/
   );
+});
+
+test("verification model preserves status, covered normalization, scalar summary, empty PASS gaps, and extended evidence", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput(
+    [summaryPath],
+    {
+      evidenceReviewedSummaryPaths: [summaryPath],
+      validationSummary:
+        "Scalar validation summary is normalized into the rendered bullet list.",
+      requirementCoverage: [
+        {
+          requirement: "VAL-01",
+          taskOrCheck: "Review completed execution evidence",
+          evidence: summaryPath,
+          coverageState: "covered",
+          notes: "Lowercase covered is accepted for model ergonomics."
+        }
+      ],
+      manualOrDeferredCoverage: [],
+      gapClassification: [],
+      gapsFound: [],
+      suggestedRepairs: [],
+      sessionState: [
+        `Resume source: ${summaryPath}`,
+        "Current validation step: schema-first verification complete"
+      ],
+      checkpoint: "none",
+      testMatrix: [
+        {
+          number: "1",
+          test: "Saved summary validation",
+          expectedBehavior: "Completed summary evidence supports UAT handoff.",
+          evidence: summaryPath,
+          result: "pass",
+          notes: "Validated through the phase verification model."
+        }
+      ],
+      resultSummary: {
+        total: 1,
+        passed: 1,
+        issues: 0,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      },
+      observedBehavior: [
+        `Observed validation evidence remained grounded in ${summaryPath}.`
+      ],
+      unresolvedGaps: ["none"],
+      structuredGaps: [
+        {
+          test: "none",
+          truth: "none",
+          status: "none",
+          severity: "none",
+          reason: "none",
+          followUp: "none"
+        }
+      ],
+      followUpFixes: ["none"]
+    }
+  );
+
+  const validated = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const statusMismatch = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      status: "PARTIAL"
+    }
+  });
+  const blockedWithoutGaps = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      status: "BLOCKED",
+      gateState: "BLOCKED",
+      requirementCoverage: [
+        {
+          ...model.requirementCoverage![0]!,
+          coverageState: "BLOCKED",
+          notes: "Blocked evidence remains unresolved."
+        }
+      ],
+      nextSafeAction: "/blu-audit-fix 3"
+    }
+  });
+  const passWithOptionalGapSignal = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: {
+      ...model,
+      resultSummary: {
+        total: 1,
+        passed: 0,
+        issues: 1,
+        pending: 0,
+        skipped: 0,
+        blocked: 0
+      },
+      unresolvedGaps: ["Verification still has an actionable unresolved gap."],
+      structuredGaps: [
+        {
+          test: "Saved summary validation",
+          truth: "A gap remains",
+          status: "failed",
+          severity: "major",
+          reason: "The optional gap field still reports unresolved work.",
+          followUp: "Repair before UAT."
+        }
+      ],
+      followUpFixes: ["Repair the optional gap before UAT."]
+    }
+  });
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model,
+    authoringMode: "model-only"
+  });
+  const saved = await readFile(path.join(repoPath, written.path), "utf8");
+  const normalizedVerification = validated.normalizedModel as {
+    requirementCoverage: Array<{ coverageState: string }>;
+    validationSummary: string[];
+  } | null;
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(
+    normalizedVerification?.requirementCoverage[0]?.coverageState,
+    "COVERED"
+  );
+  assert.deepEqual(normalizedVerification?.validationSummary, [
+    "Scalar validation summary is normalized into the rendered bullet list."
+  ]);
+  assert.equal(statusMismatch.status, "invalid");
+  assert.match(
+    statusMismatch.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
+    /model\.gateState/
+  );
+  assert.equal(blockedWithoutGaps.status, "invalid");
+  assert.match(
+    blockedWithoutGaps.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must contain at least 1 valid item|must contain at least 1 valid item\(s\)|must contain/i
+  );
+  assert.equal(passWithOptionalGapSignal.status, "invalid");
+  assert.match(
+    passWithOptionalGapSignal.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /must not declare PASS while unresolved coverage, gap, or repair signals remain/
+  );
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.match(saved, /\| VAL-01 \| Review completed execution evidence \| .* \| COVERED \|/);
+  assert.match(saved, /## Session State/);
+  assert.match(saved, /## Validation Test Matrix/);
+  assert.match(saved, /## Result Summary/);
+  assert.match(saved, /## Structured Gaps/);
+  assert.match(saved, /## Follow-Up Fixes/);
 });
 
 test("validation write accepts a structured UAT model after ready verification evidence", async (t) => {

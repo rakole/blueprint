@@ -4480,7 +4480,13 @@ const VERIFICATION_PLACEHOLDER_BODIES = [
 ] as const;
 type VerificationGateState = "PASS" | "PARTIAL" | "BLOCKED";
 type VerificationReadinessState = "ready for UAT" | "not ready for UAT";
-const VALID_VERIFICATION_COVERAGE_STATES = new Set(["PASS", "MANUAL", "DEFERRED", "BLOCKED"]);
+const VALID_VERIFICATION_COVERAGE_STATES = new Set([
+  "PASS",
+  "COVERED",
+  "MANUAL",
+  "DEFERRED",
+  "BLOCKED"
+]);
 const VALID_VERIFICATION_MANUAL_COVERAGE_STATES = new Set(["MANUAL", "DEFERRED", "NONE"]);
 const VALID_VERIFICATION_GAP_CLASSES = new Set([
   "missing-evidence",
@@ -4553,6 +4559,73 @@ function hasActionableValidationListSignal(section: string): boolean {
 
 function isLiteralNoneValidationCell(value: string | undefined): boolean {
   return normalizeValidationSignal(value ?? "") === "none";
+}
+
+function hasMarkdownSection(content: string, heading: string): boolean {
+  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*(?:\\n|$)`).test(content);
+}
+
+function validateOptionalVerificationListSection(
+  content: string,
+  heading: string,
+  issues: string[]
+): void {
+  if (!hasMarkdownSection(content, heading)) {
+    return;
+  }
+
+  const section = extractMarkdownSection(content, heading);
+
+  if (!hasActionableValidationListSignal(section) && !/\bnone\b/i.test(section)) {
+    issues.push(`Verification artifact optional section ${heading} must include at least one populated bullet.`);
+  }
+}
+
+function validateOptionalVerificationTableSection(
+  content: string,
+  heading: string,
+  requiredColumns: number,
+  issues: string[]
+): void {
+  if (!hasMarkdownSection(content, heading)) {
+    return;
+  }
+
+  const rows = extractMarkdownTableDataRows(extractMarkdownSection(content, heading));
+
+  if (rows.length === 0) {
+    issues.push(`Verification artifact optional section ${heading} must include at least one populated table row.`);
+    return;
+  }
+
+  if (rows.some((cells) => cells.length < requiredColumns)) {
+    issues.push(`Verification artifact optional section ${heading} must keep all expected table columns populated.`);
+  }
+}
+
+function hasActionableVerificationStructuredGapSignal(content: string): boolean {
+  if (!hasMarkdownSection(content, "Structured Gaps")) {
+    return false;
+  }
+
+  return extractMarkdownTableDataRows(extractMarkdownSection(content, "Structured Gaps"))
+    .some((cells) => cells.some((cell) => !isLiteralNoneValidationCell(cell)));
+}
+
+function hasActionableVerificationResultCounts(content: string): boolean {
+  if (!hasMarkdownSection(content, "Result Summary")) {
+    return false;
+  }
+
+  const resultSummary = extractMarkdownSection(content, "Result Summary");
+
+  return ["Issues", "Pending", "Blocked"].some((label) => {
+    const match = resultSummary.match(new RegExp(`^\\s*-\\s*${label}:\\s*(\\d+)\\s*$`, "mi"));
+
+    return match ? Number.parseInt(match[1] ?? "0", 10) > 0 : false;
+  });
 }
 
 function validateModelExampleLeakage(
@@ -4767,14 +4840,50 @@ export function validateVerificationArtifactContent(
 
   const gapsFound = extractMarkdownSection(content, "Gaps Found");
   const suggestedRepairs = extractMarkdownSection(content, "Suggested Repairs");
+  const unresolvedGaps = extractMarkdownSection(content, "Unresolved Gaps");
+  const followUpFixes = extractMarkdownSection(content, "Follow-Up Fixes");
   const hasActionableGapsFound = hasActionableValidationListSignal(gapsFound);
   const hasActionableRepairs = hasActionableValidationListSignal(suggestedRepairs);
+  const hasActionableUnresolvedGaps = hasActionableValidationListSignal(unresolvedGaps);
+  const hasActionableFollowUpFixes = hasActionableValidationListSignal(followUpFixes);
+  const hasActionableStructuredGaps = hasActionableVerificationStructuredGapSignal(content);
+  const hasActionableResultCounts = hasActionableVerificationResultCounts(content);
+  validateOptionalVerificationListSection(content, "Session State", issues);
+  validateOptionalVerificationListSection(content, "Observed Behavior", issues);
+  validateOptionalVerificationListSection(content, "Unresolved Gaps", issues);
+  validateOptionalVerificationListSection(content, "Follow-Up Fixes", issues);
+  validateOptionalVerificationTableSection(content, "Validation Test Matrix", 6, issues);
+  validateOptionalVerificationTableSection(content, "Structured Gaps", 6, issues);
+  if (hasMarkdownSection(content, "Checkpoint")) {
+    const checkpoint = extractMarkdownSection(content, "Checkpoint");
+
+    if (!hasActionableValidationListSignal(checkpoint) && !/\bnone\b/i.test(checkpoint)) {
+      issues.push("Verification artifact optional section Checkpoint must include a concrete checkpoint bullet.");
+    }
+  }
+  if (hasMarkdownSection(content, "Result Summary")) {
+    const resultSummary = extractMarkdownSection(content, "Result Summary");
+    const requiredResultLabels = ["Total", "Passed", "Issues", "Pending", "Skipped", "Blocked"];
+    const missingLabels = requiredResultLabels.filter(
+      (label) => !new RegExp(`^\\s*-\\s*${label}:\\s*\\d+\\s*$`, "mi").test(resultSummary)
+    );
+
+    if (missingLabels.length > 0) {
+      issues.push(
+        `Verification artifact optional section Result Summary must include numeric ${missingLabels.join(", ")} count(s).`
+      );
+    }
+  }
   const hasUnresolvedValidationGap =
     hasUnresolvedCoverageState ||
     hasUnresolvedManualCoverage ||
     hasActionableGapClass ||
     hasActionableGapsFound ||
-    hasActionableRepairs;
+    hasActionableRepairs ||
+    hasActionableUnresolvedGaps ||
+    hasActionableFollowUpFixes ||
+    hasActionableStructuredGaps ||
+    hasActionableResultCounts;
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));

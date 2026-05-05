@@ -524,14 +524,130 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
 
+const RICH_TEXT_TOOL_NAMES = new Set([
+  "blueprint_artifact_contract_read",
+  "blueprint_phase_validation_authoring_context",
+  "blueprint_phase_validation_validate_model",
+  "blueprint_phase_summary_read",
+  "blueprint_phase_validation_read"
+]);
+
+function stringifyForToolText(value: unknown): string {
+  return JSON.stringify(value, null, 2);
+}
+
+function appendJsonSection(sections: string[], heading: string, value: unknown): void {
+  if (value === undefined || value === null) {
+    return;
+  }
+
+  sections.push(`## ${heading}\n\n\`\`\`json\n${stringifyForToolText(value)}\n\`\`\``);
+}
+
+function appendMarkdownSection(sections: string[], heading: string, value: unknown): void {
+  if (typeof value !== "string" || value.length === 0) {
+    return;
+  }
+
+  sections.push(`## ${heading}\n\n\`\`\`\`markdown\n${value}\n\`\`\`\``);
+}
+
+function appendNestedMarkdownSection(
+  sections: string[],
+  heading: string,
+  value: unknown,
+  key: string
+): void {
+  const record = asRecord(value);
+
+  appendMarkdownSection(sections, heading, record?.[key]);
+}
+
+function getContractFromResult(result: ToolResult): Record<string, unknown> | null {
+  return asRecord(result.contract);
+}
+
+function appendArtifactContractReadDetails(sections: string[], result: ToolResult): void {
+  const contract = getContractFromResult(result);
+  const modelContract = asRecord(contract?.modelContract);
+
+  appendMarkdownSection(sections, "Authoring Template", contract?.authoringTemplate);
+  appendJsonSection(sections, "Model Contract", modelContract);
+  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
+}
+
+function appendValidationAuthoringContextDetails(sections: string[], result: ToolResult): void {
+  const contract = getContractFromResult(result);
+  const modelContract = asRecord(contract?.modelContract);
+
+  appendJsonSection(sections, "Allowed Values", result.allowedValues);
+  appendJsonSection(sections, "Summary Evidence", result.summaryEvidence);
+  appendJsonSection(sections, "Base Model Schema", result.baseSchema);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
+  appendNestedMarkdownSection(sections, "Existing Validation Artifact", result.existing, "content");
+  appendNestedMarkdownSection(sections, "Ready Verification Artifact", result.verification, "content");
+}
+
+function appendValidationModelDetails(sections: string[], result: ToolResult): void {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
+  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
+}
+
+function appendRichToolText(toolName: string, result: ToolResult, summary: string): string {
+  if (!RICH_TEXT_TOOL_NAMES.has(toolName)) {
+    return summary;
+  }
+
+  const sections: string[] = [];
+
+  if (toolName === "blueprint_artifact_contract_read") {
+    appendArtifactContractReadDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_validation_authoring_context") {
+    appendValidationAuthoringContextDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_validation_validate_model") {
+    appendValidationModelDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_phase_summary_read") {
+    appendMarkdownSection(sections, "Summary Artifact Body", result.content);
+    appendJsonSection(sections, "Summary Validation", result.validation);
+    appendJsonSection(sections, "Summary Metadata", result.metadata);
+  }
+
+  if (toolName === "blueprint_phase_validation_read") {
+    appendMarkdownSection(sections, "Validation Artifact Body", result.content);
+    appendJsonSection(sections, "Validation State", {
+      validation: result.validation,
+      verificationReadyForUat: result.verificationReadyForUat,
+      uatStatus: result.uatStatus,
+      resumeState: result.resumeState,
+      checkpoint: result.checkpoint,
+      complete: result.complete,
+      summaryPaths: result.summaryPaths
+    });
+  }
+
+  return sections.length > 0 ? `${summary}\n\n${sections.join("\n\n")}` : summary;
+}
+
 export function createToolResponseContent(
   toolName: string,
   result: ToolResult
 ): Array<{ type: "text"; text: string }> {
+  const summary = summarizeToolResult(toolName, result);
+
   return [
     {
       type: "text",
-      text: summarizeToolResult(toolName, result)
+      text: appendRichToolText(toolName, result, summary)
     }
   ];
 }
