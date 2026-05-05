@@ -175,6 +175,16 @@ type ArtifactValidateResult = {
     suggestedRepairs: string[];
     warnings: string[];
 };
+export type PhaseArtifactValidationDiagnostic = {
+    path: string;
+    code: string;
+    message: string;
+    heading?: string;
+    missing?: string[];
+    repair: string;
+    retryable: boolean;
+    nextTool?: string;
+};
 type ArtifactSummaryDigestArgs = {
     cwd?: string;
     focusArea?: string;
@@ -426,6 +436,7 @@ type McpWriteDiagnostic = {
     missing?: string[];
     repair: string;
     retryable: boolean;
+    nextTool?: string;
     argsPatch?: Record<string, unknown>;
 };
 type ArtifactReportDiagnostic = McpWriteDiagnostic & {
@@ -583,6 +594,7 @@ export declare function validatePhaseArtifactContent(content: string, artifact: 
     valid: boolean;
     issues: string[];
     warnings: string[];
+    diagnostics: PhaseArtifactValidationDiagnostic[];
 };
 export declare function validateVerificationArtifactContent(content: string, summaryPaths?: string[]): {
     valid: boolean;
@@ -775,9 +787,9 @@ export declare const artifactToolDefinitions: ({
                 notes: z.ZodOptional<z.ZodArray<z.ZodString>>;
             }, z.core.$strip>>>;
             brownfieldMode: z.ZodOptional<z.ZodEnum<{
+                brownfield: "brownfield";
                 greenfield: "greenfield";
                 "scaffold-only": "scaffold-only";
-                brownfield: "brownfield";
             }>>;
             assumptions: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>>;

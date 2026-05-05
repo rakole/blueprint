@@ -126,15 +126,79 @@ async function createLegacyCompatibilityFixtureRepo(
     includeDiscoveryPhase
       ? `# Phase 03: Phase Discovery - Context
 
-## Decisions
+## Phase Boundary
 
-- Discovery remains in progress.
+- Discovery remains in progress for Phase 03.
+
+## Discovery Grounding
+
+- Saved roadmap and requirements keep this phase grounded.
+
+## Implementation Decisions
+
+- Preserve initialized-repo validation compatibility.
+
+## Specific Ideas
+
+- Continue discovery without treating the fixture as malformed.
+
+## Existing Code Insights
+
+- Legacy fixtures may contain older roadmap shells.
+
+## Dependencies
+
+- .blueprint/ROADMAP.md remains the saved source for the legacy phase boundary.
+
+## Open Questions
+
+- No unresolved compatibility questions remain for this initialized fixture.
+
+## Deferred Ideas
+
+- No deferred discovery ideas are needed for this initialized fixture.
+
+## Canonical References
+
+- .blueprint/ROADMAP.md - legacy roadmap fixture.
 `
       : `# Phase 02: Router Health And Mapping - Context
 
-## Decisions
+## Phase Boundary
 
 - The repository already has durable phase evidence.
+
+## Discovery Grounding
+
+- Saved roadmap and requirements keep this phase grounded.
+
+## Implementation Decisions
+
+- Preserve initialized-repo validation compatibility.
+
+## Specific Ideas
+
+- Continue validation without treating the fixture as malformed.
+
+## Existing Code Insights
+
+- Legacy fixtures may contain older roadmap shells.
+
+## Dependencies
+
+- .blueprint/ROADMAP.md remains the saved source for the legacy phase boundary.
+
+## Open Questions
+
+- No unresolved compatibility questions remain for this initialized fixture.
+
+## Deferred Ideas
+
+- No deferred discovery ideas are needed for this initialized fixture.
+
+## Canonical References
+
+- .blueprint/ROADMAP.md - legacy roadmap fixture.
 `,
     "utf8"
   );
@@ -147,9 +211,41 @@ async function createLegacyCompatibilityFixtureRepo(
       path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
       `# Phase 03: Phase Discovery - Context
 
-## Decisions
+## Phase Boundary
 
-- Discovery remains in progress.
+- Discovery remains in progress for Phase 03.
+
+## Discovery Grounding
+
+- Saved roadmap and requirements keep this phase grounded.
+
+## Implementation Decisions
+
+- Preserve initialized-repo validation compatibility.
+
+## Specific Ideas
+
+- Continue discovery without treating the fixture as malformed.
+
+## Existing Code Insights
+
+- Legacy fixtures may contain older roadmap shells.
+
+## Dependencies
+
+- .blueprint/ROADMAP.md remains the saved source for the legacy phase boundary.
+
+## Open Questions
+
+- No unresolved compatibility questions remain for this initialized fixture.
+
+## Deferred Ideas
+
+- No deferred discovery ideas are needed for this initialized fixture.
+
+## Canonical References
+
+- .blueprint/ROADMAP.md - legacy roadmap fixture.
 `,
       "utf8"
     );
@@ -665,11 +761,128 @@ test("bootstrap roadmap validation requires per-phase requirement mapping and su
   assert.equal(validation.valid, false);
   assert.match(
     validation.issues.join("\n"),
-    /ROADMAP\.md: Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause\./
+    /ROADMAP\.md: Roadmap artifact Phase 1 field Requirements is missing requirement IDs\. Repair by adding a Requirements clause with IDs from Requirement Coverage\./
   );
   assert.match(
     validation.issues.join("\n"),
-    /ROADMAP\.md: Roadmap artifact phase entries must include at least one success criteria bullet\./
+    /ROADMAP\.md: Phase 1 \(Bootstrap Seed\) must include at least two success criteria\. Repair Phase 1 field Success Criteria by listing 2-5 observable criteria\./
+  );
+});
+
+test("bootstrap roadmap validation treats bold and unbolded phase lines consistently", async (t) => {
+  const boldRepoPath = await createThinBootstrapFixtureRepo();
+  const unboldedRepoPath = await createThinBootstrapFixtureRepo();
+
+  t.after(async () => {
+    await rm(path.dirname(boldRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(unboldedRepoPath), { recursive: true, force: true });
+  });
+
+  const unboldedPhases = `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-04)
+  - Objective: Seed the first milestone.
+  - Success Criteria:
+    - Bootstrap requirements are traceable.
+    - The bootstrap contract stays coherent.
+
+- [ ] Phase 2: Traceable Follow-Through (Requirements: RQ-02, RQ-03)
+  - Objective: Turn the bootstrap draft into durable planning inputs.
+  - Success Criteria:
+    - Requirement coverage stays aligned with the canonical requirements table.
+    - Later planning can proceed without renumbering.`;
+  const boldPhases = unboldedPhases.replace(
+    /^- \[ \] Phase ([^\n(]+)( \(Requirements: [^)]+\))/gm,
+    "- [ ] **Phase $1**$2"
+  );
+
+  await writeBootstrapArtifacts(unboldedRepoPath, {
+    roadmapContent: createBootstrapRoadmapContent({ phases: unboldedPhases })
+  });
+  await writeBootstrapArtifacts(boldRepoPath, {
+    roadmapContent: createBootstrapRoadmapContent({ phases: boldPhases })
+  });
+
+  const unboldedValidation = await blueprintArtifactValidate({ cwd: unboldedRepoPath });
+  const boldValidation = await blueprintArtifactValidate({ cwd: boldRepoPath });
+
+  assert.equal(unboldedValidation.valid, true);
+  assert.deepEqual(boldValidation.issues, unboldedValidation.issues);
+  assert.equal(boldValidation.valid, unboldedValidation.valid);
+});
+
+test("bootstrap roadmap validation reports phase-specific success criteria count diagnostics", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    roadmapContent: createBootstrapRoadmapContent({
+      phases: `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-04)
+  - Objective: Seed the first milestone.
+  - Success Criteria:
+
+- [ ] Phase 2: Traceable Follow-Through (Requirements: RQ-02, RQ-03)
+  - Objective: Turn the bootstrap draft into durable planning inputs.
+  - Success Criteria:
+    - Criterion one.
+    - Criterion two.
+    - Criterion three.
+    - Criterion four.
+    - Criterion five.
+    - Criterion six.`
+    })
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const issues = validation.issues.join("\n");
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    issues,
+    /ROADMAP\.md: Phase 1 \(Bootstrap Seed\) must include at least two success criteria\. Repair Phase 1 field Success Criteria by listing 2-5 observable criteria\./
+  );
+  assert.match(
+    issues,
+    /ROADMAP\.md: Phase 2 \(Traceable Follow-Through\) must include no more than five success criteria\. Repair Phase 2 field Success Criteria by trimming it to 2-5 observable criteria\./
+  );
+});
+
+test("bootstrap roadmap validation names offending undeclared requirement IDs and phase numbers", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    roadmapContent: createBootstrapRoadmapContent({
+      requirementCoverage: `- Committed v1: RQ-01, RQ-02
+- Deferred: RQ-03
+- Out-of-scope: RQ-04`,
+      phases: `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-99)
+  - Objective: Seed the first milestone.
+  - Success Criteria:
+    - Bootstrap requirements are traceable.
+    - The bootstrap contract stays coherent.
+
+- [ ] Phase 3: Traceable Follow-Through (Requirements: RQ-02, RQ-03, RQ-04)
+  - Objective: Turn the bootstrap draft into durable planning inputs.
+  - Success Criteria:
+    - Requirement coverage stays aligned with the canonical requirements table.
+    - Later planning can proceed without renumbering.`
+    })
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const issues = validation.issues.join("\n");
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    issues,
+    /ROADMAP\.md: Roadmap artifact Phase 1 field Requirements references unknown IDs RQ-99\. Repair by adding those IDs to Requirement Coverage or replacing them with declared requirement IDs\./
+  );
+  assert.match(
+    issues,
+    /ROADMAP\.md references requirement RQ-99 which is not declared in REQUIREMENTS\.md\./
   );
 });
 

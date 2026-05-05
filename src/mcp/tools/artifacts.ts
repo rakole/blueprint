@@ -4041,11 +4041,148 @@ function validateBootstrapRequirementsArtifact(
 
 function extractBootstrapRoadmapPhaseBlocks(content: string): string[] {
   const phasesSection = extractMarkdownSection(content, "Phases");
+  const blocks: string[] = [];
+  let currentBlock: string[] = [];
 
-  return phasesSection
-    .split(/\n(?=- \[(?: |x)\] Phase )/g)
-    .map((block) => block.trim())
-    .filter((block) => block.startsWith("- ["));
+  for (const line of phasesSection.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock.join("\n").trim());
+      }
+
+      currentBlock = [line];
+      continue;
+    }
+
+    if (currentBlock.length > 0) {
+      currentBlock.push(line);
+    }
+  }
+
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join("\n").trim());
+  }
+
+  return blocks;
+}
+
+type BootstrapRoadmapPhaseValidationBlock = {
+  phaseNumber: string;
+  phaseName: string;
+  requirementIds: string[];
+  successCriteria: string[];
+};
+
+function parseBootstrapRoadmapPhaseBlock(
+  phaseBlock: string
+): BootstrapRoadmapPhaseValidationBlock | null {
+  const line = phaseBlock.split("\n")[0] ?? "";
+  const match = line.match(
+    /^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+.+)?\s*$/
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const rawPhaseName = (match[2] ?? "").replace(/\s*\(\s*Requirements:\s*[^)]+\)\s*$/i, "").trim();
+
+  return {
+    phaseNumber: match[1] ?? "",
+    phaseName: rawPhaseName,
+    requirementIds: extractBootstrapRoadmapPhaseRequirementIds(phaseBlock),
+    successCriteria: extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock)
+  };
+}
+
+function extractBootstrapRoadmapScopedRequirementIds(
+  section: string,
+  scopePattern: RegExp
+): string[] {
+  const ids: string[] = [];
+
+  for (const line of section.split("\n")) {
+    const match = line.match(/^\s*-\s*([^:]+):\s*(.+)$/);
+
+    if (!match || !scopePattern.test(match[1] ?? "")) {
+      continue;
+    }
+
+    ids.push(...extractRequirementIdsFromMarkdown(match[2] ?? ""));
+  }
+
+  return [...new Set(ids)];
+}
+
+type BootstrapRoadmapPhaseDetailBlock = {
+  phaseNumber: string;
+  goal: string | null;
+  requirementIds: string[];
+  successCriteria: string[];
+  status: string | null;
+};
+
+const ROADMAP_PHASE_DETAIL_STATUSES = new Set([
+  "planned",
+  "in_progress",
+  "completed",
+  "done"
+]);
+
+function normalizeRoadmapPhaseDetailStatus(value: string): string {
+  return value.trim().toLowerCase().replace(/-/g, "_");
+}
+
+function extractBoldFieldValue(block: string, field: string): string | null {
+  const match = block.match(new RegExp(`^\\*\\*${field}\\*\\*:\\s*(.+)$`, "im"));
+  return match ? (match[1]?.trim() ?? null) : null;
+}
+
+function parseRoadmapDetailSuccessCriteria(value: string | null): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(/\s*;\s*|\s*,\s*(?=[A-Z0-9])/)
+    .map((criterion) => criterion.trim())
+    .filter((criterion) => criterion.length > 0 && !/^none(?:\s+yet)?$/i.test(criterion));
+}
+
+function extractBootstrapRoadmapPhaseDetails(content: string): BootstrapRoadmapPhaseDetailBlock[] {
+  const phaseDetails = extractMarkdownSection(content, "Phase Details");
+
+  if (phaseDetails.trim().length === 0) {
+    return [];
+  }
+
+  return phaseDetails
+    .split(/^### Phase /gm)
+    .slice(1)
+    .map((rawBlock) => {
+      const newlineIndex = rawBlock.indexOf("\n");
+      const header = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
+      const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
+      const headerMatch = header.match(/^(\d+(?:\.\d+)?):\s+(.+)$/);
+
+      if (!headerMatch) {
+        return null;
+      }
+
+      const requirements = extractBoldFieldValue(body, "Requirements");
+      const status = extractBoldFieldValue(body, "Status");
+
+      return {
+        phaseNumber: headerMatch[1] ?? "",
+        goal: extractBoldFieldValue(body, "Goal"),
+        requirementIds: requirements ? extractRequirementIdsFromMarkdownAll(requirements) : [],
+        successCriteria: parseRoadmapDetailSuccessCriteria(
+          extractBoldFieldValue(body, "Success Criteria")
+        ),
+        status
+      };
+    })
+    .filter((block): block is BootstrapRoadmapPhaseDetailBlock => block !== null);
 }
 
 function validateBootstrapRoadmapArtifact(
@@ -4072,9 +4209,22 @@ function validateBootstrapRoadmapArtifact(
   const requirementCoverage = extractMarkdownSection(content, "Requirement Coverage");
   const notes = extractMarkdownSection(content, "Notes");
   const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+  const parsedPhaseBlocks = phaseBlocks
+    .map((phaseBlock) => parseBootstrapRoadmapPhaseBlock(phaseBlock))
+    .filter((phaseBlock): phaseBlock is BootstrapRoadmapPhaseValidationBlock => phaseBlock !== null);
+  const phaseDetails = extractBootstrapRoadmapPhaseDetails(content);
+  const phaseDetailByNumber = new Map(
+    phaseDetails.map((detail) => [detail.phaseNumber, detail])
+  );
   const coverageIds = extractBootstrapScopedRequirementIds(requirementCoverage);
-  const phaseRequirementRefs = phaseBlocks.flatMap((phaseBlock) =>
-    extractBootstrapRoadmapPhaseRequirementIds(phaseBlock)
+  const committedCoverageIds = extractBootstrapRoadmapScopedRequirementIds(
+    requirementCoverage,
+    /\bcommitted\b/i
+  );
+  const phaseRequirementRefs = parsedPhaseBlocks.flatMap((phaseBlock) =>
+    phaseBlock.requirementIds.length > 0
+      ? phaseBlock.requirementIds
+      : (phaseDetailByNumber.get(phaseBlock.phaseNumber)?.requirementIds ?? [])
   );
   const duplicatePhaseRequirementRefs = valuesWithDuplicates(phaseRequirementRefs);
 
@@ -4105,34 +4255,161 @@ function validateBootstrapRoadmapArtifact(
 
     if (duplicatePhaseRequirementRefs.length > 0) {
       issues.push(
-        `Roadmap artifact phase entries must not reference a requirement ID more than once: ${duplicatePhaseRequirementRefs.join(", ")}.`
+        `Roadmap artifact field Phases has duplicate requirement mapping IDs ${duplicatePhaseRequirementRefs.join(", ")}. Repair by assigning each committed requirement ID to exactly one phase.`
       );
     }
 
     for (const phaseBlock of phaseBlocks) {
-      if (!/^- \[(?: |x)\] Phase \d+(?:\.\d+)?:\s+\S+/m.test(phaseBlock)) {
-        issues.push("Roadmap artifact phase entries must include a numbered phase title.");
-      }
+      const parsedPhaseBlock = parseBootstrapRoadmapPhaseBlock(phaseBlock);
+      const phaseLabel = parsedPhaseBlock ? `Phase ${parsedPhaseBlock.phaseNumber}` : "an unknown phase";
 
-      if (!/Objective:\s*\S+/m.test(phaseBlock)) {
-        issues.push("Roadmap artifact phase entries must include an objective.");
-      }
-
-      const phaseRequirementIds = extractBootstrapRoadmapPhaseRequirementIds(phaseBlock);
-      const successCriteria = extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock);
-
-      if (phaseRequirementIds.length === 0) {
+      if (!parsedPhaseBlock) {
         issues.push(
-          "Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause."
-        );
-      } else if (phaseRequirementIds.some((requirementId) => !coverageIds.includes(requirementId))) {
-        issues.push(
-          "Roadmap artifact phase entries may only reference requirement IDs listed in Requirement Coverage."
+          "Roadmap artifact field Phases contains a malformed phase checkbox line. Repair by using `- [ ] Phase N: Title (Requirements: REQ-01)` or `- [ ] **Phase N: Title** (Requirements: REQ-01)`."
         );
       }
 
-      if (successCriteria.length === 0) {
-        issues.push("Roadmap artifact phase entries must include at least one success criteria bullet.");
+      const detail = parsedPhaseBlock
+        ? phaseDetailByNumber.get(parsedPhaseBlock.phaseNumber)
+        : undefined;
+      const objective = phaseBlock.match(/Objective:\s*(\S.+)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
+
+      if (objective.length === 0) {
+        issues.push(
+          `Roadmap artifact ${phaseLabel} field Objective is missing or empty. Repair by adding an Objective child bullet under ${phaseLabel} or \`**Goal**: <phase goal>\` in ${phaseLabel}'s Phase Details block.`
+        );
+      }
+
+      const phaseRequirementIds =
+        parsedPhaseBlock && parsedPhaseBlock.requirementIds.length > 0
+          ? parsedPhaseBlock.requirementIds
+          : (detail?.requirementIds ?? []);
+      const successCriteria =
+        parsedPhaseBlock && parsedPhaseBlock.successCriteria.length > 0
+          ? parsedPhaseBlock.successCriteria
+          : (detail?.successCriteria ?? []);
+      const allowsDeferredRequirementMapping =
+        parsedPhaseBlock !== null &&
+        parsedPhaseBlock.phaseNumber.includes(".") &&
+        detail !== undefined &&
+        detail.requirementIds.length === 0;
+
+      if (phaseRequirementIds.length === 0 && !allowsDeferredRequirementMapping) {
+        issues.push(
+          `Roadmap artifact ${phaseLabel} field Requirements is missing requirement IDs. Repair by adding a Requirements clause with IDs from Requirement Coverage.`
+        );
+        issues.push(
+          `Roadmap artifact phase entries must include at least one requirement identifier in a Requirements clause. ${phaseLabel} field Requirements is missing requirement IDs; repair by adding a Requirements clause with IDs from Requirement Coverage.`
+        );
+      } else {
+        const unknownRequirementIds = phaseRequirementIds.filter(
+          (requirementId) => !coverageIds.includes(requirementId)
+        );
+
+        if (unknownRequirementIds.length > 0) {
+          issues.push(
+            `Roadmap artifact ${phaseLabel} field Requirements references unknown IDs ${unknownRequirementIds.join(", ")}. Repair by adding those IDs to Requirement Coverage or replacing them with declared requirement IDs.`
+          );
+          issues.push(
+            ...unknownRequirementIds.map(
+              (requirementId) =>
+                `${phaseLabel}${parsedPhaseBlock?.phaseName ? ` (${parsedPhaseBlock.phaseName})` : ""} references requirement ${requirementId} which is not declared in Requirement Coverage. Repair ${phaseLabel} field Requirements by adding ${requirementId} to Requirement Coverage or replacing it with a declared requirement ID.`
+            )
+          );
+        }
+      }
+
+      if (successCriteria.length < 2 || successCriteria.length > 5) {
+        if (successCriteria.length === 0) {
+          issues.push(
+            "Roadmap artifact phase entries must include at least one success criteria bullet."
+          );
+        }
+
+        if (parsedPhaseBlock) {
+          issues.push(
+            `Roadmap artifact ${phaseLabel} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel}.`
+          );
+          issues.push(
+            successCriteria.length < 2
+              ? `${phaseLabel} (${parsedPhaseBlock.phaseName}) must include at least two success criteria. Repair ${phaseLabel} field Success Criteria by listing 2-5 observable criteria.`
+              : `${phaseLabel} (${parsedPhaseBlock.phaseName}) must include no more than five success criteria. Repair ${phaseLabel} field Success Criteria by trimming it to 2-5 observable criteria.`
+          );
+          continue;
+        }
+
+        issues.push(
+          `Roadmap artifact ${phaseLabel} field Success Criteria has ${successCriteria.length} item(s). Repair by listing 2-5 observable success criteria under ${phaseLabel}.`
+        );
+      }
+    }
+
+    if (committedCoverageIds.length > 0) {
+      const mappedRequirementIds = new Set(phaseRequirementRefs);
+      const missingCommittedIds = committedCoverageIds.filter(
+        (requirementId) => !mappedRequirementIds.has(requirementId)
+      );
+
+      if (missingCommittedIds.length > 0) {
+        issues.push(
+          `Roadmap artifact field Phases is missing committed requirement IDs ${missingCommittedIds.join(", ")}. Repair by assigning each missing ID to exactly one phase Requirements clause.`
+        );
+      }
+    }
+
+    const phaseByNumber = new Map(
+      parsedPhaseBlocks.map((phaseBlock) => [phaseBlock.phaseNumber, phaseBlock])
+    );
+
+    for (const detail of phaseDetails) {
+      const matchingPhase = phaseByNumber.get(detail.phaseNumber);
+      const detailLabel = `Phase ${detail.phaseNumber}`;
+
+      if (!matchingPhase) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details references a phase absent from Phases. Repair by adding ${detailLabel} to Phases or removing the orphan Phase Details block.`
+        );
+        continue;
+      }
+
+      if (detail.goal === null || detail.goal.length === 0) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Goal is missing or empty. Repair by adding \`**Goal**: <phase goal>\` to the Phase Details block.`
+        );
+      }
+
+      const matchingPhaseRequirementIds =
+        matchingPhase.requirementIds.length > 0
+          ? matchingPhase.requirementIds
+          : detail.requirementIds;
+      const phaseRequirementSet = new Set(matchingPhaseRequirementIds);
+      const detailRequirementSet = new Set(detail.requirementIds);
+      const missingDetailIds = matchingPhaseRequirementIds.filter(
+        (requirementId) => !detailRequirementSet.has(requirementId)
+      );
+      const extraDetailIds = detail.requirementIds.filter(
+        (requirementId) => !phaseRequirementSet.has(requirementId)
+      );
+
+      if (missingDetailIds.length > 0 || extraDetailIds.length > 0) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details Requirements does not match Phases. Offending IDs: missing ${missingDetailIds.join(", ") || "none"}; extra ${extraDetailIds.join(", ") || "none"}. Repair by making \`**Requirements**\` match ${detailLabel}'s Requirements clause exactly.`
+        );
+      }
+
+      if (detail.successCriteria.length < 2 || detail.successCriteria.length > 5) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Phase Details Success Criteria has ${detail.successCriteria.length} item(s). Repair by recording 2-5 semicolon-separated observable criteria.`
+        );
+      }
+
+      if (
+        detail.status !== null &&
+        !ROADMAP_PHASE_DETAIL_STATUSES.has(normalizeRoadmapPhaseDetailStatus(detail.status))
+      ) {
+        issues.push(
+          `Roadmap artifact ${detailLabel} field Status uses unsupported value \`${detail.status}\`. Repair by using one of: planned, in_progress, completed, done.`
+        );
       }
     }
 
@@ -7982,6 +8259,31 @@ function collectPhaseSummaryPathsForArtifact(
   );
 }
 
+function readStateLineValue(raw: string, label: string): string | null {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = raw.match(new RegExp(`^-\\s*${escapedLabel}:\\s*(.+)$`, "im"));
+
+  return match?.[1]?.trim() ?? null;
+}
+
+async function isActiveDiscussPhaseDraft(
+  projectRoot: string,
+  inspection: Awaited<ReturnType<typeof inspectBlueprintArtifacts>>
+): Promise<boolean> {
+  if (!inspection.core.present.includes(BLUEPRINT_STATE_PATH)) {
+    return false;
+  }
+
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH), "utf8");
+    const activeCommand = readStateLineValue(raw, "Active command");
+
+    return activeCommand === blueprintDirectCommand("discuss-phase");
+  } catch {
+    return false;
+  }
+}
+
 export async function blueprintArtifactValidate(
   args: ArtifactValidateArgs = {}
 ): Promise<ArtifactValidateResult> {
@@ -7995,6 +8297,7 @@ export async function blueprintArtifactValidate(
     /phase-discovery/i.test(artifact)
   );
   const bootstrapAssessment = await assessBootstrapRepoShape(projectRoot, inspection);
+  const activeDiscussPhaseDraft = await isActiveDiscussPhaseDraft(projectRoot, inspection);
 
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
@@ -8126,25 +8429,29 @@ export async function blueprintArtifactValidate(
 
   for (const target of phaseArtifactValidationTargets) {
     for (const artifact of inspection.phases.filter((value) => value.endsWith(target.suffix))) {
-    const absolutePath = resolveBlueprintPath(projectRoot, artifact);
-    const raw = await fs.readFile(absolutePath, "utf8");
+      if (activeDiscussPhaseDraft && target.kind === "context") {
+        continue;
+      }
+
+      const absolutePath = resolveBlueprintPath(projectRoot, artifact);
+      const raw = await fs.readFile(absolutePath, "utf8");
       const validation = validatePhaseArtifactContent(raw, target.kind);
 
-    for (const issue of validation.issues) {
-      issues.push(`${artifact}: ${issue}`);
-    }
+      for (const issue of validation.issues) {
+        issues.push(`${artifact}: ${issue}`);
+      }
 
-    for (const warning of validation.warnings) {
-      warnings.push(`${artifact}: ${warning}`);
-    }
+      for (const warning of validation.warnings) {
+        warnings.push(`${artifact}: ${warning}`);
+      }
 
-    if (!validation.valid) {
+      if (!validation.valid) {
         suggestedRepairs.add(target.repair);
       }
     }
   }
 
-  for (const artifact of [
+  for (const artifact of activeDiscussPhaseDraft ? [] : [
     `${BLUEPRINT_DIR}/PROJECT.md`,
     `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
     `${BLUEPRINT_DIR}/ROADMAP.md`

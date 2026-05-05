@@ -6,7 +6,10 @@ import os from "node:os";
 import path from "node:path";
 
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
-import { blueprintArtifactScaffold } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactScaffold,
+  blueprintArtifactValidate
+} from "../src/mcp/tools/artifacts.js";
 import {
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
@@ -207,6 +210,268 @@ async function createInsertRoadmapRepo(): Promise<string> {
   return repoPath;
 }
 
+async function createContractRoadmapRepo(options: {
+  currentPhase?: string;
+  includePhaseThreeRequirement?: boolean;
+  includePhaseFiveRequirement?: boolean;
+} = {}): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-contract-roadmap-tools-");
+  const currentPhase = options.currentPhase ?? "2";
+  const requirementRows = [
+    "| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |",
+    "| RQ-02 | Keep core runtime traceable. | Pending | Phase 2 coverage. |",
+    options.includePhaseThreeRequirement
+      ? "| RQ-03 | Add the inserted API stabilization slice. | Pending | Reserved for inserted decimal phase. |"
+      : null,
+    "| RQ-04 | Keep release hardening traceable. | Pending | Phase 4 coverage. |",
+    options.includePhaseFiveRequirement
+      ? "| RQ-05 | Add repair-grade follow-through. | Pending | Reserved for appended repair phase. |"
+      : null
+  ].filter(Boolean).join("\n");
+  const coverageIds = [
+    "RQ-01",
+    "RQ-02",
+    options.includePhaseThreeRequirement ? "RQ-03" : null,
+    "RQ-04",
+    options.includePhaseFiveRequirement ? "RQ-05" : null
+  ].filter(Boolean).join(", ");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/01-foundation"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-core-runtime"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/04-release-hardening"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/PROJECT.md"),
+    `# Project: Contract Fixture
+
+## Vision
+
+Keep roadmap mutations artifact-valid while preserving phase traceability.
+
+## Audience
+
+- Primary: Blueprint maintainers
+- Secondary: Extension contributors
+
+## Constraints
+
+- Preserve requirement identifiers across roadmap mutations.
+- Keep roadmap-admin commands deterministic.
+
+## Current Milestone
+
+- v2 contract parity
+
+## Bootstrap Shape
+
+- Repository shape: greenfield
+- Codebase mapping: pending
+- Bootstrap posture: contract parity fixture
+
+## Scope Posture
+
+- Committed v1: ${coverageIds}
+- Deferred: none
+- Out-of-scope: none
+
+## Non-Goals
+
+- Shipping source repairs from this regression fixture.
+
+## Assumptions
+
+- Runtime workers will make roadmap mutations satisfy this contract.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Contract Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+${requirementRows}
+
+## Scope Summary
+
+- Committed v1: ${coverageIds}
+- Deferred: none
+- Out-of-scope: none
+
+## Committed V1 Scope
+
+### Roadmap parity
+
+- \`RQ-01\`: Keep the foundation traceable.
+- \`RQ-02\`: Keep core runtime traceable.
+${options.includePhaseThreeRequirement ? "- `RQ-03`: Add the inserted API stabilization slice.\n" : ""}- \`RQ-04\`: Keep release hardening traceable.
+${options.includePhaseFiveRequirement ? "- `RQ-05`: Add repair-grade follow-through.\n" : ""}
+## Deferred Scope
+
+### none
+
+- none
+
+## Out-of-Scope Cuts
+
+### none
+
+- none
+
+## Traceability Notes
+
+- Keep every requirement ID referenced from .blueprint/ROADMAP.md.
+
+## Open Questions
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Contract Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Bootstrap Status
+
+- Repository shape: greenfield
+- Codebase mapping: pending
+- Roadmap confidence: ready for progress review
+
+## Requirement Coverage
+
+- Committed v1: ${coverageIds}
+- Deferred: none
+- Out-of-scope: none
+
+## Phases
+
+- [x] Phase 1: Foundation (Requirements: RQ-01)
+  - Objective: Keep the foundation traceable.
+  - Success Criteria:
+    - Foundation requirement coverage is explicit.
+    - Foundation evidence can be validated.
+- [ ] Phase 2: Core Runtime (Requirements: RQ-02)
+  - Objective: Keep core runtime traceable.
+  - Success Criteria:
+    - Core runtime requirement coverage is explicit.
+    - Core runtime evidence can be validated.
+- [ ] Phase 4: Release Hardening (Requirements: RQ-04)
+  - Objective: Keep release hardening traceable.
+  - Success Criteria:
+    - Release hardening requirement coverage is explicit.
+    - Release hardening evidence can be validated.
+
+## Phase Details
+
+### Phase 1: Foundation
+**Goal**: Keep the foundation traceable.
+**Requirements**: RQ-01
+**Depends on**: none
+**Success Criteria**: Foundation requirement coverage is explicit; Foundation evidence can be validated.
+**Status**: planned
+
+### Phase 2: Core Runtime
+**Goal**: Keep core runtime traceable.
+**Requirements**: RQ-02
+**Depends on**: Phase 1
+**Success Criteria**: Core runtime requirement coverage is explicit; Core runtime evidence can be validated.
+**Status**: planned
+
+### Phase 4: Release Hardening
+**Goal**: Keep release hardening traceable.
+**Requirements**: RQ-04
+**Depends on**: Phase 2
+**Success Criteria**: Release hardening requirement coverage is explicit; Release hardening evidence can be validated.
+**Status**: planned
+
+## Notes
+
+- Keep generated roadmap mutations within the bootstrap roadmap contract.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: ${currentPhase}
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createMalformedRoadmapRepo(): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-malformed-roadmap-tools-");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/01-foundation"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Malformed Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] Phase 1: Foundation
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 1
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-12T00:00:00.000Z
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 test("roadmap tools register blueprint_roadmap_add_phase", () => {
   assert.ok(
     blueprintToolNames.includes("blueprint_roadmap_add_phase"),
@@ -288,6 +553,30 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
   assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+});
+
+test("blueprint_roadmap_add_phase keeps the mutated ROADMAP artifact-valid", async (t) => {
+  const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Repair Follow Through",
+    expectedPhaseNumber: "5",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Add repair-grade follow-through for the roadmap contract.",
+      successCriteria: "Roadmap mutations remain artifact-valid after append.",
+      repairRequirementIds: ["RQ-05"]
+    }
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.deepEqual(validation.issues, []);
 });
 
 test("add-phase scaffold path uses returned phase metadata as authoritative context seed", async (t) => {
@@ -532,6 +821,24 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   assert.match(roadmapBody, /\*\*Depends on\*\*: Phase 2/);
 });
 
+test("blueprint_roadmap_insert_phase keeps the mutated ROADMAP artifact-valid", async (t) => {
+  const repoPath = await createContractRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapInsertPhase({
+    cwd: repoPath,
+    after: 2,
+    description: "API Stabilization"
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.deepEqual(validation.issues, []);
+});
+
 test("blueprint_roadmap_insert_phase increments the decimal suffix from roadmap state on repeated inserts", async (t) => {
   const repoPath = await createInsertRoadmapRepo();
   t.after(async () => {
@@ -768,6 +1075,71 @@ test("blueprint_roadmap_insert_phase rejects missing integer targets", async (t)
         description: "Emergency follow-up"
       }),
     /does not exist/
+  );
+});
+
+test("blueprint_roadmap_add_phase malformed ROADMAP errors include recovery guidance", async (t) => {
+  const repoPath = await createMalformedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Malformed Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phasez
+
+- [ ] Phase 1: Foundation
+`,
+    "utf8"
+  );
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapAddPhase({
+        cwd: repoPath,
+        description: "Recovery Guidance"
+      }),
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+
+      assert.match(message, /Malformed \.blueprint\/ROADMAP\.md/);
+      assert.match(message, /missing field "## Phases"/);
+      assert.match(message, /Repair by adding a top-level "## Phases" section/);
+      assert.match(message, /re-run \/blu-add-phase/);
+
+      return true;
+    }
+  );
+});
+
+test("blueprint_roadmap_insert_phase malformed ROADMAP errors include recovery guidance", async (t) => {
+  const repoPath = await createMalformedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: 1,
+        description: "Recovery Guidance"
+      }),
+    (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+
+      assert.match(message, /Malformed \.blueprint\/ROADMAP\.md/);
+      assert.match(message, /missing field "## Phase Details"/);
+      assert.match(message, /Repair by adding a top-level "## Phase Details" section/);
+      assert.match(message, /re-running \/blu-insert-phase/);
+
+      return true;
+    }
   );
 });
 

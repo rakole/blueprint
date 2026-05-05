@@ -29,7 +29,7 @@ Blueprint-native.
 - Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
   UI readiness, and the config-aware `planningReadiness` handoff gate.
 - Read `mcp_blueprint_blueprint_phase_artifact_read` for actual current
-  context, research, UI, and other relevant discovery artifact content that
+  `XX-CONTEXT.md`, research, UI, and other relevant discovery artifact content that
   exists. Status metadata alone is not enough.
 - Read `mcp_blueprint_blueprint_phase_validation_read` for saved verification
   or UAT evidence when present.

@@ -163,6 +163,8 @@ this runtime.
 The `phase.context` authoring template is the schema authority. Populate every
 required section with concrete content:
 
+The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
+
 - `Phase Boundary`: fixed phase scope, in-scope and out-of-scope boundaries,
   success criteria
 - `Discovery Grounding`: project brief, requirements grounding, workflow

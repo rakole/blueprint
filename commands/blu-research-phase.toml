@@ -25,5 +25,5 @@ Response requirements:
 - Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, filenames, or bare artifact names back into Blueprint phase-write or scaffold tools.
 - Do not persist scaffold-only or validation-failing research content.
 - Do not present blocked lifecycle commands as runnable.
-- If research validation rejects a draft, repair the same normalized draft once and retry; if identical diagnostics repeat, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and stop.
+- If research validation rejects a draft, repair the same normalized draft once and retry; if identical diagnostics repeat, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, do not inspect MCP source as a repair strategy, and stop.
 """
