@@ -606,11 +606,23 @@ test("new-project interactive mode rejects missing bootstrapSeed before writes",
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({ cwd: repoPath }),
-    /Interactive project bootstrap requires a sufficient bootstrapSeed/i
-  );
+  const result = await blueprintProjectInit({ cwd: repoPath });
 
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.match(result.issues!.join("\n"), /requires bootstrapSeed\.vision/i);
+  assert.match(result.issues!.join("\n"), /requires at least one bootstrapSeed\.requirements entry/i);
+  assert.deepEqual(
+    result.diagnostics!.map((diagnostic) => diagnostic.path),
+    [
+      "bootstrapSeed.vision",
+      "bootstrapSeed.currentMilestone",
+      "bootstrapSeed.requirements",
+      "bootstrapSeed.roadmapPhases"
+    ]
+  );
+  assert.equal(result.diagnostics!.every((diagnostic) => diagnostic.retryable), true);
+  assert.match(result.suggestedRepairs!.join("\n"), /\/blu-new-project/);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
@@ -620,17 +632,20 @@ test("new-project interactive mode rejects insufficient bootstrapSeed before wri
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({
-      cwd: repoPath,
-      bootstrapSeed: {
-        vision: "A thin seed without durable requirements or roadmap phases.",
-        currentMilestone: "v1"
-      }
-    }),
-    /Interactive project bootstrap requires a sufficient bootstrapSeed/i
-  );
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision: "A thin seed without durable requirements or roadmap phases.",
+      currentMilestone: "v1"
+    }
+  });
 
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.deepEqual(
+    result.diagnostics!.map((diagnostic) => diagnostic.code),
+    ["seed_requirements_missing", "seed_roadmap_phases_missing"]
+  );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
@@ -641,11 +656,18 @@ test("new-project auto mode rejects missing supplied or repo-derived context bef
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" }),
-    /Automatic project bootstrap requires a substantive supplied or repo-derived brief/i
-  );
+  const result = await blueprintProjectInit({ cwd: repoPath, bootstrapMode: "auto" });
 
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.deepEqual(result.diagnostics![0], {
+    path: "bootstrapSeed.vision",
+    code: "seed_auto_context_missing",
+    message:
+      "Automatic project bootstrap requires a substantive supplied or repo-derived brief before any writes.",
+    repair: "Provide bootstrapSeed.vision or add README/package description context before retrying.",
+    retryable: true
+  });
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
@@ -655,8 +677,72 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-01",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Map each committed requirement to a single roadmap phase before persistence.",
+          status: "Pending",
+          notes: "Duplicate mapping guard."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "First Mapping Pass",
+          objective: "Map committed requirements into the first roadmap phase.",
+          requirementIds: ["PF-01"],
+          successCriteria: [
+            "The first phase names the committed requirement selected for bootstrap.",
+            "The preview shows the requirement mapping before the write starts."
+          ]
+        },
+        {
+          phase: "2",
+          title: "Second Mapping Pass",
+          objective: "Accidentally map the same committed requirement again.",
+          requirementIds: ["PF-01"],
+          successCriteria: [
+            "The second phase repeats the committed requirement for regression coverage.",
+            "The preflight rejects duplicate committed coverage before artifacts exist."
+          ]
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.match(result.issues!.join("\n"), /Committed requirement PF-01 must be mapped to exactly one roadmap phase/i);
+  assert.equal(
+    result.diagnostics!.find((diagnostic) => diagnostic.code === "seed_committed_requirement_coverage_invalid")?.path,
+    "bootstrapSeed.roadmapPhases[].requirementIds"
+  );
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
+test("new-project can retry after a structured preflight invalid result", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalidResult = await executeToolHandlerWithFailureLogging(
+    {
+      name: "blueprint_project_init",
+      description: "fixture",
+      handler: async (args: Record<string, unknown>) =>
+        blueprintProjectInit(args as Parameters<typeof blueprintProjectInit>[0])
+    },
+    {
       cwd: repoPath,
       bootstrapSeed: {
         vision:
@@ -664,13 +750,13 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
         currentMilestone: "v1",
         requirements: [
           {
-            id: "PF-01",
+            id: "PF-31",
             scope: "committed",
             group: "Traceability",
             requirement:
-              "Map each committed requirement to a single roadmap phase before persistence.",
+              "Let maintainers retry project bootstrap after seed preflight failures without deleting operational logs.",
             status: "Pending",
-            notes: "Duplicate mapping guard."
+            notes: "Retryability guard."
           }
         ],
         roadmapPhases: [
@@ -678,7 +764,7 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
             phase: "1",
             title: "First Mapping Pass",
             objective: "Map committed requirements into the first roadmap phase.",
-            requirementIds: ["PF-01"],
+            requirementIds: ["PF-31"],
             successCriteria: [
               "The first phase names the committed requirement selected for bootstrap.",
               "The preview shows the requirement mapping before the write starts."
@@ -688,7 +774,7 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
             phase: "2",
             title: "Second Mapping Pass",
             objective: "Accidentally map the same committed requirement again.",
-            requirementIds: ["PF-01"],
+            requirementIds: ["PF-31"],
             successCriteria: [
               "The second phase repeats the committed requirement for regression coverage.",
               "The preflight rejects duplicate committed coverage before artifacts exist."
@@ -696,76 +782,15 @@ test("new-project rejects seeds with duplicate committed mappings before writes"
           }
         ]
       }
-    }),
-    /Committed requirement PF-01 must be mapped to exactly one roadmap phase/i
-  );
-
-  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
-});
-
-test("new-project can retry after a preflight failure leaves only the MCP failure log", async (t) => {
-  const repoPath = await createRepoFromFixture("fresh-repo");
-  t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
-  });
-
-  await assert.rejects(
-    executeToolHandlerWithFailureLogging(
-      {
-        name: "blueprint_project_init",
-        description: "fixture",
-        handler: async (args: Record<string, unknown>) =>
-          blueprintProjectInit(args as Parameters<typeof blueprintProjectInit>[0])
-      },
-      {
-        cwd: repoPath,
-        bootstrapSeed: {
-          vision:
-            "Create a reliable project bootstrap workflow with durable requirement traceability.",
-          currentMilestone: "v1",
-          requirements: [
-            {
-              id: "PF-31",
-              scope: "committed",
-              group: "Traceability",
-              requirement:
-                "Let maintainers retry project bootstrap after seed preflight failures without deleting operational logs.",
-              status: "Pending",
-              notes: "Retryability guard."
-            }
-          ],
-          roadmapPhases: [
-            {
-              phase: "1",
-              title: "First Mapping Pass",
-              objective: "Map committed requirements into the first roadmap phase.",
-              requirementIds: ["PF-31"],
-              successCriteria: [
-                "The first phase names the committed requirement selected for bootstrap.",
-                "The preview shows the requirement mapping before the write starts."
-              ]
-            },
-            {
-              phase: "2",
-              title: "Second Mapping Pass",
-              objective: "Accidentally map the same committed requirement again.",
-              requirementIds: ["PF-31"],
-              successCriteria: [
-                "The second phase repeats the committed requirement for regression coverage.",
-                "The preflight rejects duplicate committed coverage before artifacts exist."
-              ]
-            }
-          ]
-        }
-      }
-    ),
-    /Committed requirement PF-31 must be mapped to exactly one roadmap phase/i
-  );
+    }
+  ) as Awaited<ReturnType<typeof blueprintProjectInit>>;
 
   const failureLogPath = path.join(repoPath, ".blueprint/mcp-write-failures.ndjson");
   const retryableStatus = await blueprintProjectStatus({ cwd: repoPath });
   const retryableValidation = await blueprintArtifactValidate({ cwd: repoPath });
 
+  assert.equal(invalidResult.status, "invalid");
+  assert.match(invalidResult.issues!.join("\n"), /Committed requirement PF-31 must be mapped to exactly one roadmap phase/i);
   assert.equal(await pathExists(failureLogPath), true);
   assert.equal(retryableStatus.status, "uninitialized");
   assert.match(retryableStatus.nextAction, /\/blu-new-project/);
@@ -791,60 +816,71 @@ test("new-project rejects duplicate phase refs and generic success criteria befo
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({
-      cwd: repoPath,
-      bootstrapSeed: {
-        vision:
-          "Create a reliable project bootstrap workflow with durable requirement traceability.",
-        currentMilestone: "v1",
-        requirements: [
-          {
-            id: "PF-11",
-            scope: "committed",
-            group: "Traceability",
-            requirement:
-              "Prevent duplicate phase identifiers from reaching persisted roadmap artifacts.",
-            status: "Pending",
-            notes: "Duplicate phase guard."
-          },
-          {
-            id: "PF-12",
-            scope: "committed",
-            group: "Quality",
-            requirement:
-              "Require observable success criteria before bootstrap artifacts are written.",
-            status: "Pending",
-            notes: "Generic criterion guard."
-          }
-        ],
-        roadmapPhases: [
-          {
-            phase: "1",
-            title: "Preflight Quality",
-            objective: "Validate roadmap quality before persistence.",
-            requirementIds: ["PF-11"],
-            successCriteria: [
-              "Complete phase.",
-              "The preflight rejects duplicate phase identifiers before artifacts exist."
-            ]
-          },
-          {
-            phase: "1.0",
-            title: "Duplicate Preflight Quality",
-            objective: "Duplicate the normalized first phase reference.",
-            requirementIds: ["PF-12"],
-            successCriteria: [
-              "The duplicate phase reference is detected before roadmap persistence.",
-              "The command leaves `.blueprint/` absent when preflight validation fails."
-            ]
-          }
-        ]
-      }
-    }),
-    /(?=.*duplicate phase reference 1\.0)(?=.*generic success criterion)/is
-  );
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-11",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Prevent duplicate phase identifiers from reaching persisted roadmap artifacts.",
+          status: "Pending",
+          notes: "Duplicate phase guard."
+        },
+        {
+          id: "PF-12",
+          scope: "committed",
+          group: "Quality",
+          requirement:
+            "Require observable success criteria before bootstrap artifacts are written.",
+          status: "Pending",
+          notes: "Generic criterion guard."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Preflight Quality",
+          objective: "Validate roadmap quality before persistence.",
+          requirementIds: ["PF-11"],
+          successCriteria: [
+            "Complete phase.",
+            "The preflight rejects duplicate phase identifiers before artifacts exist."
+          ]
+        },
+        {
+          phase: "1.0",
+          title: "Duplicate Preflight Quality",
+          objective: "Duplicate the normalized first phase reference.",
+          requirementIds: ["PF-12"],
+          successCriteria: [
+            "The duplicate phase reference is detected before roadmap persistence.",
+            "The command leaves `.blueprint/` absent when preflight validation fails."
+          ]
+        }
+      ]
+    }
+  });
 
+  assert.equal(result.status, "invalid");
+  assert.match(result.issues!.join("\n"), /duplicate phase reference 1\.0/is);
+  assert.match(result.issues!.join("\n"), /generic success criterion/is);
+  assert.deepEqual(
+    result.diagnostics!
+      .filter((diagnostic) =>
+        ["seed_duplicate_phase_ref", "seed_success_criterion_generic"].includes(diagnostic.code)
+      )
+      .map((diagnostic) => diagnostic.path),
+    [
+      "bootstrapSeed.roadmapPhases[0].successCriteria[0]",
+      "bootstrapSeed.roadmapPhases[1].phase"
+    ]
+  );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
@@ -854,36 +890,40 @@ test("new-project rejects bootstrap seed roadmap gaps before writes", async (t) 
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  await assert.rejects(
-    blueprintProjectInit({
-      cwd: repoPath,
-      bootstrapSeed: {
-        vision:
-          "Create a reliable project bootstrap workflow with durable requirement traceability.",
-        currentMilestone: "v1",
-        requirements: [
-          {
-            id: "PF-21",
-            scope: "committed",
-            group: "Traceability",
-            requirement:
-              "Reject roadmap phases that omit requirement coverage or observable success criteria.",
-            status: "Pending",
-            notes: "Missing phase detail guard."
-          }
-        ],
-        roadmapPhases: [
-          {
-            phase: "1",
-            title: "Incomplete Roadmap Phase",
-            objective: "Show that seed gaps are rejected before persistence."
-          }
-        ]
-      }
-    }),
-    /must include explicit requirementIds[\s\S]*must include explicit successCriteria/i
-  );
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-21",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Reject roadmap phases that omit requirement coverage or observable success criteria.",
+          status: "Pending",
+          notes: "Missing phase detail guard."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Incomplete Roadmap Phase",
+          objective: "Show that seed gaps are rejected before persistence."
+        }
+      ]
+    }
+  });
 
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.match(result.issues!.join("\n"), /must include explicit requirementIds[\s\S]*must include explicit successCriteria/i);
+  assert.deepEqual(
+    result.diagnostics!.map((diagnostic) => diagnostic.code),
+    ["seed_phase_requirement_ids_missing", "seed_phase_success_criteria_missing"]
+  );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 

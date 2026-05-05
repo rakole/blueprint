@@ -33,8 +33,13 @@ type ProjectInitArgs = {
     bootstrapMode?: "interactive" | "auto";
     bootstrapSeed?: BootstrapSeed;
 };
-type ProjectInitResult = {
+type ProjectInitSuccessResult = {
     projectRoot: string;
+    status?: never;
+    written?: never;
+    issues?: never;
+    diagnostics?: never;
+    suggestedRepairs?: never;
     createdPaths: string[];
     seededState: {
         updatedFields: string[];
@@ -53,6 +58,24 @@ type ProjectInitResult = {
     nextAction: string;
     warnings: string[];
 };
+type ProjectInitDiagnostic = {
+    path: string;
+    code: string;
+    message: string;
+    repair: string;
+    retryable: boolean;
+    allowedValues?: string[];
+    argsPatch?: unknown;
+};
+type ProjectInitInvalidResult = {
+    projectRoot: string;
+    status: "invalid";
+    written: false;
+    issues: string[];
+    diagnostics: ProjectInitDiagnostic[];
+    suggestedRepairs: string[];
+};
+type ProjectInitResult = ProjectInitSuccessResult | ProjectInitInvalidResult;
 type ProjectStatusArgs = {
     cwd?: string;
 };

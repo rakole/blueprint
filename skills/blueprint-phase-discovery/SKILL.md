@@ -153,7 +153,7 @@ does not grant broader tool scope to a command.
 
 - Blueprint does not create, manage, or repair repo-root `CONTEXT.md`.
 - Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
-- Phase context lives only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
+- Phase context lives only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`; the canonical filename shape is `XX-CONTEXT.md`.
 - `/blu-discuss-phase` authors and repairs phase context.
 - `/blu-research-phase` and `/blu-ui-phase` read phase context and route back to `/blu-discuss-phase <phase>` when it is missing, invalid, or unusable; they must not repair, overwrite, synthesize, or mirror context.
 - `/blu-plan-phase` follows the same read-only context boundary from its planning skill contract.

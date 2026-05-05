@@ -172,6 +172,7 @@ type ArtifactValidateArgs = {
 type ArtifactValidateResult = {
     valid: boolean;
     issues: string[];
+    diagnostics: ArtifactValidationDiagnostic[];
     suggestedRepairs: string[];
     warnings: string[];
 };
@@ -184,6 +185,17 @@ export type PhaseArtifactValidationDiagnostic = {
     repair: string;
     retryable: boolean;
     nextTool?: string;
+};
+type ArtifactValidationDiagnostic = {
+    artifactId: ArtifactContractId | "blueprint.config" | "blueprint.core" | "blueprint.phase";
+    path: string;
+    section: string | null;
+    code: string;
+    message: string;
+    allowedValues?: string[];
+    expected?: string;
+    repair: string;
+    retryable: boolean;
 };
 type ArtifactSummaryDigestArgs = {
     cwd?: string;
@@ -589,6 +601,7 @@ export declare function validateResearchArtifactContent(content: string): {
     valid: boolean;
     issues: string[];
     warnings: string[];
+    diagnostics: PhaseArtifactValidationDiagnostic[];
 };
 export declare function validatePhaseArtifactContent(content: string, artifact: "context" | "discussion-log" | "research" | "ui-spec"): {
     valid: boolean;

@@ -232,6 +232,7 @@ place and report the exact blocker plus the next safe continuation action.
 - Blueprint does not create, manage, or repair repo-root `CONTEXT.md`.
 - Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
 - `/blu-discuss-phase` authors and repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md` through MCP artifact tools.
+- The canonical phase context filename shape is `XX-CONTEXT.md` inside the resolved phase directory.
 - Research, UI, and planning commands consume this phase context as read-only evidence and route back to `/blu-discuss-phase <phase>` when it is missing, invalid, contradictory, or unusable.
 - If context or discussion validation returns diagnostics, repair the same normalized draft once and retry the same MCP write path.
 - If the retry returns identical diagnostics, stop, preserve the discuss checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.
