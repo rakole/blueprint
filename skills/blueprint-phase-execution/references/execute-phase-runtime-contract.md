@@ -117,7 +117,10 @@ helper guidance.
   issues caused by the current changes, cap repeated repair attempts, and write
   `PARTIAL` or `BLOCKED` summaries when verification cannot pass honestly.
 - Do not persist `COMPLETED` summaries while required tests fail, lower-wave
-  blockers remain, or acceptance criteria are unverified.
+  blockers remain, or acceptance criteria are unverified. A `COMPLETED`
+  summary closes only the selected plan's execution debt; route it back to
+  `/blu-execute-phase <phase>` while other phase plans remain pending and to
+  `/blu-validate-phase <phase>` only after the last pending plan is summarized.
 - After summary writes finish, rerun
   `mcp_blueprint_blueprint_phase_summary_index`, then
   `mcp_blueprint_blueprint_artifact_validate`, and finally

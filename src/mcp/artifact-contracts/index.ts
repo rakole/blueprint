@@ -1061,7 +1061,7 @@ const PHASE_SUMMARY_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, planId, artifact, path, linkedPlanPath, content, or the rendered Plan marker; the write tool owns identity, plan linkage, and path derivation.",
     "Author against the narrowed taskSchema returned by blueprint_phase_summary_authoring_context or blueprint_phase_summary_validate_model so acceptance checks, dependency plans, summary path, and status-safe next actions stay deterministic.",
-    "COMPLETED summaries must prove every targeted verification row passed, use exact none sentinel rows for manual/deferred work and gap routes, and route to /blu-validate-phase for the current phase.",
+    "COMPLETED summaries must prove every targeted verification row passed, use exact none sentinel rows for manual/deferred work and gap routes, and use the runtime-narrowed next action: /blu-execute-phase while other plans remain pending or /blu-validate-phase when the selected plan closes the phase execution set.",
     "PARTIAL and BLOCKED summaries must include at least one concrete gap or repair route, at least one non-pass targeted verification row, and a non-none follow-up.",
     "Use concrete command, test, artifact, or repo-path evidence; do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
   ],

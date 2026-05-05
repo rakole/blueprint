@@ -134,9 +134,12 @@ and no-subagent fallback behavior, read the rich runtime contract in
   expects `planId`.
 - `COMPLETED` is the only summary status that closes execution debt. `PARTIAL`
   and `BLOCKED` remain pending carry-forward evidence.
-- Truth table: `COMPLETED` requires `ready-for-validation`, completion state
-  `complete`, passing targeted verification rows, exact `none` sentinel rows
-  for manual/deferred work and gaps, and `/blu-validate-phase <phase>`.
+- Truth table: `COMPLETED` closes the selected plan's execution debt and
+  requires completion state `complete`, passing targeted verification rows, and
+  exact `none` sentinel rows for manual/deferred work and gaps. It uses
+  `not-ready-for-validation` plus `/blu-execute-phase <phase>` while other
+  phase plans remain pending, and `ready-for-validation` plus
+  `/blu-validate-phase <phase>` only when no phase plans remain pending.
   `PARTIAL` requires `not-ready-for-validation`, completion state `pending`,
   at least one non-pass targeted verification row, a concrete open repair
   route, and `/blu-execute-phase <phase>`. `BLOCKED` requires `blocked`,

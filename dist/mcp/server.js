@@ -17153,7 +17153,7 @@ var init_artifact_contracts = __esm({
       qualityRules: [
         "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, planId, artifact, path, linkedPlanPath, content, or the rendered Plan marker; the write tool owns identity, plan linkage, and path derivation.",
         "Author against the narrowed taskSchema returned by blueprint_phase_summary_authoring_context or blueprint_phase_summary_validate_model so acceptance checks, dependency plans, summary path, and status-safe next actions stay deterministic.",
-        "COMPLETED summaries must prove every targeted verification row passed, use exact none sentinel rows for manual/deferred work and gap routes, and route to /blu-validate-phase for the current phase.",
+        "COMPLETED summaries must prove every targeted verification row passed, use exact none sentinel rows for manual/deferred work and gap routes, and use the runtime-narrowed next action: /blu-execute-phase while other plans remain pending or /blu-validate-phase when the selected plan closes the phase execution set.",
         "PARTIAL and BLOCKED summaries must include at least one concrete gap or repair route, at least one non-pass targeted verification row, and a non-none follow-up.",
         "Use concrete command, test, artifact, or repo-path evidence; do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
       ],
@@ -43060,6 +43060,32 @@ function normalizeSummaryMarkerValue(value) {
   }
   return trimmed;
 }
+function phaseSummaryCompletedRoute(args) {
+  return args.hasRemainingPendingPlans ? {
+    readiness: "not-ready-for-validation",
+    nextSafeAction: `/blu-execute-phase ${args.phaseNumber}`
+  } : {
+    readiness: "ready-for-validation",
+    nextSafeAction: `/blu-validate-phase ${args.phaseNumber}`
+  };
+}
+function remainingPlanIdsAfterSelectedCompletion(args) {
+  const completedAfterSelection = new Set(args.completedPlanIds);
+  completedAfterSelection.add(args.selectedPlanId);
+  return args.planIds.filter((planId2) => !completedAfterSelection.has(planId2));
+}
+function completedRouteAfterSelectedCompletion(args) {
+  return phaseSummaryCompletedRoute({
+    phaseNumber: args.phaseNumber,
+    hasRemainingPendingPlans: remainingPlanIdsAfterSelectedCompletion(args).length > 0
+  });
+}
+function routesMatch(actual, expected) {
+  return actual.readiness === expected.readiness && actual.nextSafeAction === expected.nextSafeAction;
+}
+function formatCompletedSummaryRoute(route) {
+  return `**Readiness:** ${route.readiness} and **Next Safe Action:** ${route.nextSafeAction}`;
+}
 function extractPhaseSummaryMarkerValue(content, marker) {
   const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = content.match(new RegExp(`^\\*\\*${escapedMarker}:\\*\\*\\s*(.+)$`, "m"));
@@ -43133,17 +43159,49 @@ function validateSummaryAgainstLivePlanInventory(content, args) {
   const warnings = [];
   const normalizedContent = content.replace(/\r\n/g, "\n");
   const status = extractSummaryStatus(normalizedContent);
+  const readiness = extractPhaseSummaryMarkerValue(normalizedContent, "Readiness");
   const nextSafeAction = extractPhaseSummaryMarkerValue(normalizedContent, "Next Safe Action");
   if (status) {
-    const expectedNextSafeAction = {
-      COMPLETED: `/blu-validate-phase ${args.resolved.phaseNumber}`,
-      PARTIAL: `/blu-execute-phase ${args.resolved.phaseNumber}`,
-      BLOCKED: "/blu-progress"
-    }[status];
-    if (nextSafeAction !== null && nextSafeAction !== expectedNextSafeAction) {
-      issues.push(
-        `Summary artifact status ${status} requires **Next Safe Action:** ${expectedNextSafeAction} for phase ${args.resolved.phaseNumber}.`
-      );
+    if (status === "COMPLETED") {
+      const routeValidation = args.completedRouteValidation ?? {
+        mode: "exact",
+        route: phaseSummaryCompletedRoute({
+          phaseNumber: args.resolved.phaseNumber,
+          hasRemainingPendingPlans: false
+        })
+      };
+      if (routeValidation.mode !== "skip") {
+        const expectedRoutes = routeValidation.mode === "exact" ? [routeValidation.route] : [
+          phaseSummaryCompletedRoute({
+            phaseNumber: args.resolved.phaseNumber,
+            hasRemainingPendingPlans: false
+          }),
+          phaseSummaryCompletedRoute({
+            phaseNumber: args.resolved.phaseNumber,
+            hasRemainingPendingPlans: true
+          })
+        ];
+        const uniqueExpectedRoutes = expectedRoutes.filter(
+          (route, index, routes) => routes.findIndex(
+            (candidate) => candidate.readiness === route.readiness && candidate.nextSafeAction === route.nextSafeAction
+          ) === index
+        );
+        if (readiness !== null && nextSafeAction !== null && !uniqueExpectedRoutes.some((route) => routesMatch({ readiness, nextSafeAction }, route))) {
+          issues.push(
+            `Summary artifact status ${status} requires ${uniqueExpectedRoutes.map(formatCompletedSummaryRoute).join(" or ")} for phase ${args.resolved.phaseNumber}.`
+          );
+        }
+      }
+    } else {
+      const expectedNextSafeAction = {
+        PARTIAL: `/blu-execute-phase ${args.resolved.phaseNumber}`,
+        BLOCKED: "/blu-progress"
+      }[status];
+      if (nextSafeAction !== null && nextSafeAction !== expectedNextSafeAction) {
+        issues.push(
+          `Summary artifact status ${status} requires **Next Safe Action:** ${expectedNextSafeAction} for phase ${args.resolved.phaseNumber}.`
+        );
+      }
     }
   }
   if (!args.plan) {
@@ -43455,7 +43513,8 @@ function buildPhaseSummaryTaskSchema(args) {
       },
       then: {
         properties: {
-          nextSafeAction: { const: args.readyAction }
+          readiness: { const: args.completedRoute.readiness },
+          nextSafeAction: { const: args.completedRoute.nextSafeAction }
         }
       }
     },
@@ -43494,6 +43553,7 @@ function buildPhaseSummaryTaskSchema(args) {
     readyAction: args.readyAction,
     partialAction: args.partialAction,
     blockedAction: args.blockedAction,
+    completedRoute: args.completedRoute,
     allowedActions: args.allowedActions
   };
   return schema;
@@ -43512,6 +43572,7 @@ async function phaseSummaryModelSchemas(args) {
     baseSchema,
     acceptanceCriteria: args.acceptanceCriteria,
     dependencyPlans: args.dependencyPlans,
+    completedRoute: args.completedRoute,
     summaryPath: args.summaryPath,
     linkedPlanPath: args.linkedPlanPath,
     ...allowedNextActions
@@ -47713,7 +47774,7 @@ async function blueprintPhaseSummaryIndex(args = {}) {
   });
   const summaryPaths = located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
   const summaries = [];
-  const completedPlans = /* @__PURE__ */ new Set();
+  let completedPlans = /* @__PURE__ */ new Set();
   const warnings = [...planIndex.warnings];
   const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
   const knownPlanPaths = new Map(planIndex.plans.map((plan) => [plan.planId, plan.path]));
@@ -47735,7 +47796,8 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       resolved,
       planId: planId2,
       plan: linkedPlan,
-      knownPlanIds
+      knownPlanIds,
+      completedRouteValidation: { mode: "skip" }
     });
     const validation = {
       valid: strictValidation.valid && livePlanValidation.valid,
@@ -47747,24 +47809,56 @@ async function blueprintPhaseSummaryIndex(args = {}) {
     loadedSummaries.push({
       planId: planId2,
       path: summaryPath2,
+      content,
       status: summaryStatus,
+      strictValidation,
       validation,
       linkedPlan,
       dependencyPlanIds: linkedPlan ? normalizeDependencyPlanIds(linkedPlan.dependsOn) : []
     });
   }
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const loaded of loadedSummaries) {
-      if (completedPlans.has(loaded.planId) || loaded.status !== "COMPLETED" || !loaded.validation.valid || !loaded.linkedPlan || !loaded.linkedPlan.valid) {
-        continue;
-      }
-      if (loaded.dependencyPlanIds.every((dependencyPlanId) => completedPlans.has(dependencyPlanId))) {
-        completedPlans.add(loaded.planId);
-        changed = true;
+  const deriveCompletedPlans = () => {
+    const derivedCompletedPlans = /* @__PURE__ */ new Set();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const loaded of loadedSummaries) {
+        if (derivedCompletedPlans.has(loaded.planId) || loaded.status !== "COMPLETED" || !loaded.validation.valid || !loaded.linkedPlan || !loaded.linkedPlan.valid) {
+          continue;
+        }
+        if (loaded.dependencyPlanIds.every(
+          (dependencyPlanId) => derivedCompletedPlans.has(dependencyPlanId)
+        )) {
+          derivedCompletedPlans.add(loaded.planId);
+          changed = true;
+        }
       }
     }
+    return derivedCompletedPlans;
+  };
+  completedPlans = deriveCompletedPlans();
+  for (let attempt = 0; attempt < loadedSummaries.length + 1; attempt += 1) {
+    for (const loaded of loadedSummaries) {
+      const livePlanValidation = validateSummaryAgainstLivePlanInventory(loaded.content, {
+        resolved,
+        planId: loaded.planId,
+        plan: loaded.linkedPlan,
+        knownPlanIds,
+        completedDependencyPlanIds: completedPlans,
+        completedRouteValidation: { mode: "indexed" }
+      });
+      loaded.validation = {
+        valid: loaded.strictValidation.valid && livePlanValidation.valid,
+        issues: [...loaded.strictValidation.issues, ...livePlanValidation.issues],
+        warnings: [...loaded.strictValidation.warnings, ...livePlanValidation.warnings]
+      };
+    }
+    const nextCompletedPlans = deriveCompletedPlans();
+    if (nextCompletedPlans.size === completedPlans.size && [...nextCompletedPlans].every((planId2) => completedPlans.has(planId2))) {
+      completedPlans = nextCompletedPlans;
+      break;
+    }
+    completedPlans = nextCompletedPlans;
   }
   for (const loaded of loadedSummaries) {
     if (loaded.validation.valid && loaded.status === "COMPLETED") {
@@ -47865,6 +47959,13 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   });
   const acceptanceCriteria = indexedPlan?.acceptanceCriteria ?? planRead.metadata?.acceptanceCriteria ?? [];
   const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
+  const planIds = planIndex.plans.map((candidate) => candidate.planId);
+  const completedRoute = completedRouteAfterSelectedCompletion({
+    phaseNumber: resolved.phaseNumber,
+    planIds,
+    completedPlanIds: completedDependencyPlanIds,
+    selectedPlanId: planId2
+  });
   const unsatisfiedDependencyPlans = dependencyPlans.filter(
     (dependency) => !completedDependencyPlanIds.has(dependency.planId)
   );
@@ -47898,6 +47999,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     phaseNumber: resolved.phaseNumber,
     acceptanceCriteria,
     dependencyPlans,
+    completedRoute,
     summaryPath: summaryPath2,
     linkedPlanPath
   }) : null;
@@ -48011,12 +48113,22 @@ async function blueprintPhaseSummaryValidateModel(args) {
       cwd: args.cwd,
       phase: context.phase.phaseNumber
     });
+    const completedRoute = completedRouteAfterSelectedCompletion({
+      phaseNumber: context.phase.phaseNumber,
+      planIds: planIndex.plans.map((plan) => plan.planId),
+      completedPlanIds: new Set(summaryIndex.completedPlans),
+      selectedPlanId: context.planId
+    });
     const livePlanValidation = validateSummaryAgainstLivePlanInventory(rendered, {
       resolved: context.phase,
       planId: context.planId,
       plan: context.plan,
       knownPlanIds: new Set(planIndex.plans.map((plan) => plan.planId)),
-      completedDependencyPlanIds: new Set(summaryIndex.completedPlans)
+      completedDependencyPlanIds: new Set(summaryIndex.completedPlans),
+      completedRouteValidation: {
+        mode: "exact",
+        route: completedRoute
+      }
     });
     const markdownIssues = [...validation.issues, ...livePlanValidation.issues];
     for (const issue2 of markdownIssues) {
@@ -48112,7 +48224,8 @@ async function blueprintPhaseSummaryRead(args) {
     planId: planId2,
     plan: linkedPlan,
     knownPlanIds,
-    completedDependencyPlanIds: new Set(summaryIndex.completedPlans)
+    completedDependencyPlanIds: new Set(summaryIndex.completedPlans),
+    completedRouteValidation: { mode: "indexed" }
   });
   const validation = {
     valid: strictValidation.valid && livePlanValidation.valid,
@@ -48605,12 +48718,22 @@ async function blueprintPhaseSummaryWrite(args) {
     linkedPlanPath: plan.path,
     requirePlanMarker: true
   });
+  const completedRoute = completedRouteAfterSelectedCompletion({
+    phaseNumber: resolved.phaseNumber,
+    planIds: planIndex.plans.map((candidate) => candidate.planId),
+    completedPlanIds: completedDependencyPlanIds,
+    selectedPlanId: planId2
+  });
   const livePlanValidation = validateSummaryAgainstLivePlanInventory(normalizedContent, {
     resolved,
     planId: planId2,
     plan: indexedPlan,
     knownPlanIds,
-    completedDependencyPlanIds
+    completedDependencyPlanIds,
+    completedRouteValidation: {
+      mode: "exact",
+      route: completedRoute
+    }
   });
   const validation = {
     valid: strictValidation.valid && livePlanValidation.valid,
@@ -52869,26 +52992,26 @@ function validateSummaryLifecycleContract(content) {
   );
   const expected = {
     COMPLETED: {
-      readiness: "ready-for-validation",
+      readiness: ["ready-for-validation", "not-ready-for-validation"],
       completionState: "complete",
-      nextSafeActionPattern: /^\/blu-validate-phase(?:\s+\S+)?$/
+      nextSafeActionPattern: /^\/blu-(?:validate-phase|execute-phase)(?:\s+\S+)?$/
     },
     PARTIAL: {
-      readiness: "not-ready-for-validation",
+      readiness: ["not-ready-for-validation"],
       completionState: "pending",
       nextSafeActionPattern: /^\/blu-execute-phase(?:\s+\S+)?$/
     },
     BLOCKED: {
-      readiness: "blocked",
+      readiness: ["blocked"],
       completionState: "blocked",
       nextSafeActionPattern: /^\/blu-progress$/
     }
   }[status];
   if (readiness === null) {
     issues.push("Summary artifact must include a **Readiness:** marker.");
-  } else if (readiness !== expected.readiness) {
+  } else if (!expected.readiness.includes(readiness)) {
     issues.push(
-      `Summary artifact status ${status} requires **Readiness:** ${expected.readiness}.`
+      `Summary artifact status ${status} requires **Readiness:** ${expected.readiness.join(" or ")}.`
     );
   }
   if (completionState === null) {

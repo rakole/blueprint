@@ -113,9 +113,6 @@
       },
       "then": {
         "properties": {
-          "readiness": {
-            "const": "ready-for-validation"
-          },
           "completionState": {
             "const": "complete"
           },

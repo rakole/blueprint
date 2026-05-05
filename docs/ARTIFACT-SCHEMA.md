@@ -321,8 +321,9 @@ Validation expectations:
 - model-rendered summaries include populated `## Outcome`, `## Changes Made`, `## Verification`, `## Dependency Plans`, `## Manual / Deferred Work`, `## Gap / Repair Routes`, `## Follow-Ups`, and `## Evidence`
 - the locked `**Plan:**` and `**Status:**` markers remain required, but the model must not author them; `blueprint_phase_summary_write` renders plan provenance from MCP args and rejects Markdown content fallback
 - the `**Plan:**` marker must match the linked `XX-YY-PLAN.md` path for the summary to count as valid execution evidence
-- `COMPLETED` summaries require passing targeted verification, exact `none` sentinel rows for manual/deferred work and gap routes, and `/blu-validate-phase <phase>` as the next safe action
-- `COMPLETED` summaries must also match the live linked plan inventory exactly: selected-plan acceptance criteria, dependency plan rows, completed dependency summaries, and the current phase's next action are checked from current `.blueprint/` state rather than artifact self-citations
+- `COMPLETED` summaries close the selected plan's execution debt; they require passing targeted verification and exact `none` sentinel rows for manual/deferred work and gap routes
+- `COMPLETED` summary readiness and next action are narrowed by live phase execution state: use `not-ready-for-validation` plus `/blu-execute-phase <phase>` while other phase plans remain pending, and `ready-for-validation` plus `/blu-validate-phase <phase>` only when no phase plans remain pending
+- `COMPLETED` summaries must also match the live linked plan inventory exactly: selected-plan acceptance criteria, dependency plan rows, and completed dependency summaries are checked from current `.blueprint/` state rather than artifact self-citations
 - `PARTIAL` and `BLOCKED` summaries require concrete unresolved verification or repair evidence and remain pending execution debt
 - existing raw Markdown summaries may still be read and indexed for compatibility, but legacy concise/five-section summaries remain invalid completion evidence until repaired or migrated to the canonical model-rendered shape; new writes are schema-first model writes
 

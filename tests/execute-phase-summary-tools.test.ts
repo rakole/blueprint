@@ -979,6 +979,93 @@ test("phase context indexes execution summaries alongside plans", async (t) => {
   assert.match(summaryBody, /Targeted verification evidence for plan 01/i);
 });
 
+test("completed first-wave summaries route back to execute-phase while later waves remain pending", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 2),
+    "utf8"
+  );
+
+  const firstWaveModel = validSummaryModel("01", "COMPLETED", {
+    readiness: "not-ready-for-validation",
+    nextSafeAction: "/blu-execute-phase 3"
+  });
+  const firstWaveValidation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: firstWaveModel
+  });
+  const prematureValidationModel = validSummaryModel("01");
+  const prematureValidation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: prematureValidationModel
+  });
+  const firstWaveWrite = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: firstWaveModel
+  });
+  const firstWaveIndex = await blueprintPhaseSummaryIndex({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(
+    firstWaveValidation.status,
+    "valid",
+    firstWaveValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(prematureValidation.status, "invalid");
+  assert.match(
+    JSON.stringify(prematureValidation.taskSchema),
+    /not-ready-for-validation|\/blu-execute-phase 3/
+  );
+  assert.equal(firstWaveWrite.status, "created");
+  assert.deepEqual(firstWaveIndex.completedPlans, ["01"]);
+  assert.deepEqual(firstWaveIndex.pendingPlans, ["02"]);
+
+  const finalWaveValidation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02")
+  });
+  const finalWaveWrite = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model: validSummaryModel("02")
+  });
+  const finalIndex = await blueprintPhaseSummaryIndex({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const firstWaveRead = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+
+  assert.equal(
+    finalWaveValidation.status,
+    "valid",
+    finalWaveValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(finalWaveWrite.status, "created");
+  assert.deepEqual(finalIndex.completedPlans, ["01", "02"]);
+  assert.deepEqual(finalIndex.pendingPlans, []);
+  assert.equal(firstWaveRead.validation?.valid, true);
+});
+
 test("phase summary authoring context narrows optional empty dependency context exactly", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -1140,6 +1227,7 @@ test("phase summary runtime narrowing rejects out-of-scope acceptance criteria w
     phase: "3",
     planId: "02",
     model: validSummaryModel("02", "COMPLETED", {
+      readiness: "not-ready-for-validation",
       targetedVerification: [
         {
           check: "tests/execute-phase-summary-tools.test.ts exits 0",
@@ -1155,7 +1243,8 @@ test("phase summary runtime narrowing rejects out-of-scope acceptance criteria w
           source: "npm test -- tests/execute-phase-summary-tools.test.ts",
           summary: "Focused execute-phase summary tests passed."
         }
-      ]
+      ],
+      nextSafeAction: "/blu-execute-phase 3"
     })
   });
 
@@ -1308,7 +1397,7 @@ test("completed raw summaries must match live plan checks, dependency rows, and 
   assert.equal(wrongActionRead.validation?.valid, false);
   assert.match(
     wrongActionRead.validation?.issues.join("\n") ?? "",
-    /requires \*\*Next Safe Action:\*\* \/blu-validate-phase 3/i
+    /requires .*\/blu-validate-phase 3/i
   );
   assert.deepEqual(wrongActionIndex.completedPlans, []);
 });
@@ -2438,7 +2527,7 @@ test("phase summary reads reject raw markdown that contradicts lifecycle truth t
   assert.equal(read.validation?.valid, false);
   assert.match(
     read.validation?.issues.join("\n") ?? "",
-    /status COMPLETED requires \*\*Readiness:\*\* ready-for-validation/i
+    /status COMPLETED requires \*\*Readiness:\*\* ready-for-validation or not-ready-for-validation/i
   );
   assert.deepEqual(index.completedPlans, []);
   assert.deepEqual(index.pendingPlans, ["01"]);
@@ -2784,7 +2873,10 @@ test("phase execution targets select the earliest runnable wave, expose overlap 
     cwd: repoPath,
     phase: "3",
     planId: "01",
-    model: validSummaryModel("01")
+    model: validSummaryModel("01", "COMPLETED", {
+      readiness: "not-ready-for-validation",
+      nextSafeAction: "/blu-execute-phase 3"
+    })
   });
   await blueprintPhaseSummaryWrite({
     cwd: repoPath,
