@@ -883,7 +883,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(securityContract.authoringTemplate, /## Threat Register/);
   assert.match(
     securityContract.authoringTemplate,
-    /\| Threat ID \| Source Plan \| Category \| Component \| Disposition \| Mitigation \| Status \| Evidence \| Verifier Note \|/
+    /\| Threat ID \| Status \| Evidence \| Verifier Note \|/
   );
   assert.match(securityContract.authoringTemplate, /## Accepted Risks/);
   assert.match(securityContract.authoringTemplate, /## Manual \/ Deferred Work/);
@@ -898,7 +898,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.ok(securityContract.modelContract?.renderedHeadings.includes("Manual / Deferred Work"));
   assert.ok(
     securityContract.modelContract?.qualityRules.some((rule) =>
-      /COMPLETED security reviews require all declared threats closed or accepted/i.test(rule)
+      /COMPLETED security reviews require every declared threat to be closed or accepted/i.test(rule)
     )
   );
   assert.deepEqual(

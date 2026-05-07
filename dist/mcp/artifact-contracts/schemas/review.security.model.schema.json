@@ -50,8 +50,7 @@
     },
     "threatRegister": {
       "type": "array",
-      "description": "One model-authored status row per declared saved-plan threat. MCP renders source plan, category, component, disposition, and mitigation from live plan provenance. When no saved threat model exists, use the exact no-threat sentinel row.",
-      "minItems": 1,
+      "description": "One model-authored status row per declared saved-plan threat. MCP renders source plan, category, component, disposition, and mitigation from live plan provenance. Use an empty array when no saved threat model exists; legacy no-threat sentinel rows remain accepted for compatibility.",
       "items": {
         "oneOf": [
           {
@@ -65,8 +64,7 @@
     },
     "acceptedRisks": {
       "type": "array",
-      "description": "Explicit accepted-risk rows, or the exact no-accepted-risk sentinel row.",
-      "minItems": 1,
+      "description": "Explicit accepted-risk rows. Use an empty array when no risks were accepted; the legacy no-accepted-risk sentinel row remains accepted for compatibility.",
       "allOf": [
         {
           "if": {
@@ -96,8 +94,7 @@
     },
     "findings": {
       "type": "array",
-      "description": "Security findings, suspicious evidence, unregistered flags, or hardening follow-ups. Use the exact no-finding sentinel row only when there are no material findings.",
-      "minItems": 1,
+      "description": "Security findings, suspicious evidence, unregistered flags, or hardening follow-ups. Use an empty array when there are no material findings; the legacy no-finding sentinel row remains accepted for compatibility.",
       "allOf": [
         {
           "if": {
@@ -127,8 +124,7 @@
     },
     "manualOrDeferredWork": {
       "type": "array",
-      "description": "Manual verification or deferred security work rows, or the exact no-manual-work sentinel row.",
-      "minItems": 1,
+      "description": "Manual verification or deferred security work rows. Use an empty array when no manual or deferred work remains; the legacy no-manual-work sentinel row remains accepted for compatibility.",
       "allOf": [
         {
           "if": {
@@ -158,8 +154,7 @@
     },
     "gapRoutes": {
       "type": "array",
-      "description": "Open or blocked security gap routing rows, or the exact no-gap-route sentinel row.",
-      "minItems": 1,
+      "description": "Open or blocked security gap routing rows. Use an empty array when no gap routes remain; the legacy no-gap-route sentinel row remains accepted for compatibility.",
       "allOf": [
         {
           "if": {
@@ -189,8 +184,7 @@
     },
     "followUps": {
       "type": "array",
-      "description": "Concrete hardening or verification follow-up bullets, or the exact single none sentinel when the security gate is complete.",
-      "minItems": 1,
+      "description": "Concrete hardening or verification follow-up bullets. Use an empty array when no follow-up remains; the legacy single `none` sentinel remains accepted for compatibility.",
       "items": {
         "$ref": "#/$defs/bulletString"
       }
@@ -244,31 +238,27 @@
             }
           },
           "acceptedRisks": {
-            "minItems": 1
+            "minItems": 0
           },
           "findings": {
-            "minItems": 1,
             "maxItems": 1,
             "items": {
               "$ref": "#/$defs/noFindingRow"
             }
           },
           "manualOrDeferredWork": {
-            "minItems": 1,
             "maxItems": 1,
             "items": {
               "$ref": "#/$defs/noManualOrDeferredRow"
             }
           },
           "gapRoutes": {
-            "minItems": 1,
             "maxItems": 1,
             "items": {
               "$ref": "#/$defs/noGapRouteRow"
             }
           },
           "followUps": {
-            "minItems": 1,
             "maxItems": 1,
             "items": {
               "const": "none"
@@ -641,8 +631,6 @@
       "required": [
         "threatId",
         "rationale",
-        "acceptedBy",
-        "acceptedAt",
         "evidence"
       ],
       "properties": {
