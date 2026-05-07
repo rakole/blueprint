@@ -22,6 +22,11 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
     assert.match(contract.authoringTemplate, new RegExp(`## ${heading}`));
   }
 
+  assert.equal(
+    contract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
+    "- none"
+  );
+
   const required = modelContract.jsonSchema.required as string[];
   assert.deepEqual(required, [
     "phaseBoundary",
@@ -44,6 +49,10 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   assert.equal("content" in properties, false);
   assert.ok("phaseBoundary" in properties);
   assert.ok("canonicalReferences" in properties);
+  assert.match(
+    String((properties.openQuestions as { description?: string }).description),
+    /exact string none only when no open questions remain/i
+  );
 
   assert.ok(
     modelContract.contextBindings.some((binding) =>
@@ -53,6 +62,11 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   assert.ok(
     modelContract.qualityRules.some((rule) =>
       /preserve the exact headings in renderedHeadings/i.test(rule)
+    )
+  );
+  assert.ok(
+    modelContract.qualityRules.some((rule) =>
+      /no unresolved questions left/i.test(rule)
     )
   );
   assert.ok(

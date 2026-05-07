@@ -177,7 +177,7 @@ The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
   points, known gaps
 - `Dependencies`: prior artifacts, MCP tools, command surfaces, docs, external
   constraints, required follow-up reads
-- `Open Questions`: only unresolved questions that must remain explicit
+- `Open Questions`: only unresolved questions that must remain explicit; when none remain, save the section as exactly `- none`
 - `Deferred Ideas`: scope-creep or later-phase ideas with why they are out of
   this phase
 - `Canonical References`: full relative paths plus what each source controls;
@@ -199,7 +199,8 @@ Before treating the discussion as complete:
 2. Self-check for placeholder text, empty required sections, contradiction with
    prior saved context, missing canonical references, unsupported mode claims,
    dropped deferred ideas, and plan-inventory warnings that were not carried
-   forward.
+   forward. If `Open Questions` has no unresolved items, preserve the exact
+   `- none` sentinel during repair instead of expanding it into filler prose.
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
    `status: "invalid"` or validation issues, repair the same draft from the
    returned issues and retry before claiming success.

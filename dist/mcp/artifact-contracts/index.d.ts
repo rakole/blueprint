@@ -11,6 +11,9 @@ export type ArtifactModelContract = {
     minimalValidExample: Record<string, unknown>;
     exampleLeakageSignals: string[];
 };
+export type ArtifactContractSectionValidation = {
+    exactEmptySentinel?: string;
+};
 export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "codebase.stack" | "codebase.architecture" | "codebase.structure" | "codebase.conventions" | "codebase.testing" | "codebase.integrations" | "codebase.concerns" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix" | "report.impact";
 export type ArtifactTemplateContext = {
     phaseLabel?: string;
@@ -35,6 +38,7 @@ export type ArtifactContractDefinition = {
     canonicalFilePattern: string;
     freehandPolicy: ArtifactContractFreehandPolicy;
     requiredHeadings: string[];
+    sectionValidations?: Partial<Record<string, ArtifactContractSectionValidation>>;
     lockedMarkers: string[];
     placeholderSignals: string[];
     notes: string[];

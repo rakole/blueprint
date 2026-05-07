@@ -15157,6 +15157,14 @@ function withScaffoldFooter(content) {
 function cloneJsonObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
+function cloneSectionValidations(value) {
+  if (!value) {
+    return void 0;
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([heading, validation]) => [heading, { ...validation }])
+  );
+}
 function readJsonSchemaAsset(schemaFileName) {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidatePaths = [
@@ -15617,7 +15625,7 @@ function renderContextTemplate(context) {
 
 ## Open Questions
 
-- Question 1: <open question 1>
+- Question 1: <open question 1 or none>
 
 ## Deferred Ideas
 
@@ -16955,6 +16963,7 @@ function readArtifactContract(contractId, context) {
     canonicalFilePattern: contract.canonicalFilePattern,
     freehandPolicy: contract.freehandPolicy,
     requiredHeadings: [...contract.requiredHeadings],
+    sectionValidations: cloneSectionValidations(contract.sectionValidations),
     lockedMarkers: [...contract.lockedMarkers],
     placeholderSignals: [...contract.placeholderSignals],
     notes: [...contract.notes],
@@ -17165,6 +17174,7 @@ var init_artifact_contracts = __esm({
         "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
         "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
         "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
+        "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
         "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
         "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
       ],
@@ -18907,6 +18917,11 @@ var init_artifact_contracts = __esm({
           "Deferred Ideas",
           "Canonical References"
         ],
+        sectionValidations: {
+          "Open Questions": {
+            exactEmptySentinel: "- none"
+          }
+        },
         lockedMarkers: [],
         placeholderSignals: [
           "Goal:",
@@ -18928,12 +18943,13 @@ var init_artifact_contracts = __esm({
           "<prior phase artifacts>",
           "<external constraints>",
           "<required follow-up reads>",
-          "<open question 1>",
+          "<open question 1 or none>",
           "<deferred idea>",
           "<source 1>"
         ],
         notes: [
           "Discovery context is phase-scoped and MCP-owned.",
+          "Open Questions may use the exact `- none` sentinel only when no unresolved questions remain.",
           "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
         ],
         modelContract: PHASE_CONTEXT_MODEL_CONTRACT,
@@ -52591,6 +52607,25 @@ function countNonEmptyContractSections(content, headings) {
 function hasSubstantiveContractSection(section) {
   return hasBootstrapText(section, 3);
 }
+function matchesExactEmptySentinel(section, exactEmptySentinel) {
+  return typeof exactEmptySentinel === "string" && section.trim() === exactEmptySentinel;
+}
+function matchesFuzzyEmptySentinel(section, exactEmptySentinel) {
+  if (typeof exactEmptySentinel !== "string") {
+    return false;
+  }
+  const normalizedSection = section.trim().toLowerCase();
+  const normalizedSentinel = exactEmptySentinel.trim().toLowerCase();
+  if (normalizedSection === normalizedSentinel) {
+    return false;
+  }
+  return normalizedSection.startsWith(normalizedSentinel) || /^(?:[-*]\s*)?(?:none(?:\b|$)|no open questions?\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
+    normalizedSection
+  );
+}
+function exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) {
+  return `Populate ## ${heading} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
+}
 function phaseArtifactRepairInstruction(args) {
   if (args.artifact === "context") {
     return args.heading ? `Populate ## ${args.heading} with substantive downstream-planning detail, then retry blueprint_phase_artifact_write. Context requires every required heading to be present and substantive; one populated section is not enough.` : "Read the phase.context contract, repair every required heading with substantive downstream-planning detail, then retry blueprint_phase_artifact_write.";
@@ -52610,7 +52645,7 @@ function phaseArtifactDiagnostic(args) {
     message: args.message,
     heading: args.heading,
     missing: args.missing,
-    repair: phaseArtifactRepairInstruction({
+    repair: args.repair ?? phaseArtifactRepairInstruction({
       artifact: args.artifact,
       heading: args.heading
     }),
@@ -52835,14 +52870,18 @@ function validatePhaseArtifactContent(content, artifact) {
     issues.push(issue2);
     diagnostics.push(
       ...missingRequiredSections.map(
-        (heading) => phaseArtifactDiagnostic({
-          artifact,
-          path: `content.sections.${heading}`,
-          code: "context.missing_required_section",
-          message: `Context artifact is missing required contract section: ${heading}.`,
-          heading,
-          missing: [heading]
-        })
+        (heading) => {
+          const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
+          return phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.missing_required_section",
+            message: `Context artifact is missing required contract section: ${heading}.`,
+            heading,
+            missing: [heading],
+            repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) : void 0
+          });
+        }
       )
     );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
@@ -52889,11 +52928,31 @@ function validatePhaseArtifactContent(content, artifact) {
   if (artifact === "context") {
     for (const heading of contract.requiredHeadings) {
       const section = extractMarkdownSection5(content, heading);
+      const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
       if (section.trim().length === 0) {
         continue;
       }
+      if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
+        continue;
+      }
+      if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
+        const fuzzySentinel = exactEmptySentinel ?? "- none";
+        const issue2 = `Context artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
+        issues.push(issue2);
+        diagnostics.push(
+          phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.inexact_empty_sentinel",
+            message: issue2,
+            heading,
+            repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
+          })
+        );
+        continue;
+      }
       if (!hasSubstantiveContractSection(section)) {
-        const issue2 = `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
+        const issue2 = exactEmptySentinel ? `Context artifact section ${heading} must contain substantive downstream-planning detail or use exactly \`${exactEmptySentinel}\`.` : `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
         issues.push(issue2);
         diagnostics.push(
           phaseArtifactDiagnostic({
@@ -52901,7 +52960,8 @@ function validatePhaseArtifactContent(content, artifact) {
             path: `content.sections.${heading}`,
             code: "context.non_substantive_required_section",
             message: issue2,
-            heading
+            heading,
+            repair: exactEmptySentinel ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) : void 0
           })
         );
       }
