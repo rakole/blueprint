@@ -10,10 +10,12 @@ const VALID_PLANNER_AGENT_CONTENT = `---
 name: blueprint-planner
 description: >
   Planner description that is long enough to look like a real bundled agent.
-kind: local
+display_name: Blueprint Planner
 tools:
   - read_file
   - glob
+model: gemini-2.5-pro
+temperature: 0.2
 max_turns: 10
 timeout_mins: 10
 ---
@@ -46,10 +48,34 @@ test("agent definition validator accepts valid bundled metadata", () => {
   assert.equal(validation.frontmatter.name, "blueprint-planner");
   assert.equal(
     validation.frontmatter.description,
-    "Planner description that is long enough to look like a real bundled agent."
+    "Planner description that is long enough to look like a real bundled agent.\n"
   );
   assert.equal(validation.frontmatter.kind, "local");
+  assert.equal(validation.frontmatter.display_name, "Blueprint Planner");
   assert.deepEqual(validation.frontmatter.tools, ["read_file", "glob"]);
+  assert.equal(validation.frontmatter.model, "gemini-2.5-pro");
+  assert.equal(validation.frontmatter.temperature, 0.2);
+});
+
+test("agent definition validator accepts CRLF frontmatter and missing tools", () => {
+  const validation = validateBlueprintAgentDefinitionContent(
+    "blueprint-planner",
+    [
+      "---",
+      "name: blueprint-planner",
+      "description: Planner description with CRLF line endings.",
+      "max_turns: 12",
+      "timeout_mins: 15",
+      "---",
+      "# Blueprint Planner"
+    ].join("\r\n"),
+    "agents/blueprint-planner.md"
+  );
+
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
+  assert.equal(validation.frontmatter.kind, "local");
+  assert.equal(validation.frontmatter.tools, undefined);
 });
 
 test("available optional agents exclude malformed bundled agent fixtures", async () => {

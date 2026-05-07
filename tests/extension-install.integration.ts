@@ -17,6 +17,7 @@ import path from "node:path";
 import { symlink } from "node:fs/promises";
 
 import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
+import { BLUEPRINT_AGENT_TOOL_NAMES } from "../src/mcp/agent-metadata.js";
 import {
   extensionHomePath,
   extensionHosts,
@@ -63,6 +64,7 @@ const requiredInstalledPaths = [
   "dist/hooks/workflow-advisory.js",
   "package.json"
 ];
+const expectedBlueprintAgentNames = [...BLUEPRINT_AGENT_TOOL_NAMES];
 
 type ExecContext = {
   allowedExitCodes?: number[];
@@ -230,7 +232,7 @@ function geminiDebugListWasAuthBlocked(
 
 function resolveHostCliInstallCommand(host: ExtensionHost): string | null {
   if (host.id === "gemini") {
-    return "npm install -g @google/gemini-cli";
+    return "npm install -g @google/gemini-cli@0.40.1";
   }
 
   return process.env.BLUEPRINT_TABNINE_CLI_INSTALL_COMMAND ?? null;
@@ -399,6 +401,131 @@ console.log(JSON.stringify({
 `;
 }
 
+function geminiAgentRuntimeAssertionScript(): string {
+  return `
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { readdir, readFile, realpath } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const workspaceDir = process.argv[1];
+const bundleDir = process.argv[2];
+const expectedAgentNames = JSON.parse(process.argv[3]).sort();
+
+async function findBundleModule(bundleRoot, matcher) {
+  const entries = (await readdir(bundleRoot))
+    .filter((entry) => entry.endsWith(".js"))
+    .sort();
+
+  for (const entry of entries) {
+    const candidatePath = path.join(bundleRoot, entry);
+    const content = await readFile(candidatePath, "utf8");
+
+    if (matcher(content, entry)) {
+      return candidatePath;
+    }
+  }
+
+  throw new Error(\`Could not find Gemini bundle module in \${bundleRoot}\`);
+}
+
+const geminiExecutable = await realpath(execFileSync("sh", ["-lc", "command -v gemini"], {
+  encoding: "utf8"
+}).trim());
+const geminiBundleRoot = path.dirname(geminiExecutable);
+const coreModulePath = await findBundleModule(geminiBundleRoot, (content) => {
+  return content.includes("loadAgentsFromDirectory,") && content.includes("Config,");
+});
+const cliModulePath = await findBundleModule(geminiBundleRoot, (content, entry) => {
+  return entry.startsWith("chunk-") &&
+    content.includes("ExtensionManager,") &&
+    content.includes("getExtensionManager");
+});
+
+const core = await import(pathToFileURL(coreModulePath).href);
+const cli = await import(pathToFileURL(cliModulePath).href);
+
+const directAgentLoad = await core.loadAgentsFromDirectory(path.join(bundleDir, "agents"));
+assert.deepEqual(
+  directAgentLoad.errors,
+  [],
+  directAgentLoad.errors.map((error) => error.message).join("\\n")
+);
+
+const loadedAgentNames = directAgentLoad.agents
+  .map((agent) => agent.name)
+  .sort();
+
+assert.deepEqual(loadedAgentNames, expectedAgentNames);
+
+const extensionSettings = {
+  telemetry: { enabled: false },
+  security: {},
+  admin: {},
+  experimental: { extensionConfig: false },
+  hooksConfig: { enabled: false }
+};
+const extensionManager = new cli.ExtensionManager({
+  settings: extensionSettings,
+  workspaceDir,
+  requestConsent: async () => true,
+  clientVersion: "0.40.1"
+});
+
+await extensionManager.loadExtensions();
+
+const blueprintExtension = extensionManager
+  .getExtensions()
+  .find((extension) => extension.name === "blueprint");
+
+assert.ok(blueprintExtension, "Gemini ExtensionManager should load the blueprint extension");
+assert.deepEqual(
+  blueprintExtension.agents.map((agent) => agent.name).sort(),
+  expectedAgentNames
+);
+assert.equal(blueprintExtension.agents.length, expectedAgentNames.length);
+
+const config = new core.Config({
+  telemetry: { enabled: false },
+  interactive: false,
+  sessionId: "blueprint-agent-install-test",
+  clientVersion: "0.40.1",
+  targetDir: workspaceDir,
+  cwd: workspaceDir,
+  model: "gemini-2.5-pro",
+  debugMode: false,
+  extensionLoader: extensionManager,
+  extensionsEnabled: true,
+  folderTrust: true,
+  trustedFolder: true,
+  enableHooks: false,
+  skillsSupport: false,
+  mcpEnabled: false
+});
+
+await config.initialize();
+
+const agentRegistry = config.getAgentRegistry();
+const registryAgentNames = agentRegistry.getAllAgentNames().sort();
+
+for (const agentName of expectedAgentNames) {
+  assert.equal(
+    registryAgentNames.includes(agentName),
+    true,
+    \`Gemini AgentRegistry is missing extension agent \${agentName}\`
+  );
+}
+
+console.log(JSON.stringify({
+  loadedAgentNames,
+  extensionAgentCount: blueprintExtension.agents.length,
+  registryAgentNames
+}));
+process.exit(0);
+`;
+}
+
 async function assertInstalledBundle(
   container: StartedTestContainer,
   host: ExtensionHost,
@@ -449,6 +576,29 @@ async function runInstallModeSmoke(
       HOME: homeDir
     }
   });
+
+  if (host.id === "gemini") {
+    await execInContainer(container, {
+      command: `mkdir -p ${shellQuote(path.posix.join(homeDir, ".gemini"))} && cat <<'EOF' > ${shellQuote(path.posix.join(homeDir, ".gemini/settings.json"))}
+{
+  "security": {
+    "folderTrust": {
+      "enabled": true
+    }
+  }
+}
+EOF
+cat <<'EOF' > ${shellQuote(path.posix.join(homeDir, ".gemini/trustedFolders.json"))}
+{
+  "/workspace": "TRUST_FOLDER",
+  "/workspace/blueprint": "TRUST_FOLDER"
+}
+EOF`,
+      env: {
+        HOME: homeDir
+      }
+    });
+  }
 
   await execInContainer(container, {
     command: installCommand,
@@ -506,6 +656,25 @@ async function runInstallModeSmoke(
 
   void extensionList;
   await assertInstalledBundle(container, host, installMode, homeDir);
+
+  if (host.id === "gemini") {
+    await execInContainer(container, {
+      command: [
+        "node",
+        "--input-type=module",
+        "-e",
+        shellQuote(geminiAgentRuntimeAssertionScript()),
+        shellQuote("/workspace/blueprint"),
+        shellQuote(
+          installMode === "link" ? "/workspace/blueprint" : installedDir
+        ),
+        shellQuote(JSON.stringify(expectedBlueprintAgentNames))
+      ].join(" "),
+      env: {
+        HOME: homeDir
+      }
+    });
+  }
 }
 
 async function runLiveSmoke(container: StartedTestContainer): Promise<void> {

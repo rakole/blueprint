@@ -1,0 +1,24 @@
+export declare const BLUEPRINT_AGENT_READ_ONLY_TOOLS: readonly ["list_directory", "read_file", "glob", "grep_search"];
+export declare const BLUEPRINT_EXECUTOR_AGENT_TOOLS: readonly ["list_directory", "read_file", "glob", "grep_search", "replace", "write_file", "run_shell_command"];
+export declare const BLUEPRINT_AGENT_TOOL_ALLOWLIST: {
+    readonly "blueprint-checker": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-debugger": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-doc-verifier": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-doc-writer": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-executor": readonly ["list_directory", "read_file", "glob", "grep_search", "replace", "write_file", "run_shell_command"];
+    readonly "blueprint-mapper": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-planner": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-project-researcher": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-researcher": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-reviewer": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-roadmapper": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-security-auditor": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-ui-auditor": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-ui-designer": readonly ["list_directory", "read_file", "glob", "grep_search"];
+    readonly "blueprint-verifier": readonly ["list_directory", "read_file", "glob", "grep_search"];
+};
+export type BlueprintAgentName = keyof typeof BLUEPRINT_AGENT_TOOL_ALLOWLIST;
+export type BlueprintAgentAllowedToolName = (typeof BLUEPRINT_AGENT_TOOL_ALLOWLIST)[BlueprintAgentName][number];
+export declare const BLUEPRINT_AGENT_TOOL_NAMES: readonly ("blueprint-checker" | "blueprint-debugger" | "blueprint-doc-verifier" | "blueprint-doc-writer" | "blueprint-executor" | "blueprint-mapper" | "blueprint-planner" | "blueprint-project-researcher" | "blueprint-researcher" | "blueprint-reviewer" | "blueprint-roadmapper" | "blueprint-security-auditor" | "blueprint-ui-auditor" | "blueprint-ui-designer" | "blueprint-verifier")[];
+export declare const BLUEPRINT_WRITE_CAPABLE_AGENT_NAMES: readonly ["blueprint-executor"];
+export declare function isBlueprintAgentName(value: string): value is BlueprintAgentName;

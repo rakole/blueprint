@@ -14,6 +14,7 @@ import {
   blueprintRuntimeToolFqn,
   resolveBlueprintSkillPath
 } from "../src/mcp/runtime-vocabulary.js";
+import { BLUEPRINT_AGENT_TOOL_NAMES } from "../src/mcp/agent-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   shippedExtensionHosts,
@@ -271,6 +272,7 @@ test("implemented Blueprint skills include runtime tool and slash-command guardr
 
 test("repaired command manifests stay path-free and runtime-name consistent", async () => {
   const contracts = await repairedPromptContracts();
+  const knownBlueprintAgents = new Set(BLUEPRINT_AGENT_TOOL_NAMES);
 
   for (const contract of contracts) {
     const raw = await readRelativePath(contract.manifestPath);
@@ -317,6 +319,11 @@ test("repaired command manifests stay path-free and runtime-name consistent", as
     }
 
     for (const agentName of contract.optionalAgents) {
+      assert.equal(
+        knownBlueprintAgents.has(agentName),
+        true,
+        `${contract.commandName} references unknown optional agent ${agentName}`
+      );
       assert.match(
         raw,
         new RegExp(escapeRegExp(`\`${agentName}\``)),

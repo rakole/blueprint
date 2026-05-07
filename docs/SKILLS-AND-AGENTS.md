@@ -46,6 +46,34 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-doc-writer` | `implemented` | Draft scoped repo documentation updates |
 | `blueprint-doc-verifier` | `implemented` | Fact-check repo docs against saved evidence |
 
+## Agent Discovery Troubleshooting
+
+If Blueprint agents do not show up in Gemini after install or update:
+
+- restart Gemini so it reloads extension-discovered skills and agents
+- confirm the Blueprint extension is active with `gemini extensions list`
+- run `/agents list` and verify the expected `blueprint-*` agent names appear
+- if the workspace is not trusted, trust it before expecting repo-local and extension runtime features to behave normally
+- check restrictive `tools.core` or `tools.exclude` settings; Gemini treats subagent names as tool names for policy/allowlist purposes
+
+When you use restrictive tool settings, include the Blueprint subagent tool names themselves:
+
+- `blueprint-checker`
+- `blueprint-debugger`
+- `blueprint-doc-verifier`
+- `blueprint-doc-writer`
+- `blueprint-executor`
+- `blueprint-mapper`
+- `blueprint-planner`
+- `blueprint-project-researcher`
+- `blueprint-researcher`
+- `blueprint-reviewer`
+- `blueprint-roadmapper`
+- `blueprint-security-auditor`
+- `blueprint-ui-auditor`
+- `blueprint-ui-designer`
+- `blueprint-verifier`
+
 ## Planned Later Agents
 
 | Agent | Status | Purpose |

@@ -1,6 +1,14 @@
+import * as z from "zod/v4";
+
 import { blueprintAgentDefinitionPath } from "./runtime-vocabulary.js";
 
-export type BlueprintAgentFrontmatterValue = string | string[];
+export type BlueprintAgentFrontmatterValue =
+  | string
+  | number
+  | boolean
+  | null
+  | BlueprintAgentFrontmatterValue[]
+  | { [key: string]: BlueprintAgentFrontmatterValue };
 
 export type BlueprintAgentDefinitionValidation = {
   agentName: string;
@@ -11,9 +19,43 @@ export type BlueprintAgentDefinitionValidation = {
 };
 
 type RelativePathReader = (relativePath: string) => Promise<string | null>;
+type ParsedYamlBlock = {
+  issues: string[];
+  nextIndex: number;
+  value: BlueprintAgentFrontmatterValue;
+};
+
+const FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$/;
+const AGENT_NAME_PATTERN = /^[a-z0-9-_]+$/;
+
+const yamlValueSchema: z.ZodType<BlueprintAgentFrontmatterValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(yamlValueSchema),
+    z.record(z.string(), yamlValueSchema)
+  ])
+);
+
+const localAgentFrontmatterSchema = z
+  .object({
+    kind: z.literal("local").optional().default("local"),
+    name: z.string().regex(AGENT_NAME_PATTERN, "Name must be a valid slug"),
+    description: z.string().min(1),
+    display_name: z.string().optional(),
+    tools: z.array(z.string()).optional(),
+    mcp_servers: z.record(z.string(), yamlValueSchema).optional(),
+    model: z.string().optional(),
+    temperature: z.number().optional(),
+    max_turns: z.number().int().positive().optional(),
+    timeout_mins: z.number().int().positive().optional()
+  })
+  .strict();
 
 function extractFrontmatterBlock(content: string): { frontmatter: string; body: string } | null {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const match = content.match(FRONTMATTER_REGEX);
 
   if (!match) {
     return null;
@@ -21,7 +63,261 @@ function extractFrontmatterBlock(content: string): { frontmatter: string; body: 
 
   return {
     frontmatter: match[1],
-    body: match[2]
+    body: match[2] ?? ""
+  };
+}
+
+function countIndent(line: string): number {
+  let indent = 0;
+
+  while (indent < line.length && line[indent] === " ") {
+    indent += 1;
+  }
+
+  return indent;
+}
+
+function parseScalar(value: string): BlueprintAgentFrontmatterValue {
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  if (value === "null") {
+    return null;
+  }
+
+  if (/^-?\d+$/.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+
+  if (/^-?\d+\.\d+$/.test(value)) {
+    return Number.parseFloat(value);
+  }
+
+  if (
+    (value.startsWith("\"") && value.endsWith("\"")) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
+function foldBlockLines(lines: string[]): string {
+  const paragraphs: string[] = [];
+  let paragraph: string[] = [];
+
+  const flushParagraph = (): void => {
+    if (paragraph.length > 0) {
+      paragraphs.push(paragraph.join(" "));
+      paragraph = [];
+    }
+  };
+
+  for (const line of lines) {
+    if (line.length === 0) {
+      flushParagraph();
+      continue;
+    }
+
+    paragraph.push(line.trim());
+  }
+
+  flushParagraph();
+
+  if (paragraphs.length === 0) {
+    return "";
+  }
+
+  return `${paragraphs.join("\n\n")}\n`;
+}
+
+function parseBlockScalar(
+  lines: string[],
+  startIndex: number,
+  indent: number,
+  indicator: ">" | "|"
+): ParsedYamlBlock {
+  const blockLines: string[] = [];
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (line.trim().length === 0) {
+      blockLines.push("");
+      index += 1;
+      continue;
+    }
+
+    if (countIndent(line) < indent) {
+      break;
+    }
+
+    blockLines.push(line.slice(indent));
+    index += 1;
+  }
+
+  return {
+    value:
+      indicator === ">"
+        ? foldBlockLines(blockLines)
+        : `${blockLines.join("\n")}${blockLines.length > 0 ? "\n" : ""}`,
+    nextIndex: index,
+    issues: []
+  };
+}
+
+function parseArray(lines: string[], startIndex: number, indent: number): ParsedYamlBlock {
+  const issues: string[] = [];
+  const values: BlueprintAgentFrontmatterValue[] = [];
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (line.trim().length === 0) {
+      index += 1;
+      continue;
+    }
+
+    const lineIndent = countIndent(line);
+
+    if (lineIndent < indent) {
+      break;
+    }
+
+    if (lineIndent !== indent) {
+      issues.push(`Unexpected indentation at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+
+    const trimmed = line.trim();
+
+    if (!trimmed.startsWith("- ")) {
+      break;
+    }
+
+    const remainder = trimmed.slice(2).trimStart();
+
+    if (remainder.length === 0) {
+      let nextIndex = index + 1;
+
+      while (nextIndex < lines.length && lines[nextIndex].trim().length === 0) {
+        nextIndex += 1;
+      }
+
+      if (nextIndex >= lines.length || countIndent(lines[nextIndex]) <= indent) {
+        values.push(null);
+        index += 1;
+        continue;
+      }
+
+      const childIndent = countIndent(lines[nextIndex]);
+      const parsed = lines[nextIndex].trim().startsWith("- ")
+        ? parseArray(lines, nextIndex, childIndent)
+        : parseObject(lines, nextIndex, childIndent);
+
+      values.push(parsed.value);
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    values.push(parseScalar(remainder));
+    index += 1;
+  }
+
+  return {
+    value: values,
+    nextIndex: index,
+    issues
+  };
+}
+
+function parseObject(lines: string[], startIndex: number, indent: number): ParsedYamlBlock {
+  const issues: string[] = [];
+  const value: Record<string, BlueprintAgentFrontmatterValue> = {};
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (line.trim().length === 0) {
+      index += 1;
+      continue;
+    }
+
+    const lineIndent = countIndent(line);
+
+    if (lineIndent < indent) {
+      break;
+    }
+
+    if (lineIndent !== indent) {
+      issues.push(`Unexpected indentation at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+
+    const trimmed = line.trim();
+    const keyMatch = /^([A-Za-z0-9_-]+):(.*)$/.exec(trimmed);
+
+    if (!keyMatch) {
+      issues.push(`Invalid YAML mapping at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+
+    const [, key, rawRemainder] = keyMatch;
+    const remainder = rawRemainder.trimStart();
+
+    if (remainder === ">" || remainder === "|") {
+      const parsed = parseBlockScalar(lines, index + 1, indent + 2, remainder);
+      value[key] = parsed.value;
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    if (remainder.length === 0) {
+      let nextIndex = index + 1;
+
+      while (nextIndex < lines.length && lines[nextIndex].trim().length === 0) {
+        nextIndex += 1;
+      }
+
+      if (nextIndex >= lines.length || countIndent(lines[nextIndex]) <= indent) {
+        value[key] = null;
+        index += 1;
+        continue;
+      }
+
+      const childIndent = countIndent(lines[nextIndex]);
+      const parsed = lines[nextIndex].trim().startsWith("- ")
+        ? parseArray(lines, nextIndex, childIndent)
+        : parseObject(lines, nextIndex, childIndent);
+
+      value[key] = parsed.value;
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+
+    value[key] = parseScalar(remainder);
+    index += 1;
+  }
+
+  return {
+    value,
+    nextIndex: index,
+    issues
   };
 }
 
@@ -29,70 +325,33 @@ function parseFrontmatter(frontmatter: string): {
   frontmatter: Record<string, BlueprintAgentFrontmatterValue>;
   issues: string[];
 } {
-  const result: Record<string, BlueprintAgentFrontmatterValue> = {};
-  const issues: string[] = [];
-  const lines = frontmatter.split("\n");
+  const parsed = parseObject(frontmatter.split(/\r?\n/), 0, 0);
 
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
+  if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+    return {
+      frontmatter: {},
+      issues: ["Agent frontmatter must be a YAML object."]
+    };
+  }
 
-    if (!line.trim()) {
-      continue;
-    }
+  const validation = localAgentFrontmatterSchema.safeParse(parsed.value);
 
-    const match = line.match(/^([a-zA-Z_]+):\s*(.*)$/);
-
-    if (!match) {
-      issues.push(`Unsupported frontmatter line: ${line}`);
-      continue;
-    }
-
-    const [, key, rawValue] = match;
-
-    if (rawValue === ">" || rawValue === "|") {
-      const blockLines: string[] = [];
-
-      for (index += 1; index < lines.length; index += 1) {
-        const blockLine = lines[index];
-
-        if (blockLine.startsWith("  ")) {
-          blockLines.push(blockLine.slice(2).trim());
-          continue;
-        }
-
-        index -= 1;
-        break;
-      }
-
-      result[key] = blockLines.join(" ").trim();
-      continue;
-    }
-
-    if (!rawValue) {
-      const items: string[] = [];
-
-      for (index += 1; index < lines.length; index += 1) {
-        const itemLine = lines[index];
-        const itemMatch = itemLine.match(/^  - (.+)$/);
-
-        if (!itemMatch) {
-          index -= 1;
-          break;
-        }
-
-        items.push(itemMatch[1].trim());
-      }
-
-      result[key] = items;
-      continue;
-    }
-
-    result[key] = rawValue.trim();
+  if (!validation.success) {
+    return {
+      frontmatter: parsed.value as Record<string, BlueprintAgentFrontmatterValue>,
+      issues: [
+        ...parsed.issues,
+        ...validation.error.issues.map((issue) => {
+          const pathLabel = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+          return `${pathLabel}${issue.message}`;
+        })
+      ]
+    };
   }
 
   return {
-    frontmatter: result,
-    issues
+    frontmatter: validation.data as Record<string, BlueprintAgentFrontmatterValue>,
+    issues: parsed.issues
   };
 }
 
@@ -130,12 +389,8 @@ export function validateBlueprintAgentDefinitionContent(
     issues.push(`Missing agent description in ${relativePath}`);
   }
 
-  if (typeof frontmatter.kind !== "string" || frontmatter.kind !== "local") {
-    issues.push(`Missing or invalid agent kind in ${relativePath}`);
-  }
-
-  if (!Array.isArray(frontmatter.tools) || frontmatter.tools.length === 0) {
-    issues.push(`Missing or empty tools list in ${relativePath}`);
+  if (frontmatter.kind !== undefined && frontmatter.kind !== "local") {
+    issues.push(`Invalid agent kind in ${relativePath}: ${String(frontmatter.kind)}`);
   }
 
   return {

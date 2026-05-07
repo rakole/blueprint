@@ -1,4 +1,8 @@
 import type { BlueprintInternalToolName } from "./runtime-vocabulary.js";
+import {
+  BLUEPRINT_AGENT_TOOL_NAMES,
+  type BlueprintAgentName
+} from "./agent-metadata.js";
 
 type RuntimeOwnedCommandStatus =
   | "planned"
@@ -17,7 +21,7 @@ export type RuntimeOwnedCommandMetadata = {
     risk: string;
   };
   requiredTools: readonly BlueprintInternalToolName[];
-  optionalAgents: readonly string[];
+  optionalAgents: readonly BlueprintAgentName[];
   requiredInputPaths?: readonly string[];
   spec: {
     path: string;
@@ -34,7 +38,7 @@ export type RuntimeOwnedCommandMetadata = {
     command: string;
     primarySkill: string;
     exactMcpDestination: readonly BlueprintInternalToolName[];
-    optionalAgents: readonly string[];
+    optionalAgents: readonly BlueprintAgentName[];
     hookInvolvement: readonly string[];
     contractNotes: string;
     evidenceState: readonly string[];
@@ -42,6 +46,31 @@ export type RuntimeOwnedCommandMetadata = {
 };
 
 const RUNTIME_METADATA_PATH = "src/mcp/command-runtime-metadata.ts";
+const KNOWN_BLUEPRINT_AGENT_NAMES = new Set<string>(BLUEPRINT_AGENT_TOOL_NAMES);
+
+function blueprintOptionalAgents<const T extends readonly BlueprintAgentName[]>(
+  ...agentNames: T
+): T {
+  return agentNames;
+}
+
+function assertKnownBlueprintOptionalAgents(
+  commandName: string,
+  agentNames: readonly BlueprintAgentName[]
+): void {
+  for (const agentName of agentNames) {
+    if (!KNOWN_BLUEPRINT_AGENT_NAMES.has(agentName)) {
+      throw new Error(
+        `Unknown optional agent "${agentName}" in runtime metadata for ${commandName}`
+      );
+    }
+  }
+}
+
+const NEW_PROJECT_OPTIONAL_AGENTS = blueprintOptionalAgents(
+  "blueprint-project-researcher",
+  "blueprint-roadmapper"
+);
 
 export const NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID =
   "src/mcp/command-runtime-metadata.ts#new-project";
@@ -66,7 +95,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
     "blueprint_artifact_contract_read",
     "blueprint_artifact_validate"
   ],
-  optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+  optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
   spec: {
     path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
     title: "`/blu-new-project`",
@@ -98,7 +127,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
       "blueprint_artifact_contract_read",
       "blueprint_artifact_validate"
     ],
-    optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+    optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
       "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
@@ -707,54 +736,56 @@ const REAPPLY_PATCHES_SPEC_PATH =
 const DEBUG_SPEC_PATH =
   "skills/blueprint-debug/references/debug-runtime-contract.md";
 
-const PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = [
+const PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-researcher"
-] as const;
-const PLAN_PHASE_OPTIONAL_AGENTS = [
+);
+const PLAN_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-planner",
   "blueprint-checker"
-] as const;
-const UI_PHASE_OPTIONAL_AGENTS = [
+);
+const UI_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-ui-designer",
   "blueprint-checker"
-] as const;
-const EXECUTE_PHASE_OPTIONAL_AGENTS = ["blueprint-executor"] as const;
-const VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"] as const;
-const ADD_TESTS_OPTIONAL_AGENTS = [
+);
+const EXECUTE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-executor");
+const VALIDATION_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-verifier");
+const ADD_TESTS_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-executor",
   "blueprint-verifier"
-] as const;
-const CODE_REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
-const CODE_REVIEW_FIX_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
-const SECURE_PHASE_OPTIONAL_AGENTS = ["blueprint-security-auditor"] as const;
-const AUDIT_FIX_OPTIONAL_AGENTS = [
+);
+const CODE_REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+const CODE_REVIEW_FIX_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+const SECURE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
+  "blueprint-security-auditor"
+);
+const AUDIT_FIX_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-reviewer",
   "blueprint-verifier"
-] as const;
-const REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"] as const;
-const UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"] as const;
-const DOCS_UPDATE_OPTIONAL_AGENTS = [
+);
+const REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+const UI_REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-ui-auditor");
+const DOCS_UPDATE_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-doc-writer",
   "blueprint-doc-verifier"
-] as const;
+);
 const ROADMAP_ADMIN_HOOKS = [
   "read-before-edit",
   ".blueprint write guard"
 ] as const;
-const ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS = [
+const ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-roadmapper"
-] as const;
-const ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS = [
+);
+const ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-verifier"
-] as const;
-const EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"] as const;
-const QUICK_OPTIONAL_AGENTS = [
+);
+const EXPLORE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-researcher");
+const QUICK_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-researcher",
   "blueprint-planner",
   "blueprint-executor",
   "blueprint-verifier"
-] as const;
-const MAP_CODEBASE_OPTIONAL_AGENTS = ["blueprint-mapper"] as const;
+);
+const MAP_CODEBASE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-mapper");
 
 function runtimeMetadataSourceId(commandName: string): string {
   return `${RUNTIME_METADATA_PATH}#${commandName}`;
@@ -2839,7 +2870,7 @@ export const DEBUG_RUNTIME_METADATA = {
     risk: "Medium: exploratory shell commands and test runs are likely."
   },
   requiredTools: DEBUG_REQUIRED_TOOLS,
-  optionalAgents: ["blueprint-debugger"],
+  optionalAgents: blueprintOptionalAgents("blueprint-debugger"),
   requiredInputPaths: ["commands/blu-debug.toml", DEBUG_SPEC_PATH],
   spec: {
     path: runtimeMetadataSourceId("debug"),
@@ -2863,7 +2894,7 @@ export const DEBUG_RUNTIME_METADATA = {
     command: "debug",
     primarySkill: "blueprint-debug",
     exactMcpDestination: DEBUG_REQUIRED_TOOLS,
-    optionalAgents: ["blueprint-debugger"],
+    optionalAgents: blueprintOptionalAgents("blueprint-debugger"),
     hookInvolvement: [
       "read-before-edit",
       ".blueprint write guard",
@@ -2974,6 +3005,14 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [DEBUG_RUNTIME_METADATA.commandName]: DEBUG_RUNTIME_METADATA,
   [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
 } as const;
+
+for (const metadata of Object.values(RUNTIME_OWNED_COMMAND_METADATA)) {
+  assertKnownBlueprintOptionalAgents(metadata.commandName, metadata.optionalAgents);
+  assertKnownBlueprintOptionalAgents(
+    `${metadata.commandName} runtimeReference`,
+    metadata.runtimeReference.optionalAgents
+  );
+}
 
 export function listRuntimeOwnedCommandMetadata(): RuntimeOwnedCommandMetadata[] {
   return Object.values(RUNTIME_OWNED_COMMAND_METADATA);

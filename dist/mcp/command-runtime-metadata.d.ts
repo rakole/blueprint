@@ -1,4 +1,5 @@
 import type { BlueprintInternalToolName } from "./runtime-vocabulary.js";
+import { type BlueprintAgentName } from "./agent-metadata.js";
 type RuntimeOwnedCommandStatus = "planned" | "implemented" | "blocked" | "repairing";
 export type RuntimeOwnedCommandMetadata = {
     commandName: string;
@@ -11,7 +12,7 @@ export type RuntimeOwnedCommandMetadata = {
         risk: string;
     };
     requiredTools: readonly BlueprintInternalToolName[];
-    optionalAgents: readonly string[];
+    optionalAgents: readonly BlueprintAgentName[];
     requiredInputPaths?: readonly string[];
     spec: {
         path: string;
@@ -28,7 +29,7 @@ export type RuntimeOwnedCommandMetadata = {
         command: string;
         primarySkill: string;
         exactMcpDestination: readonly BlueprintInternalToolName[];
-        optionalAgents: readonly string[];
+        optionalAgents: readonly BlueprintAgentName[];
         hookInvolvement: readonly string[];
         contractNotes: string;
         evidenceState: readonly string[];

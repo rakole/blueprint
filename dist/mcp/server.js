@@ -36268,63 +36268,223 @@ var init_runtime_vocabulary = __esm({
 
 // src/mcp/agent-definition.ts
 function extractFrontmatterBlock(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  const match = content.match(FRONTMATTER_REGEX);
   if (!match) {
     return null;
   }
   return {
     frontmatter: match[1],
-    body: match[2]
+    body: match[2] ?? ""
+  };
+}
+function countIndent(line) {
+  let indent = 0;
+  while (indent < line.length && line[indent] === " ") {
+    indent += 1;
+  }
+  return indent;
+}
+function parseScalar(value) {
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  if (value === "null") {
+    return null;
+  }
+  if (/^-?\d+$/.test(value)) {
+    return Number.parseInt(value, 10);
+  }
+  if (/^-?\d+\.\d+$/.test(value)) {
+    return Number.parseFloat(value);
+  }
+  if (value.startsWith('"') && value.endsWith('"') || value.startsWith("'") && value.endsWith("'")) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+function foldBlockLines(lines) {
+  const paragraphs = [];
+  let paragraph = [];
+  const flushParagraph = () => {
+    if (paragraph.length > 0) {
+      paragraphs.push(paragraph.join(" "));
+      paragraph = [];
+    }
+  };
+  for (const line of lines) {
+    if (line.length === 0) {
+      flushParagraph();
+      continue;
+    }
+    paragraph.push(line.trim());
+  }
+  flushParagraph();
+  if (paragraphs.length === 0) {
+    return "";
+  }
+  return `${paragraphs.join("\n\n")}
+`;
+}
+function parseBlockScalar(lines, startIndex, indent, indicator) {
+  const blockLines = [];
+  let index = startIndex;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.trim().length === 0) {
+      blockLines.push("");
+      index += 1;
+      continue;
+    }
+    if (countIndent(line) < indent) {
+      break;
+    }
+    blockLines.push(line.slice(indent));
+    index += 1;
+  }
+  return {
+    value: indicator === ">" ? foldBlockLines(blockLines) : `${blockLines.join("\n")}${blockLines.length > 0 ? "\n" : ""}`,
+    nextIndex: index,
+    issues: []
+  };
+}
+function parseArray(lines, startIndex, indent) {
+  const issues = [];
+  const values = [];
+  let index = startIndex;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.trim().length === 0) {
+      index += 1;
+      continue;
+    }
+    const lineIndent = countIndent(line);
+    if (lineIndent < indent) {
+      break;
+    }
+    if (lineIndent !== indent) {
+      issues.push(`Unexpected indentation at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("- ")) {
+      break;
+    }
+    const remainder = trimmed.slice(2).trimStart();
+    if (remainder.length === 0) {
+      let nextIndex = index + 1;
+      while (nextIndex < lines.length && lines[nextIndex].trim().length === 0) {
+        nextIndex += 1;
+      }
+      if (nextIndex >= lines.length || countIndent(lines[nextIndex]) <= indent) {
+        values.push(null);
+        index += 1;
+        continue;
+      }
+      const childIndent = countIndent(lines[nextIndex]);
+      const parsed = lines[nextIndex].trim().startsWith("- ") ? parseArray(lines, nextIndex, childIndent) : parseObject(lines, nextIndex, childIndent);
+      values.push(parsed.value);
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+    values.push(parseScalar(remainder));
+    index += 1;
+  }
+  return {
+    value: values,
+    nextIndex: index,
+    issues
+  };
+}
+function parseObject(lines, startIndex, indent) {
+  const issues = [];
+  const value = {};
+  let index = startIndex;
+  while (index < lines.length) {
+    const line = lines[index];
+    if (line.trim().length === 0) {
+      index += 1;
+      continue;
+    }
+    const lineIndent = countIndent(line);
+    if (lineIndent < indent) {
+      break;
+    }
+    if (lineIndent !== indent) {
+      issues.push(`Unexpected indentation at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+    const trimmed = line.trim();
+    const keyMatch = /^([A-Za-z0-9_-]+):(.*)$/.exec(trimmed);
+    if (!keyMatch) {
+      issues.push(`Invalid YAML mapping at line ${index + 1}.`);
+      index += 1;
+      continue;
+    }
+    const [, key, rawRemainder] = keyMatch;
+    const remainder = rawRemainder.trimStart();
+    if (remainder === ">" || remainder === "|") {
+      const parsed = parseBlockScalar(lines, index + 1, indent + 2, remainder);
+      value[key] = parsed.value;
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+    if (remainder.length === 0) {
+      let nextIndex = index + 1;
+      while (nextIndex < lines.length && lines[nextIndex].trim().length === 0) {
+        nextIndex += 1;
+      }
+      if (nextIndex >= lines.length || countIndent(lines[nextIndex]) <= indent) {
+        value[key] = null;
+        index += 1;
+        continue;
+      }
+      const childIndent = countIndent(lines[nextIndex]);
+      const parsed = lines[nextIndex].trim().startsWith("- ") ? parseArray(lines, nextIndex, childIndent) : parseObject(lines, nextIndex, childIndent);
+      value[key] = parsed.value;
+      issues.push(...parsed.issues);
+      index = parsed.nextIndex;
+      continue;
+    }
+    value[key] = parseScalar(remainder);
+    index += 1;
+  }
+  return {
+    value,
+    nextIndex: index,
+    issues
   };
 }
 function parseFrontmatter(frontmatter) {
-  const result = {};
-  const issues = [];
-  const lines = frontmatter.split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (!line.trim()) {
-      continue;
-    }
-    const match = line.match(/^([a-zA-Z_]+):\s*(.*)$/);
-    if (!match) {
-      issues.push(`Unsupported frontmatter line: ${line}`);
-      continue;
-    }
-    const [, key, rawValue] = match;
-    if (rawValue === ">" || rawValue === "|") {
-      const blockLines = [];
-      for (index += 1; index < lines.length; index += 1) {
-        const blockLine = lines[index];
-        if (blockLine.startsWith("  ")) {
-          blockLines.push(blockLine.slice(2).trim());
-          continue;
-        }
-        index -= 1;
-        break;
-      }
-      result[key] = blockLines.join(" ").trim();
-      continue;
-    }
-    if (!rawValue) {
-      const items = [];
-      for (index += 1; index < lines.length; index += 1) {
-        const itemLine = lines[index];
-        const itemMatch = itemLine.match(/^  - (.+)$/);
-        if (!itemMatch) {
-          index -= 1;
-          break;
-        }
-        items.push(itemMatch[1].trim());
-      }
-      result[key] = items;
-      continue;
-    }
-    result[key] = rawValue.trim();
+  const parsed = parseObject(frontmatter.split(/\r?\n/), 0, 0);
+  if (!parsed.value || typeof parsed.value !== "object" || Array.isArray(parsed.value)) {
+    return {
+      frontmatter: {},
+      issues: ["Agent frontmatter must be a YAML object."]
+    };
+  }
+  const validation = localAgentFrontmatterSchema.safeParse(parsed.value);
+  if (!validation.success) {
+    return {
+      frontmatter: parsed.value,
+      issues: [
+        ...parsed.issues,
+        ...validation.error.issues.map((issue2) => {
+          const pathLabel = issue2.path.length > 0 ? `${issue2.path.join(".")}: ` : "";
+          return `${pathLabel}${issue2.message}`;
+        })
+      ]
+    };
   }
   return {
-    frontmatter: result,
-    issues
+    frontmatter: validation.data,
+    issues: parsed.issues
   };
 }
 function validateBlueprintAgentDefinitionContent(expectedAgentName, content, relativePath = blueprintAgentDefinitionPath(expectedAgentName)) {
@@ -36352,11 +36512,8 @@ function validateBlueprintAgentDefinitionContent(expectedAgentName, content, rel
   if (typeof frontmatter.description !== "string" || frontmatter.description.length === 0) {
     issues.push(`Missing agent description in ${relativePath}`);
   }
-  if (typeof frontmatter.kind !== "string" || frontmatter.kind !== "local") {
-    issues.push(`Missing or invalid agent kind in ${relativePath}`);
-  }
-  if (!Array.isArray(frontmatter.tools) || frontmatter.tools.length === 0) {
-    issues.push(`Missing or empty tools list in ${relativePath}`);
+  if (frontmatter.kind !== void 0 && frontmatter.kind !== "local") {
+    issues.push(`Invalid agent kind in ${relativePath}: ${String(frontmatter.kind)}`);
   }
   return {
     agentName: expectedAgentName,
@@ -36390,14 +36547,92 @@ async function resolveAvailableOptionalAgents(agentNames, readRelativePath) {
   }
   return available;
 }
+var FRONTMATTER_REGEX, AGENT_NAME_PATTERN, yamlValueSchema, localAgentFrontmatterSchema;
 var init_agent_definition = __esm({
   "src/mcp/agent-definition.ts"() {
     "use strict";
+    init_v4();
     init_runtime_vocabulary();
+    FRONTMATTER_REGEX = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$/;
+    AGENT_NAME_PATTERN = /^[a-z0-9-_]+$/;
+    yamlValueSchema = lazy(
+      () => union([
+        string2(),
+        number2(),
+        boolean2(),
+        _null3(),
+        array(yamlValueSchema),
+        record(string2(), yamlValueSchema)
+      ])
+    );
+    localAgentFrontmatterSchema = object2({
+      kind: literal("local").optional().default("local"),
+      name: string2().regex(AGENT_NAME_PATTERN, "Name must be a valid slug"),
+      description: string2().min(1),
+      display_name: string2().optional(),
+      tools: array(string2()).optional(),
+      mcp_servers: record(string2(), yamlValueSchema).optional(),
+      model: string2().optional(),
+      temperature: number2().optional(),
+      max_turns: number2().int().positive().optional(),
+      timeout_mins: number2().int().positive().optional()
+    }).strict();
+  }
+});
+
+// src/mcp/agent-metadata.ts
+var BLUEPRINT_AGENT_READ_ONLY_TOOLS, BLUEPRINT_EXECUTOR_AGENT_TOOLS, BLUEPRINT_AGENT_TOOL_ALLOWLIST, BLUEPRINT_AGENT_TOOL_NAMES;
+var init_agent_metadata = __esm({
+  "src/mcp/agent-metadata.ts"() {
+    "use strict";
+    BLUEPRINT_AGENT_READ_ONLY_TOOLS = [
+      "list_directory",
+      "read_file",
+      "glob",
+      "grep_search"
+    ];
+    BLUEPRINT_EXECUTOR_AGENT_TOOLS = [
+      ...BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "replace",
+      "write_file",
+      "run_shell_command"
+    ];
+    BLUEPRINT_AGENT_TOOL_ALLOWLIST = {
+      "blueprint-checker": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-debugger": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-doc-verifier": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-doc-writer": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-executor": BLUEPRINT_EXECUTOR_AGENT_TOOLS,
+      "blueprint-mapper": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-planner": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-project-researcher": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-researcher": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-reviewer": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-roadmapper": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-security-auditor": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-ui-auditor": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-ui-designer": BLUEPRINT_AGENT_READ_ONLY_TOOLS,
+      "blueprint-verifier": BLUEPRINT_AGENT_READ_ONLY_TOOLS
+    };
+    BLUEPRINT_AGENT_TOOL_NAMES = Object.freeze(
+      Object.keys(BLUEPRINT_AGENT_TOOL_ALLOWLIST).sort()
+    );
   }
 });
 
 // src/mcp/command-runtime-metadata.ts
+function blueprintOptionalAgents(...agentNames) {
+  return agentNames;
+}
+function assertKnownBlueprintOptionalAgents(commandName, agentNames) {
+  for (const agentName of agentNames) {
+    if (!KNOWN_BLUEPRINT_AGENT_NAMES.has(agentName)) {
+      throw new Error(
+        `Unknown optional agent "${agentName}" in runtime metadata for ${commandName}`
+      );
+    }
+  }
+}
 function runtimeMetadataSourceId(commandName) {
   return `${RUNTIME_METADATA_PATH}#${commandName}`;
 }
@@ -36415,11 +36650,17 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
+    init_agent_metadata();
     RUNTIME_METADATA_PATH = "src/mcp/command-runtime-metadata.ts";
+    KNOWN_BLUEPRINT_AGENT_NAMES = new Set(BLUEPRINT_AGENT_TOOL_NAMES);
+    NEW_PROJECT_OPTIONAL_AGENTS = blueprintOptionalAgents(
+      "blueprint-project-researcher",
+      "blueprint-roadmapper"
+    );
     NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#new-project";
     NEW_PROJECT_RUNTIME_METADATA = {
       commandName: "new-project",
@@ -36440,7 +36681,7 @@ var init_command_runtime_metadata = __esm({
         "blueprint_artifact_contract_read",
         "blueprint_artifact_validate"
       ],
-      optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+      optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
       spec: {
         path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
         title: "`/blu-new-project`",
@@ -36471,7 +36712,7 @@ var init_command_runtime_metadata = __esm({
           "blueprint_artifact_contract_read",
           "blueprint_artifact_validate"
         ],
-        optionalAgents: ["blueprint-project-researcher", "blueprint-roadmapper"],
+        optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
         contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
@@ -36981,54 +37222,56 @@ var init_command_runtime_metadata = __esm({
     UPDATE_SPEC_PATH = "skills/blueprint-maintenance/references/update-runtime-contract.md";
     REAPPLY_PATCHES_SPEC_PATH = "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
     DEBUG_SPEC_PATH = "skills/blueprint-debug/references/debug-runtime-contract.md";
-    PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = [
+    PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-researcher"
-    ];
-    PLAN_PHASE_OPTIONAL_AGENTS = [
+    );
+    PLAN_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-planner",
       "blueprint-checker"
-    ];
-    UI_PHASE_OPTIONAL_AGENTS = [
+    );
+    UI_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-ui-designer",
       "blueprint-checker"
-    ];
-    EXECUTE_PHASE_OPTIONAL_AGENTS = ["blueprint-executor"];
-    VALIDATION_OPTIONAL_AGENTS = ["blueprint-verifier"];
-    ADD_TESTS_OPTIONAL_AGENTS = [
+    );
+    EXECUTE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-executor");
+    VALIDATION_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-verifier");
+    ADD_TESTS_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-executor",
       "blueprint-verifier"
-    ];
-    CODE_REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
-    CODE_REVIEW_FIX_OPTIONAL_AGENTS = ["blueprint-reviewer"];
-    SECURE_PHASE_OPTIONAL_AGENTS = ["blueprint-security-auditor"];
-    AUDIT_FIX_OPTIONAL_AGENTS = [
+    );
+    CODE_REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+    CODE_REVIEW_FIX_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+    SECURE_PHASE_OPTIONAL_AGENTS = blueprintOptionalAgents(
+      "blueprint-security-auditor"
+    );
+    AUDIT_FIX_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-reviewer",
       "blueprint-verifier"
-    ];
-    REVIEW_OPTIONAL_AGENTS = ["blueprint-reviewer"];
-    UI_REVIEW_OPTIONAL_AGENTS = ["blueprint-ui-auditor"];
-    DOCS_UPDATE_OPTIONAL_AGENTS = [
+    );
+    REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-reviewer");
+    UI_REVIEW_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-ui-auditor");
+    DOCS_UPDATE_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-doc-writer",
       "blueprint-doc-verifier"
-    ];
+    );
     ROADMAP_ADMIN_HOOKS = [
       "read-before-edit",
       ".blueprint write guard"
     ];
-    ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS = [
+    ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-roadmapper"
-    ];
-    ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS = [
+    );
+    ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-verifier"
-    ];
-    EXPLORE_OPTIONAL_AGENTS = ["blueprint-researcher"];
-    QUICK_OPTIONAL_AGENTS = [
+    );
+    EXPLORE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-researcher");
+    QUICK_OPTIONAL_AGENTS = blueprintOptionalAgents(
       "blueprint-researcher",
       "blueprint-planner",
       "blueprint-executor",
       "blueprint-verifier"
-    ];
-    MAP_CODEBASE_OPTIONAL_AGENTS = ["blueprint-mapper"];
+    );
+    MAP_CODEBASE_OPTIONAL_AGENTS = blueprintOptionalAgents("blueprint-mapper");
     INSERT_PHASE_RUNTIME_METADATA = {
       commandName: "insert-phase",
       sourceId: runtimeMetadataSourceId("insert-phase"),
@@ -38938,7 +39181,7 @@ var init_command_runtime_metadata = __esm({
         risk: "Medium: exploratory shell commands and test runs are likely."
       },
       requiredTools: DEBUG_REQUIRED_TOOLS,
-      optionalAgents: ["blueprint-debugger"],
+      optionalAgents: blueprintOptionalAgents("blueprint-debugger"),
       requiredInputPaths: ["commands/blu-debug.toml", DEBUG_SPEC_PATH],
       spec: {
         path: runtimeMetadataSourceId("debug"),
@@ -38961,7 +39204,7 @@ var init_command_runtime_metadata = __esm({
         command: "debug",
         primarySkill: "blueprint-debug",
         exactMcpDestination: DEBUG_REQUIRED_TOOLS,
-        optionalAgents: ["blueprint-debugger"],
+        optionalAgents: blueprintOptionalAgents("blueprint-debugger"),
         hookInvolvement: [
           "read-before-edit",
           ".blueprint write guard",
@@ -39063,6 +39306,13 @@ var init_command_runtime_metadata = __esm({
       [DEBUG_RUNTIME_METADATA.commandName]: DEBUG_RUNTIME_METADATA,
       [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
     };
+    for (const metadata of Object.values(RUNTIME_OWNED_COMMAND_METADATA)) {
+      assertKnownBlueprintOptionalAgents(metadata.commandName, metadata.optionalAgents);
+      assertKnownBlueprintOptionalAgents(
+        `${metadata.commandName} runtimeReference`,
+        metadata.runtimeReference.optionalAgents
+      );
+    }
   }
 });
 
@@ -69522,7 +69772,7 @@ function findNextMeaningfulLine(lines, startIndex) {
   }
   return -1;
 }
-function parseArray(lines, startIndex, indent) {
+function parseArray2(lines, startIndex, indent) {
   const value = [];
   let index = startIndex;
   while (index < lines.length) {
@@ -69544,7 +69794,7 @@ function parseArray(lines, startIndex, indent) {
     nextIndex: index
   };
 }
-function parseObject(lines, startIndex, indent) {
+function parseObject2(lines, startIndex, indent) {
   const value = {};
   let index = startIndex;
   while (index < lines.length) {
@@ -69612,12 +69862,12 @@ function parseObject(lines, startIndex, indent) {
       continue;
     }
     if (nextTrimmed.startsWith("- ")) {
-      const parsedArray = parseArray(lines, nextIndex, nextIndent);
+      const parsedArray = parseArray2(lines, nextIndex, nextIndent);
       value[key] = parsedArray.value;
       index = parsedArray.nextIndex;
       continue;
     }
-    const parsedObject = parseObject(lines, nextIndex, nextIndent);
+    const parsedObject = parseObject2(lines, nextIndex, nextIndent);
     value[key] = parsedObject.value;
     index = parsedObject.nextIndex;
   }
@@ -69627,7 +69877,7 @@ function parseObject(lines, startIndex, indent) {
   };
 }
 function parseFrontmatter3(frontmatter) {
-  return parseObject(frontmatter.split("\n"), 0, 0).value;
+  return parseObject2(frontmatter.split("\n"), 0, 0).value;
 }
 function extractMarkdownSection6(markdown, heading) {
   const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
