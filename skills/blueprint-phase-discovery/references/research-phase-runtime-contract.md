@@ -223,9 +223,11 @@ This fallback is the required single-agent path, not a degraded emergency mode.
   report the exact validation blocker plus the next safe continuation action.
 - Delete the checkpoint only after final research writes successfully.
 - After a successful research write or a valid `view`/`skip`/`reuse` exit,
-  sync `STATE.md` through `blueprint_state_update` with `base: "synced"`, then
-  re-load routing through `blueprint_state_load` without mutating the research
-  artifact.
+  sync `STATE.md` through `blueprint_state_update` with `base: "synced"` while
+  preserving the already resolved selected phase in `patch.currentPhase`
+  together with `patch.activeCommand`, then re-load routing through
+  `blueprint_state_load` without mutating the research artifact or falling back
+  to roadmap-derived phase selection.
 
 ## Output Quality Criteria
 

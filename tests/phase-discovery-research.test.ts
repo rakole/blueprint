@@ -70,6 +70,111 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+async function createEarlierSelectedResearchPhaseRepo(): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-research-earlier-phase-");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-earlier-discovery"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-later-delivery"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Explicit Earlier Research Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Earlier Discovery**
+- [ ] **Phase 3: Later Delivery**
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 3
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          ui_phase: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+function validContextContent(phaseNumber: string, phaseName: string): string {
+  const prefix = phaseNumber.padStart(2, "0");
+  return `# Phase ${prefix}: ${phaseName} - Context
+
+## Phase Boundary
+- Phase goal - keep selected-phase routing pinned through synced state refresh.
+- Included work - persist discovery outputs for the explicitly selected phase only.
+- Excluded work - letting later roadmap phases override selected-phase routing.
+- Success target - downstream commands continue on the same selected phase.
+
+## Discovery Grounding
+- Product brief - Blueprint persists phase discovery state under .blueprint/phases/.
+- Requirements trace - downstream research and UI work must stay phase-scoped.
+- Workflow stance - synced state refresh should preserve an explicit earlier-phase selection.
+- Locked decisions - MCP-owned state writes are the only persistence path.
+
+## Implementation Decisions
+- Decision: preserve the resolved selected phase during synced state refresh.
+- Tradeoff or constraint: roadmap-derived current phase alone is not enough when the user selected an earlier phase.
+
+## Specific Ideas
+- Specific idea 1: keep the phase selection explicit in the final sync patch.
+- Specific idea 2: make regression coverage assert earlier-phase routing.
+
+## Existing Code Insights
+- Existing code insight 1: state sync recomputes routing from artifacts and the current phase.
+- Reusable pattern: patch currentPhase during synced updates when a command resolved a different selected phase.
+- Known gap or caution: roadmap-only sync can drift to a later phase.
+
+## Dependencies
+- Prior phase artifacts: selected phase context and research stay under the same phase directory.
+- External constraints: no host-global state writes.
+- Required follow-up reads: src/mcp/tools/state.ts
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Scope creep or later follow-up: generalize this regression shape for later lifecycle commands if needed.
+
+## Canonical References
+- Source 1: src/mcp/tools/state.ts`;
+}
+
 function validResearchContent(summary: string): string {
   return `# Phase 03: Phase Discovery - Research
 
@@ -220,6 +325,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /route back to `\/blu-discuss-phase <phase>`/i);
   assert.match(commandFile, /repair or update as the only successful path/i);
   assert.match(commandFile, /state_update` with `base: "synced"`/i);
+  assert.match(commandFile, /patch\.currentPhase/i);
   assert.match(commandFile, /state_load/i);
   assert.match(commandFile, /command_catalog/i);
   assert.match(commandFile, /research-owned checkpoint/i);
@@ -251,7 +357,11 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(docFile, /If the context read returns `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
   assert.match(docFile, /Invalid existing research must go through repair/i);
   assert.match(docFile, /use the runtime contract's single-agent topic-strand fallback/i);
-  assert.match(docFile, /call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load`/i);
+  assert.match(
+    docFile,
+    /call `blueprint_state_update` with `base: "synced"`[\s\S]*`blueprint_state_load`/i
+  );
+  assert.match(docFile, /patch\.currentPhase/i);
   assert.doesNotMatch(docFile, /update_topic|write_todos/);
 
   assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
@@ -379,6 +489,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /do not allow skip, default reuse, or an\s+unchanged invalid write result/i);
   assert.match(runtimeContract, /explicit `update` selection as the overwrite gate/i);
   assert.match(runtimeContract, /sync `STATE\.md` through `blueprint_state_update` with `base: "synced"`/i);
+  assert.match(runtimeContract, /patch\.currentPhase/i);
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
@@ -734,4 +845,55 @@ test("valid existing research can sync STATE without mutating the research artif
   assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-research-phase 3/);
   assert.match(loadedState.derivedStatus.nextAction, /\/blu-(ui-phase|plan-phase) 3/);
   assert.match(stateBody, /Run \/blu-(ui-phase|plan-phase) 3/);
+});
+
+test("research-phase synced state update stays on an explicitly selected earlier phase", async (t) => {
+  const repoPath = await createEarlierSelectedResearchPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "2",
+    artifact: "context",
+    content: validContextContent("2", "Earlier Discovery"),
+    overwrite: true
+  });
+  const researchWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "2",
+    artifact: "research",
+    content: validResearchContent(
+      "Keep research routing pinned to the explicitly selected earlier phase."
+    ).replaceAll("Phase 03: Phase Discovery", "Phase 02: Earlier Discovery"),
+    overwrite: true
+  });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "2",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(contextWrite.written, true);
+  assert.equal(researchWrite.written, true);
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.equal(stateUpdate.statePath, ".blueprint/STATE.md");
+  assert.match(
+    stateUpdate.warnings.join("\n"),
+    /requested phase 2 instead of the roadmap current phase 3/i
+  );
+  assert.equal(loadedState.state.activeCommand, "/blu-research-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "2");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 3|\/blu-plan-phase 3/);
+  assert.match(stateBody, /- Current phase: 2/);
+  assert.match(stateBody, /Run \/blu-ui-phase 2 to draft the phase UI contract/);
+  assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 3|Run \/blu-plan-phase 3/);
 });

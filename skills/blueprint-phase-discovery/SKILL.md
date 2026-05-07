@@ -193,7 +193,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 13. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry once before treating `/blu-discuss-phase` as complete. If the same diagnostics repeat or repair cannot finish safely, leave the checkpoint intact, report the exact validation blocker and next safe action, and do not inspect MCP source files as a repair strategy.
 14. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
 15. Require explicit overwrite confirmation before replacing existing context artifacts.
-16. End with the next safe action loaded from `blueprint_state_load.derivedStatus.nextAction` after the synced state update, and leave `STATE.md` legible about that next step. Do not infer a direct `/blu-plan-phase` handoff from successful context capture when enabled research or UI gates still route through `/blu-research-phase` or `/blu-ui-phase`.
+16. End with the next safe action loaded from `blueprint_state_load.derivedStatus.nextAction` after a synced `blueprint_state_update` that preserves the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, and leave `STATE.md` legible about that next step. Do not infer a direct `/blu-plan-phase` handoff from successful context capture when enabled research or UI gates still route through `/blu-research-phase` or `/blu-ui-phase`.
 
 ### `research-phase`
 
@@ -208,7 +208,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 7. During non-trivial multi-strand research on Gemini, use `update_topic` and `write_todos` only as session-local visibility aids. When a host does not expose those helpers, keep the same stage and next-safe-action visibility through short progress recaps plus MCP-backed checkpoints and `STATE.md`.
 8. Break long-running research into topic-sized strands, checkpoint paused or inconclusive work, and use the runtime contract's single-agent fallback when no suitable subagent is available. Do not use browser-only, web-search-only, shell-only, or generic agents as substitutes.
 9. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry once before treating `/blu-research-phase` as complete. If the same diagnostics repeat, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and stop.
-10. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load` so `STATE.md` and the reported next safe action advance without mutating the research artifact.
+10. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, then call `blueprint_state_load` so `STATE.md` and the reported next safe action advance without mutating the research artifact.
 
 ### `list-phase-assumptions`
 

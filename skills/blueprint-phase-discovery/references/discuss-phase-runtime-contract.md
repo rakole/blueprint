@@ -209,8 +209,10 @@ Before treating the discussion as complete:
 4. If a discussion log is written, apply the same contract-read,
    normalize, write, and repair loop for `phase.discussion-log`.
 5. After the final context artifact and any optional discussion log write
-   successfully, call `blueprint_state_update` with `base: "synced"`. Do not
-   treat the update response as the routing decision.
+   successfully, call `blueprint_state_update` with `base: "synced"` and keep
+   the already resolved selected phase in `patch.currentPhase` together with
+   `patch.activeCommand`. Do not rely on roadmap-derived phase selection and do
+   not treat the update response as the routing decision.
 6. Call `blueprint_state_load` after the synced update and report the refreshed
    next safe action from the loaded state, falling back to `/blu-progress` when
    routing is missing, blocked, or undecidable.

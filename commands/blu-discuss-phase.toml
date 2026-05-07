@@ -16,6 +16,7 @@ Command-local constraints:
 - The authored phase context artifact is the saved `XX-CONTEXT.md` file for the resolved phase.
 - Require explicit confirmation before replacing substantive user-authored artifacts; scaffold-generated placeholders may be replaced by validated authored content.
 - Use host-supported structured choices for interactive overwrite confirmation, next-area branching, resume-versus-discard decisions, and focused discovery tradeoffs when a structured choice will help.
+- When finalizing with `mcp_blueprint_blueprint_state_update`, pass `base: "synced"` and preserve the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, so synced routing does not fall back to roadmap-derived phase selection.
 - Keep the final user response concise: phase, reused versus replaced artifacts, checkpoint behavior, plan-inventory warning if any, deferred ideas, progress recap, and the next safe action loaded from refreshed state. Do not infer a direct `/blu-plan-phase` handoff from successful context capture; repeat `mcp_blueprint_blueprint_state_load.derivedStatus.nextAction` exactly, so enabled research or UI gates continue to route through `/blu-research-phase` or `/blu-ui-phase` first.
 
 Response requirements:

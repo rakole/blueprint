@@ -89,7 +89,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker.
 - `blueprint-researcher` is optional and capability-gated. Use it only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps; otherwise use the runtime contract's single-agent topic-strand fallback. Any official-doc or other external evidence packet must come from the parent command or user, not from the subagent fetching it on its own.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
-- After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
+- After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
 
 ## Research Persistence Contract
 
@@ -156,6 +156,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Reads the actual saved context content before drafting or revising research.
 - Stops on missing context until the user repairs or confirms the recovery route.
 - Does not create, repair, overwrite, or infer phase context; missing or unusable context routes to `/blu-discuss-phase <phase>`.
+- Keeps an explicitly selected earlier phase pinned through the synced `STATE.md` refresh instead of relying on roadmap-derived phase selection.
 - Uses `contract.authoringTemplate` as the direct drafting seed and reserves scaffold for deliberate placeholder creation only.
 - Honors the effective `research.external_sources` policy before any external verification step.
 - Keeps repo truth explicit and distinct from official-doc or user-supplied external evidence.

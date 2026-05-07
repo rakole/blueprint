@@ -69,6 +69,86 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+async function createEarlierSelectedDiscussPhaseRepo(): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-discuss-earlier-phase-");
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/02-earlier-discovery"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-later-delivery"), {
+    recursive: true
+  });
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Explicit Earlier Phase Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Earlier Discovery**
+- [ ] **Phase 3: Later Delivery**
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 3
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          research: false,
+          ui_phase: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-later-delivery/03-CONTEXT.md"),
+    `# Phase 03: Later Delivery - Context
+
+## Decisions
+- The later roadmap phase is already ready for planning once it becomes the active phase again.
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-later-delivery/03-UI-SPEC.md"),
+    `# Phase 03: Later Delivery - UI Spec
+
+## Decisions
+- The later roadmap phase already has its UI contract.
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 function buildValidDiscussContext(openQuestionsSection: string): string {
   return `# Phase 03: Phase Discovery - Context
 
@@ -222,6 +302,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.doesNotMatch(discussToolSection, /`blueprint_command_catalog`/);
 
   assert.match(discussReference, /blueprint_state_update` with `base: "synced"/i);
+  assert.match(discussReference, /patch\.currentPhase/i);
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
   assert.match(discussReference, /Do not infer `\/blu-plan-phase`/i);
   assert.match(discussReference, /`derivedStatus\.nextAction`/);
@@ -590,6 +671,48 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   assert.match(contextBody, /checkpoint-per-area/i);
   assert.notEqual(contextBody, scaffoldContextBody);
   assert.match(stateBody, /Run \/blu-research-phase 3 to capture phase research/);
+});
+
+test("discuss-phase synced state update stays on an explicitly selected earlier phase", async (t) => {
+  const repoPath = await createEarlierSelectedDiscussPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "2",
+    artifact: "context",
+    content: buildValidDiscussContext("- none").replaceAll("Phase 03", "Phase 02"),
+    overwrite: true
+  });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-discuss-phase",
+      currentPhase: "2",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(contextWrite.written, true);
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.ok(stateUpdate.updatedFields.includes("lastUpdated"));
+  assert.equal(stateUpdate.statePath, ".blueprint/STATE.md");
+  assert.match(
+    stateUpdate.warnings.join("\n"),
+    /requested phase 2 instead of the roadmap current phase 3/i
+  );
+  assert.equal(loadedState.state.activeCommand, "/blu-discuss-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "2");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.match(stateBody, /- Current phase: 2/);
+  assert.match(stateBody, /Run \/blu-ui-phase 2 to draft the phase UI contract/);
+  assert.doesNotMatch(stateBody, /Run \/blu-plan-phase 3 to create execution-ready phase plans/);
 });
 
 test("discuss-phase keeps checkpoint when final synced state update fails", async (t) => {
