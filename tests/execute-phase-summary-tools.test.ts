@@ -367,9 +367,7 @@ function validAddTestsReportModel(
         planId: summary.planId,
         linkedPlanPath: summary.linkedPlanPath,
         summaryStatus: "COMPLETED",
-        targetedVerification: summary.targetedVerification.length > 0
-          ? summary.targetedVerification
-          : ["npm test -- tests/phase-planning-tools.test.ts exits 0"],
+        targetedVerification: summary.targetedVerification,
         coverageNote: `Generated tests cover completed plan ${summary.planId}.`
       }
     ])
@@ -670,10 +668,7 @@ function validAuditFixReportModel(
         planId: summary.planId,
         linkedPlanPath: summary.linkedPlanPath,
         summaryStatus: "COMPLETED",
-        targetedVerification:
-          summary.targetedVerification.length > 0
-            ? summary.targetedVerification
-            : ["npm test -- tests/phase-planning-tools.test.ts"],
+        targetedVerification: summary.targetedVerification,
         coverageNote: `Saved summary ${summary.planId} proves the linked-plan remediation provenance.`
       }
     ])
@@ -820,7 +815,7 @@ function validAuditFixReportModel(
       }
     ],
     commitTraceability: {
-      preFixHead: "abc1234",
+      preFixHead: "unknown",
       createdCommits: ["none"]
     },
     todoCapture: {
@@ -1635,6 +1630,44 @@ test("add-tests report authoring rejects invalid validation evidence and non-can
   assert.equal(nonCanonicalFileExists, false);
 });
 
+test("report model fixtures preserve empty saved targeted verification lists", () => {
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const linkedPlanPath = ".blueprint/phases/03-phase-discovery/03-01-PLAN.md";
+  const emptySummary = {
+    planId: "01",
+    path: summaryPath,
+    linkedPlanPath,
+    targetedVerification: []
+  };
+  const addTestsContext = {
+    completedSummaries: [emptySummary],
+    validationEvidencePaths: [".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"],
+    pendingPlans: [],
+    dependencyPlans: []
+  } as AddTestsReportContext;
+  const auditFixContext = {
+    completedSummaries: [emptySummary],
+    selectedEvidencePaths: [".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"],
+    scopeFiles: ["src/mcp/tools/phase.ts"],
+    pendingPlans: [],
+    dependencyPlans: []
+  } as AuditFixReportContext;
+
+  const addTestsModel = validAddTestsReportModel(addTestsContext);
+  const auditFixModel = validAuditFixReportModel(auditFixContext);
+
+  assert.deepEqual(
+    (addTestsModel.summaryEvidence as Record<string, { targetedVerification: string[] }>)[summaryPath]
+      ?.targetedVerification,
+    []
+  );
+  assert.deepEqual(
+    (auditFixModel.summaryEvidence as Record<string, { targetedVerification: string[] }>)[summaryPath]
+      ?.targetedVerification,
+    []
+  );
+});
+
 test("add-tests report authoring normalizes basename summary plan markers", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -2310,7 +2343,7 @@ test("invalid report and codebase writes return structured repair guidance", asy
   assert.match(invalidCodebase.suggestedRepairs?.join("\n") ?? "", /Runtime/);
 });
 
-test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale inventory, impossible completed pending debt, and dry-run mutation claims", async (t) => {
+test("audit-fix narrowing keeps pipe-safe table cells, reports clean missing-field diagnostics, preserves no-change sentinels, and still rejects stale inventory or dry-run mutation claims", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -2351,7 +2384,15 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
     auditFixContext,
     model: missingModel
   });
-  const injected = await blueprintArtifactReportValidateModel({
+  const missingSummaryEvidenceModel = validAuditFixReportModel(initialContext);
+  delete missingSummaryEvidenceModel.summaryEvidence;
+  const missingSummaryEvidence = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: missingSummaryEvidenceModel
+  });
+  const escapedPipeTableCell = await blueprintArtifactReportValidateModel({
     cwd: repoPath,
     reportName: "audit-fix-3",
     auditFixContext,
@@ -2412,6 +2453,31 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
       }
     })
   });
+  const dryRunNoChangeSentinel = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext: dryRunContext,
+    model: validAuditFixReportModel(dryRunAuthoringContext, "PARTIAL", {
+      changesApplied: [
+        {
+          findingId: "none",
+          status: "none",
+          changedFiles: ["none"],
+          summary: "none"
+        }
+      ],
+      commitTraceability: {
+        preFixHead: "unknown",
+        createdCommits: ["none"]
+      }
+    })
+  });
+  const blockedNoChangeSentinel = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "audit-fix-3",
+    auditFixContext,
+    model: validAuditFixReportModel(initialContext, "BLOCKED")
+  });
 
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
@@ -2458,10 +2524,33 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
     missing.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /model\.remediationSummary is required by report\.audit-fix/i
   );
-  assert.equal(injected.status, "invalid");
+  const missingRemediationSummaryDiagnostic = missing.diagnostics.find(
+    (diagnostic) => diagnostic.path === "model.remediationSummary"
+  );
+  assert.ok(missingRemediationSummaryDiagnostic);
+  assert.equal(missingRemediationSummaryDiagnostic.argsPatch, undefined);
+  assert.doesNotMatch(
+    missingRemediationSummaryDiagnostic.repair,
+    /replace with concrete run-specific evidence/i
+  );
+  assert.equal(missingSummaryEvidence.status, "invalid");
+  const missingSummaryEvidenceDiagnostic = missingSummaryEvidence.diagnostics.find(
+    (diagnostic) => diagnostic.path === "model.summaryEvidence"
+  );
+  assert.ok(missingSummaryEvidenceDiagnostic);
+  assert.equal(missingSummaryEvidenceDiagnostic.argsPatch, undefined);
+  assert.doesNotMatch(
+    missingSummaryEvidenceDiagnostic.repair,
+    /<exact completed summary path from taskSchema>|<taskSchema targeted verification>/i
+  );
+  assert.equal(
+    escapedPipeTableCell.status,
+    "valid",
+    escapedPipeTableCell.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
   assert.match(
-    injected.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must match pattern/i
+    escapedPipeTableCell.renderPreview ?? "",
+    /Unsafe \\\| table delimiter/
   );
   assert.equal(outOfScopeSeverity.status, "invalid");
   const severityDiagnostic = outOfScopeSeverity.diagnostics.find(
@@ -2498,6 +2587,22 @@ test("audit-fix narrowing rejects unsupported fields, unsafe sinks, stale invent
         diagnostic.code === "content.dry_run_mutation_claim" &&
         /empty changedFiles arrays/.test(diagnostic.repair)
     )
+  );
+  assert.ok(
+    !dryRunNoChangeSentinel.diagnostics.some(
+      (diagnostic) => diagnostic.code === "content.change_out_of_scope"
+    ),
+    dryRunNoChangeSentinel.diagnostics
+      .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
+      .join("\n")
+  );
+  assert.ok(
+    !blockedNoChangeSentinel.diagnostics.some(
+      (diagnostic) => diagnostic.code === "content.change_out_of_scope"
+    ),
+    blockedNoChangeSentinel.diagnostics
+      .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`)
+      .join("\n")
   );
 });
 

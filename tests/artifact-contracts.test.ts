@@ -303,13 +303,36 @@ test("artifact contract read exposes structured model contracts for phase plan, 
       /auditFixContext/i.test(binding)
     )
   );
+  assert.equal(
+    auditFixReportContract.contract.placeholderSignals.includes("src/mcp/tools/review.ts"),
+    false
+  );
+  assert.equal(
+    auditFixReportContract.contract.modelContract?.exampleLeakageSignals.includes(
+      "src/mcp/tools/review.ts"
+    ) ?? false,
+    false
+  );
   const auditFixModelProperties =
     auditFixReportContract.contract.modelContract?.jsonSchema.properties as
       | Record<string, unknown>
       | undefined;
+  const auditFixModelDefs = auditFixReportContract.contract.modelContract?.jsonSchema.$defs as
+    | Record<string, Record<string, unknown>>
+    | undefined;
   assert.equal(Boolean(auditFixModelProperties && "auditFixContext" in auditFixModelProperties), false);
   assert.ok(auditFixModelProperties && "summaryEvidence" in auditFixModelProperties);
   assert.ok(auditFixModelProperties && "todoCapture" in auditFixModelProperties);
+  assert.equal(
+    auditFixModelDefs?.tableCellString?.pattern,
+    "^(?=.*\\S)[^\\r\\n]+$"
+  );
+  assert.ok(
+    Array.isArray(auditFixModelDefs?.commitShaOrNone?.oneOf) &&
+      auditFixModelDefs.commitShaOrNone.oneOf.some(
+        (entry) => typeof entry === "object" && entry !== null && "const" in entry && entry.const === "unknown"
+      )
+  );
   assert.equal(
     listedAuditFixContract?.modelContract?.schemaId,
     "blueprint.report.audit-fix.model"
@@ -1712,6 +1735,10 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(auditFixContract.authoringTemplate, /### Summary Evidence/);
   assert.match(auditFixContract.authoringTemplate, /### Evidence Ledger/);
   assert.match(auditFixContract.authoringTemplate, /### Follow-Up Fixes/);
+  assert.match(
+    auditFixContract.authoringTemplate,
+    /pre-fix HEAD <sha\|unknown\|none>; created commits <sha list\|unknown\|none>/
+  );
   assert.match(
     auditFixContract.authoringTemplate,
     /Todo capture: <captured\|declined\|not-needed\|blocked>/

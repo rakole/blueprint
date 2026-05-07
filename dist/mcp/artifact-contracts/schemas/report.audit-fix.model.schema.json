@@ -335,7 +335,7 @@
     "tableCellString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n|]+$"
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$"
     },
     "status": {
       "type": "string",
@@ -764,6 +764,9 @@
         {
           "type": "string",
           "pattern": "^[0-9a-f]{7,40}$"
+        },
+        {
+          "const": "unknown"
         },
         {
           "const": "none"
