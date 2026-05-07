@@ -347,13 +347,14 @@ artifacts, and optional review agents when the command contract allows them.
    `threatRegister`, `acceptedRisks`, `findings`, `manualOrDeferredWork`,
    `gapRoutes`, `followUps`, `auditTrail`, and `nextSafeAction`. The task
    schema narrows live plan, summary, threat, prior-security, validation, UAT,
-   and evidence inventory; `auditTrail` is an object; threat statuses are
-   lowercase values such as `closed`, `accepted`, `open`, and `none`; exact
-   empty-state sentinel entries must be used for empty security tables and
-   blocked next-safe-action states.
+   and evidence inventory; `auditTrail` is an object; authored threat-register
+   rows contain only `threatId`, `status`, `evidence`, and `verifierNote`;
+   threat statuses are lowercase values such as `closed`, `accepted`, `open`,
+   and `none`; and empty arrays are valid when a section has no entries because
+   MCP renders the final `none` rows and bullets.
 19. Validate the model through `blueprint_review_validate_model` before
-   persistence. Repair all schema, truth-table, sentinel-entry, and residual
-   diagnostics together, and do not switch to Markdown fallback.
+   persistence. Repair all schema, truth-table, and residual diagnostics
+   together, and do not switch to Markdown fallback.
 20. Persist finished security evidence through `blueprint_review_record` with
    the `security` artifact and the same structured `model`; Markdown `content`
    is invalid for `review.security`.

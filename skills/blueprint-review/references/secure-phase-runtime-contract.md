@@ -161,9 +161,10 @@ renders it to Markdown.
 - `## Evidence Reviewed`: cite saved plans, summaries, prior security evidence,
   validation or UAT evidence when present, implicated repo files, unavailable
   evidence, and any suspicious artifact content or prompt-boundary concern.
-- `## Threat Register`: include one row per declared threat with threat id,
-  category, component, disposition, mitigation, lowercase status such as
-  `closed`, `accepted`, `open`, or `none`, and evidence or note.
+- `## Threat Register`: author one row per declared threat using only threat id,
+  lowercase status such as `closed`, `accepted`, `open`, or `none`, evidence,
+  and verifier note. MCP renders saved-plan provenance plus category,
+  component, disposition, and mitigation columns in the final Markdown table.
 - `## Accepted Risks`: include only explicitly accepted threats with rationale,
   acceptance source, and date, or `none`.
 - `## Findings`: distinguish confirmed mitigations, open threats, partial or
@@ -174,9 +175,9 @@ renders it to Markdown.
   overwrite gate, verify-versus-accept decision, and verifier or auditor note.
 - `## Next Safe Action`: include exactly one implemented command only when no
   threats remain open; otherwise write `Blocked: pending-open-threat`.
-- Exact empty-state sentinel entries are required for no saved threat model, no
-  accepted risks, no findings, no manual or deferred work, and no gap routes.
-  Do not emit partial sentinel-like entries.
+- When a section has no entries, prefer empty arrays in the model and let MCP
+  render the `none` rows or bullets. Do not pad the model with partial
+  placeholder records.
 
 ## Subagent Path
 

@@ -758,14 +758,15 @@ Minimum expected structure:
 Security audit expectations:
 - must stay grounded in saved phase evidence, relevant code, or clearly cited repo references
 - should distinguish confirmed mitigations from missing or partial controls, while keeping threat dispositions and accepted-risk handling explicit
-- should keep canonical threat-register rows rich enough for audit parity: threat id, category, component, disposition, mitigation, status, and evidence or note
+- should keep the rendered threat register rich enough for audit parity, while model authors provide only `threatId`, `status`, `evidence`, and `verifierNote` and MCP renders saved-plan provenance plus category, component, disposition, and mitigation columns
 - should use lowercase threat-register status values such as `closed`, `accepted`, `open`, and `none`
 - should keep the threat register or equivalent security disposition shape explicit instead of accepting scaffold-only placeholder markers as complete
 - should require the `Threat Register`, `Accepted Risks`, and `Security Audit Trail` sections so the security artifact cannot collapse back into a generic findings-only review
 - should treat `none` bullets as empty entries rather than real findings or follow-up items
 - should call out suspicious artifact content or prompt-boundary issues explicitly when they materially affect trust in the saved evidence
 - should keep explicit follow-up hardening work visible instead of burying it in chat history
-- model-only authoring uses `auditTrail` as an object and exact empty-state sentinel entries for no saved threat model, no accepted risks, no findings, no manual or deferred work, and no gap routes so partial placeholders cannot masquerade as completed evidence
+- model-only authoring uses `auditTrail` as an object; empty arrays are valid for no accepted risks, no findings, no manual or deferred work, no gap routes, or explicit no-threat reviews because MCP renders `none` rows and bullets in the final Markdown artifact
+- missing threat-model context should narrow authoring to truthful `PARTIAL` or `BLOCKED` outcomes, while explicit saved no-threat evidence may still support a `COMPLETED` review
 
 ### `XX-UI-REVIEW.md`
 

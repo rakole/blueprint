@@ -323,42 +323,11 @@ function createSecurityModel(
         verifierNote: "The mitigation evidence matches the saved threat register."
       }
     ],
-    acceptedRisks: [
-      {
-        threatId: "none",
-        rationale: "none",
-        acceptedBy: "none",
-        acceptedAt: "none",
-        evidence: "none"
-      }
-    ],
-    findings: [
-      {
-        kind: "none",
-        severity: "none",
-        threatId: "none",
-        evidence: "none",
-        recommendation: "none",
-        status: "none"
-      }
-    ],
-    manualOrDeferredWork: [
-      {
-        item: "none",
-        reason: "none",
-        followUp: "none",
-        status: "NONE"
-      }
-    ],
-    gapRoutes: [
-      {
-        gap: "none",
-        evidence: "none",
-        repair: "none",
-        status: "NONE"
-      }
-    ],
-    followUps: ["none"],
+    acceptedRisks: [],
+    findings: [],
+    manualOrDeferredWork: [],
+    gapRoutes: [],
+    followUps: [],
     auditTrail: {
       auditDate: "2026-04-30",
       executionMode: "inline",
@@ -382,14 +351,8 @@ function createNoThreatModelPartialModel(
     securitySummary: [
       "Completed execution evidence exists, but no saved threat model was available in the linked plan."
     ],
-    threatRegister: [
-      {
-        threatId: "none",
-        status: "none",
-        evidence: "none",
-        verifierNote: "none"
-      }
-    ],
+    threatRegister: [],
+    acceptedRisks: [],
     findings: [
       {
         kind: "missing-control",
@@ -430,6 +393,35 @@ function createNoThreatModelPartialModel(
   });
 }
 
+function createNoThreatCompletedModel(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return createSecurityModel({
+    status: "COMPLETED",
+    readiness: "ready-for-routing",
+    completionState: "complete",
+    securitySummary: [
+      "The linked plans explicitly declared no in-scope threats, and completed execution evidence stayed within that saved scope."
+    ],
+    threatRegister: [],
+    acceptedRisks: [],
+    findings: [],
+    manualOrDeferredWork: [],
+    gapRoutes: [],
+    followUps: [],
+    auditTrail: {
+      auditDate: "2026-04-30",
+      executionMode: "inline",
+      overwriteGate: "not-needed",
+      verifyOrAcceptDecision: "none",
+      pendingOpenThreatStatus: "none",
+      verifierNote: "Saved plan evidence explicitly declared no threats for this completed phase."
+    },
+    nextSafeAction: "/blu-validate-phase 5",
+    ...overrides
+  });
+}
+
 test("secure-phase docs and catalog metadata keep the security review slice implemented and spine-aligned", async () => {
   const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
@@ -453,7 +445,7 @@ test("secure-phase docs and catalog metadata keep the security review slice impl
   assert.match(runtimeReference, /`secure-phase`[\s\S]*model-only/i);
 });
 
-test("blueprint_review_record validates and writes a model-only phase-scoped security artifact", async (t) => {
+test("blueprint_review_record validates model-only security artifacts and MCP renders none rows for empty arrays", async (t) => {
   const repoPath = await createSecurePhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -486,6 +478,9 @@ test("blueprint_review_record validates and writes a model-only phase-scoped sec
   );
   assert.equal(validation.status, "valid");
   assert.match(validation.renderPreview ?? "", /\*\*Status:\*\* COMPLETED/);
+  assert.match(validation.renderPreview ?? "", /## Accepted Risks[\s\S]*\| none \|/);
+  assert.match(validation.renderPreview ?? "", /## Findings[\s\S]*\| none \|/);
+  assert.match(validation.renderPreview ?? "", /## Follow-Ups[\s\S]*- none/);
   assert.equal(written.status, "created");
   assert.equal(written.reportPath, ".blueprint/phases/05-security-audit/05-SECURITY.md");
   assert.equal(written.counts.findings, 0);
@@ -496,6 +491,9 @@ test("blueprint_review_record validates and writes a model-only phase-scoped sec
   assert.match(saved, /\.blueprint\/phases\/05-security-audit\/05-01-PLAN\.md/);
   assert.match(saved, /Tampering/);
   assert.match(saved, /Review substrate/);
+  assert.match(saved, /## Accepted Risks[\s\S]*\| none \|/);
+  assert.match(saved, /## Gap \/ Repair Routes[\s\S]*\| none \|/);
+  assert.match(saved, /## Follow-Ups[\s\S]*- none/);
 
   const artifactList = await blueprintArtifactList({ cwd: repoPath });
   assert.ok(
@@ -626,15 +624,15 @@ test("security validation requires completed summary threat flags to be covered"
     ignored.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /unregistered.*threat flag|summary threat flag/i
   );
-  assert.equal(unrelatedFinding.status, "invalid");
+  assert.equal(unrelatedFinding.status, "valid");
   assert.match(
-    unrelatedFinding.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    unrelatedFinding.warnings.join("\n"),
     /unregistered.*threat flag|summary threat flag/i
   );
   assert.equal(covered.status, "valid");
 });
 
-test("security validation requires declared summary threat flags to cite concrete flag evidence", async (t) => {
+test("security validation accepts paraphrased but concrete declared summary threat-flag evidence", async (t) => {
   const repoPath = await createSecurePhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -666,16 +664,16 @@ test("security validation requires declared summary threat flags to cite concret
         {
           threatId: "T-01",
           status: "closed",
-          evidence: "External webhook authentication drifted after execution.",
+          evidence: "Completed summary threat flag shows external webhook authentication drift after execution.",
           verifierNote: "The summary threat flag was explicitly reconciled with saved mitigation evidence."
         }
       ]
     })
   });
 
-  assert.equal(ignored.status, "invalid");
+  assert.equal(ignored.status, "valid");
   assert.match(
-    ignored.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    ignored.warnings.join("\n"),
     /maps to declared threat T-01|summary threat flag/i
   );
   assert.equal(covered.status, "valid");
@@ -824,7 +822,7 @@ test("security schema rejects unsupported fields, missing required fields, and u
   );
 });
 
-test("security runtime narrowing rejects out-of-scope evidence keys and stale threat ids", async (t) => {
+test("security runtime narrowing returns actionable diagnostics for out-of-scope evidence keys and stale threat ids", async (t) => {
   const repoPath = await createSecurePhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -864,15 +862,15 @@ test("security runtime narrowing rejects out-of-scope evidence keys and stale th
     model: staleThreat
   });
 
-  assert.equal(staleEvidenceResult.status, "invalid");
+  assert.equal(staleEvidenceResult.status, "valid");
   assert.match(
-    staleEvidenceResult.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have additional properties/i
+    staleEvidenceResult.warnings.join("\n"),
+    /outside the live phase inventory|knownEvidenceArtifacts/i
   );
   assert.equal(staleThreatResult.status, "invalid");
   assert.match(
     staleThreatResult.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /allowed values|must be equal to one of|outside the live saved-plan register/i
+    /saved-plan register|declared threat|stale threat id/i
   );
 });
 
@@ -901,19 +899,22 @@ test("security authoring context blocks missing required upstream summaries and 
     artifact: "security"
   });
 
-  assert.equal(missingContext.status, "invalid");
-  assert.equal(missingContext.taskSchema, null);
-  assert.match(missingContext.reason ?? "", /no valid completed SUMMARY/i);
+  assert.equal(missingContext.status, "ready");
+  assert.notEqual(missingContext.taskSchema, null);
+  assert.match(missingContext.warnings.join("\n"), /no valid completed SUMMARY/i);
   assert.equal(missingValidation.status, "invalid");
   assert.match(
-    missingValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    [
+      ...missingValidation.diagnostics.map((diagnostic) => diagnostic.message),
+      ...missingValidation.warnings
+    ].join("\n"),
     /no valid completed SUMMARY|completed phase execution evidence/i
   );
-  assert.equal(pendingContext.status, "invalid");
-  assert.match(pendingContext.reason ?? "", /pending execution plans/i);
+  assert.equal(pendingContext.status, "ready");
+  assert.match(pendingContext.warnings.join("\n"), /pending execution plans/i);
 });
 
-test("security optional empty threat context is accepted only through the exact sentinel shape", async (t) => {
+test("security missing threat-model context narrows authoring to PARTIAL or BLOCKED and returns actionable diagnostics", async (t) => {
   const repoPath = await createSecurePhaseRepo({ withThreatModel: false });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -995,26 +996,26 @@ test("security optional empty threat context is accepted only through the exact 
   assert.equal(inventedThreat.status, "invalid");
   assert.match(
     inventedThreat.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /must NOT have more than 1 items|must be equal to constant|must match exactly one schema/i
+    /no declared threats|leave the threat register empty|saved threat model/i
   );
   assert.equal(inventedFindingThreat.status, "invalid");
   assert.match(
     inventedFindingThreat.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /allowed values|must be equal to one of/i
+    /no declared threats|unregistered findings|saved threat model|No declared threats exist/i
   );
   assert.equal(pendingPartialDecision.status, "invalid");
   assert.match(
     pendingPartialDecision.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /allowed values|must be equal to one of/i
+    /pending.*open threat|verify-or-accept decision/i
   );
   assert.equal(falseCompleted.status, "invalid");
   assert.match(
     falseCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
-    /allowed values|must be equal to one of/i
+    /PARTIAL|BLOCKED|saved threat model/i
   );
 });
 
-test("security threat parser treats N/A threat rows and bullets as no declared threats", async (t) => {
+test("security threat parser treats N/A threat rows and bullets as explicit no-threat evidence for completed reports", async (t) => {
   const tableRepo = await createSecurePhaseRepo({ threatId: "N/A" });
   const bulletRepo = await createSecurePhaseRepo();
   t.after(async () => {
@@ -1044,7 +1045,7 @@ test("security threat parser treats N/A threat rows and bullets as no declared t
       cwd: repoPath,
       phase: "5",
       artifact: "security",
-      model: createNoThreatModelPartialModel()
+      model: createNoThreatCompletedModel()
     });
 
     assert.equal(context.status, "ready");
@@ -1055,6 +1056,8 @@ test("security threat parser treats N/A threat rows and bullets as no declared t
       []
     );
     assert.equal(validation.status, "valid");
+    assert.match(validation.renderPreview ?? "", /## Threat Register[\s\S]*\| none \|/);
+    assert.match(validation.renderPreview ?? "", /## Accepted Risks[\s\S]*\| none \|/);
   }
 });
 

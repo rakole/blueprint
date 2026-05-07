@@ -1880,37 +1880,47 @@ function renderSecurityTemplate(context?: ArtifactTemplateContext): string {
 
 ## Threat Register
 
-| Threat ID | Source Plan | Category | Component | Disposition | Mitigation | Status | Evidence | Verifier Note |
-|-----------|-------------|----------|-----------|-------------|------------|--------|----------|---------------|
-| T-01 | ${phasePrefix(context)}-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |
+_Author only threat status and evidence. MCP renders saved-plan provenance columns and an empty row when no declared threats exist._
+
+| Threat ID | Status | Evidence | Verifier Note |
+|-----------|--------|----------|---------------|
+| T-01 | closed / accepted / open | File, artifact, or rationale reference. | verifier note |
 
 ## Accepted Risks
 
+_Only include accepted-risk rows. \`Accepted By\` and \`Accepted At\` are optional when not supplied, and MCP renders an empty row when the section is empty._
+
 | Threat ID | Rationale | Accepted By | Accepted At | Evidence |
 |-----------|-----------|-------------|-------------|----------|
-| none | none | none | none | none |
+| T-01 | Explicit acceptance rationale. | approver if supplied | YYYY-MM-DD if supplied | Acceptance evidence or decision record. |
 
 ## Findings
 
+_Only include concrete findings. MCP renders an empty row when no findings remain._
+
 | Kind | Severity | Threat ID | Status | Evidence | Recommendation |
 |------|----------|-----------|--------|----------|----------------|
-| none | none | none | none | none | none |
+| missing-control | medium | T-01 | follow-up | File, artifact, or rationale reference. | Concrete hardening or verification recommendation. |
 
 ## Manual / Deferred Work
 
+_Only include rows when manual verification or deferred work remains. MCP renders an empty row when the section is empty._
+
 | Item | Reason | Follow-Up | Status |
 |------|--------|-----------|--------|
-| none | none | none | NONE |
+| Security regression test | Waiting on environment or reviewer decision. | Exact next step or owner handoff. | MANUAL |
 
 ## Gap / Repair Routes
 
+_Only include rows when a security gap or blocked repair route remains. MCP renders an empty row when the section is empty._
+
 | Gap | Evidence | Repair | Status |
 |-----|----------|--------|--------|
-| none | none | none | NONE |
+| Missing validation evidence | File, artifact, or rationale reference. | Exact repair or escalation route. | OPEN |
 
 ## Follow-Ups
 
-- Explicit hardening step, validation gap, or \`none\`.
+- Add concrete hardening or verification follow-up bullets only when work remains; otherwise leave the section empty and MCP renders no follow-up rows.
 
 ## Security Audit Trail
 
@@ -1933,7 +1943,7 @@ const SECURITY_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, summaryPath, linkedPlanPath, planPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
     "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so live evidence artifact keys, declared threat ids, and status-safe next actions stay deterministic.",
-    "COMPLETED security reviews require all declared threats closed or accepted, exact none sentinel rows for manual/deferred work, gap routes, findings, and followUps, and a routed implemented next action.",
+    "COMPLETED security reviews require every declared threat to be closed or accepted, allow honest no-threat reports, allow empty arrays for accepted risks/findings/manual work/gap routes/follow-ups when those sections are empty, and require a routed implemented next action.",
     "PARTIAL security reviews require concrete follow-up findings, manual/deferred work, gap routes, and followUps while rejecting validation/UAT next actions.",
     "BLOCKED security reviews require at least one open threat, a manual decision row, a blocked gap route, concrete followUps, and the exact blocked next action sentinel.",
     "Use concrete artifact, code, user-decision, or security evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
@@ -1962,77 +1972,34 @@ const SECURITY_MODEL_CONTRACT: ArtifactModelContract = {
     readiness: "ready-for-routing",
     completionState: "complete",
     securitySummary: [
-      "Saved plan threats were checked against completed execution summaries and no open threat remains."
+      "Completed execution evidence was reviewed and no declared or observed security gaps require follow-up."
     ],
     evidenceCoverage: {
-      ".blueprint/phases/05-security-audit/05-01-PLAN.md": {
-        status: "used",
-        rationale: "Plan evidence supplied the declared threat register."
-      },
       ".blueprint/phases/05-security-audit/05-01-SUMMARY.md": {
         status: "used",
-        rationale: "Completed summary evidence confirmed the mitigation was delivered."
+        rationale: "Completed summary evidence grounded the security review outcome."
       }
     },
-    threatRegister: [
-      {
-        threatId: "T-01",
-        status: "closed",
-        evidence: "The completed summary cites the MCP-owned persistence path.",
-        verifierNote: "Mitigation evidence matches the saved plan threat."
-      }
-    ],
-    acceptedRisks: [
-      {
-        threatId: "none",
-        rationale: "none",
-        acceptedBy: "none",
-        acceptedAt: "none",
-        evidence: "none"
-      }
-    ],
-    findings: [
-      {
-        kind: "none",
-        severity: "none",
-        threatId: "none",
-        evidence: "none",
-        recommendation: "none",
-        status: "none"
-      }
-    ],
-    manualOrDeferredWork: [
-      {
-        item: "none",
-        reason: "none",
-        followUp: "none",
-        status: "NONE"
-      }
-    ],
-    gapRoutes: [
-      {
-        gap: "none",
-        evidence: "none",
-        repair: "none",
-        status: "NONE"
-      }
-    ],
-    followUps: ["none"],
+    threatRegister: [],
+    acceptedRisks: [],
+    findings: [],
+    manualOrDeferredWork: [],
+    gapRoutes: [],
+    followUps: [],
     auditTrail: {
       auditDate: "2026-04-30",
       executionMode: "inline",
       overwriteGate: "not-needed",
-      verifyOrAcceptDecision: "verified",
+      verifyOrAcceptDecision: "none",
       pendingOpenThreatStatus: "none",
-      verifierNote: "Threat counts were checked against the saved plan register."
+      verifierNote: "Completed summaries were reviewed and no declared threats required verification or acceptance."
     },
     nextSafeAction: "/blu-validate-phase 5"
   },
   exampleLeakageSignals: [
-    "Saved plan threats were checked against completed execution summaries and no open threat remains.",
-    "Plan evidence supplied the declared threat register.",
-    "The completed summary cites the MCP-owned persistence path.",
-    "Threat counts were checked against the saved plan register."
+    "Completed execution evidence was reviewed and no declared or observed security gaps require follow-up.",
+    "Completed summary evidence grounded the security review outcome.",
+    "Completed summaries were reviewed and no declared threats required verification or acceptance."
   ]
 };
 
@@ -4403,12 +4370,12 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Concise security posture grounded in saved evidence.",
       "Saved phase artifacts, repo paths, or cited references reviewed.",
       "| T-01 | XX-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |",
-      "Explicit hardening step, validation gap, or `none`.",
+      "Add concrete hardening or verification follow-up bullets only when work remains; otherwise leave the section empty and MCP renders no follow-up rows.",
       "Audit date, threat counts, and verifier note."
     ],
     notes: [
       "Security artifacts are model-only and render through MCP-owned canonical Markdown before persistence.",
-      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/status/evidence coverage against live saved-plan provenance, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers.",
+      "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/status/evidence coverage against live saved-plan provenance, keep accepted-risk and audit-trail context visible, treat accepted-risk approver/date cells as optional unless supplied, let empty authoring arrays represent empty sections, and reject scaffold-only placeholder markers.",
       "COMPLETED/PARTIAL/BLOCKED status truth-table rules live in the review.security JSON Schema and are narrowed by live plan, summary, threat, and next-action context."
     ],
     modelContract: SECURITY_MODEL_CONTRACT,

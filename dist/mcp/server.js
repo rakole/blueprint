@@ -16248,37 +16248,47 @@ function renderSecurityTemplate(context) {
 
 ## Threat Register
 
-| Threat ID | Source Plan | Category | Component | Disposition | Mitigation | Status | Evidence | Verifier Note |
-|-----------|-------------|----------|-----------|-------------|------------|--------|----------|---------------|
-| T-01 | ${phasePrefix(context)}-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |
+_Author only threat status and evidence. MCP renders saved-plan provenance columns and an empty row when no declared threats exist._
+
+| Threat ID | Status | Evidence | Verifier Note |
+|-----------|--------|----------|---------------|
+| T-01 | closed / accepted / open | File, artifact, or rationale reference. | verifier note |
 
 ## Accepted Risks
 
+_Only include accepted-risk rows. \`Accepted By\` and \`Accepted At\` are optional when not supplied, and MCP renders an empty row when the section is empty._
+
 | Threat ID | Rationale | Accepted By | Accepted At | Evidence |
 |-----------|-----------|-------------|-------------|----------|
-| none | none | none | none | none |
+| T-01 | Explicit acceptance rationale. | approver if supplied | YYYY-MM-DD if supplied | Acceptance evidence or decision record. |
 
 ## Findings
 
+_Only include concrete findings. MCP renders an empty row when no findings remain._
+
 | Kind | Severity | Threat ID | Status | Evidence | Recommendation |
 |------|----------|-----------|--------|----------|----------------|
-| none | none | none | none | none | none |
+| missing-control | medium | T-01 | follow-up | File, artifact, or rationale reference. | Concrete hardening or verification recommendation. |
 
 ## Manual / Deferred Work
 
+_Only include rows when manual verification or deferred work remains. MCP renders an empty row when the section is empty._
+
 | Item | Reason | Follow-Up | Status |
 |------|--------|-----------|--------|
-| none | none | none | NONE |
+| Security regression test | Waiting on environment or reviewer decision. | Exact next step or owner handoff. | MANUAL |
 
 ## Gap / Repair Routes
 
+_Only include rows when a security gap or blocked repair route remains. MCP renders an empty row when the section is empty._
+
 | Gap | Evidence | Repair | Status |
 |-----|----------|--------|--------|
-| none | none | none | NONE |
+| Missing validation evidence | File, artifact, or rationale reference. | Exact repair or escalation route. | OPEN |
 
 ## Follow-Ups
 
-- Explicit hardening step, validation gap, or \`none\`.
+- Add concrete hardening or verification follow-up bullets only when work remains; otherwise leave the section empty and MCP renders no follow-up rows.
 
 ## Security Audit Trail
 
@@ -17638,7 +17648,7 @@ var init_artifact_contracts = __esm({
       qualityRules: [
         "Do not include MCP-owned identity or provenance keys such as cwd, phase, phaseDir, artifact, path, reportPath, summaryPath, linkedPlanPath, planPath, content, or rendered headings; MCP owns identity, source paths, and Markdown rendering.",
         "Author against the narrowed taskSchema returned by blueprint_review_authoring_context or blueprint_review_validate_model so live evidence artifact keys, declared threat ids, and status-safe next actions stay deterministic.",
-        "COMPLETED security reviews require all declared threats closed or accepted, exact none sentinel rows for manual/deferred work, gap routes, findings, and followUps, and a routed implemented next action.",
+        "COMPLETED security reviews require every declared threat to be closed or accepted, allow honest no-threat reports, allow empty arrays for accepted risks/findings/manual work/gap routes/follow-ups when those sections are empty, and require a routed implemented next action.",
         "PARTIAL security reviews require concrete follow-up findings, manual/deferred work, gap routes, and followUps while rejecting validation/UAT next actions.",
         "BLOCKED security reviews require at least one open threat, a manual decision row, a blocked gap route, concrete followUps, and the exact blocked next action sentinel.",
         "Use concrete artifact, code, user-decision, or security evidence. Do not copy minimal example wording, placeholder prose, or generic none values where real evidence or gaps exist."
@@ -17667,77 +17677,34 @@ var init_artifact_contracts = __esm({
         readiness: "ready-for-routing",
         completionState: "complete",
         securitySummary: [
-          "Saved plan threats were checked against completed execution summaries and no open threat remains."
+          "Completed execution evidence was reviewed and no declared or observed security gaps require follow-up."
         ],
         evidenceCoverage: {
-          ".blueprint/phases/05-security-audit/05-01-PLAN.md": {
-            status: "used",
-            rationale: "Plan evidence supplied the declared threat register."
-          },
           ".blueprint/phases/05-security-audit/05-01-SUMMARY.md": {
             status: "used",
-            rationale: "Completed summary evidence confirmed the mitigation was delivered."
+            rationale: "Completed summary evidence grounded the security review outcome."
           }
         },
-        threatRegister: [
-          {
-            threatId: "T-01",
-            status: "closed",
-            evidence: "The completed summary cites the MCP-owned persistence path.",
-            verifierNote: "Mitigation evidence matches the saved plan threat."
-          }
-        ],
-        acceptedRisks: [
-          {
-            threatId: "none",
-            rationale: "none",
-            acceptedBy: "none",
-            acceptedAt: "none",
-            evidence: "none"
-          }
-        ],
-        findings: [
-          {
-            kind: "none",
-            severity: "none",
-            threatId: "none",
-            evidence: "none",
-            recommendation: "none",
-            status: "none"
-          }
-        ],
-        manualOrDeferredWork: [
-          {
-            item: "none",
-            reason: "none",
-            followUp: "none",
-            status: "NONE"
-          }
-        ],
-        gapRoutes: [
-          {
-            gap: "none",
-            evidence: "none",
-            repair: "none",
-            status: "NONE"
-          }
-        ],
-        followUps: ["none"],
+        threatRegister: [],
+        acceptedRisks: [],
+        findings: [],
+        manualOrDeferredWork: [],
+        gapRoutes: [],
+        followUps: [],
         auditTrail: {
           auditDate: "2026-04-30",
           executionMode: "inline",
           overwriteGate: "not-needed",
-          verifyOrAcceptDecision: "verified",
+          verifyOrAcceptDecision: "none",
           pendingOpenThreatStatus: "none",
-          verifierNote: "Threat counts were checked against the saved plan register."
+          verifierNote: "Completed summaries were reviewed and no declared threats required verification or acceptance."
         },
         nextSafeAction: "/blu-validate-phase 5"
       },
       exampleLeakageSignals: [
-        "Saved plan threats were checked against completed execution summaries and no open threat remains.",
-        "Plan evidence supplied the declared threat register.",
-        "The completed summary cites the MCP-owned persistence path.",
-        "Threat counts were checked against the saved plan register."
+        "Completed execution evidence was reviewed and no declared or observed security gaps require follow-up.",
+        "Completed summary evidence grounded the security review outcome.",
+        "Completed summaries were reviewed and no declared threats required verification or acceptance."
       ]
     };
     UI_REVIEW_MODEL_SCHEMA_FILE = "review.ui-review.model.schema.json";
@@ -19412,12 +19379,12 @@ var init_artifact_contracts = __esm({
           "Concise security posture grounded in saved evidence.",
           "Saved phase artifacts, repo paths, or cited references reviewed.",
           "| T-01 | XX-01-PLAN.md | STRIDE category | component or boundary | mitigate / accept / transfer | declared control or risk decision | closed / accepted / open | File, artifact, or rationale reference. | verifier note |",
-          "Explicit hardening step, validation gap, or `none`.",
+          "Add concrete hardening or verification follow-up bullets only when work remains; otherwise leave the section empty and MCP renders no follow-up rows.",
           "Audit date, threat counts, and verifier note."
         ],
         notes: [
           "Security artifacts are model-only and render through MCP-owned canonical Markdown before persistence.",
-          "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/status/evidence coverage against live saved-plan provenance, keep accepted-risk and audit-trail context visible, and reject scaffold-only placeholder markers.",
+          "Security artifacts should distinguish confirmed mitigations from missing controls, keep threat-register dispositions explicit, require threat id/status/evidence coverage against live saved-plan provenance, keep accepted-risk and audit-trail context visible, treat accepted-risk approver/date cells as optional unless supplied, let empty authoring arrays represent empty sections, and reject scaffold-only placeholder markers.",
           "COMPLETED/PARTIAL/BLOCKED status truth-table rules live in the review.security JSON Schema and are narrowed by live plan, summary, threat, and next-action context."
         ],
         modelContract: SECURITY_MODEL_CONTRACT,
@@ -22772,12 +22739,8 @@ function exactObjectPropertyContains(propertyName, value) {
     maxContains: 1
   };
 }
-function exactArraySentinel(schema) {
-  return {
-    minItems: 1,
-    maxItems: 1,
-    items: schema
-  };
+function canonicalNoneTableRow(width) {
+  return Array.from({ length: width }, () => "none");
 }
 async function buildAllowedSecurityNextActions(args) {
   const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
@@ -23031,19 +22994,22 @@ function buildSecurityTaskSchema(args) {
     }
     const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
     if (evidenceCoverage) {
-      evidenceCoverage.additionalProperties = false;
-      evidenceCoverage.required = args.knownEvidenceArtifacts;
+      evidenceCoverage.additionalProperties = { $ref: "#/$defs/evidenceCoverageEntry" };
+      delete evidenceCoverage.required;
       evidenceCoverage.properties = Object.fromEntries(
         args.knownEvidenceArtifacts.map((artifactPath) => [
           artifactPath,
           { $ref: "#/$defs/evidenceCoverageEntry" }
         ])
       );
+      evidenceCoverage.description = "Coverage decisions for evidence artifacts. Prefer exact keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts; missing or extra bookkeeping is warning-only unless the artifact is directly cited elsewhere in the model.";
     }
     const threatRegister = getJsonObjectProperty(properties, "threatRegister");
     if (threatRegister) {
       if (args.declaredThreats.length === 0) {
-        Object.assign(threatRegister, exactArraySentinel({ $ref: "#/$defs/noThreatRow" }));
+        threatRegister.minItems = 0;
+        threatRegister.maxItems = 1;
+        threatRegister.items = { $ref: "#/$defs/noThreatRow" };
       } else {
         threatRegister.minItems = args.declaredThreats.length;
         threatRegister.maxItems = args.declaredThreats.length;
@@ -23076,10 +23042,9 @@ function buildSecurityTaskSchema(args) {
       }
     }
     if (acceptedRisks && threatIdEnum.length === 0) {
-      Object.assign(acceptedRisks, exactArraySentinel({ $ref: "#/$defs/noAcceptedRiskRow" }));
-    }
-    if (findings && threatIdEnum.length === 0) {
-      findings.minItems = 1;
+      acceptedRisks.minItems = 0;
+      acceptedRisks.maxItems = 1;
+      acceptedRisks.items = { $ref: "#/$defs/noAcceptedRiskRow" };
     }
     const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
     if (nextSafeAction) {
@@ -23214,24 +23179,24 @@ async function buildSecurityAuthoringContext(args) {
     })
   ]);
   const completedSummaries = summaryIndex.summaries.filter((summary) => summaryIndex.completedPlans.includes(summary.planId)).map((summary) => summary.path).sort((left, right) => left.localeCompare(right));
-  const blockers = [];
+  const completionWarnings = [];
   if (planIndex.plans.length === 0) {
-    blockers.push(
+    completionWarnings.push(
       `Phase ${phaseNumber} has no saved PLAN artifacts, so review.security cannot bind to plan provenance.`
     );
   }
   if (completedSummaries.length === 0) {
-    blockers.push(
+    completionWarnings.push(
       `Phase ${phaseNumber} has no valid completed SUMMARY artifacts. Run /blu-execute-phase ${phaseNumber} before /blu-secure-phase.`
     );
   }
   if (summaryIndex.pendingPlans.length > 0) {
-    blockers.push(
+    completionWarnings.push(
       `Phase ${phaseNumber} still has pending execution plans: ${summaryIndex.pendingPlans.join(", ")}. Run /blu-execute-phase ${phaseNumber} before persisting security evidence.`
     );
   }
   if (executionTargets.blockers.lowerWavePendingPlanIds.length > 0) {
-    blockers.push(
+    completionWarnings.push(
       `Lower-wave pending plans block full security coverage: ${executionTargets.blockers.lowerWavePendingPlanIds.join(", ")}.`
     );
   }
@@ -23255,22 +23220,26 @@ async function buildSecurityAuthoringContext(args) {
   );
   for (const planRead of planReads) {
     if (!planRead.found || !planRead.path) {
-      blockers.push(planRead.reason ?? "A saved plan could not be read for security provenance.");
+      completionWarnings.push(
+        planRead.reason ?? "A saved plan could not be read for security provenance."
+      );
       continue;
     }
     if (!planRead.validation?.valid) {
       const issues = planRead.validation?.issues.length ? planRead.validation.issues : ["Linked plan artifact is invalid."];
-      blockers.push(...issues.map((issue2) => `${planRead.path}: ${issue2}`));
+      completionWarnings.push(...issues.map((issue2) => `${planRead.path}: ${issue2}`));
     }
   }
   for (const summaryRead of summaryReads) {
     if (!summaryRead.found || !summaryRead.path) {
-      blockers.push(summaryRead.reason ?? "A completed summary could not be read for security evidence.");
+      completionWarnings.push(
+        summaryRead.reason ?? "A completed summary could not be read for security evidence."
+      );
       continue;
     }
     if (!summaryRead.validation?.valid) {
       const issues = summaryRead.validation?.issues.length ? summaryRead.validation.issues : ["Completed summary artifact is invalid."];
-      blockers.push(...issues.map((issue2) => `${summaryRead.path}: ${issue2}`));
+      completionWarnings.push(...issues.map((issue2) => `${summaryRead.path}: ${issue2}`));
     }
   }
   const declaredThreats = disambiguateDeclaredThreatIds(
@@ -23278,6 +23247,14 @@ async function buildSecurityAuthoringContext(args) {
       (planRead) => planRead.path && planRead.content ? parseThreatRowsFromPlanContent(planRead.content, planRead.path) : []
     )
   );
+  const hasExplicitThreatModelEvidence = planReads.some(
+    (planRead) => Boolean(planRead.content && extractThreatModelContent(planRead.content).length > 0)
+  );
+  if (declaredThreats.length === 0 && !hasExplicitThreatModelEvidence) {
+    completionWarnings.push(
+      `Phase ${phaseNumber} has no saved threat model evidence. Authoring is restricted to PARTIAL or BLOCKED until a saved threat model or explicit no-threat rationale exists.`
+    );
+  }
   const summaryThreatFlags = summaryReads.flatMap(
     (summaryRead) => summaryRead.path && summaryRead.content ? parseThreatFlagsFromSummaryContent(summaryRead.content, summaryRead.path) : []
   );
@@ -23291,15 +23268,16 @@ async function buildSecurityAuthoringContext(args) {
     phaseNumber,
     artifacts
   });
-  const taskSchema = blockers.length === 0 ? buildSecurityTaskSchema({
+  const allowCompleted = completionWarnings.length === 0;
+  const taskSchema = buildSecurityTaskSchema({
     baseSchema: securityBaseSchema,
     declaredThreats,
     summaryThreatFlags,
     knownEvidenceArtifacts,
-    allowCompleted: declaredThreats.length > 0,
+    allowCompleted,
     ...allowedNextActions
-  }) : null;
-  const authoringContext = taskSchema ? {
+  });
+  const authoringContext = {
     phase,
     path: `${located.phaseDir}/${located.phasePrefix}${REVIEW_ARTIFACT_SUFFIXES.security}`,
     completedSummaries,
@@ -23312,9 +23290,9 @@ async function buildSecurityAuthoringContext(args) {
     schemaPath: modelContract.schemaPath,
     baseSchema: securityBaseSchema,
     taskSchema
-  } : null;
+  };
   return {
-    status: blockers.length === 0 ? "ready" : "invalid",
+    status: "ready",
     artifact: "security",
     phase,
     files: [],
@@ -23324,13 +23302,14 @@ async function buildSecurityAuthoringContext(args) {
     taskSchema,
     modelOnly: true,
     authoringContext,
-    prerequisiteBlockers: blockers,
-    reason: blockers.length > 0 ? blockers.join(" ") : null,
+    prerequisiteBlockers: [],
+    reason: null,
     warnings: uniqueSortedStrings([
       ...located.warnings,
       ...planIndex.warnings,
       ...summaryIndex.warnings,
-      ...executionTargets.warnings
+      ...executionTargets.warnings,
+      ...completionWarnings
     ])
   };
 }
@@ -24732,9 +24711,16 @@ function securityThreatCounts(model) {
   };
 }
 function renderSecurityEvidenceCoverage(args) {
-  return args.knownEvidenceArtifacts.map((artifactPath) => {
+  const artifactPaths = uniqueSortedStrings([
+    ...args.knownEvidenceArtifacts,
+    ...Object.keys(args.model.evidenceCoverage)
+  ]);
+  if (artifactPaths.length === 0) {
+    return ["none"];
+  }
+  return artifactPaths.map((artifactPath) => {
     const coverage = args.model.evidenceCoverage[artifactPath];
-    return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
+    return coverage ? `${artifactPath} - ${coverage.status}: ${coverage.rationale}` : `${artifactPath} - unavailable: No evidenceCoverage entry was authored.`;
   });
 }
 function renderSecurityModelContent(model, located, authoringContext) {
@@ -24744,7 +24730,7 @@ function renderSecurityModelContent(model, located, authoringContext) {
   const counts = securityThreatCounts(model);
   const threatRows = model.threatRegister.length > 0 ? model.threatRegister.map((row) => {
     if (row.threatId === "none") {
-      return ["none", "none", "none", "none", "none", "none", "none", "none", "none"];
+      return canonicalNoneTableRow(9);
     }
     const declared = threatById.get(row.threatId);
     return [
@@ -24758,34 +24744,34 @@ function renderSecurityModelContent(model, located, authoringContext) {
       row.evidence,
       row.verifierNote
     ];
-  }) : [["none", "none", "none", "none", "none", "none", "none", "none", "none"]];
-  const acceptedRiskRows = model.acceptedRisks.map((row) => [
+  }) : [canonicalNoneTableRow(9)];
+  const acceptedRiskRows = model.acceptedRisks.length > 0 ? model.acceptedRisks.map((row) => [
     row.threatId,
     row.rationale,
     row.acceptedBy,
     row.acceptedAt,
     row.evidence
-  ]);
-  const findingRows = model.findings.map((row) => [
+  ]) : [canonicalNoneTableRow(5)];
+  const findingRows = model.findings.length > 0 ? model.findings.map((row) => [
     row.kind,
     row.severity,
     row.threatId,
     row.status,
     row.evidence,
     row.recommendation
-  ]);
-  const manualRows = model.manualOrDeferredWork.map((row) => [
+  ]) : [canonicalNoneTableRow(6)];
+  const manualRows = model.manualOrDeferredWork.length > 0 ? model.manualOrDeferredWork.map((row) => [
     row.item,
     row.reason,
     row.followUp,
     row.status
-  ]);
-  const gapRows = model.gapRoutes.map((row) => [
+  ]) : [canonicalNoneTableRow(4)];
+  const gapRows = model.gapRoutes.length > 0 ? model.gapRoutes.map((row) => [
     row.gap,
     row.evidence,
     row.repair,
     row.status
-  ]);
+  ]) : [canonicalNoneTableRow(4)];
   return normalizeTextContent(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Security Review
 
 **Status:** ${model.status}
@@ -24975,22 +24961,49 @@ function ajvPathToModelPath(instancePath) {
     return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
   }).join("")}`;
 }
-function schemaDiagnosticFromAjvError(error2, artifact) {
+function schemaDiagnosticFromAjvError(error2, artifact, securityAuthoringContext = null) {
   const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
   const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
   const basePath = ajvPathToModelPath(error2.instancePath);
   const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  const securityHintContext = artifact === "security" && securityAuthoringContext ? {
+    allowedThreatIds: securityAuthoringContext.declaredThreats.map((threat) => threat.threatId),
+    allowedEvidenceKeys: securityAuthoringContext.knownEvidenceArtifacts,
+    allowedNextActions: securityAuthoringContext.allowedNextActions
+  } : {};
+  const securitySuggestion = artifact === "security" && securityAuthoringContext ? (() => {
+    const allowedThreatIds = securityAuthoringContext.declaredThreats.map(
+      (threat) => threat.threatId
+    );
+    if (/model\.(?:threatRegister|acceptedRisks|findings)(?:\[.*\])?\.threatId$/.test(pathValue)) {
+      if (allowedThreatIds.length === 0) {
+        return "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context. No declared threats exist in the saved threat model; leave threatRegister empty and use threatId unregistered only for concrete unregistered findings.";
+      }
+      return `Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context. Allowed threat ids from blueprint_review_authoring_context.authoringContext.declaredThreats: ${allowedThreatIds.length > 0 ? allowedThreatIds.join(", ") : "none"}.`;
+    }
+    if (pathValue.startsWith("model.evidenceCoverage")) {
+      return `Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context. Preferred evidenceCoverage keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts: ${securityAuthoringContext.knownEvidenceArtifacts.length > 0 ? securityAuthoringContext.knownEvidenceArtifacts.join(", ") : "none"}.`;
+    }
+    if (pathValue === "model.nextSafeAction") {
+      return `Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context. Allowed next actions from blueprint_review_authoring_context.authoringContext.allowedNextActions: ${securityAuthoringContext.allowedNextActions.join(", ")}.`;
+    }
+    if (pathValue === "model.auditTrail.verifyOrAcceptDecision" || pathValue === "model.auditTrail.pendingOpenThreatStatus") {
+      return "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context. PARTIAL security reviews should not use a pending verify-or-accept decision or pending-open-threat state unless an open threat is actually blocking advancement.";
+    }
+    return "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context, then align threat ids, evidenceCoverage keys, and nextSafeAction with the live security authoring context.";
+  })() : null;
   return modelDiagnostic({
     source: "schema",
     path: pathValue,
     code: `schema.${error2.keyword}`,
-    message: error2.message ?? "Model does not match the review task schema.",
+    message: artifact === "security" && securitySuggestion ? `${error2.message ?? "Model does not match the review task schema."} ${securitySuggestion}` : error2.message ?? "Model does not match the review task schema.",
     context: {
       keyword: error2.keyword,
       params: error2.params,
-      schemaPath: error2.schemaPath
+      schemaPath: error2.schemaPath,
+      ...securityHintContext
     },
-    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : artifact === "ui-review" || artifact === "review-fix" ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context." : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
+    suggestion: missingProperty !== null ? artifact === "security" && securitySuggestion ? `${securitySuggestion} Add required field ${missingProperty}.` : `Add required field ${missingProperty}.` : additionalProperty !== null ? artifact === "security" && securitySuggestion ? `${securitySuggestion} Remove unsupported field ${additionalProperty}.` : `Remove unsupported field ${additionalProperty}.` : artifact === "security" && securitySuggestion ? securitySuggestion : artifact === "ui-review" || artifact === "review-fix" ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context." : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
   });
 }
 function normalizeStringArray(value) {
@@ -25336,11 +25349,11 @@ function normalizeSecurityModel(model) {
   });
   const normalizedAcceptedRisks = acceptedRisks.map((row) => {
     const rowObject = asJsonObject(row);
-    return rowObject && typeof rowObject.threatId === "string" && typeof rowObject.rationale === "string" && typeof rowObject.acceptedBy === "string" && typeof rowObject.acceptedAt === "string" && typeof rowObject.evidence === "string" ? {
+    return rowObject && typeof rowObject.threatId === "string" && typeof rowObject.rationale === "string" && (typeof rowObject.acceptedBy === "string" || rowObject.acceptedBy === void 0) && (typeof rowObject.acceptedAt === "string" || rowObject.acceptedAt === void 0) && typeof rowObject.evidence === "string" ? {
       threatId: rowObject.threatId.trim(),
       rationale: rowObject.rationale.trim(),
-      acceptedBy: rowObject.acceptedBy.trim(),
-      acceptedAt: rowObject.acceptedAt.trim(),
+      acceptedBy: typeof rowObject.acceptedBy === "string" ? rowObject.acceptedBy.trim() : "unspecified",
+      acceptedAt: typeof rowObject.acceptedAt === "string" ? rowObject.acceptedAt.trim() : "unspecified",
       evidence: rowObject.evidence.trim()
     } : null;
   });
@@ -26436,7 +26449,7 @@ function addSecuritySemanticDiagnostics(args) {
         source: "residual",
         path: "model.threatRegister",
         code: "residual.threat_unknown",
-        message: `Security review model contains threat ids outside the live saved-plan register: ${unknownThreatIds.join(", ")}.`,
+        message: declaredThreatIds.size === 0 ? `Security review model contains threat ids but no declared threats exist in the saved threat model: ${unknownThreatIds.join(", ")}. Leave the threat register empty until saved threat model evidence exists.` : `Security review model contains threat ids outside the live saved-plan register: ${unknownThreatIds.join(", ")}.`,
         context: { unknownThreatIds },
         suggestion: "Use only exact threat ids from authoringContext.declaredThreats."
       })
@@ -26444,13 +26457,16 @@ function addSecuritySemanticDiagnostics(args) {
   }
   args.authoringContext.summaryThreatFlags.forEach((flag, index) => {
     if (flag.threatId && declaredThreatIds.has(flag.threatId)) {
+      const matchingThreatRows = args.model.threatRegister.filter(
+        (row) => row.threatId === flag.threatId && row.status !== "none"
+      );
       const hasThreatRegisterCoverage = args.model.threatRegister.some(
         (row) => row.threatId === flag.threatId && row.status !== "none" && securityThreatRegisterMentionsThreatFlag(row, flag)
       );
       const hasFindingCoverage = realFindings.some(
         (row) => securityFindingMentionsThreatFlag(row, flag)
       );
-      if (!hasThreatRegisterCoverage && !hasFindingCoverage) {
+      if (matchingThreatRows.length === 0 && !hasFindingCoverage) {
         args.diagnostics.push(
           modelDiagnostic({
             source: "residual",
@@ -26461,6 +26477,10 @@ function addSecuritySemanticDiagnostics(args) {
             suggestion: "Cover the flag with the matching threatRegister row or a concrete security finding."
           })
         );
+      } else if (!hasThreatRegisterCoverage && !hasFindingCoverage) {
+        args.warnings.push(
+          `Summary threat flag ${flag.flagId} maps to declared threat ${flag.threatId}, but the coverage appears to miss the saved summary wording. Preserve the threat row or finding and tighten the lexical evidence match if you want stricter traceability.`
+        );
       }
       return;
     }
@@ -26470,7 +26490,7 @@ function addSecuritySemanticDiagnostics(args) {
     const hasExplicitCoverage = matchingUnregisteredFindings.some(
       (row) => securityFindingMentionsThreatFlag(row, flag)
     );
-    if (!hasExplicitCoverage) {
+    if (matchingUnregisteredFindings.length === 0) {
       args.diagnostics.push(
         modelDiagnostic({
           source: "residual",
@@ -26480,6 +26500,10 @@ function addSecuritySemanticDiagnostics(args) {
           context: { flag },
           suggestion: "Add a findings row with kind unregistered-flag, threatId unregistered, concrete evidence, and a follow-up route."
         })
+      );
+    } else if (!hasExplicitCoverage) {
+      args.warnings.push(
+        `Summary threat flag ${flag.flagId} has an unregistered-flag finding, but the finding text does not lexically match the saved summary wording. Tighten the evidence text if you need exact traceability.`
       );
     }
   });
@@ -26507,6 +26531,21 @@ function addSecuritySemanticDiagnostics(args) {
       })
     );
   }
+  if (openThreats.length > 0 && args.model.nextSafeAction !== args.authoringContext.blockedNextSafeAction) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_contradiction",
+        message: `Open threat rows require the blocked pending-open-threat action until they are verified or explicitly accepted: ${openThreats.map((row) => row.threatId).join(", ")}.`,
+        context: {
+          openThreatIds: openThreats.map((row) => row.threatId),
+          nextSafeAction: args.model.nextSafeAction
+        },
+        suggestion: "Use the blocked next action from authoringContext.allowedNextActions while any threatRegister row remains open."
+      })
+    );
+  }
   if (openThreats.length === 0 && args.model.nextSafeAction === args.authoringContext.blockedNextSafeAction) {
     args.diagnostics.push(
       modelDiagnostic({
@@ -26520,8 +26559,64 @@ function addSecuritySemanticDiagnostics(args) {
     );
   }
 }
+function collectSecurityDirectEvidenceCitations(args) {
+  const citations = /* @__PURE__ */ new Set();
+  const stringEntries = collectModelStringEntries(args.model).filter(
+    (entry) => !entry.path.startsWith("model.evidenceCoverage.")
+  );
+  for (const artifactPath of args.knownEvidenceArtifacts) {
+    if (stringEntries.some((entry) => entry.value.includes(artifactPath))) {
+      citations.add(artifactPath);
+    }
+  }
+  return citations;
+}
+function addSecurityEvidenceCoverageBookkeepingFeedback(args) {
+  const knownEvidence = new Set(args.authoringContext.knownEvidenceArtifacts);
+  const coverageKeys = Object.keys(args.normalizedModel.evidenceCoverage);
+  const missingCoverage = args.authoringContext.knownEvidenceArtifacts.filter(
+    (artifactPath) => !(artifactPath in args.normalizedModel.evidenceCoverage)
+  );
+  const unknownCoverage = coverageKeys.filter((artifactPath) => !knownEvidence.has(artifactPath));
+  const directCitations = collectSecurityDirectEvidenceCitations({
+    model: args.rawModel,
+    knownEvidenceArtifacts: args.authoringContext.knownEvidenceArtifacts
+  });
+  const directlyCitedMissing = missingCoverage.filter(
+    (artifactPath) => directCitations.has(artifactPath)
+  );
+  const bookkeepingOnlyMissing = missingCoverage.filter(
+    (artifactPath) => !directCitations.has(artifactPath)
+  );
+  if (directlyCitedMissing.length > 0) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.evidenceCoverage",
+        code: "residual.evidence_coverage_missing",
+        message: `Security review model directly cites saved evidence artifacts without matching evidenceCoverage entries: ${directlyCitedMissing.join(", ")}.`,
+        context: {
+          directlyCitedMissing,
+          allowedEvidenceKeys: args.authoringContext.knownEvidenceArtifacts
+        },
+        suggestion: "Add exact evidenceCoverage keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts for every directly cited artifact."
+      })
+    );
+  }
+  if (bookkeepingOnlyMissing.length > 0) {
+    args.warnings.push(
+      `Security review model omitted evidenceCoverage bookkeeping for saved artifacts that are not directly cited: ${bookkeepingOnlyMissing.join(", ")}. Add exact keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts if you want exhaustive bookkeeping.`
+    );
+  }
+  if (unknownCoverage.length > 0) {
+    args.warnings.push(
+      `Security review model evidenceCoverage contains paths outside the live phase inventory: ${unknownCoverage.join(", ")}. Prefer exact keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts.`
+    );
+  }
+}
 async function collectSecurityResidualDiagnostics(args) {
   const diagnostics = [];
+  const warnings = [];
   const identityKeys = Object.keys(args.model).filter(
     (key) => SECURITY_MODEL_IDENTITY_KEYS.has(key)
   );
@@ -26539,14 +26634,22 @@ async function collectSecurityResidualDiagnostics(args) {
   }
   addSecurityPlaceholderDiagnostics({ diagnostics, model: args.model });
   if (!args.normalizedModel) {
-    return diagnostics;
+    return { diagnostics, warnings };
   }
+  addSecurityEvidenceCoverageBookkeepingFeedback({
+    diagnostics,
+    warnings,
+    rawModel: args.model,
+    normalizedModel: args.normalizedModel,
+    authoringContext: args.authoringContext
+  });
   addSecurityGenericValueDiagnostics({
     diagnostics,
     model: args.normalizedModel
   });
   addSecuritySemanticDiagnostics({
     diagnostics,
+    warnings,
     model: args.normalizedModel,
     authoringContext: args.authoringContext
   });
@@ -26566,7 +26669,10 @@ async function collectSecurityResidualDiagnostics(args) {
       })
     );
   }
-  return diagnostics;
+  return {
+    diagnostics,
+    warnings: uniqueSortedStrings(warnings)
+  };
 }
 function addUiReviewPlaceholderDiagnostics(args) {
   const modelContract = readArtifactContract("review.ui-review").modelContract;
@@ -27501,7 +27607,6 @@ async function blueprintReviewValidateModel(args) {
   }
   const modelObject = asJsonObject(args.model);
   const diagnostics = [];
-  const validationWarnings = [];
   if (!modelObject) {
     const modelLabel = artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : artifact === "ui-review" ? "UI-review" : artifact === "peer-review" ? "Peer-review" : "Code-review";
     diagnostics.push(
@@ -27520,25 +27625,30 @@ async function blueprintReviewValidateModel(args) {
   let normalizedReviewFixModel = null;
   let normalizedSecurityModel = null;
   let normalizedUiReviewModel = null;
+  const validationWarnings = [...context.warnings];
   if (modelObject) {
     const validate = createAjvValidator().compile(context.taskSchema);
     const schemaValid = validate(modelObject);
     if (!schemaValid) {
       diagnostics.push(
         ...(validate.errors ?? []).map(
-          (error2) => schemaDiagnosticFromAjvError(error2, artifact)
+          (error2) => schemaDiagnosticFromAjvError(
+            error2,
+            artifact,
+            artifact === "security" ? context.authoringContext : null
+          )
         )
       );
     }
     if (artifact === "security") {
       normalizedSecurityModel = normalizeSecurityModel(modelObject);
-      diagnostics.push(
-        ...await collectSecurityResidualDiagnostics({
-          model: modelObject,
-          normalizedModel: normalizeSecurityModelForResiduals(modelObject),
-          authoringContext: context.authoringContext
-        })
-      );
+      const securityResidual = await collectSecurityResidualDiagnostics({
+        model: modelObject,
+        normalizedModel: normalizeSecurityModelForResiduals(modelObject),
+        authoringContext: context.authoringContext
+      });
+      diagnostics.push(...securityResidual.diagnostics);
+      validationWarnings.push(...securityResidual.warnings);
     } else if (artifact === "review-fix") {
       normalizedReviewFixModel = normalizeReviewFixModel(modelObject);
       diagnostics.push(
@@ -27696,7 +27806,7 @@ async function blueprintReviewValidateModel(args) {
       renderPreview = rendered;
     }
   }
-  if (artifact === "security" && diagnostics.length === 0 && normalizedSecurityModel) {
+  if (artifact === "security" && normalizedSecurityModel) {
     const securityContext = context.authoringContext;
     const located = {
       phaseNumber: context.phase.phaseNumber,
