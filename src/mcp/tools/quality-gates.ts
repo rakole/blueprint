@@ -22,6 +22,7 @@ export type PhaseQualityGateArtifactKind =
   | "plan"
   | "summary"
   | "review"
+  | "review-fix"
   | "security"
   | "other";
 
@@ -38,6 +39,7 @@ export type PhaseQualityGateScopedArtifacts = {
   plans?: PhaseQualityGateArtifactInput[];
   summaries?: PhaseQualityGateArtifactInput[];
   review?: PhaseQualityGateArtifactInput | null;
+  reviewFix?: PhaseQualityGateArtifactInput | null;
   security?: PhaseQualityGateArtifactInput | null;
 };
 
@@ -253,6 +255,7 @@ function normalizeArtifactCollection(
   }
 
   pushNormalizedArtifact(artifacts, collection.review, "review");
+  pushNormalizedArtifact(artifacts, collection.reviewFix, "review-fix");
   pushNormalizedArtifact(artifacts, collection.security, "security");
 
   return artifacts;
@@ -290,7 +293,7 @@ function findArtifactPath(args: {
   artifacts: NormalizedArtifact[];
   phaseRoot: string | null;
   phasePrefix: string;
-  suffix: "-REVIEW.md" | "-SECURITY.md";
+  suffix: "-REVIEW.md" | "-REVIEW-FIX.md" | "-SECURITY.md";
   kind: PhaseQualityGateArtifactKind;
 }): string | null {
   return (
@@ -461,6 +464,35 @@ function extractReviewNextSafeAction(content: string): string | null {
       .map(extractBlueprintCommand)
       .find((command): command is string => command !== null) ?? null
   );
+}
+
+function extractReviewFixNextSafeAction(content: string): string | null {
+  const sectionAction = extractReviewNextSafeAction(content);
+
+  if (sectionAction !== null) {
+    return sectionAction;
+  }
+
+  const markerAction = extractArtifactMarker(content, "Next Safe Action");
+
+  return markerAction ? extractBlueprintCommand(markerAction) : null;
+}
+
+function extractArtifactMarker(content: string, marker: string): string | null {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*\\*\\*${escapedMarker}:?\\*\\*\\s*:?\\s*(.+?)\\s*$`, "im")
+  );
+
+  return match?.[1]?.trim() ?? null;
+}
+
+function isCompletedReviewFixArtifact(content: string): boolean {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+  const completionState =
+    extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
+
+  return status === "COMPLETED" && completionState === "complete";
 }
 
 function extractCommandName(action: string): string | null {
@@ -739,7 +771,7 @@ async function readReviewNextSafeAction(args: {
     return null;
   }
 
-  const nextSafeAction = extractReviewNextSafeAction(content);
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
 
   if (nextSafeAction === null) {
     args.warnings.push(
@@ -748,6 +780,64 @@ async function readReviewNextSafeAction(args: {
   }
 
   return nextSafeAction;
+}
+
+async function readCompletedReviewFixNextSafeAction(args: {
+  projectRoot: string;
+  reviewFixPath: string | null;
+  artifacts: NormalizedArtifact[];
+  warnings: string[];
+}): Promise<{
+  completed: boolean;
+  nextSafeAction: string | null;
+}> {
+  if (args.reviewFixPath === null) {
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+
+  const reviewFixArtifact =
+    args.artifacts.find((artifact) => artifact.path === args.reviewFixPath) ??
+    ({
+      path: args.reviewFixPath,
+      kind: "review-fix"
+    } satisfies NormalizedArtifact);
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: reviewFixArtifact
+  });
+
+  if (content === null) {
+    args.warnings.push(
+      `${args.reviewFixPath}: could not read Review Fix artifact Next Safe Action.`
+    );
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+
+  if (!isCompletedReviewFixArtifact(content)) {
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+
+  const nextSafeAction = extractReviewNextSafeAction(content);
+
+  if (nextSafeAction === null) {
+    args.warnings.push(
+      `${args.reviewFixPath}: completed Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
+    );
+  }
+
+  return {
+    completed: true,
+    nextSafeAction
+  };
 }
 
 export async function evaluatePhaseQualityGates(
@@ -772,6 +862,13 @@ export async function evaluatePhaseQualityGates(
     suffix: "-REVIEW.md",
     kind: "review"
   });
+  const reviewFixPath = findArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix,
+    suffix: "-REVIEW-FIX.md",
+    kind: "review-fix"
+  });
   const securityPath = findArtifactPath({
     artifacts,
     phaseRoot,
@@ -779,12 +876,14 @@ export async function evaluatePhaseQualityGates(
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, securityExists, reviewSettings] = await Promise.all([
+  const [reviewExists, reviewFixExists, securityExists, reviewSettings] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
+    artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
     resolveCodeReviewEnabled(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
+  const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
   warnings.push(...reviewSettings.warnings);
 
@@ -820,18 +919,32 @@ export async function evaluatePhaseQualityGates(
       : requiresCodeReview && hasReview && !hasSecurity
         ? "security"
         : null;
-  const reviewNextSafeAction = hasReview
-    ? normalizeReviewNextSafeAction({
-        action: await readReviewNextSafeAction({
+  const reviewFixNextSafeAction = hasReviewFix
+    ? await readCompletedReviewFixNextSafeAction({
+        projectRoot,
+        reviewFixPath,
+        artifacts,
+        warnings
+      })
+    : {
+        completed: false,
+        nextSafeAction: null
+      };
+  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed
+    ? reviewFixNextSafeAction.nextSafeAction
+    : hasReview
+      ? await readReviewNextSafeAction({
           projectRoot,
           reviewPath,
           artifacts,
           warnings
-        }),
-        missingGate,
-        hasSecurity
-      })
-    : null;
+        })
+      : null;
+  const reviewNextSafeAction = normalizeReviewNextSafeAction({
+    action: rawReviewNextSafeAction,
+    missingGate,
+    hasSecurity
+  });
   const hasBlockingReviewFollowUp = isBlockingReviewNextSafeAction({
     action: reviewNextSafeAction,
     missingGate,

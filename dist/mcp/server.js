@@ -21053,6 +21053,7 @@ function normalizeArtifactCollection(collection) {
     pushNormalizedArtifact(artifacts, input, "summary");
   }
   pushNormalizedArtifact(artifacts, collection.review, "review");
+  pushNormalizedArtifact(artifacts, collection.reviewFix, "review-fix");
   pushNormalizedArtifact(artifacts, collection.security, "security");
   return artifacts;
 }
@@ -21182,6 +21183,26 @@ function extractBlueprintCommand(line) {
 function extractReviewNextSafeAction(content) {
   const section = extractMarkdownSection(content, "Next Safe Action");
   return section.split(/\r?\n/).map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+}
+function extractReviewFixNextSafeAction(content) {
+  const sectionAction = extractReviewNextSafeAction(content);
+  if (sectionAction !== null) {
+    return sectionAction;
+  }
+  const markerAction = extractArtifactMarker(content, "Next Safe Action");
+  return markerAction ? extractBlueprintCommand(markerAction) : null;
+}
+function extractArtifactMarker(content, marker) {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(
+    new RegExp(`^\\s*\\*\\*${escapedMarker}:?\\*\\*\\s*:?\\s*(.+?)\\s*$`, "im")
+  );
+  return match?.[1]?.trim() ?? null;
+}
+function isCompletedReviewFixArtifact(content) {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+  const completionState = extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
+  return status === "COMPLETED" && completionState === "complete";
 }
 function extractCommandName(action) {
   const match = action.match(/\/blu-([a-z0-9-]+)/i);
@@ -21352,13 +21373,54 @@ async function readReviewNextSafeAction(args) {
     args.warnings.push(`${args.reviewPath}: could not read Review artifact Next Safe Action.`);
     return null;
   }
-  const nextSafeAction = extractReviewNextSafeAction(content);
+  const nextSafeAction = extractReviewFixNextSafeAction(content);
   if (nextSafeAction === null) {
     args.warnings.push(
       `${args.reviewPath}: Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
     );
   }
   return nextSafeAction;
+}
+async function readCompletedReviewFixNextSafeAction(args) {
+  if (args.reviewFixPath === null) {
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+  const reviewFixArtifact = args.artifacts.find((artifact) => artifact.path === args.reviewFixPath) ?? {
+    path: args.reviewFixPath,
+    kind: "review-fix"
+  };
+  const content = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: reviewFixArtifact
+  });
+  if (content === null) {
+    args.warnings.push(
+      `${args.reviewFixPath}: could not read Review Fix artifact Next Safe Action.`
+    );
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+  if (!isCompletedReviewFixArtifact(content)) {
+    return {
+      completed: false,
+      nextSafeAction: null
+    };
+  }
+  const nextSafeAction = extractReviewNextSafeAction(content);
+  if (nextSafeAction === null) {
+    args.warnings.push(
+      `${args.reviewFixPath}: completed Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
+    );
+  }
+  return {
+    completed: true,
+    nextSafeAction
+  };
 }
 async function evaluatePhaseQualityGates(args) {
   const projectRoot = await ensureRepoRoot(args.projectRoot);
@@ -21380,6 +21442,13 @@ async function evaluatePhaseQualityGates(args) {
     suffix: "-REVIEW.md",
     kind: "review"
   });
+  const reviewFixPath = findArtifactPath({
+    artifacts,
+    phaseRoot,
+    phasePrefix: phasePrefix2,
+    suffix: "-REVIEW-FIX.md",
+    kind: "review-fix"
+  });
   const securityPath = findArtifactPath({
     artifacts,
     phaseRoot,
@@ -21387,12 +21456,14 @@ async function evaluatePhaseQualityGates(args) {
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, securityExists, reviewSettings] = await Promise.all([
+  const [reviewExists, reviewFixExists, securityExists, reviewSettings] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
+    artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
     resolveCodeReviewEnabled(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
+  const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
   warnings.push(...reviewSettings.warnings);
   const completedSummaries = await collectCompletedSummaries({
@@ -21420,16 +21491,26 @@ async function evaluatePhaseQualityGates(args) {
   const reviewableFiles = evidenceFiles.filter(isReviewableRepoFile).sort((left, right) => left.localeCompare(right));
   const requiresCodeReview = reviewSettings.enabled && reviewableFiles.length > 0;
   const missingGate = requiresCodeReview && !hasReview ? "review" : requiresCodeReview && hasReview && !hasSecurity ? "security" : null;
-  const reviewNextSafeAction = hasReview ? normalizeReviewNextSafeAction({
-    action: await readReviewNextSafeAction({
-      projectRoot,
-      reviewPath,
-      artifacts,
-      warnings
-    }),
+  const reviewFixNextSafeAction = hasReviewFix ? await readCompletedReviewFixNextSafeAction({
+    projectRoot,
+    reviewFixPath,
+    artifacts,
+    warnings
+  }) : {
+    completed: false,
+    nextSafeAction: null
+  };
+  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed ? reviewFixNextSafeAction.nextSafeAction : hasReview ? await readReviewNextSafeAction({
+    projectRoot,
+    reviewPath,
+    artifacts,
+    warnings
+  }) : null;
+  const reviewNextSafeAction = normalizeReviewNextSafeAction({
+    action: rawReviewNextSafeAction,
     missingGate,
     hasSecurity
-  }) : null;
+  });
   const hasBlockingReviewFollowUp = isBlockingReviewNextSafeAction({
     action: reviewNextSafeAction,
     missingGate,
@@ -21626,6 +21707,19 @@ function renderBulletList(items, fallback = "none") {
     return `- ${fallback}`;
   }
   return lines.map((item) => `- ${item}`).join("\n");
+}
+function formatReviewTargetId(prefix, index) {
+  return `${prefix}-${String(index + 1).padStart(2, "0")}`;
+}
+function stripVisibleReviewTargetId(value) {
+  return value.replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").trim();
+}
+function renderIdentifiedBulletList(items, prefix, fallback = "none") {
+  const lines = items.map((item) => stripVisibleReviewTargetId(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+  return lines.map((item, index) => `- \`${formatReviewTargetId(prefix, index)}\` - ${item}`).join("\n");
 }
 function isGenericNoneValue(value) {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
@@ -23569,8 +23663,8 @@ function isPlaceholderReviewListItem(item) {
   return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "not applicable" || normalized === "no finding" || normalized === "no findings" || normalized === "no follow up" || normalized === "no follow ups" || normalized === "no follow-up" || normalized === "no follow-ups";
 }
 function collectSubstantiveReviewItems(content, headingPattern) {
-  return extractMarkdownSectionItems(content, headingPattern).filter(
-    (item) => !isPlaceholderReviewListItem(item)
+  return uniqueOrderedStrings(
+    extractMarkdownSectionItems(content, headingPattern).map(stripVisibleReviewTargetId).filter((item) => !isPlaceholderReviewListItem(item))
   );
 }
 function extractMarkdownSectionContent(content, headingPattern) {
@@ -23697,10 +23791,10 @@ function inferFindingSeverity(heading, item) {
   return "unknown";
 }
 function normalizeFindingSummary(item) {
-  return item.replace(
+  return item.replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").replace(
     /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass|fixed|deferred|skipped)\]\s*)+/i,
     ""
-  ).replace(/^`?(?:F|FU)-\d{2,}`?\s*[-:]\s*/i, "").replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "").replace(
+  ).replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "").replace(
     /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
     ""
   ).trim();
@@ -24062,8 +24156,8 @@ function codeReviewModelSeverityCounts(findings) {
   }
   return counts;
 }
-function renderCodeReviewFinding(finding) {
-  return `- [${finding.severity}][${finding.disposition}] \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+function renderCodeReviewFinding(finding, index) {
+  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
 }
 function renderCodeReviewEvidenceCoverage(args) {
   if (args.knownEvidenceArtifacts.length === 0) {
@@ -24118,7 +24212,7 @@ ${findings.join("\n")}
 
 ## Follow-Ups
 
-${renderBulletList(model.followUps)}
+${renderIdentifiedBulletList(model.followUps, "FU")}
 
 ## Next Safe Action
 
@@ -24580,7 +24674,7 @@ function schemaDiagnosticFromAjvError(error2, artifact) {
       params: error2.params,
       schemaPath: error2.schemaPath
     },
-    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : artifact === "ui-review" ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context." : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : artifact === "ui-review" || artifact === "review-fix" ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context." : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
   });
 }
 function normalizeStringArray(value) {
@@ -25787,6 +25881,88 @@ async function addReviewFixChangedFileDiagnostics(args) {
     }
   }
 }
+function duplicateReviewFixTargetIds(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const duplicated = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicated.add(value);
+    }
+    seen.add(value);
+  }
+  return [...duplicated];
+}
+function formatReviewFixExpectedTargetIds(expectedTargetIds) {
+  return expectedTargetIds.length > 0 ? expectedTargetIds.join(", ") : "(none)";
+}
+function addReviewFixFindingIdDiagnostics(args) {
+  const expectedTargetIds = args.authoringContext.selectedTargetIds;
+  const expectedTargetIdSet = new Set(expectedTargetIds);
+  const knownTargetIds = args.authoringContext.targets.map((target) => target.targetId);
+  const knownTargetIdSet = new Set(knownTargetIds);
+  const actualTargetIds = args.model.findingsAddressed.map((row) => row.findingId.trim()).filter((targetId) => targetId.length > 0);
+  const missingTargetIds = expectedTargetIds.filter(
+    (targetId) => !actualTargetIds.includes(targetId)
+  );
+  const duplicateTargetIds = duplicateReviewFixTargetIds(actualTargetIds);
+  const unknownTargetIds = uniqueOrderedStrings(
+    actualTargetIds.filter((targetId) => !knownTargetIdSet.has(targetId))
+  );
+  const mismatchedTargetIds = uniqueOrderedStrings(
+    actualTargetIds.filter(
+      (targetId) => knownTargetIdSet.has(targetId) && !expectedTargetIdSet.has(targetId)
+    )
+  );
+  const expectedText = formatReviewFixExpectedTargetIds(expectedTargetIds);
+  const diagnosticContext = {
+    expectedSelectedTargetIds: expectedTargetIds,
+    actualFindingIds: actualTargetIds,
+    knownTargetIds
+  };
+  const pushFindingIdDiagnostic = (argsForDiagnostic) => {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.findingsAddressed[].findingId",
+        code: argsForDiagnostic.code,
+        message: `Review-fix findingsAddressed[].findingId must exactly match authoringContext.selectedTargetIds. Expected selected IDs: ${expectedText}. ${argsForDiagnostic.message} ${REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE}`,
+        context: {
+          ...diagnosticContext,
+          ...argsForDiagnostic.context
+        },
+        suggestion: REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE
+      })
+    );
+  };
+  if (unknownTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_unknown",
+      message: `Unknown saved review target ids: ${unknownTargetIds.join(", ")}.`,
+      context: { unknownTargetIds }
+    });
+  }
+  if (mismatchedTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_mismatched",
+      message: `Ids were found in the saved review baseline but were not selected for this review-fix pass: ${mismatchedTargetIds.join(", ")}.`,
+      context: { mismatchedTargetIds }
+    });
+  }
+  if (duplicateTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_duplicate",
+      message: `Duplicate selected target ids: ${duplicateTargetIds.join(", ")}.`,
+      context: { duplicateTargetIds }
+    });
+  }
+  if (missingTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_missing",
+      message: `Missing selected target ids: ${missingTargetIds.join(", ")}.`,
+      context: { missingTargetIds }
+    });
+  }
+}
 async function collectReviewFixResidualDiagnostics(args) {
   const diagnostics = [];
   addReviewFixPlaceholderDiagnostics({ diagnostics, model: args.model });
@@ -25796,6 +25972,11 @@ async function collectReviewFixResidualDiagnostics(args) {
   addReviewFixGenericValueDiagnostics({
     diagnostics,
     model: args.normalizedModel
+  });
+  addReviewFixFindingIdDiagnostics({
+    diagnostics,
+    model: args.normalizedModel,
+    authoringContext: args.authoringContext
   });
   await addReviewFixChangedFileDiagnostics({
     diagnostics,
@@ -27609,7 +27790,7 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, implementedCommandNamesPromise, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -27733,6 +27914,7 @@ var init_review = __esm({
       (phaseNumber) => `/blu-validate-phase ${phaseNumber}`,
       () => "/blu-progress"
     ];
+    REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE = "Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record.";
     implementedCommandNamesPromise = null;
     PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS = [
       ".blueprint/ROADMAP.md",
