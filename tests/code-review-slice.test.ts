@@ -1327,8 +1327,9 @@ test("blueprint_review_record persists structured code-review models as canonica
   assert.match(saved, /\.blueprint\/phases\/05-review-scope\/05-VERIFICATION\.md/);
   assert.match(
     saved,
-    /\[high\]\[follow-up\] `src\/feature\.ts:1` - Evidence: The feature implementation has no negative-input guard\./
+    /\[high\]\[follow-up\] `F-01` `src\/feature\.ts:1` - Evidence: The feature implementation has no negative-input guard\./
   );
+  assert.match(saved, /`FU-01` - Add a negative-input regression test before shipping\./);
 
   const loaded = await blueprintReviewLoadFindings({
     cwd: repoPath,
@@ -1337,6 +1338,8 @@ test("blueprint_review_record persists structured code-review models as canonica
   });
 
   assert.equal(loaded.findings.length, 1);
+  assert.deepEqual(loaded.findings.map((finding) => finding.id), ["F-01"]);
+  assert.deepEqual(loaded.followUps, ["Add a negative-input regression test before shipping."]);
   assert.deepEqual(loaded.severityCounts, {
     critical: 0,
     high: 1,
@@ -1344,6 +1347,75 @@ test("blueprint_review_record persists structured code-review models as canonica
     low: 0,
     unknown: 0
   });
+});
+
+test("blueprint_review_load_findings derives stable ids for legacy code-review markdown without visible ids", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const reviewPath = path.join(repoPath, ".blueprint/phases/05-review-scope/05-REVIEW.md");
+
+  await writeFile(
+    reviewPath,
+    `# Phase 05: Code Review Scope - Code Review
+
+**Verdict:** FOLLOW_UP
+
+## Findings
+
+- [high][follow-up] \`src/feature.ts:1\` - Evidence: Legacy review finding one. Impact: It matters. Fix/verification: Fix it.
+- [medium][observation] \`tests/feature.test.ts:1\` - Evidence: Legacy review finding two. Impact: It matters less. Fix/verification: Cover it.
+
+## Follow-Ups
+
+- Re-run focused validation.
+`,
+    "utf8"
+  );
+
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review"
+  });
+
+  assert.equal(loaded.found, true);
+  assert.deepEqual(
+    loaded.findings.map((finding) => [finding.id, finding.severity]),
+    [
+      ["F-01", "high"],
+      ["F-02", "medium"]
+    ]
+  );
+  assert.deepEqual(loaded.followUps, ["Re-run focused validation."]);
+});
+
+test("blueprint_review_record keeps no-follow-up sentinel unnumbered", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model: createStructuredCodeReviewModel({
+      verdict: "PASS",
+      findings: [],
+      followUps: ["none"],
+      nextSafeAction: "/blu-progress"
+    }),
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
+  });
+
+  assert.equal(created.status, "created");
+  assert.equal(created.counts.followUps, 0);
+  const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
+  assert.match(saved, /## Follow-Ups\n\n- none/);
+  assert.doesNotMatch(saved, /FU-01/);
 });
 
 test("blueprint_review_record preserves implicit phase-evidence scope source when replaying validated files", async (t) => {

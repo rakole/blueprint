@@ -5,6 +5,10 @@ import path from "node:path";
 
 import { blueprintPhaseValidationWrite } from "../src/mcp/tools/phase.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
+import {
+  buildPhaseQualityGateNextAction,
+  evaluatePhaseQualityGates
+} from "../src/mcp/tools/quality-gates.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 type PhaseFixture = {
@@ -18,8 +22,10 @@ type PhaseFixture = {
   withVerification?: boolean;
   withUat?: boolean;
   withReview?: boolean;
+  withReviewFix?: boolean;
   withSecurity?: boolean;
   reviewNextSafeAction?: string;
+  reviewFixNextSafeAction?: string;
   planModifiedFiles?: string[];
   summaryChangedFiles?: string[];
   summaryOutcomeLines?: string[];
@@ -353,6 +359,71 @@ function reviewContent(phase: PhaseFixture): string {
 `;
 }
 
+function reviewFixContent(phase: PhaseFixture): string {
+  const nextSafeAction = phase.reviewFixNextSafeAction ?? `/blu-validate-phase ${phase.phase}`;
+
+  return `# ${phaseTitle(phase)} - Review Fix
+
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Source Review:** ${phaseArtifactPath(phase, "-REVIEW.md")}
+**Next Safe Action:** ${nextSafeAction}
+
+## Remediation Summary
+
+- The selected saved review finding was fixed and verified.
+
+## Findings Addressed
+
+- QG-REVIEW-001 fixed.
+
+## Changes Made
+
+| File | Summary |
+|------|---------|
+| src/feature.ts | Applied the review remediation. |
+
+## Verification
+
+| Check | Command | Result | Evidence |
+|-------|---------|--------|----------|
+| focused quality-gate test | npm exec -- tsx --test tests/quality-gate-routing.test.ts | pass | Saved review-fix fixture. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| review | ${phaseArtifactPath(phase, "-REVIEW.md")} | Saved review findings baseline. |
+
+## Next Safe Action
+
+- ${nextSafeAction}
+`;
+}
+
 function securityContent(phase: PhaseFixture): string {
   return `# ${phaseTitle(phase)} - Security
 
@@ -488,6 +559,14 @@ async function writePhaseArtifacts(repoPath: string, phase: PhaseFixture): Promi
     await writeFile(
       path.join(phaseDir, `${phasePrefix(phase.phase)}-REVIEW.md`),
       reviewContent(phase),
+      "utf8"
+    );
+  }
+
+  if (phase.withReviewFix) {
+    await writeFile(
+      path.join(phaseDir, `${phasePrefix(phase.phase)}-REVIEW-FIX.md`),
+      reviewFixContent(phase),
       "utf8"
     );
   }
@@ -746,6 +825,37 @@ test("review fix follow-up blocks UAT completion even after review and security 
   assert.match(status.nextAction, /\/blu-code-review-fix 1/);
   assert.match(roadmap, /- \[ \] \*\*Phase 1: Quality Gate\*\*/);
   assert.doesNotMatch(roadmap, /### Phase 1: Quality Gate[\s\S]*\*\*Status\*\*: completed/);
+});
+
+test("completed REVIEW-FIX next action outranks stale REVIEW follow-up", async (t) => {
+  const phase = implementedPhase({
+    withReview: true,
+    withReviewFix: true,
+    withSecurity: true,
+    reviewNextSafeAction: "/blu-code-review-fix 1",
+    reviewFixNextSafeAction: "/blu-validate-phase 1"
+  });
+  const repoPath = await createQualityGateRepo({
+    phases: [phase]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: String(phase.phase),
+    phasePrefix: phasePrefix(phase.phase),
+    phaseDir: phaseDirectoryName(phase)
+  });
+  const nextAction = buildPhaseQualityGateNextAction({
+    phaseNumber: String(phase.phase),
+    evaluation,
+    implementedCommandNames: new Set(["validate-phase", "code-review-fix"])
+  });
+
+  assert.equal(evaluation.reviewNextSafeAction, "/blu-validate-phase 1");
+  assert.equal(nextAction, "Run /blu-validate-phase 1.");
 });
 
 test("saved REVIEW with missing SECURITY routes to secure-phase", async (t) => {

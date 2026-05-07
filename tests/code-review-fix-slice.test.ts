@@ -725,6 +725,130 @@ test("review-fix authoring context narrows selected findings, required evidence 
   assert.deepEqual(selectedLoaded.findings.map((finding) => finding.id), ["F-01"]);
 });
 
+test("review-fix validation reports clear target id alignment diagnostics", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const assertTargetDiagnostic = (
+    validation: Awaited<ReturnType<typeof blueprintReviewValidateModel>>,
+    code: string,
+    expectedIds: string[]
+  ): void => {
+    const diagnostic = validation.diagnostics.find((candidate) => candidate.code === code);
+
+    assert.ok(
+      diagnostic,
+      validation.diagnostics.map((candidate) => `${candidate.code}: ${candidate.message}`).join("\n")
+    );
+    assert.match(diagnostic.message, new RegExp(`Expected selected IDs: ${expectedIds.join(", ")}`));
+    assert.match(
+      `${diagnostic.message} ${diagnostic.suggestion}`,
+      /Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record/
+    );
+  };
+
+  const defaultContext = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix"
+  });
+  assert.equal(defaultContext.status, "ready");
+  assert.deepEqual(
+    (defaultContext.authoringContext as { selectedTargetIds: string[] }).selectedTargetIds,
+    ["F-01", "F-02", "FU-01"]
+  );
+
+  const mismatched = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-02",
+          status: "fixed",
+          evidence: "A saved but unselected finding id is intentionally addressed.",
+          disposition: "This must be rejected because validation selected F-01 only."
+        }
+      ]
+    })
+  });
+  assert.equal(mismatched.status, "invalid");
+  assertTargetDiagnostic(mismatched, "residual.finding_id_mismatched", ["F-01"]);
+  assertTargetDiagnostic(mismatched, "residual.finding_id_missing", ["F-01"]);
+
+  const unknown = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-99",
+          status: "fixed",
+          evidence: "An unknown finding id is intentionally addressed.",
+          disposition: "This must be rejected because F-99 is not in the saved review baseline."
+        }
+      ]
+    })
+  });
+  assert.equal(unknown.status, "invalid");
+  assertTargetDiagnostic(unknown, "residual.finding_id_unknown", ["F-01"]);
+
+  const duplicate = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01", "F-02"],
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-01",
+          status: "fixed",
+          evidence: "The implementation finding was fixed.",
+          disposition: "The first selected finding is addressed once."
+        },
+        {
+          findingId: "F-01",
+          status: "fixed",
+          evidence: "The implementation finding is duplicated instead of addressing F-02.",
+          disposition: "This duplicate must be rejected."
+        }
+      ]
+    })
+  });
+  assert.equal(duplicate.status, "invalid");
+  assertTargetDiagnostic(duplicate, "residual.finding_id_duplicate", ["F-01", "F-02"]);
+  assertTargetDiagnostic(duplicate, "residual.finding_id_missing", ["F-01", "F-02"]);
+
+  const omittedSubset = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-01",
+          status: "fixed",
+          evidence: "The implementation finding was fixed.",
+          disposition: "Only one saved target is addressed."
+        },
+        {
+          findingId: "FU-01",
+          status: "fixed",
+          evidence: "Focused validation was rerun.",
+          disposition: "The saved follow-up is addressed."
+        }
+      ]
+    })
+  });
+  assert.equal(omittedSubset.status, "invalid");
+  assertTargetDiagnostic(omittedSubset, "residual.finding_id_missing", ["F-01", "F-02", "FU-01"]);
+});
+
 test("review-fix authoring blocks when required upstream context is missing", async (t) => {
   const repoPath = await createCodeReviewFixRepo();
   t.after(async () => {
@@ -963,6 +1087,18 @@ test("review-fix schema rejects unsupported fields, missing required fields, and
   assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.additionalProperties"));
   assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.required"));
   assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.pattern"));
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.source === "schema" &&
+        /blueprint_review_authoring_context/.test(diagnostic.suggestion)
+    ),
+    invalid.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n")
+  );
+  assert.ok(
+    invalid.diagnostics.every((diagnostic) => !/blueprint_review_scope/.test(diagnostic.suggestion)),
+    invalid.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n")
+  );
 });
 
 test("review-fix truth table rejects completed models with active gaps and accepts partial follow-up shape", async (t) => {
@@ -970,6 +1106,40 @@ test("review-fix truth table rejects completed models with active gaps and accep
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+
+  const completedValidatePhase = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      nextSafeAction: "/blu-validate-phase 5"
+    })
+  });
+
+  assert.equal(
+    completedValidatePhase.status,
+    "valid",
+    completedValidatePhase.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const completedProgress = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    model: validReviewFixModel({
+      nextSafeAction: "/blu-progress"
+    })
+  });
+
+  assert.equal(completedProgress.status, "invalid");
+  assert.ok(
+    completedProgress.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.source === "schema" &&
+        diagnostic.path === "model.nextSafeAction"
+    ),
+    completedProgress.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
 
   const invalidCompleted = await blueprintReviewValidateModel({
     cwd: repoPath,

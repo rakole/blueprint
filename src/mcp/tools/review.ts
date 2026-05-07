@@ -775,6 +775,8 @@ const CODE_REVIEW_NEXT_ACTION_BUILDERS = [
   (phaseNumber: string) => `/blu-validate-phase ${phaseNumber}`,
   () => "/blu-progress"
 ] as const;
+const REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE =
+  "Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record.";
 
 function createAjvValidator(): Ajv2020 {
   return new Ajv2020({
@@ -884,6 +886,34 @@ function renderBulletList(items: string[], fallback = "none"): string {
   }
 
   return lines.map((item) => `- ${item}`).join("\n");
+}
+
+function formatReviewTargetId(prefix: "F" | "FU", index: number): string {
+  return `${prefix}-${String(index + 1).padStart(2, "0")}`;
+}
+
+function stripVisibleReviewTargetId(value: string): string {
+  return value
+    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
+    .trim();
+}
+
+function renderIdentifiedBulletList(
+  items: string[],
+  prefix: "F" | "FU",
+  fallback = "none"
+): string {
+  const lines = items
+    .map((item) => stripVisibleReviewTargetId(item.trim()))
+    .filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
+
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+
+  return lines
+    .map((item, index) => `- \`${formatReviewTargetId(prefix, index)}\` - ${item}`)
+    .join("\n");
 }
 
 function isGenericNoneValue(value: string): boolean {
@@ -3423,8 +3453,10 @@ function collectSubstantiveReviewItems(
   content: string,
   headingPattern: RegExp
 ): string[] {
-  return extractMarkdownSectionItems(content, headingPattern).filter(
-    (item) => !isPlaceholderReviewListItem(item)
+  return uniqueOrderedStrings(
+    extractMarkdownSectionItems(content, headingPattern)
+      .map(stripVisibleReviewTargetId)
+      .filter((item) => !isPlaceholderReviewListItem(item))
   );
 }
 
@@ -3645,11 +3677,12 @@ function inferFindingSeverity(
 
 function normalizeFindingSummary(item: string): string {
   return item
+    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
     .replace(
       /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass|fixed|deferred|skipped)\]\s*)+/i,
       ""
     )
-    .replace(/^`?(?:F|FU)-\d{2,}`?\s*[-:]\s*/i, "")
+    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
     .replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "")
     .replace(
       /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
@@ -4205,8 +4238,11 @@ function codeReviewModelSeverityCounts(
   return counts;
 }
 
-function renderCodeReviewFinding(finding: CodeReviewStructuredModel["findings"][number]): string {
-  return `- [${finding.severity}][${finding.disposition}] \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+function renderCodeReviewFinding(
+  finding: CodeReviewStructuredModel["findings"][number],
+  index: number
+): string {
+  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
 }
 
 function renderCodeReviewEvidenceCoverage(args: {
@@ -4275,7 +4311,7 @@ ${findings.join("\n")}
 
 ## Follow-Ups
 
-${renderBulletList(model.followUps)}
+${renderIdentifiedBulletList(model.followUps, "FU")}
 
 ## Next Safe Action
 
@@ -4830,7 +4866,7 @@ function schemaDiagnosticFromAjvError(
         ? `Add required field ${missingProperty}.`
         : additionalProperty !== null
           ? `Remove unsupported field ${additionalProperty}.`
-          : artifact === "ui-review"
+          : artifact === "ui-review" || artifact === "review-fix"
             ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context."
             : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
   });
@@ -6550,6 +6586,107 @@ async function addReviewFixChangedFileDiagnostics(args: {
   }
 }
 
+function duplicateReviewFixTargetIds(values: string[]): string[] {
+  const seen = new Set<string>();
+  const duplicated = new Set<string>();
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicated.add(value);
+    }
+    seen.add(value);
+  }
+
+  return [...duplicated];
+}
+
+function formatReviewFixExpectedTargetIds(expectedTargetIds: string[]): string {
+  return expectedTargetIds.length > 0 ? expectedTargetIds.join(", ") : "(none)";
+}
+
+function addReviewFixFindingIdDiagnostics(args: {
+  diagnostics: ReviewModelDiagnostic[];
+  model: ReviewFixStructuredModel;
+  authoringContext: ReviewFixAuthoringContext;
+}): void {
+  const expectedTargetIds = args.authoringContext.selectedTargetIds;
+  const expectedTargetIdSet = new Set(expectedTargetIds);
+  const knownTargetIds = args.authoringContext.targets.map((target) => target.targetId);
+  const knownTargetIdSet = new Set(knownTargetIds);
+  const actualTargetIds = args.model.findingsAddressed
+    .map((row) => row.findingId.trim())
+    .filter((targetId) => targetId.length > 0);
+  const missingTargetIds = expectedTargetIds.filter(
+    (targetId) => !actualTargetIds.includes(targetId)
+  );
+  const duplicateTargetIds = duplicateReviewFixTargetIds(actualTargetIds);
+  const unknownTargetIds = uniqueOrderedStrings(
+    actualTargetIds.filter((targetId) => !knownTargetIdSet.has(targetId))
+  );
+  const mismatchedTargetIds = uniqueOrderedStrings(
+    actualTargetIds.filter(
+      (targetId) => knownTargetIdSet.has(targetId) && !expectedTargetIdSet.has(targetId)
+    )
+  );
+  const expectedText = formatReviewFixExpectedTargetIds(expectedTargetIds);
+  const diagnosticContext = {
+    expectedSelectedTargetIds: expectedTargetIds,
+    actualFindingIds: actualTargetIds,
+    knownTargetIds
+  };
+  const pushFindingIdDiagnostic = (argsForDiagnostic: {
+    code: string;
+    message: string;
+    context: Record<string, unknown>;
+  }): void => {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.findingsAddressed[].findingId",
+        code: argsForDiagnostic.code,
+        message: `Review-fix findingsAddressed[].findingId must exactly match authoringContext.selectedTargetIds. Expected selected IDs: ${expectedText}. ${argsForDiagnostic.message} ${REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE}`,
+        context: {
+          ...diagnosticContext,
+          ...argsForDiagnostic.context
+        },
+        suggestion: REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE
+      })
+    );
+  };
+
+  if (unknownTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_unknown",
+      message: `Unknown saved review target ids: ${unknownTargetIds.join(", ")}.`,
+      context: { unknownTargetIds }
+    });
+  }
+
+  if (mismatchedTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_mismatched",
+      message: `Ids were found in the saved review baseline but were not selected for this review-fix pass: ${mismatchedTargetIds.join(", ")}.`,
+      context: { mismatchedTargetIds }
+    });
+  }
+
+  if (duplicateTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_duplicate",
+      message: `Duplicate selected target ids: ${duplicateTargetIds.join(", ")}.`,
+      context: { duplicateTargetIds }
+    });
+  }
+
+  if (missingTargetIds.length > 0) {
+    pushFindingIdDiagnostic({
+      code: "residual.finding_id_missing",
+      message: `Missing selected target ids: ${missingTargetIds.join(", ")}.`,
+      context: { missingTargetIds }
+    });
+  }
+}
+
 async function collectReviewFixResidualDiagnostics(args: {
   projectRoot: string;
   model: Record<string, unknown>;
@@ -6567,6 +6704,11 @@ async function collectReviewFixResidualDiagnostics(args: {
   addReviewFixGenericValueDiagnostics({
     diagnostics,
     model: args.normalizedModel
+  });
+  addReviewFixFindingIdDiagnostics({
+    diagnostics,
+    model: args.normalizedModel,
+    authoringContext: args.authoringContext
   });
   await addReviewFixChangedFileDiagnostics({
     diagnostics,

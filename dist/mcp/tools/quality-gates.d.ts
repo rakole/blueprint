@@ -1,5 +1,5 @@
 export type PhaseQualityGateMissingGate = "review" | "security" | null;
-export type PhaseQualityGateArtifactKind = "plan" | "summary" | "review" | "security" | "other";
+export type PhaseQualityGateArtifactKind = "plan" | "summary" | "review" | "review-fix" | "security" | "other";
 export type PhaseQualityGateArtifactInput = string | {
     path: string;
     content?: string;
@@ -10,6 +10,7 @@ export type PhaseQualityGateScopedArtifacts = {
     plans?: PhaseQualityGateArtifactInput[];
     summaries?: PhaseQualityGateArtifactInput[];
     review?: PhaseQualityGateArtifactInput | null;
+    reviewFix?: PhaseQualityGateArtifactInput | null;
     security?: PhaseQualityGateArtifactInput | null;
 };
 export type PhaseQualityGateArtifactCollection = PhaseQualityGateArtifactInput[] | PhaseQualityGateScopedArtifacts;
