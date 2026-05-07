@@ -16879,7 +16879,7 @@ function renderAuditFixTemplate(context) {
 |------------|-------|---------|--------|----------|
 | <finding id> | <targeted verification check> | <command or none> | <pass|fail|blocked|not-run|reread-only> | <verification evidence> |
 
-- Commit traceability: pre-fix HEAD <sha>; created commits <sha list or none>.
+- Commit traceability: pre-fix HEAD <sha|unknown|none>; created commits <sha list|unknown|none>.
 
 ## Remaining Gaps
 
@@ -18196,7 +18196,7 @@ var init_artifact_contracts = __esm({
           }
         ],
         commitTraceability: {
-          preFixHead: "abc1234",
+          preFixHead: "unknown",
           createdCommits: ["none"]
         },
         todoCapture: {
@@ -19901,8 +19901,7 @@ var init_artifact_contracts = __esm({
           "auto-fixable|manual-only|skip",
           "pass|fail|blocked|not-run|reread-only",
           "MANUAL|DEFERRED|NONE",
-          "OPEN|BLOCKED|NONE",
-          "src/mcp/tools/review.ts"
+          "OPEN|BLOCKED|NONE"
         ],
         notes: [
           "Audit-fix reports capture dry-run or applied remediation without creating a review-fix artifact.",
@@ -57952,35 +57951,39 @@ function valueAtJsonPointer(root, pointer) {
 }
 function minimalArtifactReportModelValue(fieldName) {
   switch (fieldName) {
-    case "remediationSummary":
-    case "classification":
-    case "changesApplied":
-    case "verification":
-    case "manualOrDeferredWork":
-    case "gapRoutes":
-    case "followUpFixes":
-    case "evidence":
-      return ["replace with concrete run-specific evidence"];
-    case "summaryEvidence":
-      return {
-        "<exact completed summary path from taskSchema>": {
-          planId: "<taskSchema planId>",
-          linkedPlanPath: "<taskSchema linkedPlanPath>",
-          summaryStatus: "COMPLETED",
-          targetedVerification: ["<taskSchema targeted verification>"],
-          coverageNote: "Explain what this saved summary proves."
-        }
-      };
-    case "pendingPlans":
-    case "dependencyPlans":
-      return [];
     case "commitTraceability":
-      return { preFixHead: "<current HEAD or unknown>", createdCommits: ["none"] };
+      return { preFixHead: "unknown", createdCommits: ["none"] };
     case "todoCapture":
       return { status: "not-needed", evidence: "No todo capture was needed." };
     default:
       return `<${fieldName}>`;
   }
+}
+function artifactReportTaskSchemaRepairHint(reportLabel, fieldName, pathValue) {
+  const reportSpecificHints = reportLabel === "report.audit-fix" ? {
+    summaryEvidence: "Read taskSchema.properties.summaryEvidence for the exact completed-summary keys and object shape.",
+    classification: "Read taskSchema.properties.classification together with taskSchema.$defs.classificationRow for the required finding rows.",
+    changesApplied: "Read taskSchema.properties.changesApplied together with taskSchema.$defs.changeRow for the required change rows.",
+    verification: "Read taskSchema.properties.verification together with taskSchema.$defs.verificationRow for the required verification rows. Use the exact not-run sentinel only when no verification command actually ran.",
+    pendingPlans: "Read taskSchema.properties.pendingPlans together with taskSchema.$defs.pendingPlanRow for the exact pending-plan inventory.",
+    dependencyPlans: "Read taskSchema.properties.dependencyPlans together with taskSchema.$defs.dependencyPlanRow for the exact dependency-plan inventory.",
+    manualOrDeferredWork: "Read taskSchema.properties.manualOrDeferredWork together with taskSchema.$defs.manualOrDeferredRow for the required rows.",
+    gapRoutes: "Read taskSchema.properties.gapRoutes together with taskSchema.$defs.gapRouteRow for the required rows.",
+    evidence: "Read taskSchema.properties.evidence together with taskSchema.$defs.evidenceRow for the required evidence ledger rows."
+  } : {
+    summaryEvidence: "Read taskSchema.properties.summaryEvidence for the exact completed-summary keys and object shape.",
+    pendingPlans: "Read taskSchema.properties.pendingPlans together with taskSchema.$defs.pendingPlanRow for the exact pending-plan inventory.",
+    dependencyPlans: "Read taskSchema.properties.dependencyPlans together with taskSchema.$defs.dependencyPlanRow for the exact dependency-plan inventory.",
+    classification: "Read taskSchema.properties.classification together with taskSchema.$defs.classificationRow for the required classification rows.",
+    testPlan: "Read taskSchema.properties.testPlan together with taskSchema.$defs.testPlanRow for the required test-plan rows.",
+    testsAddedOrUpdated: "Read taskSchema.properties.testsAddedOrUpdated together with taskSchema.$defs.testFileRow for the required file rows.",
+    targetedCommands: "Read taskSchema.properties.targetedCommands together with taskSchema.$defs.commandRow for the required command rows.",
+    bugsOrBlockers: "Read taskSchema.properties.bugsOrBlockers together with taskSchema.$defs.bugRow for the required rows.",
+    manualOrDeferredWork: "Read taskSchema.properties.manualOrDeferredWork together with taskSchema.$defs.manualRow for the required rows.",
+    remainingGaps: "Read taskSchema.properties.remainingGaps together with taskSchema.$defs.gapRow for the required rows."
+  };
+  const hint = reportSpecificHints[fieldName];
+  return hint ? `Add ${pathValue} using the current runtime taskSchema. ${hint}` : null;
 }
 function ajvPathToArtifactReportModelPath(instancePath) {
   if (instancePath.length === 0) {
@@ -58005,11 +58008,22 @@ function schemaDiagnosticFromArtifactReportAjvError(error2, reportLabel, modelOb
   let repair = missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}; MCP owns report identity, paths, rendered headings, and context markers.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_artifact_report_authoring_context.";
   let argsPatch;
   if (missingProperty !== null) {
-    argsPatch = {
-      modelPatch: {
-        [missingProperty]: minimalArtifactReportModelValue(missingProperty)
-      }
-    };
+    const minimalValue = minimalArtifactReportModelValue(missingProperty);
+    const taskSchemaRepairHint = artifactReportTaskSchemaRepairHint(
+      reportLabel,
+      missingProperty,
+      pathValue
+    );
+    if (taskSchemaRepairHint) {
+      repair = taskSchemaRepairHint;
+    }
+    if (minimalValue !== void 0 && !(typeof minimalValue === "string" && /^<.+>$/.test(minimalValue))) {
+      argsPatch = {
+        modelPatch: {
+          [missingProperty]: minimalValue
+        }
+      };
+    }
   }
   if ((error2.keyword === "enum" || error2.keyword === "const") && allowedValues && allowedValues.length > 0) {
     message = `${pathValue} must be one of: ${allowedValues.map(String).join(", ")}.`;
@@ -58023,7 +58037,16 @@ function schemaDiagnosticFromArtifactReportAjvError(error2, reportLabel, modelOb
     repair = `Populate ${pathValue} with concrete values allowed by the current taskSchema; do not invent paths or ids.`;
   } else if (error2.keyword === "required" && missingProperty !== null) {
     message = `${pathValue} is required by ${reportLabel}.`;
-    repair = `Add ${pathValue} using the current taskSchema. Minimal shape: ${JSON.stringify(minimalArtifactReportModelValue(missingProperty))}.`;
+    const taskSchemaRepairHint = artifactReportTaskSchemaRepairHint(
+      reportLabel,
+      missingProperty,
+      pathValue
+    );
+    const minimalValue = minimalArtifactReportModelValue(missingProperty);
+    repair = taskSchemaRepairHint ?? (minimalValue !== void 0 && !(typeof minimalValue === "string" && /^<.+>$/.test(minimalValue)) ? `Add ${pathValue} using the current taskSchema. Minimal shape: ${JSON.stringify(minimalValue)}.` : `Add ${pathValue} using the current taskSchema.`);
+    if (missingProperty === "commitTraceability") {
+      repair += ' Use the actual pre-fix git HEAD when it was captured; use `unknown` if the run did not record it, and use `createdCommits: ["none"]` when no commit was created.';
+    }
   } else if (error2.keyword === "additionalProperties" && additionalProperty !== null) {
     message = `${pathValue} is not supported by ${reportLabel}.`;
     repair = `Remove ${pathValue}; MCP owns report identity, report paths, rendered Markdown, and auditFixContext marker values.`;
@@ -58364,12 +58387,13 @@ function auditFixEvidenceKindFromPath(artifactPath) {
 }
 async function validateAuditFixScopeFiles(args) {
   const blockers = [];
+  const warnings = [];
   const files = uniqueSorted2(args.scopeFiles.map((entry) => entry.trim()).filter((entry) => entry.length > 0));
   if (files.length === 0) {
     blockers.push(
       "report.audit-fix authoring requires the authoritative blueprint_review_scope.files list as required upstream context."
     );
-    return { files: [], blockers };
+    return { files: [], blockers, warnings };
   }
   for (const file2 of files) {
     let absolutePath;
@@ -58390,13 +58414,17 @@ async function validateAuditFixScopeFiles(args) {
     try {
       const stats = await fs9.stat(absolutePath);
       if (!stats.isFile()) {
-        blockers.push(`Audit-fix scope file ${file2} is not a regular file.`);
+        warnings.push(
+          `Audit-fix scope file ${file2} is no longer a regular file; keeping it in scope because blueprint_review_scope captured the pre-fix path.`
+        );
       }
     } catch {
-      blockers.push(`Audit-fix scope file ${file2} does not exist.`);
+      warnings.push(
+        `Audit-fix scope file ${file2} no longer exists on disk; keeping it in scope because blueprint_review_scope captured the pre-fix path.`
+      );
     }
   }
-  return { files, blockers };
+  return { files, blockers, warnings };
 }
 function dependencyPlanPathForPhase(phaseDir, phasePrefix2, planId2) {
   return `${phaseDir}/${phasePrefix2}-${planId2}-PLAN.md`;
@@ -58878,6 +58906,7 @@ async function collectAuditFixReportContext(args) {
     scopeFiles: Array.isArray(rawScopeFiles) ? rawScopeFiles.filter((entry) => typeof entry === "string") : []
   });
   blockers.push(...scopeValidation.blockers);
+  warnings.push(...scopeValidation.warnings);
   const summaryInventory = await collectAuditFixSummaryInventory({
     projectRoot: args.projectRoot,
     phase
@@ -59748,35 +59777,6 @@ async function collectAuditFixResidualDiagnostics(args) {
         })
       );
     }
-    for (const file2 of row.changedFiles) {
-      try {
-        const absolutePath = resolveRepoRelativeInputPathSync(args.projectRoot, file2);
-        const stats = await fs9.stat(absolutePath);
-        if (!stats.isFile()) {
-          diagnostics.push(
-            artifactReportDiagnostic({
-              source: "residual",
-              path: `model.changesApplied[${index}].changedFiles`,
-              code: "content.changed_file_not_file",
-              message: `Audit-fix changed file path is not a regular file: ${file2}.`,
-              context: { file: file2 },
-              suggestion: "Use an existing repo-relative file path inside the authoritative scope."
-            })
-          );
-        }
-      } catch {
-        diagnostics.push(
-          artifactReportDiagnostic({
-            source: "residual",
-            path: `model.changesApplied[${index}].changedFiles`,
-            code: "content.changed_file_missing",
-            message: `Audit-fix changed file path does not exist: ${file2}.`,
-            context: { file: file2 },
-            suggestion: "Use an existing repo-relative file path inside the authoritative scope."
-          })
-        );
-      }
-    }
   }
   for (const [index, row] of args.normalizedModel.verification.entries()) {
     if (row.result === "not-run" && row.check === "none" && row.command === "none") {
@@ -59791,7 +59791,7 @@ async function collectAuditFixResidualDiagnostics(args) {
             code: "content.generic_text",
             message: `Audit-fix verification.${index}.${field} must be concrete unless it is the exact not-run sentinel.`,
             context: { value: row[field] },
-            suggestion: "Record the focused verification command or the explicit reason it could not run."
+            suggestion: "Record the actual verification check, command, and evidence from the run, or use the exact not-run sentinel when no verification command ran."
           })
         );
       }
@@ -59825,9 +59825,28 @@ async function collectAuditFixResidualDiagnostics(args) {
       })
     );
   }
+  if (args.normalizedModel.status === "COMPLETED" && args.authoringContext.pendingPlans.length > 0 && args.normalizedModel.pendingPlans.length > 0) {
+    diagnostics.push(
+      artifactReportDiagnostic({
+        source: "residual",
+        path: "model.pendingPlans",
+        code: "content.completed_pending_plan_debt",
+        message: "model.pendingPlans must be empty because the current runtime authoring context exposes no allowed items for this array.",
+        context: {
+          status: args.normalizedModel.status,
+          pendingPlans: args.normalizedModel.pendingPlans
+        },
+        suggestion: "Set model.pendingPlans to [] or reread blueprint_artifact_report_authoring_context if you expected pending or dependency items."
+      })
+    );
+  }
   const knownFindingIds = new Set(args.normalizedModel.classification.map((row) => row.findingId));
-  const unknownChangeFindingIds = args.normalizedModel.changesApplied.map((row) => row.findingId).filter((findingId) => !knownFindingIds.has(findingId));
-  const unknownVerificationFindingIds = args.normalizedModel.verification.map((row) => row.findingId).filter((findingId) => !knownFindingIds.has(findingId));
+  const unknownChangeFindingIds = args.normalizedModel.changesApplied.map((row) => row.findingId).filter(
+    (findingId) => findingId.toLowerCase() !== "none" && !knownFindingIds.has(findingId)
+  );
+  const unknownVerificationFindingIds = args.normalizedModel.verification.map((row) => row.findingId).filter(
+    (findingId) => findingId.toLowerCase() !== "none" && !knownFindingIds.has(findingId)
+  );
   if (unknownChangeFindingIds.length > 0) {
     diagnostics.push(
       artifactReportDiagnostic({
@@ -60155,7 +60174,6 @@ async function blueprintArtifactReportValidateModel(args) {
       context: { reportName: context.reportName, phase: context.phase?.phaseNumber ?? null },
       repair: /scopeFiles/.test(message) ? "Pass auditFixContext.scopeFiles from the authoritative blueprint_review_scope.files array, then reread blueprint_artifact_report_authoring_context before editing the model." : contractId === "report.audit-fix" ? "Repair required source evidence, summary provenance, or scope context before authoring report.audit-fix." : "Repair required completed summary and validation/UAT context before authoring report.add-tests.",
       retryable: /scopeFiles/.test(message),
-      argsPatch: /scopeFiles/.test(message) ? { auditFixContext: { scopeFiles: "Use blueprint_review_scope.files exactly." } } : void 0,
       suggestion: /scopeFiles/.test(message) ? "Pass auditFixContext.scopeFiles from the authoritative blueprint_review_scope.files array, then reread blueprint_artifact_report_authoring_context before editing the model." : contractId === "report.audit-fix" ? "Repair required source evidence, summary provenance, or scope context before authoring report.audit-fix." : "Repair required completed summary and validation/UAT context before authoring report.add-tests."
     })
   );
@@ -60207,7 +60225,6 @@ async function blueprintArtifactReportValidateModel(args) {
       normalizedModel = normalizeAuditFixReportModel(modelObject);
       diagnostics.push(
         ...await collectAuditFixResidualDiagnostics({
-          projectRoot,
           model: modelObject,
           normalizedModel: normalizeAuditFixReportModel(modelObject),
           authoringContext: context,

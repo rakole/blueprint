@@ -2983,7 +2983,7 @@ function renderAuditFixTemplate(context?: ArtifactTemplateContext): string {
 |------------|-------|---------|--------|----------|
 | <finding id> | <targeted verification check> | <command or none> | <pass|fail|blocked|not-run|reread-only> | <verification evidence> |
 
-- Commit traceability: pre-fix HEAD <sha>; created commits <sha list or none>.
+- Commit traceability: pre-fix HEAD <sha|unknown|none>; created commits <sha list|unknown|none>.
 
 ## Remaining Gaps
 
@@ -3122,7 +3122,7 @@ const AUDIT_FIX_REPORT_MODEL_CONTRACT: ArtifactModelContract = {
       }
     ],
     commitTraceability: {
-      preFixHead: "abc1234",
+      preFixHead: "unknown",
       createdCommits: ["none"]
     },
     todoCapture: {
@@ -4892,8 +4892,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "auto-fixable|manual-only|skip",
       "pass|fail|blocked|not-run|reread-only",
       "MANUAL|DEFERRED|NONE",
-      "OPEN|BLOCKED|NONE",
-      "src/mcp/tools/review.ts"
+      "OPEN|BLOCKED|NONE"
     ],
     notes: [
       "Audit-fix reports capture dry-run or applied remediation without creating a review-fix artifact.",

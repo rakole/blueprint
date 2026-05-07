@@ -54,7 +54,7 @@ Response requirements:
 - Report progress during longer audits, including resolved scope, active stage, pending gate, execution mode, next safe action, threat-register status, and any `pending-open-threat` waiting state.
 - Treat `update_topic` and `write_todos` as session-local visibility only; they must not become a second persistence path.
 - Use `skills/blueprint-review/references/secure-phase-runtime-contract.md` as the detailed runtime contract for State A/B/C handling, bounded threat-register verification, summary threat flags, subagent gating, no-subagent fallback, and invalid-write repair.
-- The authored `threatRegister` should represent every declared saved-plan threat exactly once using only `threatId`, `status`, `evidence`, and `verifierNote`; MCP renders source-plan provenance and saved threat metadata in the final `Threat Register`.
+- The authored `Threat Register` should represent every declared saved-plan threat exactly once using only `threatId`, `status`, `evidence`, and `verifierNote`; MCP renders source-plan provenance and saved threat metadata in the final `Threat Register`.
 - Do not pass Markdown `content` for `review.security`; model-only validation and persistence is the only secure-phase write path.
 - Do not emit next-step routing when any threat remains open.
 - Do not present planned-only commands as runnable; if the next step is not implemented, route to `/blu-progress` instead.
