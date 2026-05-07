@@ -76,6 +76,7 @@ ready for milestone audit without applying fixes.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 20260507-review-fix-parity-implementation | Implement code-review/review-fix contract parity fixes from the 2026-05-07 review | 2026-05-07 | pending | [20260507-review-fix-parity-implementation](./quick/20260507-review-fix-parity-implementation/) |
 | 260505-remove-research-freshness-validation | Remove MCP enforcement of research State Of The Art freshness markers while keeping runtime guidance advisory | 2026-05-05 | pending | [260505-remove-research-freshness-validation](./quick/260505-remove-research-freshness-validation/) |
 | 260502-bpbug-004-dist-refresh | Repair BPBUG-004 by refreshing the tracked dist bundle so it includes the audit-fix generated schema asset | 2026-05-02 | 350e87a | [260502-bpbug-004-dist-refresh](./quick/260502-bpbug-004-dist-refresh/) |
 

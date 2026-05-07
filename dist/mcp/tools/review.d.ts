@@ -3,6 +3,7 @@ type ReviewArtifactKind = "code-review" | "peer-review" | "review-fix" | "securi
 type NumericInput = string | number;
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 type ReviewFindingDisposition = "follow-up" | "observation" | "blocked" | "accepted-risk";
+type ReviewFixTargetClassification = "fixable" | "test-gap" | "validation-only" | "routing-note" | "no-op" | "blocked" | "observation" | "accepted-risk";
 type CodeReviewEvidenceCoverageStatus = "used" | "deferred" | "irrelevant";
 type ReviewFixStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
 type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
@@ -32,11 +33,30 @@ type PeerReviewFindingStatus = "OPEN" | "BLOCKED" | "NONE";
 type PeerReviewManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type PeerReviewGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type PeerReviewEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
+type ReviewFindingLocation = {
+    display: string;
+    file: string;
+    startLine: number;
+    endLine: number | null;
+};
 type ReviewFinding = {
     id: string;
+    visibleId: string | null;
+    stableId: string | null;
+    legacyDerived: boolean;
     severity: ReviewFindingSeverity;
     summary: string;
     sourceSection: string | null;
+    disposition: ReviewFindingDisposition | null;
+    location: ReviewFindingLocation | null;
+    file: string | null;
+    startLine: number | null;
+    endLine: number | null;
+    evidence: string | null;
+    impact: string | null;
+    recommendation: string | null;
+    classification: ReviewFixTargetClassification | null;
+    defaultEligible: boolean;
 };
 type ReviewRecordArgs = {
     cwd?: string;
@@ -67,6 +87,9 @@ type ReviewRecordResult = {
         followUps: number;
     };
     followUps: string[];
+    diagnostics?: ReviewModelDiagnostic[];
+    diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+    taskSchema?: Record<string, unknown> | null;
     warnings: string[];
 };
 type ReviewDepth = "quick" | "standard" | "deep";
@@ -111,6 +134,8 @@ type CodeReviewAuthoringContext = {
     };
     knownEvidenceArtifacts: string[];
     allowedNextActions: string[];
+    preferredNextSafeAction: string | null;
+    secondaryNextSafeAction: string | null;
     schemaPath: string;
     baseSchema: Record<string, unknown>;
     taskSchema: Record<string, unknown>;
@@ -153,6 +178,7 @@ type ReviewLoadFindingsResult = {
     findings: ReviewFinding[];
     severityCounts: Record<ReviewFindingSeverity, number>;
     followUps: string[];
+    followUpTargets: ReviewFixTarget[];
     reason: string | null;
     warnings: string[];
 };
@@ -177,10 +203,23 @@ type CodeReviewStructuredModel = {
 };
 type ReviewFixTarget = {
     targetId: string;
+    visibleId: string | null;
+    stableId: string | null;
+    legacyDerived: boolean;
     source: "finding" | "follow-up";
     severity: ReviewFindingSeverity;
     summary: string;
     sourceSection: string | null;
+    disposition: ReviewFindingDisposition | null;
+    location: string | null;
+    file: string | null;
+    startLine: number | null;
+    endLine: number | null;
+    evidence: string | null;
+    impact: string | null;
+    recommendation: string | null;
+    classification: ReviewFixTargetClassification;
+    defaultEligible: boolean;
 };
 type ReviewFixStructuredModel = {
     status: ReviewFixStatus;

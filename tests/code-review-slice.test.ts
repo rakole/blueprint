@@ -24,6 +24,20 @@ import { createGitRepo } from "./helpers/git-fixtures.js";
 const repoRoot = process.cwd();
 const execFileAsync = promisify(execFileCallback);
 
+async function readSchemaFile(relativePath: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(path.join(repoRoot, relativePath), "utf8")) as Record<string, unknown>;
+}
+
+function reviewResultMessages(result: {
+  warnings?: string[];
+  diagnostics?: Array<{ message: string }>;
+}): string {
+  return [
+    ...(result.warnings ?? []),
+    ...((result.diagnostics ?? []).map((diagnostic) => diagnostic.message))
+  ].join("\n");
+}
+
 function isBundledPath(value: unknown, relativePath: string): boolean {
   if (value instanceof URL) {
     return value.pathname.endsWith(`/${relativePath}`);
@@ -730,7 +744,8 @@ Exercise code-review follow-up routing.
         }
       }
     }),
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
   await writeFile(
     path.join(repoPath, ".blueprint/phases/05-review-scope/05-SECURITY.md"),
@@ -1212,7 +1227,8 @@ test("blueprint_review_record persists model-only code-review artifacts and trac
     phase: "5",
     artifact: "code-review",
     model: initialModel,
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(created.status, "created");
@@ -1235,11 +1251,11 @@ test("blueprint_review_record persists model-only code-review artifacts and trac
     [
       [
         "high",
-        "`src/feature.ts:1` - Evidence: Negative-input behavior is undocumented and untested. Impact: Invalid input can be processed as successful behavior. Fix/verification: Add a negative-input regression test before shipping."
+        "Add a negative-input regression test before shipping."
       ],
       [
         "medium",
-        "`tests/feature.test.ts:1` - Evidence: The saved evidence does not prove edge-case coverage. Impact: Regression confidence remains lower for boundary behavior. Fix/verification: Extend focused tests for edge-case coverage."
+        "Extend focused tests for edge-case coverage."
       ]
     ]
   );
@@ -1250,7 +1266,8 @@ test("blueprint_review_record persists model-only code-review artifacts and trac
     phase: "5",
     artifact: "code-review",
     model: initialModel,
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(reused.status, "reused");
@@ -1263,7 +1280,8 @@ test("blueprint_review_record persists model-only code-review artifacts and trac
         phase: "5",
         artifact: "code-review",
         model: updatedModel,
-        scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+        scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+        scopeSource: "explicit-files"
       }),
     /already exists\. Re-run only after explicit overwrite confirmation/i
   );
@@ -1274,6 +1292,7 @@ test("blueprint_review_record persists model-only code-review artifacts and trac
     artifact: "code-review",
     model: updatedModel,
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     overwrite: true
   });
 
@@ -1381,14 +1400,91 @@ test("blueprint_review_load_findings derives stable ids for legacy code-review m
   });
 
   assert.equal(loaded.found, true);
+  assert.equal(loaded.findings.length, 2);
+  assert.match(loaded.findings[0]?.id ?? "", /^F-LEGACY-[A-F0-9]{10}$/);
+  assert.match(loaded.findings[1]?.id ?? "", /^F-LEGACY-[A-F0-9]{10}$/);
+  assert.notEqual(loaded.findings[0]?.id, loaded.findings[1]?.id);
   assert.deepEqual(
-    loaded.findings.map((finding) => [finding.id, finding.severity]),
+    loaded.findings.map((finding) => [finding.legacyDerived, finding.severity]),
     [
-      ["F-01", "high"],
-      ["F-02", "medium"]
+      [true, "high"],
+      [true, "medium"]
     ]
   );
   assert.deepEqual(loaded.followUps, ["Re-run focused validation."]);
+});
+
+test("blueprint_review_load_findings preserves structured code-review finding fields for remediation handoff", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "The feature implementation has no negative-input guard.",
+          impact: "Invalid input can be treated as successful behavior.",
+          recommendation: "Add an explicit negative-input guard before validation reruns."
+        }
+      ]
+    }),
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
+  });
+
+  assert.equal(created.status, "created");
+
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review"
+  });
+
+  const finding = (loaded.findings as Array<{
+    id: string;
+    severity: string;
+    disposition?: string;
+    summary: string;
+    evidence?: string;
+    location?: {
+      display?: string;
+      file?: string;
+      startLine?: number;
+      endLine?: number | null;
+    };
+  }>)[0];
+
+  assert.deepEqual(
+    {
+      id: finding.id,
+      severity: finding.severity,
+      disposition: finding.disposition,
+      summary: finding.summary,
+      evidence: finding.evidence,
+      location: finding.location
+    },
+    {
+      id: "F-01",
+      severity: "high",
+      disposition: "follow-up",
+      summary: "Add an explicit negative-input guard before validation reruns.",
+      evidence: "The feature implementation has no negative-input guard.",
+      location: {
+        display: "src/feature.ts:1",
+        file: "src/feature.ts",
+        startLine: 1,
+        endLine: 1
+      }
+    }
+  );
 });
 
 test("blueprint_review_record keeps no-follow-up sentinel unnumbered", async (t) => {
@@ -1441,13 +1537,59 @@ test("blueprint_review_record preserves implicit phase-evidence scope source whe
     phase: "5",
     artifact: "code-review",
     model,
-    scopeFiles: validation.files
+    scopeFiles: validation.files,
+    scopeSource: "phase-evidence"
   });
 
   assert.equal(created.status, "created");
   const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
   assert.match(saved, /- Scope source: phase-evidence/);
   assert.doesNotMatch(saved, /- Scope source: explicit-files/);
+});
+
+test("blueprint_review_record requires scopeSource whenever scoped files are supplied", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/feature.ts", "tests/feature.test.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model: createStructuredCodeReviewModel(),
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    reviewResultMessages(invalid as { warnings?: string[]; diagnostics?: Array<{ message: string }> }),
+    /scopeSource/i
+  );
+});
+
+test("blueprint_review_record preserves explicit-files when explicit scope equals implicit scope", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/feature.ts", "tests/feature.test.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model: createStructuredCodeReviewModel(),
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
+  });
+
+  assert.equal(created.status, "created");
+  const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
+  assert.match(saved, /- Scope source: explicit-files/);
 });
 
 test("blueprint_review_record accepts structured code-review findings for root-level files", async (t) => {
@@ -1482,7 +1624,8 @@ test("blueprint_review_record accepts structured code-review findings for root-l
       ],
       followUps: ["Keep root-level file citations covered by code-review regression tests."]
     }),
-    scopeFiles: ["package.json"]
+    scopeFiles: ["package.json"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(created.status, "created");
@@ -1561,7 +1704,8 @@ test("blueprint_review_record rejects invalid structured code-review models befo
         }
       }
     }),
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(missingEvidence.status, "invalid");
@@ -1585,7 +1729,8 @@ test("blueprint_review_record rejects invalid structured code-review models befo
         }
       ]
     }),
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(genericFindingFields.status, "invalid");
@@ -1601,7 +1746,8 @@ test("blueprint_review_record rejects invalid structured code-review models befo
     artifact: "code-review",
     content: "# ignored\n",
     model: createStructuredCodeReviewModel(),
-    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
+    scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files"
   });
 
   assert.equal(bothInputs.status, "invalid");
@@ -1686,6 +1832,119 @@ test("blueprint_review_validate_model aggregates schema and residual diagnostics
         diagnostic.context &&
         diagnostic.suggestion
     )
+  );
+});
+
+test("code-review schema rejects multiline scalar fields before Markdown render", async () => {
+  const schema = await readSchemaFile(
+    "src/mcp/artifact-contracts/schemas/review.code-review.model.schema.json"
+  );
+  const validate = new Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  }).compile(schema);
+  const valid = validate(
+    createStructuredCodeReviewModel({
+      reviewSummary: [
+        "First line\nSecond line"
+      ],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "Concrete first line\nInjected second line",
+          impact: "Invalid input can be processed as successful behavior.",
+          recommendation: "Add a negative-input guard and focused test coverage."
+        }
+      ]
+    })
+  );
+
+  assert.equal(valid, false);
+  assert.match(JSON.stringify(validate.errors, null, 2), /pattern/);
+});
+
+test("blueprint_review_validate_model accepts quoted placeholder tokens when the evidence is concrete", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence:
+            "The retained source comment literally says \"TODO: remove after migration\" and proves the fallback branch is still active.",
+          impact: "The fallback path can keep masking negative-input handling debt.",
+          recommendation:
+            "Replace the quoted TODO with a completed guard implementation and focused regression coverage."
+        }
+      ]
+    })
+  });
+
+  assert.equal(
+    validation.status,
+    "valid",
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.ok(
+    validation.diagnostics.every((diagnostic) => diagnostic.code !== "residual.placeholder_text"),
+    validation.diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("\n")
+  );
+});
+
+test("blueprint_review_validate_model accepts distinct same-line findings when the evidence is substantively different", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      reviewSummary: [
+        "Phase 5 review found two distinct issues anchored to the same guardless source line."
+      ],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "Negative inputs are accepted without an early guard.",
+          impact: "Invalid input can be processed as successful behavior.",
+          recommendation: "Add an explicit negative-input guard."
+        },
+        {
+          severity: "medium",
+          disposition: "observation",
+          location: "src/feature.ts:1",
+          evidence: "The same branch has no inline rationale explaining why the fallback remains.",
+          impact: "Future cleanup work can reintroduce the same bug because intent is opaque.",
+          recommendation: "Document the retained branch intent while the fix lands."
+        }
+      ],
+      followUps: [
+        "Add the negative-input guard before shipping."
+      ]
+    })
+  });
+
+  assert.equal(
+    validation.status,
+    "valid",
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
   );
 });
 
@@ -1852,6 +2111,7 @@ test("blueprint_review_record rejects code-review models with out-of-scope findi
     phase: "5",
     artifact: "code-review",
     scopeFiles: ["src/feature.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       findings: [
         {

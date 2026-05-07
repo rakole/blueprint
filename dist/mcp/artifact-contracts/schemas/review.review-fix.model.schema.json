@@ -150,10 +150,21 @@
             }
           },
           "changesMade": {
-            "contains": {
-              "$ref": "#/$defs/changeRow"
-            },
-            "minContains": 1
+            "oneOf": [
+              {
+                "contains": {
+                  "$ref": "#/$defs/changeRow"
+                },
+                "minContains": 1
+              },
+              {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "$ref": "#/$defs/noChangeRow"
+                }
+              }
+            ]
           },
           "verification": {
             "items": {
@@ -189,7 +200,39 @@
               "const": "none"
             }
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "changesMade": {
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/noChangeRow"
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "findingsAddressed": {
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "findingId"
+                    ],
+                    "properties": {
+                      "findingId": {
+                        "pattern": "^FU-\\d{2,}$"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     },
     {
@@ -210,48 +253,6 @@
           },
           "completionState": {
             "const": "pending"
-          },
-          "manualOrDeferredWork": {
-            "contains": {
-              "type": "object",
-              "required": [
-                "status"
-              ],
-              "properties": {
-                "status": {
-                  "enum": [
-                    "MANUAL",
-                    "DEFERRED"
-                  ]
-                }
-              }
-            },
-            "minContains": 1
-          },
-          "gapRoutes": {
-            "contains": {
-              "type": "object",
-              "required": [
-                "status"
-              ],
-              "properties": {
-                "status": {
-                  "enum": [
-                    "OPEN",
-                    "BLOCKED"
-                  ]
-                }
-              }
-            },
-            "minContains": 1
-          },
-          "followUps": {
-            "contains": {
-              "not": {
-                "const": "none"
-              }
-            },
-            "minContains": 1
           }
         },
         "anyOf": [
@@ -292,6 +293,60 @@
                         "not-run"
                       ]
                     }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "manualOrDeferredWork": {
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "MANUAL",
+                        "DEFERRED"
+                      ]
+                    }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "gapRoutes": {
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "OPEN",
+                        "BLOCKED"
+                      ]
+                    }
+                  }
+                },
+                "minContains": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "followUps": {
+                "contains": {
+                  "not": {
+                    "const": "none"
                   }
                 },
                 "minContains": 1
@@ -500,8 +555,8 @@
     "tableCellString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
-      "description": "Non-empty single-line Markdown table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line Markdown table cell. CR/LF is rejected; literal pipes are allowed because the renderer escapes them before emitting Markdown."
     },
     "repoPathString": {
       "type": "string",
@@ -516,14 +571,14 @@
     "evidenceSourceString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
-      "description": "Evidence source table cell. CR/LF and pipe delimiters are rejected to preserve table shape."
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Evidence source table cell. CR/LF is rejected; literal pipes are allowed because the renderer escapes them before emitting Markdown."
     },
     "commandEvidenceString": {
       "type": "string",
       "minLength": 1,
-      "pattern": "^(?=.*\\S)[^\\r\\n|]+$",
-      "description": "Single-line command evidence suitable for the Evidence table source cell."
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Single-line command evidence suitable for the Evidence table source cell. Literal pipes are allowed because the renderer escapes them before emitting Markdown."
     },
     "findingId": {
       "type": "string",

@@ -147,6 +147,40 @@ Put explicitly checked pass evidence or safeguards in `positiveSignals`, not in
 - The parent MCP renderer will preserve the canonical `review.code-review`
   headings after the JSON model validates.
 
+## Explicit Review-Fix Reuse Contract
+
+The parent may explicitly reuse this agent for `/blu-code-review-fix`
+reclassification only when it supplies selected saved target ids plus the saved
+finding or follow-up evidence for those exact targets.
+
+For that review-fix reuse path:
+
+- stay read-only and analyze only the selected saved targets the parent passed
+- do not invent new target ids, new findings, new persistence fields, or a new
+  remediation scope
+- decide each selected target as exactly one of `fix`, `defer`, or `skip`
+- flag stale evidence plainly when current code no longer matches the saved
+  review evidence closely enough for a bounded remediation pass
+- keep the reasoning tied to the saved target id, the current implicated
+  repo-relative files, and the current stale-or-actionable posture
+
+When the parent asks for review-fix reclassification, return a compact JSON
+array or object matching the parent-provided shape, with each selected target
+including:
+
+- `targetId`
+- `decision`: `fix`, `defer`, or `skip`
+- `staleEvidence`: `true` or `false`
+- `reason`
+- optional implicated repo-relative file paths or line citations when the
+  parent requested them
+
+`fix` means the saved target still looks actionable inside a bounded remediation
+pass. `defer` means the target may still matter, but it needs another command,
+broader scope, or missing evidence before safe action. `skip` means the target
+is stale, already resolved, intentionally non-remediation, or otherwise not a
+bounded fix target for this run.
+
 ## Boundaries
 
 - Remain read-only; the parent command owns MCP persistence and any repo
@@ -158,4 +192,7 @@ Put explicitly checked pass evidence or safeguards in `positiveSignals`, not in
 - Do not act as a fixer or executor agent: no source edits, no commits, no
   rollback steps, no durable remediation writes, and no hidden iterative
   re-review loop.
+- Do not persist review-fix selections, mutate state, or claim the parent
+  already fixed, deferred, or skipped a target; classification is advisory
+  input to the parent command only.
 - Do not reintroduce `.planning` or legacy slash-command flows.
