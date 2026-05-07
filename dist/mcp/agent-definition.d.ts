@@ -1,4 +1,6 @@
-export type BlueprintAgentFrontmatterValue = string | string[];
+export type BlueprintAgentFrontmatterValue = string | number | boolean | null | BlueprintAgentFrontmatterValue[] | {
+    [key: string]: BlueprintAgentFrontmatterValue;
+};
 export type BlueprintAgentDefinitionValidation = {
     agentName: string;
     relativePath: string;

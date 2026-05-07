@@ -29,6 +29,14 @@ Blueprint remains Gemini-first, but the shared contract must still describe hone
 - Treat config precedence, migration, and defaults loading as MCP-owned behavior rather than per-command prompt logic.
 - Treat install, update, restart, and patch replay as operational workflows, not normal in-session slash-command mutations.
 
+## Agent Visibility Notes
+
+- Gemini extension agents load from `agents/*.md` inside the installed extension bundle; a copied file alone is not enough if the host has not reloaded the extension yet.
+- After installing or updating Blueprint, restart Gemini before treating a missing `blueprint-*` subagent as a packaging defect.
+- Use `/agents list` to verify whether Gemini actually registered the Blueprint agents in the current session.
+- Restrictive `tools.core` or `tools.exclude` settings can hide Blueprint subagents even when the extension loaded successfully, because Gemini policy and allowlist handling uses the agent names themselves as tool names.
+- Trusted-workspace checks still matter for the overall operator experience; confirm the workspace is trusted before diagnosing missing-agent behavior.
+
 ## What Future Sessions Should Avoid
 
 - Reintroducing `.planning/`, legacy slash-command surfaces, or installer-managed runtime state.
