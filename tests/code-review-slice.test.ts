@@ -1603,6 +1603,158 @@ test("blueprint_review_validate_model aggregates schema and residual diagnostics
   );
 });
 
+test("blueprint_review_validate_model requires explicit files when saved scope evidence has no review files", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    withPlan: false,
+    withSummary: false
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const omittedFiles = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({})
+  });
+  const emptyFiles = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: [],
+    model: createStructuredCodeReviewModel({})
+  });
+
+  for (const validation of [omittedFiles, emptyFiles]) {
+    assert.equal(validation.status, "invalid");
+    assert.equal(validation.valid, false);
+    assert.deepEqual(validation.files, []);
+    assert.equal(validation.diagnostics.length, 1);
+    assert.deepEqual(validation.diagnosticCounts.bySource, {
+      scope: 1,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    });
+    assert.equal(validation.diagnostics[0].source, "scope");
+    assert.equal(validation.diagnostics[0].code, "scope.files_required");
+    assert.equal(validation.diagnostics[0].path, "model.findings[].location");
+    assert.match(
+      validation.diagnostics[0].message,
+      /location scope cannot be validated because no explicit files were passed and no PLAN\/SUMMARY-derived review files were found/i
+    );
+    assert.doesNotMatch(
+      validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+      /severity count|severityCounts|markdown|schema/i
+    );
+  }
+});
+
+test("blueprint_review_validate_model rejects explicit finding locations outside files", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts"],
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "tests/feature.test.ts:1",
+          evidence: "The test file is outside the explicitly requested review scope.",
+          impact: "The review could report findings outside the user-selected files.",
+          recommendation: "Keep finding citations inside the explicit files list."
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.deepEqual(invalid.files, ["src/feature.ts"]);
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.location_out_of_scope" &&
+        diagnostic.path === "model.findings[0].location" &&
+        /outside the resolved review scope/i.test(diagnostic.message)
+    )
+  );
+});
+
+test("blueprint_review_validate_model rejects implicit finding locations outside derived files", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    planFilesModified: ["src/feature.ts"],
+    summaryChangedFiles: ["src/feature.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "tests/feature.test.ts:1",
+          evidence: "The test file is outside the saved PLAN/SUMMARY-derived review scope.",
+          impact: "The review could report findings outside the resolved implicit scope.",
+          recommendation: "Keep finding citations inside the derived review files list."
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.deepEqual(invalid.files, ["src/feature.ts"]);
+  assert.equal(invalid.reviewMode.source, "phase-evidence");
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.location_out_of_scope" &&
+        diagnostic.path === "model.findings[0].location" &&
+        /outside the resolved review scope/i.test(diagnostic.message)
+    )
+  );
+});
+
+test("blueprint_review_validate_model rejects authored runtime-owned severity counts", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel({
+      severityCounts: {
+        critical: 0,
+        high: 1,
+        medium: 0,
+        low: 0,
+        unknown: 0
+      }
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(
+    invalid.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.runtime_owned_field" &&
+        /severityCounts/.test(diagnostic.message)
+    )
+  );
+});
+
 test("blueprint_review_record rejects code-review models with out-of-scope finding locations", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {

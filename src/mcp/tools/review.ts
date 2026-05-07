@@ -724,7 +724,9 @@ const CODE_REVIEW_MODEL_IDENTITY_KEYS = new Set([
   "artifact",
   "path",
   "reportPath",
-  "content"
+  "content",
+  "scope",
+  "severityCounts"
 ]);
 
 const SECURITY_MODEL_IDENTITY_KEYS = new Set([
@@ -868,6 +870,10 @@ function countDiagnostics(
 
 function formatReviewDiagnostic(diagnostic: ReviewModelDiagnostic): string {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+
+function explicitReviewFilesRequested(files: string[] | undefined): boolean {
+  return (files ?? []).some((candidate) => candidate.trim().length > 0);
 }
 
 function renderBulletList(items: string[], fallback = "none"): string {
@@ -8046,19 +8052,29 @@ export async function blueprintReviewValidateModel(
   });
 
   if (context.status !== "ready" || !context.phase || !context.taskSchema || !context.authoringContext) {
+    const filesRequiredDiagnostic =
+      artifact === "code-review" &&
+      !explicitReviewFilesRequested(args.files) &&
+      context.files.length === 0 &&
+      /could not derive any reviewable repo files/i.test(context.reason ?? "");
     const diagnostics = context.prerequisiteBlockers.length > 0
       ? context.prerequisiteBlockers.map((message) =>
           modelDiagnostic({
             source: "scope",
-            path: "phase",
-            code: "scope.invalid",
-            message,
+            path: filesRequiredDiagnostic ? "model.findings[].location" : "phase",
+            code: filesRequiredDiagnostic ? "scope.files_required" : "scope.invalid",
+            message: filesRequiredDiagnostic
+              ? "Code-review finding location scope cannot be validated because no explicit files were passed and no PLAN/SUMMARY-derived review files were found."
+              : message,
             context: {
               reason: context.reason,
-              warnings: context.warnings
+              warnings: context.warnings,
+              files: args.files ?? []
             },
             suggestion:
-              artifact === "security"
+              filesRequiredDiagnostic
+                ? "Pass explicit repo-relative files, or restore saved PLAN/SUMMARY evidence that names reviewable repo files."
+                : artifact === "security"
                 ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
                 : artifact === "review-fix"
                   ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix."
@@ -8072,15 +8088,20 @@ export async function blueprintReviewValidateModel(
       : [
       modelDiagnostic({
         source: "scope",
-        path: "phase",
-        code: "scope.invalid",
-        message: context.reason ?? "Review model validation could not resolve a ready authoring context.",
+        path: filesRequiredDiagnostic ? "model.findings[].location" : "phase",
+        code: filesRequiredDiagnostic ? "scope.files_required" : "scope.invalid",
+        message: filesRequiredDiagnostic
+          ? "Code-review finding location scope cannot be validated because no explicit files were passed and no PLAN/SUMMARY-derived review files were found."
+          : context.reason ?? "Review model validation could not resolve a ready authoring context.",
         context: {
           reason: context.reason,
-          warnings: context.warnings
+          warnings: context.warnings,
+          files: args.files ?? []
         },
         suggestion:
-          artifact === "security"
+          filesRequiredDiagnostic
+            ? "Pass explicit repo-relative files, or restore saved PLAN/SUMMARY evidence that names reviewable repo files."
+            : artifact === "security"
             ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security."
             : artifact === "review-fix"
               ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix."

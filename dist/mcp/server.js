@@ -21054,6 +21054,9 @@ function countDiagnostics(diagnostics) {
 function formatReviewDiagnostic(diagnostic) {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
+function explicitReviewFilesRequested(files) {
+  return (files ?? []).some((candidate) => candidate.trim().length > 0);
+}
 function renderBulletList(items, fallback = "none") {
   const lines = items.map((item) => item.trim()).filter((item) => item.length > 0);
   if (lines.length === 0) {
@@ -26375,29 +26378,32 @@ async function blueprintReviewValidateModel(args) {
     targetIds: args.targetIds
   });
   if (context.status !== "ready" || !context.phase || !context.taskSchema || !context.authoringContext) {
+    const filesRequiredDiagnostic = artifact === "code-review" && !explicitReviewFilesRequested(args.files) && context.files.length === 0 && /could not derive any reviewable repo files/i.test(context.reason ?? "");
     const diagnostics2 = context.prerequisiteBlockers.length > 0 ? context.prerequisiteBlockers.map(
       (message) => modelDiagnostic({
         source: "scope",
-        path: "phase",
-        code: "scope.invalid",
-        message,
+        path: filesRequiredDiagnostic ? "model.findings[].location" : "phase",
+        code: filesRequiredDiagnostic ? "scope.files_required" : "scope.invalid",
+        message: filesRequiredDiagnostic ? "Code-review finding location scope cannot be validated because no explicit files were passed and no PLAN/SUMMARY-derived review files were found." : message,
         context: {
           reason: context.reason,
-          warnings: context.warnings
+          warnings: context.warnings,
+          files: args.files ?? []
         },
-        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "ui-review" ? "Resolve valid completed summary evidence and live UI-review provenance before authoring review.ui-review." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+        suggestion: filesRequiredDiagnostic ? "Pass explicit repo-relative files, or restore saved PLAN/SUMMARY evidence that names reviewable repo files." : artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "ui-review" ? "Resolve valid completed summary evidence and live UI-review provenance before authoring review.ui-review." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ) : [
       modelDiagnostic({
         source: "scope",
-        path: "phase",
-        code: "scope.invalid",
-        message: context.reason ?? "Review model validation could not resolve a ready authoring context.",
+        path: filesRequiredDiagnostic ? "model.findings[].location" : "phase",
+        code: filesRequiredDiagnostic ? "scope.files_required" : "scope.invalid",
+        message: filesRequiredDiagnostic ? "Code-review finding location scope cannot be validated because no explicit files were passed and no PLAN/SUMMARY-derived review files were found." : context.reason ?? "Review model validation could not resolve a ready authoring context.",
         context: {
           reason: context.reason,
-          warnings: context.warnings
+          warnings: context.warnings,
+          files: args.files ?? []
         },
-        suggestion: artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "ui-review" ? "Resolve valid completed summary evidence and live UI-review provenance before authoring review.ui-review." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
+        suggestion: filesRequiredDiagnostic ? "Pass explicit repo-relative files, or restore saved PLAN/SUMMARY evidence that names reviewable repo files." : artifact === "security" ? "Resolve completed phase execution evidence and live plan provenance before authoring review.security." : artifact === "review-fix" ? "Resolve a saved code-review artifact, selected finding ids, completed summary evidence, and dependency provenance before authoring review.review-fix." : artifact === "ui-review" ? "Resolve valid completed summary evidence and live UI-review provenance before authoring review.ui-review." : artifact === "peer-review" ? "Resolve saved phase plan artifacts before authoring review.peer-review." : "Resolve a valid phase review scope first, or pass explicit repo-relative files that exist."
       })
     ];
     return {
@@ -27117,7 +27123,9 @@ var init_review = __esm({
       "artifact",
       "path",
       "reportPath",
-      "content"
+      "content",
+      "scope",
+      "severityCounts"
     ]);
     SECURITY_MODEL_IDENTITY_KEYS = /* @__PURE__ */ new Set([
       "cwd",
