@@ -451,16 +451,26 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(contextContract.authoringTemplate, /## Existing Code Insights/);
   assert.match(contextContract.authoringTemplate, /<existing code insight 1>/);
   assert.match(contextContract.authoringTemplate, /<prior phase artifacts>/);
-  assert.match(contextContract.authoringTemplate, /<open question 1>/);
+  assert.match(contextContract.authoringTemplate, /<open question 1 or none>/);
   assert.match(contextContract.authoringTemplate, /## Deferred Ideas/);
   assert.match(contextContract.authoringTemplate, /## Canonical References/);
+  assert.equal(
+    contextContract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
+    "- none"
+  );
   assert.ok(contextContract.placeholderSignals.includes("<implementation decision 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<specific idea 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<existing code insight 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<prior phase artifacts>"));
-  assert.ok(contextContract.placeholderSignals.includes("<open question 1>"));
+  assert.ok(contextContract.placeholderSignals.includes("<open question 1 or none>"));
   assert.ok(contextContract.placeholderSignals.includes("<deferred idea>"));
   assert.ok(contextContract.placeholderSignals.includes("<source 1>"));
+  assert.ok(
+    contextContract.modelContract?.qualityRules.some((rule) =>
+      /exact string `none` only when the section has no unresolved questions left/i.test(rule)
+    )
+  );
+  assert.match(contextContract.notes.join("\n"), /exact `- none` sentinel/i);
   assert.match(contextContract.notes.join("\n"), /downstream planning/i);
   assert.ok(Array.isArray(listed.contracts));
   assert.ok(listed.contracts.length >= 10);

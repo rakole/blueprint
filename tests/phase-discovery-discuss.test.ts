@@ -10,7 +10,8 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
 import {
   blueprintArtifactScaffold,
-  blueprintArtifactList
+  blueprintArtifactList,
+  validatePhaseArtifactContent
 } from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhaseArtifactWrite,
@@ -66,6 +67,52 @@ async function createPhaseRepo(): Promise<string> {
   await writeFile(path.join(repoPath, ".blueprint/config.json"), "{\n  \"version\": 2\n}\n", "utf8");
 
   return repoPath;
+}
+
+function buildValidDiscussContext(openQuestionsSection: string): string {
+  return `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Phase goal - keep discuss-phase context durable and phase-scoped.
+- Included work - persist discovery decisions that planning can consume directly.
+- Excluded work - rewriting later lifecycle artifacts during discovery.
+- Success target - saved context preserves boundaries, dependencies, and next-step inputs.
+
+## Discovery Grounding
+- Product brief - Blueprint keeps phase discovery artifacts under .blueprint/phases/.
+- Requirements trace - discovery output must remain usable by research, UI, and planning commands.
+- Workflow stance - discuss-phase owns context authoring and repair before downstream work begins.
+- Locked decisions - persistent writes stay MCP-owned and phase-scoped.
+
+## Implementation Decisions
+- Decision: Allow Open Questions to use an exact empty-state sentinel when no unresolved questions remain.
+- Tradeoff or constraint: Only the explicit contract-owned sentinel should bypass the usual substantive-content rule.
+
+## Specific Ideas
+- Specific idea 1: Keep the authoring template explicit so the model does not invent filler prose.
+- Specific idea 2: Preserve exact sentinel behavior through validation and repair loops.
+- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.
+
+## Existing Code Insights
+- Existing code insight 1: Phase artifact validation already centralizes section-level checks.
+- Reusable pattern: Artifact contracts can carry opt-in metadata for individual headings.
+- Known gap or caution: Fuzzy empty-state prose must not pass as substantive content.
+
+## Dependencies
+- Prior phase artifacts: .blueprint/phases/03-phase-discovery/03-CONTEXT.md when it already exists.
+- External constraints: Discuss-phase must not weaken downstream planning detail requirements.
+- Required follow-up reads: src/mcp/artifact-contracts/index.ts and src/mcp/tools/artifacts.ts.
+
+## Open Questions
+${openQuestionsSection}
+
+## Deferred Ideas
+- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.
+- Ideas to revisit after this phase: Evaluate whether model-backed phase.context writes should also enforce the same sentinel semantics.
+
+## Canonical References
+- Source 1: src/mcp/artifact-contracts/index.ts
+- Source 2: src/mcp/tools/artifacts.ts`;
 }
 
 test("discuss-phase command references only registered phase-discovery tool names", async () => {
@@ -178,6 +225,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
   assert.match(discussReference, /Do not infer `\/blu-plan-phase`/i);
   assert.match(discussReference, /`derivedStatus\.nextAction`/);
+  assert.match(discussReference, /exactly `- none`/i);
   assert.match(
     discussReference,
     /Delete the checkpoint only after[\s\S]*context write[\s\S]*optional discussion-log[\s\S]*synced state update[\s\S]*state load/i
@@ -252,6 +300,72 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(researcherAgent, /Output Mode Selection/);
   assert.match(researcherAgent, /gray-area memo mode/);
   assert.match(researcherAgent, /not a populated `phase\.research` or\s+`XX-RESEARCH\.md` body/i);
+});
+
+test("discuss-phase context validation accepts the exact Open Questions none sentinel", () => {
+  const validation = validatePhaseArtifactContent(buildValidDiscussContext("- none"), "context");
+
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.issues, []);
+});
+
+test("discuss-phase context validation rejects malformed Open Questions empty-state variants", () => {
+  const invalidSections = [
+    "none",
+    "- None that block this fixture.",
+    "- no open questions currently"
+  ];
+
+  for (const invalidSection of invalidSections) {
+    const validation = validatePhaseArtifactContent(
+      buildValidDiscussContext(invalidSection),
+      "context"
+    );
+
+    assert.equal(validation.valid, false);
+    assert.match(validation.issues.join("\n"), /Open Questions/i);
+    assert.match(validation.issues.join("\n"), /exactly `- none`|substantive downstream-planning detail or use exactly `- none`/i);
+  }
+});
+
+test("discuss-phase context validation does not allow the none sentinel in other required sections", () => {
+  const validation = validatePhaseArtifactContent(
+    buildValidDiscussContext("- none").replace(
+      "## Specific Ideas\n- Specific idea 1: Keep the authoring template explicit so the model does not invent filler prose.\n- Specific idea 2: Preserve exact sentinel behavior through validation and repair loops.\n- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.",
+      "## Specific Ideas\n- none"
+    ),
+    "context"
+  );
+
+  assert.equal(validation.valid, false);
+  assert.match(validation.issues.join("\n"), /Specific Ideas/i);
+  assert.doesNotMatch(validation.issues.join("\n"), /Open Questions/i);
+});
+
+test("discuss-phase context write preserves the exact Open Questions none sentinel", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const writeResult = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: buildValidDiscussContext("- none"),
+    overwrite: true
+  });
+
+  assert.equal(writeResult.status, "created");
+  assert.equal(writeResult.written, true);
+
+  const saved = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    "utf8"
+  );
+
+  assert.match(saved, /## Open Questions\n- none\n/);
+  assert.doesNotMatch(saved, /None that block this phase|no open questions currently/i);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {

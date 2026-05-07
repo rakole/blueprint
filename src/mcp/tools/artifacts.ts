@@ -4475,6 +4475,34 @@ function hasSubstantiveContractSection(section: string): boolean {
   return hasBootstrapText(section, 3);
 }
 
+function matchesExactEmptySentinel(section: string, exactEmptySentinel: string | undefined): boolean {
+  return typeof exactEmptySentinel === "string" && section.trim() === exactEmptySentinel;
+}
+
+function matchesFuzzyEmptySentinel(section: string, exactEmptySentinel: string | undefined): boolean {
+  if (typeof exactEmptySentinel !== "string") {
+    return false;
+  }
+
+  const normalizedSection = section.trim().toLowerCase();
+  const normalizedSentinel = exactEmptySentinel.trim().toLowerCase();
+
+  if (normalizedSection === normalizedSentinel) {
+    return false;
+  }
+
+  return (
+    normalizedSection.startsWith(normalizedSentinel) ||
+    /^(?:[-*]\s*)?(?:none(?:\b|$)|no open questions?\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
+      normalizedSection
+    )
+  );
+}
+
+function exactEmptySentinelRepairInstruction(heading: string, exactEmptySentinel: string): string {
+  return `Populate ## ${heading} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
+}
+
 function phaseArtifactRepairInstruction(args: {
   artifact: "context" | "discussion-log" | "research" | "ui-spec";
   heading?: string;
@@ -4507,6 +4535,7 @@ function phaseArtifactDiagnostic(args: {
   message: string;
   heading?: string;
   missing?: string[];
+  repair?: string;
 }): PhaseArtifactValidationDiagnostic {
   return {
     path: args.path,
@@ -4514,10 +4543,12 @@ function phaseArtifactDiagnostic(args: {
     message: args.message,
     heading: args.heading,
     missing: args.missing,
-    repair: phaseArtifactRepairInstruction({
-      artifact: args.artifact,
-      heading: args.heading
-    }),
+    repair:
+      args.repair ??
+      phaseArtifactRepairInstruction({
+        artifact: args.artifact,
+        heading: args.heading
+      }),
     retryable: true,
     nextTool: "blueprint_phase_artifact_write"
   };
@@ -4855,14 +4886,21 @@ export function validatePhaseArtifactContent(
     issues.push(issue);
     diagnostics.push(
       ...missingRequiredSections.map((heading) =>
-        phaseArtifactDiagnostic({
-          artifact,
-          path: `content.sections.${heading}`,
-          code: "context.missing_required_section",
-          message: `Context artifact is missing required contract section: ${heading}.`,
-          heading,
-          missing: [heading]
-        })
+        {
+          const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
+
+          return phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.missing_required_section",
+            message: `Context artifact is missing required contract section: ${heading}.`,
+            heading,
+            missing: [heading],
+            repair: exactEmptySentinel
+              ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel)
+              : undefined
+          });
+        }
       )
     );
   } else if (artifact === "ui-spec" && missingRequiredSections.length > 0) {
@@ -4911,13 +4949,37 @@ export function validatePhaseArtifactContent(
   if (artifact === "context") {
     for (const heading of contract.requiredHeadings) {
       const section = extractMarkdownSection(content, heading);
+      const exactEmptySentinel = contract.sectionValidations?.[heading]?.exactEmptySentinel;
 
       if (section.trim().length === 0) {
         continue;
       }
 
+      if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
+        continue;
+      }
+
+      if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
+        const fuzzySentinel = exactEmptySentinel ?? "- none";
+        const issue = `Context artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
+        issues.push(issue);
+        diagnostics.push(
+          phaseArtifactDiagnostic({
+            artifact,
+            path: `content.sections.${heading}`,
+            code: "context.inexact_empty_sentinel",
+            message: issue,
+            heading,
+            repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
+          })
+        );
+        continue;
+      }
+
       if (!hasSubstantiveContractSection(section)) {
-        const issue = `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
+        const issue = exactEmptySentinel
+          ? `Context artifact section ${heading} must contain substantive downstream-planning detail or use exactly \`${exactEmptySentinel}\`.`
+          : `Context artifact section ${heading} must contain substantive downstream-planning detail.`;
         issues.push(issue);
         diagnostics.push(
           phaseArtifactDiagnostic({
@@ -4925,7 +4987,10 @@ export function validatePhaseArtifactContent(
             path: `content.sections.${heading}`,
             code: "context.non_substantive_required_section",
             message: issue,
-            heading
+            heading,
+            repair: exactEmptySentinel
+              ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel)
+              : undefined
           })
         );
       }

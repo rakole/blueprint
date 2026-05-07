@@ -55,7 +55,7 @@
     },
     "openQuestions": {
       "type": "array",
-      "description": "Open questions rendered under Open Questions. Use an explicit none value only when no open questions remain.",
+      "description": "Open questions rendered under Open Questions. Use the exact string none only when no open questions remain.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/nonEmptyString"

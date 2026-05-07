@@ -20,6 +20,10 @@ export type ArtifactModelContract = {
   exampleLeakageSignals: string[];
 };
 
+export type ArtifactContractSectionValidation = {
+  exactEmptySentinel?: string;
+};
+
 export type ArtifactContractId =
   | "bootstrap.project"
   | "bootstrap.requirements"
@@ -83,6 +87,7 @@ export type ArtifactContractDefinition = {
   canonicalFilePattern: string;
   freehandPolicy: ArtifactContractFreehandPolicy;
   requiredHeadings: string[];
+  sectionValidations?: Partial<Record<string, ArtifactContractSectionValidation>>;
   lockedMarkers: string[];
   placeholderSignals: string[];
   notes: string[];
@@ -152,6 +157,18 @@ function withScaffoldFooter(content: string): string {
 
 function cloneJsonObject<T extends Record<string, unknown>>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function cloneSectionValidations(
+  value: Partial<Record<string, ArtifactContractSectionValidation>> | undefined
+): Partial<Record<string, ArtifactContractSectionValidation>> | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([heading, validation]) => [heading, { ...validation }])
+  );
 }
 
 function readJsonSchemaAsset(schemaFileName: string): Record<string, unknown> {
@@ -746,7 +763,7 @@ function renderContextTemplate(context?: ArtifactTemplateContext): string {
 
 ## Open Questions
 
-- Question 1: <open question 1>
+- Question 1: <open question 1 or none>
 
 ## Deferred Ideas
 
@@ -774,6 +791,7 @@ const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
     "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
     "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
     "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
+    "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
     "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
     "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
   ],
@@ -3890,6 +3908,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Deferred Ideas",
       "Canonical References"
     ],
+    sectionValidations: {
+      "Open Questions": {
+        exactEmptySentinel: "- none"
+      }
+    },
     lockedMarkers: [],
     placeholderSignals: [
       "Goal:",
@@ -3911,12 +3934,13 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<prior phase artifacts>",
       "<external constraints>",
       "<required follow-up reads>",
-      "<open question 1>",
+      "<open question 1 or none>",
       "<deferred idea>",
       "<source 1>"
     ],
     notes: [
       "Discovery context is phase-scoped and MCP-owned.",
+      "Open Questions may use the exact `- none` sentinel only when no unresolved questions remain.",
       "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
     ],
     modelContract: PHASE_CONTEXT_MODEL_CONTRACT,
@@ -4940,6 +4964,7 @@ export function readArtifactContract(
     canonicalFilePattern: contract.canonicalFilePattern,
     freehandPolicy: contract.freehandPolicy,
     requiredHeadings: [...contract.requiredHeadings],
+    sectionValidations: cloneSectionValidations(contract.sectionValidations),
     lockedMarkers: [...contract.lockedMarkers],
     placeholderSignals: [...contract.placeholderSignals],
     notes: [...contract.notes],
