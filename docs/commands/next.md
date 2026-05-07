@@ -38,6 +38,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - When the repo is waiting on a missing artifact, verification debt, or blocked substrate, include the pending gate and the next safe follow-up command explicitly.
+- After UAT completes, enforce the post-UAT quality gate when `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files.
 - Repo side effects: No durable artifact writes are planned.
 
 
@@ -45,6 +46,7 @@
 
 
 - `.blueprint/STATE.md` through `blueprint_state_load`
+- effective config through `blueprint_config_get`
 - `.blueprint/ROADMAP.md`, phase artifacts, and codebase bundle presence through `blueprint_project_status` and `blueprint_artifact_list`
 - runtime command availability through `blueprint_command_catalog`
 - waiting state and derived next action through `blueprint_state_load`
@@ -60,6 +62,7 @@
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
@@ -123,6 +126,8 @@
 
 
 - Explain exactly which phase artifact is missing and which implemented command creates it.
+- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action; gates complete -> normal advancement.
+- If `workflow.code_review` is false, keep the previous post-UAT advancement behavior.
 - On failure, return the safest implemented recovery command instead of mutating project state implicitly.
 
 
@@ -132,6 +137,7 @@
 - Returns guidance, assumptions, or routing output without mutating project artifacts by default.
 - Uses only documented read-oriented MCP queries for inspection and routing.
 - Surfaces waiting state plainly when the repo is blocked, partial, or missing a prerequisite artifact.
+- Surfaces the post-UAT review/security gate before normal advancement when effective config requires it.
 - Never routes to omitted commands or hides destructive behavior behind an implicit step.
 - Always names the next safe follow-up command when one is available.
 

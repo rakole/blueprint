@@ -31,6 +31,19 @@ This file describes the intended artifact flow through a single Blueprint phase 
 - `add-tests` may add code-level tests, update `XX-VERIFICATION.md`, and write a supporting `.blueprint/reports/add-tests-<phase>.md` report.
 - `review` writes `XX-REVIEWS.md`.
 
+## Post-UAT Quality Gate
+
+When effective config `workflow.code_review` is true and saved execution evidence includes reviewable repo or source files, completed UAT does not advance the phase by itself. `/blu-code-review <phase>` and `/blu-secure-phase <phase>` become mandatory before normal phase advancement.
+
+Routing order after UAT is:
+
+- UAT complete, reviewable files present, and no `XX-REVIEW.md`: route to `/blu-code-review <phase>`.
+- `XX-REVIEW.md` exists and no `XX-SECURITY.md`: route to `/blu-secure-phase <phase>`.
+- `XX-REVIEW.md` has open findings: follow the saved review next safe action.
+- Review and security gates complete: advance normally.
+
+When `workflow.code_review` is false, or saved execution evidence has no reviewable repo/source files, preserve the previous post-UAT advancement behavior.
+
 ## Phase Completion Signals
 
 A phase should not be treated as complete just because execution finished. Completion requires enough evidence for the next command to route safely:
@@ -38,7 +51,7 @@ A phase should not be treated as complete just because execution finished. Compl
 - execution summaries exist
 - validation state is known and grounded in saved summaries
 - UAT state is known, resumable, or explicitly deferred
-- any review or security follow-up is visible in artifacts
+- required review and security gates are complete, or any follow-up is visible in artifacts
 - `STATE.md` names the next action clearly
 
 ## Failure And Pause Paths

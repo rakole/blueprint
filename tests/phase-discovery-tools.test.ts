@@ -262,7 +262,7 @@ function validContextContent(): string {
 - .blueprint/config.json controls whether research and UI artifacts are required before planning.
 
 ## Open Questions
-- None that block this fixture.
+- none
 
 ## Deferred Ideas
 - Broader lifecycle routing cleanup can happen outside this regression.
