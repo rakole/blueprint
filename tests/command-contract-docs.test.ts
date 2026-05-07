@@ -318,6 +318,7 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
   assert.match(exploreDoc, /Primary skill: `blueprint-capture`/);
   assert.match(exploreDoc, /Argument hint: `<topic>`/);
   assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_project_status`/);
+  assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_config_get`/);
   assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_mutate_index`/);
   assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_roadmap_add_phase`/);
   assert.match(exploreDoc, /## Required MCP Tools[\s\S]*`blueprint_artifact_scaffold`/);
@@ -325,7 +326,7 @@ test("capture skill and shipped note, backlog, and explore docs are marked imple
   assert.match(exploreDoc, /scaffolded phase context/i);
   assert.match(
     migrationMarkdown,
-    /\| `explore` \| `commands\/gsd\/explore\.md` \| GSD has an upstream workflow file \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_project_status`<br>`blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_artifact_scaffold` \| `blueprint-researcher` \|/
+    /\| `explore` \| `commands\/gsd\/explore\.md` \| GSD has an upstream workflow file \| `docs\/commands\/explore\.md` \| `blueprint-capture` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_artifact_scaffold` \| `blueprint-researcher` \|/
   );
   assert.match(
     mcpToolsDoc,
@@ -505,7 +506,7 @@ test("map-codebase docs history and runtime contract keep the repaired brownfiel
   );
   assert.match(
     mcpToolsDoc,
-    /`map-codebase` uses `blueprint_project_status`, `blueprint_artifact_contract_read`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_codebase_artifact_write`, and `blueprint_artifact_validate`/i
+    /`map-codebase` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_contract_read`, `blueprint_artifact_scaffold`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, `blueprint_codebase_artifact_write`, and `blueprint_artifact_validate`/i
   );
 });
 
@@ -663,6 +664,7 @@ test("quick command docs keep the bounded report-backed execution contract expli
 
   assert.match(quickDoc, /Primary skill: `blueprint-phase-execution`/);
   assert.match(quickDoc, /blueprint_project_status/);
+  assert.match(quickDoc, /blueprint_config_get/);
   assert.match(quickDoc, /blueprint_command_catalog/);
   assert.match(quickDoc, /blueprint_artifact_report_write/);
   assert.match(quickDoc, /blueprint_state_update/);
@@ -689,6 +691,7 @@ test("debug command docs keep the report-backed investigation contract explicit"
 
   assert.match(debugDoc, /Primary skill: `blueprint-debug`/);
   assert.match(debugDoc, /blueprint_project_status/);
+  assert.match(debugDoc, /blueprint_config_get/);
   assert.match(debugDoc, /blueprint_artifact_report_write/);
   assert.match(debugDoc, /blueprint_artifact_mutate_index/);
   assert.match(debugDoc, /blueprint_state_update/);
@@ -792,13 +795,14 @@ test("ui-review manifest, runtime resource, and UI auditor docs stay aligned", a
   assert.match(uiReviewManifest, /XX-UI-REVIEW\.md/);
   assert.match(
     mcpToolsDoc,
-    /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
+    /`ui-review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_config_get`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
   assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#ui-review");
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_review_authoring_context",
     "blueprint_review_validate_model",
     "blueprint_review_record"
@@ -1069,7 +1073,7 @@ test("review manifest and runtime resource keep the peer-review contract explici
   assert.match(reviewManifest, /preserve the disagreement/i);
   assert.match(
     mcpToolsDoc,
-    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_execution_targets`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
+    /`review` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_artifact_contract_read`, `blueprint_config_get`, `blueprint_phase_plan_index`, `blueprint_phase_plan_read`, `blueprint_phase_summary_index`, `blueprint_phase_summary_read`, `blueprint_phase_execution_targets`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, and `blueprint_review_record`/
   );
   assert.equal(contract.runtimeReference?.commandSpecPath, "src/mcp/command-runtime-metadata.ts#review");
   assert.deepEqual(contract.runtimeReference?.optionalAgents, ["blueprint-reviewer"]);
@@ -1110,13 +1114,14 @@ test("audit-fix manifest and runtime contract keep the remediation contract expl
   assert.match(auditFixManifest, /\.blueprint\/reports\/audit-fix-<phase>\.md/);
   assert.match(
     mcpToolsDoc,
-    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_contract_read`, `blueprint_artifact_report_authoring_context`, `blueprint_artifact_report_validate_model`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
+    /`audit-fix` uses `blueprint_phase_locate`, `blueprint_artifact_list`, `blueprint_review_scope`, `blueprint_artifact_contract_read`, `blueprint_config_get`, `blueprint_artifact_report_authoring_context`, `blueprint_artifact_report_validate_model`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update` to keep audit-driven remediation evidence-first/
   );
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_review_scope",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_artifact_report_authoring_context",
     "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
@@ -1164,7 +1169,7 @@ test("code-review-fix manifest and runtime resource keep review remediation expl
   assert.match(codeReviewFixManifest, /Markdown `content` fallback is invalid/);
   assert.match(
     mcpToolsDoc,
-    /`code-review-fix` uses `blueprint_phase_locate`, `blueprint_review_load_findings`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, `blueprint_review_record`, and `blueprint_state_update`/
+    /`code-review-fix` uses `blueprint_phase_locate`, `blueprint_config_get`, `blueprint_review_load_findings`, `blueprint_review_authoring_context`, `blueprint_review_validate_model`, `blueprint_review_record`, and `blueprint_state_update`/
   );
   assert.equal(
     contract.runtimeReference?.commandSpecPath,
@@ -1338,10 +1343,70 @@ test("docs-update command docs keep the scoped report-backed docs contract expli
 
   assert.match(docsUpdateDoc, /Primary skill: `blueprint-docs`/);
   assert.match(docsUpdateDoc, /blueprint_project_status/);
+  assert.match(docsUpdateDoc, /blueprint_config_get/);
   assert.match(docsUpdateDoc, /blueprint_artifact_list/);
   assert.match(docsUpdateDoc, /blueprint_artifact_summary_digest/);
   assert.match(docsUpdateDoc, /blueprint_artifact_report_write/);
   assert.match(docsUpdateDoc, /`--verify-only` must never mutate repo documentation files/i);
   assert.match(docsUpdateDoc, /docs-update-latest\.md/);
   assert.match(docsUpdateDoc, /Leaves unrelated repo files untouched/i);
+});
+
+test("docs-facing optional-subagent tool inventories include blueprint_config_get", async () => {
+  const [runtimeReference, mcpToolsDoc, quickDoc, debugDoc, exploreDoc, docsUpdateDoc, addTestsDoc] =
+    await Promise.all([
+      readRepoFile("docs/RUNTIME-REFERENCE.md"),
+      readRepoFile("docs/MCP-TOOLS.md"),
+      readRepoFile("docs/commands/quick.md"),
+      readRepoFile("docs/commands/debug.md"),
+      readRepoFile("docs/commands/explore.md"),
+      readRepoFile("docs/commands/docs-update.md"),
+      readRepoFile("docs/commands/add-tests.md")
+    ]);
+
+  assert.match(
+    runtimeReference,
+    /\| `quick` \| `docs\/commands\/quick\.md` \| `blueprint-phase-execution` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_command_catalog`<br>`blueprint_artifact_report_write`<br>`blueprint_state_update` \| `blueprint-researcher`<br>`blueprint-planner`<br>`blueprint-executor`<br>`blueprint-verifier` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /\| `explore` \| `src\/mcp\/command-runtime-metadata\.ts#explore` \| `blueprint-capture` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_mutate_index`<br>`blueprint_roadmap_add_phase`<br>`blueprint_artifact_scaffold` \| `blueprint-researcher` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /\| `docs-update` \| `docs\/commands\/docs-update\.md` \| `blueprint-docs` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_list`<br>`blueprint_artifact_summary_digest`<br>`blueprint_artifact_report_write` \| `blueprint-doc-writer`<br>`blueprint-doc-verifier` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /\| `add-tests` \| `src\/mcp\/command-runtime-metadata\.ts#add-tests` \| `blueprint-phase-validation` \| `blueprint_phase_locate`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_validation_read`<br>`blueprint_phase_validation_authoring_context`<br>`blueprint_phase_validation_render`<br>`blueprint_artifact_contract_read`<br>`blueprint_config_get`<br>`blueprint_phase_validation_write`<br>`blueprint_artifact_list`<br>`blueprint_artifact_validate`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_state_load`<br>`blueprint_state_update` \| `blueprint-executor`<br>`blueprint-verifier` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /\| `debug` \| `docs\/commands\/debug\.md` \| `blueprint-debug` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-debugger` \|/
+  );
+
+  assert.match(
+    mcpToolsDoc,
+    /`explore` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_mutate_index`, `blueprint_roadmap_add_phase`, and `blueprint_artifact_scaffold`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`quick` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_command_catalog`, `blueprint_artifact_report_write`, and `blueprint_state_update`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`debug` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_report_write`, `blueprint_artifact_mutate_index`, and `blueprint_state_update`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`add-tests` uses phase locate, summary index\/read, validation read\/write, `blueprint_phase_validation_authoring_context`, `blueprint_phase_validation_render`, `blueprint_artifact_contract_read`, `blueprint_config_get`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`docs-update` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_list`, `blueprint_artifact_summary_digest`, and `blueprint_artifact_report_write`/i
+  );
+
+  for (const doc of [quickDoc, debugDoc, exploreDoc, docsUpdateDoc, addTestsDoc]) {
+    assert.match(doc, /blueprint_config_get/);
+  }
 });

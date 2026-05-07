@@ -669,6 +669,7 @@ test("map-codebase runtime metadata mirrors key command contract details", async
   ]);
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     "blueprint_project_status",
+    "blueprint_config_get",
     "blueprint_artifact_contract_read",
     "blueprint_artifact_scaffold",
     "blueprint_artifact_list",

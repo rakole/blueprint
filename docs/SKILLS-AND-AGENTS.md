@@ -4,6 +4,12 @@ Implemented Blueprint skills are host-discoverable bundles at `skills/<name>/SKI
 
 When one skill owns multiple commands, its bundle metadata should keep shared inputs separate from command-specific inputs. Loaders and runtime-contract consumers should resolve only the effective bundle for the invoking command rather than loading every sibling command doc by default. For example, `/blu-validate-phase` should load the shared `blueprint-phase-validation` inputs plus the validate-phase runtime contract, not the `verify-work` or `add-tests` references unless the active command actually needs them.
 
+## Optional Subagent Gate
+
+- Skills may invoke optional subagents only when the current command contract allows them and effective config has `workflow.subagents=true`.
+- When effective config has `workflow.subagents=false`, use the command's no-subagent fallback and state that config disabled subagents.
+- This does not change `blueprint_command_catalog.availableOptionalAgents` or implemented-only routing; it gates runtime skill behavior only.
+
 ## Shipped Skills
 
 Primary command lists are canonical ownership metadata and must stay consistent with `docs/COMMAND-CATALOG.md` and `docs/commands/*.md`. The `Status` column here is skill-family/file rollout metadata; command-level availability remains canonical in `docs/COMMAND-CATALOG.md` and the live `blueprint_command_catalog`.

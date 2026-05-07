@@ -52,6 +52,7 @@
 ## Blueprint And Global State Reads
 
 
+- Effective workflow config through `blueprint_config_get` before any optional doc-writer or doc-verifier decision
 - Project status and artifact inventory through the documented project and artifact MCP tools
 - Digest-backed Blueprint evidence for the selected docs through `blueprint_artifact_summary_digest`
 
@@ -67,12 +68,14 @@
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 
 ## Digest And Report Contract
 
+- Read effective config through `blueprint_config_get` before deciding whether to use `blueprint-doc-writer`, `blueprint-doc-verifier`, or the inline fallback.
 - Pass only repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, and `testFiles` to `blueprint_artifact_summary_digest`.
 - Treat the returned `inputsUsed` list as the authoritative digest scope instead of re-describing or widening the evidence set afterward.
 - Treat digest-backed repo files and saved Blueprint artifacts as repo truth. When external verification is genuinely needed, keep cited external truth separate in the report instead of flattening it into the same evidence claim.

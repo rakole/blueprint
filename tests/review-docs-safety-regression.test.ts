@@ -67,7 +67,7 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     review,
-    /Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review\.peer-review` contract and `mcp_blueprint_blueprint_review_authoring_context`/i
+    /Read `mcp_blueprint_blueprint_artifact_contract_read` for the canonical `review\.peer-review` contract, read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer decision, and read `mcp_blueprint_blueprint_review_authoring_context`/i
   );
   assert.match(
     review,

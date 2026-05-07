@@ -1439,6 +1439,7 @@ test("secure-phase is exposed as an implemented review command with the register
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
+    "blueprint_config_get",
     "blueprint_phase_execution_targets",
     "blueprint_phase_locate",
     "blueprint_phase_plan_index",

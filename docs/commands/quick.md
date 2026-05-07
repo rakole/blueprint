@@ -58,12 +58,14 @@
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Quick Report Contract
 
+- Read effective config through `blueprint_config_get` before deciding whether to use any optional research, planning, execution, or verification subagent path.
 - Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path`, `written`, and `status` as authoritative.
 

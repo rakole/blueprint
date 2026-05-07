@@ -182,7 +182,7 @@ export declare const PLAN_MILESTONE_GAPS_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: can add multiple phases in one pass.";
     };
-    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-roadmapper"];
     readonly requiredInputPaths: readonly ["commands/blu-plan-milestone-gaps.toml"];
     readonly spec: {
@@ -199,7 +199,7 @@ export declare const PLAN_MILESTONE_GAPS_RUNTIME_METADATA: {
         readonly waveTitle: "Roadmap And Milestone";
         readonly command: "plan-milestone-gaps";
         readonly primarySkill: "blueprint-roadmap-admin";
-        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
@@ -216,7 +216,7 @@ export declare const AUDIT_MILESTONE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: report generation only.";
     };
-    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_report_write"];
     readonly optionalAgents: readonly ["blueprint-verifier"];
     readonly requiredInputPaths: readonly ["commands/blu-audit-milestone.toml"];
     readonly spec: {
@@ -233,7 +233,7 @@ export declare const AUDIT_MILESTONE_RUNTIME_METADATA: {
         readonly waveTitle: "Roadmap And Milestone";
         readonly command: "audit-milestone";
         readonly primarySkill: "blueprint-roadmap-admin";
-        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_report_write"];
         readonly optionalAgents: readonly ["blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.";
@@ -318,7 +318,7 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts.";
     };
-    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-roadmapper"];
     readonly requiredInputPaths: readonly ["commands/blu-new-milestone.toml"];
     readonly spec: {
@@ -335,7 +335,7 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly waveTitle: "Roadmap And Milestone";
         readonly command: "new-milestone";
         readonly primarySkill: "blueprint-roadmap-admin";
-        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
@@ -454,7 +454,7 @@ export declare const MAP_CODEBASE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: refresh mode can replace existing codebase-mapping artifacts.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
     readonly optionalAgents: readonly ["blueprint-mapper"];
     readonly requiredInputPaths: readonly ["commands/blu-map-codebase.toml", "skills/blueprint-map/references/map-runtime-contract.md"];
     readonly spec: {
@@ -471,7 +471,7 @@ export declare const MAP_CODEBASE_RUNTIME_METADATA: {
         readonly waveTitle: "Foundation";
         readonly command: "map-codebase";
         readonly primarySkill: "blueprint-map";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
         readonly optionalAgents: readonly ["blueprint-mapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.";
@@ -641,7 +641,7 @@ export declare const PLAN_PHASE_RUNTIME_METADATA: {
         readonly waveTitle: "Core Lifecycle";
         readonly command: "plan-phase";
         readonly primarySkill: "blueprint-phase-planning";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_validate", "blueprint_phase_plan_write", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_write", "blueprint_phase_plan_validate", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, re-read blueprint_phase_plan_authoring_context immediately before each model validation/write after any successful plan write because saved plan files are intentional later-slot evidence artifacts, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: \"strict\" and authoringMode: \"model-only\", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups.";
@@ -759,7 +759,7 @@ export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: read-only analysis.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
     readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
     readonly spec: {
@@ -776,7 +776,7 @@ export declare const LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA: {
         readonly waveTitle: "Roadmap And Milestone";
         readonly command: "list-phase-assumptions";
         readonly primarySkill: "blueprint-phase-discovery";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly hookInvolvement: readonly [];
         readonly contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.";
@@ -861,7 +861,7 @@ export declare const CODE_REVIEW_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: review artifact generation only.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
     readonly optionalAgents: readonly ["blueprint-reviewer"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-runtime-contract.md"];
     readonly spec: {
@@ -878,7 +878,7 @@ export declare const CODE_REVIEW_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "code-review";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When security still routes first, keep code-review-fix visible as the secondary queued follow-up if concrete follow-up fixes remain.";
@@ -895,7 +895,7 @@ export declare const CODE_REVIEW_FIX_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: selected findings can trigger bounded repo remediation plus review-fix/state updates.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-reviewer"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-fix-runtime-contract.md"];
     readonly spec: {
@@ -912,7 +912,7 @@ export declare const CODE_REVIEW_FIX_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "code-review-fix";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Long-running-mutation profile for bounded saved-finding remediation: default unscoped remediation to saved follow-up findings, keep repo mutation scoped to selected findings, use blueprint-reviewer only for read-only selected-target fix/defer/skip reclassification plus stale-evidence notes, keep the inline fallback on the same one-target-at-a-time decision contract, author only the review.review-fix schema's camelCase JSON fields while forbidding rendered-heading or locked-marker keys, validate through blueprint_review_validate_model, persist through review MCP tools, and update STATE.md through blueprint_state_update with base synced plus explicit activeCommand/currentPhase/nextAction patch fields before routing follow-up through implemented validation or progress commands only.";
@@ -929,7 +929,7 @@ export declare const SECURE_PHASE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: audit artifact only.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
     readonly optionalAgents: readonly ["blueprint-security-auditor"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/secure-phase-runtime-contract.md"];
     readonly spec: {
@@ -946,7 +946,7 @@ export declare const SECURE_PHASE_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "secure-phase";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-security-auditor"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.";
@@ -963,7 +963,7 @@ export declare const AUDIT_FIX_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: bounded remediation plus report/state updates.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/audit-fix-runtime-contract.md"];
     readonly spec: {
@@ -980,7 +980,7 @@ export declare const AUDIT_FIX_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "audit-fix";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, repair invalid diagnostics by exact path, code, repair, allowedValues, missing, argsPatch, and repairSummary guidance, reread authoring context when runtime context is stale or incomplete, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop with top diagnostics plus suggestedRepairs rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -997,7 +997,7 @@ export declare const REVIEW_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: external reviewer orchestration without default repo mutation.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
     readonly optionalAgents: readonly ["blueprint-reviewer"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/review-runtime-contract.md"];
     readonly spec: {
@@ -1014,7 +1014,7 @@ export declare const REVIEW_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "review";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -1031,7 +1031,7 @@ export declare const UI_REVIEW_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Low: review artifact only.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
     readonly optionalAgents: readonly ["blueprint-ui-auditor"];
     readonly requiredInputPaths: readonly ["skills/blueprint-review/references/ui-review-runtime-contract.md"];
     readonly spec: {
@@ -1048,7 +1048,7 @@ export declare const UI_REVIEW_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "ui-review";
         readonly primarySkill: "blueprint-review";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-ui-auditor"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -1065,7 +1065,7 @@ export declare const ADD_TESTS_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: repo test mutation plus verification/report updates.";
     };
-    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
     readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"];
     readonly spec: {
@@ -1082,7 +1082,7 @@ export declare const ADD_TESTS_RUNTIME_METADATA: {
         readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
         readonly command: "add-tests";
         readonly primarySkill: "blueprint-phase-validation";
-        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
@@ -1099,7 +1099,7 @@ export declare const DOCS_UPDATE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: writes selected repo documentation files and a durable docs-update report.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
     readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
     readonly requiredInputPaths: readonly ["skills/blueprint-docs/references/docs-update-runtime-contract.md"];
     readonly spec: {
@@ -1116,7 +1116,7 @@ export declare const DOCS_UPDATE_RUNTIME_METADATA: {
         readonly waveTitle: "Quality And Shipping";
         readonly command: "docs-update";
         readonly primarySkill: "blueprint-docs";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
         readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.";
@@ -1706,7 +1706,7 @@ export declare const EXPLORE_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
     readonly optionalAgents: readonly ["blueprint-researcher"];
     readonly spec: {
         readonly path: string;
@@ -1722,7 +1722,7 @@ export declare const EXPLORE_RUNTIME_METADATA: {
         readonly waveTitle: "Capture And Lightweight Execution";
         readonly command: "explore";
         readonly primarySkill: "blueprint-capture";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
         readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
@@ -1739,7 +1739,7 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "High: can execute repo changes with reduced ceremony.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
     readonly spec: {
         readonly path: string;
@@ -1755,7 +1755,7 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly waveTitle: "Capture And Lightweight Execution";
         readonly command: "quick";
         readonly primarySkill: "blueprint-phase-execution";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
@@ -1772,7 +1772,7 @@ export declare const DEBUG_RUNTIME_METADATA: {
         readonly declaredStatus: "implemented";
         readonly risk: "Medium: exploratory shell commands and test runs are likely.";
     };
-    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
     readonly optionalAgents: readonly ["blueprint-debugger"];
     readonly requiredInputPaths: readonly ["commands/blu-debug.toml", "skills/blueprint-debug/references/debug-runtime-contract.md"];
     readonly spec: {
@@ -1789,7 +1789,7 @@ export declare const DEBUG_RUNTIME_METADATA: {
         readonly waveTitle: "Capture And Lightweight Execution";
         readonly command: "debug";
         readonly primarySkill: "blueprint-debug";
-        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-debugger"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
         readonly contractNotes: "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.";
@@ -1975,7 +1975,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: can add multiple phases in one pass.";
         };
-        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly requiredInputPaths: readonly ["commands/blu-plan-milestone-gaps.toml"];
         readonly spec: {
@@ -1992,7 +1992,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Roadmap And Milestone";
             readonly command: "plan-milestone-gaps";
             readonly primarySkill: "blueprint-roadmap-admin";
-            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_roadmap_add_phase", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_roadmap_add_phase", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-roadmapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Interactive-read profile for bounded audit-follow-up planning: locate the matching milestone audit, preserve grouped requirement, integration, flow, and optional sections with traceability repair notes, prefer ask_user for the grouped plan confirmation gate, keep the waiting state explicit as missing-milestone-audit, no-actionable-gaps, or gap-plan-confirmation, append coherent phases through repeated roadmap-add-phase calls, and route to /blu-discuss-phase <first new phase> without adopting long-running progress tools.";
@@ -2009,7 +2009,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: report generation only.";
         };
-        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_report_write"];
         readonly optionalAgents: readonly ["blueprint-verifier"];
         readonly requiredInputPaths: readonly ["commands/blu-audit-milestone.toml"];
         readonly spec: {
@@ -2026,7 +2026,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Roadmap And Milestone";
             readonly command: "audit-milestone";
             readonly primarySkill: "blueprint-roadmap-admin";
-            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_phase_summary_index", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_report_write"];
             readonly optionalAgents: readonly ["blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Interactive-read profile for bounded milestone auditing: compare original milestone intent against completed phase evidence, read report.milestone-audit before drafting, keep grouped gap sections plus traceability notes for downstream repair, prefer ask_user for overwrite confirmation, keep the waiting state explicit as milestone-audit-overwrite-confirmation, and stay report-local in .blueprint/reports/ without adopting long-running progress tools.";
@@ -2111,7 +2111,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: rewrites milestone starter docs through carry-forward scaffolding and advances state without deleting historical phase artifacts.";
         };
-        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly requiredInputPaths: readonly ["commands/blu-new-milestone.toml"];
         readonly spec: {
@@ -2128,7 +2128,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Roadmap And Milestone";
             readonly command: "new-milestone";
             readonly primarySkill: "blueprint-roadmap-admin";
-            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_scaffold", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-roadmapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
@@ -2247,7 +2247,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: refresh mode can replace existing codebase-mapping artifacts.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
         readonly optionalAgents: readonly ["blueprint-mapper"];
         readonly requiredInputPaths: readonly ["commands/blu-map-codebase.toml", "skills/blueprint-map/references/map-runtime-contract.md"];
         readonly spec: {
@@ -2264,7 +2264,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Foundation";
             readonly command: "map-codebase";
             readonly primarySkill: "blueprint-map";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_artifact_scaffold", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_codebase_artifact_write", "blueprint_artifact_validate"];
             readonly optionalAgents: readonly ["blueprint-mapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for read-heavy brownfield mapping: load the local map runtime contract at skills/blueprint-map/references/map-runtime-contract.md, keep reuse as the default posture, treat supplied focus areas as targeted deepening across the same seven-document bundle, require ask_user confirmation for refresh or replace paths before any overwrite, read the canonical codebase contract before scaffold or refresh decisions, use contract.authoringTemplate as the heading authority, pass digest inputs as repo-relative paths and treat returned inputsUsed as authoritative, persist substantive mapping content through blueprint_codebase_artifact_write, repair invalid write results from returned issues before moving on, validate the resulting bundle, and route a successful map-first brownfield repo to /blu-new-project.";
@@ -2434,7 +2434,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Core Lifecycle";
             readonly command: "plan-phase";
             readonly primarySkill: "blueprint-phase-planning";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_validate", "blueprint_phase_plan_write", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_phase_research_status", "blueprint_phase_artifact_read", "blueprint_phase_validation_read", "blueprint_review_load_findings", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_plan_authoring_context", "blueprint_phase_plan_validate_model", "blueprint_phase_plan_write", "blueprint_phase_plan_validate", "blueprint_config_get", "blueprint_state_load", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-planner", "blueprint-checker"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, re-read blueprint_phase_plan_authoring_context immediately before each model validation/write after any successful plan write because saved plan files are intentional later-slot evidence artifacts, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: \"strict\" and authoringMode: \"model-only\", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups.";
@@ -2552,7 +2552,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: read-only analysis.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly requiredInputPaths: readonly ["skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"];
         readonly spec: {
@@ -2569,7 +2569,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Roadmap And Milestone";
             readonly command: "list-phase-assumptions";
             readonly primarySkill: "blueprint-phase-discovery";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_context", "blueprint_roadmap_read", "blueprint_project_status", "blueprint_config_get"];
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly [];
             readonly contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.";
@@ -2654,7 +2654,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: review artifact generation only.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-runtime-contract.md"];
         readonly spec: {
@@ -2671,7 +2671,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "code-review";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_artifact_contract_read", "blueprint_review_scope", "blueprint_review_load_findings", "blueprint_review_validate_model", "blueprint_review_record"];
             readonly optionalAgents: readonly ["blueprint-reviewer"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When security still routes first, keep code-review-fix visible as the secondary queued follow-up if concrete follow-up fixes remain.";
@@ -2688,7 +2688,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: selected findings can trigger bounded repo remediation plus review-fix/state updates.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/code-review-fix-runtime-contract.md"];
         readonly spec: {
@@ -2705,7 +2705,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "code-review-fix";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_config_get", "blueprint_review_load_findings", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-reviewer"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for bounded saved-finding remediation: default unscoped remediation to saved follow-up findings, keep repo mutation scoped to selected findings, use blueprint-reviewer only for read-only selected-target fix/defer/skip reclassification plus stale-evidence notes, keep the inline fallback on the same one-target-at-a-time decision contract, author only the review.review-fix schema's camelCase JSON fields while forbidding rendered-heading or locked-marker keys, validate through blueprint_review_validate_model, persist through review MCP tools, and update STATE.md through blueprint_state_update with base synced plus explicit activeCommand/currentPhase/nextAction patch fields before routing follow-up through implemented validation or progress commands only.";
@@ -2722,7 +2722,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: audit artifact only.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-security-auditor"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/secure-phase-runtime-contract.md"];
         readonly spec: {
@@ -2739,7 +2739,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "secure-phase";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
             readonly optionalAgents: readonly ["blueprint-security-auditor"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.";
@@ -2756,7 +2756,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: bounded remediation plus report/state updates.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/audit-fix-runtime-contract.md"];
         readonly spec: {
@@ -2773,7 +2773,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "audit-fix";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_review_scope", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-reviewer", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for bounded saved-evidence remediation: load skills/blueprint-review/references/audit-fix-runtime-contract.md, resolve the phase and artifact inventory, let blueprint_review_scope own the repo-file scope, classify only selected saved evidence, keep --source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit, use blueprint-reviewer only for bounded read-only classification and blueprint-verifier only for bounded post-fix verification, validate the structured report.audit-fix model through blueprint_artifact_report_validate_model, repair invalid diagnostics by exact path, code, repair, allowedValues, missing, argsPatch, and repairSummary guidance, reread authoring context when runtime context is stale or incomplete, persist it through blueprint_artifact_report_write, append confirmed todo follow-ups through blueprint_artifact_mutate_index, update state through blueprint_state_update, and stop with top diagnostics plus suggestedRepairs rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -2790,7 +2790,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: external reviewer orchestration without default repo mutation.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-reviewer"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/review-runtime-contract.md"];
         readonly spec: {
@@ -2807,7 +2807,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "review";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_plan_index", "blueprint_phase_plan_read", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_execution_targets", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
             readonly optionalAgents: readonly ["blueprint-reviewer"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for saved-plan peer review: load skills/blueprint-review/references/review-runtime-contract.md, resolve the phase and artifact inventory, read only selected phase plans and related summaries through MCP, keep requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit, use blueprint-reviewer only for bounded packet and synthesis quality checks, validate the structured review.peer-review model through blueprint_review_validate_model, persist it through blueprint_review_record, preserve partial reviewer coverage honestly, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -2824,7 +2824,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Low: review artifact only.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
         readonly optionalAgents: readonly ["blueprint-ui-auditor"];
         readonly requiredInputPaths: readonly ["skills/blueprint-review/references/ui-review-runtime-contract.md"];
         readonly spec: {
@@ -2841,7 +2841,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "ui-review";
             readonly primarySkill: "blueprint-review";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_review_authoring_context", "blueprint_review_validate_model", "blueprint_review_record"];
             readonly optionalAgents: readonly ["blueprint-ui-auditor"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for phase-scoped UI audit: load skills/blueprint-review/references/ui-review-runtime-contract.md, resolve the phase and artifact inventory, read review.ui-review through blueprint_artifact_contract_read, keep saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit, use blueprint-ui-auditor only for bounded UI/code analysis when available, validate the structured review.ui-review model through blueprint_review_validate_model, persist it through blueprint_review_record, and stop rather than hand-writing .blueprint/ if MCP validation or persistence rejects the repaired model.";
@@ -2858,7 +2858,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: repo test mutation plus verification/report updates.";
         };
-        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
         readonly requiredInputPaths: readonly ["skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"];
         readonly spec: {
@@ -2875,7 +2875,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality, Shipping, Docs, And Maintenance";
             readonly command: "add-tests";
             readonly primarySkill: "blueprint-phase-validation";
-            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_phase_locate", "blueprint_phase_summary_index", "blueprint_phase_summary_read", "blueprint_phase_validation_read", "blueprint_phase_validation_authoring_context", "blueprint_phase_validation_render", "blueprint_artifact_contract_read", "blueprint_config_get", "blueprint_phase_validation_write", "blueprint_artifact_list", "blueprint_artifact_validate", "blueprint_artifact_report_authoring_context", "blueprint_artifact_report_validate_model", "blueprint_artifact_report_write", "blueprint_state_load", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for evidence-backed test generation; keep repo mutation scoped to selected tests and persist validation/report evidence through MCP tools.";
@@ -2892,7 +2892,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: writes selected repo documentation files and a durable docs-update report.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
         readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
         readonly requiredInputPaths: readonly ["skills/blueprint-docs/references/docs-update-runtime-contract.md"];
         readonly spec: {
@@ -2909,7 +2909,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Quality And Shipping";
             readonly command: "docs-update";
             readonly primarySkill: "blueprint-docs";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_list", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write"];
             readonly optionalAgents: readonly ["blueprint-doc-writer", "blueprint-doc-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Long-running-mutation profile for scoped repo documentation refresh or verification: load commands/blu-docs-update.toml and skills/blueprint-docs/references/docs-update-runtime-contract.md, resolve a narrow doc scope before drafting, keep repo truth from selected docs, source files, tests, saved Blueprint artifacts, digest inputsUsed, and optional cited external truth separate, keep --verify-only read-only for repo docs while still allowing the durable report, gate broad scope, doc replacement, and report replacement unless --force already supplies approval, use blueprint-doc-writer and blueprint-doc-verifier only for bounded docs passes when available, persist the report through blueprint_artifact_report_write with bare reportName docs-update-latest, keep Blueprint persistence inside .blueprint/reports/, and route only to implemented follow-ups such as /blu-map-codebase or /blu-progress.";
@@ -3499,7 +3499,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: ideation-first, but confirmed roadmap promotion can append a new active phase.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
         readonly optionalAgents: readonly ["blueprint-researcher"];
         readonly spec: {
             readonly path: string;
@@ -3515,7 +3515,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Capture And Lightweight Execution";
             readonly command: "explore";
             readonly primarySkill: "blueprint-capture";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_mutate_index", "blueprint_roadmap_add_phase", "blueprint_artifact_scaffold"];
             readonly optionalAgents: readonly ["blueprint-researcher"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
             readonly contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.";
@@ -3532,7 +3532,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "High: can execute repo changes with reduced ceremony.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
         readonly spec: {
             readonly path: string;
@@ -3548,7 +3548,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Capture And Lightweight Execution";
             readonly command: "quick";
             readonly primarySkill: "blueprint-phase-execution";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_command_catalog", "blueprint_artifact_report_write", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
@@ -3565,7 +3565,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly declaredStatus: "implemented";
             readonly risk: "Medium: exploratory shell commands and test runs are likely.";
         };
-        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-debugger"];
         readonly requiredInputPaths: readonly ["commands/blu-debug.toml", "skills/blueprint-debug/references/debug-runtime-contract.md"];
         readonly spec: {
@@ -3582,7 +3582,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly waveTitle: "Capture And Lightweight Execution";
             readonly command: "debug";
             readonly primarySkill: "blueprint-debug";
-            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_artifact_report_write", "blueprint_artifact_mutate_index", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-debugger"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Interactive-read profile for evidence-backed investigations that can stay concise; long-running-mutation profile only for non-trivial investigations. Load commands/blu-debug.toml plus skills/blueprint-debug/references/debug-runtime-contract.md, require a concrete issue statement and initialized Blueprint state before durable persistence, keep --diagnose honest as diagnose-only until the user confirms a fix attempt, use update_topic and write_todos only as session-local visibility for non-trivial investigations, persist the durable report through blueprint_artifact_report_write with the bare debug-latest name and treat returned paths and ids as authoritative, require overwrite confirmation before replacing an existing report, capture persisted todos only after an explicit user ask or confirmation through blueprint_artifact_mutate_index, update state through blueprint_state_update, route implemented follow-ups only to /blu-quick, /blu-plan-phase, /blu-validate-phase, or /blu-progress, and do not hide state or perform broad direct fixes inside debug.";

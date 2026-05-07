@@ -23,6 +23,7 @@ import {
   IMPACT_RUNTIME_METADATA,
   getRuntimeOwnedCommandMetadata,
   HELP_RUNTIME_METADATA,
+  listRuntimeOwnedCommandMetadata,
   MAP_CODEBASE_RUNTIME_METADATA,
   NEXT_RUNTIME_METADATA,
   NEW_PROJECT_RUNTIME_METADATA,
@@ -239,7 +240,8 @@ test("runtime command catalog marks shipped commands as implemented once manifes
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_roadmap_read",
-    "blueprint_project_status"
+    "blueprint_project_status",
+    "blueprint_config_get"
   ]);
   assert.deepEqual(listPhaseAssumptions.availableOptionalAgents, [
     "blueprint-researcher"
@@ -888,6 +890,7 @@ test("explore is implemented once manifest, skill, and ideation-routing MCP tool
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_scaffold",
+    "blueprint_config_get",
     "blueprint_project_status",
     "blueprint_roadmap_add_phase"
   ]);
@@ -985,6 +988,20 @@ test("implemented commands expose their declared optional agent contracts when s
     "blueprint-doc-verifier",
     "blueprint-doc-writer"
   ]);
+});
+
+test("runtime metadata requires blueprint_config_get for every optional-subagent command", () => {
+  for (const metadata of listRuntimeOwnedCommandMetadata()) {
+    if (metadata.optionalAgents.length === 0) {
+      continue;
+    }
+
+    assert.equal(
+      metadata.requiredTools.includes("blueprint_config_get"),
+      true,
+      `${metadata.commandName} should require blueprint_config_get when optional subagents are exposed`
+    );
+  }
 });
 
 test("map-codebase is implemented once the brownfield mapping contract and tools exist", async () => {
@@ -1467,6 +1484,7 @@ test("secure-phase is implemented once manifest, review skill, and review MCP to
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
+    "blueprint_config_get",
     "blueprint_phase_execution_targets",
     "blueprint_phase_locate",
     "blueprint_phase_plan_index",
@@ -1495,6 +1513,7 @@ test("ui-review is implemented once manifest, review skill, and review MCP tools
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
     "blueprint_artifact_list",
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_review_authoring_context",
     "blueprint_review_record",
@@ -1520,6 +1539,7 @@ test("code-review is implemented once manifest, review skill, and review MCP too
   );
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_review_load_findings",
     "blueprint_review_record",
@@ -1575,6 +1595,7 @@ test("code-review runtime reference keeps the long-running review posture explic
   assert.equal(runtimeReference.primarySkill, "blueprint-review");
   assert.deepEqual(runtimeReference.exactMcpDestination, [
     "blueprint_phase_locate",
+    "blueprint_config_get",
     "blueprint_artifact_contract_read",
     "blueprint_review_scope",
     "blueprint_review_load_findings",
@@ -1611,6 +1632,7 @@ test("review is implemented once manifest, review skill, and plan-backed peer-re
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_phase_summary_index",
@@ -1636,6 +1658,7 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.ok(entry.skillPath);
   assert.ok(entry.specPath);
   assert.deepEqual([...entry.requiredTools].sort(), [
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_review_authoring_context",
     "blueprint_review_load_findings",
@@ -1722,7 +1745,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
 
   assert.match(
     runtimeReference,
-    /\| `code-review-fix` \| `src\/mcp\/command-runtime-metadata\.ts#code-review-fix` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+    /\| `code-review-fix` \| `src\/mcp\/command-runtime-metadata\.ts#code-review-fix` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
   );
   assert.match(runtimeReference, /author only the schema's camelCase JSON fields/);
   assert.match(runtimeReference, /forbid rendered-heading or locked-marker JSON keys/);
@@ -1732,7 +1755,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     runtimeReference,
-    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_config_get`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
   );
   assert.match(
     runtimeReference,
@@ -1757,7 +1780,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     migrationDoc,
-    /\| `code-review-fix` \| `commands\/gsd\/code-review-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+    /\| `code-review-fix` \| `commands\/gsd\/code-review-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
   );
   assert.match(
     migrationDoc,
@@ -1765,7 +1788,7 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
   );
   assert.match(
     migrationDoc,
-    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_config_get`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
   );
   assert.match(
     migrationDoc,
@@ -1795,6 +1818,7 @@ test("audit-fix is implemented once manifest, review skill, and remediation MCP 
     "blueprint_artifact_report_authoring_context",
     "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",
+    "blueprint_config_get",
     "blueprint_phase_locate",
     "blueprint_review_scope",
     "blueprint_state_update"
@@ -1825,6 +1849,7 @@ test("add-tests is implemented once manifest, validation skill, and test-generat
     "blueprint_phase_validation_authoring_context",
     "blueprint_phase_validation_render",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_phase_validation_write",
     "blueprint_artifact_list",
     "blueprint_artifact_validate",
@@ -1870,6 +1895,7 @@ test("plan-milestone-gaps is implemented once manifest, skill, and gap-planning 
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_list",
     "blueprint_artifact_summary_digest",
+    "blueprint_config_get",
     "blueprint_roadmap_add_phase",
     "blueprint_roadmap_read",
     "blueprint_state_update"
@@ -1940,6 +1966,7 @@ test("new-milestone is implemented once manifest, skill, and carry-forward scaff
     "blueprint_artifact_contract_read",
     "blueprint_artifact_scaffold",
     "blueprint_artifact_summary_digest",
+    "blueprint_config_get",
     "blueprint_roadmap_read",
     "blueprint_state_update"
   ]);
@@ -1962,6 +1989,7 @@ test("docs-update is implemented once manifest, skill, and docs-report MCP tools
     "blueprint_artifact_list",
     "blueprint_artifact_report_write",
     "blueprint_artifact_summary_digest",
+    "blueprint_config_get",
     "blueprint_project_status"
   ]);
   assert.deepEqual(entry.availableOptionalAgents.sort(), [
@@ -2170,6 +2198,7 @@ test("quick is implemented once manifest, skill, and report-backed quick-run MCP
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_report_write",
     "blueprint_command_catalog",
+    "blueprint_config_get",
     "blueprint_project_status",
     "blueprint_state_update"
   ]);
@@ -2221,6 +2250,7 @@ test("debug is implemented once manifest, skill, and report-backed debug MCP too
   assert.deepEqual([...entry.requiredTools].sort(), [
     "blueprint_artifact_mutate_index",
     "blueprint_artifact_report_write",
+    "blueprint_config_get",
     "blueprint_project_status",
     "blueprint_state_update"
   ]);

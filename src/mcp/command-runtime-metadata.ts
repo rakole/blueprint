@@ -72,6 +72,16 @@ const NEW_PROJECT_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-roadmapper"
 );
 
+const NEW_PROJECT_REQUIRED_TOOLS = [
+  "blueprint_project_init",
+  "blueprint_project_status",
+  "blueprint_config_get",
+  "blueprint_config_set",
+  "blueprint_state_update",
+  "blueprint_artifact_contract_read",
+  "blueprint_artifact_validate"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 export const NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID =
   "src/mcp/command-runtime-metadata.ts#new-project";
 
@@ -86,15 +96,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
     risk:
       "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap."
   },
-  requiredTools: [
-    "blueprint_project_init",
-    "blueprint_project_status",
-    "blueprint_config_get",
-    "blueprint_config_set",
-    "blueprint_state_update",
-    "blueprint_artifact_contract_read",
-    "blueprint_artifact_validate"
-  ],
+  requiredTools: NEW_PROJECT_REQUIRED_TOOLS,
   optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
   spec: {
     path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
@@ -118,15 +120,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
     waveTitle: "Foundation",
     command: "new-project",
     primarySkill: "blueprint-bootstrap",
-    exactMcpDestination: [
-      "blueprint_project_init",
-      "blueprint_project_status",
-      "blueprint_config_get",
-      "blueprint_config_set",
-      "blueprint_state_update",
-      "blueprint_artifact_contract_read",
-      "blueprint_artifact_validate"
-    ],
+    exactMcpDestination: NEW_PROJECT_REQUIRED_TOOLS,
     optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
@@ -299,7 +293,8 @@ const LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_phase_context",
   "blueprint_roadmap_read",
-  "blueprint_project_status"
+  "blueprint_project_status",
+  "blueprint_config_get"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
 const INSERT_PHASE_REQUIRED_TOOLS = [
@@ -320,6 +315,7 @@ const PLAN_MILESTONE_GAPS_REQUIRED_TOOLS = [
   "blueprint_roadmap_read",
   "blueprint_artifact_list",
   "blueprint_artifact_summary_digest",
+  "blueprint_config_get",
   "blueprint_roadmap_add_phase",
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
@@ -330,6 +326,7 @@ const AUDIT_MILESTONE_REQUIRED_TOOLS = [
   "blueprint_artifact_list",
   "blueprint_artifact_contract_read",
   "blueprint_artifact_summary_digest",
+  "blueprint_config_get",
   "blueprint_artifact_report_write"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
@@ -356,6 +353,7 @@ const NEW_MILESTONE_REQUIRED_TOOLS = [
   "blueprint_roadmap_read",
   "blueprint_artifact_contract_read",
   "blueprint_artifact_summary_digest",
+  "blueprint_config_get",
   "blueprint_artifact_scaffold",
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
@@ -393,6 +391,7 @@ const VERIFY_WORK_REQUIRED_TOOLS = [
 
 const CODE_REVIEW_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
+  "blueprint_config_get",
   "blueprint_artifact_contract_read",
   "blueprint_review_scope",
   "blueprint_review_load_findings",
@@ -402,6 +401,7 @@ const CODE_REVIEW_REQUIRED_TOOLS = [
 
 const CODE_REVIEW_FIX_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
+  "blueprint_config_get",
   "blueprint_review_load_findings",
   "blueprint_review_authoring_context",
   "blueprint_review_validate_model",
@@ -418,6 +418,7 @@ const SECURE_PHASE_REQUIRED_TOOLS = [
   "blueprint_phase_summary_read",
   "blueprint_phase_execution_targets",
   "blueprint_artifact_contract_read",
+  "blueprint_config_get",
   "blueprint_review_authoring_context",
   "blueprint_review_validate_model",
   "blueprint_review_record"
@@ -428,6 +429,7 @@ const AUDIT_FIX_REQUIRED_TOOLS = [
   "blueprint_artifact_list",
   "blueprint_review_scope",
   "blueprint_artifact_contract_read",
+  "blueprint_config_get",
   "blueprint_artifact_report_authoring_context",
   "blueprint_artifact_report_validate_model",
   "blueprint_artifact_report_write",
@@ -439,6 +441,7 @@ const REVIEW_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_artifact_list",
   "blueprint_artifact_contract_read",
+  "blueprint_config_get",
   "blueprint_phase_plan_index",
   "blueprint_phase_plan_read",
   "blueprint_phase_summary_index",
@@ -453,6 +456,7 @@ const UI_REVIEW_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_artifact_list",
   "blueprint_artifact_contract_read",
+  "blueprint_config_get",
   "blueprint_review_authoring_context",
   "blueprint_review_validate_model",
   "blueprint_review_record"
@@ -466,6 +470,7 @@ const ADD_TESTS_REQUIRED_TOOLS = [
   "blueprint_phase_validation_authoring_context",
   "blueprint_phase_validation_render",
   "blueprint_artifact_contract_read",
+  "blueprint_config_get",
   "blueprint_phase_validation_write",
   "blueprint_artifact_list",
   "blueprint_artifact_validate",
@@ -478,6 +483,7 @@ const ADD_TESTS_REQUIRED_TOOLS = [
 
 const DOCS_UPDATE_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_artifact_list",
   "blueprint_artifact_summary_digest",
   "blueprint_artifact_report_write"
@@ -518,6 +524,7 @@ const REVIEW_BACKLOG_REQUIRED_TOOLS = [
 
 const EXPLORE_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_artifact_mutate_index",
   "blueprint_roadmap_add_phase",
   "blueprint_artifact_scaffold"
@@ -525,6 +532,7 @@ const EXPLORE_REQUIRED_TOOLS = [
 
 const QUICK_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_command_catalog",
   "blueprint_artifact_report_write",
   "blueprint_state_update"
@@ -532,6 +540,7 @@ const QUICK_REQUIRED_TOOLS = [
 
 const DEBUG_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_artifact_report_write",
   "blueprint_artifact_mutate_index",
   "blueprint_state_update"
@@ -647,6 +656,7 @@ const REAPPLY_PATCHES_REQUIRED_TOOLS = [
 
 const MAP_CODEBASE_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_artifact_contract_read",
   "blueprint_artifact_scaffold",
   "blueprint_artifact_list",
@@ -1474,24 +1484,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     waveTitle: "Core Lifecycle",
     command: "plan-phase",
     primarySkill: "blueprint-phase-planning",
-    exactMcpDestination: [
-      "blueprint_phase_locate",
-      "blueprint_artifact_contract_read",
-      "blueprint_phase_context",
-      "blueprint_phase_research_status",
-      "blueprint_phase_artifact_read",
-      "blueprint_phase_validation_read",
-      "blueprint_review_load_findings",
-      "blueprint_phase_plan_index",
-      "blueprint_phase_plan_read",
-      "blueprint_phase_plan_authoring_context",
-      "blueprint_phase_plan_validate_model",
-      "blueprint_phase_plan_validate",
-      "blueprint_phase_plan_write",
-      "blueprint_config_get",
-      "blueprint_state_load",
-      "blueprint_state_update"
-    ],
+    exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
     optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:

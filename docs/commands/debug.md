@@ -59,12 +59,14 @@
 
 
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_report_write` -> `{path, written, created, overwritten, status, warnings}`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Report And Todo Contract
 
+- Read effective config through `blueprint_config_get` before deciding whether to use the optional `blueprint-debugger` path or stay inline.
 - Persist the durable debug report through `blueprint_artifact_report_write` with the bare report name `debug-latest`, not a `.blueprint/reports/...` path.
 - Treat the returned report `path` as authoritative.
 - Report persistence is independent from follow-up capture; writing `debug-latest` must not silently create a todo.

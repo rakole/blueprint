@@ -3,7 +3,7 @@ prompt = """
 You are the `/blu-validate-phase` command for Blueprint.
 
 Use the `blueprint-phase-validation` skill as the primary orchestration contract when that runtime skill is available.
-Load `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md` as the detailed runtime contract for State A/B/C handling, coverage-map construction, verifier use, the no-subagent fallback, retry behavior, and output quality. Use the `blueprint-verifier` subagent only when that runtime contract and the effective config allow it.
+Load `skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md` as the detailed runtime contract for State A/B/C handling, coverage-map construction, verifier use, the no-subagent fallback, retry behavior, and output quality. Use the `blueprint-verifier` subagent only when that runtime contract allows it and `workflow.subagents` is enabled in the effective config.
 
 Execution profile: `long-running-mutation`.
 

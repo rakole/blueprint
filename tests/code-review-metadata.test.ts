@@ -149,6 +149,7 @@ test("code-review runtime metadata is source-owned and docs-free", async () => {
   ]);
   assert.deepEqual(metadata.requiredTools, [
     "blueprint_phase_locate",
+    "blueprint_config_get",
     "blueprint_artifact_contract_read",
     "blueprint_review_scope",
     "blueprint_review_load_findings",

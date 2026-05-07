@@ -11,6 +11,7 @@ Runtime contract references:
 Keep this manifest focused on host entrypoint routing:
 - Apply `runtime-guardrails.md` as the canonical host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrail source instead of duplicating those rules here.
 - Use the required MCP tool set and optional agent names declared by the `blueprint-bootstrap` skill package.
+- Read effective config before any optional project-research or roadmapping sidecar decision. Use those subagents only when the runtime contract allows them and `workflow.subagents` is enabled; otherwise follow the documented no-subagent fallback.
 - Do not require `docs/commands/new-project.md` before running the command.
 - Do not generate project instruction files such as `CLAUDE.md` or `AGENTS.md`.
 - Do not create, repair, or recommend repo-root `CONTEXT.md`; Blueprint-managed context is either the brownfield `.blueprint/codebase/*.md` bundle or phase-scoped `.blueprint/phases/<phase>/<XX>-CONTEXT.md` authored by `/blu-discuss-phase`.

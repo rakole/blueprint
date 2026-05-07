@@ -2,7 +2,7 @@ description = "Create a phase-scoped UI spec or explicit skip rationale through 
 prompt = """
 You are the `/blu-ui-phase` command for Blueprint.
 
-Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available, and load `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the rich command-specific runtime contract. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance and the `blueprint-checker` subagent for a final bounded revision gate before persistence.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available, and load `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the rich command-specific runtime contract. When deeper UI design work is useful, use the `blueprint-ui-designer` subagent for bounded, phase-scoped UI guidance and the `blueprint-checker` subagent for a final bounded revision gate before persistence only when the runtime contract allows them and `workflow.subagents` is enabled in effective config.
 
 Execution profile: `long-running-mutation`.
 Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` visible for the stages this run actually reaches. Keep resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
@@ -26,7 +26,7 @@ Follow this flow exactly:
 1. Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`. If the user did not pass a phase, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the phase cannot be resolved, stop with the precise `mcp_blueprint_blueprint_phase_locate.reason`.
 3. Read `mcp_blueprint_blueprint_phase_research_status` so you know which discovery artifacts already exist for the phase.
-4. Read `mcp_blueprint_blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase` and `workflow.ui_safety_gate`.
+4. Read `mcp_blueprint_blueprint_config_get` with the `effective` scope so you can honor `workflow.ui_phase`, `workflow.ui_safety_gate`, and `workflow.subagents`.
 5. Read the canonical UI-spec contract through `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` before drafting or persisting, then read the existing UI artifact through `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "ui-spec"` before proposing any replace path.
 5a. If `mcp_blueprint_blueprint_phase_research_status` reports saved context or research, read those actual artifacts through `mcp_blueprint_blueprint_phase_artifact_read` with `artifact: "context"` and `artifact: "research"` before drafting so the UI spec is grounded in saved decisions rather than status booleans.
 6. If `XX-UI-SPEC.md` already contains substantive content, require explicit overwrite confirmation before any replace path. Reuse is the default. Prefer `ask_user` for that confirmation path.

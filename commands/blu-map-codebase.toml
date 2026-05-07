@@ -2,7 +2,7 @@ description = "Map a brownfield repository into the stable .blueprint/codebase b
 prompt = """
 You are the `/blu-map-codebase` command for Blueprint.
 
-Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, subagent, fallback, and repair-loop contract. When deeper mapper decomposition is helpful and a suitable code-analysis subagent or task mechanism is available, follow `agents/blueprint-mapper.md`.
+Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, subagent, fallback, and repair-loop contract. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any mapper-lane decision. When deeper mapper decomposition is helpful, use `agents/blueprint-mapper.md` only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented single-agent fallback.
 
 Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
 
@@ -22,7 +22,7 @@ Shared execution profile and status contract:
 Follow this flow exactly:
 
 1. Detect whether the user supplied an optional focus area such as `api`, `auth`, or `mcp`. Treat it as targeted deepening of that subsystem, not as a generic suffix.
-2. Read `mcp_blueprint_blueprint_project_status` first. If status is uninitialized and the repo is brownfield, continue because `/blu-map-codebase` may create only `.blueprint/codebase/*.md` as the first Blueprint write. If status is uninitialized for greenfield or scaffold-only, stop and direct the user to `/blu-new-project`. If status is partial, stop and direct the user to `/blu-health`. If status is `mapping-incomplete`, continue to finish or repair the codebase-only bundle. If status is `mapped-only`, reuse the existing valid bundle by default and route to `/blu-new-project`.
+2. Read `mcp_blueprint_blueprint_project_status` first, then read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before deciding whether mapper lanes may run. If status is uninitialized and the repo is brownfield, continue because `/blu-map-codebase` may create only `.blueprint/codebase/*.md` as the first Blueprint write. If status is uninitialized for greenfield or scaffold-only, stop and direct the user to `/blu-new-project`. If status is partial, stop and direct the user to `/blu-health`. If status is `mapping-incomplete`, continue to finish or repair the codebase-only bundle. If status is `mapped-only`, reuse the existing valid bundle by default and route to `/blu-new-project`.
 3. Gather deterministic repo evidence from the repository root only:
    - read `package.json` when present
    - inspect source directories with `rg --files src app lib commands`
@@ -49,7 +49,7 @@ Follow this flow exactly:
 15. End with the next logical Blueprint action. A successful first brownfield mapping should leave status `mapped-only` and route to `/blu-new-project`; an initialized project usually routes to `/blu-progress` or the appropriate documented discovery/planning flow.
 
 Response requirements:
-- Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
+- Use `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_scaffold`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_codebase_artifact_write`, and `mcp_blueprint_blueprint_artifact_validate`.
 - Keep persistence inside MCP tools only.
 - Produce evidence-density and rich canonical authoring, not terse scaffold-shaped summaries. Every artifact should include concrete repo paths and practical guidance.
 - Keep the active stage, resolved scope, pending gate, execution mode, and next safe action explicit whenever the run pauses or spans multiple mapping steps.

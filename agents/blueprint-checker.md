@@ -11,11 +11,13 @@ description: >
   proposing targeted revisions instead of a full replan or respec.
 kind: local
 tools:
-  - "*"
-max_turns: 30
-timeout_mins: 15
+  - list_directory
+  - read_file
+  - glob
+  - grep_search
+max_turns: 10
+timeout_mins: 10
 ---
-
 # Blueprint Checker
 
 ## Purpose

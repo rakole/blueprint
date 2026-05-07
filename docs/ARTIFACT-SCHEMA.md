@@ -192,6 +192,7 @@ Current normalized schema:
     "discuss_mode": "discuss",
     "skip_discuss": false,
     "use_worktrees": true,
+    "subagents": true,
     "subagent_timeout": 300000
   },
   "parallelization": {
@@ -245,6 +246,7 @@ Normalization and precedence rules:
 - Effective config precedence is hardcoded Blueprint defaults, then `~/.<host>/blueprint/defaults.json`, then `.blueprint/config.json`, then command flags.
 - `.blueprint/config.json` is persisted in normalized object form for every section, including `parallelization`, even if legacy or shorthand input was accepted at the tool boundary.
 - Repo config must not contain `workflow.use_workspaces`, `workflow.use_workstreams`, or repo-level `hooks.*` keys. Workspace and workstream behavior stays command-driven; hook activation stays extension-owned in `hooks/hooks.json`.
+- `workflow.subagents` is the global optional-subagent workflow policy for Blueprint command orchestration. It governs whether commands may use their optional Blueprint subagent paths; it does not install host agents, change agent catalog availability, or widen routing.
 - `workflow.code_review` and `workflow.code_review_depth` are surfaced through `/blu-settings` and consumed by `/blu-code-review`; the review toggle should stay meaningful as a surfaced workflow setting, and the depth value is the default when the review command runs without an explicit `--depth`.
 - `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.

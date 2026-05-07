@@ -109,6 +109,7 @@ test("config_set persists normalized version 2 config for initialized repos", as
   assert.match(normalizedConfigText, /"version": 2/);
   assert.equal((config.planning as Record<string, unknown>).commit_docs, false);
   assert.equal((config.workflow as Record<string, unknown>).verifier, false);
+  assert.equal((config.workflow as Record<string, unknown>).subagents, true);
   assert.equal(config.model_profile, "balanced");
   assert.deepEqual(config.ux, {
     progress_mode: "quiet",
@@ -145,6 +146,10 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   const defaultsAfter = await readFile(defaultsPath, "utf8");
   const expectedConfig = structuredClone(beforeConfig);
   expectedConfig.model_profile = "budget";
+  expectedConfig.workflow = {
+    ...(expectedConfig.workflow as Record<string, unknown>),
+    subagents: true
+  };
   expectedConfig.ux = {
     progress_mode: "quiet",
     structured_confirmations: "auto",
@@ -262,6 +267,7 @@ test("legacy and minimal config inputs are upgraded to the full schema on write"
       warning.includes("Migrated legacy config key commit_docs")
     )
   );
+  assert.equal(workflow.subagents, true);
 });
 
 test("config_set reports only keys that actually changed", async (t) => {
@@ -280,6 +286,56 @@ test("config_set reports only keys that actually changed", async (t) => {
 
   assert.deepEqual(result.updatedKeys, ["model_profile"]);
   assert.match(result.warnings.join("\n"), /Ignored unknown config key: unknown_top/);
+});
+
+test("config_get defaults workflow.subagents to true and project patches can disable it", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const before = await blueprintConfigGet({
+    cwd: repoPath,
+    scope: "effective"
+  });
+
+  assert.equal(before.config.workflow.subagents, true);
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        subagents: false
+      }
+    }
+  });
+  const savedConfig = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+
+  assert.equal(result.config.workflow.subagents, false);
+  assert.deepEqual(result.updatedKeys, ["workflow.subagents"]);
+  assert.equal((savedConfig.workflow as Record<string, unknown>).subagents, false);
+});
+
+test("config_set ignores invalid workflow.subagents values and warns", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        subagents: "disabled"
+      }
+    }
+  });
+
+  assert.equal(result.config.workflow.subagents, true);
+  assert.equal(result.updatedKeys.includes("workflow.subagents"), false);
+  assert.match(result.warnings.join("\n"), /Ignored invalid config type for workflow\.subagents/);
 });
 
 test("defaults-scope writes for effectiveness-spine keys participate in effective precedence until project override", async (t) => {
@@ -305,6 +361,9 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
       },
       research: {
         external_sources: "ask"
+      },
+      workflow: {
+        subagents: false
       }
     }
   });
@@ -326,6 +385,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(effectiveBeforeProjectOverride.config.research, {
     external_sources: "ask"
   });
+  assert.equal(effectiveBeforeProjectOverride.config.workflow.subagents, false);
 
   const projectOverride = await blueprintConfigSet({
     cwd: repoPath,
@@ -339,6 +399,9 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
       },
       research: {
         external_sources: "auto"
+      },
+      workflow: {
+        subagents: true
       }
     }
   });
@@ -354,6 +417,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(projectOverride.config.research, {
     external_sources: "auto"
   });
+  assert.equal(projectOverride.config.workflow.subagents, true);
 
   const effectiveAfterProjectOverride = await blueprintConfigGet({
     cwd: repoPath,
@@ -372,6 +436,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(effectiveAfterProjectOverride.config.research, {
     external_sources: "auto"
   });
+  assert.equal(effectiveAfterProjectOverride.config.workflow.subagents, true);
 });
 
 test("settings and set-profile command contracts reference the registered MCP tools", async () => {

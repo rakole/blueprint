@@ -157,7 +157,8 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_roadmap_read",
-    "blueprint_project_status"
+    "blueprint_project_status",
+    "blueprint_config_get"
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);
   assert.deepEqual(entry.blockedBy, []);

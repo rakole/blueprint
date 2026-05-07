@@ -10,8 +10,11 @@ description: >
   review artifact against the current repo surface.
 kind: local
 tools:
-  - "*"
-max_turns: 30
+  - list_directory
+  - read_file
+  - glob
+  - grep_search
+max_turns: 16
 timeout_mins: 15
 ---
 # Blueprint Reviewer
