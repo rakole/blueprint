@@ -101,6 +101,7 @@
 - Read checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"`, then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`; for discuss checkpoints, `mode` must be `"discuss"`. Treat the returned checkpoint `path` as authoritative, do not try to serialize resumable state into markdown fields, and remember that the filename is a shared phase checkpoint path rather than proof of discuss ownership.
 - Delete checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"` so cleanup only removes discuss-owned continuation state from the shared checkpoint path.
+- During the final synced `blueprint_state_update`, preserve the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`; do not let sync fall back to the roadmap's current phase when the user explicitly chose another phase.
 - Rich context authoring should preserve evidence behind decisions: options considered, selected answer or assumption, rationale, repo paths or saved artifacts used as evidence, consequences if an assumption is wrong, canonical refs, and deferred ideas. This density is required even when the command falls back to a single main agent with no subagent support.
 - `/blu-discuss-phase` is the only lifecycle command that authors or repairs phase context. Research, UI, and planning commands read this artifact and route back here when it is missing, invalid, or unusable.
 
@@ -177,6 +178,7 @@
 
 - Reads and writes only the selected phase scope.
 - Updates `STATE.md` whenever the next-step signal changes and leaves the end-of-run `STATE.md` update legible.
+- Keeps the explicitly selected phase pinned through the final synced state refresh instead of re-deriving phase routing from the roadmap alone.
 - Creates or updates only the declared artifacts for this command.
 - Persists real phase decisions into `XX-CONTEXT.md`, not only scaffold placeholders.
 - Reads actual saved context and discussion content, plus the canonical `phase.context` and `phase.discussion-log` contracts, before drafting updates.

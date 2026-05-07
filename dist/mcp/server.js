@@ -40265,6 +40265,46 @@ function comparePhaseNumbers2(left, right) {
   }
   return 0;
 }
+function normalizeSelectedPhase(value) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+function extractNextActionPhaseSelection(nextAction) {
+  const match = nextAction.match(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/i);
+  return {
+    command: match?.[1] ?? null,
+    currentPhase: normalizeSelectedPhase(match?.[2])
+  };
+}
+function resolveStoredPhaseRoutingOverride(args) {
+  const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
+  if (nextActionSelection.command === null || !STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(nextActionSelection.command)) {
+    return null;
+  }
+  if (args.currentPhase === null || args.roadmapCurrentPhase === null || nextActionSelection.currentPhase !== args.currentPhase) {
+    return null;
+  }
+  return comparePhaseNumbers2(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
+}
+function resolvePatchedPhaseRoutingOverride(args) {
+  if (!PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(args.activeCommand)) {
+    return null;
+  }
+  if (args.currentPhase === null || args.roadmapCurrentPhase === null) {
+    return null;
+  }
+  return comparePhaseNumbers2(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
+}
+async function phaseDirectoryExists(projectRoot, phaseNumber) {
+  const normalizedPhase = normalizePhaseNumber(phaseNumber);
+  const phaseDirs = await listImmediateDirectories(
+    resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
+  );
+  return phaseDirs.some((phaseDir) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+    return extractedPhase !== null && normalizePhaseNumber(extractedPhase) === normalizedPhase;
+  });
+}
 function formatPhasePrefix(value) {
   return formatBlueprintPhasePrefix(value);
 }
@@ -41036,7 +41076,7 @@ async function deriveNextAction(args) {
   }
   return args.currentPhase ? `${blueprintRunDirectCommand("progress")} to review Phase ${args.currentPhase} and the next safe action` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
 }
-async function buildSyncedState(projectRoot) {
+async function buildSyncedState(projectRoot, patch = {}) {
   const inspection = await inspectBlueprintArtifacts(projectRoot);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
   const existingState = await loadBlueprintState(projectRoot);
@@ -41055,10 +41095,43 @@ async function buildSyncedState(projectRoot) {
     warnings.push("ROADMAP.md is missing; state sync fell back to the last known milestone and phase.");
   }
   const projectStatus = inspection.readiness;
+  const requestedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
+  const requestedCurrentPhaseExists = requestedCurrentPhase !== null && await phaseDirectoryExists(projectRoot, requestedCurrentPhase);
+  const effectivePatchCurrentPhase = requestedCurrentPhaseExists ? requestedCurrentPhase : null;
   const statePhaseIsAheadOfRoadmap = roadmapSignals.currentPhase !== null && existingState.currentPhase.length > 0 && comparePhaseNumbers2(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
-  const currentPhase2 = statePhaseIsAheadOfRoadmap ? existingState.currentPhase : roadmapSignals.currentPhase ?? existingState.currentPhase;
+  const patchedPhaseRoutingOverride = resolvePatchedPhaseRoutingOverride({
+    activeCommand: patch.activeCommand ?? existingState.activeCommand,
+    currentPhase: effectivePatchCurrentPhase ?? normalizeSelectedPhase(existingState.currentPhase),
+    roadmapCurrentPhase: roadmapSignals.currentPhase
+  });
+  const storedPhaseRoutingOverride = patch.activeCommand === void 0 && patch.currentPhase === void 0 ? resolveStoredPhaseRoutingOverride({
+    currentPhase: normalizeSelectedPhase(existingState.currentPhase),
+    nextAction: existingState.nextAction,
+    roadmapCurrentPhase: roadmapSignals.currentPhase
+  }) : null;
+  const currentPhase2 = effectivePatchCurrentPhase ?? patchedPhaseRoutingOverride ?? storedPhaseRoutingOverride ?? (statePhaseIsAheadOfRoadmap ? existingState.currentPhase : roadmapSignals.currentPhase ?? existingState.currentPhase);
   const currentMilestone = roadmapSignals.currentMilestone ?? existingState.currentMilestone;
-  if (statePhaseIsAheadOfRoadmap && roadmapSignals.currentPhase !== null) {
+  if (requestedCurrentPhase !== null && !requestedCurrentPhaseExists) {
+    warnings.push(
+      `STATE.md refresh ignored the requested phase ${requestedCurrentPhase} because no matching phase directory exists under ${BLUEPRINT_DIR}/phases/.`
+    );
+  }
+  if (effectivePatchCurrentPhase !== null && roadmapSignals.currentPhase !== null && effectivePatchCurrentPhase !== roadmapSignals.currentPhase) {
+    warnings.push(
+      `STATE.md refresh used the requested phase ${effectivePatchCurrentPhase} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
+    );
+  }
+  if (patchedPhaseRoutingOverride !== null && roadmapSignals.currentPhase !== null) {
+    warnings.push(
+      `STATE.md preserved selected phase ${patchedPhaseRoutingOverride} for ${patch.activeCommand ?? existingState.activeCommand} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
+    );
+  }
+  if (storedPhaseRoutingOverride !== null && roadmapSignals.currentPhase !== null) {
+    warnings.push(
+      `STATE.md preserved selected phase ${storedPhaseRoutingOverride} from the stored next action ${existingState.nextAction} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
+    );
+  }
+  if (effectivePatchCurrentPhase === null && patchedPhaseRoutingOverride === null && storedPhaseRoutingOverride === null && statePhaseIsAheadOfRoadmap && roadmapSignals.currentPhase !== null) {
     warnings.push(
       `STATE.md is ahead of ROADMAP.md: current phase ${existingState.currentPhase} will be used instead of the stale roadmap phase ${roadmapSignals.currentPhase}.`
     );
@@ -41306,24 +41379,33 @@ async function blueprintStateUpdate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   const useSyncedBase = args.base === "synced";
-  const synced = useSyncedBase ? await buildSyncedState(projectRoot) : null;
-  const currentState = synced?.state ?? await loadBlueprintState(projectRoot);
   const patch = args.patch ?? {};
+  const syncedBase = useSyncedBase ? await buildSyncedState(projectRoot) : null;
+  const synced = useSyncedBase ? await buildSyncedState(projectRoot, {
+    activeCommand: patch.activeCommand,
+    currentPhase: patch.currentPhase
+  }) : null;
+  const currentState = synced?.state ?? syncedBase?.state ?? await loadBlueprintState(projectRoot);
+  const comparisonState = syncedBase?.state ?? currentState;
+  const sanitizedPatch = useSyncedBase && patch.currentPhase !== void 0 && patch.nextAction === void 0 && currentState.currentPhase !== patch.currentPhase ? {
+    ...patch,
+    currentPhase: currentState.currentPhase
+  } : patch;
   const nextState = {
     ...currentState,
-    ...patch,
-    blockers: patch.blockers ?? currentState.blockers,
-    roadmapEvolutionNotes: patch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
-    lastUpdated: patch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
+    ...sanitizedPatch,
+    blockers: sanitizedPatch.blockers ?? currentState.blockers,
+    roadmapEvolutionNotes: sanitizedPatch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
+    lastUpdated: sanitizedPatch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
   };
   const updatedFields = [
     .../* @__PURE__ */ new Set([
-      ...Object.keys(patch),
-      ...patch.lastUpdated ? [] : ["lastUpdated"]
+      ...Object.keys(sanitizedPatch),
+      ...sanitizedPatch.lastUpdated ? [] : ["lastUpdated"]
     ])
   ].filter((key) => {
     const field = key;
-    return JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field]);
+    return JSON.stringify(comparisonState[field]) !== JSON.stringify(nextState[field]);
   });
   const warnings = [...synced?.warnings ?? []];
   warnings.push(
@@ -41355,7 +41437,7 @@ async function blueprintStateSync(args = {}) {
     statePath: toRepoRelativePath(projectRoot, statePath)
   };
 }
-var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise2, stateToolDefinitions;
+var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, STORED_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise2, stateToolDefinitions;
 var init_state = __esm({
   "src/mcp/tools/state.ts"() {
     "use strict";
@@ -41392,6 +41474,31 @@ var init_state = __esm({
     PAUSE_WORK_COMMAND = blueprintDirectCommand("pause-work");
     RESUME_WORK_COMMAND = blueprintDirectCommand("resume-work");
     PAUSE_HANDOFF_BLOCKER_PREFIX = "Paused handoff is active at ";
+    PATCH_PHASE_OVERRIDE_COMMANDS = [
+      blueprintDirectCommand("discuss-phase"),
+      blueprintDirectCommand("research-phase"),
+      blueprintDirectCommand("ui-phase"),
+      blueprintDirectCommand("plan-phase"),
+      blueprintDirectCommand("execute-phase"),
+      blueprintDirectCommand("validate-phase"),
+      blueprintDirectCommand("verify-work"),
+      blueprintDirectCommand("add-tests")
+    ];
+    STORED_PHASE_OVERRIDE_COMMANDS = [
+      blueprintDirectCommand("research-phase"),
+      blueprintDirectCommand("ui-phase"),
+      blueprintDirectCommand("plan-phase"),
+      blueprintDirectCommand("execute-phase"),
+      blueprintDirectCommand("validate-phase"),
+      blueprintDirectCommand("verify-work"),
+      blueprintDirectCommand("add-tests")
+    ];
+    PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = new Set(
+      PATCH_PHASE_OVERRIDE_COMMANDS
+    );
+    STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = new Set(
+      STORED_PHASE_OVERRIDE_COMMANDS
+    );
     stateUpdateInputSchema = {
       cwd: string2().optional(),
       base: _enum(["stored", "synced"]).optional(),
