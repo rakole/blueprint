@@ -33,6 +33,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - When initialized, include active model profile, branching mode, blockers, pending gates, and config warnings that materially affect the recommended next step.
+- After UAT completes, show the post-UAT quality gate when `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files.
 - Repo side effects: No durable artifact writes are planned.
 - Routed recommendations must be limited to commands whose catalog entry is `implemented`.
 
@@ -96,6 +97,8 @@
 - If the repo is `mapping-incomplete`, route to `/blu-map-codebase`.
 - If the repo is `mapped-only`, route to `/blu-new-project`.
 - If the repo is partial, route to `/blu-health`.
+- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action; gates complete -> normal advancement.
+- If `workflow.code_review` is false, keep the previous post-UAT advancement behavior.
 - If the natural next command is blocked, explain the missing substrate and keep the recommendation inside the implemented Wave 0 surface.
 - If the repo is waiting on a missing artifact, verification debt, or blocked substrate, say so explicitly.
 

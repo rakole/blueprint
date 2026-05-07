@@ -12,6 +12,7 @@
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `verify-work` uses the shared long-running-mutation posture: resolve the target phase, read saved execution and validation evidence, decide whether the current UAT artifact is viewed, resumed, replaced, or newly created, execute bounded conversational UAT, persist through MCP, validate the saved artifact, and route to the next safe implemented follow-up.
 - Keep the saved-summary-first contract explicit throughout the run: execution summaries plus a ready-for-UAT verification artifact are the UAT baseline, overwrite confirmation and interactive `review` / `skip` / `stop` checkpoints are the pending gates while evidence is still being collected, and the next safe action stays on `/blu-verify-work <phase>` until the saved UAT checkpoint is either completed or a prerequisite routes elsewhere.
+- When `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files, completed UAT routes through `/blu-code-review <phase>` and `/blu-secure-phase <phase>` before phase advancement.
 - Detailed runtime reference: `skills/blueprint-phase-validation/references/verify-work-runtime-contract.md`.
 - The detailed contract owns the richer UAT loop: derive user-observable tests from saved summaries, present one expected behavior at a time, classify plain responses into pass/skipped/blocked/issue, preserve verbatim reports and inferred severity, separate blocked prerequisites from code gaps, and persist test matrix plus structured gaps in `XX-UAT.md`.
 
@@ -43,7 +44,7 @@
 ## Outputs
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
-- Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, and UAT evidence make completion durable, preserves user-reported issues and structured gaps as UAT evidence, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
+- Repo side effects: writes `XX-UAT.md` through MCP, validates the saved artifact after the write, updates `.blueprint/ROADMAP.md` when valid execution, verification, UAT evidence, and configured post-UAT quality gates make completion durable, preserves user-reported issues and structured gaps as UAT evidence, may record explicit follow-up fix capture in the same artifact after confirmation, and updates `.blueprint/STATE.md` when the next safe action changes.
 - In-flight UAT should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
 ## In-Flight Progress Contract
@@ -116,6 +117,8 @@
 - If the verification artifact is valid but not ready for UAT, follow its saved implemented repair route, such as `/blu-audit-fix <phase>` or `/blu-add-tests <phase>`, before attempting UAT persistence.
 - Keep user-reported issues and remaining gaps inside the saved UAT content by default. Confirm follow-up-fix capture before persistence or later explicit state updates, and do not invent separate tool-owned artifacts.
 - Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.
+- After completed UAT, if `workflow.code_review` is true and saved summaries include reviewable repo/source files, route in this order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the next safe action saved in `XX-REVIEW.md`; review and security complete -> normal advancement.
+- If `workflow.code_review` is false, or saved execution evidence has no reviewable repo/source files, preserve the older post-UAT advancement behavior.
 - Re-read the saved UAT through `blueprint_phase_validation_read` after persistence and use its typed `validation`, `uatStatus`, `resumeState`, `checkpoint`, and `complete` fields as the artifact-scoped truth.
 - If `blueprint_phase_validation_validate_model` returns `status: "invalid"`, repair the structured UAT payload against the returned diagnostics before calling the writer. If the write result or the post-write UAT re-read says the saved artifact is invalid after a valid model preview, treat that as a race, overwrite, or prerequisite failure, repair once through MCP, and stop with explicit issues if the retry is not safe.
 - If post-write `blueprint_artifact_validate` fails only because unrelated Blueprint artifacts are invalid, surface that repo-health issue without rewriting the UAT draft.
@@ -200,7 +203,7 @@ Before persistence, validate the final structured UAT payload through `blueprint
 - Uses execution summaries as the source of truth for conversational UAT coverage.
 - Persists UAT evidence through `blueprint_phase_validation_write` rather than direct file writes.
 - Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_validate_model` so the writer receives the same schema-valid structured model rather than prompt-built Markdown.
-- Marks the matching `ROADMAP.md` phase complete only after summary, verification, and UAT evidence all exist.
+- Marks the matching `ROADMAP.md` phase complete only after summary, verification, UAT evidence, and any required post-UAT review/security gates all exist.
 - Keeps `XX-UAT.md` resumable and explicit about unresolved gaps or follow-up captures.
 - Produces a concrete user-observable test matrix with expected behavior, saved evidence, result counts, blocked-prerequisite separation, and structured gaps.
 - Preserves plain user issue reports with inferred severity rather than asking the user to classify implementation risk.

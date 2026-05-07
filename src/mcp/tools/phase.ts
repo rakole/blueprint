@@ -47,6 +47,7 @@ import {
   prepareTextForPersistence,
   safeJsonParseObject
 } from "../../shared/security.js";
+import { evaluatePhaseQualityGates } from "./quality-gates.js";
 
 type RoadmapReadArgs = {
   cwd?: string;
@@ -3100,12 +3101,33 @@ async function syncRoadmapPhaseCompletion(
     validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
 
+  const qualityGateEvaluation = await evaluatePhaseQualityGates({
+    projectRoot,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseDir: resolved.phaseDir,
+    artifacts: phaseArtifacts
+  });
+
+  validationWarnings.push(...qualityGateEvaluation.warnings);
+
+  if (
+    hasCompleteUat &&
+    qualityGateEvaluation.requiresCodeReview &&
+    !qualityGateEvaluation.gatesSatisfied
+  ) {
+    validationWarnings.push(
+      `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+    );
+  }
+
   const completed =
     summaryIndex.pendingPlans.length === 0 &&
     summaryPaths.length > 0 &&
     hasValidVerification &&
     verificationReadyForUat &&
-    hasCompleteUat;
+    hasCompleteUat &&
+    qualityGateEvaluation.gatesSatisfied;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,

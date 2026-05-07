@@ -732,6 +732,20 @@ Exercise code-review follow-up routing.
     }),
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"]
   });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-review-scope/05-SECURITY.md"),
+    `# Phase 05: Code Review Scope - Security
+
+## Findings
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` after security review.
+`,
+    "utf8"
+  );
 
   const state = await blueprintStateLoad({ cwd: repoPath });
 

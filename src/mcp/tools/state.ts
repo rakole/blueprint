@@ -24,6 +24,12 @@ import {
 } from "./artifacts.js";
 import { blueprintConfigGet } from "./config.js";
 import {
+  buildPhaseQualityGateNextAction,
+  evaluatePhaseQualityGates,
+  type PhaseQualityGateEvaluation,
+  type PhaseQualityGateMissingGate
+} from "./quality-gates.js";
+import {
   blueprintDirectCommand,
   blueprintRunDirectCommand
 } from "../command-paths.js";
@@ -185,6 +191,7 @@ type CurrentPhaseArtifactStatus = {
   researchPath: string | null;
   uiSpecPath: string | null;
   reviewPath: string | null;
+  securityPath: string | null;
   reviewNextSafeAction: string | null;
   verificationPath: string | null;
   verificationNextSafeAction: string | null;
@@ -195,12 +202,21 @@ type CurrentPhaseArtifactStatus = {
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
+  hasReview: boolean;
+  hasSecurity: boolean;
   hasVerification: boolean;
   verificationReadyForUat: boolean;
   hasUat: boolean;
   hasPlans: boolean;
   hasSummaries: boolean;
   hasPendingExecution: boolean;
+  codeReviewEnabled: boolean;
+  requiresCodeReview: boolean;
+  hasReviewableFiles: boolean;
+  reviewableFiles: string[];
+  qualityGateMissingGate: PhaseQualityGateMissingGate;
+  qualityGatesSatisfied: boolean;
+  qualityGateNextAction: string | null;
   researchValid: boolean | null;
   blockers: string[];
   warnings: string[];
@@ -218,7 +234,13 @@ type MilestoneEvidenceStatus = {
   verificationTestGapPhases: string[];
   verificationRepairActions: Record<string, string>;
   pendingSummaryCoveragePhases: string[];
+  missingQualityGatePhases: string[];
+  qualityGateDebtPhases: string[];
+  qualityGateRepairActions: Record<string, string>;
+  qualityGateMissingGates: Record<string, Exclude<PhaseQualityGateMissingGate, null>>;
+  qualityGateReviewableFiles: Record<string, string[]>;
   blockingPhase: string | null;
+  qualityGateBlockingPhase: string | null;
   allCompletedPhasesReady: boolean;
   warnings: string[];
 };
@@ -963,6 +985,80 @@ async function getImplementedCommandNames(): Promise<Set<string>> {
   return implementedCommandNamesPromise;
 }
 
+function emptyCurrentPhaseQualityGateStatus(): Pick<
+  CurrentPhaseArtifactStatus,
+  | "securityPath"
+  | "hasReview"
+  | "hasSecurity"
+  | "codeReviewEnabled"
+  | "requiresCodeReview"
+  | "hasReviewableFiles"
+  | "reviewableFiles"
+  | "qualityGateMissingGate"
+  | "qualityGatesSatisfied"
+  | "qualityGateNextAction"
+> {
+  return {
+    securityPath: null,
+    hasReview: false,
+    hasSecurity: false,
+    codeReviewEnabled: true,
+    requiresCodeReview: false,
+    hasReviewableFiles: false,
+    reviewableFiles: [],
+    qualityGateMissingGate: null,
+    qualityGatesSatisfied: true,
+    qualityGateNextAction: null
+  };
+}
+
+function implementedReviewNextSafeAction(
+  reviewNextSafeAction: string | null,
+  implementedCommands: Set<string>
+): string | null {
+  if (!reviewNextSafeAction) {
+    return null;
+  }
+
+  const reviewNextCommand =
+    reviewNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+
+  if (
+    reviewNextCommand === null ||
+    reviewNextCommand === blueprintDirectCommand("progress") ||
+    !implementedCommands.has(reviewNextCommand)
+  ) {
+    return null;
+  }
+
+  return reviewNextSafeAction;
+}
+
+function resolvePhaseQualityGateNextAction(args: {
+  phaseNumber: string;
+  evaluation: PhaseQualityGateEvaluation;
+  implementedCommands: Set<string>;
+}): string | null {
+  const missingGateAction = buildPhaseQualityGateNextAction({
+    phaseNumber: args.phaseNumber,
+    evaluation: args.evaluation,
+    implementedCommandNames: args.implementedCommands
+  });
+
+  if (missingGateAction !== null) {
+    return missingGateAction;
+  }
+
+  if (!args.evaluation.hasReview || !args.evaluation.hasSecurity) {
+    return null;
+  }
+
+  return implementedReviewNextSafeAction(
+    args.evaluation.reviewNextSafeAction,
+    args.implementedCommands
+  );
+}
+
 async function inspectCurrentPhaseArtifacts(
   projectRoot: string,
   inspectionPhases: string[],
@@ -982,6 +1078,7 @@ async function inspectCurrentPhaseArtifacts(
       researchPath: null,
       uiSpecPath: null,
       reviewPath: null,
+      ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
       verificationPath: null,
       verificationNextSafeAction: null,
@@ -1036,6 +1133,7 @@ async function inspectCurrentPhaseArtifacts(
       researchPath: null,
       uiSpecPath: null,
       reviewPath: null,
+      ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
       verificationPath: null,
       verificationNextSafeAction: null,
@@ -1076,6 +1174,7 @@ async function inspectCurrentPhaseArtifacts(
       researchPath: null,
       uiSpecPath: null,
       reviewPath: null,
+      ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
       verificationPath: null,
       verificationNextSafeAction: null,
@@ -1106,12 +1205,14 @@ async function inspectCurrentPhaseArtifacts(
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
   const reviewPath = `${phaseRoot}/${phasePrefix}-REVIEW.md`;
+  const securityPath = `${phaseRoot}/${phasePrefix}-SECURITY.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix}-UAT.md`;
   const hasContext = phaseArtifacts.includes(contextPath);
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
+  const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
   const {
@@ -1150,7 +1251,6 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-UAT.md`)
   );
   let researchValid: boolean | null = null;
-  let reviewNextSafeAction: string | null = null;
 
   if (hasResearch) {
     try {
@@ -1166,15 +1266,6 @@ async function inspectCurrentPhaseArtifacts(
       warnings.push(`${researchPath}: ${message}`);
       researchValid = false;
     }
-  }
-
-  if (hasReview) {
-    const reviewRouting = await readReviewArtifactNextSafeAction({
-      projectRoot,
-      artifactPath: reviewPath
-    });
-    reviewNextSafeAction = reviewRouting.nextAction;
-    warnings.push(...reviewRouting.warnings);
   }
 
   if (!hasContext && hasLaterArtifacts) {
@@ -1214,6 +1305,26 @@ async function inspectCurrentPhaseArtifacts(
   }
 
   warnings.push(...summaryWarnings, ...validationWarnings);
+  const qualityGateEvaluation = await evaluatePhaseQualityGates({
+    projectRoot,
+    phaseNumber: normalizedPhase,
+    phasePrefix,
+    phaseDir: phaseRoot,
+    artifacts: phaseArtifacts
+  });
+  const qualityGateNextAction = resolvePhaseQualityGateNextAction({
+    phaseNumber: normalizedPhase,
+    evaluation: qualityGateEvaluation,
+    implementedCommands: await getImplementedCommandNames()
+  });
+
+  if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+    warnings.push(
+      `Current phase ${currentPhase} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+    );
+  }
+
+  warnings.push(...qualityGateEvaluation.warnings);
 
   return {
     currentPhase,
@@ -1222,8 +1333,9 @@ async function inspectCurrentPhaseArtifacts(
     contextPath,
     researchPath,
     uiSpecPath,
-    reviewPath,
-    reviewNextSafeAction,
+    reviewPath: qualityGateEvaluation.reviewPath ?? (hasReview ? reviewPath : null),
+    securityPath: qualityGateEvaluation.securityPath ?? (hasSecurity ? securityPath : null),
+    reviewNextSafeAction: qualityGateEvaluation.reviewNextSafeAction,
     verificationPath,
     verificationNextSafeAction,
     verificationHasDeferredTestGaps,
@@ -1233,12 +1345,21 @@ async function inspectCurrentPhaseArtifacts(
     hasContext,
     hasResearch,
     hasUiSpec,
+    hasReview: qualityGateEvaluation.hasReview,
+    hasSecurity: qualityGateEvaluation.hasSecurity,
     hasVerification,
     verificationReadyForUat,
     hasUat,
     hasPlans,
     hasSummaries,
     hasPendingExecution,
+    codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
+    requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
+    hasReviewableFiles: qualityGateEvaluation.reviewableFiles.length > 0,
+    reviewableFiles: qualityGateEvaluation.reviewableFiles,
+    qualityGateMissingGate: qualityGateEvaluation.missingGate,
+    qualityGatesSatisfied: qualityGateEvaluation.gatesSatisfied,
+    qualityGateNextAction,
     researchValid,
     blockers,
     warnings
@@ -1296,7 +1417,13 @@ async function inspectMilestoneEvidence(
   const verificationTestGapPhases: string[] = [];
   const verificationRepairActions: Record<string, string> = {};
   const pendingSummaryCoveragePhases: string[] = [];
+  const missingQualityGatePhases: string[] = [];
+  const qualityGateDebtPhases: string[] = [];
+  const qualityGateRepairActions: Record<string, string> = {};
+  const qualityGateMissingGates: Record<string, Exclude<PhaseQualityGateMissingGate, null>> = {};
+  const qualityGateReviewableFiles: Record<string, string[]> = {};
   const warnings: string[] = [];
+  const implementedCommands = await getImplementedCommandNames();
 
   for (const phase of phases) {
     if (!phase.completed) {
@@ -1360,6 +1487,46 @@ async function inspectMilestoneEvidence(
     if (!hasUat) {
       missingUatPhases.push(phase.phaseNumber);
     }
+
+    const qualityGateEvaluation = await evaluatePhaseQualityGates({
+      projectRoot,
+      phaseNumber: phase.phaseNumber,
+      phasePrefix,
+      phaseDir: phaseDir ? `${BLUEPRINT_DIR}/phases/${phaseDir}` : undefined,
+      artifacts: phaseScopedArtifacts
+    });
+    const qualityGateNextAction = resolvePhaseQualityGateNextAction({
+      phaseNumber: phase.phaseNumber,
+      evaluation: qualityGateEvaluation,
+      implementedCommands
+    });
+
+    warnings.push(...qualityGateEvaluation.warnings);
+
+    if (qualityGateEvaluation.reviewableFiles.length > 0) {
+      qualityGateReviewableFiles[phase.phaseNumber] = qualityGateEvaluation.reviewableFiles;
+    }
+
+    if (
+      qualityGateEvaluation.requiresCodeReview &&
+      qualityGateEvaluation.missingGate !== null
+    ) {
+      missingQualityGatePhases.push(phase.phaseNumber);
+      qualityGateDebtPhases.push(phase.phaseNumber);
+      qualityGateMissingGates[phase.phaseNumber] = qualityGateEvaluation.missingGate;
+      warnings.push(
+        `Phase ${phase.phaseNumber} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+      );
+    } else if (qualityGateNextAction !== null) {
+      qualityGateDebtPhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has quality gate debt from saved REVIEW Next Safe Action: ${qualityGateNextAction}`
+      );
+    }
+
+    if (qualityGateNextAction !== null) {
+      qualityGateRepairActions[phase.phaseNumber] = qualityGateNextAction;
+    }
   }
 
   return {
@@ -1369,18 +1536,26 @@ async function inspectMilestoneEvidence(
     verificationTestGapPhases,
     verificationRepairActions,
     pendingSummaryCoveragePhases,
+    missingQualityGatePhases,
+    qualityGateDebtPhases,
+    qualityGateRepairActions,
+    qualityGateMissingGates,
+    qualityGateReviewableFiles,
     blockingPhase:
       missingVerificationPhases[0] ??
       verificationTestGapPhases[0] ??
       verificationNotReadyPhases[0] ??
       missingUatPhases[0] ??
+      qualityGateDebtPhases[0] ??
       pendingSummaryCoveragePhases[0] ??
       null,
+    qualityGateBlockingPhase: qualityGateDebtPhases[0] ?? null,
     allCompletedPhasesReady:
       missingVerificationPhases.length === 0 &&
       verificationNotReadyPhases.length === 0 &&
       verificationTestGapPhases.length === 0 &&
       missingUatPhases.length === 0 &&
+      qualityGateDebtPhases.length === 0 &&
       pendingSummaryCoveragePhases.length === 0,
     warnings
   };
@@ -1791,13 +1966,8 @@ async function deriveNextAction(args: {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
 
-  if (args.phaseArtifacts.reviewNextSafeAction) {
-    const reviewNextCommand =
-      args.phaseArtifacts.reviewNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
-
-    if (reviewNextCommand && implementedCommands.has(reviewNextCommand)) {
-      return args.phaseArtifacts.reviewNextSafeAction;
-    }
+  if (args.phaseArtifacts.hasUat && args.phaseArtifacts.qualityGateNextAction) {
+    return args.phaseArtifacts.qualityGateNextAction;
   }
 
   if (
@@ -1857,6 +2027,24 @@ async function deriveNextAction(args: {
     implementedCommands.has(verifyWorkCommand)
   ) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
+  }
+
+  if (
+    args.allPhasesComplete &&
+    args.milestoneEvidence.missingVerificationPhases.length === 0 &&
+    args.milestoneEvidence.verificationNotReadyPhases.length === 0 &&
+    args.milestoneEvidence.missingUatPhases.length === 0 &&
+    args.milestoneEvidence.qualityGateDebtPhases.length > 0
+  ) {
+    const phaseNumber = args.milestoneEvidence.qualityGateDebtPhases[0];
+    const qualityGateRepairAction =
+      args.milestoneEvidence.qualityGateRepairActions[phaseNumber] ?? null;
+
+    if (qualityGateRepairAction !== null) {
+      return qualityGateRepairAction;
+    }
+
+    return `${blueprintRunDirectCommand("progress")} to review quality gate debt for Phase ${phaseNumber}`;
   }
 
   if (
@@ -1990,7 +2178,17 @@ async function buildSyncedState(
           roadmapCurrentPhase: roadmapSignals.currentPhase
         })
       : null;
+  const milestoneEvidence = await inspectMilestoneEvidence(
+    projectRoot,
+    inspection.phases,
+    roadmapSignals.phases
+  );
+  const qualityGateDebtPhase =
+    patch.activeCommand === undefined && patch.currentPhase === undefined
+      ? milestoneEvidence.qualityGateBlockingPhase
+      : null;
   const currentPhase =
+    qualityGateDebtPhase ??
     effectivePatchCurrentPhase ??
     patchedPhaseRoutingOverride ??
     storedPhaseRoutingOverride ??
@@ -2037,6 +2235,16 @@ async function buildSyncedState(
   }
 
   if (
+    qualityGateDebtPhase !== null &&
+    roadmapSignals.currentPhase !== null &&
+    qualityGateDebtPhase !== roadmapSignals.currentPhase
+  ) {
+    warnings.push(
+      `STATE.md routed back to completed Phase ${qualityGateDebtPhase} because unresolved quality gate debt blocks routing to roadmap phase ${roadmapSignals.currentPhase}.`
+    );
+  }
+
+  if (
     effectivePatchCurrentPhase === null &&
     patchedPhaseRoutingOverride === null &&
     storedPhaseRoutingOverride === null &&
@@ -2073,11 +2281,6 @@ async function buildSyncedState(
     projectRoot,
     inspection.phases,
     currentPhase
-  );
-  const milestoneEvidence = await inspectMilestoneEvidence(
-    projectRoot,
-    inspection.phases,
-    roadmapSignals.phases
   );
   const bootstrapRouting: BootstrapRoutingSignals = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
@@ -2329,7 +2532,13 @@ export async function blueprintStateLoad(
               verificationTestGapPhases: [],
               verificationRepairActions: {},
               pendingSummaryCoveragePhases: [],
+              missingQualityGatePhases: [],
+              qualityGateDebtPhases: [],
+              qualityGateRepairActions: {},
+              qualityGateMissingGates: {},
+              qualityGateReviewableFiles: {},
               blockingPhase: null,
+              qualityGateBlockingPhase: null,
               allCompletedPhasesReady: false,
               warnings: []
             },
