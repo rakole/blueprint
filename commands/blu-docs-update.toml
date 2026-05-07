@@ -2,7 +2,7 @@ description = "Generate or verify repo documentation against saved Blueprint and
 prompt = """
 You are the `/blu-docs-update` command for Blueprint.
 
-Use the `blueprint-docs` skill as the primary orchestration contract when that runtime skill is available. Use the `blueprint-doc-writer` and `blueprint-doc-verifier` subagents for bounded drafting and fact-checking when the requested docs change is substantial.
+Use the `blueprint-docs` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional doc-writer or doc-verifier pass. Use the `blueprint-doc-writer` and `blueprint-doc-verifier` subagents for bounded drafting and fact-checking when the requested docs change is substantial only when the runtime contract allows them and `workflow.subagents` is enabled.
 Execution profile: `long-running-mutation`.
 Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 Keep the resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
@@ -11,7 +11,7 @@ For non-trivial docs-update runs, use Gemini CLI's internal `update_topic` tool 
 Follow this flow exactly:
 
 1. Read `mcp_blueprint_blueprint_project_status` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
-2. Read `mcp_blueprint_blueprint_artifact_list` so you know which project, codebase, phase, and report artifacts already exist.
+2. Read `mcp_blueprint_blueprint_artifact_list` and `mcp_blueprint_blueprint_config_get` with `scope: "effective"` so you know which project, codebase, phase, and report artifacts already exist and whether optional docs helpers are globally allowed.
 3. Resolve the documentation scope from the user's request before editing anything:
    - If the user named one or more doc files, keep the write scope to those files.
    - If the user passed `--verify-only`, stay read-only for repo docs and prepare only the verification report.
@@ -34,7 +34,7 @@ Follow this flow exactly:
 12. Return a concise completion summary covering the selected doc scope, whether the pass verified or updated docs, the evidence inputs used, whether the run stayed on repo truth only or also used cited external truth, the report status, any blockers or factual gaps, and the next safe implemented Blueprint action. Prefer `/blu-progress` when a follow-up is needed and no narrower implemented command is clearly better.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, and `mcp_blueprint_blueprint_artifact_report_write` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, and `mcp_blueprint_blueprint_artifact_report_write` for Blueprint-owned persistent state work.
 - Keep Blueprint-owned writes inside `.blueprint/reports/`.
 - Do not hand-build digest inputs or report paths after the MCP calls return; use `inputsUsed` and `path` as authoritative.
 - Treat `--force` as the only path that bypasses confirmation for replacing existing docs or the canonical report.

@@ -2,13 +2,13 @@ description = "Audit milestone completion against original intent, produce a dur
 prompt = """
 You are the `/blu-audit-milestone` command for Blueprint.
 
-Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. When deeper milestone evidence review is useful, use the `blueprint-verifier` subagent for bounded analysis.
+Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any verifier pass. When deeper milestone evidence review is useful, use the `blueprint-verifier` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented inline fallback.
 
 Follow this flow exactly:
 
 1. Resolve the target milestone with `mcp_blueprint_blueprint_roadmap_read`. If the user did not pass a version or milestone name, allow the tool to infer it from Blueprint state or the roadmap.
 2. If the milestone cannot be resolved, stop with the precise `mcp_blueprint_blueprint_roadmap_read` or `mcp_blueprint_blueprint_artifact_list` reason plus any recovery guidance.
-3. Read `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_phase_summary_index`, and `mcp_blueprint_blueprint_artifact_list` so you know the current roadmap, which phase evidence exists, and what reports already exist.
+3. Read `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_artifact_list`, and `mcp_blueprint_blueprint_config_get` with `scope: "effective"` so you know the current roadmap, which phase evidence exists, what reports already exist, and whether optional verifier help is allowed.
 4. Read `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "report.milestone-audit"` before drafting the report. Use the returned `authoringTemplate` as the baseline when shaping the audit text.
 5. Build the milestone evidence digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit repo-relative `artifactPaths` such as `.blueprint/ROADMAP.md` and the relevant completed-phase `SUMMARY`, `VERIFICATION`, and `UAT` artifacts. Treat the returned `inputsUsed` list as the authoritative digest scope.
 6. If a milestone audit report already exists and the user has not clearly asked to replace it, require explicit overwrite confirmation with `ask_user` before any write.
@@ -17,7 +17,7 @@ Follow this flow exactly:
 9. Return a concise summary covering the milestone audited, whether the report was created or revised, the main intent/evidence gaps, grouped requirement, integration, flow, and optional gap sections when needed, and the next safe implemented action. If the audit surfaces actionable gaps, prefer `/blu-plan-milestone-gaps`; otherwise route the follow-up to `/blu-progress`.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_summary_digest`, and `mcp_blueprint_blueprint_artifact_report_write` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_config_get`, and `mcp_blueprint_blueprint_artifact_report_write` for persistent state work.
 - Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/reports/`.
 - Treat overwrite as an explicit confirmation path, not the default.

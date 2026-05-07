@@ -24,6 +24,8 @@ Review and update normalized project-local Blueprint settings, with an optional 
 - Saved defaults writes go only through `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` after explicit opt-in.
 - Treat returned `configPath` values as authoritative.
 - Patches must be JSON objects, not arrays, strings, or raw config file content.
+- `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
+- Setting `workflow.subagents` to `false` disables optional Blueprint subagent invocation and forces the documented no-subagent fallback. It does not hide agent entries, change agent catalog visibility, or change implemented-command routing.
 
 ## Effectiveness Spine Settings
 

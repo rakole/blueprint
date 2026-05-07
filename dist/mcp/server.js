@@ -20340,6 +20340,7 @@ function getHardCodedConfig() {
       discuss_mode: "discuss",
       skip_discuss: false,
       use_worktrees: true,
+      subagents: true,
       subagent_timeout: 3e5
     },
     parallelization: {
@@ -37866,7 +37867,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_REQUIRED_TOOLS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -37877,6 +37878,15 @@ var init_command_runtime_metadata = __esm({
       "blueprint-project-researcher",
       "blueprint-roadmapper"
     );
+    NEW_PROJECT_REQUIRED_TOOLS = [
+      "blueprint_project_init",
+      "blueprint_project_status",
+      "blueprint_config_get",
+      "blueprint_config_set",
+      "blueprint_state_update",
+      "blueprint_artifact_contract_read",
+      "blueprint_artifact_validate"
+    ];
     NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID = "src/mcp/command-runtime-metadata.ts#new-project";
     NEW_PROJECT_RUNTIME_METADATA = {
       commandName: "new-project",
@@ -37888,15 +37898,7 @@ var init_command_runtime_metadata = __esm({
         declaredStatus: "implemented",
         risk: "Medium: deep-questioning bootstrap that creates the initial planning tree, seeds normalized repo config, and leaves a traceable first roadmap."
       },
-      requiredTools: [
-        "blueprint_project_init",
-        "blueprint_project_status",
-        "blueprint_config_get",
-        "blueprint_config_set",
-        "blueprint_state_update",
-        "blueprint_artifact_contract_read",
-        "blueprint_artifact_validate"
-      ],
+      requiredTools: NEW_PROJECT_REQUIRED_TOOLS,
       optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
       spec: {
         path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
@@ -37919,15 +37921,7 @@ var init_command_runtime_metadata = __esm({
         waveTitle: "Foundation",
         command: "new-project",
         primarySkill: "blueprint-bootstrap",
-        exactMcpDestination: [
-          "blueprint_project_init",
-          "blueprint_project_status",
-          "blueprint_config_get",
-          "blueprint_config_set",
-          "blueprint_state_update",
-          "blueprint_artifact_contract_read",
-          "blueprint_artifact_validate"
-        ],
+        exactMcpDestination: NEW_PROJECT_REQUIRED_TOOLS,
         optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
         contractNotes: "Long-running-mutation Gemini-native bootstrap. The detailed runtime contract lives in skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md, with host-entrypoint, MCP FQN, approval-surface, and Gemini-helper guardrails centralized in skills/blueprint-bootstrap/references/runtime-guardrails.md. The live contract stays map-first for brownfield repos: unmapped or mapping-incomplete states route to map-codebase; valid mapped-only states may run new-project while preserving .blueprint/codebase/*.md.",
@@ -38082,7 +38076,8 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_locate",
       "blueprint_phase_context",
       "blueprint_roadmap_read",
-      "blueprint_project_status"
+      "blueprint_project_status",
+      "blueprint_config_get"
     ];
     INSERT_PHASE_REQUIRED_TOOLS = [
       "blueprint_roadmap_read",
@@ -38100,6 +38095,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_roadmap_read",
       "blueprint_artifact_list",
       "blueprint_artifact_summary_digest",
+      "blueprint_config_get",
       "blueprint_roadmap_add_phase",
       "blueprint_state_update"
     ];
@@ -38109,6 +38105,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_artifact_list",
       "blueprint_artifact_contract_read",
       "blueprint_artifact_summary_digest",
+      "blueprint_config_get",
       "blueprint_artifact_report_write"
     ];
     COMPLETE_MILESTONE_REQUIRED_TOOLS = [
@@ -38132,6 +38129,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_roadmap_read",
       "blueprint_artifact_contract_read",
       "blueprint_artifact_summary_digest",
+      "blueprint_config_get",
       "blueprint_artifact_scaffold",
       "blueprint_state_update"
     ];
@@ -38166,6 +38164,7 @@ var init_command_runtime_metadata = __esm({
     ];
     CODE_REVIEW_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
+      "blueprint_config_get",
       "blueprint_artifact_contract_read",
       "blueprint_review_scope",
       "blueprint_review_load_findings",
@@ -38174,6 +38173,7 @@ var init_command_runtime_metadata = __esm({
     ];
     CODE_REVIEW_FIX_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
+      "blueprint_config_get",
       "blueprint_review_load_findings",
       "blueprint_review_authoring_context",
       "blueprint_review_validate_model",
@@ -38189,6 +38189,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_summary_read",
       "blueprint_phase_execution_targets",
       "blueprint_artifact_contract_read",
+      "blueprint_config_get",
       "blueprint_review_authoring_context",
       "blueprint_review_validate_model",
       "blueprint_review_record"
@@ -38198,6 +38199,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_artifact_list",
       "blueprint_review_scope",
       "blueprint_artifact_contract_read",
+      "blueprint_config_get",
       "blueprint_artifact_report_authoring_context",
       "blueprint_artifact_report_validate_model",
       "blueprint_artifact_report_write",
@@ -38208,6 +38210,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_locate",
       "blueprint_artifact_list",
       "blueprint_artifact_contract_read",
+      "blueprint_config_get",
       "blueprint_phase_plan_index",
       "blueprint_phase_plan_read",
       "blueprint_phase_summary_index",
@@ -38221,6 +38224,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_locate",
       "blueprint_artifact_list",
       "blueprint_artifact_contract_read",
+      "blueprint_config_get",
       "blueprint_review_authoring_context",
       "blueprint_review_validate_model",
       "blueprint_review_record"
@@ -38233,6 +38237,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_validation_authoring_context",
       "blueprint_phase_validation_render",
       "blueprint_artifact_contract_read",
+      "blueprint_config_get",
       "blueprint_phase_validation_write",
       "blueprint_artifact_list",
       "blueprint_artifact_validate",
@@ -38244,6 +38249,7 @@ var init_command_runtime_metadata = __esm({
     ];
     DOCS_UPDATE_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_artifact_list",
       "blueprint_artifact_summary_digest",
       "blueprint_artifact_report_write"
@@ -38277,18 +38283,21 @@ var init_command_runtime_metadata = __esm({
     ];
     EXPLORE_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_artifact_mutate_index",
       "blueprint_roadmap_add_phase",
       "blueprint_artifact_scaffold"
     ];
     QUICK_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_command_catalog",
       "blueprint_artifact_report_write",
       "blueprint_state_update"
     ];
     DEBUG_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_artifact_report_write",
       "blueprint_artifact_mutate_index",
       "blueprint_state_update"
@@ -38388,6 +38397,7 @@ var init_command_runtime_metadata = __esm({
     ];
     MAP_CODEBASE_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_artifact_contract_read",
       "blueprint_artifact_scaffold",
       "blueprint_artifact_list",
@@ -39116,24 +39126,7 @@ var init_command_runtime_metadata = __esm({
         waveTitle: "Core Lifecycle",
         command: "plan-phase",
         primarySkill: "blueprint-phase-planning",
-        exactMcpDestination: [
-          "blueprint_phase_locate",
-          "blueprint_artifact_contract_read",
-          "blueprint_phase_context",
-          "blueprint_phase_research_status",
-          "blueprint_phase_artifact_read",
-          "blueprint_phase_validation_read",
-          "blueprint_review_load_findings",
-          "blueprint_phase_plan_index",
-          "blueprint_phase_plan_read",
-          "blueprint_phase_plan_authoring_context",
-          "blueprint_phase_plan_validate_model",
-          "blueprint_phase_plan_validate",
-          "blueprint_phase_plan_write",
-          "blueprint_config_get",
-          "blueprint_state_load",
-          "blueprint_state_update"
-        ],
+        exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
         contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, re-read blueprint_phase_plan_authoring_context immediately before each model validation/write after any successful plan write because saved plan files are intentional later-slot evidence artifacts, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: "strict" and authoringMode: "model-only", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups.',

@@ -112,6 +112,7 @@ test("audit-fix is exposed as an implemented remediation command with the regist
     "blueprint_artifact_list",
     "blueprint_review_scope",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_artifact_report_authoring_context",
     "blueprint_artifact_report_validate_model",
     "blueprint_artifact_report_write",

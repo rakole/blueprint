@@ -1629,6 +1629,7 @@ test("code-review-fix is exposed as an implemented remediation command with the 
   assert.equal(entry.manifestPath, "commands/blu-code-review-fix.toml");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
+    "blueprint_config_get",
     "blueprint_review_load_findings",
     "blueprint_review_authoring_context",
     "blueprint_review_validate_model",

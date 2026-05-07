@@ -1020,6 +1020,7 @@ test("ui-review is exposed as an implemented review command with the registered 
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_review_authoring_context",
     "blueprint_review_validate_model",
     "blueprint_review_record"

@@ -2,11 +2,11 @@ description = "Execute a bounded repo task with reduced ceremony, visible in-fli
 prompt = """
 You are the `/blu-quick` command for Blueprint.
 
-Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. When the user explicitly asks for more depth, use the `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents only for bounded work that fits the quick-run scope.
+Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional subagent decision. When the user explicitly asks for more depth, use the `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents only for bounded work that fits the quick-run scope and only when `workflow.subagents` is enabled; otherwise keep the quick run inline.
 
 Follow this flow exactly:
 
-1. Read `mcp_blueprint_blueprint_project_status` and `mcp_blueprint_blueprint_command_catalog` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
+1. Read `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, and `mcp_blueprint_blueprint_command_catalog` first. If Blueprint is uninitialized, stop and route to `/blu-new-project`. If project health is partial or unhealthy, stop and route to `/blu-health` instead of guessing through broken Blueprint state.
 2. Require an explicit task description from the user input. If the request is blank or too vague to execute safely, stop with concise usage guidance instead of inventing scope.
 3. Resolve optional depth flags before editing anything:
    - `--discuss`: ask for explicit confirmation before doing a quick clarification or discovery pass.
@@ -27,7 +27,7 @@ Follow this flow exactly:
 11. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, whether tracker-backed branching was needed, the report status, any warnings or deferred follow-up work, and the next safe implemented action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_artifact_report_write`, and `mcp_blueprint_blueprint_state_update` for Blueprint-owned persistent state work.
 - Execution profile: `long-running-mutation`.
 - Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the quick run.
 - Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.

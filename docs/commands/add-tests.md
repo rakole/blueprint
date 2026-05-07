@@ -66,6 +66,7 @@
 - verification authoring context through `blueprint_phase_validation_authoring_context`
 - canonical verification contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"`
 - canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"`
+- effective workflow config through `blueprint_config_get` before any optional executor or verifier decision
 - current Blueprint artifact inventory through `blueprint_artifact_list`
 - current state routing through `blueprint_state_load`
 
@@ -89,6 +90,7 @@
 - `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
 - `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs}`
@@ -100,6 +102,7 @@
 
 ## Validation And Report Contract
 
+- Read effective config through `blueprint_config_get` before deciding whether to use `blueprint-executor`, `blueprint-verifier`, or the no-subagent fallback.
 - Update verification coverage through `blueprint_phase_validation_render` followed by `blueprint_phase_validation_write` with `artifact: "verification"` and exactly one of rendered `content` or the same structured `model`; do not edit `XX-VERIFICATION.md` directly.
 - Pass `phase` as the resolved numeric phase reference and treat the returned `path` plus `summaryPaths`, `written`, and `status` as authoritative instead of rebuilding filenames or summary links manually.
 - Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final verification authoring.

@@ -56,6 +56,7 @@ type BlueprintConfig = {
     discuss_mode: string;
     skip_discuss: boolean;
     use_worktrees: boolean;
+    subagents: boolean;
     subagent_timeout: number;
   };
   parallelization: {
@@ -237,6 +238,7 @@ function getHardCodedConfig(): BlueprintConfig {
       discuss_mode: "discuss",
       skip_discuss: false,
       use_worktrees: true,
+      subagents: true,
       subagent_timeout: 300000
     },
     parallelization: {

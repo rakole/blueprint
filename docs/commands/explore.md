@@ -48,6 +48,7 @@
 
 
 - `blueprint_project_status` reads Blueprint readiness before persistence.
+- `blueprint_config_get` reads the effective workflow policy before any optional researcher decision.
 
 
 ## Blueprint And Global State Writes
@@ -62,13 +63,15 @@
 ## Required MCP Tools
 
 
+- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_mutate_index` -> `{targetPath, createdEntryIds, updatedCounts}`
 - `blueprint_roadmap_add_phase` -> `{phaseNumber, phaseDir, roadmapPath}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
 
 ## Routing Persistence Contract
 
+- Read effective config through `blueprint_config_get` before deciding whether to use the optional `blueprint-researcher` path or stay inline.
 - Capture routes use `blueprint_artifact_mutate_index` in append mode: omit `action`, pass the normalized idea in `entry.text`, and use returned entry ids as authoritative.
 - Roadmap promotion uses `blueprint_roadmap_add_phase` with only the confirmed phase description. Treat the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
 - When scaffolding the roadmap route, build the initial context path from the returned `phaseDir` plus returned `phasePrefix`. Do not invent the phase slug or path from user prose.

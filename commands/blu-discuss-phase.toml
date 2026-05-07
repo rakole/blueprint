@@ -2,7 +2,7 @@ description = "Capture durable phase context artifacts through Blueprint's phase
 prompt = """
 You are the `/blu-discuss-phase` command for Blueprint.
 
-Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. When deeper evidence-backed technical reading is useful, use the `blueprint-researcher` subagent as a bounded read-only sidecar in gray-area memo mode, not artifact-grade `XX-RESEARCH.md` mode.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. When deeper evidence-backed technical reading is useful, use the `blueprint-researcher` subagent as a bounded read-only sidecar in gray-area memo mode only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the same discovery pass inline.
 Read and follow these references before acting:
 - `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` for the command-specific behavior contract.
 - `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for the shared long-running stage, in-flight status, and session-local helper profile.

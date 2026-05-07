@@ -2,7 +2,7 @@ description = "Run a phase-scoped Blueprint UI audit, persist XX-UI-REVIEW, and 
 prompt = """
 You are the `/blu-ui-review` command for Blueprint.
 
-Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-review/references/ui-review-runtime-contract.md` before analysis; that local reference owns scored-pillar output quality, artifact authoring richness, subagent gating, no-subagent fallback, and MCP retry/repair behavior. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis.
+Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Load `skills/blueprint-review/references/ui-review-runtime-contract.md` before analysis; that local reference owns scored-pillar output quality, artifact authoring richness, subagent gating, no-subagent fallback, and MCP retry/repair behavior. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional auditor pass. When the phase needs a deeper visual or UX audit, use the `blueprint-ui-auditor` subagent for bounded six-pillar UI analysis only when the runtime contract allows it and `workflow.subagents` is enabled.
 Execution profile: `long-running-mutation`.
 Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 Keep the resolved scope, active stage, pending gate, execution mode, and next safe action explicit throughout the run.
@@ -16,7 +16,7 @@ Follow this flow exactly:
 4. Read `mcp_blueprint_blueprint_artifact_contract_read` for `review.ui-review` and treat `contract.modelContract.schemaPath`, `contract.modelContract.jsonSchema`, and the required headings as the baseline before drafting, repairing, or persisting `XX-UI-REVIEW.md`.
 5. Require completed phase execution evidence before a UI audit is persisted. If the resolved phase has no `XX-YY-SUMMARY.md` artifacts, stop and route to `/blu-execute-phase <phase>` first.
 6. If a `XX-UI-REVIEW.md` artifact already exists, treat it as the audit baseline. Review it before replacement, default to reuse, and require explicit overwrite confirmation before changing it.
-7. Call `mcp_blueprint_blueprint_review_authoring_context` with the resolved numeric `phase` and `artifact: "ui-review"`. Treat `authoringContext.taskSchema`, completed summaries, pending plans, exact evidence keys, existing UI-review path, and allowed next actions as authoritative. If it returns `status: "invalid"`, stop with its blocker reason instead of inventing execution or evidence coverage.
+7. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional auditor decision, then call `mcp_blueprint_blueprint_review_authoring_context` with the resolved numeric `phase` and `artifact: "ui-review"`. Treat `authoringContext.taskSchema`, completed summaries, pending plans, exact evidence keys, existing UI-review path, and allowed next actions as authoritative. If it returns `status: "invalid"`, stop with its blocker reason instead of inventing execution or evidence coverage.
 8. Ground the audit in the saved execution summaries, the phase goal, the saved `XX-UI-SPEC.md` contract when it exists, and the concrete frontend or UX surface actually affected by the phase. Do not invent UI scope from chat memory alone.
 9. Produce a scored six-pillar JSON model using the local runtime contract: Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design, each scored 1-4 with evidence, plus an overall score out of 24 and up to three priority fixes.
 10. Use the `blueprint-ui-auditor` subagent for bounded analysis when the phase spans multiple screens, includes richer frontend behavior, or benefits from a second look across scored pillars, accessibility, responsiveness, interaction states, consistency, and polish. If a suitable auditor is unavailable or unnecessary, follow the no-subagent fallback from the local runtime contract one pillar at a time.
@@ -32,7 +32,7 @@ Next-action rules:
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_review_authoring_context`, `mcp_blueprint_blueprint_review_validate_model`, and `mcp_blueprint_blueprint_review_record` for Blueprint-owned persistent state work.
+- Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_review_authoring_context`, `mcp_blueprint_blueprint_review_validate_model`, and `mcp_blueprint_blueprint_review_record` for Blueprint-owned persistent state work.
 - When using structured persistence, do not include MCP-owned identity keys in the model; `phase`, `artifact`, path, filename, completed summary inventory, and evidence keys come from the tool calls.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory only.
 - Treat overwrite as an explicit confirmation path, not the default.

@@ -2,11 +2,11 @@ description = "Read the latest milestone audit, group actionable gaps into a sma
 prompt = """
 You are the `/blu-plan-milestone-gaps` command for Blueprint.
 
-Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. When the audit needs a second pass for phase grouping, use the `blueprint-roadmapper` subagent for bounded read-only synthesis.
+Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional roadmapper pass. When the audit needs a second pass for phase grouping, use the `blueprint-roadmapper` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented inline fallback.
 
 Follow this flow exactly:
 
-1. Read `mcp_blueprint_blueprint_roadmap_read` first so you know the active milestone, current phase inventory, and any roadmap recovery warnings before proposing new work.
+1. Read `mcp_blueprint_blueprint_roadmap_read` first, then read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before deciding whether a bounded roadmapper pass is allowed, so you know the active milestone, current phase inventory, and any roadmap recovery warnings before proposing new work.
 2. Read `mcp_blueprint_blueprint_artifact_list` and locate the latest milestone audit report in `.blueprint/reports/`. Prefer a report whose name matches the active milestone, and fall back to the newest milestone-audit report only when the milestone still matches the roadmap context.
 3. If no matching audit report exists, stop with concise guidance to run `/blu-audit-milestone` first.
 4. Build an audit-plus-roadmap digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit repo-relative `artifactPaths` that include `.blueprint/ROADMAP.md` and the chosen milestone audit report. Treat the returned `inputsUsed` list as the authoritative digest scope.
@@ -19,7 +19,7 @@ Follow this flow exactly:
 11. Return a concise completion summary covering the milestone audited, the report used, phases added, any deferred gaps, and the next safe Blueprint action.
 
 Response requirements:
-- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_roadmap_add_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
+- Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_artifact_summary_digest`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_roadmap_add_phase`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
 - Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Do not mutate code or git state.

@@ -71,4 +71,46 @@ test("source-owned config behavior keeps effectiveness-spine defaults and enum g
 
   assert.match(configSource, /function getHardCodedConfig\(\)/);
   assert.match(configSource, /export async function blueprintConfigSet\(/);
+  assert.match(configSource, /subagents: true/);
+});
+
+test("artifact schema documents workflow.subagents as workflow policy rather than host agent availability", async () => {
+  const artifactSchema = await readFile(
+    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
+    "utf8"
+  );
+
+  assert.match(artifactSchema, /"subagents": true/);
+  assert.match(
+    artifactSchema,
+    /`workflow\.subagents` is the global optional-subagent workflow policy for Blueprint command orchestration/i
+  );
+  assert.match(
+    artifactSchema,
+    /it does not install host agents, change agent catalog availability, or widen routing/i
+  );
+});
+
+test("settings docs describe workflow.subagents as fallback policy rather than visibility or routing control", async () => {
+  const [settingsDoc, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-governance/references/settings-runtime-contract.md"
+      ),
+      "utf8"
+    )
+  ]);
+
+  for (const markdown of [settingsDoc, settingsReference]) {
+    assert.match(
+      markdown,
+      /workflow\.subagents.*disables optional Blueprint subagent invocation/i
+    );
+    assert.match(markdown, /no-subagent fallback/i);
+    assert.match(markdown, /does not hide agent entries/i);
+    assert.match(markdown, /does not .*change agent catalog visibility/i);
+    assert.match(markdown, /does not .*implemented-command routing/i);
+  }
 });

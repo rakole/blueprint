@@ -12,8 +12,11 @@ description: >
   the user.
 kind: local
 tools:
-  - "*"
-max_turns: 30
+  - list_directory
+  - read_file
+  - glob
+  - grep_search
+max_turns: 18
 timeout_mins: 15
 ---
 # Blueprint Researcher

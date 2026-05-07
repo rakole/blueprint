@@ -66,6 +66,7 @@ test("debug runtime-owned metadata, skill, and local contract capture the explic
   );
   assert.deepEqual([...DEBUG_RUNTIME_METADATA.requiredTools], [
     "blueprint_project_status",
+    "blueprint_config_get",
     "blueprint_artifact_report_write",
     "blueprint_artifact_mutate_index",
     "blueprint_state_update"

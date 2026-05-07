@@ -258,18 +258,18 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
   assert.equal(metadata.runtimeReference.waveTitle, "Core Lifecycle");
   assert.deepEqual(metadata.runtimeReference.exactMcpDestination, [
     "blueprint_phase_locate",
-    "blueprint_artifact_contract_read",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
     "blueprint_phase_artifact_read",
     "blueprint_phase_validation_read",
     "blueprint_review_load_findings",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_phase_plan_authoring_context",
     "blueprint_phase_plan_validate_model",
-    "blueprint_phase_plan_validate",
     "blueprint_phase_plan_write",
+    "blueprint_phase_plan_validate",
     "blueprint_config_get",
     "blueprint_state_load",
     "blueprint_state_update"

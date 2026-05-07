@@ -25,6 +25,7 @@ Follow this flow exactly:
 5. Offer an advanced settings pass after the common pass. Cover:
    - `gates.*`
    - `safety.*`
+   - `workflow.subagents`
    - `workflow.subagent_timeout`
    - `workflow.discuss_mode`
    - `workflow.research_before_questions`

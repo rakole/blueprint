@@ -937,6 +937,7 @@ test("review is exposed as an implemented peer-review command with the registere
     "blueprint_phase_locate",
     "blueprint_artifact_list",
     "blueprint_artifact_contract_read",
+    "blueprint_config_get",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_phase_summary_index",

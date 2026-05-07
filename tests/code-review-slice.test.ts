@@ -2295,6 +2295,7 @@ test("code-review is exposed as an implemented review command with the scope too
   assert.equal(entry.manifestPath, "commands/blu-code-review.toml");
   assert.deepEqual(entry.requiredTools, [
     "blueprint_phase_locate",
+    "blueprint_config_get",
     "blueprint_artifact_contract_read",
     "blueprint_review_scope",
     "blueprint_review_load_findings",
