@@ -9,7 +9,15 @@ description: >
   order constraints.
 kind: local
 tools:
-  - "*"
+  - list_directory
+  - read_file
+  - grep_search
+  - glob
+  - write_file
+  - replace
+  - run_shell_command
+  - google_web_search
+  - web_fetch
 max_turns: 30
 timeout_mins: 15
 ---
