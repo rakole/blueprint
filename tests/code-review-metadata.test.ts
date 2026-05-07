@@ -38,10 +38,14 @@ test("code-review manifest references the review tools, canonical contract, and 
   assert.match(commandFile, /scopeFiles/);
   assert.match(commandFile, /scopeSource/);
   assert.match(commandFile, /reviewMode\.source/);
+  assert.match(commandFile, /authoringTemplate` as renderer preview only/i);
+  assert.match(commandFile, /contract\.modelContract\.jsonSchema/);
+  assert.match(commandFile, /Do not repair toward rendered Markdown headings or `authoringTemplate`/i);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-secure-phase/);
   assert.match(commandFile, /\/blu-code-review-fix/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /secondary queued recommendation/i);
   assert.match(commandFile, /scope source, file count, selected review depth, pending gate, execution mode/);
   assert.match(commandFile, /no-subagent fallback/i);
   assert.match(commandFile, /invalid-write repair/i);
@@ -112,16 +116,24 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(runtimeContract, /review one file group at a time/i);
   assert.match(runtimeContract, /compress carry-forward context/i);
   assert.match(runtimeContract, /## Retry And Repair/);
-  assert.match(runtimeContract, /retry validation once before persistence/i);
+  assert.match(runtimeContract, /retry validation\s+once before persistence/i);
   assert.match(runtimeContract, /confirmationRecommended/);
   assert.match(runtimeContract, /scopeSource/);
   assert.match(runtimeContract, /reviewMode\.source/);
+  assert.match(runtimeContract, /renderer preview only/i);
+  assert.match(runtimeContract, /contract\.modelContract\.jsonSchema/);
+  assert.match(runtimeContract, /secondary queued follow-up/i);
   assert.match(runtimeContract, /scoped file:line or\s+line-range location, evidence, impact, and recommendation/i);
 
   assert.match(reviewerAgent, /## Depth-Aware Review Expectations/);
+  assert.match(reviewerAgent, /## Explicit Review-Fix Reuse Contract/);
+  assert.match(reviewerAgent, /\/blu-code-review-fix/);
+  assert.match(reviewerAgent, /`fix`, `defer`, or `skip`/);
+  assert.match(reviewerAgent, /staleEvidence/);
+  assert.match(reviewerAgent, /Do not persist review-fix selections/i);
   assert.match(reviewerAgent, /severity is\s+`critical\|high\|medium\|low\|unknown`/i);
   assert.match(reviewerAgent, /scoped file:line evidence, impact, and concrete fix or\s+verification guidance/i);
-  assert.doesNotMatch(reviewerAgent, /\/blu-code-review-fix|\/blu-audit-fix|peer-review/i);
+  assert.doesNotMatch(reviewerAgent, /\/blu-audit-fix|peer-review/i);
 });
 
 test("code-review runtime metadata is source-owned and docs-free", async () => {
@@ -155,6 +167,8 @@ test("code-review runtime metadata is source-owned and docs-free", async () => {
     contract.runtimeReference?.contractNotes ?? "",
     /Long-running-mutation profile for deterministic phase-scoped review/i
   );
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /modelContract\.jsonSchema/);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /secondary queued follow-up/i);
   assert.deepEqual(contract.skillInputs, {
     skill: "blueprint-review",
     shared: [],

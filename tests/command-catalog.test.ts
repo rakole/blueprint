@@ -1722,9 +1722,10 @@ test("review-fix inventory docs stay aligned with the shipped Blueprint runtime"
 
   assert.match(
     runtimeReference,
-    /\| `code-review-fix` \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
+    /\| `code-review-fix` \| `src\/mcp\/command-runtime-metadata\.ts#code-review-fix` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
   );
-  assert.match(runtimeReference, /author only a JSON model with `COMPLETED`, `PARTIAL`, or `BLOCKED` lifecycle status/);
+  assert.match(runtimeReference, /author only the schema's camelCase JSON fields/);
+  assert.match(runtimeReference, /forbid rendered-heading or locked-marker JSON keys/);
   assert.match(
     runtimeReference,
     /No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./

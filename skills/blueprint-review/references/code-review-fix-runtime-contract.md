@@ -41,6 +41,10 @@ model-only, and repo mutation remains explicit and scoped.
   narrow scope through `--all`, `--auto`, or clear natural language.
 - Treat `--auto` as bounded finding selection, not permission for hidden commits,
   branch creation, a fixer agent, or iterative re-review.
+- When the user did not explicitly choose targets, default the candidate
+  remediation set to saved `follow-up` findings only. Treat observations,
+  accepted risks, validation-only follow-ups, process notes, and stale evidence
+  as defer-or-skip inputs unless the user explicitly selects them.
 - Prefer high-confidence saved findings for automatic selection. Defer stale,
   ambiguous, or broad findings with a reason instead of widening scope.
 - Preserve the confirmed selected saved target ids exactly; they are part of the
@@ -70,11 +74,17 @@ model-only, and repo mutation remains explicit and scoped.
   invalid.
 - Use lifecycle statuses `COMPLETED`, `PARTIAL`, or `BLOCKED`.
 - Preserve the locked markers `Status`, `Readiness`, `Completion State`, and
-  `Next Safe Action`; MCP owns rendered source-review provenance.
-- Include concrete model evidence for every rendered heading:
-  `Remediation Summary`, `Findings Addressed`, `Changes Made`, `Verification`,
-  `Dependency Plans`, `Manual / Deferred Work`, `Gap / Repair Routes`,
-  `Follow-Ups`, `Evidence`, and `Next Safe Action`.
+  `Next Safe Action` through the schema fields; MCP owns rendered source-review
+  provenance.
+- Populate only the schema's camelCase keys such as `remediationSummary`,
+  `findingsAddressed`, `changesMade`, `verification`, `dependencyPlans`,
+  `manualOrDeferredWork`, `gapRoutes`, `followUps`, `evidence`, and
+  `nextSafeAction`.
+- Literal rendered heading keys like `Remediation Summary`, `Findings
+  Addressed`, `Changes Made`, `Verification`, `Dependency Plans`,
+  `Manual / Deferred Work`, `Gap / Repair Routes`, `Follow-Ups`, `Evidence`,
+  `Next Safe Action`, or locked-marker keys like `Status`, `Readiness`, and
+  `Completion State` are forbidden in the JSON model.
 - Validate through `blueprint_review_validate_model`, repair diagnostics against
   `authoringContext.taskSchema`, and retry validation once. Pass the same
   `targetIds` array used for authoring context when the run is scoped.
@@ -97,6 +107,10 @@ model-only, and repo mutation remains explicit and scoped.
 
 - Update state through `blueprint_state_update` after the review-fix artifact is
   settled.
+- Call `blueprint_state_update` with `base: "synced"` plus an explicit patch
+  that sets `activeCommand: "/blu-code-review-fix"`,
+  `currentPhase: "<resolved phase>"`, and
+  `nextAction: "<chosen implemented action>"`.
 - Prefer `/blu-validate-phase <phase>` when behavior changed or verification
   evidence is stale.
 - Prefer `/blu-add-tests <phase>` when the main remaining gap is test coverage.
@@ -129,10 +143,11 @@ useful. Suitable triggers:
 - selected remediation scope is ambiguous
 - the user requests `--auto` but the saved finding set is not trivially narrow
 
-The subagent may reclassify saved findings, flag stale evidence, and recommend a
-selection/defer list. It must stay read-only and must not apply fixes, persist
-artifacts, invent new findings, use browser/web/search-only tools as substitutes
-for codebase analysis, create commits, or route the user.
+The subagent may reclassify selected saved targets, flag stale evidence, and
+recommend `fix`, `defer`, or `skip` decisions for those exact target ids. It
+must stay read-only and must not apply fixes, persist artifacts, invent new
+findings, widen scope, use browser/web/search-only tools as substitutes for
+codebase analysis, create commits, or route the user.
 
 ## No-Subagent Fallback
 
@@ -141,10 +156,14 @@ When `blueprint-reviewer` is unavailable or unnecessary:
 1. Sort selected findings by severity and saved-review order.
 2. Work one finding at a time.
 3. Reread the implicated source and test files before editing.
-4. Apply only the minimal scoped change for the current finding.
-5. Verify the changed surface with the narrowest available check.
-6. Record fixed, skipped, or deferred evidence before moving on.
-7. Compress carry-forward context to the remaining selected finding ids,
+4. Decide `fix`, `defer`, or `skip` for the current target before broadening
+   work.
+5. Record stale-evidence notes whenever the current code no longer matches the
+   saved review evidence well enough for safe remediation.
+6. Apply only the minimal scoped change for the current `fix` target.
+7. Verify the changed surface with the narrowest available check.
+8. Record fixed, skipped, or deferred evidence before moving on.
+9. Compress carry-forward context to the remaining selected finding ids,
    modified files, verification state, and unresolved blockers.
 
 This fallback is the default safe path; it is not a degraded permission to skip

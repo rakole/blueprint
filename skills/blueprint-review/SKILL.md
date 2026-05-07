@@ -168,16 +168,20 @@ artifacts, and optional review agents when the command contract allows them.
    `nextSafeAction`. Let MCP own depth, scope/source, evidence inventory,
    severity counts, path, and Markdown rendering.
 14. Validate through `blueprint_review_validate_model`; repair every returned
-   diagnostic against `authoringContext.taskSchema`, then retry validation once.
+   diagnostic against `contract.modelContract.jsonSchema`,
+   `authoringContext.taskSchema`, and the returned diagnostics, then retry
+   validation once.
 15. Persist the validated model through `blueprint_review_record` with the
    `code-review` artifact, resolved `scopeFiles`, and the returned
    `reviewMode.source` as `scopeSource`. Use `scopeSource: "explicit-files"`
    only when the user supplied explicit file arguments. Do not pass Markdown
    `content` for code-review, and do not hand-edit `.blueprint/`.
 16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-secure-phase <phase>` when the phase still lacks a security artifact,
+   `/blu-secure-phase <phase>` when the phase still lacks a security artifact.
+   When concrete follow-up fixes also remain, keep `/blu-code-review-fix
+   <phase>` visible as the secondary queued recommendation. Otherwise prefer
    `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
-   otherwise `/blu-progress`.
+   `/blu-progress` when they do not.
 
 ### `code-review-fix`
 
@@ -206,20 +210,27 @@ artifacts, and optional review agents when the command contract allows them.
    not authorize any auto-fixer behavior, automatic commits, branch creation,
    or hidden iterative re-review loops.
    It does not authorize automatic commits, branch creation, or iterative re-review loops.
+   When the user did not explicitly choose targets, default the remediation
+   candidate set to saved `follow-up` findings only and treat observations,
+   accepted risks, validation-only follow-ups, process notes, and stale
+   evidence as defer-or-skip inputs unless explicitly selected.
 8. Require explicit confirmation of the selected findings unless the user
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
 9. Keep repo mutation tightly bounded to the selected review findings and the
    implicated repo files.
 10. Use `blueprint-reviewer` for bounded reclassification when the saved review
-   is broad or ambiguous. The subagent stays read-only: it may sort,
-   reclassify, or recommend selected/deferred findings, but it must not apply
+   is broad or ambiguous. The subagent stays read-only: it may only sort the
+   selected saved target ids into `fix`, `defer`, or `skip`, flag stale
+   evidence, and recommend a bounded selection posture. It must not apply
    fixes, persist artifacts, create commits, or act as a browser/web/search-only
    substitute for codebase analysis.
 11. When the subagent is unavailable or unnecessary, use the no-subagent
-   fallback from the runtime contract: process one selected finding at a time,
-   reread implicated files, apply the minimal scoped change, verify the changed
-   surface, record fixed/skipped/deferred evidence, and compress carry-forward
-   context before moving to the next finding.
+    fallback from the runtime contract: process one selected target at a time,
+    reread implicated files, decide `fix`, `defer`, or `skip`, record
+    stale-evidence notes when needed, apply the minimal scoped change only for
+    `fix` decisions, verify the changed surface, record fixed/skipped/deferred
+    evidence, and compress carry-forward context before moving to the next
+    target.
 12. Keep the active stage visible as the run moves through `Resolve`, `Read`,
     `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
     resolved scope, active stage, pending gate, execution mode, and next safe
@@ -235,12 +246,13 @@ artifacts, and optional review agents when the command contract allows them.
     run stays inline, uses the reviewer subagent, or is following an explicit
     versus bounded `--auto` selection path.
 15. Author only the `review.review-fix` JSON model. Use lifecycle statuses
-   `COMPLETED`, `PARTIAL`, or `BLOCKED`; preserve the locked markers `Status`,
-   `Readiness`, `Completion State`, and `Next Safe Action`; and fill rendered
-   heading evidence for `Remediation Summary`, `Findings Addressed`,
-   `Changes Made`, `Verification`, `Dependency Plans`,
-   `Manual / Deferred Work`, `Gap / Repair Routes`, `Follow-Ups`, `Evidence`,
-   and `Next Safe Action`.
+   `COMPLETED`, `PARTIAL`, or `BLOCKED`; populate the schema's camelCase fields
+   such as `remediationSummary`, `findingsAddressed`, `changesMade`,
+   `verification`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`,
+   `followUps`, `evidence`, and `nextSafeAction`; and preserve the meaning of
+   the locked markers `Status`, `Readiness`, `Completion State`, and
+   `Next Safe Action` through those fields. Literal rendered headings or
+   locked-marker labels are forbidden as JSON keys.
 16. Validate through `blueprint_review_validate_model`; repair every returned
    diagnostic against `authoringContext.taskSchema`, then retry validation once.
    Pass the same `targetIds` array used for authoring context. Markdown `content`
@@ -250,10 +262,12 @@ artifacts, and optional review agents when the command contract allows them.
    `targetIds` selection.
 18. If `blueprint_review_record` rejects the model, stop with the MCP reason and
    do not write the artifact by hand.
-19. Update `STATE.md` through `blueprint_state_update` so follow-up routing stays
-   inside implemented commands. Prefer `/blu-validate-phase <phase>` when
-   behavior changed, `/blu-add-tests <phase>` when missing tests are the main
-   remaining gap, and `/blu-progress` otherwise.
+19. Update `STATE.md` through `blueprint_state_update` with `base: "synced"`
+   plus an explicit patch for `activeCommand`, `currentPhase`, and
+   `nextAction` so follow-up routing stays inside implemented commands. Prefer
+   `/blu-validate-phase <phase>` when behavior changed, `/blu-add-tests <phase>`
+   when missing tests are the main remaining gap, and `/blu-progress`
+   otherwise.
 20. No auto-fixer behavior is shipped. Do not invent a `blueprint-fixer`,
     implicit branch or commit flow, or hidden iterative re-review pass.
 
