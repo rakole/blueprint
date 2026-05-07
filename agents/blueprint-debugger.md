@@ -11,7 +11,7 @@ description: >
   steps.
 kind: local
 tools:
-  - *
+  - "*"
 max_turns: 30
 timeout_mins: 15
 ---

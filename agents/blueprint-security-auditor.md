@@ -9,7 +9,7 @@ description: >
   comparing a revised phase against an earlier security audit.
 kind: local
 tools:
-  - *
+  - "*"
 max_turns: 30
 timeout_mins: 15
 ---
