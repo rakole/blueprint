@@ -63,7 +63,10 @@ Call these tools in this order unless the command must stop early:
 2. `mcp_blueprint_blueprint_artifact_contract_read` for
    `review.code-review`
    - Controls the required headings, locked markers, and authoring template.
-   - Treat the returned `authoringTemplate` as the shape to repair toward.
+   - Treat the returned `authoringTemplate` as renderer preview only. Repair
+     against `contract.modelContract.jsonSchema`,
+     `blueprint_review_scope.authoringContext.taskSchema`, and returned
+     diagnostics instead of rendered Markdown shape.
 3. `mcp_blueprint_blueprint_review_scope`
    - Controls whether review is enabled, the exact repo files, scope source,
      effective review depth, saved evidence inventory, and scope warnings.
@@ -190,11 +193,12 @@ Do not replace the missing subagent with browser/web/search-only analysis.
 - If `XX-REVIEW.md` already exists and the new body differs, require explicit
   overwrite confirmation before passing `overwrite: true`.
 - If `blueprint_review_validate_model` returns `status: "invalid"`, repair the
-  authored model against `authoringContext.taskSchema` and every diagnostic,
-  then retry validation once before persistence.
+  authored model against `contract.modelContract.jsonSchema`,
+  `authoringContext.taskSchema`, and every diagnostic, then retry validation
+  once before persistence.
 - If `blueprint_review_record` returns `status: "invalid"`, repair the same
-  model against the returned validator diagnostics, then retry once through
-  `blueprint_review_record`.
+  model against the returned validator diagnostics plus the same JSON Schema and
+  narrowed task schema, then retry once through `blueprint_review_record`.
 - If the retry is still invalid, stop with the invalid reasons and do not
   hand-edit `.blueprint/`.
 - If the record call throws because overwrite was not confirmed, surface the
@@ -218,6 +222,9 @@ The review is strong enough to persist only when:
 - uncertainty is stated plainly instead of upgraded into false certainty
 - severity counts match the findings
 - next-step guidance names only implemented Blueprint commands
+- when security still routes first and concrete follow-up fixes remain,
+  `/blu-secure-phase <phase>` stays primary while `/blu-code-review-fix <phase>`
+  remains visible as the secondary queued follow-up
 
 ## Completion Criteria
 

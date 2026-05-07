@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -38,6 +39,15 @@ type NumericInput = string | number;
 
 type ReviewFindingSeverity = "critical" | "high" | "medium" | "low" | "unknown";
 type ReviewFindingDisposition = "follow-up" | "observation" | "blocked" | "accepted-risk";
+type ReviewFixTargetClassification =
+  | "fixable"
+  | "test-gap"
+  | "validation-only"
+  | "routing-note"
+  | "no-op"
+  | "blocked"
+  | "observation"
+  | "accepted-risk";
 type CodeReviewEvidenceCoverageStatus = "used" | "deferred" | "irrelevant";
 type ReviewFixStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
 type ReviewFixReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
@@ -74,11 +84,31 @@ type PeerReviewManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type PeerReviewGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type PeerReviewEvidenceCoverageStatus = "used" | "deferred" | "unavailable";
 
+type ReviewFindingLocation = {
+  display: string;
+  file: string;
+  startLine: number;
+  endLine: number | null;
+};
+
 type ReviewFinding = {
   id: string;
+  visibleId: string | null;
+  stableId: string | null;
+  legacyDerived: boolean;
   severity: ReviewFindingSeverity;
   summary: string;
   sourceSection: string | null;
+  disposition: ReviewFindingDisposition | null;
+  location: ReviewFindingLocation | null;
+  file: string | null;
+  startLine: number | null;
+  endLine: number | null;
+  evidence: string | null;
+  impact: string | null;
+  recommendation: string | null;
+  classification: ReviewFixTargetClassification | null;
+  defaultEligible: boolean;
 };
 
 type ReviewRecordArgs = {
@@ -111,6 +141,9 @@ type ReviewRecordResult = {
     followUps: number;
   };
   followUps: string[];
+  diagnostics?: ReviewModelDiagnostic[];
+  diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+  taskSchema?: Record<string, unknown> | null;
   warnings: string[];
 };
 
@@ -164,6 +197,8 @@ type CodeReviewAuthoringContext = {
   };
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
+  preferredNextSafeAction: string | null;
+  secondaryNextSafeAction: string | null;
   schemaPath: string;
   baseSchema: Record<string, unknown>;
   taskSchema: Record<string, unknown>;
@@ -214,6 +249,7 @@ type ReviewLoadFindingsResult = {
   findings: ReviewFinding[];
   severityCounts: Record<ReviewFindingSeverity, number>;
   followUps: string[];
+  followUpTargets: ReviewFixTarget[];
   reason: string | null;
   warnings: string[];
 };
@@ -243,10 +279,23 @@ type CodeReviewStructuredModel = {
 
 type ReviewFixTarget = {
   targetId: string;
+  visibleId: string | null;
+  stableId: string | null;
+  legacyDerived: boolean;
   source: "finding" | "follow-up";
   severity: ReviewFindingSeverity;
   summary: string;
   sourceSection: string | null;
+  disposition: ReviewFindingDisposition | null;
+  location: string | null;
+  file: string | null;
+  startLine: number | null;
+  endLine: number | null;
+  evidence: string | null;
+  impact: string | null;
+  recommendation: string | null;
+  classification: ReviewFixTargetClassification;
+  defaultEligible: boolean;
 };
 
 type ReviewFixStructuredModel = {
@@ -767,6 +816,11 @@ const PEER_REVIEW_MODEL_IDENTITY_KEYS = new Set([
 
 const CODE_REVIEW_LOCATION_PATTERN =
   /^((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
+const VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
+const CANONICAL_CODE_REVIEW_FINDING_PATTERN =
+  /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
+const LEGACY_CODE_REVIEW_FINDING_PATTERN =
+  /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
 const CODE_REVIEW_NEXT_ACTION_BUILDERS = [
   (phaseNumber: string) => `/blu-code-review-fix ${phaseNumber}`,
   (phaseNumber: string) => `/blu-secure-phase ${phaseNumber}`,
@@ -892,10 +946,43 @@ function formatReviewTargetId(prefix: "F" | "FU", index: number): string {
   return `${prefix}-${String(index + 1).padStart(2, "0")}`;
 }
 
+function extractVisibleReviewTargetId(value: string): string | null {
+  const trimmed = value.trim();
+  const startMatch = trimmed.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
+
+  if (startMatch) {
+    return startMatch[1].toUpperCase();
+  }
+
+  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN);
+
+  return inlineMatch ? inlineMatch[1].toUpperCase() : null;
+}
+
 function stripVisibleReviewTargetId(value: string): string {
   return value
-    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
+    .replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "")
     .trim();
+}
+
+function buildLegacyReviewTargetId(
+  prefix: "F" | "FU",
+  sourceSection: string | null,
+  value: string
+): string {
+  const digest = createHash("sha1")
+    .update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`)
+    .digest("hex")
+    .slice(0, 10)
+    .toUpperCase();
+
+  return `${prefix}-LEGACY-${digest}`;
+}
+
+function sanitizeMarkdownScalar(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function renderIdentifiedBulletList(
@@ -921,7 +1008,27 @@ function isGenericNoneValue(value: string): boolean {
 }
 
 function hasPlaceholderLanguage(value: string): boolean {
-  return /\b(?:todo|tbd|placeholder|replace me|fill in|insert here|coming soon)\b/i.test(value);
+  const normalized = value.trim();
+
+  if (/\b(?:placeholder|replace me|fill in|insert here|coming soon)\b/i.test(normalized)) {
+    return true;
+  }
+
+  return /^(?:todo|tbd)(?:\b|[:\s-])/i.test(normalized) && normalized.length <= 120;
+}
+
+function inferCodeReviewSecondaryNextSafeAction(
+  allowedNextActions: string[],
+  preferredNextSafeAction: string | null
+): string | null {
+  const repairAction =
+    allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? null;
+
+  if (!repairAction || repairAction === preferredNextSafeAction) {
+    return null;
+  }
+
+  return repairAction;
 }
 
 async function getImplementedCommandNames(): Promise<Set<string> | null> {
@@ -1056,6 +1163,8 @@ function buildCodeReviewTaskSchema(args: {
   scopeFiles: string[];
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
+  preferredNextSafeAction: string | null;
+  secondaryNextSafeAction: string | null;
 }): Record<string, unknown> {
   const schema = cloneJsonObject(args.baseSchema);
   const properties = getJsonObjectProperty(schema, "properties");
@@ -1092,6 +1201,14 @@ function buildCodeReviewTaskSchema(args: {
     Object.assign(location, buildTaskLocationSchema(args.scopeFiles));
   }
 
+  schema["x-blueprint-runtimeContext"] = {
+    preferredNextSafeAction: args.preferredNextSafeAction,
+    secondaryNextSafeAction: args.secondaryNextSafeAction,
+    allowedNextActions: args.allowedNextActions,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    scopeFiles: args.scopeFiles
+  };
+
   return schema;
 }
 
@@ -1111,12 +1228,23 @@ async function buildCodeReviewAuthoringContext(args: {
   }
 
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
+  const preferredNextSafeAction =
+    allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ??
+    allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ??
+    allowedNextActions[0] ??
+    null;
+  const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
+    allowedNextActions,
+    preferredNextSafeAction
+  );
   const baseSchema = cloneJsonObject(modelContract.jsonSchema);
   const taskSchema = buildCodeReviewTaskSchema({
     baseSchema,
     scopeFiles: args.files,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
-    allowedNextActions
+    allowedNextActions,
+    preferredNextSafeAction,
+    secondaryNextSafeAction
   });
 
   return {
@@ -1125,6 +1253,8 @@ async function buildCodeReviewAuthoringContext(args: {
     reviewMode: { ...args.reviewMode },
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
+    preferredNextSafeAction,
+    secondaryNextSafeAction,
     schemaPath: modelContract.schemaPath,
     baseSchema,
     taskSchema
@@ -1524,21 +1654,27 @@ function allowOnlyEmptyArray(schema: Record<string, unknown>): void {
 
 function reviewFixTargetsFromFindings(loaded: ReviewLoadFindingsResult): ReviewFixTarget[] {
   const findingTargets: ReviewFixTarget[] = loaded.findings.map((finding) => ({
-    targetId: finding.id,
+    targetId: finding.visibleId ?? finding.stableId ?? finding.id,
+    visibleId: finding.visibleId,
+    stableId: finding.stableId,
+    legacyDerived: finding.legacyDerived,
     source: "finding",
     severity: finding.severity,
     summary: finding.summary,
-    sourceSection: finding.sourceSection
-  }));
-  const followUpTargets: ReviewFixTarget[] = loaded.followUps.map((followUp, index) => ({
-    targetId: `FU-${String(index + 1).padStart(2, "0")}`,
-    source: "follow-up",
-    severity: "unknown",
-    summary: followUp,
-    sourceSection: "Follow-Ups"
+    sourceSection: finding.sourceSection,
+    disposition: finding.disposition,
+    location: finding.location?.display ?? null,
+    file: finding.file,
+    startLine: finding.startLine,
+    endLine: finding.endLine,
+    evidence: finding.evidence,
+    impact: finding.impact,
+    recommendation: finding.recommendation,
+    classification: finding.classification ?? "fixable",
+    defaultEligible: finding.defaultEligible
   }));
 
-  return [...findingTargets, ...followUpTargets];
+  return [...findingTargets, ...loaded.followUpTargets];
 }
 
 function resolveReviewFixSelectedTargetIds(args: {
@@ -1549,12 +1685,17 @@ function resolveReviewFixSelectedTargetIds(args: {
   const requested = args.targetIds?.map((targetId) => targetId.trim()).filter(Boolean);
   const selectedTargetIds = requested && requested.length > 0
     ? [...new Set(requested)]
-    : args.targets.map((target) => target.targetId);
+    : args.targets.filter((target) => target.defaultEligible).map((target) => target.targetId);
   const unknown = selectedTargetIds.filter((targetId) => !available.has(targetId));
   const issues: string[] = [];
 
   if (selectedTargetIds.length === 0) {
-    issues.push("review.review-fix requires at least one selected saved review target.");
+    const explicitOnlyTargets = args.targets.filter((target) => !target.defaultEligible);
+    issues.push(
+      explicitOnlyTargets.length > 0
+        ? `review.review-fix default selection found only explicit-only saved review targets: ${explicitOnlyTargets.map((target) => `${target.targetId} (${target.classification})`).join(", ")}. Pass targetIds explicitly.`
+        : "review.review-fix requires at least one selected saved review target."
+    );
   }
   if (unknown.length > 0) {
     issues.push(`Selected review-fix target ids are not present in the saved review baseline: ${unknown.join(", ")}.`);
@@ -1661,6 +1802,7 @@ function reviewFixEvidenceKindForSource(source: string): "review" | "plan" | "su
 
 async function buildReviewFixTaskSchema(args: {
   baseSchema: Record<string, unknown>;
+  targets: ReviewFixTarget[];
   selectedTargetIds: string[];
   dependencyPlans: Array<{ planId: string; path: string }>;
   executionDebt: ReviewFixExecutionDebt;
@@ -1869,6 +2011,7 @@ async function buildReviewFixTaskSchema(args: {
   ];
 
   schema["x-blueprint-runtimeContext"] = {
+    targets: args.targets,
     selectedTargetIds: args.selectedTargetIds,
     dependencyPlans: args.dependencyPlans,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -2087,6 +2230,7 @@ async function buildReviewFixAuthoringContext(args: {
     hardBlockers.length === 0 && loaded.path
       ? await buildReviewFixTaskSchema({
           baseSchema: reviewFixBaseSchema,
+          targets,
           selectedTargetIds: selected.selectedTargetIds,
           dependencyPlans,
           executionDebt,
@@ -3386,12 +3530,18 @@ function collectListItems(block: string): string[] {
     .filter((item) => item.length > 0);
 }
 
-function extractMarkdownSectionItems(
+function extractMarkdownSectionRawItems(
   content: string,
   headingPattern: RegExp
-): string[] {
+): Array<{
+  heading: string;
+  items: string[];
+}> {
   const lines = content.split("\n");
-  const items: string[] = [];
+  const entries: Array<{
+    heading: string;
+    items: string[];
+  }> = [];
 
   for (let index = 0; index < lines.length; index += 1) {
     const headingMatch = lines[index].match(/^(##+)\s+(.+)$/);
@@ -3413,10 +3563,24 @@ function extractMarkdownSectionItems(
       sectionLines.push(lines[innerIndex]);
     }
 
-    items.push(...collectListItems(sectionLines.join("\n")));
+    entries.push({
+      heading: headingMatch[2].trim(),
+      items: collectListItems(sectionLines.join("\n"))
+    });
   }
 
-  return [...new Set(items)];
+  return entries;
+}
+
+function extractMarkdownSectionItems(
+  content: string,
+  headingPattern: RegExp
+): string[] {
+  return [
+    ...new Set(
+      extractMarkdownSectionRawItems(content, headingPattern).flatMap((entry) => entry.items)
+    )
+  ];
 }
 
 function normalizeReviewListItem(item: string): string {
@@ -3582,12 +3746,12 @@ function parseSecurityThreatRegisterFindings(content: string): ReviewFinding[] {
       }
 
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: "unknown",
         summary,
         sourceSection: "Threat Register"
-      });
+      }));
     }
   }
 
@@ -3677,12 +3841,12 @@ function inferFindingSeverity(
 
 function normalizeFindingSummary(item: string): string {
   return item
-    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
+    .replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "")
     .replace(
-      /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass|fixed|deferred|skipped)\]\s*)+/i,
+      /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|accepted-risk|pass|fixed|deferred|skipped)\]\s*)+/i,
       ""
     )
-    .replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "")
+    .replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "")
     .replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "")
     .replace(
       /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
@@ -3692,19 +3856,291 @@ function normalizeFindingSummary(item: string): string {
 }
 
 function extractReviewFixTargetId(item: string): string | null {
-  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
-
-  return match ? match[1].toUpperCase() : null;
+  return extractVisibleReviewTargetId(item);
 }
 
 function normalizeReviewFixFindingSummary(item: string): string {
-  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
+  const match = item.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
 
   if (!match) {
     return normalizeFindingSummary(item);
   }
 
   return item.slice((match.index ?? 0) + match[0].length).trim();
+}
+
+function buildReviewFinding(args: {
+  id: string;
+  visibleId?: string | null;
+  stableId?: string | null;
+  legacyDerived?: boolean;
+  severity?: ReviewFindingSeverity;
+  summary: string;
+  sourceSection: string | null;
+  disposition?: ReviewFindingDisposition | null;
+  location?: string | null;
+  evidence?: string | null;
+  impact?: string | null;
+  recommendation?: string | null;
+  classification?: ReviewFixTargetClassification | null;
+  defaultEligible?: boolean;
+}): ReviewFinding {
+  const parsedLocation = args.location ? parseCodeReviewLocation(args.location) : null;
+
+  return {
+    id: args.id,
+    visibleId: args.visibleId ?? null,
+    stableId: args.stableId ?? null,
+    legacyDerived: args.legacyDerived ?? false,
+    severity: args.severity ?? "unknown",
+    summary: args.summary,
+    sourceSection: args.sourceSection,
+    disposition: args.disposition ?? null,
+    location: parsedLocation
+      ? {
+          display: args.location ?? `${parsedLocation.file}:${parsedLocation.startLine}`,
+          file: parsedLocation.file,
+          startLine: parsedLocation.startLine,
+          endLine: parsedLocation.endLine
+        }
+      : null,
+    file: parsedLocation?.file ?? null,
+    startLine: parsedLocation?.startLine ?? null,
+    endLine: parsedLocation?.endLine ?? null,
+    evidence: args.evidence ?? null,
+    impact: args.impact ?? null,
+    recommendation: args.recommendation ?? null,
+    classification: args.classification ?? null,
+    defaultEligible: args.defaultEligible ?? false
+  };
+}
+
+function classificationForFindingDisposition(
+  disposition: ReviewFindingDisposition | null
+): ReviewFixTargetClassification | null {
+  if (disposition === "follow-up") {
+    return "fixable";
+  }
+  if (disposition === "blocked") {
+    return "blocked";
+  }
+  if (disposition === "observation") {
+    return "observation";
+  }
+  if (disposition === "accepted-risk") {
+    return "accepted-risk";
+  }
+
+  return null;
+}
+
+function classifyFollowUpTarget(summary: string): ReviewFixTargetClassification {
+  const normalized = normalizeReviewListItem(summary);
+
+  if (normalized.length === 0 || isPlaceholderReviewListItem(summary)) {
+    return "no-op";
+  }
+
+  if (
+    /(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) ||
+    /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) ||
+    /\/blu-add-tests\b/i.test(summary)
+  ) {
+    return "test-gap";
+  }
+
+  if (
+    /\b(?:verify|verification|validate|validation|uat|manual qa|smoke check|re-run)\b/i.test(summary) ||
+    /\/blu-(?:validate-phase|verify-work)\b/i.test(summary)
+  ) {
+    return "validation-only";
+  }
+
+  if (
+    /\/blu-(?:progress|secure-phase|plan-phase|review|execute-phase|pause-work|resume-work)\b/i.test(summary) ||
+    /\b(?:route|routing|document|triage|coordinate|handoff|process note)\b/i.test(summary)
+  ) {
+    return "routing-note";
+  }
+
+  if (/\b(?:no action|no change|already covered|informational only)\b/i.test(summary)) {
+    return "no-op";
+  }
+
+  return "fixable";
+}
+
+function isDefaultReviewFixClassification(
+  classification: ReviewFixTargetClassification
+): boolean {
+  return classification === "fixable";
+}
+
+function parseCodeReviewFindingEntry(
+  item: string,
+  sourceSection: string,
+  index: number
+): ReviewFinding {
+  const visibleId = extractVisibleReviewTargetId(item);
+  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+
+  if (canonical) {
+    const [, severity, disposition, canonicalId, location, evidence, impact, recommendation] = canonical;
+    const normalizedDisposition = disposition.toLowerCase() as ReviewFindingDisposition;
+    const classification = normalizedDisposition === "follow-up"
+      ? classifyFollowUpTarget(recommendation)
+      : classificationForFindingDisposition(normalizedDisposition);
+
+    return buildReviewFinding({
+      id: canonicalId.toUpperCase(),
+      visibleId: canonicalId.toUpperCase(),
+      stableId: null,
+      legacyDerived: false,
+      severity: severity.toLowerCase() as ReviewFindingSeverity,
+      summary: sanitizeMarkdownScalar(recommendation),
+      sourceSection,
+      disposition: normalizedDisposition,
+      location,
+      evidence,
+      impact,
+      recommendation,
+      classification,
+      defaultEligible: isDefaultReviewFixClassification(classification ?? "routing-note")
+    });
+  }
+
+  const legacyCanonical = item.match(LEGACY_CODE_REVIEW_FINDING_PATTERN);
+
+  if (legacyCanonical) {
+    const [, severity, disposition, location, evidence, impact, recommendation] = legacyCanonical;
+    const normalizedDisposition = disposition.toLowerCase() as ReviewFindingDisposition;
+    const classification = normalizedDisposition === "follow-up"
+      ? classifyFollowUpTarget(recommendation)
+      : classificationForFindingDisposition(normalizedDisposition);
+    const stableId = buildLegacyReviewTargetId("F", sourceSection, item);
+
+    return buildReviewFinding({
+      id: stableId,
+      visibleId: null,
+      stableId,
+      legacyDerived: true,
+      severity: severity.toLowerCase() as ReviewFindingSeverity,
+      summary: sanitizeMarkdownScalar(recommendation),
+      sourceSection,
+      disposition: normalizedDisposition,
+      location,
+      evidence,
+      impact,
+      recommendation,
+      classification,
+      defaultEligible: isDefaultReviewFixClassification(classification ?? "routing-note")
+    });
+  }
+
+  const stripped = stripVisibleReviewTargetId(item);
+  const locationMatch = [...stripped.matchAll(/`([^`]+)`/g)][0]?.[1] ?? null;
+  const recommendationMatch = stripped.match(/Fix\/verification:\s*(.+)$/i);
+  const summary = sanitizeMarkdownScalar(recommendationMatch?.[1] ?? normalizeFindingSummary(stripped));
+  const severity = inferFindingSeverity(sourceSection, item);
+  const stableId = visibleId === null ? buildLegacyReviewTargetId("F", sourceSection, item) : null;
+  const classification = classifyFollowUpTarget(summary);
+
+  return buildReviewFinding({
+    id: visibleId ?? stableId!,
+    visibleId,
+    stableId,
+    legacyDerived: visibleId === null,
+    severity,
+    summary,
+    sourceSection,
+    disposition: /follow-?up/i.test(item) ? "follow-up" : null,
+    location: locationMatch,
+    classification,
+    defaultEligible: isDefaultReviewFixClassification(classification)
+  });
+}
+
+function parseCodeReviewFollowUpTargets(content: string): {
+  followUps: string[];
+  targets: ReviewFixTarget[];
+} {
+  const followUps: string[] = [];
+  const targets: ReviewFixTarget[] = [];
+
+  for (const entry of extractMarkdownSectionRawItems(content, /^Follow-?Ups$/i)) {
+    for (const item of entry.items) {
+      const visibleId = extractVisibleReviewTargetId(item);
+      const summary = stripVisibleReviewTargetId(item);
+      const classification = classifyFollowUpTarget(summary);
+      const placeholderOnly = isPlaceholderReviewListItem(summary);
+      const stableId =
+        visibleId === null ? buildLegacyReviewTargetId("FU", entry.heading, item) : null;
+
+      if (!placeholderOnly) {
+        followUps.push(summary);
+      }
+
+      if (placeholderOnly && visibleId === null) {
+        continue;
+      }
+
+      targets.push({
+        targetId: visibleId ?? stableId!,
+        visibleId,
+        stableId,
+        legacyDerived: visibleId === null,
+        source: "follow-up",
+        severity: "unknown",
+        summary: summary.length > 0 ? summary : "none",
+        sourceSection: entry.heading,
+        disposition: null,
+        location: null,
+        file: null,
+        startLine: null,
+        endLine: null,
+        evidence: null,
+        impact: null,
+        recommendation: null,
+        classification,
+        defaultEligible: isDefaultReviewFixClassification(classification)
+      });
+    }
+  }
+
+  return {
+    followUps: uniqueOrderedStrings(followUps),
+    targets
+  };
+}
+
+function parseCodeReviewFindings(content: string): {
+  findings: ReviewFinding[];
+  severityCounts: Record<ReviewFindingSeverity, number>;
+  followUps: string[];
+  followUpTargets: ReviewFixTarget[];
+} {
+  const findings = extractMarkdownSectionRawItems(content, /^Findings$/i)
+    .flatMap((entry) =>
+      entry.items
+        .filter((item) => !isPlaceholderReviewListItem(item))
+        .map((item, index) => parseCodeReviewFindingEntry(item, entry.heading, index))
+    );
+  const severityCounts = emptySeverityCounts();
+
+  findings.forEach((finding) => {
+    severityCounts[finding.severity] += 1;
+  });
+
+  const followUps = parseCodeReviewFollowUpTargets(content);
+
+  return {
+    findings,
+    severityCounts,
+    followUps: followUps.followUps,
+    followUpTargets: followUps.targets
+  };
 }
 
 function resolveFindingsHeadingPattern(artifact: ReviewArtifactKind): RegExp {
@@ -3797,12 +4233,12 @@ function parseSecurityFindingsTableFindings(content: string): ReviewFinding[] {
       }
 
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeSecurityFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
     }
   }
 
@@ -3901,12 +4337,12 @@ function parseUiReviewFindingsTable(content: string): {
       }
 
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeUiReviewFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
 
       if (
         recommendation.length > 0 &&
@@ -3992,12 +4428,12 @@ function parsePeerReviewFindingsTableFindings(content: string): ReviewFinding[] 
       }
 
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeSecurityFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
     }
   }
 
@@ -4011,7 +4447,12 @@ function parseFindingsFromArtifact(
   findings: ReviewFinding[];
   severityCounts: Record<ReviewFindingSeverity, number>;
   followUps: string[];
+  followUpTargets: ReviewFixTarget[];
 } {
+  if (artifact === "code-review") {
+    return parseCodeReviewFindings(content);
+  }
+
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings: ReviewFinding[] = [];
   const seenFindingKeys = new Set<string>();
@@ -4039,12 +4480,14 @@ function parseFindingsFromArtifact(
       const severity = inferFindingSeverity(entry.heading, item);
       seenFindingKeys.add(findingKey);
       severityCounts[severity] += 1;
-      findings.push({
+      findings.push(buildReviewFinding({
         id: reviewFixTargetId ?? `F-${String(findings.length + 1).padStart(2, "0")}`,
+        visibleId: reviewFixTargetId,
+        legacyDerived: reviewFixTargetId === null,
         severity,
         summary,
         sourceSection: entry.heading
-      });
+      }));
     }
   }
 
@@ -4056,12 +4499,24 @@ function parseFindingsFromArtifact(
 
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
 
     for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
@@ -4071,12 +4526,24 @@ function parseFindingsFromArtifact(
 
       seenFindingKeys.add(threatFinding.summary);
       severityCounts[threatFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: threatFinding.severity,
-        summary: threatFinding.summary,
-        sourceSection: threatFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: threatFinding.visibleId,
+          stableId: threatFinding.stableId,
+          legacyDerived: threatFinding.legacyDerived,
+          severity: threatFinding.severity,
+          summary: threatFinding.summary,
+          sourceSection: threatFinding.sourceSection,
+          disposition: threatFinding.disposition,
+          location: threatFinding.location?.display ?? null,
+          evidence: threatFinding.evidence,
+          impact: threatFinding.impact,
+          recommendation: threatFinding.recommendation,
+          classification: threatFinding.classification,
+          defaultEligible: threatFinding.defaultEligible
+        })
+      );
     }
   }
 
@@ -4091,12 +4558,24 @@ function parseFindingsFromArtifact(
 
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
   }
 
@@ -4108,12 +4587,24 @@ function parseFindingsFromArtifact(
 
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
   }
 
@@ -4126,7 +4617,8 @@ function parseFindingsFromArtifact(
         /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
       ),
       ...parsedFollowUps
-    ])
+    ]),
+    followUpTargets: []
   };
 }
 
@@ -4163,6 +4655,9 @@ function reviewRecordInvalidResult(args: {
   reportPath: string;
   counts?: ReviewRecordResult["counts"];
   followUps?: string[];
+  diagnostics?: ReviewModelDiagnostic[];
+  diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+  taskSchema?: Record<string, unknown> | null;
   warnings: string[];
 }): ReviewRecordResult {
   return {
@@ -4183,6 +4678,9 @@ function reviewRecordInvalidResult(args: {
         followUps: 0
       },
     followUps: args.followUps ?? [],
+    diagnostics: args.diagnostics,
+    diagnosticCounts: args.diagnosticCounts,
+    taskSchema: args.taskSchema ?? null,
     warnings: args.warnings
   };
 }
@@ -4242,7 +4740,7 @@ function renderCodeReviewFinding(
   finding: CodeReviewStructuredModel["findings"][number],
   index: number
 ): string {
-  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${sanitizeMarkdownScalar(finding.location)}\` - Evidence: ${sanitizeMarkdownScalar(finding.evidence)} Impact: ${sanitizeMarkdownScalar(finding.impact)} Fix/verification: ${sanitizeMarkdownScalar(finding.recommendation)}`;
 }
 
 function renderCodeReviewEvidenceCoverage(args: {
@@ -5943,6 +6441,7 @@ function addEvidenceCoverageDiagnostics(args: {
 
 async function addFindingLocationDiagnostics(args: {
   diagnostics: ReviewModelDiagnostic[];
+  warnings: string[];
   projectRoot: string;
   model: CodeReviewStructuredModel;
   scopeFiles: string[];
@@ -5950,6 +6449,14 @@ async function addFindingLocationDiagnostics(args: {
   const scopeSet = new Set(args.scopeFiles);
   const seenLocations = new Map<string, number>();
   const rangesByFile = new Map<string, Array<{ index: number; startLine: number; endLine: number }>>();
+  const distinctFindingDetails = (
+    left: CodeReviewStructuredModel["findings"][number],
+    right: CodeReviewStructuredModel["findings"][number]
+  ): boolean =>
+    left.disposition !== right.disposition ||
+    sanitizeMarkdownScalar(left.evidence) !== sanitizeMarkdownScalar(right.evidence) ||
+    sanitizeMarkdownScalar(left.impact) !== sanitizeMarkdownScalar(right.impact) ||
+    sanitizeMarkdownScalar(left.recommendation) !== sanitizeMarkdownScalar(right.recommendation);
 
   for (const [index, finding] of args.model.findings.entries()) {
     const parsed = parseCodeReviewLocation(finding.location);
@@ -6049,16 +6556,22 @@ async function addFindingLocationDiagnostics(args: {
 
     const previousIndex = seenLocations.get(finding.location);
     if (previousIndex !== undefined) {
-      args.diagnostics.push(
-        modelDiagnostic({
-          source: "residual",
-          path: `model.findings[${index}].location`,
-          code: "residual.duplicate_location",
-          message: `Code-review model repeats the same finding location: ${finding.location}.`,
-          context: { location: finding.location, firstFindingIndex: previousIndex, duplicateFindingIndex: index },
-          suggestion: "Merge duplicate findings or cite distinct line-backed evidence."
-        })
-      );
+      if (distinctFindingDetails(args.model.findings[previousIndex], finding)) {
+        args.warnings.push(
+          `Code-review model reuses location ${finding.location} for distinct findings (${previousIndex} and ${index}).`
+        );
+      } else {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.duplicate_location",
+            message: `Code-review model repeats the same finding location: ${finding.location}.`,
+            context: { location: finding.location, firstFindingIndex: previousIndex, duplicateFindingIndex: index },
+            suggestion: "Merge duplicate findings or cite distinct line-backed evidence."
+          })
+        );
+      }
     } else {
       seenLocations.set(finding.location, index);
     }
@@ -6069,20 +6582,26 @@ async function addFindingLocationDiagnostics(args: {
     );
 
     if (overlapping) {
-      args.diagnostics.push(
-        modelDiagnostic({
-          source: "residual",
-          path: `model.findings[${index}].location`,
-          code: "residual.conflicting_location",
-          message: `Code-review model has overlapping finding locations in ${parsed.file}.`,
-          context: {
-            file: parsed.file,
-            firstFindingIndex: overlapping.index,
-            conflictingFindingIndex: index
-          },
-          suggestion: "Merge overlapping findings unless they cite distinct, non-overlapping evidence."
-        })
-      );
+      if (distinctFindingDetails(args.model.findings[overlapping.index], finding)) {
+        args.warnings.push(
+          `Code-review model overlaps distinct finding ranges in ${parsed.file} (${overlapping.index} and ${index}).`
+        );
+      } else {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.conflicting_location",
+            message: `Code-review model has overlapping finding locations in ${parsed.file}.`,
+            context: {
+              file: parsed.file,
+              firstFindingIndex: overlapping.index,
+              conflictingFindingIndex: index
+            },
+            suggestion: "Merge overlapping findings unless they cite distinct, non-overlapping evidence."
+          })
+        );
+      }
     }
 
     ranges.push({
@@ -6197,8 +6716,12 @@ async function collectCodeReviewResidualDiagnostics(args: {
   model: Record<string, unknown>;
   normalizedModel: CodeReviewStructuredModel | null;
   authoringContext: CodeReviewAuthoringContext;
-}): Promise<ReviewModelDiagnostic[]> {
+}): Promise<{
+  diagnostics: ReviewModelDiagnostic[];
+  warnings: string[];
+}> {
   const diagnostics: ReviewModelDiagnostic[] = [];
+  const warnings: string[] = [];
   const identityKeys = Object.keys(args.model).filter((key) =>
     CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
   );
@@ -6219,7 +6742,7 @@ async function collectCodeReviewResidualDiagnostics(args: {
   addPlaceholderDiagnostics({ diagnostics, model: args.model });
 
   if (!args.normalizedModel) {
-    return diagnostics;
+    return { diagnostics, warnings };
   }
 
   addGenericValueDiagnostics({
@@ -6233,6 +6756,7 @@ async function collectCodeReviewResidualDiagnostics(args: {
   });
   await addFindingLocationDiagnostics({
     diagnostics,
+    warnings,
     projectRoot: args.projectRoot,
     model: args.normalizedModel,
     scopeFiles: args.authoringContext.files
@@ -6258,7 +6782,7 @@ async function collectCodeReviewResidualDiagnostics(args: {
     );
   }
 
-  return diagnostics;
+  return { diagnostics, warnings };
 }
 
 async function collectPeerReviewResidualDiagnostics(args: {
@@ -8276,6 +8800,7 @@ export async function blueprintReviewValidateModel(
 
   const modelObject = asJsonObject(args.model);
   const diagnostics: ReviewModelDiagnostic[] = [];
+  const validationWarnings: string[] = [];
 
   if (!modelObject) {
     const modelLabel =
@@ -8357,14 +8882,14 @@ export async function blueprintReviewValidateModel(
     } else {
       normalizedModel = normalizeCodeReviewModel(modelObject);
       const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
-      diagnostics.push(
-        ...await collectCodeReviewResidualDiagnostics({
-          projectRoot,
-          model: modelObject,
-          normalizedModel: residualModel,
-          authoringContext: context.authoringContext as CodeReviewAuthoringContext
-        })
-      );
+      const codeReviewResiduals = await collectCodeReviewResidualDiagnostics({
+        projectRoot,
+        model: modelObject,
+        normalizedModel: residualModel,
+        authoringContext: context.authoringContext as CodeReviewAuthoringContext
+      });
+      diagnostics.push(...codeReviewResiduals.diagnostics);
+      validationWarnings.push(...codeReviewResiduals.warnings);
     }
   }
 
@@ -8398,9 +8923,9 @@ export async function blueprintReviewValidateModel(
     const markdownIssues = [
       ...markdownValidation.issues,
       ...scopedValidation.issues,
-      ...evidenceCoverageIssues,
       ...nextSafeActionIssues
     ];
+    validationWarnings.push(...evidenceCoverageIssues);
 
     for (const issue of markdownIssues) {
       diagnostics.push(
@@ -8589,23 +9114,11 @@ export async function blueprintReviewValidateModel(
               ? normalizedPeerReviewModel
               : normalizedModel,
     renderPreview,
-    warnings: context.warnings
+    warnings: uniqueSortedStrings([...context.warnings, ...validationWarnings])
   };
 }
 
-function sameStringSet(left: string[], right: string[]): boolean {
-  const leftSet = new Set(left);
-  const rightSet = new Set(right);
-
-  if (leftSet.size !== rightSet.size) {
-    return false;
-  }
-
-  return [...leftSet].every((value) => rightSet.has(value));
-}
-
 async function resolveCodeReviewRecordValidationFiles(args: {
-  projectRoot: string;
   recordArgs: ReviewRecordArgs;
 }): Promise<string[] | undefined> {
   if (!args.recordArgs.scopeFiles || args.recordArgs.scopeFiles.length === 0) {
@@ -8616,19 +9129,6 @@ async function resolveCodeReviewRecordValidationFiles(args: {
     return args.recordArgs.scopeSource === "explicit-files"
       ? args.recordArgs.scopeFiles
       : undefined;
-  }
-
-  const implicitScope = await blueprintReviewScope({
-    cwd: args.projectRoot,
-    phase: args.recordArgs.phase,
-    depth: args.recordArgs.depth
-  });
-
-  if (
-    implicitScope.status === "ready" &&
-    sameStringSet(args.recordArgs.scopeFiles, implicitScope.files)
-  ) {
-    return undefined;
   }
 
   return args.recordArgs.scopeFiles;
@@ -8725,11 +9225,44 @@ export async function blueprintReviewRecord(
   let uiReviewValidatedModel: UiReviewStructuredModel | null = null;
 
   if (modelOnlyArtifact) {
+    if (
+      args.artifact === "code-review" &&
+      (args.scopeFiles?.length ?? 0) > 0 &&
+      !args.scopeSource
+    ) {
+      const context = await blueprintReviewAuthoringContext({
+        cwd: projectRoot,
+        phase: args.phase,
+        artifact: "code-review",
+        files: args.scopeFiles,
+        depth: args.depth
+      });
+      const diagnostics = [
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_required",
+          message: "Code-review record writes with scopeFiles must also provide scopeSource.",
+          context: { scopeFiles: args.scopeFiles },
+          suggestion: "Pass scopeSource alongside scopeFiles so Blueprint can preserve explicit scope provenance."
+        })
+      ];
+
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
+        artifact: args.artifact,
+        reportPath,
+        diagnostics,
+        diagnosticCounts: countDiagnostics(diagnostics),
+        taskSchema: context.taskSchema,
+        warnings: [...warnings, ...diagnostics.map(formatReviewDiagnostic)]
+      });
+    }
+
     const modelArtifact = args.artifact as "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     const validationFiles =
       args.artifact === "code-review"
         ? await resolveCodeReviewRecordValidationFiles({
-            projectRoot,
             recordArgs: args
           })
         : undefined;
@@ -8748,14 +9281,19 @@ export async function blueprintReviewRecord(
         located: locatedReviewPhase,
         artifact: args.artifact,
         reportPath,
+        diagnostics: validation.diagnostics,
+        diagnosticCounts: validation.diagnosticCounts,
+        taskSchema: validation.taskSchema,
         warnings: [
           ...warnings,
+          ...validation.warnings,
           ...validation.diagnostics.map(formatReviewDiagnostic)
         ]
       });
     }
 
     content = validation.renderPreview;
+    warnings.push(...validation.warnings);
     codeReviewScopeFiles = args.artifact === "code-review" ? validation.files : [];
     if (args.artifact === "ui-review" && validation.normalizedModel) {
       const uiModel = validation.normalizedModel as UiReviewStructuredModel;
@@ -8967,6 +9505,7 @@ export async function blueprintReviewLoadFindings(
       findings: [],
       severityCounts: emptySeverityCounts(),
       followUps: [],
+      followUpTargets: [],
       reason:
         located.reason ?? "Phase could not be resolved for review findings loading.",
       warnings: [
@@ -8993,6 +9532,7 @@ export async function blueprintReviewLoadFindings(
       findings: [],
       severityCounts: emptySeverityCounts(),
       followUps: [],
+      followUpTargets: [],
       reason: `Phase ${located.phaseNumber} does not have a saved ${REVIEW_ARTIFACT_SUFFIXES[artifact]} artifact yet.`,
       warnings: located.warnings
     };
@@ -9016,9 +9556,10 @@ export async function blueprintReviewLoadFindings(
     findings: parsed.findings,
     severityCounts: parsed.severityCounts,
     followUps: parsed.followUps,
+    followUpTargets: parsed.followUpTargets,
     reason: null,
     warnings:
-      parsed.findings.length === 0
+      parsed.findings.length === 0 && parsed.followUpTargets.length === 0
         ? [
             ...located.warnings,
             `No structured findings were parsed from ${artifactPath}.`

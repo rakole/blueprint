@@ -107,7 +107,9 @@
   "$defs": {
     "nonEmptyString": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^(?=.*\\S)[^\\r\\n]+$",
+      "description": "Non-empty single-line Markdown-safe text. CR/LF is rejected so model-authored bullets and finding fields cannot inject extra list items or headings."
     },
     "verdict": {
       "type": "string",

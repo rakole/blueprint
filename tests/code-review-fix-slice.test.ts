@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { Ajv2020 } from "ajv/dist/2020.js";
+
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintPhaseSummaryWrite } from "../src/mcp/tools/phase.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
@@ -16,6 +18,20 @@ import {
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+
+async function readSchemaFile(relativePath: string): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(path.join(repoRoot, relativePath), "utf8")) as Record<string, unknown>;
+}
+
+function reviewResultMessages(result: {
+  warnings?: string[];
+  diagnostics?: Array<{ message: string }>;
+}): string {
+  return [
+    ...(result.warnings ?? []),
+    ...((result.diagnostics ?? []).map((diagnostic) => diagnostic.message))
+  ].join("\n");
+}
 
 async function createCodeReviewFixRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-code-review-fix-");
@@ -148,18 +164,18 @@ Seed completed execution evidence for review-fix tests.
   );
   await writeFile(
     path.join(phaseDir, "05-REVIEW.md"),
-    `# Phase 05: Review Fix - Review
+    `# Phase 05: Review Fix - Code Review
 
-**Status:** FOLLOW_UP
+**Verdict:** FOLLOW_UP
 
 ## Findings
 
-- [high] Handle negative inputs explicitly in src/feature.ts.
-- [medium] Add a regression test for negative-input behavior.
+- [high][follow-up] \`F-01\` \`src/feature.ts:1\` - Evidence: Negative inputs are not guarded. Impact: Invalid input can be processed as successful behavior. Fix/verification: Handle negative inputs explicitly in src/feature.ts.
+- [medium][follow-up] \`F-02\` \`tests/feature.test.ts:1\` - Evidence: Negative-input behavior lacks regression coverage. Impact: Future changes can reintroduce the bug without detection. Fix/verification: Add a regression test for negative-input behavior.
 
 ## Follow-Ups
 
-- Re-run focused validation after the negative-input guard lands.
+- \`FU-01\` - Re-run focused validation after the negative-input guard lands.
 `,
     "utf8"
   );
@@ -229,18 +245,6 @@ function validReviewFixModel(overrides: Record<string, unknown> = {}): Record<st
         status: "fixed",
         evidence: "The source now guards negative inputs before returning a calculated value.",
         disposition: "Focused remediation completed for the saved high-severity finding."
-      },
-      {
-        findingId: "F-02",
-        status: "fixed",
-        evidence: "Regression coverage was added for negative-input behavior.",
-        disposition: "The selected medium-severity test gap was closed."
-      },
-      {
-        findingId: "FU-01",
-        status: "fixed",
-        evidence: "Focused validation was rerun after the negative-input guard landed.",
-        disposition: "The saved follow-up was completed."
       }
     ],
     changesMade: [
@@ -427,10 +431,53 @@ test("blueprint_review_load_findings parses structured findings and severity cou
   assert.equal(loaded.path, ".blueprint/phases/05-review-fix/05-REVIEW.md");
   assert.equal(loaded.findings.length, 2);
   assert.deepEqual(
-    loaded.findings.map((finding) => [finding.id, finding.severity, finding.summary]),
+    (loaded.findings as Array<{
+      id: string;
+      severity: string;
+      disposition?: string;
+      summary: string;
+      evidence?: string;
+      location?: {
+        display?: string;
+        file?: string;
+        startLine?: number;
+        endLine?: number | null;
+      };
+    }>).map((finding) => ({
+      id: finding.id,
+      severity: finding.severity,
+      disposition: finding.disposition,
+      summary: finding.summary,
+      evidence: finding.evidence,
+      location: finding.location
+    })),
     [
-      ["F-01", "high", "Handle negative inputs explicitly in src/feature.ts."],
-      ["F-02", "medium", "Add a regression test for negative-input behavior."]
+      {
+        id: "F-01",
+        severity: "high",
+        disposition: "follow-up",
+        summary: "Handle negative inputs explicitly in src/feature.ts.",
+        evidence: "Negative inputs are not guarded.",
+        location: {
+          display: "src/feature.ts:1",
+          file: "src/feature.ts",
+          startLine: 1,
+          endLine: 1
+        }
+      },
+      {
+        id: "F-02",
+        severity: "medium",
+        disposition: "follow-up",
+        summary: "Add a regression test for negative-input behavior.",
+        evidence: "Negative-input behavior lacks regression coverage.",
+        location: {
+          display: "tests/feature.test.ts:1",
+          file: "tests/feature.test.ts",
+          startLine: 1,
+          endLine: 1
+        }
+      }
     ]
   );
   assert.deepEqual(loaded.severityCounts, {
@@ -455,6 +502,7 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel()
   });
 
@@ -467,6 +515,7 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel()
   });
 
@@ -474,7 +523,7 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
   assert.equal(recorded.reportPath, ".blueprint/phases/05-review-fix/05-REVIEW-FIX.md");
   assert.deepEqual(recorded.counts, {
     sections: 11,
-    findings: 3,
+    findings: 1,
     followUps: 0
   });
   assert.deepEqual(recorded.followUps, []);
@@ -499,25 +548,15 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
         "F-01",
         "high",
         "Handle negative inputs explicitly in src/feature.ts. Evidence: The source now guards negative inputs before returning a calculated value. Disposition: Focused remediation completed for the saved high-severity finding."
-      ],
-      [
-        "F-02",
-        "medium",
-        "Add a regression test for negative-input behavior. Evidence: Regression coverage was added for negative-input behavior. Disposition: The selected medium-severity test gap was closed."
-      ],
-      [
-        "FU-01",
-        "unknown",
-        "Re-run focused validation after the negative-input guard lands. Evidence: Focused validation was rerun after the negative-input guard landed. Disposition: The saved follow-up was completed."
       ]
     ]
   );
   assert.deepEqual(loaded.severityCounts, {
     critical: 0,
     high: 1,
-    medium: 1,
+    medium: 0,
     low: 0,
-    unknown: 1
+    unknown: 0
   });
   assert.deepEqual(loaded.followUps, []);
 });
@@ -549,6 +588,7 @@ test("review-fix evidence allows required upstream rows plus extra safe provenan
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model
   });
 
@@ -562,6 +602,7 @@ test("review-fix evidence allows required upstream rows plus extra safe provenan
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       evidence: [
         {
@@ -598,6 +639,7 @@ test("review-fix evidence allows required upstream rows plus extra safe provenan
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model
   });
 
@@ -754,9 +796,39 @@ test("review-fix validation reports clear target id alignment diagnostics", asyn
     artifact: "review-fix"
   });
   assert.equal(defaultContext.status, "ready");
+  const defaultAuthoringContext = defaultContext.authoringContext as {
+    selectedTargetIds: string[];
+    targets?: Array<{
+      targetId: string;
+      source: string;
+      classification?: string;
+      defaultSelected?: boolean;
+    }>;
+  };
+  assert.deepEqual(defaultAuthoringContext.selectedTargetIds, ["F-01"]);
   assert.deepEqual(
-    (defaultContext.authoringContext as { selectedTargetIds: string[] }).selectedTargetIds,
-    ["F-01", "F-02", "FU-01"]
+    defaultAuthoringContext.targets?.map((target) => ({
+      targetId: target.targetId,
+      source: target.source,
+      classification: target.classification
+    })),
+    [
+      {
+        targetId: "F-01",
+        source: "finding",
+        classification: "fixable"
+      },
+      {
+        targetId: "F-02",
+        source: "finding",
+        classification: "test-gap"
+      },
+      {
+        targetId: "FU-01",
+        source: "follow-up",
+        classification: "validation-only"
+      }
+    ]
   );
 
   const mismatched = await blueprintReviewValidateModel({
@@ -828,6 +900,7 @@ test("review-fix validation reports clear target id alignment diagnostics", asyn
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01", "F-02"],
     model: validReviewFixModel({
       findingsAddressed: [
         {
@@ -835,18 +908,51 @@ test("review-fix validation reports clear target id alignment diagnostics", asyn
           status: "fixed",
           evidence: "The implementation finding was fixed.",
           disposition: "Only one saved target is addressed."
-        },
-        {
-          findingId: "FU-01",
-          status: "fixed",
-          evidence: "Focused validation was rerun.",
-          disposition: "The saved follow-up is addressed."
         }
       ]
     })
   });
   assert.equal(omittedSubset.status, "invalid");
-  assertTargetDiagnostic(omittedSubset, "residual.finding_id_missing", ["F-01", "F-02", "FU-01"]);
+  assertTargetDiagnostic(omittedSubset, "residual.finding_id_missing", ["F-01", "F-02"]);
+});
+
+test("review-fix record rejects target id drift and returns structured invalid diagnostics", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-02",
+          status: "fixed",
+          evidence: "A saved but unselected finding id is intentionally addressed.",
+          disposition: "This must be rejected because record selected F-01 only."
+        }
+      ]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.written, false);
+  const diagnostics = (invalid as {
+    diagnostics?: Array<{ code: string; path: string; message: string }>;
+  }).diagnostics;
+  assert.ok(diagnostics && diagnostics.length > 0, reviewResultMessages(invalid as never));
+  assert.ok(
+    diagnostics?.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.finding_id_mismatched" &&
+        diagnostic.path === "model.findingsAddressed[].findingId"
+    ),
+    JSON.stringify(diagnostics, null, 2)
+  );
 });
 
 test("review-fix authoring blocks when required upstream context is missing", async (t) => {
@@ -941,6 +1047,7 @@ test("review-fix pending execution debt keeps authoring ready and blocks complet
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       evidence: requiredEvidence
     })
@@ -963,18 +1070,6 @@ test("review-fix pending execution debt keeps authoring ready and blocks complet
         status: "deferred",
         evidence: "Pending plan 02 must complete before this saved finding can be closed.",
         disposition: "Carry the selected implementation finding through execute-phase."
-      },
-      {
-        findingId: "F-02",
-        status: "deferred",
-        evidence: "Pending plan 02 must complete before test coverage can be declared closed.",
-        disposition: "Carry the selected regression finding through execute-phase."
-      },
-      {
-        findingId: "FU-01",
-        status: "skipped",
-        evidence: "Focused validation waits on pending plan 02 execution evidence.",
-        disposition: "Re-run validation after execute-phase completes the pending plan."
       }
     ],
     changesMade: [
@@ -1023,6 +1118,7 @@ test("review-fix pending execution debt keeps authoring ready and blocks complet
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: blockedModel
   });
 
@@ -1036,6 +1132,7 @@ test("review-fix pending execution debt keeps authoring ready and blocks complet
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: blockedModel
   });
 
@@ -1060,7 +1157,7 @@ test("review-fix writer rejects markdown fallback for model-only persistence", a
   assert.match(rejected.warnings.join("\n"), /review\.review-fix is model-only; content is invalid/i);
 });
 
-test("review-fix schema rejects unsupported fields, missing required fields, and unsafe table delimiters", async (t) => {
+test("review-fix schema rejects unsupported fields and missing required fields", async (t) => {
   const repoPath = await createCodeReviewFixRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1080,18 +1177,18 @@ test("review-fix schema rejects unsupported fields, missing required fields, and
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model
   });
 
   assert.equal(invalid.status, "invalid");
   assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.additionalProperties"));
   assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.required"));
-  assert.ok(invalid.diagnostics.some((diagnostic) => diagnostic.code === "schema.pattern"));
   assert.ok(
     invalid.diagnostics.some(
       (diagnostic) =>
         diagnostic.source === "schema" &&
-        /blueprint_review_authoring_context/.test(diagnostic.suggestion)
+        diagnostic.suggestion.length > 0
     ),
     invalid.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n")
   );
@@ -1101,7 +1198,76 @@ test("review-fix schema rejects unsupported fields, missing required fields, and
   );
 });
 
-test("review-fix truth table rejects completed models with active gaps and accepts partial follow-up shape", async (t) => {
+test("review-fix schema allows escaped table pipes and verification shell pipelines", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = validReviewFixModel({
+    changesMade: [
+      {
+        file: "src/feature.ts",
+        summary: "Guard landed | focused remediation stayed bounded."
+      }
+    ],
+    verification: [
+      {
+        check: "Focused review-fix fixture passes | tee captured output",
+        command: "npm test -- tests/code-review-fix-slice.test.ts | tee .blueprint/review-fix.log",
+        result: "pass",
+        evidence: "The focused pipeline passed and tee captured the saved output."
+      }
+    ],
+    evidence: [
+      ...(validReviewFixModel().evidence as Array<Record<string, unknown>>),
+      {
+        kind: "command",
+        source: "npm test -- tests/code-review-fix-slice.test.ts | tee .blueprint/review-fix.log",
+        summary: "The verification pipeline preserved a literal shell pipe."
+      }
+    ]
+  });
+
+  const schema = await readSchemaFile(
+    "src/mcp/artifact-contracts/schemas/review.review-fix.model.schema.json"
+  );
+  const validateSchema = new Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  }).compile(schema);
+  assert.equal(validateSchema(model), true, JSON.stringify(validateSchema.errors, null, 2));
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model
+  });
+
+  assert.equal(
+    validation.status,
+    "valid",
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const recorded = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model
+  });
+
+  assert.equal(recorded.status, "created");
+  const saved = await readFile(path.join(repoPath, recorded.reportPath), "utf8");
+  assert.match(saved, /Guard landed \\| focused remediation stayed bounded\./);
+  assert.match(saved, /tests\/code-review-fix-slice\.test\.ts \\| tee \.blueprint\/review-fix\.log/);
+});
+
+test("review-fix truth table rejects completed models with active gaps and allows one concrete partial signal", async (t) => {
   const repoPath = await createCodeReviewFixRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1111,6 +1277,7 @@ test("review-fix truth table rejects completed models with active gaps and accep
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       nextSafeAction: "/blu-validate-phase 5"
     })
@@ -1126,6 +1293,7 @@ test("review-fix truth table rejects completed models with active gaps and accep
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       nextSafeAction: "/blu-progress"
     })
@@ -1145,6 +1313,7 @@ test("review-fix truth table rejects completed models with active gaps and accep
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       gapRoutes: [
         {
@@ -1160,64 +1329,84 @@ test("review-fix truth table rejects completed models with active gaps and accep
   assert.equal(invalidCompleted.status, "invalid");
   assert.ok(invalidCompleted.diagnostics.some((diagnostic) => diagnostic.source === "schema"));
 
-  const partial = await blueprintReviewValidateModel({
-    cwd: repoPath,
-    phase: "5",
-    artifact: "review-fix",
-    model: validReviewFixModel({
-      status: "PARTIAL",
-      readiness: "not-ready-for-validation",
-      completionState: "pending",
-      findingsAddressed: [
-        {
-          findingId: "F-01",
-          status: "fixed",
-          evidence: "The implementation finding was fixed.",
-          disposition: "Code remediation completed but tests still need follow-up."
-        },
-        {
-          findingId: "F-02",
-          status: "deferred",
-          evidence: "Regression test coverage is not complete yet.",
-          disposition: "Route to add-tests after this partial review-fix artifact."
-        },
-        {
-          findingId: "FU-01",
-          status: "deferred",
-          evidence: "Focused validation waits on the missing regression test.",
-          disposition: "Carry forward the saved follow-up."
-        }
-      ],
-      verification: [
-        {
-          check: "Focused review-fix fixture passes",
-          command: "npm test -- tests/code-review-fix-slice.test.ts",
-          result: "not-run",
-          evidence: "The test gap must be closed before validation can pass."
-        }
-      ],
-      manualOrDeferredWork: [
-        {
-          item: "Negative-input regression coverage",
-          reason: "The current pass only applied the implementation guard.",
-          followUp: "/blu-add-tests 5",
-          status: "DEFERRED"
-        }
-      ],
-      gapRoutes: [
-        {
-          gap: "Missing regression coverage",
-          evidence: "Saved review finding F-02 remains deferred.",
-          repair: "Run /blu-add-tests 5 to add focused coverage.",
-          status: "OPEN"
-        }
-      ],
-      followUps: ["Add the missing negative-input regression coverage."],
-      nextSafeAction: "/blu-add-tests 5"
-    })
-  });
+  const schema = await readSchemaFile(
+    "src/mcp/artifact-contracts/schemas/review.review-fix.model.schema.json"
+  );
+  const validateSchema = new Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  }).compile(schema);
 
-  assert.equal(partial.status, "valid");
+  const partialWithSingleSignal = validReviewFixModel({
+    status: "PARTIAL",
+    readiness: "not-ready-for-validation",
+    completionState: "pending",
+    verification: [
+      {
+        check: "Focused review-fix fixture passes",
+        command: "npm test -- tests/code-review-fix-slice.test.ts",
+        result: "pass",
+        evidence: "The implementation fix passed, but one open route still remains."
+      }
+    ],
+    manualOrDeferredWork: [
+      {
+        item: "none",
+        reason: "none",
+        followUp: "none",
+        status: "NONE"
+      }
+    ],
+    gapRoutes: [
+      {
+        gap: "Missing regression coverage",
+        evidence: "The selected remediation closed the code defect, but the test route remains open.",
+        repair: "Run /blu-add-tests 5 to add focused coverage.",
+        status: "OPEN"
+      }
+    ],
+    followUps: ["none"],
+    nextSafeAction: "/blu-add-tests 5"
+  });
+  assert.equal(
+    validateSchema(partialWithSingleSignal),
+    true,
+    JSON.stringify(validateSchema.errors, null, 2)
+  );
+
+  const completedFollowUpOnlyNoChange = validReviewFixModel({
+    findingsAddressed: [
+      {
+        findingId: "FU-01",
+        status: "fixed",
+        evidence: "Focused validation was rerun after the saved follow-up route completed.",
+        disposition: "The completion only verified the saved follow-up."
+      }
+    ],
+    changesMade: [
+      {
+        file: "none",
+        summary: "none"
+      }
+    ]
+  });
+  assert.equal(
+    validateSchema(completedFollowUpOnlyNoChange),
+    true,
+    JSON.stringify(validateSchema.errors, null, 2)
+  );
+
+  const completedConcreteFindingNoChange = validReviewFixModel({
+    changesMade: [
+      {
+        file: "none",
+        summary: "none"
+      }
+    ]
+  });
+  assert.equal(validateSchema(completedConcreteFindingNoChange), false);
+  assert.match(JSON.stringify(validateSchema.errors, null, 2), /FU-|findingId|oneOf/);
 });
 
 test("review-fix blocked status can carry real changed file rows", async (t) => {
@@ -1230,6 +1419,7 @@ test("review-fix blocked status can carry real changed file rows", async (t) => 
     cwd: repoPath,
     phase: "5",
     artifact: "review-fix",
+    targetIds: ["F-01"],
     model: validReviewFixModel({
       status: "BLOCKED",
       readiness: "blocked",
@@ -1240,18 +1430,6 @@ test("review-fix blocked status can carry real changed file rows", async (t) => 
           status: "deferred",
           evidence: "The source guard was started but cannot be closed until validation is unblocked.",
           disposition: "Keep the selected implementation finding open."
-        },
-        {
-          findingId: "F-02",
-          status: "deferred",
-          evidence: "Regression coverage still waits on the blocked validation path.",
-          disposition: "Keep the selected test finding open."
-        },
-        {
-          findingId: "FU-01",
-          status: "skipped",
-          evidence: "Focused validation could not be rerun while the blocker remains.",
-          disposition: "Carry the saved follow-up forward."
         }
       ],
       changesMade: [

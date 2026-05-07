@@ -81,6 +81,7 @@
 - If a prior `XX-REVIEW.md` exists, load its structured findings through `blueprint_review_load_findings` before replacement, and use read-only file access for full-body comparison only when needed.
 - Request authoring context from `blueprint_review_scope` when drafting JSON. Use `authoringContext.taskSchema`, exact `knownEvidenceArtifacts`, scoped files, and `allowedNextActions` as the model-authoring boundary.
 - Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema and residual diagnostics together; do not switch to Markdown fallback.
+- Repair invalid code-review models against `contract.modelContract.jsonSchema`, the narrowed `authoringContext.taskSchema`, and returned diagnostics. Treat `authoringTemplate` as renderer preview only, not as a Markdown repair target.
 - Persist the final review through `blueprint_review_record` with `artifact: "code-review"`, the resolved `scopeFiles`, the returned `reviewMode.source` as `scopeSource`, optional `depth`, and the same structured `model`. Pass `scopeSource: "explicit-files"` only when the user supplied explicit `--files`; otherwise preserve the implicit source returned by `blueprint_review_scope`. Treat the returned `reportPath` as authoritative instead of hand-building `XX-REVIEW.md`; Markdown `content` is invalid for `code-review`.
 
 ## Depth And Output Quality Contract
@@ -92,6 +93,7 @@
 - The authored model must use only `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`. Runtime-owned depth, scope source, scope reviewed, evidence inventory rendering, severity counts, paths, and Markdown are computed by MCP.
 - `evidenceCoverage` must be an object keyed by the exact known evidence artifact paths from authoring context, with `{status: "used"|"deferred"|"irrelevant", rationale}` for every key.
 - Structured `model` writes must not include MCP-owned identity keys such as `phase`, `artifact`, path, `content`, `depth`, `scopeSource`, or rendered section fields.
+- When the phase still lacks `XX-SECURITY.md` and concrete follow-up fixes also remain, keep `/blu-secure-phase <phase>` as the primary next step while surfacing `/blu-code-review-fix <phase>` as the secondary queued recommendation.
 
 ## Subagent And Fallback Contract
 
@@ -151,7 +153,7 @@
 
 - Preserve generated reports when review persistence needs overwrite confirmation or artifact repair.
 - Fall back to explicit file selection or saved-evidence recovery guidance instead of guessing.
-- If `blueprint_review_validate_model` or `blueprint_review_record` returns `status: "invalid"`, repair the authored structured model against `taskSchema`, `modelContract`, and returned diagnostics, retry validation once, then retry persistence once. Stop with the invalid reasons if the retry still fails.
+- If `blueprint_review_validate_model` or `blueprint_review_record` returns `status: "invalid"`, repair the authored structured model against `taskSchema`, `modelContract.jsonSchema`, and returned diagnostics, retry validation once, then retry persistence once. Stop with the invalid reasons if the retry still fails.
 
 
 ## Acceptance Criteria

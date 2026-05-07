@@ -21639,6 +21639,7 @@ var init_quality_gates = __esm({
 });
 
 // src/mcp/tools/review.ts
+import { createHash } from "node:crypto";
 import { promises as fs2 } from "node:fs";
 import path5 from "node:path";
 function createAjvValidator() {
@@ -21711,8 +21712,26 @@ function renderBulletList(items, fallback = "none") {
 function formatReviewTargetId(prefix, index) {
   return `${prefix}-${String(index + 1).padStart(2, "0")}`;
 }
+function extractVisibleReviewTargetId(value) {
+  const trimmed = value.trim();
+  const startMatch = trimmed.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
+  if (startMatch) {
+    return startMatch[1].toUpperCase();
+  }
+  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN);
+  return inlineMatch ? inlineMatch[1].toUpperCase() : null;
+}
 function stripVisibleReviewTargetId(value) {
-  return value.replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").trim();
+  return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
+}
+function buildLegacyReviewTargetId(prefix, sourceSection, value) {
+  const digest = createHash("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  return `${prefix}-LEGACY-${digest}`;
+}
+function sanitizeMarkdownScalar(value) {
+  return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();
 }
 function renderIdentifiedBulletList(items, prefix, fallback = "none") {
   const lines = items.map((item) => stripVisibleReviewTargetId(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
@@ -21725,7 +21744,18 @@ function isGenericNoneValue(value) {
   return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
 }
 function hasPlaceholderLanguage(value) {
-  return /\b(?:todo|tbd|placeholder|replace me|fill in|insert here|coming soon)\b/i.test(value);
+  const normalized = value.trim();
+  if (/\b(?:placeholder|replace me|fill in|insert here|coming soon)\b/i.test(normalized)) {
+    return true;
+  }
+  return /^(?:todo|tbd)(?:\b|[:\s-])/i.test(normalized) && normalized.length <= 120;
+}
+function inferCodeReviewSecondaryNextSafeAction(allowedNextActions, preferredNextSafeAction) {
+  const repairAction = allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? null;
+  if (!repairAction || repairAction === preferredNextSafeAction) {
+    return null;
+  }
+  return repairAction;
 }
 async function getImplementedCommandNames() {
   if (!implementedCommandNamesPromise) {
@@ -21845,6 +21875,13 @@ function buildCodeReviewTaskSchema(args) {
     }
     Object.assign(location, buildTaskLocationSchema(args.scopeFiles));
   }
+  schema["x-blueprint-runtimeContext"] = {
+    preferredNextSafeAction: args.preferredNextSafeAction,
+    secondaryNextSafeAction: args.secondaryNextSafeAction,
+    allowedNextActions: args.allowedNextActions,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    scopeFiles: args.scopeFiles
+  };
   return schema;
 }
 async function buildCodeReviewAuthoringContext(args) {
@@ -21856,12 +21893,19 @@ async function buildCodeReviewAuthoringContext(args) {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
+  const preferredNextSafeAction = allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ?? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? allowedNextActions[0] ?? null;
+  const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
+    allowedNextActions,
+    preferredNextSafeAction
+  );
   const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
   const taskSchema = buildCodeReviewTaskSchema({
     baseSchema,
     scopeFiles: args.files,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
-    allowedNextActions
+    allowedNextActions,
+    preferredNextSafeAction,
+    secondaryNextSafeAction
   });
   return {
     phase: args.phase,
@@ -21869,6 +21913,8 @@ async function buildCodeReviewAuthoringContext(args) {
     reviewMode: { ...args.reviewMode },
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
+    preferredNextSafeAction,
+    secondaryNextSafeAction,
     schemaPath: modelContract.schemaPath,
     baseSchema,
     taskSchema
@@ -22188,29 +22234,38 @@ function allowOnlyEmptyArray(schema) {
 }
 function reviewFixTargetsFromFindings(loaded) {
   const findingTargets = loaded.findings.map((finding) => ({
-    targetId: finding.id,
+    targetId: finding.visibleId ?? finding.stableId ?? finding.id,
+    visibleId: finding.visibleId,
+    stableId: finding.stableId,
+    legacyDerived: finding.legacyDerived,
     source: "finding",
     severity: finding.severity,
     summary: finding.summary,
-    sourceSection: finding.sourceSection
+    sourceSection: finding.sourceSection,
+    disposition: finding.disposition,
+    location: finding.location?.display ?? null,
+    file: finding.file,
+    startLine: finding.startLine,
+    endLine: finding.endLine,
+    evidence: finding.evidence,
+    impact: finding.impact,
+    recommendation: finding.recommendation,
+    classification: finding.classification ?? "fixable",
+    defaultEligible: finding.defaultEligible
   }));
-  const followUpTargets = loaded.followUps.map((followUp, index) => ({
-    targetId: `FU-${String(index + 1).padStart(2, "0")}`,
-    source: "follow-up",
-    severity: "unknown",
-    summary: followUp,
-    sourceSection: "Follow-Ups"
-  }));
-  return [...findingTargets, ...followUpTargets];
+  return [...findingTargets, ...loaded.followUpTargets];
 }
 function resolveReviewFixSelectedTargetIds(args) {
   const available = new Set(args.targets.map((target) => target.targetId));
   const requested = args.targetIds?.map((targetId) => targetId.trim()).filter(Boolean);
-  const selectedTargetIds = requested && requested.length > 0 ? [...new Set(requested)] : args.targets.map((target) => target.targetId);
+  const selectedTargetIds = requested && requested.length > 0 ? [...new Set(requested)] : args.targets.filter((target) => target.defaultEligible).map((target) => target.targetId);
   const unknown2 = selectedTargetIds.filter((targetId) => !available.has(targetId));
   const issues = [];
   if (selectedTargetIds.length === 0) {
-    issues.push("review.review-fix requires at least one selected saved review target.");
+    const explicitOnlyTargets = args.targets.filter((target) => !target.defaultEligible);
+    issues.push(
+      explicitOnlyTargets.length > 0 ? `review.review-fix default selection found only explicit-only saved review targets: ${explicitOnlyTargets.map((target) => `${target.targetId} (${target.classification})`).join(", ")}. Pass targetIds explicitly.` : "review.review-fix requires at least one selected saved review target."
+    );
   }
   if (unknown2.length > 0) {
     issues.push(`Selected review-fix target ids are not present in the saved review baseline: ${unknown2.join(", ")}.`);
@@ -22470,6 +22525,7 @@ async function buildReviewFixTaskSchema(args) {
     }
   ];
   schema["x-blueprint-runtimeContext"] = {
+    targets: args.targets,
     selectedTargetIds: args.selectedTargetIds,
     dependencyPlans: args.dependencyPlans,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -22650,6 +22706,7 @@ async function buildReviewFixAuthoringContext(args) {
   const reviewFixBaseSchema = cloneJsonObject2(modelContract.jsonSchema);
   const taskSchema = hardBlockers.length === 0 && loaded.path ? await buildReviewFixTaskSchema({
     baseSchema: reviewFixBaseSchema,
+    targets,
     selectedTargetIds: selected.selectedTargetIds,
     dependencyPlans,
     executionDebt,
@@ -23631,9 +23688,9 @@ function collectListItems(block) {
     return numberedMatch ? [numberedMatch[1].trim()] : [];
   }).filter((item) => item.length > 0);
 }
-function extractMarkdownSectionItems(content, headingPattern) {
+function extractMarkdownSectionRawItems(content, headingPattern) {
   const lines = content.split("\n");
-  const items = [];
+  const entries = [];
   for (let index = 0; index < lines.length; index += 1) {
     const headingMatch = lines[index].match(/^(##+)\s+(.+)$/);
     if (!headingMatch || !headingPattern.test(headingMatch[2].trim())) {
@@ -23648,9 +23705,19 @@ function extractMarkdownSectionItems(content, headingPattern) {
       }
       sectionLines.push(lines[innerIndex]);
     }
-    items.push(...collectListItems(sectionLines.join("\n")));
+    entries.push({
+      heading: headingMatch[2].trim(),
+      items: collectListItems(sectionLines.join("\n"))
+    });
   }
-  return [...new Set(items)];
+  return entries;
+}
+function extractMarkdownSectionItems(content, headingPattern) {
+  return [
+    ...new Set(
+      extractMarkdownSectionRawItems(content, headingPattern).flatMap((entry) => entry.items)
+    )
+  ];
 }
 function normalizeReviewListItem(item) {
   return normalizeFindingSummary(item).replace(/^`+|`+$/g, "").replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "").trim().toLowerCase();
@@ -23728,12 +23795,12 @@ function parseSecurityThreatRegisterFindings(content) {
         continue;
       }
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: "unknown",
         summary,
         sourceSection: "Threat Register"
-      });
+      }));
     }
   }
   return findings;
@@ -23791,24 +23858,216 @@ function inferFindingSeverity(heading, item) {
   return "unknown";
 }
 function normalizeFindingSummary(item) {
-  return item.replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").replace(
-    /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|pass|fixed|deferred|skipped)\]\s*)+/i,
+  return item.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").replace(
+    /^(?:\[(?:critical|high|medium|low|unknown|p[0-3]|blocker|follow-?up|observation|accepted-risk|pass|fixed|deferred|skipped)\]\s*)+/i,
     ""
-  ).replace(/^`?(?:F|FU)-\d{2,}`?(?:\s*[-:]\s*|\s+)/i, "").replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "").replace(
+  ).replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").replace(/^(?:critical|high|medium|low|p[0-3])\s*[:\-]\s*/i, "").replace(
     /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
     ""
   ).trim();
 }
 function extractReviewFixTargetId(item) {
-  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
-  return match ? match[1].toUpperCase() : null;
+  return extractVisibleReviewTargetId(item);
 }
 function normalizeReviewFixFindingSummary(item) {
-  const match = item.match(/`?((?:F|FU)-\d{2,})`?\s*[-:]\s*/i);
+  const match = item.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
   if (!match) {
     return normalizeFindingSummary(item);
   }
   return item.slice((match.index ?? 0) + match[0].length).trim();
+}
+function buildReviewFinding(args) {
+  const parsedLocation = args.location ? parseCodeReviewLocation(args.location) : null;
+  return {
+    id: args.id,
+    visibleId: args.visibleId ?? null,
+    stableId: args.stableId ?? null,
+    legacyDerived: args.legacyDerived ?? false,
+    severity: args.severity ?? "unknown",
+    summary: args.summary,
+    sourceSection: args.sourceSection,
+    disposition: args.disposition ?? null,
+    location: parsedLocation ? {
+      display: args.location ?? `${parsedLocation.file}:${parsedLocation.startLine}`,
+      file: parsedLocation.file,
+      startLine: parsedLocation.startLine,
+      endLine: parsedLocation.endLine
+    } : null,
+    file: parsedLocation?.file ?? null,
+    startLine: parsedLocation?.startLine ?? null,
+    endLine: parsedLocation?.endLine ?? null,
+    evidence: args.evidence ?? null,
+    impact: args.impact ?? null,
+    recommendation: args.recommendation ?? null,
+    classification: args.classification ?? null,
+    defaultEligible: args.defaultEligible ?? false
+  };
+}
+function classificationForFindingDisposition(disposition) {
+  if (disposition === "follow-up") {
+    return "fixable";
+  }
+  if (disposition === "blocked") {
+    return "blocked";
+  }
+  if (disposition === "observation") {
+    return "observation";
+  }
+  if (disposition === "accepted-risk") {
+    return "accepted-risk";
+  }
+  return null;
+}
+function classifyFollowUpTarget(summary) {
+  const normalized = normalizeReviewListItem(summary);
+  if (normalized.length === 0 || isPlaceholderReviewListItem(summary)) {
+    return "no-op";
+  }
+  if (/(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) || /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) || /\/blu-add-tests\b/i.test(summary)) {
+    return "test-gap";
+  }
+  if (/\b(?:verify|verification|validate|validation|uat|manual qa|smoke check|re-run)\b/i.test(summary) || /\/blu-(?:validate-phase|verify-work)\b/i.test(summary)) {
+    return "validation-only";
+  }
+  if (/\/blu-(?:progress|secure-phase|plan-phase|review|execute-phase|pause-work|resume-work)\b/i.test(summary) || /\b(?:route|routing|document|triage|coordinate|handoff|process note)\b/i.test(summary)) {
+    return "routing-note";
+  }
+  if (/\b(?:no action|no change|already covered|informational only)\b/i.test(summary)) {
+    return "no-op";
+  }
+  return "fixable";
+}
+function isDefaultReviewFixClassification(classification) {
+  return classification === "fixable";
+}
+function parseCodeReviewFindingEntry(item, sourceSection, index) {
+  const visibleId = extractVisibleReviewTargetId(item);
+  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+  if (canonical) {
+    const [, severity2, disposition, canonicalId, location, evidence, impact, recommendation] = canonical;
+    const normalizedDisposition = disposition.toLowerCase();
+    const classification2 = normalizedDisposition === "follow-up" ? classifyFollowUpTarget(recommendation) : classificationForFindingDisposition(normalizedDisposition);
+    return buildReviewFinding({
+      id: canonicalId.toUpperCase(),
+      visibleId: canonicalId.toUpperCase(),
+      stableId: null,
+      legacyDerived: false,
+      severity: severity2.toLowerCase(),
+      summary: sanitizeMarkdownScalar(recommendation),
+      sourceSection,
+      disposition: normalizedDisposition,
+      location,
+      evidence,
+      impact,
+      recommendation,
+      classification: classification2,
+      defaultEligible: isDefaultReviewFixClassification(classification2 ?? "routing-note")
+    });
+  }
+  const legacyCanonical = item.match(LEGACY_CODE_REVIEW_FINDING_PATTERN);
+  if (legacyCanonical) {
+    const [, severity2, disposition, location, evidence, impact, recommendation] = legacyCanonical;
+    const normalizedDisposition = disposition.toLowerCase();
+    const classification2 = normalizedDisposition === "follow-up" ? classifyFollowUpTarget(recommendation) : classificationForFindingDisposition(normalizedDisposition);
+    const stableId2 = buildLegacyReviewTargetId("F", sourceSection, item);
+    return buildReviewFinding({
+      id: stableId2,
+      visibleId: null,
+      stableId: stableId2,
+      legacyDerived: true,
+      severity: severity2.toLowerCase(),
+      summary: sanitizeMarkdownScalar(recommendation),
+      sourceSection,
+      disposition: normalizedDisposition,
+      location,
+      evidence,
+      impact,
+      recommendation,
+      classification: classification2,
+      defaultEligible: isDefaultReviewFixClassification(classification2 ?? "routing-note")
+    });
+  }
+  const stripped = stripVisibleReviewTargetId(item);
+  const locationMatch = [...stripped.matchAll(/`([^`]+)`/g)][0]?.[1] ?? null;
+  const recommendationMatch = stripped.match(/Fix\/verification:\s*(.+)$/i);
+  const summary = sanitizeMarkdownScalar(recommendationMatch?.[1] ?? normalizeFindingSummary(stripped));
+  const severity = inferFindingSeverity(sourceSection, item);
+  const stableId = visibleId === null ? buildLegacyReviewTargetId("F", sourceSection, item) : null;
+  const classification = classifyFollowUpTarget(summary);
+  return buildReviewFinding({
+    id: visibleId ?? stableId,
+    visibleId,
+    stableId,
+    legacyDerived: visibleId === null,
+    severity,
+    summary,
+    sourceSection,
+    disposition: /follow-?up/i.test(item) ? "follow-up" : null,
+    location: locationMatch,
+    classification,
+    defaultEligible: isDefaultReviewFixClassification(classification)
+  });
+}
+function parseCodeReviewFollowUpTargets(content) {
+  const followUps = [];
+  const targets = [];
+  for (const entry of extractMarkdownSectionRawItems(content, /^Follow-?Ups$/i)) {
+    for (const item of entry.items) {
+      const visibleId = extractVisibleReviewTargetId(item);
+      const summary = stripVisibleReviewTargetId(item);
+      const classification = classifyFollowUpTarget(summary);
+      const placeholderOnly = isPlaceholderReviewListItem(summary);
+      const stableId = visibleId === null ? buildLegacyReviewTargetId("FU", entry.heading, item) : null;
+      if (!placeholderOnly) {
+        followUps.push(summary);
+      }
+      if (placeholderOnly && visibleId === null) {
+        continue;
+      }
+      targets.push({
+        targetId: visibleId ?? stableId,
+        visibleId,
+        stableId,
+        legacyDerived: visibleId === null,
+        source: "follow-up",
+        severity: "unknown",
+        summary: summary.length > 0 ? summary : "none",
+        sourceSection: entry.heading,
+        disposition: null,
+        location: null,
+        file: null,
+        startLine: null,
+        endLine: null,
+        evidence: null,
+        impact: null,
+        recommendation: null,
+        classification,
+        defaultEligible: isDefaultReviewFixClassification(classification)
+      });
+    }
+  }
+  return {
+    followUps: uniqueOrderedStrings(followUps),
+    targets
+  };
+}
+function parseCodeReviewFindings(content) {
+  const findings = extractMarkdownSectionRawItems(content, /^Findings$/i).flatMap(
+    (entry) => entry.items.filter((item) => !isPlaceholderReviewListItem(item)).map((item, index) => parseCodeReviewFindingEntry(item, entry.heading, index))
+  );
+  const severityCounts = emptySeverityCounts();
+  findings.forEach((finding) => {
+    severityCounts[finding.severity] += 1;
+  });
+  const followUps = parseCodeReviewFollowUpTargets(content);
+  return {
+    findings,
+    severityCounts,
+    followUps: followUps.followUps,
+    followUpTargets: followUps.targets
+  };
 }
 function resolveFindingsHeadingPattern(artifact) {
   if (artifact === "review-fix") {
@@ -23865,12 +24124,12 @@ function parseSecurityFindingsTableFindings(content) {
         continue;
       }
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeSecurityFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
     }
   }
   return findings;
@@ -23927,12 +24186,12 @@ function parseUiReviewFindingsTable(content) {
         continue;
       }
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeUiReviewFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
       if (recommendation.length > 0 && !isPlaceholderReviewListItem(recommendation) && !/^none$/i.test(recommendation)) {
         followUps.push(recommendation);
       }
@@ -23984,17 +24243,20 @@ function parsePeerReviewFindingsTableFindings(content) {
         continue;
       }
       seenSummaries.add(summary);
-      findings.push({
+      findings.push(buildReviewFinding({
         id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity: normalizeSecurityFindingSeverity(severity),
         summary,
         sourceSection: "Findings"
-      });
+      }));
     }
   }
   return findings;
 }
 function parseFindingsFromArtifact(content, artifact) {
+  if (artifact === "code-review") {
+    return parseCodeReviewFindings(content);
+  }
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings = [];
   const seenFindingKeys = /* @__PURE__ */ new Set();
@@ -24014,12 +24276,14 @@ function parseFindingsFromArtifact(content, artifact) {
       const severity = inferFindingSeverity(entry.heading, item);
       seenFindingKeys.add(findingKey);
       severityCounts[severity] += 1;
-      findings.push({
+      findings.push(buildReviewFinding({
         id: reviewFixTargetId ?? `F-${String(findings.length + 1).padStart(2, "0")}`,
+        visibleId: reviewFixTargetId,
+        legacyDerived: reviewFixTargetId === null,
         severity,
         summary,
         sourceSection: entry.heading
-      });
+      }));
     }
   }
   if (artifact === "security") {
@@ -24029,12 +24293,24 @@ function parseFindingsFromArtifact(content, artifact) {
       }
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
     for (const threatFinding of parseSecurityThreatRegisterFindings(content)) {
       if (seenFindingKeys.has(threatFinding.summary)) {
@@ -24042,12 +24318,24 @@ function parseFindingsFromArtifact(content, artifact) {
       }
       seenFindingKeys.add(threatFinding.summary);
       severityCounts[threatFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: threatFinding.severity,
-        summary: threatFinding.summary,
-        sourceSection: threatFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: threatFinding.visibleId,
+          stableId: threatFinding.stableId,
+          legacyDerived: threatFinding.legacyDerived,
+          severity: threatFinding.severity,
+          summary: threatFinding.summary,
+          sourceSection: threatFinding.sourceSection,
+          disposition: threatFinding.disposition,
+          location: threatFinding.location?.display ?? null,
+          evidence: threatFinding.evidence,
+          impact: threatFinding.impact,
+          recommendation: threatFinding.recommendation,
+          classification: threatFinding.classification,
+          defaultEligible: threatFinding.defaultEligible
+        })
+      );
     }
   }
   if (artifact === "ui-review") {
@@ -24059,12 +24347,24 @@ function parseFindingsFromArtifact(content, artifact) {
       }
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
   }
   if (artifact === "peer-review") {
@@ -24074,12 +24374,24 @@ function parseFindingsFromArtifact(content, artifact) {
       }
       seenFindingKeys.add(tableFinding.summary);
       severityCounts[tableFinding.severity] += 1;
-      findings.push({
-        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
-        severity: tableFinding.severity,
-        summary: tableFinding.summary,
-        sourceSection: tableFinding.sourceSection
-      });
+      findings.push(
+        buildReviewFinding({
+          id: `F-${String(findings.length + 1).padStart(2, "0")}`,
+          visibleId: tableFinding.visibleId,
+          stableId: tableFinding.stableId,
+          legacyDerived: tableFinding.legacyDerived,
+          severity: tableFinding.severity,
+          summary: tableFinding.summary,
+          sourceSection: tableFinding.sourceSection,
+          disposition: tableFinding.disposition,
+          location: tableFinding.location?.display ?? null,
+          evidence: tableFinding.evidence,
+          impact: tableFinding.impact,
+          recommendation: tableFinding.recommendation,
+          classification: tableFinding.classification,
+          defaultEligible: tableFinding.defaultEligible
+        })
+      );
     }
   }
   return {
@@ -24091,7 +24403,8 @@ function parseFindingsFromArtifact(content, artifact) {
         /^(follow-?ups?|follow-up fixes|suggested repairs|recommended fixes|next actions?)$/i
       ),
       ...parsedFollowUps
-    ])
+    ]),
+    followUpTargets: []
   };
 }
 function collectReviewCounts(content, artifact) {
@@ -24123,6 +24436,9 @@ function reviewRecordInvalidResult(args) {
       followUps: 0
     },
     followUps: args.followUps ?? [],
+    diagnostics: args.diagnostics,
+    diagnosticCounts: args.diagnosticCounts,
+    taskSchema: args.taskSchema ?? null,
     warnings: args.warnings
   };
 }
@@ -24157,7 +24473,7 @@ function codeReviewModelSeverityCounts(findings) {
   return counts;
 }
 function renderCodeReviewFinding(finding, index) {
-  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${finding.location}\` - Evidence: ${finding.evidence} Impact: ${finding.impact} Fix/verification: ${finding.recommendation}`;
+  return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${sanitizeMarkdownScalar(finding.location)}\` - Evidence: ${sanitizeMarkdownScalar(finding.evidence)} Impact: ${sanitizeMarkdownScalar(finding.impact)} Fix/verification: ${sanitizeMarkdownScalar(finding.recommendation)}`;
 }
 function renderCodeReviewEvidenceCoverage(args) {
   if (args.knownEvidenceArtifacts.length === 0) {
@@ -25327,6 +25643,7 @@ async function addFindingLocationDiagnostics(args) {
   const scopeSet = new Set(args.scopeFiles);
   const seenLocations = /* @__PURE__ */ new Map();
   const rangesByFile = /* @__PURE__ */ new Map();
+  const distinctFindingDetails = (left, right) => left.disposition !== right.disposition || sanitizeMarkdownScalar(left.evidence) !== sanitizeMarkdownScalar(right.evidence) || sanitizeMarkdownScalar(left.impact) !== sanitizeMarkdownScalar(right.impact) || sanitizeMarkdownScalar(left.recommendation) !== sanitizeMarkdownScalar(right.recommendation);
   for (const [index, finding] of args.model.findings.entries()) {
     const parsed = parseCodeReviewLocation(finding.location);
     if (!parsed) {
@@ -25415,16 +25732,22 @@ async function addFindingLocationDiagnostics(args) {
     }
     const previousIndex = seenLocations.get(finding.location);
     if (previousIndex !== void 0) {
-      args.diagnostics.push(
-        modelDiagnostic({
-          source: "residual",
-          path: `model.findings[${index}].location`,
-          code: "residual.duplicate_location",
-          message: `Code-review model repeats the same finding location: ${finding.location}.`,
-          context: { location: finding.location, firstFindingIndex: previousIndex, duplicateFindingIndex: index },
-          suggestion: "Merge duplicate findings or cite distinct line-backed evidence."
-        })
-      );
+      if (distinctFindingDetails(args.model.findings[previousIndex], finding)) {
+        args.warnings.push(
+          `Code-review model reuses location ${finding.location} for distinct findings (${previousIndex} and ${index}).`
+        );
+      } else {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.duplicate_location",
+            message: `Code-review model repeats the same finding location: ${finding.location}.`,
+            context: { location: finding.location, firstFindingIndex: previousIndex, duplicateFindingIndex: index },
+            suggestion: "Merge duplicate findings or cite distinct line-backed evidence."
+          })
+        );
+      }
     } else {
       seenLocations.set(finding.location, index);
     }
@@ -25433,20 +25756,26 @@ async function addFindingLocationDiagnostics(args) {
       (range) => parsed.startLine <= range.endLine && parsed.endLine >= range.startLine
     );
     if (overlapping) {
-      args.diagnostics.push(
-        modelDiagnostic({
-          source: "residual",
-          path: `model.findings[${index}].location`,
-          code: "residual.conflicting_location",
-          message: `Code-review model has overlapping finding locations in ${parsed.file}.`,
-          context: {
-            file: parsed.file,
-            firstFindingIndex: overlapping.index,
-            conflictingFindingIndex: index
-          },
-          suggestion: "Merge overlapping findings unless they cite distinct, non-overlapping evidence."
-        })
-      );
+      if (distinctFindingDetails(args.model.findings[overlapping.index], finding)) {
+        args.warnings.push(
+          `Code-review model overlaps distinct finding ranges in ${parsed.file} (${overlapping.index} and ${index}).`
+        );
+      } else {
+        args.diagnostics.push(
+          modelDiagnostic({
+            source: "residual",
+            path: `model.findings[${index}].location`,
+            code: "residual.conflicting_location",
+            message: `Code-review model has overlapping finding locations in ${parsed.file}.`,
+            context: {
+              file: parsed.file,
+              firstFindingIndex: overlapping.index,
+              conflictingFindingIndex: index
+            },
+            suggestion: "Merge overlapping findings unless they cite distinct, non-overlapping evidence."
+          })
+        );
+      }
     }
     ranges.push({
       index,
@@ -25543,6 +25872,7 @@ function addVerdictContradictionDiagnostics(args) {
 }
 async function collectCodeReviewResidualDiagnostics(args) {
   const diagnostics = [];
+  const warnings = [];
   const identityKeys = Object.keys(args.model).filter(
     (key) => CODE_REVIEW_MODEL_IDENTITY_KEYS.has(key)
   );
@@ -25560,7 +25890,7 @@ async function collectCodeReviewResidualDiagnostics(args) {
   }
   addPlaceholderDiagnostics({ diagnostics, model: args.model });
   if (!args.normalizedModel) {
-    return diagnostics;
+    return { diagnostics, warnings };
   }
   addGenericValueDiagnostics({
     diagnostics,
@@ -25573,6 +25903,7 @@ async function collectCodeReviewResidualDiagnostics(args) {
   });
   await addFindingLocationDiagnostics({
     diagnostics,
+    warnings,
     projectRoot: args.projectRoot,
     model: args.normalizedModel,
     scopeFiles: args.authoringContext.files
@@ -25596,7 +25927,7 @@ async function collectCodeReviewResidualDiagnostics(args) {
       })
     );
   }
-  return diagnostics;
+  return { diagnostics, warnings };
 }
 async function collectPeerReviewResidualDiagnostics(args) {
   const diagnostics = [];
@@ -27170,6 +27501,7 @@ async function blueprintReviewValidateModel(args) {
   }
   const modelObject = asJsonObject(args.model);
   const diagnostics = [];
+  const validationWarnings = [];
   if (!modelObject) {
     const modelLabel = artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : artifact === "ui-review" ? "UI-review" : artifact === "peer-review" ? "Peer-review" : "Code-review";
     diagnostics.push(
@@ -27238,14 +27570,14 @@ async function blueprintReviewValidateModel(args) {
     } else {
       normalizedModel = normalizeCodeReviewModel(modelObject);
       const residualModel = normalizeCodeReviewModelForResiduals(modelObject);
-      diagnostics.push(
-        ...await collectCodeReviewResidualDiagnostics({
-          projectRoot,
-          model: modelObject,
-          normalizedModel: residualModel,
-          authoringContext: context.authoringContext
-        })
-      );
+      const codeReviewResiduals = await collectCodeReviewResidualDiagnostics({
+        projectRoot,
+        model: modelObject,
+        normalizedModel: residualModel,
+        authoringContext: context.authoringContext
+      });
+      diagnostics.push(...codeReviewResiduals.diagnostics);
+      validationWarnings.push(...codeReviewResiduals.warnings);
     }
   }
   let renderPreview = null;
@@ -27277,9 +27609,9 @@ async function blueprintReviewValidateModel(args) {
     const markdownIssues = [
       ...markdownValidation.issues,
       ...scopedValidation.issues,
-      ...evidenceCoverageIssues,
       ...nextSafeActionIssues
     ];
+    validationWarnings.push(...evidenceCoverageIssues);
     for (const issue2 of markdownIssues) {
       diagnostics.push(
         modelDiagnostic({
@@ -27443,16 +27775,8 @@ async function blueprintReviewValidateModel(args) {
     diagnosticCounts: countDiagnostics(diagnostics),
     normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "ui-review" ? normalizedUiReviewModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
     renderPreview,
-    warnings: context.warnings
+    warnings: uniqueSortedStrings([...context.warnings, ...validationWarnings])
   };
-}
-function sameStringSet(left, right) {
-  const leftSet = new Set(left);
-  const rightSet = new Set(right);
-  if (leftSet.size !== rightSet.size) {
-    return false;
-  }
-  return [...leftSet].every((value) => rightSet.has(value));
 }
 async function resolveCodeReviewRecordValidationFiles(args) {
   if (!args.recordArgs.scopeFiles || args.recordArgs.scopeFiles.length === 0) {
@@ -27460,14 +27784,6 @@ async function resolveCodeReviewRecordValidationFiles(args) {
   }
   if (args.recordArgs.scopeSource) {
     return args.recordArgs.scopeSource === "explicit-files" ? args.recordArgs.scopeFiles : void 0;
-  }
-  const implicitScope = await blueprintReviewScope({
-    cwd: args.projectRoot,
-    phase: args.recordArgs.phase,
-    depth: args.recordArgs.depth
-  });
-  if (implicitScope.status === "ready" && sameStringSet(args.recordArgs.scopeFiles, implicitScope.files)) {
-    return void 0;
   }
   return args.recordArgs.scopeFiles;
 }
@@ -27539,9 +27855,36 @@ async function blueprintReviewRecord(args) {
   let modelCountsOverride = null;
   let uiReviewValidatedModel = null;
   if (modelOnlyArtifact) {
+    if (args.artifact === "code-review" && (args.scopeFiles?.length ?? 0) > 0 && !args.scopeSource) {
+      const context = await blueprintReviewAuthoringContext({
+        cwd: projectRoot,
+        phase: args.phase,
+        artifact: "code-review",
+        files: args.scopeFiles,
+        depth: args.depth
+      });
+      const diagnostics = [
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_required",
+          message: "Code-review record writes with scopeFiles must also provide scopeSource.",
+          context: { scopeFiles: args.scopeFiles },
+          suggestion: "Pass scopeSource alongside scopeFiles so Blueprint can preserve explicit scope provenance."
+        })
+      ];
+      return reviewRecordInvalidResult({
+        located: locatedReviewPhase,
+        artifact: args.artifact,
+        reportPath,
+        diagnostics,
+        diagnosticCounts: countDiagnostics(diagnostics),
+        taskSchema: context.taskSchema,
+        warnings: [...warnings, ...diagnostics.map(formatReviewDiagnostic)]
+      });
+    }
     const modelArtifact = args.artifact;
     const validationFiles = args.artifact === "code-review" ? await resolveCodeReviewRecordValidationFiles({
-      projectRoot,
       recordArgs: args
     }) : void 0;
     const validation2 = await blueprintReviewValidateModel({
@@ -27558,13 +27901,18 @@ async function blueprintReviewRecord(args) {
         located: locatedReviewPhase,
         artifact: args.artifact,
         reportPath,
+        diagnostics: validation2.diagnostics,
+        diagnosticCounts: validation2.diagnosticCounts,
+        taskSchema: validation2.taskSchema,
         warnings: [
           ...warnings,
+          ...validation2.warnings,
           ...validation2.diagnostics.map(formatReviewDiagnostic)
         ]
       });
     }
     content = validation2.renderPreview;
+    warnings.push(...validation2.warnings);
     codeReviewScopeFiles = args.artifact === "code-review" ? validation2.files : [];
     if (args.artifact === "ui-review" && validation2.normalizedModel) {
       const uiModel = validation2.normalizedModel;
@@ -27740,6 +28088,7 @@ async function blueprintReviewLoadFindings(args) {
       findings: [],
       severityCounts: emptySeverityCounts(),
       followUps: [],
+      followUpTargets: [],
       reason: located.reason ?? "Phase could not be resolved for review findings loading.",
       warnings: [
         ...located.warnings
@@ -27762,6 +28111,7 @@ async function blueprintReviewLoadFindings(args) {
       findings: [],
       severityCounts: emptySeverityCounts(),
       followUps: [],
+      followUpTargets: [],
       reason: `Phase ${located.phaseNumber} does not have a saved ${REVIEW_ARTIFACT_SUFFIXES[artifact]} artifact yet.`,
       warnings: located.warnings
     };
@@ -27783,14 +28133,15 @@ async function blueprintReviewLoadFindings(args) {
     findings: parsed.findings,
     severityCounts: parsed.severityCounts,
     followUps: parsed.followUps,
+    followUpTargets: parsed.followUpTargets,
     reason: null,
-    warnings: parsed.findings.length === 0 ? [
+    warnings: parsed.findings.length === 0 && parsed.followUpTargets.length === 0 ? [
       ...located.warnings,
       `No structured findings were parsed from ${artifactPath}.`
     ] : located.warnings
   };
 }
-var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN, LEGACY_CODE_REVIEW_FINDING_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -27906,6 +28257,9 @@ var init_review = __esm({
       "summaryPaths"
     ]);
     CODE_REVIEW_LOCATION_PATTERN = /^((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
+    VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
+    CANONICAL_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
+    LEGACY_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
     CODE_REVIEW_NEXT_ACTION_BUILDERS = [
       (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
       (phaseNumber) => `/blu-secure-phase ${phaseNumber}`,
@@ -28695,7 +29049,7 @@ var init_update = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash as createHash2 } from "node:crypto";
 import { promises as fs4 } from "node:fs";
 import os2 from "node:os";
 import path7 from "node:path";
@@ -29645,7 +29999,7 @@ function patchAuditPath(registryPath, patchId) {
   return path7.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
+  return createHash2("sha256").update(value).digest("hex");
 }
 function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
@@ -31113,13 +31467,13 @@ var init_workspace = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { promises as fs5 } from "node:fs";
 import os3 from "node:os";
 import path8 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function stableHash(value) {
-  return createHash2("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash3("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -38942,7 +39296,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: CODE_REVIEW_REQUIRED_TOOLS,
         optionalAgents: CODE_REVIEW_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback.",
+        contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When security still routes first, keep code-review-fix visible as the secondary queued follow-up if concrete follow-up fixes remain.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -38978,7 +39332,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: CODE_REVIEW_FIX_REQUIRED_TOOLS,
         optionalAgents: CODE_REVIEW_FIX_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard", "workflow advisory"],
-        contractNotes: "Long-running-mutation profile for bounded saved-finding remediation; keep repo mutation scoped to selected findings, validate review.review-fix, persist through review MCP tools, and route follow-up through implemented validation or progress commands only.",
+        contractNotes: "Long-running-mutation profile for bounded saved-finding remediation: default unscoped remediation to saved follow-up findings, keep repo mutation scoped to selected findings, use blueprint-reviewer only for read-only selected-target fix/defer/skip reclassification plus stale-evidence notes, keep the inline fallback on the same one-target-at-a-time decision contract, author only the review.review-fix schema's camelCase JSON fields while forbidding rendered-heading or locked-marker keys, validate through blueprint_review_validate_model, persist through review MCP tools, and update STATE.md through blueprint_state_update with base synced plus explicit activeCommand/currentPhase/nextAction patch fields before routing follow-up through implemented validation or progress commands only.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
