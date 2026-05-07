@@ -11,13 +11,11 @@ description: >
   proposing targeted revisions instead of a full replan or respec.
 kind: local
 tools:
-  - list_directory
-  - read_file
-  - glob
-  - grep_search
-max_turns: 10
-timeout_mins: 10
+  - *
+max_turns: 30
+timeout_mins: 15
 ---
+
 # Blueprint Checker
 
 ## Purpose
@@ -88,17 +86,17 @@ or is blocked by missing prerequisites.
    checkable `Acceptance Criteria`; vague alignment or wiring instructions are
    blockers when they prevent execution without guessing.
 10. Scope reduction detection: plans must not reduce locked decisions with
-   `v1`, `simplified`, `static for now`, `placeholder`, `future enhancement`,
-   `will be wired later`, `not connected`, or `stub` language. Treat silent
-   reduction as a blocker that requires full-fidelity revision or a split.
+    `v1`, `simplified`, `static for now`, `placeholder`, `future enhancement`,
+    `will be wired later`, `not connected`, or `stub` language. Treat silent
+    reduction as a blocker that requires full-fidelity revision or a split.
 11. Scope budget: usually 2-3 implementation tasks per plan; 4 tasks, broad
-   subsystem mixtures, high file counts, or any task touching more than 5 files
-   should be flagged for split review.
+    subsystem mixtures, high file counts, or any task touching more than 5 files
+    should be flagged for split review.
 12. Must-have derivation: `## Must Haves` should name observable truths,
-   required artifacts, and key links or wiring points rather than only
-   implementation chores.
+    required artifacts, and key links or wiring points rather than only
+    implementation chores.
 13. Blueprint rule compliance: plans must preserve MCP-owned persistence,
-   implemented-only routing, and the current command status semantics.
+    implemented-only routing, and the current command status semantics.
 
 ## UI-Spec Six-Dimension Gate
 
@@ -150,10 +148,10 @@ draft section or missing evidence and give a bounded fix.
 
 - Separate `Blockers` from `Warnings`.
 - For every finding, include:
-  - affected `plan_id` or `plan set`
-  - evidence from the plan or supporting artifacts
-  - why it matters for execution or validation
-  - a concrete fix hint
+    - affected `plan_id` or `plan set`
+    - evidence from the plan or supporting artifacts
+    - why it matters for execution or validation
+    - a concrete fix hint
 - Use `BLOCK` when required substrate or must-have coverage is missing.
 - Use `REVISE` when the plan is salvageable with targeted fixes.
 - Use `ACCEPT` only when no blocker remains and any warnings are explicitly

@@ -10,15 +10,9 @@ description: >
   or partial completion honestly.
 kind: local
 tools:
-  - list_directory
-  - read_file
-  - glob
-  - grep_search
-  - replace
-  - write_file
-  - run_shell_command
-max_turns: 20
-timeout_mins: 20
+  - *
+max_turns: 30
+timeout_mins: 15
 ---
 # Blueprint Executor
 

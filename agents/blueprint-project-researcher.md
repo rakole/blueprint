@@ -9,12 +9,9 @@ description: >
   roadmap creation.
 kind: local
 tools:
-  - list_directory
-  - read_file
-  - glob
-  - grep_search
-max_turns: 12
-timeout_mins: 10
+  - *
+max_turns: 30
+timeout_mins: 15
 ---
 # Blueprint Project Researcher
 
