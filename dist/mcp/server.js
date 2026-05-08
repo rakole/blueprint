@@ -72257,7 +72257,7 @@ function summarizeToolResult(toolName, result) {
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
-var RICH_TEXT_TOOL_NAMES = /* @__PURE__ */ new Set([
+var STRUCTURED_CONTENT_HEAVY_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_artifact_validate",
   "blueprint_artifact_contract_read",
   "blueprint_phase_plan_authoring_context",
@@ -72266,231 +72266,28 @@ var RICH_TEXT_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_phase_validation_authoring_context",
   "blueprint_phase_validation_validate_model",
   "blueprint_phase_summary_read",
+  "blueprint_phase_summary_authoring_context",
+  "blueprint_phase_summary_validate_model",
   "blueprint_phase_validation_read",
   "blueprint_review_authoring_context",
   "blueprint_review_validate_model",
-  "blueprint_review_record"
+  "blueprint_review_record",
+  "blueprint_artifact_report_authoring_context",
+  "blueprint_artifact_report_validate_model"
 ]);
-function stringifyForToolText(value) {
-  return JSON.stringify(value, null, 2);
+function getStructuredContentNote(toolName) {
+  return STRUCTURED_CONTENT_HEAVY_TOOL_NAMES.has(toolName) ? "Detailed data is available in structuredContent." : "";
 }
-function appendJsonSection(sections, heading, value) {
-  if (value === void 0 || value === null) {
-    return;
-  }
-  sections.push(`## ${heading}
-
-\`\`\`json
-${stringifyForToolText(value)}
-\`\`\``);
-}
-function appendTextSection(sections, heading, value) {
-  if (typeof value !== "string" || value.length === 0) {
-    return;
-  }
-  sections.push(`## ${heading}
-
-${value}`);
-}
-function appendMarkdownSection(sections, heading, value) {
-  if (typeof value !== "string" || value.length === 0) {
-    return;
-  }
-  sections.push(`## ${heading}
-
-\`\`\`\`markdown
-${value}
-\`\`\`\``);
-}
-function appendNestedMarkdownSection(sections, heading, value, key) {
-  const record2 = asRecord2(value);
-  appendMarkdownSection(sections, heading, record2?.[key]);
-}
-function getContractFromResult(result) {
-  return asRecord2(result.contract);
-}
-function appendArtifactContractReadDetails(sections, result) {
-  const contract = getContractFromResult(result);
-  const modelContract = asRecord2(contract?.modelContract);
-  appendMarkdownSection(sections, "Authoring Template", contract?.authoringTemplate);
-  appendJsonSection(sections, "Model Contract", modelContract);
-  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
-}
-function appendValidationAuthoringContextDetails(sections, result) {
-  const contract = getContractFromResult(result);
-  const modelContract = asRecord2(contract?.modelContract);
-  appendJsonSection(sections, "Allowed Values", result.allowedValues);
-  appendJsonSection(sections, "Summary Evidence", result.summaryEvidence);
-  appendJsonSection(sections, "Base Model Schema", result.baseSchema);
-  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
-  appendJsonSection(sections, "Model JSON Schema", modelContract?.jsonSchema);
-  appendNestedMarkdownSection(sections, "Existing Validation Artifact", result.existing, "content");
-  appendNestedMarkdownSection(sections, "Ready Verification Artifact", result.verification, "content");
-}
-function appendPhasePlanAuthoringContextDetails(sections, result) {
-  appendJsonSection(sections, "Known Requirements", result.knownRequirements);
-  appendJsonSection(sections, "Known Evidence Artifacts", result.knownEvidenceArtifacts);
-  appendJsonSection(sections, "Allowed Dependency Plan IDs", result.allowedDependencyPlanIds);
-  appendJsonSection(sections, "Base Model Schema", result.baseSchema);
-  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
-  if (getString(result, "status") === "invalid") {
-    appendTextSection(sections, "Invalid Reason", result.reason);
-  }
-}
-function appendValidationModelDetails(sections, result) {
-  appendJsonSection(sections, "Diagnostics", result.diagnostics);
-  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
-  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
-  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
-  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
-}
-function appendPhasePlanModelDetails(sections, result) {
-  appendJsonSection(sections, "Diagnostics", result.diagnostics);
-  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
-  appendJsonSection(sections, "Repair Summary", result.repairSummary);
-  appendJsonSection(sections, "Target", result.target);
-  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
-  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
-  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
-}
-function appendPhasePlanWriteModelValidationDetails(sections, result) {
-  if (getString(result, "status") !== "invalid") {
-    return;
-  }
-  const modelValidation = asRecord2(result.modelValidation);
-  if (!modelValidation) {
-    return;
-  }
-  appendJsonSection(sections, "Model Diagnostics", modelValidation.diagnostics);
-  appendJsonSection(sections, "Model Repair Summary", modelValidation.repairSummary);
-  appendJsonSection(sections, "Model Runtime Task Schema", modelValidation.taskSchema);
-}
-function compactReviewAuthoringContext(value) {
-  const context = asRecord2(value);
-  if (!context) {
-    return value;
-  }
-  const compact = {};
-  for (const [key, entry] of Object.entries(context)) {
-    if (key === "baseSchema" || key === "taskSchema") {
-      continue;
-    }
-    compact[key] = entry;
-  }
-  return compact;
-}
-function collectDeclaredThreatIds(value) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((entry) => asRecord2(entry)?.threatId).filter((entry) => typeof entry === "string");
-}
-function appendReviewAuthoringContextDetails(sections, result) {
-  const authoringContext = asRecord2(result.authoringContext);
-  appendJsonSection(
-    sections,
-    "Review Authoring Context",
-    compactReviewAuthoringContext(result.authoringContext)
-  );
-  appendJsonSection(
-    sections,
-    "Evidence Coverage Keys",
-    collectStringArray(authoringContext?.knownEvidenceArtifacts)
-  );
-  appendJsonSection(
-    sections,
-    "Allowed Next Actions",
-    collectStringArray(authoringContext?.allowedNextActions)
-  );
-  appendJsonSection(
-    sections,
-    "Declared Threat IDs",
-    collectDeclaredThreatIds(authoringContext?.declaredThreats)
-  );
-  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
-  appendJsonSection(sections, "Prerequisite Blockers", result.prerequisiteBlockers);
-  appendTextSection(sections, "Invalid Reason", result.reason);
-}
-function appendReviewModelDetails(sections, result) {
-  appendJsonSection(sections, "Diagnostics", result.diagnostics);
-  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
-  appendJsonSection(sections, "Repair Summary", result.repairSummary);
-  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
-  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
-}
-function appendReviewRecordDetails(sections, result) {
-  if (getString(result, "status") !== "invalid") {
-    return;
-  }
-  appendJsonSection(sections, "Model Diagnostics", result.diagnostics);
-  appendJsonSection(sections, "Model Repair Summary", result.repairSummary);
-}
-function appendArtifactValidateDetails(sections, result) {
-  appendJsonSection(sections, "Diagnostics", result.diagnostics);
-  appendJsonSection(sections, "Suggested Repairs", result.suggestedRepairs);
-}
-function appendRichToolText(toolName, result, summary) {
-  if (!RICH_TEXT_TOOL_NAMES.has(toolName)) {
-    return summary;
-  }
-  const sections = [];
-  if (toolName === "blueprint_artifact_validate") {
-    appendArtifactValidateDetails(sections, result);
-  }
-  if (toolName === "blueprint_artifact_contract_read") {
-    appendArtifactContractReadDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_validation_authoring_context") {
-    appendValidationAuthoringContextDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_validation_validate_model") {
-    appendValidationModelDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_plan_authoring_context") {
-    appendPhasePlanAuthoringContextDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_plan_validate_model") {
-    appendPhasePlanModelDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_plan_write") {
-    appendPhasePlanWriteModelValidationDetails(sections, result);
-  }
-  if (toolName === "blueprint_phase_summary_read") {
-    appendMarkdownSection(sections, "Summary Artifact Body", result.content);
-    appendJsonSection(sections, "Summary Validation", result.validation);
-    appendJsonSection(sections, "Summary Metadata", result.metadata);
-  }
-  if (toolName === "blueprint_phase_validation_read") {
-    appendMarkdownSection(sections, "Validation Artifact Body", result.content);
-    appendJsonSection(sections, "Validation State", {
-      validation: result.validation,
-      verificationReadyForUat: result.verificationReadyForUat,
-      uatStatus: result.uatStatus,
-      resumeState: result.resumeState,
-      checkpoint: result.checkpoint,
-      complete: result.complete,
-      summaryPaths: result.summaryPaths
-    });
-  }
-  if (toolName === "blueprint_review_authoring_context") {
-    appendReviewAuthoringContextDetails(sections, result);
-  }
-  if (toolName === "blueprint_review_validate_model") {
-    appendReviewModelDetails(sections, result);
-  }
-  if (toolName === "blueprint_review_record") {
-    appendReviewRecordDetails(sections, result);
-  }
-  return sections.length > 0 ? `${summary}
-
-${sections.join("\n\n")}` : summary;
+function formatToolResponseText(toolName, summary) {
+  const note = getStructuredContentNote(toolName);
+  return note.length > 0 ? `${summary} ${note}` : summary;
 }
 function createToolResponseContent(toolName, result) {
   const summary = summarizeToolResult(toolName, result);
   return [
     {
       type: "text",
-      text: appendRichToolText(toolName, result, summary)
+      text: formatToolResponseText(toolName, summary)
     }
   ];
 }

@@ -16,6 +16,13 @@ import {
   summarizeToolResult
 } from "../src/mcp/server.js";
 
+function expectedStructuredContentText(
+  toolName: string,
+  result: Record<string, unknown>
+): string {
+  return `${summarizeToolResult(toolName, result)} Detailed data is available in structuredContent.`;
+}
+
 test("artifact read summaries keep the transcript concise", () => {
   const result = {
     phaseFound: true,
@@ -56,6 +63,52 @@ test("tool response content returns the compact summary instead of pretty JSON",
       text: "Loaded Phase 1 context at `.blueprint/phases/01-core-game/01-CONTEXT.md` (18 B)."
     }
   ]);
+});
+
+test("schema-first authoring and validation tools point to structuredContent", () => {
+  const summaryAuthoringResult = {
+    status: "ready",
+    phaseNumber: "3",
+    planId: "01",
+    taskSchema: { properties: { status: { enum: ["COMPLETED"] } } }
+  };
+  const reportValidationResult = {
+    status: "invalid",
+    valid: false,
+    reportName: "audit-fix-3",
+    taskSchema: { properties: { reportStatus: { enum: ["BLOCKED"] } } },
+    normalizedModel: { reportStatus: "BLOCKED" },
+    diagnostics: [
+      {
+        message: "report.add-tests model is missing required evidence coverage."
+      }
+    ]
+  };
+  const summaryAuthoringText = createToolResponseContent(
+    "blueprint_phase_summary_authoring_context",
+    summaryAuthoringResult
+  )[0].text;
+  const reportValidationText = createToolResponseContent(
+    "blueprint_artifact_report_validate_model",
+    reportValidationResult
+  )[0].text;
+
+  assert.equal(
+    summaryAuthoringText,
+    expectedStructuredContentText(
+      "blueprint_phase_summary_authoring_context",
+      summaryAuthoringResult
+    )
+  );
+  assert.equal(
+    reportValidationText,
+    expectedStructuredContentText(
+      "blueprint_artifact_report_validate_model",
+      reportValidationResult
+    )
+  );
+  assert.doesNotMatch(summaryAuthoringText, /taskSchema|COMPLETED/);
+  assert.doesNotMatch(reportValidationText, /normalizedModel|BLOCKED|taskSchema/);
 });
 
 test("missing reads surface the reason without dumping the result object", () => {
@@ -143,7 +196,7 @@ test("invalid model validation summaries surface diagnostic messages", () => {
   );
 });
 
-test("phase plan model tools include repairable schema and diagnostics in MCP text", () => {
+test("phase plan model tools keep rich schema details out of MCP text", () => {
   const planDiagnostics = [
     {
       source: "schema",
@@ -187,7 +240,7 @@ test("phase plan model tools include repairable schema and diagnostics in MCP te
       dependsOn: { items: { enum: ["02"] } }
     }
   };
-  const authoringText = createToolResponseContent("blueprint_phase_plan_authoring_context", {
+  const authoringResult = {
     status: "invalid",
     phase: { phaseNumber: "3" },
     planId: "01",
@@ -202,8 +255,8 @@ test("phase plan model tools include repairable schema and diagnostics in MCP te
     baseSchema: { $id: "blueprint.phase.plan.model" },
     taskSchema,
     reason: "Phase plan authoring requires at least one roadmap requirement."
-  })[0].text;
-  const validateText = createToolResponseContent("blueprint_phase_plan_validate_model", {
+  };
+  const validateResult = {
     status: "invalid",
     valid: false,
     target: {
@@ -234,8 +287,8 @@ test("phase plan model tools include repairable schema and diagnostics in MCP te
     normalizedModel: { title: "Repair validation plan" },
     renderPreview: "# Phase 03: Validation Engine - Plan 01\n",
     warnings: []
-  })[0].text;
-  const writeText = createToolResponseContent("blueprint_phase_plan_write", {
+  };
+  const writeResult = {
     phaseNumber: "3",
     planId: "01",
     path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
@@ -254,39 +307,46 @@ test("phase plan model tools include repairable schema and diagnostics in MCP te
       taskSchema
     },
     warnings: []
-  })[0].text;
+  };
+  const authoringText = createToolResponseContent(
+    "blueprint_phase_plan_authoring_context",
+    authoringResult
+  )[0].text;
+  const validateText = createToolResponseContent(
+    "blueprint_phase_plan_validate_model",
+    validateResult
+  )[0].text;
+  const writeText = createToolResponseContent("blueprint_phase_plan_write", writeResult)[0].text;
 
-  assert.match(authoringText, /## Known Requirements/);
-  assert.match(authoringText, /LIFE-02/);
-  assert.match(authoringText, /## Known Evidence Artifacts/);
-  assert.match(authoringText, /03-CONTEXT\.md/);
-  assert.match(authoringText, /## Allowed Dependency Plan IDs/);
-  assert.match(authoringText, /## Base Model Schema/);
-  assert.match(authoringText, /## Runtime Task Schema/);
-  assert.match(authoringText, /## Invalid Reason/);
-  assert.match(authoringText, /requires at least one roadmap requirement/);
-  assert.match(validateText, /## Diagnostics/);
-  assert.match(validateText, /Acceptance criterion is not objectively verifiable/);
-  assert.match(validateText, /## Diagnostic Counts/);
-  assert.match(validateText, /## Repair Summary/);
-  assert.match(validateText, /repair all diagnostics/i);
-  assert.match(validateText, /## Target/);
-  assert.match(validateText, /phase\.plan/);
-  assert.match(validateText, /## Runtime Task Schema/);
-  assert.match(validateText, /## Normalized Model/);
-  assert.match(validateText, /Repair validation plan/);
-  assert.match(validateText, /## Render Preview/);
-  assert.match(writeText, /\(\+1 more\)\./);
-  assert.match(writeText, /## Model Diagnostics/);
-  assert.match(writeText, /Acceptance criterion is not objectively verifiable/);
-  assert.match(writeText, /## Model Repair Summary/);
-  assert.match(writeText, /re-read authoring context before retrying/i);
-  assert.match(writeText, /## Model Runtime Task Schema/);
-  assert.match(writeText, /LIFE-02/);
+  assert.equal(
+    authoringText,
+    expectedStructuredContentText("blueprint_phase_plan_authoring_context", authoringResult)
+  );
+  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
+  assert.doesNotMatch(authoringText, /## Base Model Schema/);
+  assert.doesNotMatch(authoringText, /## Invalid Reason/);
+  assert.equal(
+    validateText,
+    expectedStructuredContentText("blueprint_phase_plan_validate_model", validateResult)
+  );
+  assert.doesNotMatch(validateText, /## Diagnostics/);
+  assert.doesNotMatch(validateText, /## Diagnostic Counts/);
+  assert.doesNotMatch(validateText, /## Repair Summary/);
+  assert.doesNotMatch(validateText, /## Target/);
+  assert.doesNotMatch(validateText, /## Runtime Task Schema/);
+  assert.doesNotMatch(validateText, /## Normalized Model/);
+  assert.doesNotMatch(validateText, /## Render Preview/);
+  assert.equal(
+    writeText,
+    expectedStructuredContentText("blueprint_phase_plan_write", writeResult)
+  );
+  assert.doesNotMatch(writeText, /## Model Diagnostics/);
+  assert.doesNotMatch(writeText, /## Model Repair Summary/);
+  assert.doesNotMatch(writeText, /## Model Runtime Task Schema/);
 });
 
-test("review model tools expose authoring context and repair details in MCP text", () => {
-  const authoringText = createToolResponseContent("blueprint_review_authoring_context", {
+test("review model tools keep authoring context and repair details out of MCP text", () => {
+  const authoringResult = {
     status: "ready",
     artifact: "security",
     phase: { phaseNumber: "5" },
@@ -310,8 +370,8 @@ test("review model tools expose authoring context and repair details in MCP text
       }
     },
     prerequisiteBlockers: []
-  })[0].text;
-  const validateText = createToolResponseContent("blueprint_review_validate_model", {
+  };
+  const validateResult = {
     status: "invalid",
     valid: false,
     phase: { phaseNumber: "5" },
@@ -347,8 +407,8 @@ test("review model tools expose authoring context and repair details in MCP text
     },
     normalizedModel: null,
     renderPreview: null
-  })[0].text;
-  const recordText = createToolResponseContent("blueprint_review_record", {
+  };
+  const recordResult = {
     phaseNumber: "5",
     artifact: "security",
     reportPath: ".blueprint/phases/05-security-audit/05-SECURITY.md",
@@ -374,29 +434,43 @@ test("review model tools expose authoring context and repair details in MCP text
       retryInstruction: "Repair every diagnostic by exact path."
     },
     warnings: []
-  })[0].text;
+  };
+  const authoringText = createToolResponseContent(
+    "blueprint_review_authoring_context",
+    authoringResult
+  )[0].text;
+  const validateText = createToolResponseContent(
+    "blueprint_review_validate_model",
+    validateResult
+  )[0].text;
+  const recordText = createToolResponseContent("blueprint_review_record", recordResult)[0].text;
 
-  assert.match(authoringText, /## Review Authoring Context/);
-  assert.match(authoringText, /## Evidence Coverage Keys/);
-  assert.match(authoringText, /05-01-PLAN\.md/);
-  assert.match(authoringText, /## Allowed Next Actions/);
-  assert.match(authoringText, /\/blu-validate-phase 5/);
-  assert.match(authoringText, /Blocked: pending-open-threat/);
-  assert.doesNotMatch(authoringText, /\/blu-prog\.\.\./);
-  assert.match(authoringText, /## Declared Threat IDs/);
-  assert.match(authoringText, /T-01/);
-  assert.match(authoringText, /## Runtime Task Schema/);
-  assert.doesNotMatch(authoringText, /omittedFromCompactContext/);
-  assert.match(validateText, /## Diagnostics/);
-  assert.match(validateText, /model\.evidenceCoverage\["\.blueprint\/phases\/05-security-audit\/05-01-PLAN\.md"\]\.status/);
-  assert.match(validateText, /used/);
-  assert.match(validateText, /## Repair Summary/);
-  assert.match(recordText, /## Model Diagnostics/);
-  assert.match(recordText, /## Model Repair Summary/);
+  assert.equal(
+    authoringText,
+    expectedStructuredContentText("blueprint_review_authoring_context", authoringResult)
+  );
+  assert.doesNotMatch(authoringText, /## Review Authoring Context/);
+  assert.doesNotMatch(authoringText, /## Evidence Coverage Keys/);
+  assert.doesNotMatch(authoringText, /## Allowed Next Actions/);
+  assert.doesNotMatch(authoringText, /## Declared Threat IDs/);
+  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
+  assert.equal(
+    validateText,
+    expectedStructuredContentText("blueprint_review_validate_model", validateResult)
+  );
+  assert.doesNotMatch(validateText, /## Diagnostics/);
+  assert.doesNotMatch(validateText, /## Repair Summary/);
+  assert.doesNotMatch(validateText, /## Normalized Model/);
+  assert.equal(
+    recordText,
+    expectedStructuredContentText("blueprint_review_record", recordResult)
+  );
+  assert.doesNotMatch(recordText, /## Model Diagnostics/);
+  assert.doesNotMatch(recordText, /## Model Repair Summary/);
 });
 
-test("schema-first validation tools append task schemas, diagnostics, previews, and evidence bodies to text responses", () => {
-  const contractText = createToolResponseContent("blueprint_artifact_contract_read", {
+test("schema-first validation tools keep task schemas, previews, and evidence bodies out of MCP text", () => {
+  const contractResult = {
     artifactId: "phase.verification",
     contract: {
       authoringTemplate: "# Phase {{phasePrefix}}: {{phaseName}} - Verification\n",
@@ -408,8 +482,8 @@ test("schema-first validation tools append task schemas, diagnostics, previews, 
         }
       }
     }
-  })[0].text;
-  const authoringText = createToolResponseContent("blueprint_phase_validation_authoring_context", {
+  };
+  const authoringResult = {
     status: "ready",
     phaseFound: true,
     phaseNumber: "3",
@@ -437,8 +511,8 @@ test("schema-first validation tools append task schemas, diagnostics, previews, 
     existing: {
       content: "# Phase 03: Validation Engine - Verification\n"
     }
-  })[0].text;
-  const validateText = createToolResponseContent("blueprint_phase_validation_validate_model", {
+  };
+  const validateResult = {
     status: "invalid",
     valid: false,
     phase: { phaseNumber: "3" },
@@ -466,26 +540,42 @@ test("schema-first validation tools append task schemas, diagnostics, previews, 
     },
     normalizedModel: null,
     renderPreview: "# Phase 03: Validation Engine - Verification\n"
-  })[0].text;
+  };
+  const contractText = createToolResponseContent("blueprint_artifact_contract_read", contractResult)[0].text;
+  const authoringText = createToolResponseContent(
+    "blueprint_phase_validation_authoring_context",
+    authoringResult
+  )[0].text;
+  const validateText = createToolResponseContent(
+    "blueprint_phase_validation_validate_model",
+    validateResult
+  )[0].text;
 
-  assert.match(contractText, /## Authoring Template/);
-  assert.match(contractText, /## Model Contract/);
-  assert.match(contractText, /schemaVersion/);
-  assert.match(contractText, /## Model JSON Schema/);
-  assert.match(contractText, /"status"/);
-  assert.match(authoringText, /## Runtime Task Schema/);
-  assert.match(authoringText, /03-01-SUMMARY\.md/);
-  assert.match(authoringText, /## Model JSON Schema/);
-  assert.match(authoringText, /## Existing Validation Artifact/);
-  assert.match(validateText, /## Diagnostics/);
-  assert.match(validateText, /must have required property status/);
-  assert.match(validateText, /must match exactly one schema in oneOf/);
-  assert.match(validateText, /## Runtime Task Schema/);
-  assert.match(validateText, /## Render Preview/);
+  assert.equal(
+    contractText,
+    expectedStructuredContentText("blueprint_artifact_contract_read", contractResult)
+  );
+  assert.doesNotMatch(contractText, /## Authoring Template/);
+  assert.doesNotMatch(contractText, /## Model Contract/);
+  assert.doesNotMatch(contractText, /## Model JSON Schema/);
+  assert.equal(
+    authoringText,
+    expectedStructuredContentText("blueprint_phase_validation_authoring_context", authoringResult)
+  );
+  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
+  assert.doesNotMatch(authoringText, /## Model JSON Schema/);
+  assert.doesNotMatch(authoringText, /## Existing Validation Artifact/);
+  assert.equal(
+    validateText,
+    expectedStructuredContentText("blueprint_phase_validation_validate_model", validateResult)
+  );
+  assert.doesNotMatch(validateText, /## Diagnostics/);
+  assert.doesNotMatch(validateText, /## Runtime Task Schema/);
+  assert.doesNotMatch(validateText, /## Render Preview/);
 });
 
-test("summary and validation reads include artifact bodies when hosts expose only MCP text", () => {
-  const summaryText = createToolResponseContent("blueprint_phase_summary_read", {
+test("summary and validation reads keep artifact bodies out of MCP text", () => {
+  const summaryResult = {
     phaseFound: true,
     found: true,
     phaseNumber: "3",
@@ -494,8 +584,8 @@ test("summary and validation reads include artifact bodies when hosts expose onl
     content: "# Phase 03: Validation Engine - Summary 01\n\n## Outcome\n\n- Done.\n",
     validation: { valid: true, issues: [], warnings: [] },
     metadata: { status: "COMPLETED" }
-  })[0].text;
-  const validationText = createToolResponseContent("blueprint_phase_validation_read", {
+  };
+  const validationResult = {
     phaseFound: true,
     found: true,
     phaseNumber: "3",
@@ -505,14 +595,25 @@ test("summary and validation reads include artifact bodies when hosts expose onl
     validation: { valid: true, issues: [], warnings: [] },
     verificationReadyForUat: true,
     summaryPaths: [".blueprint/phases/03-validation-engine/03-01-SUMMARY.md"]
-  })[0].text;
+  };
+  const summaryText = createToolResponseContent("blueprint_phase_summary_read", summaryResult)[0].text;
+  const validationText = createToolResponseContent(
+    "blueprint_phase_validation_read",
+    validationResult
+  )[0].text;
 
-  assert.match(summaryText, /## Summary Artifact Body/);
-  assert.match(summaryText, /## Outcome/);
-  assert.match(summaryText, /## Summary Validation/);
-  assert.match(validationText, /## Validation Artifact Body/);
-  assert.match(validationText, /## Validation Summary/);
-  assert.match(validationText, /## Validation State/);
+  assert.equal(
+    summaryText,
+    expectedStructuredContentText("blueprint_phase_summary_read", summaryResult)
+  );
+  assert.doesNotMatch(summaryText, /## Summary Artifact Body/);
+  assert.doesNotMatch(summaryText, /## Summary Validation/);
+  assert.equal(
+    validationText,
+    expectedStructuredContentText("blueprint_phase_validation_read", validationResult)
+  );
+  assert.doesNotMatch(validationText, /## Validation Artifact Body/);
+  assert.doesNotMatch(validationText, /## Validation State/);
 });
 
 test("reused write results report preservation instead of a fresh save", () => {
