@@ -13,7 +13,7 @@ export declare const blueprintToolRegistry: {
 };
 export declare const blueprintToolNames: string[];
 export declare function summarizeToolResult(toolName: string, result: ToolResult): string;
-export declare function createToolResponseContent(toolName: string, result: ToolResult): Array<{
+export declare function createToolResponseContent(_toolName: string, result: ToolResult): Array<{
     type: "text";
     text: string;
 }>;

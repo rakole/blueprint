@@ -13,8 +13,7 @@ import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command
 import {
   blueprintToolNames,
   createToolResponseContent,
-  executeToolHandlerWithFailureLogging,
-  summarizeToolResult
+  executeToolHandlerWithFailureLogging
 } from "../src/mcp/server.js";
 import {
   blueprintProjectInit,
@@ -89,6 +88,10 @@ async function cpFixtureContents(sourcePath: string, targetPath: string): Promis
 async function readJsonFile<T>(filePath: string): Promise<T> {
   const raw = await readFile(filePath, "utf8");
   return JSON.parse(raw) as T;
+}
+
+function parseToolResponse<T extends Record<string, unknown>>(toolName: string, result: T): T {
+  return JSON.parse(createToolResponseContent(toolName, result)[0].text) as T;
 }
 
 function buildAutoBootstrapSeed(overrides: Partial<BootstrapSeed> = {}): BootstrapSeed {
@@ -1383,19 +1386,19 @@ test("new-project runtime summaries surface the live next action for fresh and b
   );
 
   assert.match(
-    createToolResponseContent("blueprint_project_init", freshInit)[0].text,
+    parseToolResponse("blueprint_project_init", freshInit).nextAction as string,
     /\/blu-discuss-phase 1/
   );
   assert.match(
-    createToolResponseContent("blueprint_project_status", freshStatus)[0].text,
+    parseToolResponse("blueprint_project_status", freshStatus).nextAction as string,
     /\/blu-discuss-phase 1/
   );
   assert.match(
-    createToolResponseContent("blueprint_project_init", brownfieldInit)[0].text,
+    parseToolResponse("blueprint_project_init", brownfieldInit).nextAction as string,
     /\/blu-discuss-phase 1/
   );
   assert.match(
-    createToolResponseContent("blueprint_project_status", brownfieldStatus)[0].text,
+    parseToolResponse("blueprint_project_status", brownfieldStatus).nextAction as string,
     /\/blu-discuss-phase 1/
   );
   assert.doesNotMatch(brownfieldRoadmapDoc, /Map Existing Codebase/);
@@ -1406,9 +1409,9 @@ test("new-project runtime summaries surface the live next action for fresh and b
   );
   assert.match(brownfieldProjectDoc, /saved `\.blueprint\/codebase\/` map/i);
   assert.match(brownfieldRoadmapDoc, /Roadmap confidence: ready for progress review/);
-  assert.doesNotMatch(
-    createToolResponseContent("blueprint_project_status", freshStatus)[0].text,
-    /"nextAction"/
+  assert.equal(
+    parseToolResponse("blueprint_project_status", freshStatus).nextAction,
+    freshStatus.nextAction
   );
 });
 

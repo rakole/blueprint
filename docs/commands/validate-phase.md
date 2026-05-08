@@ -57,7 +57,7 @@
 - existing validation artifacts through `blueprint_phase_validation_read`
 - schema-first validation authoring inputs through `blueprint_phase_validation_authoring_context`
 - canonical authoring templates, optional structured `modelContract`, and required-tool derivation through `blueprint_artifact_contract_read`
-- For Tabnine or other hosts that expose only MCP `content.text`, the contract, summary-read, validation-read, authoring-context, and validate-model tools include full schemas, diagnostics, render previews, and evidence bodies in their text response; do not fall back to shell reads of `.blueprint/`.
+- For Tabnine, Gemini, or other hosts that expose only MCP `content.text`, every registered Blueprint MCP tool mirrors its full `structuredContent` as compact JSON in the text response; do not fall back to shell reads of `.blueprint/`.
 
 
 ## Blueprint And Global State Writes

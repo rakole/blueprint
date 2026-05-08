@@ -39541,7 +39541,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: VALIDATE_PHASE_REQUIRED_TOOLS,
         optionalAgents: VALIDATION_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use schema/evidence-rich MCP text from the validation and contract tools when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.",
+        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use MCP content.text as compact mirrored structured result JSON when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -72449,44 +72449,11 @@ function summarizeToolResult(toolName, result) {
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
-var STRUCTURED_CONTENT_HEAVY_TOOL_NAMES = /* @__PURE__ */ new Set([
-  "blueprint_artifact_validate",
-  "blueprint_artifact_contract_read",
-  "blueprint_phase_plan_authoring_context",
-  "blueprint_phase_plan_validate_model",
-  "blueprint_phase_plan_write",
-  "blueprint_phase_validation_authoring_context",
-  "blueprint_phase_validation_validate_model",
-  "blueprint_phase_summary_read",
-  "blueprint_phase_summary_authoring_context",
-  "blueprint_phase_summary_validate_model",
-  "blueprint_phase_validation_read",
-  "blueprint_review_authoring_context",
-  "blueprint_review_validate_model",
-  "blueprint_review_record",
-  "blueprint_artifact_report_authoring_context",
-  "blueprint_artifact_report_validate_model"
-]);
-function getStructuredContentNote(toolName) {
-  return STRUCTURED_CONTENT_HEAVY_TOOL_NAMES.has(toolName) ? "Detailed data is available in structuredContent." : "";
-}
-function formatToolResponseText(toolName, summary) {
-  const note = getStructuredContentNote(toolName);
-  return note.length > 0 ? `${summary} ${note}` : summary;
-}
-function shouldMirrorStructuredContentInText(toolName) {
-  return toolName === "blueprint_artifact_contract_read";
-}
-function createToolResponseContent(toolName, result) {
-  const summary = summarizeToolResult(toolName, result);
-  const text = shouldMirrorStructuredContentInText(toolName) ? `${summary}
-
-Full result JSON:
-${JSON.stringify(result, null, 2)}` : formatToolResponseText(toolName, summary);
+function createToolResponseContent(_toolName, result) {
   return [
     {
       type: "text",
-      text
+      text: JSON.stringify(result)
     }
   ];
 }

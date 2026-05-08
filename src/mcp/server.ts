@@ -524,53 +524,14 @@ export function summarizeToolResult(toolName: string, result: ToolResult): strin
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
 
-const STRUCTURED_CONTENT_HEAVY_TOOL_NAMES = new Set([
-  "blueprint_artifact_validate",
-  "blueprint_artifact_contract_read",
-  "blueprint_phase_plan_authoring_context",
-  "blueprint_phase_plan_validate_model",
-  "blueprint_phase_plan_write",
-  "blueprint_phase_validation_authoring_context",
-  "blueprint_phase_validation_validate_model",
-  "blueprint_phase_summary_read",
-  "blueprint_phase_summary_authoring_context",
-  "blueprint_phase_summary_validate_model",
-  "blueprint_phase_validation_read",
-  "blueprint_review_authoring_context",
-  "blueprint_review_validate_model",
-  "blueprint_review_record",
-  "blueprint_artifact_report_authoring_context",
-  "blueprint_artifact_report_validate_model"
-]);
-
-function getStructuredContentNote(toolName: string): string {
-  return STRUCTURED_CONTENT_HEAVY_TOOL_NAMES.has(toolName)
-    ? "Detailed data is available in structuredContent."
-    : "";
-}
-
-function formatToolResponseText(toolName: string, summary: string): string {
-  const note = getStructuredContentNote(toolName);
-  return note.length > 0 ? `${summary} ${note}` : summary;
-}
-
-function shouldMirrorStructuredContentInText(toolName: string): boolean {
-  return toolName === "blueprint_artifact_contract_read";
-}
-
 export function createToolResponseContent(
-  toolName: string,
+  _toolName: string,
   result: ToolResult
 ): Array<{ type: "text"; text: string }> {
-  const summary = summarizeToolResult(toolName, result);
-  const text = shouldMirrorStructuredContentInText(toolName)
-    ? `${summary}\n\nFull result JSON:\n${JSON.stringify(result, null, 2)}`
-    : formatToolResponseText(toolName, summary);
-
   return [
     {
       type: "text",
-      text
+      text: JSON.stringify(result)
     }
   ];
 }

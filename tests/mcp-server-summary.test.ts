@@ -16,18 +16,8 @@ import {
   summarizeToolResult
 } from "../src/mcp/server.js";
 
-function expectedStructuredContentText(
-  toolName: string,
-  result: Record<string, unknown>
-): string {
-  return `${summarizeToolResult(toolName, result)} Detailed data is available in structuredContent.`;
-}
-
-function expectedMirroredStructuredContentText(
-  toolName: string,
-  result: Record<string, unknown>
-): string {
-  return `${summarizeToolResult(toolName, result)}\n\nFull result JSON:\n${JSON.stringify(result, null, 2)}`;
+function expectedStructuredContentJson(result: Record<string, unknown>): string {
+  return JSON.stringify(result);
 }
 
 test("artifact read summaries keep the transcript concise", () => {
@@ -54,25 +44,27 @@ test("artifact read summaries keep the transcript concise", () => {
   assert.doesNotMatch(summary, /\"phaseFound\"/);
 });
 
-test("tool response content returns the compact summary instead of pretty JSON", () => {
-  const content = createToolResponseContent("blueprint_phase_artifact_read", {
+test("tool response content mirrors structuredContent as compact JSON", () => {
+  const result = {
     phaseFound: true,
     found: true,
     phaseNumber: "1",
     artifact: "context",
     path: ".blueprint/phases/01-core-game/01-CONTEXT.md",
     content: "# Phase 1 Context\n"
-  });
+  };
+  const content = createToolResponseContent("blueprint_phase_artifact_read", result);
 
   assert.deepEqual(content, [
     {
       type: "text",
-      text: "Loaded Phase 1 context at `.blueprint/phases/01-core-game/01-CONTEXT.md` (18 B)."
+      text: expectedStructuredContentJson(result)
     }
   ]);
+  assert.deepEqual(JSON.parse(content[0].text), result);
 });
 
-test("schema-first authoring and validation tools point to structuredContent", () => {
+test("schema-first authoring and validation tools mirror structuredContent in MCP text", () => {
   const summaryAuthoringResult = {
     status: "ready",
     phaseNumber: "3",
@@ -102,20 +94,14 @@ test("schema-first authoring and validation tools point to structuredContent", (
 
   assert.equal(
     summaryAuthoringText,
-    expectedStructuredContentText(
-      "blueprint_phase_summary_authoring_context",
-      summaryAuthoringResult
-    )
+    expectedStructuredContentJson(summaryAuthoringResult)
   );
   assert.equal(
     reportValidationText,
-    expectedStructuredContentText(
-      "blueprint_artifact_report_validate_model",
-      reportValidationResult
-    )
+    expectedStructuredContentJson(reportValidationResult)
   );
-  assert.doesNotMatch(summaryAuthoringText, /taskSchema|COMPLETED/);
-  assert.doesNotMatch(reportValidationText, /normalizedModel|BLOCKED|taskSchema/);
+  assert.match(summaryAuthoringText, /taskSchema|COMPLETED/);
+  assert.match(reportValidationText, /normalizedModel|BLOCKED|taskSchema/);
 });
 
 test("missing reads surface the reason without dumping the result object", () => {
@@ -203,7 +189,7 @@ test("invalid model validation summaries surface diagnostic messages", () => {
   );
 });
 
-test("phase plan model tools keep rich schema details out of MCP text", () => {
+test("phase plan model tools mirror rich schema details into MCP text", () => {
   const planDiagnostics = [
     {
       source: "schema",
@@ -327,32 +313,22 @@ test("phase plan model tools keep rich schema details out of MCP text", () => {
 
   assert.equal(
     authoringText,
-    expectedStructuredContentText("blueprint_phase_plan_authoring_context", authoringResult)
+    expectedStructuredContentJson(authoringResult)
   );
-  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
-  assert.doesNotMatch(authoringText, /## Base Model Schema/);
-  assert.doesNotMatch(authoringText, /## Invalid Reason/);
+  assert.match(authoringText, /knownRequirements|taskSchema|baseSchema/);
   assert.equal(
     validateText,
-    expectedStructuredContentText("blueprint_phase_plan_validate_model", validateResult)
+    expectedStructuredContentJson(validateResult)
   );
-  assert.doesNotMatch(validateText, /## Diagnostics/);
-  assert.doesNotMatch(validateText, /## Diagnostic Counts/);
-  assert.doesNotMatch(validateText, /## Repair Summary/);
-  assert.doesNotMatch(validateText, /## Target/);
-  assert.doesNotMatch(validateText, /## Runtime Task Schema/);
-  assert.doesNotMatch(validateText, /## Normalized Model/);
-  assert.doesNotMatch(validateText, /## Render Preview/);
+  assert.match(validateText, /diagnostics|diagnosticCounts|repairSummary|target|taskSchema|normalizedModel|renderPreview/);
   assert.equal(
     writeText,
-    expectedStructuredContentText("blueprint_phase_plan_write", writeResult)
+    expectedStructuredContentJson(writeResult)
   );
-  assert.doesNotMatch(writeText, /## Model Diagnostics/);
-  assert.doesNotMatch(writeText, /## Model Repair Summary/);
-  assert.doesNotMatch(writeText, /## Model Runtime Task Schema/);
+  assert.match(writeText, /modelValidation|diagnostics|repairSummary|taskSchema/);
 });
 
-test("review model tools keep authoring context and repair details out of MCP text", () => {
+test("review model tools mirror authoring context and repair details into MCP text", () => {
   const authoringResult = {
     status: "ready",
     artifact: "security",
@@ -454,29 +430,22 @@ test("review model tools keep authoring context and repair details out of MCP te
 
   assert.equal(
     authoringText,
-    expectedStructuredContentText("blueprint_review_authoring_context", authoringResult)
+    expectedStructuredContentJson(authoringResult)
   );
-  assert.doesNotMatch(authoringText, /## Review Authoring Context/);
-  assert.doesNotMatch(authoringText, /## Evidence Coverage Keys/);
-  assert.doesNotMatch(authoringText, /## Allowed Next Actions/);
-  assert.doesNotMatch(authoringText, /## Declared Threat IDs/);
-  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
+  assert.match(authoringText, /authoringContext|allowedNextActions|declaredThreats|taskSchema/);
   assert.equal(
     validateText,
-    expectedStructuredContentText("blueprint_review_validate_model", validateResult)
+    expectedStructuredContentJson(validateResult)
   );
-  assert.doesNotMatch(validateText, /## Diagnostics/);
-  assert.doesNotMatch(validateText, /## Repair Summary/);
-  assert.doesNotMatch(validateText, /## Normalized Model/);
+  assert.match(validateText, /diagnostics|repairSummary|normalizedModel/);
   assert.equal(
     recordText,
-    expectedStructuredContentText("blueprint_review_record", recordResult)
+    expectedStructuredContentJson(recordResult)
   );
-  assert.doesNotMatch(recordText, /## Model Diagnostics/);
-  assert.doesNotMatch(recordText, /## Model Repair Summary/);
+  assert.match(recordText, /diagnostics|repairSummary/);
 });
 
-test("schema-first validation tools keep task schemas, previews, and evidence bodies out of MCP text", () => {
+test("schema-first validation tools mirror task schemas, previews, and evidence bodies into MCP text", () => {
   const contractResult = {
     artifactId: "phase.verification",
     contract: {
@@ -560,28 +529,24 @@ test("schema-first validation tools keep task schemas, previews, and evidence bo
 
   assert.equal(
     contractText,
-    expectedMirroredStructuredContentText("blueprint_artifact_contract_read", contractResult)
+    expectedStructuredContentJson(contractResult)
   );
   assert.match(contractText, /authoringTemplate/);
   assert.match(contractText, /modelContract/);
   assert.match(contractText, /jsonSchema/);
   assert.equal(
     authoringText,
-    expectedStructuredContentText("blueprint_phase_validation_authoring_context", authoringResult)
+    expectedStructuredContentJson(authoringResult)
   );
-  assert.doesNotMatch(authoringText, /## Runtime Task Schema/);
-  assert.doesNotMatch(authoringText, /## Model JSON Schema/);
-  assert.doesNotMatch(authoringText, /## Existing Validation Artifact/);
+  assert.match(authoringText, /taskSchema|baseSchema|existing/);
   assert.equal(
     validateText,
-    expectedStructuredContentText("blueprint_phase_validation_validate_model", validateResult)
+    expectedStructuredContentJson(validateResult)
   );
-  assert.doesNotMatch(validateText, /## Diagnostics/);
-  assert.doesNotMatch(validateText, /## Runtime Task Schema/);
-  assert.doesNotMatch(validateText, /## Render Preview/);
+  assert.match(validateText, /diagnostics|taskSchema|renderPreview/);
 });
 
-test("summary and validation reads keep artifact bodies out of MCP text", () => {
+test("summary and validation reads mirror artifact bodies into MCP text", () => {
   const summaryResult = {
     phaseFound: true,
     found: true,
@@ -611,16 +576,14 @@ test("summary and validation reads keep artifact bodies out of MCP text", () => 
 
   assert.equal(
     summaryText,
-    expectedStructuredContentText("blueprint_phase_summary_read", summaryResult)
+    expectedStructuredContentJson(summaryResult)
   );
-  assert.doesNotMatch(summaryText, /## Summary Artifact Body/);
-  assert.doesNotMatch(summaryText, /## Summary Validation/);
+  assert.match(summaryText, /content|validation|metadata/);
   assert.equal(
     validationText,
-    expectedStructuredContentText("blueprint_phase_validation_read", validationResult)
+    expectedStructuredContentJson(validationResult)
   );
-  assert.doesNotMatch(validationText, /## Validation Artifact Body/);
-  assert.doesNotMatch(validationText, /## Validation State/);
+  assert.match(validationText, /content|validation|verificationReadyForUat|summaryPaths/);
 });
 
 test("reused write results report preservation instead of a fresh save", () => {

@@ -25,19 +25,21 @@ mapping and retry behavior instead of restating the full flow.
 ## Required MCP Calls
 
 Call these tools through runtime FQNs from the manifest. Their return values are
-the authority for control flow.
+the authority for control flow. Every registered Blueprint MCP tool mirrors its
+full `structuredContent` as compact JSON in `content.text`, so hosts that only
+surface text still expose the complete deterministic result.
 
 | Tool | Controls |
 |------|----------|
 | `blueprint_phase_locate` | Target phase resolution, unresolved-phase recovery, and phase-scoped write boundaries. |
 | `blueprint_phase_summary_index` | Input state, completed versus pending execution evidence, and summary list for detailed reads. |
-| `blueprint_phase_summary_read` | Source evidence for every completed summary; never validate from chat memory alone. Its MCP text response includes the full summary body for hosts whose generic file tools ignore `.blueprint/`. |
-| `blueprint_phase_validation_read` with `artifact: "verification"` | State A baseline and overwrite/reuse decision. Its MCP text response includes the full validation artifact body when present. |
+| `blueprint_phase_summary_read` | Source evidence for every completed summary; never validate from chat memory alone. |
+| `blueprint_phase_validation_read` with `artifact: "verification"` | State A baseline and overwrite/reuse decision. |
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style coverage expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. Its MCP text response includes the full model schema when present. |
-| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. Its MCP text response includes schemas and existing validation content for hosts that expose only text. |
+| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. |
 | `blueprint_phase_validation_validate_model` with `artifact: "verification"` | AJV task-schema validation, residual quality checks, all diagnostics, normalized model, and canonical markdown render preview from the structured verification payload. |
 | `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`; `/blu-validate-phase` passes the validated model with `authoringMode: "model-only"`. |
 | `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
