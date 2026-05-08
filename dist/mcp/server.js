@@ -72474,12 +72474,19 @@ function formatToolResponseText(toolName, summary) {
   const note = getStructuredContentNote(toolName);
   return note.length > 0 ? `${summary} ${note}` : summary;
 }
+function shouldMirrorStructuredContentInText(toolName) {
+  return toolName === "blueprint_artifact_contract_read";
+}
 function createToolResponseContent(toolName, result) {
   const summary = summarizeToolResult(toolName, result);
+  const text = shouldMirrorStructuredContentInText(toolName) ? `${summary}
+
+Full result JSON:
+${JSON.stringify(result, null, 2)}` : formatToolResponseText(toolName, summary);
   return [
     {
       type: "text",
-      text: formatToolResponseText(toolName, summary)
+      text
     }
   ];
 }

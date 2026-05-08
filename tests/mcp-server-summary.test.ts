@@ -23,6 +23,13 @@ function expectedStructuredContentText(
   return `${summarizeToolResult(toolName, result)} Detailed data is available in structuredContent.`;
 }
 
+function expectedMirroredStructuredContentText(
+  toolName: string,
+  result: Record<string, unknown>
+): string {
+  return `${summarizeToolResult(toolName, result)}\n\nFull result JSON:\n${JSON.stringify(result, null, 2)}`;
+}
+
 test("artifact read summaries keep the transcript concise", () => {
   const result = {
     phaseFound: true,
@@ -553,11 +560,11 @@ test("schema-first validation tools keep task schemas, previews, and evidence bo
 
   assert.equal(
     contractText,
-    expectedStructuredContentText("blueprint_artifact_contract_read", contractResult)
+    expectedMirroredStructuredContentText("blueprint_artifact_contract_read", contractResult)
   );
-  assert.doesNotMatch(contractText, /## Authoring Template/);
-  assert.doesNotMatch(contractText, /## Model Contract/);
-  assert.doesNotMatch(contractText, /## Model JSON Schema/);
+  assert.match(contractText, /authoringTemplate/);
+  assert.match(contractText, /modelContract/);
+  assert.match(contractText, /jsonSchema/);
   assert.equal(
     authoringText,
     expectedStructuredContentText("blueprint_phase_validation_authoring_context", authoringResult)

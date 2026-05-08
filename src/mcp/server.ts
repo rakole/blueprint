@@ -554,16 +554,23 @@ function formatToolResponseText(toolName: string, summary: string): string {
   return note.length > 0 ? `${summary} ${note}` : summary;
 }
 
+function shouldMirrorStructuredContentInText(toolName: string): boolean {
+  return toolName === "blueprint_artifact_contract_read";
+}
+
 export function createToolResponseContent(
   toolName: string,
   result: ToolResult
 ): Array<{ type: "text"; text: string }> {
   const summary = summarizeToolResult(toolName, result);
+  const text = shouldMirrorStructuredContentInText(toolName)
+    ? `${summary}\n\nFull result JSON:\n${JSON.stringify(result, null, 2)}`
+    : formatToolResponseText(toolName, summary);
 
   return [
     {
       type: "text",
-      text: formatToolResponseText(toolName, summary)
+      text
     }
   ];
 }
