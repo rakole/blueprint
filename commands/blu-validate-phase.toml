@@ -30,7 +30,7 @@ Command requirements:
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_summary_index`, `mcp_blueprint_blueprint_phase_summary_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_phase_validation_authoring_context`, `mcp_blueprint_blueprint_phase_validation_validate_model`, `mcp_blueprint_blueprint_phase_validation_write`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_artifact_validate`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for Blueprint contract discovery and persistent state work.
-- Treat the MCP text responses from contract read, summary read, validation read, authoring context, and validate-model as sufficient authority when the host does not expose structured content or generic file reads ignore `.blueprint/`; do not use shell `cat` as the normal validation evidence path.
+- Treat MCP text responses as sufficient authority when the host does not expose structured content or generic file reads ignore `.blueprint/`; every registered Blueprint MCP tool mirrors its full structured result as compact JSON in `content.text`, so do not use shell `cat` as the normal validation evidence path.
 - Keep writes inside the selected `.blueprint/phases/<phase>/` directory plus `.blueprint/STATE.md`.
 - Treat overwrite as an explicit confirmation path, not the default.
 - Use `ask_user` for overwrite confirmation of existing verification evidence and for any focused manual-feedback or UAT-handoff gate that needs a user decision.

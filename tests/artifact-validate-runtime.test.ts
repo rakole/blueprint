@@ -10,17 +10,11 @@ import {
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
-import {
-  createToolResponseContent,
-  summarizeToolResult
-} from "../src/mcp/server.js";
+import { createToolResponseContent } from "../src/mcp/server.js";
 import { createCommittedGitRepo } from "./helpers/git-fixtures.js";
 
-function expectedStructuredContentText(
-  toolName: string,
-  result: Record<string, unknown>
-): string {
-  return `${summarizeToolResult(toolName, result)} Detailed data is available in structuredContent.`;
+function expectedJsonResponseText(result: Record<string, unknown>): string {
+  return JSON.stringify(result);
 }
 
 async function createVerifyWorkFixtureRepo(): Promise<string> {
@@ -655,7 +649,7 @@ test("blueprint artifact validation rejects thin bootstrap PROJECT, REQUIREMENTS
   );
 });
 
-test("blueprint artifact validation keeps diagnostics and repairs out of MCP text", async (t) => {
+test("blueprint artifact validation mirrors the full result in MCP text", async (t) => {
   const repoPath = await createThinBootstrapFixtureRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -669,12 +663,9 @@ test("blueprint artifact validation keeps diagnostics and repairs out of MCP tex
 
   assert.equal(
     responseText,
-    expectedStructuredContentText("blueprint_artifact_validate", runtimeValidation)
+    expectedJsonResponseText(runtimeValidation)
   );
-  assert.doesNotMatch(responseText, /## Diagnostics/);
-  assert.doesNotMatch(responseText, /## Suggested Repairs/);
-  assert.doesNotMatch(responseText, /"artifactId": "bootstrap\.project"/);
-  assert.doesNotMatch(responseText, /\/blu-new-project/);
+  assert.deepEqual(JSON.parse(responseText), runtimeValidation);
 });
 
 test("blueprint artifact validation still inspects bootstrap docs when phase artifacts already exist", async (t) => {

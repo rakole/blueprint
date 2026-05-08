@@ -38,6 +38,11 @@ type BuiltHookExpectation = {
   messagePattern: RegExp;
 };
 
+type ToolCallResponse = {
+  content: Array<{ type: string; text?: string }>;
+  structuredContent?: Record<string, unknown>;
+};
+
 const RETRYABLE_BUILT_ASSET_ERROR_PATTERNS = [
   /Unexpected end of JSON input/i,
   /ENOENT/i
@@ -103,6 +108,26 @@ async function withBuiltAssetRetry<T>(work: () => Promise<T>): Promise<T> {
   }
 
   throw lastError;
+}
+
+function assertToolResponseMirrorsStructuredContent(
+  response: ToolCallResponse,
+  context: string
+): void {
+  const firstContent = response.content[0];
+
+  assert.equal(firstContent?.type, "text", `${context} should return text content first`);
+  assert.ok(response.structuredContent, `${context} should include structuredContent`);
+  assert.equal(
+    firstContent.text,
+    JSON.stringify(response.structuredContent),
+    `${context} content text should compactly mirror structuredContent`
+  );
+  assert.deepEqual(
+    JSON.parse(firstContent.text ?? ""),
+    response.structuredContent,
+    `${context} content text should parse back to structuredContent`
+  );
 }
 
 async function createWorkspaceFixture(): Promise<string> {
@@ -267,6 +292,24 @@ test("built MCP server starts over stdio and exposes the expected tool set", asy
           stderr.trim(),
           "",
           "the built MCP entrypoint should start without stderr noise"
+        );
+
+        const statusResponse = await client.callTool({
+          name: "blueprint_project_status",
+          arguments: { cwd: repoRoot }
+        });
+        const contractResponse = await client.callTool({
+          name: "blueprint_artifact_contract_read",
+          arguments: { artifactId: "phase.verification" }
+        });
+
+        assertToolResponseMirrorsStructuredContent(
+          statusResponse as ToolCallResponse,
+          "built project status"
+        );
+        assertToolResponseMirrorsStructuredContent(
+          contractResponse as ToolCallResponse,
+          "built artifact contract read"
         );
       } finally {
         await client.close();
