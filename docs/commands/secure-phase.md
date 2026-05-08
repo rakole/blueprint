@@ -42,7 +42,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 
 - User-facing result: a concise completion summary, then either a verification-or-acceptance decision for open threats or a blocked advancement result when threats remain open.
 - Repo side effects: Writes only the declared phase-scoped security artifact for this command.
-- In-flight secure-phase work should keep the resolved scope, active stage, plan coverage, threat-register coverage, pending gate, execution mode, security artifact reuse or revision status, pending-open-threat status, and next safe action legible while the run is still live. When threats remain open, next-step guidance stays blocked.
+- In-flight secure-phase work should keep the resolved scope, active stage, plan coverage, threat-register coverage, pending gate, execution mode, artifact reuse or revision status, pending-open-threat status, and next safe action legible when those facts affect a decision. When threats remain open, next-step guidance stays blocked.
 
 
 ## Blueprint And Global State Reads
@@ -69,7 +69,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, blockers, conflicts, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings, modelContract}`
 - `blueprint_review_authoring_context` -> `{status, phase, artifact, authoringContext, reason, warnings}`
-- `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, normalizedModel, renderPreview, taskSchema}`
+- `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, repairSummary, normalizedModel, renderPreview, taskSchema}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
 
 ## Security Artifact Contract
@@ -83,7 +83,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Keep one authored threat-register row per declared saved-plan threat using only `threatId`, `status`, `evidence`, and `verifierNote`. MCP renders source-plan provenance plus saved threat metadata in the final Markdown table.
 - Author only the structured `review.security` model fields: `status`, `readiness`, `completionState`, `securitySummary`, `evidenceCoverage`, `threatRegister`, `acceptedRisks`, `findings`, `manualOrDeferredWork`, `gapRoutes`, `followUps`, `auditTrail`, and `nextSafeAction`. `auditTrail` is an object.
 - Use lowercase threat statuses such as `closed`, `accepted`, `open`, and `none`. When a section has no entries, prefer empty arrays and let MCP render `none` rows or bullets instead of hand-authoring sentinels.
-- Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema, truth-table, and residual diagnostics together; rely on the returned diagnostics to identify stale evidence keys, stale threat ids, uncovered threat flags, or invalid routing states. Do not switch to Markdown fallback.
+- Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema, truth-table, and residual diagnostics together using exact diagnostic `path`, `allowedValues`, and `repairSummary`; rely on those diagnostics to identify stale evidence keys, stale threat ids, uncovered threat flags, or invalid routing states. Do not switch to Markdown fallback.
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and the same structured `model`; treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`. Markdown `content` is invalid for `review.security`.
 - Markdown content fallback is not supported for `/blu-secure-phase`; rejected JSON must be repaired against the schema instead of hand-written as `XX-SECURITY.md`.
 - Do not compute a next action until all threats are closed or explicitly accepted.
@@ -139,7 +139,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 ## In-Flight Progress Contract
 
 
-- For non-trivial secure-phase runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact threat-review checklist with `write_todos`.
+- For non-trivial secure-phase runs, use Gemini CLI's internal `update_topic` and `write_todos` only for useful orientation around blockers, gates, or long-running review work.
 - Keep that visible progress aligned to the resolved scope, active stage, saved-plan coverage, threat-register coverage, pending gate, execution mode, whether the existing `XX-SECURITY.md` artifact is being reused or revised, current pending-open-threat status, and next safe action as the run moves from target resolution through saved-plan review, threat verification, persistence, validation, and routing.
 - Treat `update_topic` and `write_todos` as session-local visibility only; when the host lacks them, report the same progress in prose instead of inventing a second persistence path.
 - When open threats remain, keep the waiting state explicit as `pending-open-threat` and do not emit next-step routing until that gate is cleared.
@@ -159,14 +159,14 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Preserve generated security artifacts when the audit needs revision or external context is incomplete.
 - Fall back to explicit evidence gaps and the safest implemented next step instead of guessing missing mitigations.
 - Keep prompt-boundary or suspicious-content concerns explicit in the saved artifact instead of silently trusting compromised evidence.
-- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the model, repair once against the canonical `review.security` schema, narrowed task schema, and returned diagnostics, then retry through MCP. If the retry fails, stop with the MCP reason and do not write `XX-SECURITY.md` by hand.
+- If `blueprint_review_validate_model` or `blueprint_review_record` rejects the model, repair once against the returned exact-path diagnostics and compact `repairSummary`, then retry through MCP. If the retry fails, stop with the MCP reason and do not write `XX-SECURITY.md` by hand.
 
 
 ## Acceptance Criteria
 
 
 - Produces a durable artifact for review, security, UI, or shipping work.
-- Non-trivial secure-phase runs use the shared long-running-mutation posture with visible stage and status fields.
+- Non-trivial secure-phase runs use the shared long-running-mutation posture without padding the run with status-only ceremony.
 - Keeps pending gates explicit for overwrite confirmation and pending-open-threat / verify-versus-accept decisions.
 - Never hides destructive git behavior behind an implicit step.
 - Creates or updates only the declared artifacts for this command.

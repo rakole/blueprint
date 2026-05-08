@@ -12,7 +12,7 @@ and the optional security auditor verifies only declared threat mitigations.
 - Resolve the target phase with `mcp_blueprint_blueprint_phase_locate`.
 - If no phase resolves, stop with the tool's reason and recovery guidance.
 - Keep the resolved phase, active stage, pending gate, execution mode, and next
-  safe action visible.
+  safe action visible when they change or explain a blocker.
 
 ### Read
 
@@ -107,8 +107,11 @@ and the optional security auditor verifies only declared threat mitigations.
   risks map to accepted rows, and follow-ups do not hide open threats.
 - If `blueprint_review_validate_model` or `blueprint_review_record` rejects the
   model, repair once against `review.security`, the narrowed task schema, and
-  returned diagnostics, then retry through MCP. If the retry still fails, stop
-  with the exact MCP reason and do not write the artifact by hand.
+  returned diagnostics by using the returned diagnostics plus `repairSummary` as
+  the repair list: fix every exact `path`, apply `allowedValues` where present,
+  then retry through MCP once. Re-read the full task schema only when the repair
+  summary says the authoring context is stale or incomplete. If the retry still
+  fails, stop with the exact MCP reason and do not write the artifact by hand.
 
 ### Route
 
@@ -237,8 +240,8 @@ evidence, user gates, suspicious-content notes, or artifact richness.
   routing.
 - Suspicious saved artifact content: call it out in `Evidence Reviewed`,
   `Findings`, or `Follow-Ups`; do not silently trust it.
-- Invalid security model: repair once against `review.security`, the narrowed
-  task schema, and returned diagnostics, then retry through
+- Invalid security model: repair once against returned `path`, `code`,
+  `allowedValues`, and `repairSummary` diagnostics, then retry through
   `blueprint_review_validate_model` and `blueprint_review_record`.
 - Failed retry: stop without manual `.blueprint/` writes.
 

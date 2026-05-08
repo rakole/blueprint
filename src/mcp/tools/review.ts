@@ -143,6 +143,7 @@ type ReviewRecordResult = {
   followUps: string[];
   diagnostics?: ReviewModelDiagnostic[];
   diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+  repairSummary?: ReviewModelRepairSummary;
   taskSchema?: Record<string, unknown> | null;
   warnings: string[];
 };
@@ -629,6 +630,22 @@ type ReviewModelDiagnostic = {
   message: string;
   context: Record<string, unknown>;
   suggestion: string;
+  received?: unknown;
+  expected?: unknown;
+  allowedValues?: unknown[];
+  missing?: string[];
+  repair?: string;
+  retryable?: boolean;
+  argsPatch?: Record<string, unknown>;
+};
+
+type ReviewModelRepairSummary = {
+  topBlockers: string[];
+  fieldsToChange: string[];
+  firstPassActions: string[];
+  action: "none" | "reread_authoring_context" | "retry_validation" | "stop";
+  retryable: boolean;
+  retryInstruction: string;
 };
 
 type ReviewValidateModelArgs = {
@@ -655,6 +672,7 @@ type ReviewValidateModelResult = {
     bySource: Record<ReviewDiagnosticSource, number>;
     byCode: Record<string, number>;
   };
+  repairSummary: ReviewModelRepairSummary;
   normalizedModel:
     | CodeReviewStructuredModel
     | PeerReviewStructuredModel
@@ -924,8 +942,91 @@ function countDiagnostics(
   return counts;
 }
 
+function reviewDiagnosticRepairText(diagnostic: ReviewModelDiagnostic): string {
+  return diagnostic.repair ?? diagnostic.suggestion;
+}
+
 function formatReviewDiagnostic(diagnostic: ReviewModelDiagnostic): string {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Repair: ${reviewDiagnosticRepairText(diagnostic)}`;
+}
+
+function reviewRepairActionFromDiagnostic(diagnostic: ReviewModelDiagnostic): string {
+  if (diagnostic.source === "scope") {
+    return "reread-authoring-context";
+  }
+
+  if (diagnostic.code === "schema.required" || diagnostic.code === "schema.minItems" || diagnostic.code === "schema.contains") {
+    return "add";
+  }
+
+  if (diagnostic.code === "schema.additionalProperties" || diagnostic.code === "schema.maxItems") {
+    return "remove";
+  }
+
+  if (diagnostic.code === "schema.uniqueItems") {
+    return "dedupe";
+  }
+
+  if (diagnostic.code === "residual.runtime_owned_field") {
+    return "remove-runtime-owned-fields";
+  }
+
+  if (diagnostic.source === "markdown") {
+    return "repair-rendered-markdown";
+  }
+
+  if (diagnostic.source === "residual") {
+    return "align-with-authoring-context";
+  }
+
+  return "replace";
+}
+
+function summarizeReviewModelRepairs(
+  diagnostics: readonly ReviewModelDiagnostic[]
+): ReviewModelRepairSummary {
+  const topDiagnostics = diagnostics.slice(0, 5);
+  const fieldsToChange = [
+    ...new Set(
+      diagnostics
+        .map((diagnostic) => diagnostic.path)
+        .filter((pathValue) =>
+          pathValue === "model" ||
+          pathValue.startsWith("model.") ||
+          pathValue.startsWith("model[") ||
+          pathValue === "renderPreview"
+        )
+    )
+  ];
+  const firstPassActions = [
+    ...new Set(diagnostics.map((diagnostic) => reviewRepairActionFromDiagnostic(diagnostic)))
+  ];
+  const hasScopeBlocker = diagnostics.some((diagnostic) => diagnostic.source === "scope");
+  const retryable = diagnostics.length > 0 && diagnostics.every((diagnostic) => diagnostic.retryable !== false);
+  const action =
+    diagnostics.length === 0
+      ? "none"
+      : hasScopeBlocker
+        ? "reread_authoring_context"
+        : retryable
+          ? "retry_validation"
+          : "stop";
+
+  return {
+    topBlockers: topDiagnostics.map(
+      (diagnostic) => `${diagnostic.path}: ${diagnostic.message}`
+    ),
+    fieldsToChange,
+    firstPassActions,
+    action,
+    retryable,
+    retryInstruction:
+      diagnostics.length === 0
+        ? "No repair needed."
+        : hasScopeBlocker
+          ? "Re-read blueprint_review_authoring_context for the current phase and rebuild the model from that live context before retrying validation."
+          : "Repair every diagnostic by exact path, applying each diagnostic's repair and allowedValues, then retry blueprint_review_validate_model once with the corrected model."
+  };
 }
 
 function explicitReviewFilesRequested(files: string[] | undefined): boolean {
@@ -4673,6 +4774,7 @@ function reviewRecordInvalidResult(args: {
   followUps?: string[];
   diagnostics?: ReviewModelDiagnostic[];
   diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+  repairSummary?: ReviewModelRepairSummary;
   taskSchema?: Record<string, unknown> | null;
   warnings: string[];
 }): ReviewRecordResult {
@@ -4696,6 +4798,7 @@ function reviewRecordInvalidResult(args: {
     followUps: args.followUps ?? [],
     diagnostics: args.diagnostics,
     diagnosticCounts: args.diagnosticCounts,
+    repairSummary: args.repairSummary,
     taskSchema: args.taskSchema ?? null,
     warnings: args.warnings
   };
@@ -5357,15 +5460,95 @@ function ajvPathToModelPath(instancePath: string): string {
     .filter((segment) => segment.length > 0)
     .map((segment) => {
       const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
-      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
+      if (/^\d+$/.test(decoded)) {
+        return `[${decoded}]`;
+      }
+
+      return /^[A-Za-z_][A-Za-z0-9_]*$/.test(decoded)
+        ? `.${decoded}`
+        : `[${JSON.stringify(decoded)}]`;
     })
     .join("")}`;
+}
+
+function appendJsonPointerSegment(pointer: string, segment: string): string {
+  const encoded = segment.replace(/~/g, "~0").replace(/\//g, "~1");
+
+  return pointer.length === 0 ? `/${encoded}` : `${pointer}/${encoded}`;
+}
+
+function valueAtJsonPointer(root: unknown, pointer: string): unknown {
+  if (pointer.length === 0) {
+    return root;
+  }
+
+  return pointer
+    .split("/")
+    .filter((segment) => segment.length > 0)
+    .reduce<unknown>((current, segment) => {
+      const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+
+      if (Array.isArray(current) && /^\d+$/.test(key)) {
+        return current[Number(key)];
+      }
+
+      if (typeof current === "object" && current !== null && key in current) {
+        return (current as Record<string, unknown>)[key];
+      }
+
+      return undefined;
+    }, root);
+}
+
+function normalizeAllowedValues(value: unknown): unknown[] | undefined {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value === undefined ? undefined : [value];
+}
+
+function ajvAllowedValues(error: ErrorObject): unknown[] | undefined {
+  if (
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "allowedValues" in error.params
+  ) {
+    return normalizeAllowedValues(error.params.allowedValues);
+  }
+
+  if (
+    typeof error.params === "object" &&
+    error.params !== null &&
+    "allowedValue" in error.params
+  ) {
+    return normalizeAllowedValues(error.params.allowedValue);
+  }
+
+  return undefined;
+}
+
+function reviewSchemaExpected(error: ErrorObject, allowedValues?: unknown[]): unknown {
+  if (allowedValues && allowedValues.length > 0) {
+    return allowedValues;
+  }
+
+  if (error.keyword === "pattern" && "pattern" in error.params) {
+    return `Value matching pattern ${String(error.params.pattern)}`;
+  }
+
+  if ((error.keyword === "minItems" || error.keyword === "maxItems") && "limit" in error.params) {
+    return `${error.keyword === "minItems" ? "At least" : "At most"} ${String(error.params.limit)} item(s)`;
+  }
+
+  return error.keyword;
 }
 
 function schemaDiagnosticFromAjvError(
   error: ErrorObject,
   artifact: ReviewValidateModelArgs["artifact"],
-  securityAuthoringContext: SecurityAuthoringContext | null = null
+  securityAuthoringContext: SecurityAuthoringContext | null = null,
+  model?: Record<string, unknown>
 ): ReviewModelDiagnostic {
   const missingProperty =
     typeof error.params === "object" &&
@@ -5388,6 +5571,21 @@ function schemaDiagnosticFromAjvError(
       : additionalProperty !== null
         ? `${basePath}.${additionalProperty}`
         : basePath;
+  const jsonPointer =
+    missingProperty !== null
+      ? appendJsonPointerSegment(error.instancePath, missingProperty)
+      : additionalProperty !== null
+        ? appendJsonPointerSegment(error.instancePath, additionalProperty)
+        : error.instancePath;
+  const params = typeof error.params === "object" && error.params !== null
+    ? error.params as Record<string, unknown>
+    : {};
+  const allowedValues = ajvAllowedValues(error);
+  const missing = missingProperty !== null ? [missingProperty] : undefined;
+  const limit = typeof params.limit === "number" ? params.limit : null;
+  const received =
+    (error as ErrorObject & { data?: unknown }).data ??
+    (model ? valueAtJsonPointer(model, jsonPointer) : undefined);
   const securityHintContext =
     artifact === "security" && securityAuthoringContext
       ? {
@@ -5431,35 +5629,81 @@ function schemaDiagnosticFromAjvError(
           return "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context, then align threat ids, evidenceCoverage keys, and nextSafeAction with the live security authoring context.";
         })()
       : null;
+  const defaultRepair =
+    artifact === "security" && securitySuggestion
+      ? securitySuggestion
+      : artifact === "ui-review" ||
+          artifact === "review-fix" ||
+          artifact === "peer-review"
+        ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context."
+        : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope.";
+  let message = error.message ?? "Model does not match the review task schema.";
+  let repair = defaultRepair;
+  let argsPatch: Record<string, unknown> | undefined;
+
+  if ((error.keyword === "enum" || error.keyword === "const") && allowedValues && allowedValues.length > 0) {
+    message = `${pathValue} must be equal to one of the allowed values: ${allowedValues.map(String).join(", ")}.`;
+    repair = `Set ${pathValue} to one of the allowed values from the current taskSchema: ${allowedValues.map(String).join(", ")}.`;
+    if (received !== undefined) {
+      argsPatch = { modelPatch: { path: jsonPointer, value: allowedValues[0] } };
+    }
+  } else if (error.keyword === "required" && missingProperty !== null) {
+    message = `${pathValue} is required; must have required property '${missingProperty}'.`;
+    repair = `Add ${pathValue} using the current taskSchema.`;
+  } else if (error.keyword === "additionalProperties" && additionalProperty !== null) {
+    message = `${pathValue} is not supported by review.${artifact ?? "code-review"}; must NOT have additional properties.`;
+    repair = `Remove ${pathValue}; MCP owns identity, paths, rendered Markdown, and runtime provenance.`;
+    argsPatch = { modelPatch: { op: "remove", path: jsonPointer } };
+  } else if (error.keyword === "maxItems" && limit === 0) {
+    message = `${pathValue} must be empty because the current runtime authoring context exposes no allowed items for this array.`;
+    repair = `Set ${pathValue} to [] or re-read blueprint_review_authoring_context if you expected allowed rows.`;
+  } else if (error.keyword === "maxItems" && limit !== null) {
+    message = `${pathValue} must NOT have more than ${String(limit)} items.`;
+    repair = `Remove extra entries from ${pathValue}.`;
+  } else if (error.keyword === "minItems" && limit !== null) {
+    message = `${pathValue} must NOT have fewer than ${String(limit)} items; must include at least ${String(limit)} item(s) from the current taskSchema.`;
+    repair = `Populate ${pathValue} with concrete values allowed by the current taskSchema; do not invent ids or paths.`;
+  } else if (error.keyword === "oneOf") {
+    message = `${pathValue} must match exactly one schema for review.${artifact ?? "code-review"}.`;
+    repair = `Use either a real row shape or the exact none sentinel shape for ${pathValue}; do not mix sentinel rows with real rows.`;
+  } else if (error.keyword === "pattern" && "pattern" in params) {
+    message = `${pathValue} must match pattern ${String(params.pattern)}.`;
+    repair = `Rewrite ${pathValue} to satisfy the required format without Markdown headings, pipes, or newlines unless the schema allows them.`;
+  } else if (error.keyword === "type" && "type" in params) {
+    message = `${pathValue} must be ${String(params.type)}.`;
+    repair = `Replace ${pathValue} with a ${String(params.type)} value that matches the current taskSchema.`;
+  } else if (error.keyword === "if") {
+    message = `${pathValue} must satisfy the review.${artifact ?? "code-review"} status truth table.`;
+    repair = "Align status, readiness, completionState, gated rows, auditTrail, and nextSafeAction so they describe the same outcome.";
+  }
+
+  if (artifact === "security" && securitySuggestion && repair !== securitySuggestion) {
+    repair = `${repair} ${securitySuggestion}`;
+  }
+
+  if (artifact === "security" && securitySuggestion && !message.includes(securitySuggestion)) {
+    message = `${message} ${securitySuggestion}`;
+  }
 
   return modelDiagnostic({
     source: "schema",
     path: pathValue,
     code: `schema.${error.keyword}`,
-    message:
-      artifact === "security" && securitySuggestion
-        ? `${error.message ?? "Model does not match the review task schema."} ${securitySuggestion}`
-        : error.message ?? "Model does not match the review task schema.",
+    message,
     context: {
       keyword: error.keyword,
       params: error.params,
       schemaPath: error.schemaPath,
       ...securityHintContext
     },
-    suggestion:
-      missingProperty !== null
-        ? artifact === "security" && securitySuggestion
-          ? `${securitySuggestion} Add required field ${missingProperty}.`
-          : `Add required field ${missingProperty}.`
-        : additionalProperty !== null
-          ? artifact === "security" && securitySuggestion
-            ? `${securitySuggestion} Remove unsupported field ${additionalProperty}.`
-            : `Remove unsupported field ${additionalProperty}.`
-          : artifact === "security" && securitySuggestion
-            ? securitySuggestion
-          : artifact === "ui-review" || artifact === "review-fix"
-            ? "Revise the model to satisfy authoringContext.taskSchema returned by blueprint_review_authoring_context."
-            : "Revise the model to satisfy the narrowed task schema returned by blueprint_review_scope."
+    received,
+    expected: reviewSchemaExpected(error, allowedValues),
+    allowedValues,
+    missing,
+    repair,
+    retryable: true,
+    argsPatch,
+    suggestion: repair
   });
 }
 
@@ -7461,23 +7705,8 @@ function securityFindingMentionsThreatFlag(
   );
 }
 
-function securityThreatRegisterMentionsThreatFlag(
-  row: SecurityThreatRegisterRow,
-  flag: SecuritySummaryThreatFlag
-): boolean {
-  const flagText = normalizeThreatFlagMatchText(flag.evidence);
-  const rowText = normalizeThreatFlagMatchText(`${row.evidence} ${row.verifierNote}`);
-
-  return (
-    flagText.length > 0 &&
-    rowText.length > 0 &&
-    rowText.includes(flagText)
-  );
-}
-
 function addSecuritySemanticDiagnostics(args: {
   diagnostics: ReviewModelDiagnostic[];
-  warnings: string[];
   model: SecurityStructuredModel;
   authoringContext: SecurityAuthoringContext;
 }): void {
@@ -7522,12 +7751,6 @@ function addSecuritySemanticDiagnostics(args: {
       const matchingThreatRows = args.model.threatRegister.filter(
         (row) => row.threatId === flag.threatId && row.status !== "none"
       );
-      const hasThreatRegisterCoverage = args.model.threatRegister.some(
-        (row) =>
-          row.threatId === flag.threatId &&
-          row.status !== "none" &&
-          securityThreatRegisterMentionsThreatFlag(row, flag)
-      );
       const hasFindingCoverage = realFindings.some(
         (row) => securityFindingMentionsThreatFlag(row, flag)
       );
@@ -7543,10 +7766,6 @@ function addSecuritySemanticDiagnostics(args: {
             suggestion: "Cover the flag with the matching threatRegister row or a concrete security finding."
           })
         );
-      } else if (!hasThreatRegisterCoverage && !hasFindingCoverage) {
-        args.warnings.push(
-          `Summary threat flag ${flag.flagId} maps to declared threat ${flag.threatId}, but the coverage appears to miss the saved summary wording. Preserve the threat row or finding and tighten the lexical evidence match if you want stricter traceability.`
-        );
       }
 
       return;
@@ -7554,9 +7773,6 @@ function addSecuritySemanticDiagnostics(args: {
 
     const matchingUnregisteredFindings = realFindings.filter(
       (row) => row.kind === "unregistered-flag" && row.threatId === "unregistered"
-    );
-    const hasExplicitCoverage = matchingUnregisteredFindings.some((row) =>
-      securityFindingMentionsThreatFlag(row, flag)
     );
 
     if (matchingUnregisteredFindings.length === 0) {
@@ -7569,10 +7785,6 @@ function addSecuritySemanticDiagnostics(args: {
           context: { flag },
           suggestion: "Add a findings row with kind unregistered-flag, threatId unregistered, concrete evidence, and a follow-up route."
         })
-      );
-    } else if (!hasExplicitCoverage) {
-      args.warnings.push(
-        `Summary threat flag ${flag.flagId} has an unregistered-flag finding, but the finding text does not lexically match the saved summary wording. Tighten the evidence text if you need exact traceability.`
       );
     }
   });
@@ -7677,9 +7889,6 @@ function addSecurityEvidenceCoverageBookkeepingFeedback(args: {
   const directlyCitedMissing = missingCoverage.filter((artifactPath) =>
     directCitations.has(artifactPath)
   );
-  const bookkeepingOnlyMissing = missingCoverage.filter(
-    (artifactPath) => !directCitations.has(artifactPath)
-  );
 
   if (directlyCitedMissing.length > 0) {
     args.diagnostics.push(
@@ -7695,12 +7904,6 @@ function addSecurityEvidenceCoverageBookkeepingFeedback(args: {
         suggestion:
           "Add exact evidenceCoverage keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts for every directly cited artifact."
       })
-    );
-  }
-
-  if (bookkeepingOnlyMissing.length > 0) {
-    args.warnings.push(
-      `Security review model omitted evidenceCoverage bookkeeping for saved artifacts that are not directly cited: ${bookkeepingOnlyMissing.join(", ")}. Add exact keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts if you want exhaustive bookkeeping.`
     );
   }
 
@@ -7754,7 +7957,6 @@ async function collectSecurityResidualDiagnostics(args: {
   });
   addSecuritySemanticDiagnostics({
     diagnostics,
-    warnings,
     model: args.normalizedModel,
     authoringContext: args.authoringContext
   });
@@ -9005,6 +9207,7 @@ export async function blueprintReviewValidateModel(
       taskSchema: context.taskSchema,
       diagnostics,
       diagnosticCounts: countDiagnostics(diagnostics),
+      repairSummary: summarizeReviewModelRepairs(diagnostics),
       normalizedModel: null,
       renderPreview: null,
       warnings: context.warnings
@@ -9055,7 +9258,8 @@ export async function blueprintReviewValidateModel(
             artifact,
             artifact === "security"
               ? context.authoringContext as SecurityAuthoringContext
-              : null
+              : null,
+            modelObject
           )
         )
       );
@@ -9238,7 +9442,7 @@ export async function blueprintReviewValidateModel(
     }
   }
 
-  if (artifact === "security" && normalizedSecurityModel) {
+  if (artifact === "security" && diagnostics.length === 0 && normalizedSecurityModel) {
     const securityContext = context.authoringContext as SecurityAuthoringContext;
     const located: LocatedReviewPhase = {
       phaseNumber: context.phase.phaseNumber,
@@ -9321,6 +9525,7 @@ export async function blueprintReviewValidateModel(
     taskSchema: context.taskSchema,
     diagnostics,
     diagnosticCounts: countDiagnostics(diagnostics),
+    repairSummary: summarizeReviewModelRepairs(diagnostics),
     normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
       ? null
       : artifact === "security"
@@ -9473,6 +9678,7 @@ export async function blueprintReviewRecord(
         reportPath,
         diagnostics,
         diagnosticCounts: countDiagnostics(diagnostics),
+        repairSummary: summarizeReviewModelRepairs(diagnostics),
         taskSchema: context.taskSchema,
         warnings: [...warnings, ...diagnostics.map(formatReviewDiagnostic)]
       });
@@ -9502,6 +9708,7 @@ export async function blueprintReviewRecord(
         reportPath,
         diagnostics: validation.diagnostics,
         diagnosticCounts: validation.diagnosticCounts,
+        repairSummary: validation.repairSummary,
         taskSchema: validation.taskSchema,
         warnings: [
           ...warnings,
