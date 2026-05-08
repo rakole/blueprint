@@ -93,7 +93,7 @@ const MUTATION_FAILURE_STATUSES = new Set([
   "error"
 ]);
 const DIAGNOSTIC_SUMMARY_LIMIT = 3;
-const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 240;
+const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1000;
 
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
@@ -533,7 +533,10 @@ const RICH_TEXT_TOOL_NAMES = new Set([
   "blueprint_phase_validation_authoring_context",
   "blueprint_phase_validation_validate_model",
   "blueprint_phase_summary_read",
-  "blueprint_phase_validation_read"
+  "blueprint_phase_validation_read",
+  "blueprint_review_authoring_context",
+  "blueprint_review_validate_model",
+  "blueprint_review_record"
 ]);
 
 function stringifyForToolText(value: unknown): string {
@@ -650,6 +653,81 @@ function appendPhasePlanWriteModelValidationDetails(
   appendJsonSection(sections, "Model Runtime Task Schema", modelValidation.taskSchema);
 }
 
+function compactReviewAuthoringContext(value: unknown): unknown {
+  const context = asRecord(value);
+
+  if (!context) {
+    return value;
+  }
+
+  const compact: Record<string, unknown> = {};
+
+  for (const [key, entry] of Object.entries(context)) {
+    if (key === "baseSchema" || key === "taskSchema") {
+      continue;
+    }
+
+    compact[key] = entry;
+  }
+
+  return compact;
+}
+
+function collectDeclaredThreatIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => asRecord(entry)?.threatId)
+    .filter((entry): entry is string => typeof entry === "string");
+}
+
+function appendReviewAuthoringContextDetails(sections: string[], result: ToolResult): void {
+  const authoringContext = asRecord(result.authoringContext);
+
+  appendJsonSection(
+    sections,
+    "Review Authoring Context",
+    compactReviewAuthoringContext(result.authoringContext)
+  );
+  appendJsonSection(
+    sections,
+    "Evidence Coverage Keys",
+    collectStringArray(authoringContext?.knownEvidenceArtifacts)
+  );
+  appendJsonSection(
+    sections,
+    "Allowed Next Actions",
+    collectStringArray(authoringContext?.allowedNextActions)
+  );
+  appendJsonSection(
+    sections,
+    "Declared Threat IDs",
+    collectDeclaredThreatIds(authoringContext?.declaredThreats)
+  );
+  appendJsonSection(sections, "Runtime Task Schema", result.taskSchema);
+  appendJsonSection(sections, "Prerequisite Blockers", result.prerequisiteBlockers);
+  appendTextSection(sections, "Invalid Reason", result.reason);
+}
+
+function appendReviewModelDetails(sections: string[], result: ToolResult): void {
+  appendJsonSection(sections, "Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Diagnostic Counts", result.diagnosticCounts);
+  appendJsonSection(sections, "Repair Summary", result.repairSummary);
+  appendJsonSection(sections, "Normalized Model", result.normalizedModel);
+  appendMarkdownSection(sections, "Render Preview", result.renderPreview);
+}
+
+function appendReviewRecordDetails(sections: string[], result: ToolResult): void {
+  if (getString(result, "status") !== "invalid") {
+    return;
+  }
+
+  appendJsonSection(sections, "Model Diagnostics", result.diagnostics);
+  appendJsonSection(sections, "Model Repair Summary", result.repairSummary);
+}
+
 function appendArtifactValidateDetails(sections: string[], result: ToolResult): void {
   appendJsonSection(sections, "Diagnostics", result.diagnostics);
   appendJsonSection(sections, "Suggested Repairs", result.suggestedRepairs);
@@ -707,6 +785,18 @@ function appendRichToolText(toolName: string, result: ToolResult, summary: strin
       complete: result.complete,
       summaryPaths: result.summaryPaths
     });
+  }
+
+  if (toolName === "blueprint_review_authoring_context") {
+    appendReviewAuthoringContextDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_review_validate_model") {
+    appendReviewModelDetails(sections, result);
+  }
+
+  if (toolName === "blueprint_review_record") {
+    appendReviewRecordDetails(sections, result);
   }
 
   return sections.length > 0 ? `${summary}\n\n${sections.join("\n\n")}` : summary;

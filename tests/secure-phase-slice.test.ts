@@ -625,7 +625,7 @@ test("security validation requires completed summary threat flags to be covered"
     /unregistered.*threat flag|summary threat flag/i
   );
   assert.equal(unrelatedFinding.status, "valid");
-  assert.match(
+  assert.doesNotMatch(
     unrelatedFinding.warnings.join("\n"),
     /unregistered.*threat flag|summary threat flag/i
   );
@@ -672,7 +672,7 @@ test("security validation accepts paraphrased but concrete declared summary thre
   });
 
   assert.equal(ignored.status, "valid");
-  assert.match(
+  assert.doesNotMatch(
     ignored.warnings.join("\n"),
     /maps to declared threat T-01|summary threat flag/i
   );

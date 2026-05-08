@@ -89,6 +89,7 @@ type ReviewRecordResult = {
     followUps: string[];
     diagnostics?: ReviewModelDiagnostic[];
     diagnosticCounts?: ReviewValidateModelResult["diagnosticCounts"];
+    repairSummary?: ReviewModelRepairSummary;
     taskSchema?: Record<string, unknown> | null;
     warnings: string[];
 };
@@ -537,6 +538,21 @@ type ReviewModelDiagnostic = {
     message: string;
     context: Record<string, unknown>;
     suggestion: string;
+    received?: unknown;
+    expected?: unknown;
+    allowedValues?: unknown[];
+    missing?: string[];
+    repair?: string;
+    retryable?: boolean;
+    argsPatch?: Record<string, unknown>;
+};
+type ReviewModelRepairSummary = {
+    topBlockers: string[];
+    fieldsToChange: string[];
+    firstPassActions: string[];
+    action: "none" | "reread_authoring_context" | "retry_validation" | "stop";
+    retryable: boolean;
+    retryInstruction: string;
 };
 type ReviewValidateModelArgs = {
     cwd?: string;
@@ -561,6 +577,7 @@ type ReviewValidateModelResult = {
         bySource: Record<ReviewDiagnosticSource, number>;
         byCode: Record<string, number>;
     };
+    repairSummary: ReviewModelRepairSummary;
     normalizedModel: CodeReviewStructuredModel | PeerReviewStructuredModel | ReviewFixStructuredModel | SecurityStructuredModel | UiReviewStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];

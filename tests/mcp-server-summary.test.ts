@@ -285,6 +285,116 @@ test("phase plan model tools include repairable schema and diagnostics in MCP te
   assert.match(writeText, /LIFE-02/);
 });
 
+test("review model tools expose authoring context and repair details in MCP text", () => {
+  const authoringText = createToolResponseContent("blueprint_review_authoring_context", {
+    status: "ready",
+    artifact: "security",
+    phase: { phaseNumber: "5" },
+    authoringContext: {
+      knownEvidenceArtifacts: [
+        ".blueprint/phases/05-security-audit/05-01-PLAN.md",
+        ".blueprint/phases/05-security-audit/05-01-SUMMARY.md"
+      ],
+      allowedNextActions: ["/blu-validate-phase 5", "Blocked: pending-open-threat"],
+      declaredThreats: [{ threatId: "T-01", sourcePlan: "05-01-PLAN.md" }],
+      taskSchema: { omittedFromCompactContext: true },
+      baseSchema: { omittedFromCompactContext: true }
+    },
+    taskSchema: {
+      properties: {
+        evidenceCoverage: {
+          properties: {
+            ".blueprint/phases/05-security-audit/05-01-PLAN.md": {}
+          }
+        }
+      }
+    },
+    prerequisiteBlockers: []
+  })[0].text;
+  const validateText = createToolResponseContent("blueprint_review_validate_model", {
+    status: "invalid",
+    valid: false,
+    phase: { phaseNumber: "5" },
+    artifact: "security",
+    diagnostics: [
+      {
+        source: "schema",
+        path: "model.evidenceCoverage[\".blueprint/phases/05-security-audit/05-01-PLAN.md\"].status",
+        code: "schema.enum",
+        message:
+          "model.evidenceCoverage[\".blueprint/phases/05-security-audit/05-01-PLAN.md\"].status must be equal to one of the allowed values: used, deferred, unavailable.",
+        allowedValues: ["used", "deferred", "unavailable"],
+        repair:
+          "Set model.evidenceCoverage[\".blueprint/phases/05-security-audit/05-01-PLAN.md\"].status to one of the allowed values."
+      }
+    ],
+    diagnosticCounts: {
+      total: 1,
+      bySource: { schema: 1 },
+      byCode: { "schema.enum": 1 }
+    },
+    repairSummary: {
+      topBlockers: [
+        "model.evidenceCoverage[\".blueprint/phases/05-security-audit/05-01-PLAN.md\"].status: invalid status"
+      ],
+      fieldsToChange: [
+        "model.evidenceCoverage[\".blueprint/phases/05-security-audit/05-01-PLAN.md\"].status"
+      ],
+      firstPassActions: ["replace"],
+      action: "retry_validation",
+      retryable: true,
+      retryInstruction: "Repair every diagnostic by exact path."
+    },
+    normalizedModel: null,
+    renderPreview: null
+  })[0].text;
+  const recordText = createToolResponseContent("blueprint_review_record", {
+    phaseNumber: "5",
+    artifact: "security",
+    reportPath: ".blueprint/phases/05-security-audit/05-SECURITY.md",
+    written: false,
+    created: false,
+    overwritten: false,
+    status: "invalid",
+    diagnostics: [
+      {
+        source: "schema",
+        path: "model.nextSafeAction",
+        code: "schema.enum",
+        message: "model.nextSafeAction must be equal to one of the allowed values: /blu-progress.",
+        repair: "Set model.nextSafeAction to /blu-progress."
+      }
+    ],
+    repairSummary: {
+      topBlockers: ["model.nextSafeAction: invalid route"],
+      fieldsToChange: ["model.nextSafeAction"],
+      firstPassActions: ["replace"],
+      action: "retry_validation",
+      retryable: true,
+      retryInstruction: "Repair every diagnostic by exact path."
+    },
+    warnings: []
+  })[0].text;
+
+  assert.match(authoringText, /## Review Authoring Context/);
+  assert.match(authoringText, /## Evidence Coverage Keys/);
+  assert.match(authoringText, /05-01-PLAN\.md/);
+  assert.match(authoringText, /## Allowed Next Actions/);
+  assert.match(authoringText, /\/blu-validate-phase 5/);
+  assert.match(authoringText, /Blocked: pending-open-threat/);
+  assert.doesNotMatch(authoringText, /\/blu-prog\.\.\./);
+  assert.match(authoringText, /## Declared Threat IDs/);
+  assert.match(authoringText, /T-01/);
+  assert.match(authoringText, /## Runtime Task Schema/);
+  assert.doesNotMatch(authoringText, /omittedFromCompactContext/);
+  assert.match(validateText, /## Diagnostics/);
+  assert.match(validateText, /model\.evidenceCoverage\["\.blueprint\/phases\/05-security-audit\/05-01-PLAN\.md"\]\.status/);
+  assert.match(validateText, /used/);
+  assert.match(validateText, /## Repair Summary/);
+  assert.match(recordText, /## Model Diagnostics/);
+  assert.match(recordText, /## Model Repair Summary/);
+});
+
 test("schema-first validation tools append task schemas, diagnostics, previews, and evidence bodies to text responses", () => {
   const contractText = createToolResponseContent("blueprint_artifact_contract_read", {
     artifactId: "phase.verification",

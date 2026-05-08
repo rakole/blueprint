@@ -310,20 +310,17 @@ artifacts, and optional review agents when the command contract allows them.
    broad scan.
 10. Keep the audit bounded to that declared security scope from saved plan
    evidence only rather than a broad scan.
-11. Keep the active stage visible as the run moves through `Resolve`, `Read`,
-   `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the
-   resolved scope, active stage, pending gate, execution mode, and next safe
-   action legible throughout the run.
+11. Keep the active stage, resolved scope, pending gate, execution mode, and
+   next safe action legible when they change or explain a blocker. Avoid
+   status-only ceremony.
 12. For non-trivial secure-phase runs, prefer update_topic plus `write_todos`
    so saved-plan review, threat verification, overwrite gates, artifact
    persistence, post-write validation, and routing stay visible without
    becoming persistence.
-13. Report the resolved scope, threat-register coverage, whether the security
-   artifact is being reused or revised, and the current pending-open-threat
-   status while work is in flight. Keep the verify-versus-accept decision
-   explicit whenever threats remain open. Keep pending gates limited to
-   overwrite confirmation, the verify-versus-accept decision, or
-   `pending-open-threat`, and let execution mode reflect inline versus
+13. Report the resolved scope, threat-register coverage, artifact reuse or
+   revision state, and current pending-open-threat status when those facts
+   affect a decision. Keep the verify-versus-accept decision explicit whenever
+   threats remain open, and let execution mode reflect inline versus
    `blueprint-security-auditor`-assisted review.
 14. Distinguish confirmed mitigations, open threats, accepted risks, suspicious
    artifact content, and follow-up hardening work explicitly inside the saved
@@ -353,14 +350,18 @@ artifacts, and optional review agents when the command contract allows them.
    and `none`; and empty arrays are valid when a section has no entries because
    MCP renders the final `none` rows and bullets.
 19. Validate the model through `blueprint_review_validate_model` before
-   persistence. Repair all schema, truth-table, and residual diagnostics
-   together, and do not switch to Markdown fallback.
+   persistence. Repair all schema, truth-table, and residual diagnostics by
+   exact `path`, `allowedValues`, and `repairSummary`, and do not switch to
+   Markdown fallback.
 20. Persist finished security evidence through `blueprint_review_record` with
    the `security` artifact and the same structured `model`; Markdown `content`
    is invalid for `review.security`.
 21. If `blueprint_review_validate_model` or `blueprint_review_record` rejects
    the model, repair against the `review.security` model contract, narrowed task
-   schema, and diagnostics, then retry once. If the retry still fails, stop with
+   schema, and diagnostics, then retry once. Do that by fixing every returned
+   diagnostic in one pass using its exact `path`, allowed values, and repair
+   text. Re-read the full task schema only when the repair summary says the
+   authoring context is stale or incomplete. If the retry still fails, stop with
    the MCP reason and do not write the artifact by hand.
 22. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and

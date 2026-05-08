@@ -76,6 +76,7 @@ ready for milestone audit without applying fixes.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260508-secure-validation-diagnostics | Simplify secure-phase validation diagnostics, reduce non-blocking review noise, and expose repair summaries in MCP text | 2026-05-08 | pending | [260508-secure-validation-diagnostics](./quick/260508-secure-validation-diagnostics/) |
 | 20260507-review-fix-parity-implementation | Implement code-review/review-fix contract parity fixes from the 2026-05-07 review | 2026-05-07 | pending | [20260507-review-fix-parity-implementation](./quick/20260507-review-fix-parity-implementation/) |
 | 260505-remove-research-freshness-validation | Remove MCP enforcement of research State Of The Art freshness markers while keeping runtime guidance advisory | 2026-05-05 | pending | [260505-remove-research-freshness-validation](./quick/260505-remove-research-freshness-validation/) |
 | 260502-bpbug-004-dist-refresh | Repair BPBUG-004 by refreshing the tracked dist bundle so it includes the audit-fix generated schema asset | 2026-05-02 | 350e87a | [260502-bpbug-004-dist-refresh](./quick/260502-bpbug-004-dist-refresh/) |
@@ -132,6 +133,7 @@ ready for milestone audit without applying fixes.
 - 2026-05-02: Executed Phase 9 by reconciling BPBUG-004 into verified repaired/history evidence, recording that no duplicate reports or open verification questions remain, adding repair-priority bands and repair batches, and routing the milestone to `$gsd-validate-phase 9`.
 - 2026-05-02: Re-ran the targeted Phase 9 Nyquist validation checks, confirmed no new gaps, advanced Phases 8 and 9 to validated bookkeeping, and routed the milestone to `$gsd-audit-milestone`.
 - 2026-05-05: Completed quick task 260505-remove-research-freshness-validation by removing the MCP research freshness-marker validation, softening related contract text to advisory guidance, rebuilding `dist/`, and passing typecheck plus focused research/lifecycle tests.
+- 2026-05-08: Completed quick task 260508-secure-validation-diagnostics by adding exact-path review model diagnostics, repair summaries, review MCP rich-text details, reduced non-blocking secure-phase warning noise, rebuilt `dist/`, and passed typecheck, build, and the full test suite.
 
 ## Session Continuity
 
