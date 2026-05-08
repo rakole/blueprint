@@ -11,7 +11,7 @@ Treat the referenced runtime contract as the source of truth for the detailed fl
 
 Command-local constraints:
 - Use only the MCP tools listed in the response requirements for persistent state work.
-- The live `phase.context` and `phase.discussion-log` `contract.authoringTemplate` values remain the schema authority for saved artifacts.
+- The live `phase.context` and `phase.discussion-log` `contract.authoringTemplate` values remain the schema authority for saved artifacts. Any scaffold starter, whether returned through the scaffold MCP path today or surfaced as a separate scaffold template later, is starter-only and must be fully rewritten into real artifact content before the final write.
 - `/blu-discuss-phase` is the sole lifecycle command that authors or repairs phase context, and it writes only `.blueprint/phases/<phase>/<XX>-CONTEXT.md`; Blueprint does not create or manage repo-root `CONTEXT.md`.
 - The authored phase context artifact is the saved `XX-CONTEXT.md` file for the resolved phase.
 - Require explicit confirmation before replacing substantive user-authored artifacts; scaffold-generated placeholders may be replaced by validated authored content.
@@ -25,7 +25,7 @@ Response requirements:
 - Pass scaffold paths as repo-relative Blueprint artifact paths such as `.blueprint/phases/<phase>/<prefix>-CONTEXT.md`; never use bare names or absolute filesystem paths.
 - Follow the shared long-running phase-discovery profile for stage labels, in-flight status, and session-local visibility helpers.
 - Treat overwrite as an explicit confirmation path, not the default.
-- Capture real phase decisions, not just placeholder headings or scaffold text.
+- Capture real phase decisions, not just placeholder headings or scaffold text. The final persisted markdown must not preserve literal scaffold markers, example bullets, or prompt-like fill-in instructions.
 - Pass `phase` as the resolved numeric phase reference only; never pass phase directories, slugs, or artifact filenames back into the phase-write tools.
 - If validation rejects context or discussion content, repair the same normalized draft once and retry; if identical diagnostics repeat, preserve the checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as a repair strategy.
 """

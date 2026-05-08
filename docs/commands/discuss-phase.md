@@ -10,7 +10,7 @@
 
 - Shared profile reference: `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
 - Command behavior reference: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
-- Saved artifact schema authority: the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`
+- Saved artifact schema authority: the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`; any scaffold output is starter-only seed material and is never the final saved contract body
 - Detailed Draw.io workflow: [`docs/diagrams/discuss-phase-workflow-end-to-end.drawio`](../diagrams/discuss-phase-workflow-end-to-end.drawio)
 
 ## Purpose
@@ -40,7 +40,7 @@
 - Repo side effects: Writes only declared `.blueprint/` phase artifacts, checkpoints, and `STATE.md` through MCP tools.
 - Blueprint does not create or manage repo-root `CONTEXT.md`; this command authors or repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
 - In-flight discovery follows the shared profile until the run concludes or stops on a checkpoint or overwrite decision.
-- The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`.
+- The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`, while scaffold output remains starter-only and must not survive verbatim into saved artifacts.
 
 
 ## Behavior Stages
@@ -49,8 +49,8 @@
 2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory before asking for fresh detail.
 3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching.
 4. `Execute`: run one-question `ask_user` branching, optionally use capability-gated sidecar research for one gray area, capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
-5. `Persist`: scaffold only missing discovery artifacts, persist substantive context or discussion content, refresh checkpoints per area, and update `STATE.md` through MCP only.
-6. `Validate`: normalize drafts to the canonical `authoringTemplate`, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
+5. `Persist`: scaffold only missing discovery artifacts, treat scaffold text as disposable starter seed, persist substantive context or discussion content, refresh checkpoints per area, and update `STATE.md` through MCP only.
+6. `Validate`: normalize drafts to the canonical `authoringTemplate`, strip scaffold literals and other placeholders from the final body, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
 7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action loaded from refreshed state, without inferring a direct `/blu-plan-phase` handoff while research or UI gates still route elsewhere.
 
 
@@ -66,7 +66,7 @@
 - `optional phase XX-DISCUSSION-LOG.md`
 - `optional shared phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
-- The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, or dropped deferred ideas are corrected before save. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft from those returned issues and retry before treating the discussion as complete.
+- The final context and discussion bodies must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, dropped deferred ideas, or preserved scaffold literals are corrected before save. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft from those returned issues and retry before treating the discussion as complete.
 - Retry validation repair at most once for the same draft. If the same diagnostics repeat, stop, preserve the discuss checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as the repair strategy.
 
 
@@ -94,9 +94,9 @@
 - Pass `phase` to `blueprint_phase_artifact_write` and `blueprint_phase_checkpoint_put` as the resolved numeric phase reference only, for example `"3"` or `3`.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting or revising `XX-CONTEXT.md`.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.discussion-log"` before drafting or revising `XX-DISCUSSION-LOG.md`.
-- Normalize the final context and discussion drafts to the returned `authoringTemplate` before writing, then self-check the normalized body against the contract and block the write if placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas remain.
+- Normalize the final context and discussion drafts to the returned `authoringTemplate` before writing, then self-check the normalized body against the contract and block the write if placeholder text, preserved scaffold literals, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas remain.
 - Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
-- Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`.
+- Treat scaffold output as first-write seeding only. Persist the real final markdown through `blueprint_phase_artifact_write`, with literal scaffold placeholders, example bullets, and fill-in cues removed before save.
 - Use `artifact: "context"` for `XX-CONTEXT.md` and `artifact: "discussion-log"` for `XX-DISCUSSION-LOG.md`. Pass the full final body and treat the returned `path` as authoritative instead of rebuilding filenames manually.
 - Read checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"`, then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using the structured discuss checkpoint shape. Include `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, and keep resumability details inside `resumeMeta` with fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`; for discuss checkpoints, `mode` must be `"discuss"`. Treat the returned checkpoint `path` as authoritative, do not try to serialize resumable state into markdown fields, and remember that the filename is a shared phase checkpoint path rather than proof of discuss ownership.

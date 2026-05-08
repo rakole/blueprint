@@ -61,7 +61,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` as the shared long-running profile for `/blu-discuss-phase`
 - use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract for `/blu-research-phase`
 - use `skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md` as the rich behavior contract for `/blu-ui-phase`
-- treat `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts
+- treat `contract.authoringTemplate` from `blueprint_artifact_contract_read` as the schema authority for saved artifacts, while treating scaffold output as starter-only seed material that must not survive into final saved markdown
 
 ## Required Inputs
 
@@ -143,8 +143,8 @@ does not grant broader tool scope to a command.
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` to let the runtime infer it from state or the roadmap. Never pass phase directories, slugs, or filenames.
 - `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
-- `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates.
-- `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content.
+- `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates. If runtime contracts later expose a separate scaffold template, keep `authoringTemplate` as the saved-artifact authority and treat the scaffold shape as starter-only.
+- `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content, and do not preserve literal scaffold placeholders, example bullets, or fill-in cues in the final write.
 - `blueprint_phase_checkpoint_get`: pass the command's expected owner and mode when resuming saved state, then honor `safeToResume` and `warnings` before using the checkpoint.
 - `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the structured checkpoint shape, with `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `ownerCommand` must match `resumeMeta.mode` (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`). `resumeMeta` carries the resumability fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. The tool owns the shared checkpoint filename and location, rejects foreign-owner overwrites, and pairs with `blueprint_phase_checkpoint_delete` owner/mode guards when commands clean up checkpoint state.
 - `blueprint_config_get`: use `scope: "effective"` when command behavior depends on normalized config such as `research.external_sources`. Treat it as the source of truth even when another MCP result mirrors the same setting for convenience.
@@ -244,7 +244,7 @@ Before claiming completion, verify:
 
 - The active command's skill-local runtime reference from `input_bundles.commands[...]` was loaded, and sibling discovery references were not treated as active input; for `/blu-discuss-phase`, the long-running profile was also loaded.
 - The active command used only its command-scoped MCP allowlist, translated to `mcp_blueprint_*` runtime FQNs, and reached the contract's required milestones in order: resolve, read evidence/config/contracts, decide gates, persist or no-write, validate, and route.
-- Any artifact work used `blueprint_artifact_contract_read` for the active contract id (`phase.context`, `phase.discussion-log`, `phase.research`, or `phase.ui-spec`) before drafting or writing; scaffold text, status booleans, and prompt-local templates were not treated as finished content.
+- Any artifact work used `blueprint_artifact_contract_read` for the active contract id (`phase.context`, `phase.discussion-log`, `phase.research`, or `phase.ui-spec`) before drafting or writing; scaffold text, starter template literals, status booleans, and prompt-local templates were not treated as finished content or preserved verbatim in the saved artifact.
 - Persistence, when allowed, happened only through the owning MCP tools; returned `status`, `written`, `created`, `updated`, `path`, `validation`, `warnings`, and `reason` fields were treated as authoritative. For `/blu-list-phase-assumptions`, verify no write-capable MCP tool, task tracker, or hidden planning helper was called.
 - Required gates were satisfied before action: artifact overwrite/reuse/update, discuss checkpoint resume-versus-discard, research external-source policy, UI contract-versus-skip, `workflow.ui_safety_gate` rationale, checker-requested revisions, and checkpoint owner/mode cleanup guards.
 - Validation, checker, model-check, or MCP rejection results were repaired through the same normalized draft and retried when the active contract allows it; otherwise the run stopped with a checkpoint or waiting state and an honest blocker. Invalid, partial, scaffold-only, skipped, or silently reused invalid work was not described as successful completion.

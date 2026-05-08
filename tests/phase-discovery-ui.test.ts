@@ -395,6 +395,64 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
 - Record the major discussion outcomes and unresolved questions here.
 `
   });
+  const invalidContextScaffoldLiterals = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: 3,
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Phase Boundary
+
+- Goal: keep the saved context grounded.
+- In scope: preserve the durable discovery record.
+- Out of scope: execution planning.
+- Success criteria: later planning can reuse the artifact directly.
+
+## Discovery Grounding
+
+- Project brief: retain the actual brief.
+- Requirements grounding: preserve the current requirement grounding.
+- Workflow posture: keep discovery adaptive.
+- Confirmed decisions: capture durable decisions.
+
+## Implementation Decisions
+
+- Implementation decision 1: preserve the current overwrite boundary.
+- Tradeoffs or constraints: the artifact write stays phase-scoped.
+
+## Specific Ideas
+
+- Specific idea 1: carry the confirmed boundary into planning.
+- Specific idea 2: reuse the saved checkpoint state in later prompts.
+- Later follow-up: revisit optional refinements after planning.
+
+## Existing Code Insights
+
+- Existing code insight 1: the phase artifacts already carry reusable grounding.
+- Reusable pattern: keep the same H1 and sectioned bullet format.
+- Known gap or caution: avoid mixing execution summary language into the context record.
+
+## Dependencies
+
+- Prior phase artifacts: reuse the saved phase artifacts.
+- External constraints: respect repository constraints.
+- Required follow-up reads: read the roadmap before planning.
+
+## Open Questions
+
+- Question 1: what remains unresolved?
+
+## Deferred Ideas
+
+- Scope creep or later follow-up: defer anything that does not block planning.
+- Ideas to revisit after this phase: keep the next pass grounded in saved artifacts.
+
+## Canonical References
+
+- Source 1: roadmap and context artifacts.
+`,
+    overwrite: true
+  });
   const invalidContextLeadingText = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: 3,
@@ -552,6 +610,15 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
   );
   assert.equal(invalidDiscussion.status, "invalid");
   assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
+  assert.equal(invalidContextScaffoldLiterals.status, "invalid");
+  assert.match(
+    invalidContextScaffoldLiterals.validation?.issues.join("\n") ?? "",
+    /placeholder scaffold text: Project brief:/i
+  );
+  assert.match(
+    invalidContextScaffoldLiterals.validation?.issues.join("\n") ?? "",
+    /placeholder scaffold text: Requirements grounding:/i
+  );
   assert.equal(invalidContextLeadingText.status, "invalid");
   assert.match(
     invalidContextLeadingText.validation?.issues.join("\n") ?? "",

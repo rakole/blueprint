@@ -4,7 +4,10 @@ This reference is the rich behavior contract for `/blu-discuss-phase`. The
 canonical artifact schema still comes from `blueprint_artifact_contract_read`
 with `artifactId: "phase.context"` and, when used, `artifactId:
 "phase.discussion-log"`. Treat this file as orchestration and evidence-density
-guidance, not a competing markdown schema.
+guidance, not a competing markdown schema. If the runtime exposes scaffold
+starter material separately from the authoring template, keep that split
+explicit: scaffold output seeds a missing file, while `authoringTemplate`
+governs the final saved markdown.
 
 Use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
 for the shared `long-running-mutation` stage vocabulary, in-flight status
@@ -161,7 +164,9 @@ this runtime.
 ## Artifact Authoring
 
 The `phase.context` authoring template is the schema authority. Populate every
-required section with concrete content:
+required section with concrete content. If a missing file is first seeded from
+`blueprint_artifact_scaffold` or a future `scaffoldTemplate`, treat that seed as
+throwaway starter material to rewrite, not as text to preserve:
 
 The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
 
@@ -185,7 +190,8 @@ The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
 
 Prefer rich bullets over terse labels. A downstream researcher or planner should
 understand what was decided, why, what evidence supports it, and where to look
-next.
+next. The final artifact must not preserve literal scaffold headings,
+placeholder bullets, example filler, or "replace me" instructions.
 
 Write `XX-DISCUSSION-LOG.md` when it adds durable value beyond the context,
 especially for multi-area sessions, assumptions-mode corrections, advisor-style
@@ -198,9 +204,10 @@ Before treating the discussion as complete:
 1. Normalize the draft to the live `authoringTemplate`.
 2. Self-check for placeholder text, empty required sections, contradiction with
    prior saved context, missing canonical references, unsupported mode claims,
-   dropped deferred ideas, and plan-inventory warnings that were not carried
-   forward. If `Open Questions` has no unresolved items, preserve the exact
-   `- none` sentinel during repair instead of expanding it into filler prose.
+   dropped deferred ideas, preserved scaffold literals, and plan-inventory
+   warnings that were not carried forward. If `Open Questions` has no
+   unresolved items, preserve the exact `- none` sentinel during repair instead
+   of expanding it into filler prose.
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
    `status: "invalid"` or validation issues, repair the same draft from the
    returned issues and retry before claiming success.
@@ -236,6 +243,7 @@ place and report the exact blocker plus the next safe continuation action.
 - Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
 - `/blu-discuss-phase` authors and repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md` through MCP artifact tools.
 - The canonical phase context filename shape is `XX-CONTEXT.md` inside the resolved phase directory.
+- Any scaffolded or starter-only content is disposable seed material. The saved `XX-CONTEXT.md` must contain authored decisions shaped to the live `authoringTemplate`, not preserved scaffold literals.
 - Research, UI, and planning commands consume this phase context as read-only evidence and route back to `/blu-discuss-phase <phase>` when it is missing, invalid, contradictory, or unusable.
 - If context or discussion validation returns diagnostics, repair the same normalized draft once and retry the same MCP write path.
 - If the retry returns identical diagnostics, stop, preserve the discuss checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.
