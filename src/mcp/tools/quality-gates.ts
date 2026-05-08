@@ -93,6 +93,11 @@ type CandidateResolution = {
   warnings: string[];
 };
 
+type ReviewArtifactRoutingState = {
+  verdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
+  nextSafeAction: string | null;
+};
+
 const REVIEWABLE_EXTENSIONS = new Set([
   ".ts",
   ".tsx",
@@ -466,6 +471,16 @@ function extractReviewNextSafeAction(content: string): string | null {
   );
 }
 
+function extractReviewVerdict(content: string): "PASS" | "FOLLOW_UP" | "BLOCKED" | null {
+  const verdict = extractArtifactMarker(content, "Verdict")?.toUpperCase() ?? null;
+
+  if (verdict === "PASS" || verdict === "FOLLOW_UP" || verdict === "BLOCKED") {
+    return verdict;
+  }
+
+  return null;
+}
+
 function extractReviewFixNextSafeAction(content: string): string | null {
   const sectionAction = extractReviewNextSafeAction(content);
 
@@ -515,6 +530,8 @@ function isStaleSecurePhaseAction(args: {
 
 function normalizeReviewNextSafeAction(args: {
   action: string | null;
+  phaseNumber: string;
+  reviewVerdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
   missingGate: PhaseQualityGateMissingGate;
   hasSecurity: boolean;
 }): string | null {
@@ -531,6 +548,10 @@ function normalizeReviewNextSafeAction(args: {
       hasSecurity: args.hasSecurity
     })
   ) {
+    if (args.reviewVerdict === "FOLLOW_UP" || args.reviewVerdict === "BLOCKED") {
+      return `/blu-code-review-fix ${args.phaseNumber}`;
+    }
+
     return null;
   }
 
@@ -745,14 +766,17 @@ async function collectCompletedSummaries(args: {
   return { summaries, summaryIds };
 }
 
-async function readReviewNextSafeAction(args: {
+async function readReviewRoutingState(args: {
   projectRoot: string;
   reviewPath: string | null;
   artifacts: NormalizedArtifact[];
   warnings: string[];
-}): Promise<string | null> {
+}): Promise<ReviewArtifactRoutingState> {
   if (args.reviewPath === null) {
-    return null;
+    return {
+      verdict: null,
+      nextSafeAction: null
+    };
   }
 
   const reviewArtifact =
@@ -768,10 +792,14 @@ async function readReviewNextSafeAction(args: {
 
   if (content === null) {
     args.warnings.push(`${args.reviewPath}: could not read Review artifact Next Safe Action.`);
-    return null;
+    return {
+      verdict: null,
+      nextSafeAction: null
+    };
   }
 
   const nextSafeAction = extractReviewFixNextSafeAction(content);
+  const verdict = extractReviewVerdict(content);
 
   if (nextSafeAction === null) {
     args.warnings.push(
@@ -779,7 +807,10 @@ async function readReviewNextSafeAction(args: {
     );
   }
 
-  return nextSafeAction;
+  return {
+    verdict,
+    nextSafeAction
+  };
 }
 
 async function readCompletedReviewFixNextSafeAction(args: {
@@ -930,18 +961,24 @@ export async function evaluatePhaseQualityGates(
         completed: false,
         nextSafeAction: null
       };
+  const reviewRoutingState = hasReview
+    ? await readReviewRoutingState({
+        projectRoot,
+        reviewPath,
+        artifacts,
+        warnings
+      })
+    : {
+        verdict: null,
+        nextSafeAction: null
+      };
   const rawReviewNextSafeAction = reviewFixNextSafeAction.completed
     ? reviewFixNextSafeAction.nextSafeAction
-    : hasReview
-      ? await readReviewNextSafeAction({
-          projectRoot,
-          reviewPath,
-          artifacts,
-          warnings
-        })
-      : null;
+    : reviewRoutingState.nextSafeAction;
   const reviewNextSafeAction = normalizeReviewNextSafeAction({
     action: rawReviewNextSafeAction,
+    phaseNumber,
+    reviewVerdict: reviewRoutingState.verdict,
     missingGate,
     hasSecurity
   });

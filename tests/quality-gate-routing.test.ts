@@ -24,6 +24,7 @@ type PhaseFixture = {
   withReview?: boolean;
   withReviewFix?: boolean;
   withSecurity?: boolean;
+  reviewVerdict?: "PASS" | "FOLLOW_UP" | "BLOCKED";
   reviewNextSafeAction?: string;
   reviewFixNextSafeAction?: string;
   planModifiedFiles?: string[];
@@ -321,14 +322,33 @@ function uatContent(phase: PhaseFixture): string {
 }
 
 function reviewContent(phase: PhaseFixture): string {
+  const verdict = phase.reviewVerdict ?? "PASS";
+  const isFollowUp = verdict === "FOLLOW_UP";
+  const isBlocked = verdict === "BLOCKED";
+  const summaryLine = isFollowUp
+    ? "- The changed source, Java, and repo runtime files were reviewed with one follow-up finding pending remediation."
+    : isBlocked
+      ? "- The changed source, Java, and repo runtime files were reviewed, but one finding remains blocked on follow-up repair or validation."
+      : "- The changed source, Java, and repo runtime files were reviewed with no follow-up findings.";
+  const findingsRow = isFollowUp
+    ? "| high | follow-up | src/feature.ts:1 | Missing guard for invalid input remains in the implementation. | Invalid input can still be treated as successful behavior. | Apply the saved fix and rerun focused validation. |"
+    : isBlocked
+      ? "| high | blocked | src/feature.ts:1 | The changed behavior still lacks required proof after review. | Advancing would rely on unverified behavior. | Repair or validate the blocked review finding before proceeding. |"
+      : "| none | none | none | none | none | none |";
+  const followUpLine = isFollowUp
+    ? "- Apply the saved code-review remediation before phase closeout."
+    : isBlocked
+      ? "- Repair or validate the blocked review finding before phase closeout."
+      : "- none";
+
   return `# ${phaseTitle(phase)} - Code Review
 
-**Verdict:** PASS
+**Verdict:** ${verdict}
 **Readiness:** ready-for-security
 
 ## Review Summary
 
-- The changed source, Java, and repo runtime files were reviewed with no follow-up findings.
+${summaryLine}
 
 ## Positive Signals
 
@@ -338,7 +358,7 @@ function reviewContent(phase: PhaseFixture): string {
 
 | Severity | Disposition | Location | Evidence | Impact | Recommendation |
 |----------|-------------|----------|----------|--------|----------------|
-| none | none | none | none | none | none |
+${findingsRow}
 
 ## Evidence Coverage
 
@@ -351,7 +371,7 @@ function reviewContent(phase: PhaseFixture): string {
 
 ## Follow-Ups
 
-- none
+${followUpLine}
 
 ## Next Safe Action
 
@@ -1025,6 +1045,29 @@ test("stale secure-phase review follow-up does not loop after security exists", 
         completed: true,
         withReview: true,
         withSecurity: true,
+        reviewVerdict: "FOLLOW_UP",
+        reviewNextSafeAction: "/blu-secure-phase 1"
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-code-review-fix 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1|\/blu-audit-milestone v1/);
+});
+
+test("stale secure-phase pass review does not block advancement after security exists", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withReview: true,
+        withSecurity: true,
+        reviewVerdict: "PASS",
         reviewNextSafeAction: "/blu-secure-phase 1"
       })
     ]
