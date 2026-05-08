@@ -38268,6 +38268,8 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_artifact_read",
       "blueprint_phase_artifact_write",
       "blueprint_artifact_scaffold",
+      "blueprint_state_load",
+      "blueprint_command_catalog",
       "blueprint_state_update"
     ];
     EXECUTE_PHASE_REQUIRED_TOOLS = [
@@ -39422,7 +39424,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: UI_PHASE_REQUIRED_TOOLS,
         optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+        contractNotes: 'Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, call blueprint_state_update with base: "synced" while preserving patch.currentPhase and patch.activeCommand, then re-load blueprint_state_load.derivedStatus.nextAction and keep final routing constrained by blueprint_command_catalog, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -40754,6 +40756,70 @@ function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
 }
+function renderBootstrapPhaseContext(args) {
+  const requirementSummary = args.requirementIds.length > 0 ? args.requirementIds.join(", ") : "none recorded yet";
+  const successCriteriaSummary = args.successCriteria.length > 0 ? args.successCriteria.join("; ") : "Replace this starter context with authored discovery outcomes through /blu-discuss-phase.";
+  return `# Phase ${args.phasePrefix}: ${args.phaseTitle} - Context
+
+## Phase Boundary
+
+- This starter context was seeded during /blu-new-project for Phase ${args.phaseNumber}.
+- The current roadmap goal is ${args.objective}.
+- The phase is presently grounded in roadmap requirements ${requirementSummary}.
+- Replace this starter with authored discovery boundaries through ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} before planning continues.
+
+## Discovery Grounding
+
+- Project bootstrap artifacts exist at .blueprint/PROJECT.md, .blueprint/REQUIREMENTS.md, and .blueprint/ROADMAP.md.
+- The active milestone recorded during bootstrap is ${args.milestone}.
+- ROADMAP.md currently names this phase as ${args.phaseTitle}.
+- Current success criteria captured for the phase: ${successCriteriaSummary}.
+
+## Implementation Decisions
+
+- Discovery context remains phase-scoped under .blueprint/phases/ rather than repo-root CONTEXT.md.
+- Subsequent lifecycle commands should wait for authored discuss-phase output before treating this starter as complete.
+- Bootstrap owns this starter context so phase discovery can resolve the first roadmap phase immediately.
+
+## Specific Ideas
+
+- Use ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} to replace this starter with concrete scope, constraints, and decisions.
+- Confirm whether the roadmap objective needs refinement before plan-phase begins.
+- Capture durable delivery ideas in the authored context instead of leaving them only in ROADMAP.md.
+
+## Existing Code Insights
+
+- No repo-specific codebase insight has been authored for this fresh bootstrap yet.
+- Treat ROADMAP.md and REQUIREMENTS.md as the current grounded sources for this phase.
+- Add concrete code or system notes during ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} when evidence exists.
+
+## Dependencies
+
+- Prior phase artifacts: none.
+- External constraints: bootstrap should stay within implemented Blueprint command surfaces.
+- Required follow-up reads: .blueprint/PROJECT.md, .blueprint/REQUIREMENTS.md, and .blueprint/ROADMAP.md.
+
+## Open Questions
+
+- Which repo-specific constraints or requirement details still need clarification before planning starts?
+
+## Deferred Ideas
+
+- Leave plan structure, execution details, and later-phase scope decisions for the authored discuss-phase pass.
+- Keep implementation specifics deferred until discovery grounds them in project evidence.
+- Revisit broader roadmap adjustments after Phase ${args.phaseNumber} context is authored.
+
+## Canonical References
+
+- .blueprint/PROJECT.md
+- .blueprint/REQUIREMENTS.md
+- .blueprint/ROADMAP.md
+
+---
+${SCAFFOLD_GENERATED_MARKER}
+${BOOTSTRAP_STARTER_CONTEXT_MARKER}
+`;
+}
 async function pathExists5(targetPath) {
   try {
     await fs6.access(targetPath);
@@ -41435,6 +41501,17 @@ async function blueprintProjectInit(args = {}) {
     bootstrapSeed.roadmapPhases[0].phase,
     "Initial roadmap phase"
   ) : "1";
+  const initialPhaseTitle = bootstrapSeed.roadmapPhases[0]?.title?.trim() || "Initial Phase";
+  const initialPhaseDir = buildBlueprintPhaseDirectoryPath(
+    initialPhase,
+    initialPhaseTitle
+  );
+  const initialPhasePrefix = formatBlueprintPhasePrefix(initialPhase);
+  const initialPhaseContextPath = `${initialPhaseDir}/${initialPhasePrefix}-CONTEXT.md`;
+  const initialPhaseObjective = bootstrapSeed.roadmapPhases[0]?.objective?.trim() || "Author the first phase context before later lifecycle commands run.";
+  const initialPhaseRequirementIds = bootstrapSeed.roadmapPhases[0]?.requirementIds ?? [];
+  const initialPhaseSuccessCriteria = bootstrapSeed.roadmapPhases[0]?.successCriteria ?? [];
+  const initializedNextAction = bootstrapAssessment.provisionalRoadmap ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable` : blueprintRunDirectCommand("discuss-phase", initialPhase);
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
     overwrite,
@@ -41444,13 +41521,29 @@ async function blueprintProjectInit(args = {}) {
       `${BLUEPRINT_DIR}/PROJECT.md`,
       `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
       `${BLUEPRINT_DIR}/ROADMAP.md`,
-      `${BLUEPRINT_DIR}/phases/`
+      `${BLUEPRINT_DIR}/phases/`,
+      initialPhaseContextPath
     ]
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
+  const bootstrapContextWarnings = overwrite || scaffold.createdFiles.includes(initialPhaseContextPath) ? await writeTextFile(
+    resolveBlueprintPath(projectRoot, initialPhaseContextPath),
+    renderBootstrapPhaseContext({
+      phaseNumber: initialPhase,
+      phasePrefix: initialPhasePrefix,
+      phaseTitle: initialPhaseTitle,
+      milestone: bootstrapSeed.currentMilestone ?? "v1",
+      objective: initialPhaseObjective,
+      requirementIds: initialPhaseRequirementIds,
+      successCriteria: initialPhaseSuccessCriteria
+    }),
+    {
+      label: initialPhaseContextPath
+    }
+  ) : [];
   const seededState = await blueprintStateUpdate({
     cwd: projectRoot,
     patch: {
@@ -41458,7 +41551,7 @@ async function blueprintProjectInit(args = {}) {
       currentMilestone: bootstrapSeed.currentMilestone ?? "v1",
       currentPhase: initialPhase,
       activeCommand: blueprintDirectCommand("new-project"),
-      nextAction: bootstrapAssessment.provisionalRoadmap ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
+      nextAction: initializedNextAction,
       blockers: [],
       lastUpdated: (/* @__PURE__ */ new Date()).toISOString()
     }
@@ -41471,6 +41564,7 @@ async function blueprintProjectInit(args = {}) {
   ];
   const warnings = [
     ...scaffold.warnings,
+    ...bootstrapContextWarnings,
     ...seededConfig.warnings,
     ...bootstrapDiagnostics.traceabilityWarnings
   ];
@@ -41482,7 +41576,7 @@ async function blueprintProjectInit(args = {}) {
     configProvenance: seededConfig.provenance,
     brownfield: bootstrapDiagnostics.brownfield,
     bootstrapDiagnostics,
-    nextAction: bootstrapDiagnostics.brownfield.provisionalRoadmap ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable` : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
+    nextAction: initializedNextAction,
     warnings: [...new Set(warnings)]
   };
 }
@@ -42016,6 +42110,15 @@ function phaseArtifactPathsForDirectory(artifacts, phaseDir) {
   const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir}/`;
   return artifacts.filter((artifact) => artifact.startsWith(prefix));
 }
+function findPhaseArtifactPath(artifacts, phasePrefix2, suffix) {
+  const expectedSuffix = `/${phasePrefix2}${suffix}`;
+  for (const artifact of artifacts) {
+    if (artifact.endsWith(expectedSuffix)) {
+      return artifact;
+    }
+  }
+  return null;
+}
 async function collectValidatedSummaryPathsForPhase(projectRoot, phaseNumber) {
   const phaseModule = await Promise.resolve().then(() => (init_phase(), phase_exports));
   const summaryIndex = await phaseModule.blueprintPhaseSummaryIndex({
@@ -42163,13 +42266,27 @@ function resolvePhaseQualityGateNextAction(args) {
   if (missingGateAction !== null) {
     return missingGateAction;
   }
-  if (!args.evaluation.hasReview || !args.evaluation.hasSecurity) {
-    return null;
-  }
-  return implementedReviewNextSafeAction(
+  const savedReviewRepairAction = implementedReviewNextSafeAction(
     args.evaluation.reviewNextSafeAction,
     args.implementedCommands
   );
+  if (args.evaluation.requiresCodeReview && savedReviewRepairAction !== null) {
+    return savedReviewRepairAction;
+  }
+  if ((args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) && args.hasReviewableUiSpec && !args.hasUiReview && args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
+    return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+  }
+  return null;
+}
+async function uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings) {
+  try {
+    const raw = await fs7.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    return !isExplicitUiSkipRationale(raw);
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    warnings.push(`${uiSpecPath}: ${message}`);
+    return true;
+  }
 }
 async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, currentPhase2) {
   const warnings = [];
@@ -42181,8 +42298,10 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       phaseDir: null,
       phasePrefix: null,
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -42195,6 +42314,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -42232,8 +42352,10 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       phaseDir: null,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -42246,6 +42368,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -42269,8 +42392,10 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       phaseDir: null,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -42283,6 +42408,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -42301,13 +42427,17 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix2}-UI-SPEC.md`;
+  const uiReviewPath = `${phaseRoot}/${phasePrefix2}-UI-REVIEW.md`;
   const reviewPath = `${phaseRoot}/${phasePrefix2}-REVIEW.md`;
   const securityPath = `${phaseRoot}/${phasePrefix2}-SECURITY.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix2}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix2}-UAT.md`;
   const hasContext = phaseArtifacts.includes(contextPath);
+  let contextNeedsAuthoring = false;
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  let hasReviewableUiSpec = hasUiSpec;
+  const hasUiReview = phaseArtifacts.includes(uiReviewPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
@@ -42338,6 +42468,20 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
   );
   let researchValid = null;
+  if (hasContext) {
+    try {
+      const raw = await fs7.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
+      contextNeedsAuthoring = isBootstrapStarterContext(raw);
+      if (contextNeedsAuthoring) {
+        warnings.push(
+          `Current phase ${currentPhase2} still has a bootstrap starter CONTEXT artifact; ${blueprintRunDirectCommand("discuss-phase", currentPhase2)} to author the saved phase context.`
+        );
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      warnings.push(`${contextPath}: ${message}`);
+    }
+  }
   if (hasResearch) {
     try {
       const raw = await fs7.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
@@ -42351,6 +42495,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       warnings.push(`${researchPath}: ${message}`);
       researchValid = false;
     }
+  }
+  if (hasUiSpec) {
+    hasReviewableUiSpec = await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
   }
   if (!hasContext && hasLaterArtifacts) {
     warnings.push(
@@ -42395,7 +42542,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const qualityGateNextAction = resolvePhaseQualityGateNextAction({
     phaseNumber: normalizedPhase,
     evaluation: qualityGateEvaluation,
-    implementedCommands: await getImplementedCommandNames2()
+    implementedCommands: await getImplementedCommandNames2(),
+    hasReviewableUiSpec,
+    hasUiReview
   });
   if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
     warnings.push(
@@ -42408,8 +42557,10 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     phaseDir,
     phasePrefix: phasePrefix2,
     contextPath,
+    contextNeedsAuthoring,
     researchPath,
     uiSpecPath,
+    uiReviewPath,
     reviewPath: qualityGateEvaluation.reviewPath ?? (hasReview ? reviewPath : null),
     securityPath: qualityGateEvaluation.securityPath ?? (hasSecurity ? securityPath : null),
     reviewNextSafeAction: qualityGateEvaluation.reviewNextSafeAction,
@@ -42422,6 +42573,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasContext,
     hasResearch,
     hasUiSpec,
+    hasUiReview,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
     hasVerification,
@@ -42490,6 +42642,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     const phasePrefix2 = formatBlueprintPhasePrefix(phase.phaseNumber);
     const phaseDir = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix2);
     const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir);
+    const uiSpecPath = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-SPEC.md");
+    const hasReviewableUiSpec = uiSpecPath === null ? false : await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
+    const hasUiReview = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-REVIEW.md") !== null;
     const {
       summaryPaths,
       pendingPlanIds,
@@ -42543,7 +42698,9 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     const qualityGateNextAction = resolvePhaseQualityGateNextAction({
       phaseNumber: phase.phaseNumber,
       evaluation: qualityGateEvaluation,
-      implementedCommands
+      implementedCommands,
+      hasReviewableUiSpec,
+      hasUiReview
     });
     warnings.push(...qualityGateEvaluation.warnings);
     if (qualityGateEvaluation.reviewableFiles.length > 0) {
@@ -42559,7 +42716,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     } else if (qualityGateNextAction !== null) {
       qualityGateDebtPhases.push(phase.phaseNumber);
       warnings.push(
-        `Phase ${phase.phaseNumber} has quality gate debt from saved REVIEW Next Safe Action: ${qualityGateNextAction}`
+        `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
       );
     }
     if (qualityGateNextAction !== null) {
@@ -42739,8 +42896,8 @@ async function deriveNextAction(args) {
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
-  if (!args.phaseArtifacts.hasContext && implementedCommands.has(discussPhaseCommand)) {
-    return `Run ${discussPhaseCommand} ${args.currentPhase} to rebuild the current phase context`;
+  if ((!args.phaseArtifacts.hasContext || args.phaseArtifacts.contextNeedsAuthoring) && implementedCommands.has(discussPhaseCommand)) {
+    return args.phaseArtifacts.contextNeedsAuthoring ? `Run ${discussPhaseCommand} ${args.currentPhase} to author the current phase context` : `Run ${discussPhaseCommand} ${args.currentPhase} to rebuild the current phase context`;
   }
   if (args.workflow.researchEnabled && args.phaseArtifacts.hasContext && !args.phaseArtifacts.hasResearch && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to capture phase research`;
@@ -43410,6 +43567,7 @@ __export(phase_exports, {
   blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
   blueprintRoadmapRead: () => blueprintRoadmapRead,
   blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
+  buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
   phaseToolDefinitions: () => phaseToolDefinitions
 });
 import { promises as fs8 } from "node:fs";
@@ -43678,6 +43836,11 @@ function normalizePhaseDescription(value) {
 function slugifyPhaseName(value) {
   const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
   return slug.length > 0 ? slug : "new-phase";
+}
+function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
+  const phasePrefix2 = formatPhasePrefix2(phaseNumber);
+  const normalizedPhaseName = normalizePhaseDescription(phaseName);
+  return `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(normalizedPhaseName)}`;
 }
 function nextIntegerPhaseNumber(phases) {
   const basePhaseNumbers = phases.map((phase) => phase.phaseNumber).map((phaseNumber) => phaseNumber.split(".")[0] ?? phaseNumber).map((phaseNumber) => Number.parseInt(phaseNumber, 10)).filter((phaseNumber) => !Number.isNaN(phaseNumber));
@@ -44674,13 +44837,32 @@ async function evaluatePhaseArtifactUsability(projectRoot, artifactPath, artifac
   try {
     const raw = await fs8.readFile(absolutePath, "utf8");
     const validation = validatePhaseArtifactContent(raw, artifact);
+    const bootstrapStarter = artifact === "context" && isBootstrapStarterContext(raw);
+    const issues = [...validation.issues];
+    const diagnostics = [...validation.diagnostics];
+    const warnings = [...validation.warnings];
+    if (bootstrapStarter) {
+      const issue2 = "Context artifact is still the bootstrap starter and must be replaced through /blu-discuss-phase before planning.";
+      issues.push(issue2);
+      diagnostics.push({
+        path: artifactPath,
+        code: "context.bootstrap_starter",
+        message: issue2,
+        repair: `Replace ${artifactPath} through /blu-discuss-phase before planning.`,
+        retryable: true,
+        nextTool: "blueprint_phase_research_status"
+      });
+      warnings.push(
+        `${artifactPath} is still the bootstrap starter context; replace it through /blu-discuss-phase before planning.`
+      );
+    }
     return {
       present: true,
       valid: validation.valid,
-      usable: validation.valid,
-      issues: validation.issues,
-      diagnostics: validation.diagnostics,
-      warnings: validation.warnings,
+      usable: validation.valid && !bootstrapStarter,
+      issues,
+      diagnostics,
+      warnings,
       unreadable: false
     };
   } catch (error2) {
@@ -48285,7 +48467,7 @@ function checkpointResumeMode(record2) {
   return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
 }
 function isScaffoldGeneratedPhaseArtifact(content) {
-  return content.includes(SCAFFOLD_GENERATED_MARKER);
+  return isScaffoldGeneratedArtifact(content);
 }
 function isKnownCheckpointOwnerCommand(value) {
   return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
@@ -48422,7 +48604,7 @@ async function blueprintRoadmapAddPhase(args) {
     }
     const phasePrefix2 = formatPhasePrefix2(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
-    const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slug}`;
+    const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
     const rawRoadmap = await fs8.readFile(roadmapPath, "utf8");
     const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
@@ -48523,7 +48705,7 @@ async function blueprintRoadmapInsertPhase(args) {
   const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
   const phasePrefix2 = formatPhasePrefix2(phaseNumber);
   const slug = slugifyPhaseName(normalizedDescription);
-  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slug}`;
+  const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
   const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
   if (existingDecimalDirectory.reason === "ambiguous" || existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir) {
     throw new Error(
@@ -48786,7 +48968,7 @@ async function blueprintRoadmapRemovePhase(args) {
 }
 async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phasePrefix2, phaseName) {
   const warnings = [];
-  const desiredPhaseDir = `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(phaseName)}`;
+  const desiredPhaseDir = buildBlueprintPhaseDirectoryPath(phasePrefix2, phaseName);
   const desiredPhaseDirPath = resolveBlueprintPath(projectRoot, desiredPhaseDir);
   if (item.reservedPhase) {
     const reservedDirectory = await findPhaseDirectory(projectRoot, item.reservedPhase);
@@ -49212,9 +49394,12 @@ async function blueprintPhaseResearchStatus(args = {}) {
     }
   }
   const suggestedRepairs = [];
+  const bootstrapStarterContext = contextStatus.diagnostics.some(
+    (diagnostic) => diagnostic.code === "context.bootstrap_starter"
+  );
   if (contextStatus.issues.length > 0) {
     suggestedRepairs.push(
-      contextStatus.unreadable ? `Restore or regenerate ${artifacts?.context} with /blu-discuss-phase before planning.` : "Update the phase context through /blu-discuss-phase so it matches the required context schema before planning."
+      contextStatus.unreadable ? `Restore or regenerate ${artifacts?.context} with /blu-discuss-phase before planning.` : bootstrapStarterContext ? "Replace the bootstrap starter context through /blu-discuss-phase before planning." : "Update the phase context through /blu-discuss-phase so it matches the required context schema before planning."
     );
   }
   if (researchIssues.length > 0) {
@@ -51607,7 +51792,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var import__3, SCAFFOLD_GENERATED_MARKER, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var import__3, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema2, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -51621,7 +51806,6 @@ var init_phase = __esm({
     init_state();
     init_security();
     init_quality_gates();
-    SCAFFOLD_GENERATED_MARKER = "*Generated by `blueprint_artifact_scaffold`*";
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
@@ -52169,6 +52353,12 @@ import { execFile as execFile4 } from "node:child_process";
 import { promises as fs9 } from "node:fs";
 import path11 from "node:path";
 import { promisify as promisify4 } from "node:util";
+function isScaffoldGeneratedArtifact(content) {
+  return content.includes(SCAFFOLD_GENERATED_MARKER);
+}
+function isBootstrapStarterContext(content) {
+  return content.includes(BOOTSTRAP_STARTER_CONTEXT_MARKER);
+}
 async function assessRootBootstrapShape(projectRoot) {
   const entries = await fs9.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
@@ -60846,7 +61036,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -60893,6 +61083,8 @@ var init_artifacts = __esm({
       `${BLUEPRINT_CODEBASE_PATH}/INTEGRATIONS.md`,
       `${BLUEPRINT_CODEBASE_PATH}/CONCERNS.md`
     ];
+    SCAFFOLD_GENERATED_MARKER = "*Generated by `blueprint_artifact_scaffold`*";
+    BOOTSTRAP_STARTER_CONTEXT_MARKER = "*Bootstrap starter context: replace through `/blu-discuss-phase`*";
     OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS = /* @__PURE__ */ new Set([
       `${BLUEPRINT_DIR}/mcp-write-failures.ndjson`
     ]);

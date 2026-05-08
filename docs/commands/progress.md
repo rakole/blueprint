@@ -10,12 +10,12 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `progress` stays inside the shared router posture: resolve repo state, read the live status surface, and route to the next safe implemented command without implying hidden mutation.
+- `progress` stays inside the shared router posture: resolve repo state, read the live status surface, and route to the next safe implemented command from live MCP and manifest state without implying hidden mutation.
 - When the repo is waiting on a prerequisite, `progress` should name the pending gate plainly instead of flattening it into a generic status update.
 
 ## Purpose
 
-`progress` is Blueprint's command for checking project progress, showing context, and routing to the next safe action. In Blueprint it stays read-oriented and host-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
+`progress` is Blueprint's command for checking project progress, showing context, and routing to the next safe state-derived action. In Blueprint it stays read-oriented and host-native, but it must not present blocked lifecycle or roadmap commands as runnable when the substrate is missing.
 
 ## Command Path And Examples
 
@@ -33,7 +33,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - When initialized, include active model profile, branching mode, blockers, pending gates, and config warnings that materially affect the recommended next step.
-- After UAT completes, show the post-UAT quality gate when `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files.
+- After UAT completes, show the post-UAT quality gate only as part of the state-derived next-action chain from `blueprint_project_status`, `blueprint_state_load.derivedStatus`, and saved artifact inventory when `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files.
 - Repo side effects: No durable artifact writes are planned.
 - Routed recommendations must be limited to commands whose catalog entry is `implemented`.
 
@@ -97,7 +97,7 @@
 - If the repo is `mapping-incomplete`, route to `/blu-map-codebase`.
 - If the repo is `mapped-only`, route to `/blu-new-project`.
 - If the repo is partial, route to `/blu-health`.
-- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action, except that a stale saved `/blu-secure-phase <phase>` from a non-pass review must reroute to `/blu-code-review-fix <phase>` once security exists; gates complete -> normal advancement.
+- If the live state-derived next-action chain reaches the post-UAT quality gate, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action, except that a stale saved `/blu-secure-phase <phase>` from a non-pass review must reroute to `/blu-code-review-fix <phase>` once security exists; gates complete -> normal advancement.
 - If `workflow.code_review` is false, keep the previous post-UAT advancement behavior.
 - If the natural next command is blocked, explain the missing substrate and keep the recommendation inside the implemented Wave 0 surface.
 - If the repo is waiting on a missing artifact, verification debt, or blocked substrate, say so explicitly.

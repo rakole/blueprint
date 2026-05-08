@@ -4,8 +4,10 @@ import path from "node:path";
 import * as z from "zod/v4";
 
 import {
+  BOOTSTRAP_STARTER_CONTEXT_MARKER,
   BLUEPRINT_DIR,
   DURABLE_REQUIREMENT_ID_PATTERN,
+  SCAFFOLD_GENERATED_MARKER,
   artifactToolDefinitions,
   blueprintArtifactScaffold,
   buildDefaultBootstrapSeed,
@@ -13,12 +15,15 @@ import {
   getBlueprintRoot,
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
+  resolveBlueprintPath,
   type BootstrapArtifactDiagnostics,
   type BootstrapAssessment,
   type NormalizedBootstrapSeed,
-  type BootstrapSeed
+  type BootstrapSeed,
+  writeTextFile
 } from "./artifacts.js";
 import {
+  formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef,
   safeJsonParseObject
 } from "../../shared/security.js";
@@ -27,7 +32,10 @@ import {
   blueprintConfigGet,
   seedProjectConfig
 } from "./config.js";
-import { phaseToolDefinitions } from "./phase.js";
+import {
+  buildBlueprintPhaseDirectoryPath,
+  phaseToolDefinitions
+} from "./phase.js";
 import {
   stateToolDefinitions,
   blueprintStateLoad,
@@ -252,11 +260,88 @@ const AVAILABLE_TOOL_NAMES = new Set([
   ...updateToolDefinitions.map((definition) => definition.name),
   ...workspaceToolDefinitions.map((definition) => definition.name)
 ]);
-
 function bundledUrl(relativePath: string): URL {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
 
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
+}
+
+function renderBootstrapPhaseContext(args: {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseTitle: string;
+  milestone: string;
+  objective: string;
+  requirementIds: string[];
+  successCriteria: string[];
+}): string {
+  const requirementSummary =
+    args.requirementIds.length > 0 ? args.requirementIds.join(", ") : "none recorded yet";
+  const successCriteriaSummary =
+    args.successCriteria.length > 0
+      ? args.successCriteria.join("; ")
+      : "Replace this starter context with authored discovery outcomes through /blu-discuss-phase.";
+
+  return `# Phase ${args.phasePrefix}: ${args.phaseTitle} - Context
+
+## Phase Boundary
+
+- This starter context was seeded during /blu-new-project for Phase ${args.phaseNumber}.
+- The current roadmap goal is ${args.objective}.
+- The phase is presently grounded in roadmap requirements ${requirementSummary}.
+- Replace this starter with authored discovery boundaries through ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} before planning continues.
+
+## Discovery Grounding
+
+- Project bootstrap artifacts exist at .blueprint/PROJECT.md, .blueprint/REQUIREMENTS.md, and .blueprint/ROADMAP.md.
+- The active milestone recorded during bootstrap is ${args.milestone}.
+- ROADMAP.md currently names this phase as ${args.phaseTitle}.
+- Current success criteria captured for the phase: ${successCriteriaSummary}.
+
+## Implementation Decisions
+
+- Discovery context remains phase-scoped under .blueprint/phases/ rather than repo-root CONTEXT.md.
+- Subsequent lifecycle commands should wait for authored discuss-phase output before treating this starter as complete.
+- Bootstrap owns this starter context so phase discovery can resolve the first roadmap phase immediately.
+
+## Specific Ideas
+
+- Use ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} to replace this starter with concrete scope, constraints, and decisions.
+- Confirm whether the roadmap objective needs refinement before plan-phase begins.
+- Capture durable delivery ideas in the authored context instead of leaving them only in ROADMAP.md.
+
+## Existing Code Insights
+
+- No repo-specific codebase insight has been authored for this fresh bootstrap yet.
+- Treat ROADMAP.md and REQUIREMENTS.md as the current grounded sources for this phase.
+- Add concrete code or system notes during ${blueprintDirectCommand("discuss-phase")} ${args.phaseNumber} when evidence exists.
+
+## Dependencies
+
+- Prior phase artifacts: none.
+- External constraints: bootstrap should stay within implemented Blueprint command surfaces.
+- Required follow-up reads: .blueprint/PROJECT.md, .blueprint/REQUIREMENTS.md, and .blueprint/ROADMAP.md.
+
+## Open Questions
+
+- Which repo-specific constraints or requirement details still need clarification before planning starts?
+
+## Deferred Ideas
+
+- Leave plan structure, execution details, and later-phase scope decisions for the authored discuss-phase pass.
+- Keep implementation specifics deferred until discovery grounds them in project evidence.
+- Revisit broader roadmap adjustments after Phase ${args.phaseNumber} context is authored.
+
+## Canonical References
+
+- .blueprint/PROJECT.md
+- .blueprint/REQUIREMENTS.md
+- .blueprint/ROADMAP.md
+
+---
+${SCAFFOLD_GENERATED_MARKER}
+${BOOTSTRAP_STARTER_CONTEXT_MARKER}
+`;
 }
 
 async function pathExists(targetPath: string | URL): Promise<boolean> {
@@ -1191,6 +1276,25 @@ export async function blueprintProjectInit(
         "Initial roadmap phase"
       )
     : "1";
+  const initialPhaseTitle =
+    bootstrapSeed.roadmapPhases[0]?.title?.trim() || "Initial Phase";
+  const initialPhaseDir = buildBlueprintPhaseDirectoryPath(
+    initialPhase,
+    initialPhaseTitle
+  );
+  const initialPhasePrefix = formatBlueprintPhasePrefix(initialPhase);
+  const initialPhaseContextPath = `${initialPhaseDir}/${initialPhasePrefix}-CONTEXT.md`;
+  const initialPhaseObjective =
+    bootstrapSeed.roadmapPhases[0]?.objective?.trim() ||
+    "Author the first phase context before later lifecycle commands run.";
+  const initialPhaseRequirementIds =
+    bootstrapSeed.roadmapPhases[0]?.requirementIds ?? [];
+  const initialPhaseSuccessCriteria =
+    bootstrapSeed.roadmapPhases[0]?.successCriteria ?? [];
+  const initializedNextAction =
+    bootstrapAssessment.provisionalRoadmap
+      ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`
+      : blueprintRunDirectCommand("discuss-phase", initialPhase);
 
   const scaffold = await blueprintArtifactScaffold({
     cwd: projectRoot,
@@ -1201,13 +1305,32 @@ export async function blueprintProjectInit(
       `${BLUEPRINT_DIR}/PROJECT.md`,
       `${BLUEPRINT_DIR}/REQUIREMENTS.md`,
       `${BLUEPRINT_DIR}/ROADMAP.md`,
-      `${BLUEPRINT_DIR}/phases/`
+      `${BLUEPRINT_DIR}/phases/`,
+      initialPhaseContextPath
     ]
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
+  const bootstrapContextWarnings =
+    overwrite || scaffold.createdFiles.includes(initialPhaseContextPath)
+      ? await writeTextFile(
+          resolveBlueprintPath(projectRoot, initialPhaseContextPath),
+          renderBootstrapPhaseContext({
+            phaseNumber: initialPhase,
+            phasePrefix: initialPhasePrefix,
+            phaseTitle: initialPhaseTitle,
+            milestone: bootstrapSeed.currentMilestone ?? "v1",
+            objective: initialPhaseObjective,
+            requirementIds: initialPhaseRequirementIds,
+            successCriteria: initialPhaseSuccessCriteria
+          }),
+          {
+            label: initialPhaseContextPath
+          }
+        )
+      : [];
   const seededState = await blueprintStateUpdate({
     cwd: projectRoot,
     patch: {
@@ -1215,10 +1338,7 @@ export async function blueprintProjectInit(
       currentMilestone: bootstrapSeed.currentMilestone ?? "v1",
       currentPhase: initialPhase,
       activeCommand: blueprintDirectCommand("new-project"),
-      nextAction:
-        bootstrapAssessment.provisionalRoadmap
-          ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`
-          : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
+      nextAction: initializedNextAction,
       blockers: [],
       lastUpdated: new Date().toISOString()
     }
@@ -1231,6 +1351,7 @@ export async function blueprintProjectInit(
   ];
   const warnings = [
     ...scaffold.warnings,
+    ...bootstrapContextWarnings,
     ...seededConfig.warnings,
     ...bootstrapDiagnostics.traceabilityWarnings
   ];
@@ -1243,10 +1364,7 @@ export async function blueprintProjectInit(
     configProvenance: seededConfig.provenance,
     brownfield: bootstrapDiagnostics.brownfield,
     bootstrapDiagnostics,
-    nextAction:
-      bootstrapDiagnostics.brownfield.provisionalRoadmap
-        ? `${blueprintRunDirectCommand("map-codebase")} before treating the roadmap as durable`
-        : `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`,
+    nextAction: initializedNextAction,
     warnings: [...new Set(warnings)]
   };
 }

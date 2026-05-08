@@ -42,6 +42,7 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable, with remediation and verification status reported while the run is in flight.
 - Repo side effects: may apply bounded repo fixes, writes a durable review-fix artifact, and updates `.blueprint/STATE.md`.
 - In-flight review-fix work should keep the resolved phase, resolved scope, selected finding ids, active stage, pending gate, execution mode, remediation progress, verification progress, artifact status, and next safe action legible while the run is still live.
+- Route next safe action explicitly: prefer `/blu-validate-phase <phase>` when behavior changed or verification evidence is stale, otherwise prefer `/blu-add-tests <phase>` when missing tests are the main remaining gap, and otherwise prefer `/blu-progress`.
 
 
 ## Blueprint And Global State Reads
@@ -86,7 +87,7 @@
 - When `blueprint-reviewer` is available and the saved review is broad or ambiguous, use it only for read-only reclassification of the selected saved target ids into `fix`, `defer`, or `skip` recommendations plus stale-evidence notes. Browser, web, or search-only agents are not substitutes for codebase analysis.
 - When no suitable subagent is available, use the explicit single-agent fallback from the runtime contract: work one selected target at a time, reread implicated source files, decide `fix`, `defer`, or `skip`, record stale-evidence notes when current code drift makes the saved target unsafe, apply the minimal scoped change only for `fix` decisions, verify the changed surface, record fixed/skipped/deferred evidence, and compress carry-forward context before moving to the next target.
 - If `blueprint_review_validate_model` or `blueprint_review_record` rejects the review-fix model, repair against the `review.review-fix` task schema once. If the retry still fails, stop with the MCP failure reason rather than writing `XX-REVIEW-FIX.md` by hand.
-- Update `.blueprint/STATE.md` through `blueprint_state_update` with `base: "synced"` plus an explicit patch that sets `activeCommand`, `currentPhase`, and `nextAction` after the remediation artifact is settled.
+- Update `.blueprint/STATE.md` through `blueprint_state_update` with `base: "synced"` plus an explicit patch that sets `activeCommand`, `currentPhase`, and `nextAction` after the remediation artifact is settled, preferring `/blu-validate-phase <phase>` when behavior changed or verification evidence is stale, `/blu-add-tests <phase>` when missing tests are the main remaining gap, and `/blu-progress` otherwise.
 
 
 ## Skills And Subagents

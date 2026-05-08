@@ -21,9 +21,12 @@ type PhaseFixture = {
   withSummary?: boolean;
   withVerification?: boolean;
   withUat?: boolean;
+  withUiSpec?: boolean;
+  withUiReview?: boolean;
   withReview?: boolean;
   withReviewFix?: boolean;
   withSecurity?: boolean;
+  uiSpecMode?: "contract" | "skip-rationale";
   reviewVerdict?: "PASS" | "FOLLOW_UP" | "BLOCKED";
   reviewNextSafeAction?: string;
   reviewFixNextSafeAction?: string;
@@ -321,6 +324,32 @@ function uatContent(phase: PhaseFixture): string {
 `;
 }
 
+function uiSpecContent(phase: PhaseFixture): string {
+  if (phase.uiSpecMode === "skip-rationale") {
+    return `# ${phaseTitle(phase)} - UI Spec
+
+## Outcome Mode
+
+- Explicit skip rationale
+
+## Rationale
+
+- No frontend surface changes are in scope for this phase.
+`;
+  }
+
+  return `# ${phaseTitle(phase)} - UI Spec
+
+## Outcome Mode
+
+- UI Contract
+
+## Contract
+
+- Preserve the shipped frontend hierarchy across desktop and mobile breakpoints.
+`;
+}
+
 function reviewContent(phase: PhaseFixture): string {
   const verdict = phase.reviewVerdict ?? "PASS";
   const isFollowUp = verdict === "FOLLOW_UP";
@@ -512,6 +541,35 @@ function securityContent(phase: PhaseFixture): string {
 `;
 }
 
+function uiReviewContent(phase: PhaseFixture): string {
+  return `# ${phaseTitle(phase)} - UI Review
+
+**Verdict:** PASS
+**Readiness:** ready-for-closeout
+
+## Review Summary
+
+- The shipped UI work satisfies the saved phase UI contract.
+
+## Evidence Coverage
+
+| Evidence | Status | Rationale |
+|----------|--------|-----------|
+| ${phaseArtifactPath(phase, "-UI-SPEC.md")} | used | The phase UI contract defines the surface under audit. |
+| ${phaseArtifactPath(phase, "-UAT.md")} | used | UAT confirms the audited UI state is the shipped behavior. |
+
+## Findings
+
+| Pillar | Result | Evidence | Notes |
+|--------|--------|----------|-------|
+| hierarchy | pass | ${phaseArtifactPath(phase, "-UI-SPEC.md")} | The responsive hierarchy matches the saved UI contract. |
+
+## Next Safe Action
+
+- /blu-progress
+`;
+}
+
 async function writeCodebaseMapping(repoPath: string): Promise<void> {
   const codebaseDir = path.join(repoPath, ".blueprint/codebase");
 
@@ -575,6 +633,14 @@ async function writePhaseArtifacts(repoPath: string, phase: PhaseFixture): Promi
     );
   }
 
+  if (phase.withUiSpec) {
+    await writeFile(
+      path.join(phaseDir, `${phasePrefix(phase.phase)}-UI-SPEC.md`),
+      uiSpecContent(phase),
+      "utf8"
+    );
+  }
+
   if (phase.withReview) {
     await writeFile(
       path.join(phaseDir, `${phasePrefix(phase.phase)}-REVIEW.md`),
@@ -595,6 +661,14 @@ async function writePhaseArtifacts(repoPath: string, phase: PhaseFixture): Promi
     await writeFile(
       path.join(phaseDir, `${phasePrefix(phase.phase)}-SECURITY.md`),
       securityContent(phase),
+      "utf8"
+    );
+  }
+
+  if (phase.withUiReview) {
+    await writeFile(
+      path.join(phaseDir, `${phasePrefix(phase.phase)}-UI-REVIEW.md`),
+      uiReviewContent(phase),
       "utf8"
     );
   }
@@ -919,6 +993,93 @@ test("saved REVIEW with missing SECURITY routes to secure-phase", async (t) => {
   assert.doesNotMatch(status.nextAction, /\/blu-progress\b/);
 });
 
+test("UAT-complete UI phase routes to ui-review after review and security gates are satisfied", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withUiSpec: true,
+        withReview: true,
+        withSecurity: true
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-ui-review 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone|\/blu-discuss-phase 2/);
+});
+
+test("workflow.code_review false still routes UAT-complete UI phases to ui-review", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withUiSpec: true
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-ui-review 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review|\/blu-secure-phase/);
+});
+
+test("UAT-complete UI phase with no reviewable files still routes to ui-review", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withUiSpec: true,
+        planModifiedFiles: ["docs/guide.md"],
+        summaryChangedFiles: ["docs/guide.md"],
+        summaryOutcomeLines: ["- Documentation changed only."]
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeRepoFile(repoPath, "docs/guide.md", "# Guide\n");
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-ui-review 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review|\/blu-secure-phase/);
+});
+
+test("explicit UI skip rationale does not route to ui-review", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withUiSpec: true,
+        uiSpecMode: "skip-rationale",
+        withReview: true,
+        withSecurity: true
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-audit-milestone v1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-ui-review 1/);
+});
+
 test("missing SECURITY outranks saved code-review-fix follow-up", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
@@ -1033,9 +1194,41 @@ test("completed review and security gates allow routing to the next phase or mil
   const milestoneStatus = await blueprintProjectStatus({ cwd: milestoneRepoPath });
 
   assert.match(nextPhaseStatus.nextAction, /\/blu-discuss-phase 2/);
-  assert.doesNotMatch(nextPhaseStatus.nextAction, /\/blu-code-review 1|\/blu-secure-phase 1/);
+  assert.doesNotMatch(nextPhaseStatus.nextAction, /\/blu-code-review 1|\/blu-secure-phase 1|\/blu-ui-review 1/);
   assert.match(milestoneStatus.nextAction, /\/blu-audit-milestone v1/);
-  assert.doesNotMatch(milestoneStatus.nextAction, /\/blu-code-review 1|\/blu-secure-phase 1/);
+  assert.doesNotMatch(milestoneStatus.nextAction, /\/blu-code-review 1|\/blu-secure-phase 1|\/blu-ui-review 1/);
+});
+
+test("completed UI phase missing UI-REVIEW blocks later phase routing and surfaces the blocking phase", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        phase: 1,
+        title: "UI Gate",
+        slug: "ui-gate",
+        completed: true,
+        withUiSpec: true,
+        withReview: true,
+        withSecurity: true
+      }),
+      {
+        phase: 2,
+        title: "Later Work",
+        slug: "later-work",
+        completed: false,
+        withContext: false
+      }
+    ],
+    currentPhase: 2
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-ui-review 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-discuss-phase 2|\/blu-plan-phase 2/);
 });
 
 test("stale secure-phase review follow-up does not loop after security exists", async (t) => {

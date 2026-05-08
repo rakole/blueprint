@@ -4,6 +4,7 @@ import * as z from "zod/v4";
 
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import {
+  isBootstrapStarterContext,
   BLUEPRINT_DIR,
   buildBlueprintReportPath,
   blueprintPathExists,
@@ -12,6 +13,7 @@ import {
   inspectBlueprintArtifacts,
   inspectBootstrapArtifacts,
   extractMarkdownTableRows,
+  isExplicitUiSkipRationale,
   isVerificationArtifactReadyForUat,
   readUatArtifactState,
   resolveBlueprintPath,
@@ -188,8 +190,10 @@ type CurrentPhaseArtifactStatus = {
   phaseDir: string | null;
   phasePrefix: string | null;
   contextPath: string | null;
+  contextNeedsAuthoring: boolean;
   researchPath: string | null;
   uiSpecPath: string | null;
+  uiReviewPath: string | null;
   reviewPath: string | null;
   securityPath: string | null;
   reviewNextSafeAction: string | null;
@@ -202,6 +206,7 @@ type CurrentPhaseArtifactStatus = {
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
+  hasUiReview: boolean;
   hasReview: boolean;
   hasSecurity: boolean;
   hasVerification: boolean;
@@ -827,6 +832,22 @@ function phaseArtifactPathsForDirectory(artifacts: string[], phaseDir: string | 
   return artifacts.filter((artifact) => artifact.startsWith(prefix));
 }
 
+function findPhaseArtifactPath(
+  artifacts: Iterable<string>,
+  phasePrefix: string,
+  suffix: string
+): string | null {
+  const expectedSuffix = `/${phasePrefix}${suffix}`;
+
+  for (const artifact of artifacts) {
+    if (artifact.endsWith(expectedSuffix)) {
+      return artifact;
+    }
+  }
+
+  return null;
+}
+
 async function collectValidatedSummaryPathsForPhase(
   projectRoot: string,
   phaseNumber: string
@@ -1052,6 +1073,8 @@ function resolvePhaseQualityGateNextAction(args: {
   phaseNumber: string;
   evaluation: PhaseQualityGateEvaluation;
   implementedCommands: Set<string>;
+  hasReviewableUiSpec: boolean;
+  hasUiReview: boolean;
 }): string | null {
   const missingGateAction = buildPhaseQualityGateNextAction({
     phaseNumber: args.phaseNumber,
@@ -1063,14 +1086,40 @@ function resolvePhaseQualityGateNextAction(args: {
     return missingGateAction;
   }
 
-  if (!args.evaluation.hasReview || !args.evaluation.hasSecurity) {
-    return null;
-  }
-
-  return implementedReviewNextSafeAction(
+  const savedReviewRepairAction = implementedReviewNextSafeAction(
     args.evaluation.reviewNextSafeAction,
     args.implementedCommands
   );
+
+  if (args.evaluation.requiresCodeReview && savedReviewRepairAction !== null) {
+    return savedReviewRepairAction;
+  }
+
+  if (
+    (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) &&
+    args.hasReviewableUiSpec &&
+    !args.hasUiReview &&
+    args.implementedCommands.has(blueprintDirectCommand("ui-review"))
+  ) {
+    return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
+  }
+
+  return null;
+}
+
+async function uiSpecRequiresUiReview(
+  projectRoot: string,
+  uiSpecPath: string,
+  warnings: string[]
+): Promise<boolean> {
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    return !isExplicitUiSkipRationale(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnings.push(`${uiSpecPath}: ${message}`);
+    return true;
+  }
 }
 
 async function inspectCurrentPhaseArtifacts(
@@ -1089,8 +1138,10 @@ async function inspectCurrentPhaseArtifacts(
       phaseDir: null,
       phasePrefix: null,
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -1103,6 +1154,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1144,8 +1196,10 @@ async function inspectCurrentPhaseArtifacts(
       phaseDir: null,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -1158,6 +1212,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1185,8 +1240,10 @@ async function inspectCurrentPhaseArtifacts(
       phaseDir: null,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
+      contextNeedsAuthoring: false,
       researchPath: null,
       uiSpecPath: null,
+      uiReviewPath: null,
       reviewPath: null,
       ...emptyCurrentPhaseQualityGateStatus(),
       reviewNextSafeAction: null,
@@ -1199,6 +1256,7 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
@@ -1218,13 +1276,17 @@ async function inspectCurrentPhaseArtifacts(
   const contextPath = `${phaseRoot}/${phasePrefix}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix}-RESEARCH.md`;
   const uiSpecPath = `${phaseRoot}/${phasePrefix}-UI-SPEC.md`;
+  const uiReviewPath = `${phaseRoot}/${phasePrefix}-UI-REVIEW.md`;
   const reviewPath = `${phaseRoot}/${phasePrefix}-REVIEW.md`;
   const securityPath = `${phaseRoot}/${phasePrefix}-SECURITY.md`;
   const verificationPath = `${phaseRoot}/${phasePrefix}-VERIFICATION.md`;
   const uatPath = `${phaseRoot}/${phasePrefix}-UAT.md`;
   const hasContext = phaseArtifacts.includes(contextPath);
+  let contextNeedsAuthoring = false;
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
+  let hasReviewableUiSpec = hasUiSpec;
+  const hasUiReview = phaseArtifacts.includes(uiReviewPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
@@ -1266,6 +1328,22 @@ async function inspectCurrentPhaseArtifacts(
   );
   let researchValid: boolean | null = null;
 
+  if (hasContext) {
+    try {
+      const raw = await fs.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
+      contextNeedsAuthoring = isBootstrapStarterContext(raw);
+
+      if (contextNeedsAuthoring) {
+        warnings.push(
+          `Current phase ${currentPhase} still has a bootstrap starter CONTEXT artifact; ${blueprintRunDirectCommand("discuss-phase", currentPhase)} to author the saved phase context.`
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      warnings.push(`${contextPath}: ${message}`);
+    }
+  }
+
   if (hasResearch) {
     try {
       const raw = await fs.readFile(resolveBlueprintPath(projectRoot, researchPath), "utf8");
@@ -1280,6 +1358,10 @@ async function inspectCurrentPhaseArtifacts(
       warnings.push(`${researchPath}: ${message}`);
       researchValid = false;
     }
+  }
+
+  if (hasUiSpec) {
+    hasReviewableUiSpec = await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
   }
 
   if (!hasContext && hasLaterArtifacts) {
@@ -1329,7 +1411,9 @@ async function inspectCurrentPhaseArtifacts(
   const qualityGateNextAction = resolvePhaseQualityGateNextAction({
     phaseNumber: normalizedPhase,
     evaluation: qualityGateEvaluation,
-    implementedCommands: await getImplementedCommandNames()
+    implementedCommands: await getImplementedCommandNames(),
+    hasReviewableUiSpec,
+    hasUiReview
   });
 
   if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
@@ -1345,8 +1429,10 @@ async function inspectCurrentPhaseArtifacts(
     phaseDir,
     phasePrefix,
     contextPath,
+    contextNeedsAuthoring,
     researchPath,
     uiSpecPath,
+    uiReviewPath,
     reviewPath: qualityGateEvaluation.reviewPath ?? (hasReview ? reviewPath : null),
     securityPath: qualityGateEvaluation.securityPath ?? (hasSecurity ? securityPath : null),
     reviewNextSafeAction: qualityGateEvaluation.reviewNextSafeAction,
@@ -1359,6 +1445,7 @@ async function inspectCurrentPhaseArtifacts(
     hasContext,
     hasResearch,
     hasUiSpec,
+    hasUiReview,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
     hasVerification,
@@ -1447,6 +1534,13 @@ async function inspectMilestoneEvidence(
     const phasePrefix = formatBlueprintPhasePrefix(phase.phaseNumber);
     const phaseDir = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix);
     const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir);
+    const uiSpecPath = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix, "-UI-SPEC.md");
+    const hasReviewableUiSpec =
+      uiSpecPath === null
+        ? false
+        : await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
+    const hasUiReview =
+      findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix, "-UI-REVIEW.md") !== null;
     const {
       summaryPaths,
       pendingPlanIds,
@@ -1512,7 +1606,9 @@ async function inspectMilestoneEvidence(
     const qualityGateNextAction = resolvePhaseQualityGateNextAction({
       phaseNumber: phase.phaseNumber,
       evaluation: qualityGateEvaluation,
-      implementedCommands
+      implementedCommands,
+      hasReviewableUiSpec,
+      hasUiReview
     });
 
     warnings.push(...qualityGateEvaluation.warnings);
@@ -1534,7 +1630,7 @@ async function inspectMilestoneEvidence(
     } else if (qualityGateNextAction !== null) {
       qualityGateDebtPhases.push(phase.phaseNumber);
       warnings.push(
-        `Phase ${phase.phaseNumber} has quality gate debt from saved REVIEW Next Safe Action: ${qualityGateNextAction}`
+        `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
       );
     }
 
@@ -1850,8 +1946,13 @@ async function deriveNextAction(args: {
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
 
-  if (!args.phaseArtifacts.hasContext && implementedCommands.has(discussPhaseCommand)) {
-    return `Run ${discussPhaseCommand} ${args.currentPhase} to rebuild the current phase context`;
+  if (
+    (!args.phaseArtifacts.hasContext || args.phaseArtifacts.contextNeedsAuthoring) &&
+    implementedCommands.has(discussPhaseCommand)
+  ) {
+    return args.phaseArtifacts.contextNeedsAuthoring
+      ? `Run ${discussPhaseCommand} ${args.currentPhase} to author the current phase context`
+      : `Run ${discussPhaseCommand} ${args.currentPhase} to rebuild the current phase context`;
   }
 
   if (
