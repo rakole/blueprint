@@ -76,6 +76,7 @@ ready for milestone audit without applying fixes.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260508-secure-post-routing | Pin two-layer routing after secure-phase: local security lifecycle routing plus repo-wide code-review-fix remediation routing after security exists | 2026-05-08 | pending | [260508-secure-post-routing](./quick/260508-secure-post-routing/) |
 | 260508-secure-validation-diagnostics | Simplify secure-phase validation diagnostics, reduce non-blocking review noise, and expose repair summaries in MCP text | 2026-05-08 | pending | [260508-secure-validation-diagnostics](./quick/260508-secure-validation-diagnostics/) |
 | 20260507-review-fix-parity-implementation | Implement code-review/review-fix contract parity fixes from the 2026-05-07 review | 2026-05-07 | pending | [20260507-review-fix-parity-implementation](./quick/20260507-review-fix-parity-implementation/) |
 | 260505-remove-research-freshness-validation | Remove MCP enforcement of research State Of The Art freshness markers while keeping runtime guidance advisory | 2026-05-05 | pending | [260505-remove-research-freshness-validation](./quick/260505-remove-research-freshness-validation/) |
@@ -134,6 +135,7 @@ ready for milestone audit without applying fixes.
 - 2026-05-02: Re-ran the targeted Phase 9 Nyquist validation checks, confirmed no new gaps, advanced Phases 8 and 9 to validated bookkeeping, and routed the milestone to `$gsd-audit-milestone`.
 - 2026-05-05: Completed quick task 260505-remove-research-freshness-validation by removing the MCP research freshness-marker validation, softening related contract text to advisory guidance, rebuilding `dist/`, and passing typecheck plus focused research/lifecycle tests.
 - 2026-05-08: Completed quick task 260508-secure-validation-diagnostics by adding exact-path review model diagnostics, repair summaries, review MCP rich-text details, reduced non-blocking secure-phase warning noise, rebuilt `dist/`, and passed typecheck, build, and the full test suite.
+- 2026-05-08: Completed quick task 260508-secure-post-routing by pinning secure-phase local routing to validation/UAT/progress/blocked outcomes while allowing repo-wide progress/state to surface `/blu-code-review-fix <phase>` after security exists; passed typecheck, build, focused routing/security tests, and the full test suite.
 
 ## Session Continuity
 

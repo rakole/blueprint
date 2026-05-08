@@ -42677,6 +42677,13 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && implementedCommands.has(executePhaseCommand)) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
   }
+  const savedReviewRepairAction = args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
+    args.phaseArtifacts.reviewNextSafeAction,
+    implementedCommands
+  ) : null;
+  if (savedReviewRepairAction) {
+    return `Run ${savedReviewRepairAction}.`;
+  }
   if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasPendingExecution && args.phaseArtifacts.verificationHasDeferredTestGaps && implementedCommands.has(addTestsCommand)) {
     return `Run ${addTestsCommand} ${args.currentPhase} to add tests for deferred validation gaps before rerunning validation`;
   }

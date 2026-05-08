@@ -422,6 +422,32 @@ function createNoThreatCompletedModel(
   });
 }
 
+async function writeSecurityLifecycleArtifacts(
+  repoPath: string,
+  options: {
+    verification?: boolean;
+    uat?: boolean;
+  } = {}
+): Promise<void> {
+  const phaseDir = path.join(repoPath, ".blueprint/phases/05-security-audit");
+
+  if (options.verification) {
+    await writeFile(
+      path.join(phaseDir, "05-VERIFICATION.md"),
+      "# Phase 05: Security Audit - Verification\n\n**Gate State:** PASS\n**Readiness:** ready for UAT\n",
+      "utf8"
+    );
+  }
+
+  if (options.uat) {
+    await writeFile(
+      path.join(phaseDir, "05-UAT.md"),
+      "# Phase 05: Security Audit - UAT\n\n**Status:** PASS\n**Checkpoint:** none\n",
+      "utf8"
+    );
+  }
+}
+
 test("secure-phase docs and catalog metadata keep the security review slice implemented and spine-aligned", async () => {
   const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
@@ -1013,6 +1039,73 @@ test("security missing threat-model context narrows authoring to PARTIAL or BLOC
     falseCompleted.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /PARTIAL|BLOCKED|saved threat model/i
   );
+});
+
+test("security nextSafeAction rejects code-review-fix and stays local to validation, UAT, or progress routing", async (t) => {
+  const missingValidationRepo = await createSecurePhaseRepo();
+  const missingUatRepo = await createSecurePhaseRepo();
+  const completeRepo = await createSecurePhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(missingValidationRepo), { recursive: true, force: true });
+    await rm(path.dirname(missingUatRepo), { recursive: true, force: true });
+    await rm(path.dirname(completeRepo), { recursive: true, force: true });
+  });
+
+  await writeSecurityLifecycleArtifacts(missingUatRepo, { verification: true });
+  await writeSecurityLifecycleArtifacts(completeRepo, { verification: true, uat: true });
+
+  const scenarios = [
+    {
+      repoPath: missingValidationRepo,
+      expectedAction: "/blu-validate-phase 5"
+    },
+    {
+      repoPath: missingUatRepo,
+      expectedAction: "/blu-verify-work 5"
+    },
+    {
+      repoPath: completeRepo,
+      expectedAction: "/blu-progress"
+    }
+  ] as const;
+
+  for (const scenario of scenarios) {
+    const context = await blueprintReviewAuthoringContext({
+      cwd: scenario.repoPath,
+      phase: "5",
+      artifact: "security"
+    });
+    const validation = await blueprintReviewValidateModel({
+      cwd: scenario.repoPath,
+      phase: "5",
+      artifact: "security",
+      model: createSecurityModel({
+        nextSafeAction: "/blu-code-review-fix 5"
+      })
+    });
+
+    assert.equal(context.status, "ready");
+    assert.ok(context.authoringContext && "allowedNextActions" in context.authoringContext);
+    assert.deepEqual(
+      context.authoringContext && "allowedNextActions" in context.authoringContext
+        ? context.authoringContext.allowedNextActions.includes(scenario.expectedAction)
+        : false,
+      true
+    );
+    assert.deepEqual(
+      context.authoringContext && "allowedNextActions" in context.authoringContext
+        ? context.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5")
+        : false,
+      false
+    );
+    assert.equal(validation.status, "invalid");
+    assert.match(
+      validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+      new RegExp(
+        `${scenario.expectedAction.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}|allowedNextActions|must be equal to constant`
+      )
+    );
+  }
 });
 
 test("security threat parser treats N/A threat rows and bullets as explicit no-threat evidence for completed reports", async (t) => {

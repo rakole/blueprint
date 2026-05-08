@@ -120,6 +120,10 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   assert.match(commandFile, /\/blu-validate-phase/);
   assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(
+    commandFile,
+    /Repo-wide derived progress\/state may still surface saved review remediation debt such as `\/blu-code-review-fix <phase>` after security exists, but `\/blu-secure-phase` itself must not emit that action\./
+  );
   assert.doesNotMatch(commandFile, /skills\/blueprint-review\.md|agents\/blueprint-security-auditor\.md/);
 });
 
@@ -169,6 +173,10 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /do not emit next-step\s+routing while threats remain open/i);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
+  assert.match(
+    skillFile,
+    /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
+  );
 });
 
 test("secure-phase manifest and runtime resource describe the long-running security spine", async () => {
@@ -222,6 +230,11 @@ test("secure-phase local runtime contract locks retained threat verification beh
   for (const stage of ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"]) {
     assert.match(runtimeContract, new RegExp(`### ${stage}`));
   }
+
+  assert.match(
+    runtimeContract,
+    /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
+  );
 
   for (const tool of [
     "mcp_blueprint_blueprint_phase_locate",

@@ -827,6 +827,28 @@ test("review fix follow-up blocks UAT completion even after review and security 
   assert.doesNotMatch(roadmap, /### Phase 1: Quality Gate[\s\S]*\*\*Status\*\*: completed/);
 });
 
+test("repo-wide progress routes saved review remediation debt after security even before validation and UAT exist", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withVerification: false,
+        withUat: false,
+        withReview: true,
+        withSecurity: true,
+        reviewNextSafeAction: "/blu-code-review-fix 1"
+      })
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-code-review-fix 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 1|\/blu-verify-work 1/);
+});
+
 test("completed REVIEW-FIX next action outranks stale REVIEW follow-up", async (t) => {
   const phase = implementedPhase({
     withReview: true,

@@ -121,7 +121,9 @@ and the optional security auditor verifies only declared threat mitigations.
 - If all threats are closed or explicitly accepted, route only to implemented
   Blueprint commands. Prefer `/blu-validate-phase <phase>` when verification is
   missing, then `/blu-verify-work <phase>` when UAT is missing, otherwise
-  `/blu-progress`.
+  `/blu-progress`. Repo-wide derived progress/state may still surface saved
+  review remediation debt such as `/blu-code-review-fix <phase>` after
+  security exists, but `/blu-secure-phase` itself must not emit that action.
 
 ## Required MCP Calls
 

@@ -49,10 +49,22 @@ test("maintenance and security review docs reflect the tightened hardening guida
     reviewSkill,
     /confirmed mitigations, open threats, accepted risks/i
   );
+  assert.match(
+    reviewSkill,
+    /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
+  );
   assert.match(securePhaseDoc, /parses? the saved phase threat model/i);
   assert.match(securePhaseDoc, /builds? a threat register/i);
   assert.match(securePhaseDoc, /ask_user/i);
   assert.match(securePhaseDoc, /verify open threats or explicitly accept them/i);
+  assert.match(
+    securePhaseDoc,
+    /Local secure-phase routing stays scoped to the security lifecycle/i
+  );
+  assert.match(
+    securePhaseDoc,
+    /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
+  );
   assert.match(securePhaseDoc, /In-Flight Progress Contract/i);
   assert.match(securePhaseDoc, /threat-register coverage/i);
   assert.match(securePhaseDoc, /blocks? advancement while any threat remains open/i);
