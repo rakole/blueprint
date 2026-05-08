@@ -656,12 +656,16 @@ function parseStateDocument(raw: string): BlueprintState {
     .filter((line) => line.startsWith("- "))
     .map((line) => line.slice(2).trim())
     .filter((line) => line.length > 0 && line !== "none");
+  const currentPhaseValue = getLineValue("Current phase");
 
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
     currentMilestone:
       getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
-    currentPhase: getLineValue("Current phase") ?? DEFAULT_STATE.currentPhase,
+    currentPhase:
+      currentPhaseValue === null
+        ? DEFAULT_STATE.currentPhase
+        : (normalizeSelectedPhase(currentPhaseValue) ?? ""),
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
@@ -697,7 +701,17 @@ function comparePhaseNumbers(left: string, right: string): number {
 
 function normalizeSelectedPhase(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : null;
+
+  if (!trimmed || trimmed.length === 0) {
+    return null;
+  }
+
+  try {
+    return normalizeBlueprintPhaseRef(trimmed);
+  } catch {
+    const match = trimmed.match(/^(?:phase\s+)?(\d+(?:\.\d+)?)(?:\b|[^0-9.].*)$/i);
+    return match?.[1] ? normalizeBlueprintPhaseRef(match[1]) : null;
+  }
 }
 
 function extractNextActionPhaseSelection(nextAction: string): {
@@ -2590,13 +2604,34 @@ export async function blueprintStateUpdate(
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   const useSyncedBase = args.base === "synced";
   const patch = args.patch ?? {};
+  let normalizedPatchCurrentPhase: string | undefined;
+
+  if (patch.currentPhase !== undefined) {
+    const normalizedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
+
+    if (normalizedCurrentPhase === null) {
+      throw new Error(
+        `STATE currentPhase patch must start with a numeric Blueprint phase reference: ${patch.currentPhase}`
+      );
+    }
+
+    normalizedPatchCurrentPhase = normalizedCurrentPhase;
+  }
+
+  const normalizedPatch =
+    normalizedPatchCurrentPhase === undefined
+      ? patch
+      : {
+          ...patch,
+          currentPhase: normalizedPatchCurrentPhase
+        };
   const syncedBase = useSyncedBase
     ? await buildSyncedState(projectRoot)
     : null;
   const synced = useSyncedBase
     ? await buildSyncedState(projectRoot, {
-        activeCommand: patch.activeCommand,
-        currentPhase: patch.currentPhase
+        activeCommand: normalizedPatch.activeCommand,
+        currentPhase: normalizedPatch.currentPhase
       })
     : null;
   const currentState =
@@ -2604,14 +2639,14 @@ export async function blueprintStateUpdate(
   const comparisonState = syncedBase?.state ?? currentState;
   const sanitizedPatch =
     useSyncedBase &&
-    patch.currentPhase !== undefined &&
-    patch.nextAction === undefined &&
-    currentState.currentPhase !== patch.currentPhase
+    normalizedPatch.currentPhase !== undefined &&
+    normalizedPatch.nextAction === undefined &&
+    currentState.currentPhase !== normalizedPatch.currentPhase
       ? {
-          ...patch,
+          ...normalizedPatch,
           currentPhase: currentState.currentPhase
         }
-      : patch;
+      : normalizedPatch;
   const nextState: BlueprintState = {
     ...currentState,
     ...sanitizedPatch,

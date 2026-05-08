@@ -41835,10 +41835,11 @@ function parseStateDocument(raw) {
   const roadmapEvolutionNotesSection = extractMarkdownSection4(raw, "Roadmap Evolution Notes");
   const blockers = blockersSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line && line !== "none");
   const roadmapEvolutionNotes = roadmapEvolutionNotesSection.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line !== "none");
+  const currentPhaseValue = getLineValue("Current phase");
   return {
     projectStatus: getLineValue("Project status") ?? DEFAULT_STATE.projectStatus,
     currentMilestone: getLineValue("Current milestone") ?? DEFAULT_STATE.currentMilestone,
-    currentPhase: getLineValue("Current phase") ?? DEFAULT_STATE.currentPhase,
+    currentPhase: currentPhaseValue === null ? DEFAULT_STATE.currentPhase : normalizeSelectedPhase(currentPhaseValue) ?? "",
     activeCommand: getLineValue("Active command") ?? DEFAULT_STATE.activeCommand,
     nextAction: getLineValue("Next action") ?? DEFAULT_STATE.nextAction,
     lastUpdated: getLineValue("Last updated") ?? DEFAULT_STATE.lastUpdated,
@@ -41864,7 +41865,15 @@ function comparePhaseNumbers2(left, right) {
 }
 function normalizeSelectedPhase(value) {
   const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : null;
+  if (!trimmed || trimmed.length === 0) {
+    return null;
+  }
+  try {
+    return normalizeBlueprintPhaseRef(trimmed);
+  } catch {
+    const match = trimmed.match(/^(?:phase\s+)?(\d+(?:\.\d+)?)(?:\b|[^0-9.].*)$/i);
+    return match?.[1] ? normalizeBlueprintPhaseRef(match[1]) : null;
+  }
 }
 function extractNextActionPhaseSelection(nextAction) {
   const match = nextAction.match(/(\/blu-[a-z0-9-]+)(?:\s+(\d+(?:\.\d+)?))?/i);
@@ -43086,17 +43095,31 @@ async function blueprintStateUpdate(args = {}) {
   const statePath = resolveBlueprintPath(projectRoot, BLUEPRINT_STATE_PATH);
   const useSyncedBase = args.base === "synced";
   const patch = args.patch ?? {};
+  let normalizedPatchCurrentPhase;
+  if (patch.currentPhase !== void 0) {
+    const normalizedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
+    if (normalizedCurrentPhase === null) {
+      throw new Error(
+        `STATE currentPhase patch must start with a numeric Blueprint phase reference: ${patch.currentPhase}`
+      );
+    }
+    normalizedPatchCurrentPhase = normalizedCurrentPhase;
+  }
+  const normalizedPatch = normalizedPatchCurrentPhase === void 0 ? patch : {
+    ...patch,
+    currentPhase: normalizedPatchCurrentPhase
+  };
   const syncedBase = useSyncedBase ? await buildSyncedState(projectRoot) : null;
   const synced = useSyncedBase ? await buildSyncedState(projectRoot, {
-    activeCommand: patch.activeCommand,
-    currentPhase: patch.currentPhase
+    activeCommand: normalizedPatch.activeCommand,
+    currentPhase: normalizedPatch.currentPhase
   }) : null;
   const currentState = synced?.state ?? syncedBase?.state ?? await loadBlueprintState(projectRoot);
   const comparisonState = syncedBase?.state ?? currentState;
-  const sanitizedPatch = useSyncedBase && patch.currentPhase !== void 0 && patch.nextAction === void 0 && currentState.currentPhase !== patch.currentPhase ? {
-    ...patch,
+  const sanitizedPatch = useSyncedBase && normalizedPatch.currentPhase !== void 0 && normalizedPatch.nextAction === void 0 && currentState.currentPhase !== normalizedPatch.currentPhase ? {
+    ...normalizedPatch,
     currentPhase: currentState.currentPhase
-  } : patch;
+  } : normalizedPatch;
   const nextState = {
     ...currentState,
     ...sanitizedPatch,
