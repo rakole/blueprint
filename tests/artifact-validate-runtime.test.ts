@@ -10,8 +10,18 @@ import {
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
-import { createToolResponseContent } from "../src/mcp/server.js";
+import {
+  createToolResponseContent,
+  summarizeToolResult
+} from "../src/mcp/server.js";
 import { createCommittedGitRepo } from "./helpers/git-fixtures.js";
+
+function expectedStructuredContentText(
+  toolName: string,
+  result: Record<string, unknown>
+): string {
+  return `${summarizeToolResult(toolName, result)} Detailed data is available in structuredContent.`;
+}
 
 async function createVerifyWorkFixtureRepo(): Promise<string> {
   const repoPath = await createCommittedGitRepo("blueprint-verify-work-");
@@ -645,7 +655,7 @@ test("blueprint artifact validation rejects thin bootstrap PROJECT, REQUIREMENTS
   );
 });
 
-test("blueprint artifact validation exposes diagnostics and repairs in rich server text", async (t) => {
+test("blueprint artifact validation keeps diagnostics and repairs out of MCP text", async (t) => {
   const repoPath = await createThinBootstrapFixtureRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -657,10 +667,14 @@ test("blueprint artifact validation exposes diagnostics and repairs in rich serv
     runtimeValidation
   )[0].text;
 
-  assert.match(responseText, /## Diagnostics/);
-  assert.match(responseText, /"artifactId": "bootstrap\.project"/);
-  assert.match(responseText, /## Suggested Repairs/);
-  assert.match(responseText, /\/blu-new-project/);
+  assert.equal(
+    responseText,
+    expectedStructuredContentText("blueprint_artifact_validate", runtimeValidation)
+  );
+  assert.doesNotMatch(responseText, /## Diagnostics/);
+  assert.doesNotMatch(responseText, /## Suggested Repairs/);
+  assert.doesNotMatch(responseText, /"artifactId": "bootstrap\.project"/);
+  assert.doesNotMatch(responseText, /\/blu-new-project/);
 });
 
 test("blueprint artifact validation still inspects bootstrap docs when phase artifacts already exist", async (t) => {
