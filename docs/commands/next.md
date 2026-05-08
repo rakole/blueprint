@@ -126,7 +126,7 @@
 
 
 - Explain exactly which phase artifact is missing and which implemented command creates it.
-- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action; gates complete -> normal advancement.
+- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action, except that a stale saved `/blu-secure-phase <phase>` from a non-pass review must reroute to `/blu-code-review-fix <phase>` once security exists; gates complete -> normal advancement.
 - If `workflow.code_review` is false, keep the previous post-UAT advancement behavior.
 - On failure, return the safest implemented recovery command instead of mutating project state implicitly.
 

@@ -93,7 +93,7 @@
 - The authored model must use only `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`. Runtime-owned depth, scope source, scope reviewed, evidence inventory rendering, severity counts, paths, and Markdown are computed by MCP.
 - `evidenceCoverage` must be an object keyed by the exact known evidence artifact paths from authoring context, with `{status: "used"|"deferred"|"irrelevant", rationale}` for every key.
 - Structured `model` writes must not include MCP-owned identity keys such as `phase`, `artifact`, path, `content`, `depth`, `scopeSource`, or rendered section fields.
-- When the phase still lacks `XX-SECURITY.md` and concrete follow-up fixes also remain, keep `/blu-secure-phase <phase>` as the primary next step while surfacing `/blu-code-review-fix <phase>` as the secondary queued recommendation.
+- When the phase still lacks `XX-SECURITY.md` and concrete follow-up fixes also remain, keep `/blu-secure-phase <phase>` as the primary next step while surfacing `/blu-code-review-fix <phase>` as the secondary queued recommendation. After security exists, saved non-pass review debt must still route to `/blu-code-review-fix <phase>` instead of advancing as though the follow-up disappeared.
 
 ## Subagent And Fallback Contract
 

@@ -21151,6 +21151,13 @@ function extractReviewNextSafeAction(content) {
   const section = extractMarkdownSection(content, "Next Safe Action");
   return section.split(/\r?\n/).map(extractBlueprintCommand).find((command) => command !== null) ?? null;
 }
+function extractReviewVerdict(content) {
+  const verdict = extractArtifactMarker(content, "Verdict")?.toUpperCase() ?? null;
+  if (verdict === "PASS" || verdict === "FOLLOW_UP" || verdict === "BLOCKED") {
+    return verdict;
+  }
+  return null;
+}
 function extractReviewFixNextSafeAction(content) {
   const sectionAction = extractReviewNextSafeAction(content);
   if (sectionAction !== null) {
@@ -21191,6 +21198,9 @@ function normalizeReviewNextSafeAction(args) {
     missingGate: args.missingGate,
     hasSecurity: args.hasSecurity
   })) {
+    if (args.reviewVerdict === "FOLLOW_UP" || args.reviewVerdict === "BLOCKED") {
+      return `/blu-code-review-fix ${args.phaseNumber}`;
+    }
     return null;
   }
   return args.action;
@@ -21324,9 +21334,12 @@ async function collectCompletedSummaries(args) {
   }
   return { summaries, summaryIds };
 }
-async function readReviewNextSafeAction(args) {
+async function readReviewRoutingState(args) {
   if (args.reviewPath === null) {
-    return null;
+    return {
+      verdict: null,
+      nextSafeAction: null
+    };
   }
   const reviewArtifact = args.artifacts.find((artifact) => artifact.path === args.reviewPath) ?? {
     path: args.reviewPath,
@@ -21338,15 +21351,22 @@ async function readReviewNextSafeAction(args) {
   });
   if (content === null) {
     args.warnings.push(`${args.reviewPath}: could not read Review artifact Next Safe Action.`);
-    return null;
+    return {
+      verdict: null,
+      nextSafeAction: null
+    };
   }
   const nextSafeAction = extractReviewFixNextSafeAction(content);
+  const verdict = extractReviewVerdict(content);
   if (nextSafeAction === null) {
     args.warnings.push(
       `${args.reviewPath}: Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
     );
   }
-  return nextSafeAction;
+  return {
+    verdict,
+    nextSafeAction
+  };
 }
 async function readCompletedReviewFixNextSafeAction(args) {
   if (args.reviewFixPath === null) {
@@ -21467,14 +21487,20 @@ async function evaluatePhaseQualityGates(args) {
     completed: false,
     nextSafeAction: null
   };
-  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed ? reviewFixNextSafeAction.nextSafeAction : hasReview ? await readReviewNextSafeAction({
+  const reviewRoutingState = hasReview ? await readReviewRoutingState({
     projectRoot,
     reviewPath,
     artifacts,
     warnings
-  }) : null;
+  }) : {
+    verdict: null,
+    nextSafeAction: null
+  };
+  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed ? reviewFixNextSafeAction.nextSafeAction : reviewRoutingState.nextSafeAction;
   const reviewNextSafeAction = normalizeReviewNextSafeAction({
     action: rawReviewNextSafeAction,
+    phaseNumber,
+    reviewVerdict: reviewRoutingState.verdict,
     missingGate,
     hasSecurity
   });
