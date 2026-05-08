@@ -124,6 +124,8 @@ does not grant broader tool scope to a command.
 - `blueprint_phase_artifact_read`
 - `blueprint_phase_artifact_write`
 - `blueprint_artifact_scaffold`
+- `blueprint_state_load`
+- `blueprint_command_catalog`
 - `blueprint_state_update`
 
 ### `/blu-list-phase-assumptions`
@@ -237,6 +239,13 @@ full UI workflow into `/blu-discuss-phase` context.
 It preserves the exact `workflow.ui_safety_gate` rationale confirmation gate.
 It preserves the rejection of browser-only, web-search-only, shell-only, or generic agents.
 It preserves `artifactId: "phase.ui-spec"` as the canonical UI-spec contract id.
+After a successful write or valid reuse path, call `blueprint_state_update`
+with `base: "synced"` while preserving the already resolved selected phase in
+`patch.currentPhase` together with `patch.activeCommand`, then call
+`blueprint_state_load` and report the refreshed next safe action from
+`derivedStatus.nextAction`. Use `blueprint_command_catalog` whenever the final
+routing recommendation needs an explicit implemented-only check, and fall back
+to `/blu-progress` when refreshed routing is missing, blocked, or ambiguous.
 
 ## Completion Self-Check
 

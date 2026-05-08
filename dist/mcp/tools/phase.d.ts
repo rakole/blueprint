@@ -1257,6 +1257,7 @@ type PhasePlanStructuredModel = {
         followUp: string;
     }>;
 };
+export declare function buildBlueprintPhaseDirectoryPath(phaseNumber: string | number, phaseName: string): string;
 export declare function blueprintPhaseValidationAuthoringContext(args: PhaseValidationAuthoringContextArgs): Promise<PhaseValidationAuthoringContextResult>;
 export declare function blueprintPhaseValidationValidateModel(args: PhaseValidationValidateModelArgs): Promise<PhaseValidationValidateModelResult>;
 export declare function blueprintPhaseValidationRender(args: PhaseValidationRenderArgs): Promise<PhaseValidationRenderResult>;

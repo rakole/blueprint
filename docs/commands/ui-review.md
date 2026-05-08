@@ -41,6 +41,7 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable, including artifact status, overall `/24` score, top findings or pass signals, and any visual-evidence limitations.
 - Repo side effects: Writes only the declared phase-scoped UI-review artifact for this command.
 - In-flight ui-review work should keep the resolved scope, active stage, saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW.md` artifact is being created, reused, or revised, overall score or main findings/pass signals, and next safe action legible while the run is still live.
+- Route next safe action explicitly: prefer `/blu-validate-phase <phase>` when `XX-VERIFICATION.md` is still missing, otherwise prefer `/blu-verify-work <phase>` when `XX-UAT.md` is still missing, and otherwise prefer `/blu-progress`.
 
 
 ## Blueprint And Global State Reads

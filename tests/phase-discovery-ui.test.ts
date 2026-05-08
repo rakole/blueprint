@@ -13,6 +13,10 @@ import {
   blueprintPhaseArtifactWrite,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
+import {
+  blueprintStateLoad,
+  blueprintStateUpdate
+} from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
@@ -61,6 +65,91 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
+function validResearchContent(summary: string): string {
+  return `# Phase 03: Phase Discovery - Research
+
+**Researched:** 2026-04-11
+**Domain:** ui-phase routing parity repair
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| LIFE-03 | UI discovery should hand off through refreshed MCP-owned state. | Persist validated discovery artifacts and let synced state compute the next action. |
+
+## Summary
+
+- ${summary}
+
+## Locked Decisions From Context
+
+- Keep Blueprint state writes inside MCP tools and preserve implemented-only routing.
+
+## User Constraints
+
+- Keep writes inside .blueprint/ and keep the UI artifact phase-scoped.
+
+## Standard Stack
+
+- TypeScript
+- node:test via tsx --test
+
+## Installation And Setup
+
+- Run focused tests before accepting a UI-phase routing contract change.
+
+## Alternatives Considered
+
+- Hard-coding \`/blu-plan-phase\` in the command response was rejected because the next action must come from refreshed state.
+
+## Architecture Patterns
+
+- Keep commands thin and let MCP tools own artifact persistence plus state transitions.
+
+## Don't Hand-Roll
+
+- Reuse the existing phase artifact and state helpers instead of writing \`.blueprint/STATE.md\` directly.
+
+## Anti-Patterns
+
+- Reporting a next action before reloading \`derivedStatus.nextAction\`.
+
+## State Of The Art
+
+- Repo-local routing already derives next actions from saved artifacts and config-aware state.
+
+## Common Pitfalls
+
+- Treating the write result as proof of the final route instead of reloading state.
+
+## Open Questions
+
+- Should future UI-phase runs also surface the loaded route when they exit on a no-write reuse path?
+
+## Confidence Breakdown
+
+| Topic | Confidence | Why |
+|-------|------------|-----|
+| UI-phase routing | HIGH | The repo already computes next actions from synced state and current artifact coverage. |
+
+## Code Examples
+
+\`\`\`ts
+await blueprintStateUpdate({ base: "synced", patch: { activeCommand: "/blu-ui-phase" } });
+\`\`\`
+
+## Recommendations
+
+- Reload \`blueprint_state_load\` after the synced state update and report that next action.
+
+## Sources
+
+- \`src/mcp/tools/state.ts\` - current derived next-action routing substrate.
+- \`src/mcp/tools/phase.ts\` - phase artifact coverage that informs UI-phase readiness.
+`;
+}
+
 test("ui-phase command references registered tools and single-artifact UI handling", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-ui-phase.toml"), "utf8");
   const skillFile = await readFile(
@@ -88,6 +177,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "utf8"
   );
   const requiredTools = [
+    "blueprint_command_catalog",
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
     "blueprint_config_get",
@@ -95,6 +185,7 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "blueprint_phase_artifact_read",
     "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
+    "blueprint_state_load",
     "blueprint_state_update"
   ] as const;
 
@@ -128,6 +219,11 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /contract-versus-skip posture/i);
   assert.match(commandFile, /checker-requested revision/i);
+  assert.match(commandFile, /state_update` with `base: "synced"`/i);
+  assert.match(commandFile, /patch\.currentPhase/i);
+  assert.match(commandFile, /state_load/i);
+  assert.match(commandFile, /derivedStatus\.nextAction/i);
+  assert.match(commandFile, /command_catalog/i);
   assert.match(commandFile, /\/blu-plan-phase <phase>/);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /XX-UI-SPEC\.md/);
@@ -153,6 +249,11 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /repair the same normalized draft/i);
+  assert.match(skillFile, /call `blueprint_state_update`\s+with `base: "synced"`/i);
+  assert.match(skillFile, /patch\.currentPhase/i);
+  assert.match(skillFile, /blueprint_state_load/i);
+  assert.match(skillFile, /derivedStatus\.nextAction/i);
+  assert.match(skillFile, /blueprint_command_catalog/i);
   assert.match(skillFile, /\/blu-plan-phase <phase>/);
   assert.match(skillFile, /\/blu-progress/);
   const contract = await buildBlueprintCommandRuntimeContractResource("ui-phase");
@@ -227,6 +328,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(runtimeContract, /## Shared Stage Mapping/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_state_load/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_command_catalog/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /XX-CONTEXT\.md/);
   assert.match(runtimeContract, /XX-RESEARCH\.md/);
@@ -235,6 +338,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(runtimeContract, /status: "invalid"/);
   assert.match(runtimeContract, /retry through MCP once/i);
+  assert.match(runtimeContract, /base: "synced"/i);
+  assert.match(runtimeContract, /derivedStatus\.nextAction/i);
   assert.match(designerAgent, /spacing scale and layout rhythm/i);
   assert.match(designerAgent, /typography sizes\/weights\/line heights/i);
   assert.match(designerAgent, /copywriting for CTAs\/empty\/error and\s+destructive states/i);
@@ -367,6 +472,140 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
   assert.equal(body.found, true);
   assert.match(body.content ?? "", /Outcome Mode/);
   assert.match(body.content ?? "", /Explicit skip rationale/i);
+});
+
+test("ui-phase final next action comes from refreshed synced state", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    content: `# Phase 03 Context
+
+## Phase Boundary
+- Capture durable discuss-phase context for the phase.
+- Confirm the selected scope before drafting UI guidance.
+- Exclude execution planning and summary writing.
+- Downstream planning should reuse this saved discovery context.
+
+## Discovery Grounding
+- Project brief - the phase needs a durable discovery record.
+- Requirements grounding - preserve the current requirements boundary.
+- Workflow posture - keep discovery evidence-backed and MCP-owned.
+- Confirmed decisions - persist the UI-routing handoff clearly.
+
+## Implementation Decisions
+- Decision 1 - keep the UI contract phase-scoped and reusable.
+- Tradeoffs or constraints - final routing must come from synced state rather than prompt-local assumptions.
+
+## Specific Ideas
+- Specific idea 1 - keep the saved UI artifact aligned with the phase goal.
+- Specific idea 2 - let later planning consume the same saved evidence.
+- Follow-up idea - revisit only if scope changes materially.
+
+## Existing Code Insights
+- Existing code insight 1 - the phase artifacts already give state routing enough evidence.
+- Reusable pattern - preserve the canonical H1 and validated section structure.
+- Known gap or caution - avoid inventing a next action before reloading state.
+
+## Dependencies
+- Prior phase artifacts - saved research and roadmap intent.
+- External constraints - repo-level safety and implemented-only routing.
+- Required follow-up reads - roadmap, requirements, and saved research.
+
+## Open Questions
+- Which UI details still need clarification before planning?
+
+## Deferred Ideas
+- Later follow-up - record optional refinements after planning exists.
+- Reusable references - keep state-routing evidence visible for the next pass.
+
+## Canonical References
+- Roadmap, requirements, and saved discovery notes for this phase.
+`,
+    overwrite: true
+  });
+  const researchWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Keep the final UI-phase handoff anchored in refreshed MCP-derived routing."
+    ),
+    overwrite: true
+  });
+  const uiWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "ui-spec",
+    content: `# Phase 03 UI Spec
+
+## Outcome Mode
+- UI contract
+
+## User Experience Goals
+- Keep the UI guidance phase-scoped and ready for planning.
+
+## Visual Design Decisions
+- Spacing and layout: preserve the dashboard rhythm already used in the product.
+- Typography: reuse the current heading and body scales.
+- Color and contrast: stay inside the existing semantic palette.
+- Motion and feedback: keep motion limited to meaningful status changes.
+- Copy and content: labels should stay concise and task-oriented.
+
+## Screens And States
+- Screen/state 1: dashboard overview for the current phase workflow.
+- Loading, empty, error, and success states: specify all four states for the primary view.
+- Responsive behavior: keep a single-column mobile fallback.
+
+## Components And Constraints
+- Component 1: dashboard shell and action rail.
+- Existing design-system or registry primitives to reuse: current panel, button, and status primitives.
+- New component or token justification: none.
+- Density and interaction constraints: preserve current table density.
+
+## Accessibility And Content
+- Accessibility note 1: keep keyboard navigation and visible focus.
+- Content hierarchy and empty-state guidance: empty states should point to the next safe action.
+- Localization or content safety notes: avoid hard-coded status jargon.
+
+## Registry And Design-System Safety
+- Registry and design-system safety: do not fork the component registry.
+- Token and theming compatibility: keep existing tokens untouched.
+- Revisit trigger if the scope changes: revisit if the phase adds a net-new surface.
+
+## Next Safe Action
+- /blu-plan-phase 3
+`,
+    overwrite: true
+  });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-ui-phase",
+      currentPhase: "3",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(contextWrite.status, "created");
+  assert.equal(researchWrite.status, "created");
+  assert.equal(uiWrite.status, "created");
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.equal(stateUpdate.statePath, ".blueprint/STATE.md");
+  assert.equal(loadedState.state.activeCommand, "/blu-ui-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "3");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 3/);
+  assert.match(stateBody, /Run \/blu-plan-phase 3/);
+  assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 3/);
 });
 
 test("phase artifact writes validate context, discussion-log, and ui-spec content", async (t) => {

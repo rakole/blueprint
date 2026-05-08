@@ -19,6 +19,12 @@ deterministic state reads and writes.
 
 - Read `mcp_blueprint_blueprint_phase_research_status` to learn whether
   context, research, and UI spec artifacts exist.
+- Read `mcp_blueprint_blueprint_state_load` when you need the current
+  MCP-derived routing posture before or after persistence; the final next safe
+  action must come from refreshed state, not a hand-built guess.
+- Read `mcp_blueprint_blueprint_command_catalog` whenever the final route needs
+  an explicit implemented-only check beyond the loaded state's derived next
+  action.
 - Read `mcp_blueprint_blueprint_config_get` with effective scope before
   deciding whether to draft a UI contract or an explicit skip rationale.
 - Read `mcp_blueprint_blueprint_artifact_contract_read` with
@@ -109,7 +115,10 @@ the full workflow sequentially without reducing output quality:
 - Treat the returned `path`, `status`, `validation`, and `warnings` as
   authoritative.
 - Update `STATE.md` through `mcp_blueprint_blueprint_state_update` only after
-  the UI artifact is settled or the run stops on an explicit blocker.
+  the UI artifact is settled or the run stops on an explicit blocker. Use
+  `base: "synced"` and preserve the already resolved selected phase in
+  `patch.currentPhase` together with `patch.activeCommand`; do not treat the
+  update response itself as the final routing answer.
 
 ## Validate
 
@@ -130,6 +139,12 @@ the full workflow sequentially without reducing output quality:
 - End with a concise summary covering phase, mode, config gates, contract read,
   evidence used, artifact status, checker or self-check outcome, warnings, and
   next safe action.
+- Reload routing through `mcp_blueprint_blueprint_state_load` after the synced
+  update and report the refreshed next safe action from
+  `derivedStatus.nextAction`, using
+  `mcp_blueprint_blueprint_command_catalog` when an explicit implemented-only
+  check is needed. Fall back to `/blu-progress` when refreshed routing is
+  missing, blocked, or ambiguous.
 - Keep routing inside implemented commands, usually `/blu-plan-phase <phase>`
   when the artifact is settled or `/blu-progress` when a gate remains blocked.
 - Do not present planned-only or blocked lifecycle commands as runnable.
@@ -145,5 +160,5 @@ the full workflow sequentially without reducing output quality:
   completed before persistence.
 - Any invalid write or checker failure was repaired through the bounded retry
   path, or the run stopped with a named blocker.
-- The saved path and next action came from MCP-owned state and implemented
-  command routing.
+- The saved path came from the write tool response, and the next action came
+  from refreshed MCP-owned state and implemented command routing.

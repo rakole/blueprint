@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
+  SCAFFOLD_GENERATED_MARKER,
   CODEBASE_ARTIFACTS,
   blueprintArtifactScaffold,
   blueprintCodebaseArtifactWrite
@@ -683,6 +684,32 @@ test("phase research status exposes config-aware plan-phase readiness", async (t
     "Run /blu-plan-phase 3 to create execution-ready phase plans"
   );
   assert.deepEqual(disabledGateStatus.planningReadiness.blockers, []);
+});
+
+test("phase research status does not treat the generic scaffold marker as a bootstrap starter by itself", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `${validContextContent().trim()}\n\n---\n${SCAFFOLD_GENERATED_MARKER}\n`,
+    "utf8"
+  );
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.contextValid, true);
+  assert.equal(status.hasUsableContext, true);
+  assert.equal(
+    status.contextDiagnostics.some((diagnostic) => diagnostic.code === "context.bootstrap_starter"),
+    false
+  );
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-research-phase 3 to capture phase research"
+  );
 });
 
 test("phase research status returns warnings instead of throwing for unreadable saved research paths", async (t) => {

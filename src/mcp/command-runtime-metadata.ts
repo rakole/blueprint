@@ -269,6 +269,8 @@ const UI_PHASE_REQUIRED_TOOLS = [
   "blueprint_phase_artifact_read",
   "blueprint_phase_artifact_write",
   "blueprint_artifact_scaffold",
+  "blueprint_state_load",
+  "blueprint_command_catalog",
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
@@ -1573,7 +1575,7 @@ export const UI_PHASE_RUNTIME_METADATA = {
     optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
+      "Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, call blueprint_state_update with base: \"synced\" while preserving patch.currentPhase and patch.activeCommand, then re-load blueprint_state_load.derivedStatus.nextAction and keep final routing constrained by blueprint_command_catalog, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

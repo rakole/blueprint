@@ -43,7 +43,7 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes only the declared Blueprint project artifacts under `.blueprint/` for bootstrap. It must not mutate source code or git state.
 - `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` must be substantive bootstrap drafts rather than scaffold-only placeholders.
-- Brownfield repos should be left ready for `map-codebase`, and project bootstrap should preserve durable requirement and roadmap traceability.
+- Brownfield repos should be left ready for `/blu-map-codebase`, and project bootstrap should preserve durable requirement and roadmap traceability.
 - In-flight bootstrap should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
 ## Interaction Model
@@ -66,7 +66,7 @@
 4. `Execute`: draft specific, user-centered, traceable requirements and grouped roadmap phases with success criteria, using optional bounded research or roadmapping help only when it materially improves the bootstrap.
 5. `Persist`: use Blueprint MCP tools for the first write, then refine config or state through Blueprint MCP tools only.
 6. `Validate`: validate the authored bootstrap, surface warnings or provisional roadmap confidence honestly, and keep the revision loop available before or after the first draft when the command contract calls for it.
-7. `Route`: end with the next safe implemented command, routing brownfield repos to `map-codebase` when roadmap confidence is still provisional.
+7. `Route`: end with the next safe implemented command, routing brownfield repos to `/blu-map-codebase` when roadmap confidence is still provisional.
 
 ## Research, Requirements, And Roadmap Quality
 
@@ -174,8 +174,8 @@
 - In interactive mode, requirements and roadmap shape should support a revision loop before the first persistent write when the user wants adjustments.
 - Keep Gemini-native session coordination honest as described in `runtime-guardrails.md`.
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
-- if the repo is unmapped, hard-stop before writing and route to `map-codebase`
-- if `.blueprint/codebase/` is interrupted, invalid, or incomplete, route to `map-codebase`
+- if the repo is unmapped, hard-stop before writing and route to `/blu-map-codebase`
+- if `.blueprint/codebase/` is interrupted, invalid, or incomplete, route to `/blu-map-codebase`
 - if `.blueprint/codebase/` is valid and core bootstrap artifacts are absent, treat the repo as `mapped-only` and allow bootstrap follow-through without replacing codebase docs
 
 ## Edge Cases
@@ -205,7 +205,7 @@
 - Uses Gemini-native session helpers through the centralized guardrail contract when helpful, without turning those helpers into durable state.
 - Keeps requirement IDs traceable from `REQUIREMENTS.md` into `ROADMAP.md`.
 - Makes repo-shape assumptions explicit instead of silently inventing them.
-- For brownfield repos, sets the next safe action to `map-codebase` whenever roadmap confidence is still provisional.
+- For brownfield repos, sets the next safe action to `/blu-map-codebase` whenever roadmap confidence is still provisional.
 
 ## Test Cases
 
@@ -213,7 +213,7 @@
 - Partially initialized Blueprint repo fixture.
 - New-project fixture with saved defaults present.
 - Direct `new-project` happy-path fixture.
-- Brownfield fixture that rejects `new-project` before writes and routes to `map-codebase`.
+- Brownfield fixture that rejects `new-project` before writes and routes to `/blu-map-codebase`.
 - Mapped-only brownfield fixture that bootstraps with an explicit seed and preserves `.blueprint/codebase/*.md`.
 - Bootstrap seed fixture that verifies authored requirements and roadmap traceability.
 - Subagent contract fixture that verifies capability-gated project research/roadmapping and the no-subagent fallback.
