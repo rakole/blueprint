@@ -366,8 +366,11 @@ artifacts, and optional review agents when the command contract allows them.
 22. Keep next-step guidance inside implemented Blueprint commands only. Prefer
    `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and
    otherwise `/blu-progress` only after all threats are closed or accepted.
-   Do not emit next-step routing while threats remain open, and keep the
-   waiting state explicit as `pending-open-threat` until the gate clears.
+   Repo-wide derived progress/state may still surface saved review remediation
+   debt such as `/blu-code-review-fix <phase>` after security exists, but
+   `/blu-secure-phase` itself must not emit that action. Do not emit next-step
+   routing while threats remain open, and keep the waiting state explicit as
+   `pending-open-threat` until the gate clears.
 
 ### `ui-review`
 

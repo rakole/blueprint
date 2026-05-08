@@ -87,6 +87,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and the same structured `model`; treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`. Markdown `content` is invalid for `review.security`.
 - Markdown content fallback is not supported for `/blu-secure-phase`; rejected JSON must be repaired against the schema instead of hand-written as `XX-SECURITY.md`.
 - Do not compute a next action until all threats are closed or explicitly accepted.
+- Local secure-phase routing stays scoped to the security lifecycle: blocked open threats stay `Blocked: pending-open-threat`; otherwise route to `/blu-validate-phase <phase>`, `/blu-verify-work <phase>`, or `/blu-progress`. Repo-wide derived progress/state may still surface saved review remediation debt such as `/blu-code-review-fix <phase>` after security exists, but `/blu-secure-phase` itself must not emit that action.
 
 
 ## Skills And Subagents

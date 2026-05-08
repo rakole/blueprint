@@ -41,7 +41,7 @@ Next-action rules:
  - Apply these only when all threats are closed or explicitly accepted.
 - If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu-validate-phase <phase>`.
 - Otherwise if the phase lacks `XX-UAT.md`, prefer `/blu-verify-work <phase>`.
-- Otherwise if meaningful follow-up fixes remain, prefer `/blu-progress` so the user can review the safest next step.
+- Otherwise if meaningful follow-up fixes remain, still prefer `/blu-progress`. Repo-wide derived progress/state may still surface saved review remediation debt such as `/blu-code-review-fix <phase>` after security exists, but `/blu-secure-phase` itself must not emit that action.
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
