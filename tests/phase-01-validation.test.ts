@@ -213,6 +213,32 @@ test("state_update patches STATE.md deterministically and reports updated fields
   assert.match(stateDocument, /- Need roadmap review/);
 });
 
+test("state_update normalizes directory-shaped currentPhase patches", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+  const result = await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      currentPhase: "02-lets-do-some-work"
+    }
+  });
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+  const loaded = await loadBlueprintState(repoPath);
+
+  assert.equal(result.statePath, ".blueprint/STATE.md");
+  assert.ok(result.updatedFields.includes("currentPhase"));
+  assert.equal(loaded.currentPhase, "2");
+  assert.match(stateDocument, /- Current phase: 2/);
+});
+
 test("state_update preserves roadmap evolution notes for urgent decimal insertions", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -281,6 +307,40 @@ test("legacy STATE.md files without roadmap evolution notes still parse cleanly"
   assert.deepEqual(parsed.roadmapEvolutionNotes, []);
   assert.deepEqual(parsed.blockers, []);
   assert.equal(parsed.currentPhase, "1");
+});
+
+test("loadBlueprintState normalizes directory-shaped current phase values from STATE.md", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 02-lets-do-some-work
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-20T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const parsed = await loadBlueprintState(repoPath);
+
+  assert.equal(parsed.currentPhase, "2");
 });
 
 test("artifact scaffolding creates requested files, reuses them safely, and blocks path escapes", async (t) => {
