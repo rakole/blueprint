@@ -270,7 +270,7 @@ Contract notes:
 Each phase directory lives under `.blueprint/phases/<phase-slug>/`.
 
 Canonical source-of-truth note:
-- The runtime-owned contract registry under `src/mcp/artifact-contracts/` is the canonical source for scaffold templates, authoring templates, locked markers, required headings, and freehand policy.
+- The runtime-owned contract registry under `src/mcp/artifact-contracts/` is the canonical source for scaffold starters, authoring templates, locked markers, required headings, and freehand policy. Keep the distinction explicit: starter scaffold material seeds a missing file, while the authoring template governs the final saved artifact body.
 - This document is the human-readable reference and should stay aligned with the runtime contract registry rather than competing with it.
 
 Core phase artifacts:
@@ -301,6 +301,7 @@ Auxiliary phase artifacts:
 Validation expectations:
 - must start with an H1 title
 - must not persist scaffold placeholders such as `Goal:`, `Project brief:`, or `Question 1:`
+- if scaffold starter material was used, the final saved body must rewrite it into concrete phase decisions rather than preserving starter wording verbatim
 - must populate the full discuss-phase context contract sections from `Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`
 - implementation decisions should be evidence-backed enough for downstream research and planning: include rationale, repo or saved-artifact paths where applicable, options considered, consequences if assumptions are wrong, and full relative canonical references
 - `/blu-discuss-phase` must repair any returned write validation issues before treating the context capture as complete; if repair cannot finish, the checkpoint remains the continuation source
@@ -385,6 +386,7 @@ Validation expectations:
 - recommendations should be prescriptive rather than descriptive
 - sources must include a URL, repo path, or cited file reference
 - scaffold-only placeholders are not considered valid completed research
+- scaffold starters, when used, are first-write seed material only and must not survive verbatim into the final saved artifact
 - the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
 - current validation keys off the canonical heading set and also requires the `## Phase Requirements` table to include at least one populated requirement row
 

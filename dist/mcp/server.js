@@ -15636,6 +15636,35 @@ function renderContextTemplate(context) {
 
 - Source 1: <source 1>`;
 }
+function renderContextAuthoringTemplate(context) {
+  return `# ${phaseLabel(context)} - Context
+
+<!--
+Final saved content only.
+Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
+For Open Questions, replace the section with unresolved questions or use the exact sentinel \`- none\` when nothing remains open.
+Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
+-->
+
+## Phase Boundary
+
+## Discovery Grounding
+
+## Implementation Decisions
+
+## Specific Ideas
+
+## Existing Code Insights
+
+## Dependencies
+
+## Open Questions
+
+## Deferred Ideas
+
+## Canonical References
+`;
+}
 function renderDiscussionLogTemplate(context) {
   return `# ${phaseLabel(context)} - Discussion Log
 
@@ -15650,6 +15679,23 @@ function renderDiscussionLogTemplate(context) {
 ## Follow-Ups
 
 - Follow-up 1:`;
+}
+function renderDiscussionLogAuthoringTemplate(context) {
+  return `# ${phaseLabel(context)} - Discussion Log
+
+<!--
+Final saved content only.
+Replace the sections below with the actual discussion outcomes, attributable notes, and concrete follow-ups worth preserving.
+Do not preserve scaffold prompts or this guidance block in the final saved artifact.
+-->
+
+## Summary
+
+## Notes
+
+## Follow-Ups
+
+`;
 }
 function renderResearchTemplate(context) {
   return `# ${phaseLabel(context)} - Research
@@ -18917,11 +18963,13 @@ var init_artifact_contracts = __esm({
         notes: [
           "Discovery context is phase-scoped and MCP-owned.",
           "Open Questions may use the exact `- none` sentinel only when no unresolved questions remain.",
+          "Scaffold rendering is for first-write seeding and intentionally includes placeholder labels plus the scaffold footer marker so downstream overwrite logic can recognize it.",
+          "Authoring rendering preserves the canonical headings but uses final-write-safe guidance instead of literal placeholder labels that write validation rejects.",
           "Write validation requires an H1 title, removal of scaffold placeholders, and the richer discuss-phase context sections that feed downstream planning."
         ],
         modelContract: PHASE_CONTEXT_MODEL_CONTRACT,
-        renderScaffoldTemplate: renderContextTemplate,
-        renderAuthoringTemplate: renderContextTemplate
+        renderScaffoldTemplate: (context) => withScaffoldFooter(renderContextTemplate(context)),
+        renderAuthoringTemplate: renderContextAuthoringTemplate
       },
       "phase.discussion-log": {
         id: "phase.discussion-log",
@@ -18940,10 +18988,12 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Discussion logs are optional supporting artifacts.",
+          "Scaffold rendering is for first-write seeding and includes the scaffold footer marker so downstream overwrite logic can recognize scaffold material.",
+          "Authoring rendering preserves the canonical headings but swaps placeholder prompts for final-write-safe guidance.",
           "Write validation requires an H1 title, removal of scaffold placeholders, and at least one populated contract section."
         ],
-        renderScaffoldTemplate: renderDiscussionLogTemplate,
-        renderAuthoringTemplate: renderDiscussionLogTemplate
+        renderScaffoldTemplate: (context) => withScaffoldFooter(renderDiscussionLogTemplate(context)),
+        renderAuthoringTemplate: renderDiscussionLogAuthoringTemplate
       },
       "phase.research": {
         id: "phase.research",
