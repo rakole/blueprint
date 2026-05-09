@@ -74,6 +74,8 @@ helper guidance.
   one explicitly confirmed bounded batch, list write-owned files or surfaces,
   list read-first files, state isolation expectations, and require verification
   evidence plus a summary draft before returning.
+- Do not substitute browser-only, web-search-only, shell-only, or generic
+  helper agents for `blueprint-executor`.
 - If subagents are unavailable, unreliable, disabled by config, or unsafe
   because of overlapping write ownership, fall back to one-plan-at-a-time
   inline execution.
@@ -163,7 +165,8 @@ helper guidance.
 
 ## No-Subagent Fallback
 
-When suitable execution agents are unavailable, continue sequentially:
+When suitable execution agents are unavailable, continue sequentially with the
+same evidence depth and output quality bar:
 
 1. Compress the read context into a carry-forward note containing the selected
    plan ids, wave order, overlap or blocker notes, config-driven execution
@@ -172,8 +175,8 @@ When suitable execution agents are unavailable, continue sequentially:
 3. Run the plan's targeted verification and bounded repair loop.
 4. Persist the resulting summary through MCP.
 5. Use the latest persisted summary, including valid `PARTIAL` or `BLOCKED`
-   status when present, as the durable checkpoint before moving to the next
-   plan.
+   status when present, as the durable checkpoint and compact carry-forward
+   context before moving to the next plan.
 6. Stop or ask for review when the next plan is blocked by overlap, lower-wave
    debt, repeated verification failure, or user choice.
 

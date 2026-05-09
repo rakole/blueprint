@@ -89,8 +89,25 @@ planning, or unrelated repo changes.
 
 Use `blueprint-debugger` only for bounded hypothesis testing, reproduction, log
 review, and confidence-rated diagnosis when the investigation is more than a
-quick local inspection. If the agent is unavailable, continue with the same
-single-agent contract and call out the reduced confidence when relevant.
+quick local inspection. Do not substitute browser-only, web-search-only,
+shell-only, or generic helper agents for this Blueprint debugging role.
+
+## No-Subagent Fallback
+
+When `blueprint-debugger` is unavailable, unnecessary, or unsafe, continue
+single-agent with parity:
+
+1. Work one hypothesis, reproduction, log slice, or targeted test at a time
+   where the agent path could have isolated investigation.
+2. Keep the same evidence depth and diagnosis quality bar as the delegated
+   path.
+3. After each completed unit, compress compact carry-forward context:
+   confirmed evidence, rejected hypotheses, open questions, confidence shift,
+   and the next bounded experiment.
+4. Persist the same `debug-latest` report through MCP before ending or
+   handing off follow-up routing.
+5. Call out reduced confidence only when the missing agent actually prevented a
+   bounded verification step, not as a generic disclaimer.
 
 ## Output Criteria
 

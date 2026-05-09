@@ -211,7 +211,10 @@ The auditor should return one of:
 ## No-Subagent Fallback
 
 When a suitable security auditor is unavailable or unnecessary, the parent
-command uses this sequential fallback:
+command uses this sequential fallback. It must preserve the same threat-by-
+threat evidence depth, open-risk honesty, and artifact quality as the auditor
+path; the only change is that verification happens one declared threat at a
+time in the parent flow.
 
 1. Read saved plans, summaries, prior security artifact when present, and
    implicated repo files.

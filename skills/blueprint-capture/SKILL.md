@@ -140,6 +140,14 @@ Treat capture as short interactive routing or index mutation, not as long-runnin
 9. After confirmed roadmap promotion, use `blueprint_artifact_scaffold` to create or reuse the initial phase context instead of hand-writing it.
 10. Keep follow-up guidance inside implemented commands only. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
 
+When `blueprint-researcher` is unavailable, disabled, unnecessary, or unsafe for
+the bounded idea check, keep `/blu-explore` inline with the same routing quality:
+handle one idea facet or ecosystem tradeoff at a time, keep only a compact
+carry-forward note with evidence used, routing implication, uncertainty, and the
+next facet, then make the final target decision in the parent command. Do not
+substitute browser-only, web-search-only, shell-only, or generic helper agents
+for Blueprint capture or routing analysis.
+
 ## Future Capture Guardrails
 
 - Do not write capture state outside `.blueprint/notes/`, `.blueprint/todos/`, `.blueprint/backlog/`, or explicitly reserved `.blueprint/phases/999.x-*/` stubs.

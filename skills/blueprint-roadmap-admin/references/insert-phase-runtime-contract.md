@@ -128,6 +128,8 @@ MCP tools.
 
 `/blu-insert-phase` is skill-led and does not require subagents. The parent
 command must complete the workflow directly from the MCP read and write results.
+This is already the parity path: the same roadmap-read, anchor-confirmation,
+and MCP-write quality applies with no isolated subagent unit to offload.
 
 Do not use `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only,
 shell-only, or generic agents as substitutes for roadmap-admin insertion

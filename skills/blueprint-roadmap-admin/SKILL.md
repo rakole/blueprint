@@ -97,6 +97,17 @@ The earlier repository-doc-backed Required Inputs list is retained only in repos
 - `blueprint-roadmapper`
 - `blueprint-verifier`
 
+## No-Subagent Parity
+
+When a roadmap-admin command allows an optional Blueprint subagent and that
+subagent is unavailable, disabled, or unnecessary, the parent command keeps the
+same evidence depth, confirmation discipline, and output quality by working one
+isolated roadmap or milestone unit at a time, compressing carry-forward context
+after each completed unit, and finishing through the same MCP-owned write path.
+
+Do not swap in browser-only, web-search-only, shell-only, or generic helper
+substitutes for `blueprint-roadmapper` or `blueprint-verifier`.
+
 ## Shared MCP Contracts
 
 - `blueprint_roadmap_add_phase` and `blueprint_roadmap_insert_phase`: pass only the phase description plus the integer `after` anchor for insertion. Do not precompute phase numbers, slugs, or directory paths; use returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
@@ -162,9 +173,10 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 4. Require explicit overwrite confirmation before replacing an existing milestone audit report, and prefer `ask_user` for that confirmation gate.
 5. Use `blueprint_artifact_summary_digest` with explicit milestone artifact paths when the command needs a compact roadmap-plus-evidence digest.
 6. Use `blueprint-verifier` when a second-pass evidence review helps explain gaps or stale assumptions.
-7. Keep milestone report output project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
-8. If the audit surfaces actionable gaps and `plan-milestone-gaps` is implemented, route the follow-up there; otherwise treat planned-only milestone follow-up commands as unavailable.
-9. Preserve grouped gap sections and any requirements traceability repair notes so the downstream gap-planning pass can close the same evidence chain without re-auditing from scratch.
+7. If `blueprint-verifier` is unavailable or unnecessary, keep parity by reviewing one milestone evidence group at a time and carrying forward only a compact note of confirmed gaps, stale assumptions, and remaining questions before writing the report.
+8. Keep milestone report output project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
+9. If the audit surfaces actionable gaps and `plan-milestone-gaps` is implemented, route the follow-up there; otherwise treat planned-only milestone follow-up commands as unavailable.
+10. Preserve grouped gap sections and any requirements traceability repair notes so the downstream gap-planning pass can close the same evidence chain without re-auditing from scratch.
 
 ### `plan-milestone-gaps`
 
@@ -208,13 +220,14 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 2. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before generating carry-forward seeds, and normalize any summary-derived seed text to the returned authoring template when the contract provides one.
 3. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it, and prefer `ask_user` when the choice is not already explicit.
 4. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the command still owns the final write path.
-5. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
-6. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
-7. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
-8. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
-9. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
-10. Update `STATE.md` through `blueprint_state_update` so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
-11. Keep follow-up routing inside implemented Blueprint commands only.
+5. If `blueprint-roadmapper` is unavailable or unnecessary, keep parity by carrying forward one roadmap or milestone synthesis unit at a time and compressing carry-forward context after each unit to the retained intent, starter-scope decisions, and unresolved assumptions before scaffolding.
+6. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
+7. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
+8. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
+9. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
+10. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
+11. Update `STATE.md` through `blueprint_state_update` so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
+12. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail
 

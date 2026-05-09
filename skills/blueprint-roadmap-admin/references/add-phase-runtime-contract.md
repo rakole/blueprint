@@ -111,7 +111,9 @@ Do not silently continue with the new number.
 ## No-Subagent Fallback
 
 `/blu-add-phase` is skill-led and does not require subagents. The parent command
-must complete the workflow directly from the MCP read and write results.
+must complete the workflow directly from the MCP read and write results. This
+is already the parity path: the same roadmap-read, confirmation, and MCP-write
+quality applies with no isolated subagent unit to offload.
 
 Do not use browser, web-search-only, shell-only, or generic agents as
 substitutes for roadmap-admin analysis. If a future Blueprint-native optional

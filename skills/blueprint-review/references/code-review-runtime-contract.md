@@ -166,7 +166,9 @@ acceptable substitutes for `blueprint-reviewer`.
 ## No-Subagent Fallback
 
 If `blueprint-reviewer` is unavailable or unnecessary, continue sequentially in
-the parent session.
+the parent session. The fallback must preserve the same saved-evidence depth,
+finding quality, and artifact quality as the subagent path; the only change is
+that review work happens one scoped file group at a time in the parent flow.
 
 1. Read saved evidence first: summaries, plans, validation or UAT artifacts,
    security artifact, and any existing review.

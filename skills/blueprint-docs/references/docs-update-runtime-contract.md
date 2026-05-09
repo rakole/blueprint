@@ -46,8 +46,27 @@ write scope is intentionally narrow.
   multiple sections or files.
 - Use `blueprint-doc-verifier` only for bounded fact-checking of current docs
   or proposed updates.
-- Preserve the inline fallback when optional docs agents are unavailable; do
-  not substitute generic, browser-only, web-search-only, or shell-only agents.
+- Preserve the inline fallback when optional docs agents are unavailable or the
+  scope is too small to justify delegation. The fallback must keep the same
+  evidence depth and output quality one doc section or file at a time.
+- Do not substitute generic, browser-only, web-search-only, or shell-only
+  agents.
+
+## No-Subagent Fallback
+
+When optional docs agents are unavailable, unnecessary, or unsafe, continue
+inline and sequentially:
+
+1. Resolve the selected doc scope and the exact evidence set before drafting or
+   verification.
+2. Read and verify one documentation file or one bounded section at a time
+   where the agent path could have isolated drafting or fact-checking.
+3. Apply the update or verification decision for that single unit only.
+4. After each completed unit, compress compact carry-forward context: file or
+   section covered, repo evidence used, external-truth status when applicable,
+   changes or findings, and the next unit.
+5. Persist the same docs-update report through MCP and keep follow-up routing
+   implemented-only.
 
 ## Confirmation Gates
 

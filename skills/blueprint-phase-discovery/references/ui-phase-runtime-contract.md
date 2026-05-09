@@ -92,7 +92,10 @@ but they do not replace repo evidence and saved Blueprint artifacts.
 ## No-Subagent Fallback
 
 When suitable subagents are unavailable or unsafe, the parent command performs
-the full workflow sequentially without reducing output quality:
+the full workflow sequentially with the same evidence depth and artifact
+quality expected from the designer-plus-checker path. Do not substitute
+browser-only, web-search-only, shell-only, or generic helpers for Blueprint UI
+design, codebase, or workflow analysis.
 
 1. Compress the phase goal, requirements, saved context, saved research, and
    codebase evidence into a short carry-forward note.
@@ -101,7 +104,9 @@ the full workflow sequentially without reducing output quality:
 3. Draft one section at a time against `contract.authoringTemplate`, carrying
    citations or source notes forward before moving to the next section.
 4. Self-check the same six dimensions that `blueprint-checker` would review.
-5. Repair any blocked dimensions before persistence, or stop with a named
+5. Compress the completed section back into the carry-forward note with the
+   key decision, evidence roots, and any unresolved UI risk before moving on.
+6. Repair any blocked dimensions before persistence, or stop with a named
    blocker and next safe implemented action.
 
 ## Persist
