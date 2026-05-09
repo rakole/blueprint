@@ -582,6 +582,10 @@ type ReviewValidateModelResult = {
     renderPreview: string | null;
     warnings: string[];
 };
+type PublicReviewValidateModelResult = Omit<ReviewValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
+type PublicReviewRecordResult = Omit<ReviewRecordResult, "taskSchema"> & {
+    taskSchema?: ReviewRecordResult["taskSchema"];
+};
 type ReviewAuthoringContextArgs = {
     cwd?: string;
     phase?: NumericInput;
@@ -662,7 +666,7 @@ export declare const reviewToolDefinitions: ({
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
         model: z.ZodUnknown;
     };
-    handler: (args: Record<string, unknown>) => Promise<ReviewValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<PublicReviewValidateModelResult>;
 } | {
     name: string;
     description: string;
@@ -715,6 +719,6 @@ export declare const reviewToolDefinitions: ({
         }>>;
         targetIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
-    handler: (args: Record<string, unknown>) => Promise<ReviewRecordResult>;
+    handler: (args: Record<string, unknown>) => Promise<PublicReviewRecordResult>;
 })[];
 export {};

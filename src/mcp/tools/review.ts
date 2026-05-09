@@ -684,6 +684,15 @@ type ReviewValidateModelResult = {
   warnings: string[];
 };
 
+type PublicReviewValidateModelResult = Omit<
+  ReviewValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
+
+type PublicReviewRecordResult = Omit<ReviewRecordResult, "taskSchema"> & {
+  taskSchema?: ReviewRecordResult["taskSchema"];
+};
+
 type ReviewAuthoringContextArgs = {
   cwd?: string;
   phase?: NumericInput;
@@ -9542,6 +9551,29 @@ export async function blueprintReviewValidateModel(
   };
 }
 
+function toPublicReviewValidateModelResult(
+  result: ReviewValidateModelResult
+): PublicReviewValidateModelResult {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...publicResult
+  } = result;
+  return publicResult;
+}
+
+function toPublicReviewRecordResult(
+  result: ReviewRecordResult
+): PublicReviewRecordResult {
+  if (result.status !== "invalid") {
+    return result;
+  }
+
+  const { taskSchema: _taskSchema, ...publicResult } = result;
+  return publicResult;
+}
+
 async function resolveCodeReviewRecordValidationFiles(args: {
   recordArgs: ReviewRecordArgs;
 }): Promise<string[] | undefined> {
@@ -10017,7 +10049,9 @@ export const reviewToolDefinitions = [
       "Validate a model-authored review.code-review, review.peer-review, review.review-fix, review.security, or review.ui-review JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
     inputSchema: reviewValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintReviewValidateModel(args as ReviewValidateModelArgs)
+      toPublicReviewValidateModelResult(
+        await blueprintReviewValidateModel(args as ReviewValidateModelArgs)
+      )
   },
   {
     name: "blueprint_review_authoring_context",
@@ -10033,6 +10067,6 @@ export const reviewToolDefinitions = [
       "Persist a phase-scoped Blueprint review artifact with overwrite protection; code-review, peer-review, review-fix, security, and ui-review persist model-authored JSON only after validator replay.",
     inputSchema: reviewRecordInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintReviewRecord(args as ReviewRecordArgs)
+      toPublicReviewRecordResult(await blueprintReviewRecord(args as ReviewRecordArgs))
   }
 ];

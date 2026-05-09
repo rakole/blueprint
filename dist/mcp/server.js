@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path13) {
-  if (!path13)
+function getElementAtPath(obj, path14) {
+  if (!path14)
     return obj;
-  return path13.reduce((acc, key) => acc?.[key], obj);
+  return path14.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path13, issues) {
+function prefixIssues(path14, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path13);
+    iss.path.unshift(path14);
     return iss;
   });
 }
@@ -10713,8 +10713,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path13) {
-      let input = path13;
+    function removeDotSegments(path14) {
+      let input = path14;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10913,8 +10913,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path13, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path13 && path13 !== "/" ? path13 : void 0;
+        const [path14, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path14 && path14 !== "/" ? path14 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -28100,6 +28100,22 @@ async function blueprintReviewValidateModel(args) {
     warnings: uniqueSortedStrings([...context.warnings, ...validationWarnings])
   };
 }
+function toPublicReviewValidateModelResult(result) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...publicResult
+  } = result;
+  return publicResult;
+}
+function toPublicReviewRecordResult(result) {
+  if (result.status !== "invalid") {
+    return result;
+  }
+  const { taskSchema: _taskSchema, ...publicResult } = result;
+  return publicResult;
+}
 async function resolveCodeReviewRecordValidationFiles(args) {
   if (!args.recordArgs.scopeFiles || args.recordArgs.scopeFiles.length === 0) {
     return void 0;
@@ -28620,7 +28636,9 @@ var init_review = __esm({
         name: "blueprint_review_validate_model",
         description: "Validate a model-authored review.code-review, review.peer-review, review.review-fix, review.security, or review.ui-review JSON payload against the runtime task schema, residual quality checks, and canonical Markdown render before persistence.",
         inputSchema: reviewValidateModelInputSchema,
-        handler: async (args) => blueprintReviewValidateModel(args)
+        handler: async (args) => toPublicReviewValidateModelResult(
+          await blueprintReviewValidateModel(args)
+        )
       },
       {
         name: "blueprint_review_authoring_context",
@@ -28632,7 +28650,7 @@ var init_review = __esm({
         name: "blueprint_review_record",
         description: "Persist a phase-scoped Blueprint review artifact with overwrite protection; code-review, peer-review, review-fix, security, and ui-review persist model-authored JSON only after validator replay.",
         inputSchema: reviewRecordInputSchema,
-        handler: async (args) => blueprintReviewRecord(args)
+        handler: async (args) => toPublicReviewRecordResult(await blueprintReviewRecord(args))
       }
     ];
   }
@@ -47262,6 +47280,24 @@ async function phasePlanModelToContent(model, context) {
     validation
   };
 }
+function trimPhasePlanWriteModelValidation(validation) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+  return trimmed;
+}
+function trimPhasePlanStandaloneValidateModelResult(validation) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+  return trimmed;
+}
 function phaseValidationDiagnostic(args) {
   return args;
 }
@@ -47276,6 +47312,24 @@ function emptyPhaseValidationDiagnosticCounts() {
     },
     byCode: {}
   };
+}
+function trimPhaseValidationStandaloneValidateModelResult(validation) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+  return trimmed;
+}
+function trimPhaseSummaryStandaloneValidateModelResult(validation) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+  return trimmed;
 }
 function countPhaseValidationDiagnostics(diagnostics) {
   const counts = emptyPhaseValidationDiagnosticCounts();
@@ -50194,7 +50248,7 @@ async function blueprintPhasePlanValidateModel(args) {
         suggestion: "Resolve a valid phase and plan slot before authoring a phase.plan model."
       })
     ];
-    return {
+    return trimPhasePlanStandaloneValidateModelResult({
       status: "invalid",
       valid: false,
       target: phasePlanValidateModelTarget({
@@ -50218,12 +50272,13 @@ async function blueprintPhasePlanValidateModel(args) {
       normalizedModel: null,
       renderPreview: null,
       warnings: []
-    };
+    });
   }
-  return validatePhasePlanModelWithContext({
+  const validation = await validatePhasePlanModelWithContext({
     model: args.model,
     context
   });
+  return trimPhasePlanStandaloneValidateModelResult(validation);
 }
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
@@ -50295,7 +50350,7 @@ async function blueprintPhasePlanWrite(args) {
         planId: planId2
       });
       const modelRender = await phasePlanModelToContent(args.model, authoringContext);
-      modelValidation = modelRender.validation;
+      modelValidation = trimPhasePlanWriteModelValidation(modelRender.validation);
       if (!modelRender.content) {
         return {
           phaseNumber: resolved.phaseNumber,
@@ -52258,7 +52313,9 @@ var init_phase = __esm({
         name: "blueprint_phase_validation_validate_model",
         description: "Validate a structured phase.verification or phase.uat model against the runtime task schema and return a canonical render preview without writing files.",
         inputSchema: phaseValidationValidateModelInputSchema,
-        handler: async (args) => blueprintPhaseValidationValidateModel(args)
+        handler: async (args) => trimPhaseValidationStandaloneValidateModelResult(
+          await blueprintPhaseValidationValidateModel(args)
+        )
       },
       {
         name: "blueprint_phase_validation_write",
@@ -52318,7 +52375,9 @@ var init_phase = __esm({
         name: "blueprint_phase_summary_validate_model",
         description: "Validate Markdown phase.summary draft content, or render a legacy structured model, and return semantic diagnostics plus a SUMMARY preview without writing files.",
         inputSchema: phaseSummaryValidateModelInputSchema,
-        handler: async (args) => blueprintPhaseSummaryValidateModel(args)
+        handler: async (args) => trimPhaseSummaryStandaloneValidateModelResult(
+          await blueprintPhaseSummaryValidateModel(args)
+        )
       },
       {
         name: "blueprint_phase_summary_write",
@@ -60713,6 +60772,15 @@ async function blueprintArtifactReportValidateModel(args) {
     warnings: context.warnings
   };
 }
+async function blueprintArtifactReportValidateModelPublic(args) {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...publicResult
+  } = await blueprintArtifactReportValidateModel(args);
+  return publicResult;
+}
 function reportModelWriteIssues(reportName2) {
   const contractId = resolveReportContractId(reportName2);
   if (!contractId) {
@@ -61561,7 +61629,7 @@ var init_artifacts = __esm({
         name: "blueprint_artifact_report_validate_model",
         description: "Validate a structured report.add-tests or report.audit-fix model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
         inputSchema: artifactReportValidateModelInputSchema,
-        handler: async (args) => blueprintArtifactReportValidateModel(args)
+        handler: async (args) => blueprintArtifactReportValidateModelPublic(args)
       },
       {
         name: "blueprint_artifact_report_write",
@@ -61932,8 +62000,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path13, errorMaps, issueData } = params;
-  const fullPath = [...path13, ...issueData.path || []];
+  const { data, path: path14, errorMaps, issueData } = params;
+  const fullPath = [...path14, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -62048,11 +62116,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path13, key) {
+  constructor(parent, value, path14, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path13;
+    this._path = path14;
     this._key = key;
   }
   get path() {
@@ -71390,6 +71458,7 @@ var StdioServerTransport = class {
 };
 
 // src/mcp/server.ts
+import path13 from "node:path";
 import { pathToFileURL } from "node:url";
 
 // src/mcp/write-failure-log.ts
@@ -71736,7 +71805,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path13) => typeof path13 === "string" && path13.length > 0)
+    ].filter((path14) => typeof path14 === "string" && path14.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -72120,6 +72189,7 @@ var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
 ]);
 var DIAGNOSTIC_SUMMARY_LIMIT = 3;
 var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
+var IMPACT_CONFIG_SUCCESS_WARNING = "Impact config loaded successfully through the Phase 3 config resolver.";
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
     throw new Error(`Missing required config tool registration: ${toolName}`);
@@ -72189,6 +72259,22 @@ var SUMMARY_COUNT_KEYS = [
   ["issues", "issues"],
   ["suggestedRepairs", "repairs"]
 ];
+var IMPACT_ANALYZE_DUPLICATE_REPORT_KEYS = [
+  "impactId",
+  "status",
+  "impactStatus",
+  "risk",
+  "confidence",
+  "surfaces",
+  "areaSummary",
+  "surfaceSummary",
+  "ownership",
+  "dependencyGraph",
+  "findings",
+  "obligations",
+  "unknowns",
+  "evidence"
+];
 function getString(result, key) {
   const value = result[key];
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -72230,6 +72316,506 @@ function cleanSentenceFragment(value) {
 }
 function asRecord2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function areEquivalentJsonValues(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+function shouldTrimMatchedEntryIds(result) {
+  const entries = result.entries;
+  const matchedEntryIds = result.matchedEntryIds;
+  if (!Array.isArray(entries) || !Array.isArray(matchedEntryIds)) {
+    return false;
+  }
+  const entryIds = entries.map((entry) => asRecord2(entry)?.id);
+  if (entryIds.some((entryId) => typeof entryId !== "string")) {
+    return false;
+  }
+  return areEquivalentJsonValues(entryIds, matchedEntryIds);
+}
+function shouldTrimSelectedBacklogIds(result) {
+  if (getString(result, "status") !== "updated") {
+    return false;
+  }
+  const selectedBacklogIds = result.selectedBacklogIds;
+  const promotedItems = result.promotedItems;
+  if (!Array.isArray(selectedBacklogIds) || !Array.isArray(promotedItems)) {
+    return false;
+  }
+  const promotedBacklogIds = promotedItems.map((item) => asRecord2(item)?.backlogId);
+  if (promotedBacklogIds.some((backlogId) => typeof backlogId !== "string")) {
+    return false;
+  }
+  return areEquivalentJsonValues(promotedBacklogIds, selectedBacklogIds);
+}
+function shouldTrimCreatedPhaseDirs(result) {
+  if (getString(result, "status") !== "updated") {
+    return false;
+  }
+  const createdPhaseDirs = result.createdPhaseDirs;
+  const promotedItems = result.promotedItems;
+  if (!Array.isArray(createdPhaseDirs) || !Array.isArray(promotedItems)) {
+    return false;
+  }
+  const promotedCreatedPhaseDirs = promotedItems.filter((item) => asRecord2(item)?.createdPhaseDir === true).map((item) => asRecord2(item)?.phaseDir);
+  if (promotedCreatedPhaseDirs.some((phaseDir) => typeof phaseDir !== "string")) {
+    return false;
+  }
+  return areEquivalentJsonValues(promotedCreatedPhaseDirs, createdPhaseDirs);
+}
+function shouldTrimRoadmapPhaseSlug(toolName, result) {
+  if (toolName !== "blueprint_roadmap_add_phase" && toolName !== "blueprint_roadmap_insert_phase") {
+    return false;
+  }
+  if (getBoolean(result, "written") !== true) {
+    return false;
+  }
+  const slug = getString(result, "slug");
+  const phaseName = getString(result, "phaseName");
+  const phaseDir = getString(result, "phaseDir");
+  if (!slug || !phaseName || !phaseDir) {
+    return false;
+  }
+  const phaseDirBaseName = phaseDir.split("/").at(-1);
+  if (!phaseDirBaseName) {
+    return false;
+  }
+  const phaseDirSlug = phaseDirBaseName.replace(/^\d+(?:\.\d+)?-/, "");
+  return phaseDirSlug.length > 0 && phaseDirSlug === slug;
+}
+function shouldTrimUpdatePlanPath(result) {
+  const pathValue = getString(result, "path");
+  const savedPaths = asRecord2(result.savedPaths);
+  const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
+  return pathValue !== null && metadataPath !== null && pathValue === metadataPath;
+}
+function trimRedundantInstallProvenanceSource(result) {
+  const extensionPath = getString(result, "extensionPath");
+  const installProvenance = asRecord2(result.installProvenance);
+  const source = typeof installProvenance?.source === "string" ? installProvenance.source : null;
+  if (extensionPath === null || installProvenance === null || source !== extensionPath) {
+    return result;
+  }
+  const { source: _source, ...trimmedInstallProvenance } = installProvenance;
+  return {
+    ...result,
+    installProvenance: trimmedInstallProvenance
+  };
+}
+function trimUpdatePlanPublicFields(result) {
+  const { extensionManifestPath: _extensionManifestPath, ...manifestTrimmedResult } = result;
+  const provenanceTrimmedResult = trimRedundantInstallProvenanceSource(manifestTrimmedResult);
+  let trimmedResult = provenanceTrimmedResult;
+  const savedPaths = asRecord2(trimmedResult.savedPaths);
+  const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
+  const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
+  const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path13.dirname(metadataPath) === updatesDir && path13.dirname(checklistPath) === updatesDir;
+  if (shouldTrimUpdatesDir && savedPaths !== null) {
+    const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
+    trimmedResult = {
+      ...trimmedResult,
+      savedPaths: trimmedSavedPaths
+    };
+  }
+  if (shouldTrimUpdatePlanPath(trimmedResult)) {
+    const { path: _path, ...pathTrimmedResult } = trimmedResult;
+    return pathTrimmedResult;
+  }
+  return trimmedResult;
+}
+function trimTopLevelStatePath(result) {
+  const { statePath: _statePath, ...trimmedResult } = result;
+  return trimmedResult;
+}
+function trimEmptyTopLevelWarnings(result) {
+  if (!Array.isArray(result.warnings) || result.warnings.length !== 0) {
+    return result;
+  }
+  const { warnings: _warnings, ...trimmedResult } = result;
+  return trimmedResult;
+}
+function trimRedundantConfigGetSourcePath(result) {
+  const sourcePath = getString(result, "sourcePath");
+  const provenance = asRecord2(result.provenance);
+  const defaultsPath = typeof provenance?.defaultsPath === "string" ? provenance.defaultsPath : null;
+  const projectPath = typeof provenance?.projectPath === "string" ? provenance.projectPath : null;
+  if (sourcePath === null || sourcePath !== defaultsPath && sourcePath !== projectPath) {
+    return result;
+  }
+  const { sourcePath: _sourcePath, ...trimmedResult } = result;
+  return trimmedResult;
+}
+function trimEmptyTopLevelArrayFields(result, keys) {
+  let trimmedResult = result;
+  for (const key of keys) {
+    const value = trimmedResult[key];
+    if (!Array.isArray(value) || value.length !== 0) {
+      continue;
+    }
+    const { [key]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
+    trimmedResult = nextTrimmedResult;
+  }
+  return trimmedResult;
+}
+function trimRoadmapReadPublicFields(result) {
+  let trimmedResult = trimEmptyTopLevelArrayFields(result, [
+    "warnings",
+    "recovery"
+  ]);
+  const roadmap = asRecord2(trimmedResult.roadmap);
+  const phases = trimmedResult.phases;
+  if (!roadmap || !Array.isArray(phases) || roadmap.phaseCount !== phases.length) {
+    return trimmedResult;
+  }
+  const { phaseCount: _phaseCount, ...trimmedRoadmap } = roadmap;
+  trimmedResult = {
+    ...trimmedResult,
+    roadmap: trimmedRoadmap
+  };
+  return trimmedResult;
+}
+function trimPhaseLocatePublicFields(result) {
+  return trimEmptyTopLevelArrayFields(result, [
+    "warnings",
+    "recovery"
+  ]);
+}
+function shouldTrimPhasePlanIndexWaves(result) {
+  const plans = result.plans;
+  const waves = result.waves;
+  if (!Array.isArray(plans) || !asRecord2(waves)) {
+    return false;
+  }
+  const derivedWaves = {};
+  for (const plan of plans) {
+    const planRecord = asRecord2(plan);
+    const planPath = typeof planRecord?.path === "string" ? planRecord.path : null;
+    const wave = typeof planRecord?.wave === "number" ? planRecord.wave : null;
+    if (planPath === null) {
+      return false;
+    }
+    const waveKey = String(wave ?? "unassigned");
+    derivedWaves[waveKey] ??= [];
+    derivedWaves[waveKey].push(planPath);
+  }
+  return areEquivalentJsonValues(derivedWaves, waves);
+}
+function shouldTrimCommandCatalogWaves(result) {
+  const commands = asRecord2(result.commands);
+  const waves = asRecord2(result.waves);
+  if (!commands || !waves) {
+    return false;
+  }
+  const derivedWaves = {};
+  for (const [commandName, commandValue] of Object.entries(commands)) {
+    const commandRecord = asRecord2(commandValue);
+    const wave = typeof commandRecord?.wave === "number" ? commandRecord.wave : null;
+    if (wave === null) {
+      return false;
+    }
+    const waveKey = String(wave);
+    derivedWaves[waveKey] ??= [];
+    derivedWaves[waveKey].push(commandName);
+  }
+  return areEquivalentJsonValues(derivedWaves, waves);
+}
+function trimWorkstreamPublicStatePath(workstream) {
+  const workstreamRecord = asRecord2(workstream);
+  if (!workstreamRecord) {
+    return workstream;
+  }
+  const { statePath: _statePath, ...trimmedWorkstream } = workstreamRecord;
+  return trimmedWorkstream;
+}
+function trimWorkstreamPublicFields(result) {
+  const trimmedActive = trimWorkstreamPublicStatePath(result.active);
+  const trimmedWorkstreams = Array.isArray(result.workstreams) ? result.workstreams.map((entry) => trimWorkstreamPublicStatePath(entry)) : result.workstreams;
+  return {
+    ...result,
+    active: trimmedActive,
+    workstreams: trimmedWorkstreams
+  };
+}
+function shouldTrimStateLoadBlockers(result) {
+  const topLevelBlockers = result.blockers;
+  const state = asRecord2(result.state);
+  const nestedBlockers = state?.blockers;
+  return Array.isArray(topLevelBlockers) && Array.isArray(nestedBlockers) && areEquivalentJsonValues(topLevelBlockers, nestedBlockers);
+}
+function trimPhaseResearchStatusPlanningDiagnostics(result) {
+  const planningReadiness = asRecord2(result.planningReadiness);
+  if (!planningReadiness || !Array.isArray(planningReadiness.diagnostics)) {
+    return result;
+  }
+  const nestedDiagnostics = planningReadiness.diagnostics;
+  const topLevelContextDiagnostics = result.contextDiagnostics;
+  const topLevelUiSpecDiagnostics = result.uiSpecDiagnostics;
+  const duplicatesContextDiagnostics = Array.isArray(topLevelContextDiagnostics) && areEquivalentJsonValues(nestedDiagnostics, topLevelContextDiagnostics);
+  const duplicatesUiSpecDiagnostics = Array.isArray(topLevelUiSpecDiagnostics) && areEquivalentJsonValues(nestedDiagnostics, topLevelUiSpecDiagnostics);
+  if (!duplicatesContextDiagnostics && !duplicatesUiSpecDiagnostics) {
+    return result;
+  }
+  const { diagnostics: _diagnostics, ...trimmedPlanningReadiness } = planningReadiness;
+  return {
+    ...result,
+    planningReadiness: trimmedPlanningReadiness
+  };
+}
+function shouldTrimProjectStatusBootstrapNextAction(result) {
+  const nextAction = getNextAction(result);
+  const bootstrap = asRecord2(result.bootstrap);
+  const recommendedNextAction = typeof bootstrap?.recommendedNextAction === "string" && bootstrap.recommendedNextAction.length > 0 ? bootstrap.recommendedNextAction : null;
+  return nextAction !== null && recommendedNextAction !== null && nextAction === recommendedNextAction;
+}
+function shouldTrimNestedWarnings(result, key) {
+  const topLevelWarnings = result.warnings;
+  const nestedRecord = asRecord2(result[key]);
+  const nestedWarnings = nestedRecord?.warnings;
+  if (!Array.isArray(topLevelWarnings) || !Array.isArray(nestedWarnings)) {
+    return false;
+  }
+  if (nestedWarnings.length === 0) {
+    return false;
+  }
+  return nestedWarnings.every((warning) => topLevelWarnings.includes(warning));
+}
+function trimNestedWarnings(result, key) {
+  const nestedRecord = asRecord2(result[key]);
+  if (!nestedRecord || !("warnings" in nestedRecord)) {
+    return result;
+  }
+  const { warnings: _warnings, ...trimmedNestedRecord } = nestedRecord;
+  return {
+    ...result,
+    [key]: trimmedNestedRecord
+  };
+}
+function shouldTrimPhaseContextCodebaseWarnings(result) {
+  const topLevelWarnings = result.warnings;
+  const codebase = asRecord2(result.codebase);
+  const nestedWarnings = codebase?.warnings;
+  if (!Array.isArray(topLevelWarnings) || !Array.isArray(nestedWarnings)) {
+    return false;
+  }
+  if (nestedWarnings.length === 0) {
+    return false;
+  }
+  return nestedWarnings.every((warning) => topLevelWarnings.includes(warning));
+}
+function trimPhaseContextCodebaseWarnings(result) {
+  const codebase = asRecord2(result.codebase);
+  if (!codebase || !("warnings" in codebase)) {
+    return result;
+  }
+  const { warnings: _warnings, ...trimmedCodebase } = codebase;
+  return {
+    ...result,
+    codebase: trimmedCodebase
+  };
+}
+function shouldTrimPhaseValidationRenderValidationWarnings(result) {
+  const topLevelWarnings = result.warnings;
+  const validation = asRecord2(result.validation);
+  const nestedWarnings = validation?.warnings;
+  if (!Array.isArray(topLevelWarnings) || !Array.isArray(nestedWarnings)) {
+    return false;
+  }
+  if (nestedWarnings.length === 0) {
+    return false;
+  }
+  return nestedWarnings.every((warning) => topLevelWarnings.includes(warning));
+}
+function trimPhaseValidationRenderValidationWarnings(result) {
+  const validation = asRecord2(result.validation);
+  if (!validation || !("warnings" in validation)) {
+    return result;
+  }
+  const { warnings: _warnings, ...trimmedValidation } = validation;
+  return {
+    ...result,
+    validation: trimmedValidation
+  };
+}
+function trimImpactContextLoadConfigPublicFields(result) {
+  const config2 = asRecord2(result.config);
+  if (!config2) {
+    return result;
+  }
+  const {
+    provenance: _provenance,
+    sourcePath: _sourcePath,
+    ...trimmedConfig
+  } = config2;
+  return {
+    ...result,
+    config: trimmedConfig
+  };
+}
+function trimImpactConfigGetPublicWarnings(result) {
+  if (!Array.isArray(result.warnings)) {
+    return result;
+  }
+  const warnings = result.warnings.filter(
+    (warning) => warning !== IMPACT_CONFIG_SUCCESS_WARNING
+  );
+  return trimEmptyTopLevelWarnings({
+    ...result,
+    warnings
+  });
+}
+function trimImpactAnalyzeDuplicatedTopLevelReportFields(result) {
+  const report = asRecord2(result.report);
+  if (!report) {
+    return result;
+  }
+  let trimmedResult = result;
+  for (const key of IMPACT_ANALYZE_DUPLICATE_REPORT_KEYS) {
+    if (!(key in trimmedResult) || !(key in report)) {
+      continue;
+    }
+    if (!areEquivalentJsonValues(trimmedResult[key], report[key])) {
+      continue;
+    }
+    const { [key]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
+    trimmedResult = nextTrimmedResult;
+  }
+  return trimmedResult;
+}
+function trimImpactScopeResolveDuplicatedChangedFiles(result) {
+  const scope = asRecord2(result.scope);
+  const scopeFiles = scope?.files;
+  const changedFiles = result.changedFiles;
+  if (!Array.isArray(scopeFiles) || !Array.isArray(changedFiles)) {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  const warningsTrimmedResult = trimEmptyTopLevelWarnings(result);
+  if (!areEquivalentJsonValues(scopeFiles, changedFiles)) {
+    return warningsTrimmedResult;
+  }
+  const { changedFiles: _changedFiles, ...trimmedResult } = warningsTrimmedResult;
+  return trimmedResult;
+}
+function trimReviewScopeDuplicatedAuthoringContext(result) {
+  const authoringContext = asRecord2(result.authoringContext);
+  if (!authoringContext) {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  let trimmedAuthoringContext = authoringContext;
+  for (const key of ["phase", "files", "reviewMode"]) {
+    if (!(key in trimmedAuthoringContext) || !(key in result)) {
+      continue;
+    }
+    if (!areEquivalentJsonValues(trimmedAuthoringContext[key], result[key])) {
+      continue;
+    }
+    const { [key]: _trimmedField, ...nextTrimmedAuthoringContext } = trimmedAuthoringContext;
+    trimmedAuthoringContext = nextTrimmedAuthoringContext;
+  }
+  const warningsTrimmedResult = trimEmptyTopLevelWarnings(result);
+  if (trimmedAuthoringContext === authoringContext) {
+    return warningsTrimmedResult;
+  }
+  return {
+    ...warningsTrimmedResult,
+    authoringContext: trimmedAuthoringContext
+  };
+}
+function derivePlanStringArray(plans, key) {
+  if (!Array.isArray(plans)) {
+    return null;
+  }
+  const derivedValues = [];
+  for (const plan of plans) {
+    const value = asRecord2(plan)?.[key];
+    if (typeof value !== "string") {
+      return null;
+    }
+    derivedValues.push(value);
+  }
+  return derivedValues;
+}
+function shouldTrimPhaseExecutionTargetPlanField(result, field, plansKey, planKey) {
+  const fieldValue = result[field];
+  if (!Array.isArray(fieldValue)) {
+    return false;
+  }
+  const derivedValues = derivePlanStringArray(result[plansKey], planKey);
+  return derivedValues !== null && areEquivalentJsonValues(derivedValues, fieldValue);
+}
+function trimPhaseExecutionTargetsPublicFields(result) {
+  let trimmedResult = result;
+  for (const [field, plansKey, planKey] of [
+    ["candidatePlanIds", "candidatePlans", "planId"],
+    ["candidatePlanPaths", "candidatePlans", "path"],
+    ["selectedPlanIds", "selectedPlans", "planId"],
+    ["selectedPlanPaths", "selectedPlans", "path"]
+  ]) {
+    if (!shouldTrimPhaseExecutionTargetPlanField(trimmedResult, field, plansKey, planKey)) {
+      continue;
+    }
+    const { [field]: _trimmedField, ...nextTrimmedResult } = trimmedResult;
+    trimmedResult = nextTrimmedResult;
+  }
+  return trimmedResult;
+}
+function trimWorkspaceResponsePaths(result, entry, pathKey) {
+  const { registryPath: _registryPath, ...registryTrimmedResult } = result;
+  let trimmedResult = registryTrimmedResult;
+  const pathValue = getString(result, pathKey);
+  const entryPath = typeof entry?.path === "string" ? entry.path : null;
+  if (pathValue !== null && entryPath !== null && pathValue === entryPath) {
+    const { [pathKey]: _duplicatePath, ...nextTrimmedResult } = trimmedResult;
+    trimmedResult = nextTrimmedResult;
+  }
+  const manifestPath = getString(result, "manifestPath");
+  const entryManifestPath = typeof entry?.manifestPath === "string" ? entry.manifestPath : null;
+  if (manifestPath !== null && entryManifestPath !== null && manifestPath === entryManifestPath) {
+    const { manifestPath: _duplicateManifestPath, ...nextTrimmedResult } = trimmedResult;
+    trimmedResult = nextTrimmedResult;
+  }
+  if (!entry) {
+    return trimmedResult;
+  }
+  const { manifestPath: _nestedManifestPath, ...trimmedEntry } = entry;
+  return {
+    ...trimmedResult,
+    [pathKey === "workspacePath" ? "registryEntry" : "removedEntry"]: trimmedEntry
+  };
+}
+function trimPatchListPublicFields(result) {
+  const trimmedPatches = Array.isArray(result.patches) ? result.patches.map((patchEntry) => {
+    const patchRecord = asRecord2(patchEntry);
+    if (!patchRecord) {
+      return patchEntry;
+    }
+    const {
+      manifestPath: _manifestPath,
+      patchPath: _patchPath,
+      auditPath: _auditPath,
+      ...trimmedPatchRecord
+    } = patchRecord;
+    return trimmedPatchRecord;
+  }) : result.patches;
+  const { registryPath: _registryPath, ...trimmedResult } = result;
+  return {
+    ...trimmedResult,
+    patches: trimmedPatches
+  };
+}
+function trimWorkspaceRegistryPublicFields(result) {
+  const trimmedWorkspaces = Array.isArray(result.workspaces) ? result.workspaces.map((workspaceEntry) => {
+    const workspaceRecord = asRecord2(workspaceEntry);
+    if (!workspaceRecord) {
+      return workspaceEntry;
+    }
+    const { manifestPath: _manifestPath, ...trimmedWorkspaceRecord } = workspaceRecord;
+    return trimmedWorkspaceRecord;
+  }) : result.workspaces;
+  const { registryPath: _registryPath, ...trimmedResult } = result;
+  return {
+    ...trimmedResult,
+    workspaces: trimmedWorkspaces
+  };
 }
 function truncateDiagnosticSummary(value) {
   if (value.length <= MAX_DIAGNOSTIC_SUMMARY_LENGTH) {
@@ -72413,7 +72999,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path13 = findSummaryPath(result);
+  const path14 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -72429,8 +73015,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path13) {
-    details.push(`at \`${path13}\``);
+  if (path14) {
+    details.push(`at \`${path14}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);
@@ -72449,13 +73035,340 @@ function summarizeToolResult(toolName, result) {
   const diagnosticSuffix = buildDiagnosticSuffix(status, result);
   return `${operationVerb} ${subject}${detailSuffix}.${diagnosticSuffix}${guidanceSuffix}`;
 }
-function createToolResponseContent(_toolName, result) {
+function createToolResponseContent(toolName, result) {
+  const publicResult = sanitizeToolResultForPublicResponse(toolName, result);
   return [
     {
       type: "text",
-      text: JSON.stringify(result)
+      text: JSON.stringify(publicResult)
     }
   ];
+}
+function sanitizeToolResultForPublicResponse(toolName, result) {
+  if (toolName === "blueprint_project_init") {
+    const status2 = getString(result, "status");
+    if (status2 === "invalid") {
+      return result;
+    }
+    const bootstrapDiagnostics = asRecord2(result.bootstrapDiagnostics);
+    const placeholderArtifacts = bootstrapDiagnostics?.placeholderArtifacts;
+    const {
+      configProvenance: _configProvenance,
+      bootstrapDiagnostics: _bootstrapDiagnostics,
+      ...trimmedResult2
+    } = result;
+    if (Array.isArray(placeholderArtifacts)) {
+      return trimEmptyTopLevelWarnings({
+        ...trimmedResult2,
+        bootstrapDiagnostics: {
+          placeholderArtifacts
+        }
+      });
+    }
+    return trimEmptyTopLevelWarnings(trimmedResult2);
+  }
+  if (toolName === "blueprint_config_set") {
+    const {
+      scope,
+      updatedKeys,
+      configPath,
+      warnings
+    } = result;
+    return trimEmptyTopLevelWarnings({
+      scope,
+      updatedKeys,
+      configPath,
+      warnings
+    });
+  }
+  if (toolName === "blueprint_config_get") {
+    return trimRedundantConfigGetSourcePath(result);
+  }
+  if (toolName === "blueprint_impact_config_get") {
+    return trimImpactConfigGetPublicWarnings(result);
+  }
+  if (toolName === "blueprint_review_load_findings") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_workstream_list" || toolName === "blueprint_workstream_mutate") {
+    const trimmedNestedResult = trimEmptyTopLevelWarnings(
+      trimWorkstreamPublicFields(result)
+    );
+    const {
+      rootPath: _rootPath,
+      indexPath: _indexPath,
+      ...resultWithoutPaths
+    } = trimmedNestedResult;
+    const active = asRecord2(trimmedNestedResult.active);
+    const workstreams = trimmedNestedResult.workstreams;
+    if (active && Array.isArray(workstreams)) {
+      const duplicateActive = workstreams.some(
+        (entry) => areEquivalentJsonValues(entry, active)
+      );
+      if (duplicateActive) {
+        const { active: _active, ...trimmedResult2 } = resultWithoutPaths;
+        return trimmedResult2;
+      }
+    }
+    return resultWithoutPaths;
+  }
+  if (toolName === "blueprint_workspace_create") {
+    const registryEntry = asRecord2(result.registryEntry);
+    const nestedRepos = registryEntry?.repos;
+    const repoMembers = result.repoMembers;
+    let trimmedResult2 = trimWorkspaceResponsePaths(
+      result,
+      registryEntry,
+      "workspacePath"
+    );
+    if (Array.isArray(nestedRepos) && Array.isArray(repoMembers)) {
+      if (areEquivalentJsonValues(nestedRepos, repoMembers)) {
+        const { repoMembers: _repoMembers, ...nextTrimmedResult } = trimmedResult2;
+        trimmedResult2 = nextTrimmedResult;
+      }
+    }
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_workspace_remove") {
+    const removedEntry = asRecord2(result.removedEntry);
+    const nestedRepos = removedEntry?.repos;
+    const removedMembers = result.removedMembers;
+    let trimmedResult2 = trimWorkspaceResponsePaths(
+      result,
+      removedEntry,
+      "removedPath"
+    );
+    if (Array.isArray(nestedRepos) && Array.isArray(removedMembers)) {
+      if (areEquivalentJsonValues(nestedRepos, removedMembers)) {
+        const { removedMembers: _removedMembers, ...nextTrimmedResult } = trimmedResult2;
+        trimmedResult2 = nextTrimmedResult;
+      }
+    }
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_workspace_registry_get") {
+    return trimWorkspaceRegistryPublicFields(result);
+  }
+  if (toolName === "blueprint_pause_handoff_write") {
+    const status2 = getString(result, "status");
+    const isSuccessfulWriteStatus2 = status2 === "created" || status2 === "updated" || status2 === "reused";
+    const shouldTrimHandoff = (isSuccessfulWriteStatus2 || status2 === "invalid") && "handoff" in result;
+    if (shouldTrimHandoff) {
+      const { handoff: _handoff, ...trimmedResult2 } = result;
+      return trimEmptyTopLevelWarnings(trimmedResult2);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_pause_handoff_get") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_update_plan") {
+    return trimEmptyTopLevelWarnings(trimUpdatePlanPublicFields(result));
+  }
+  if (toolName === "blueprint_update_check") {
+    const { extensionManifestPath: _extensionManifestPath, ...trimmedResult2 } = result;
+    return trimEmptyTopLevelWarnings(trimRedundantInstallProvenanceSource(trimmedResult2));
+  }
+  if (toolName === "blueprint_state_load") {
+    if (shouldTrimStateLoadBlockers(result)) {
+      const { blockers: _blockers, ...trimmedResult2 } = result;
+      return trimmedResult2;
+    }
+    return result;
+  }
+  if (toolName === "blueprint_state_update" || toolName === "blueprint_state_sync") {
+    return trimEmptyTopLevelWarnings(trimTopLevelStatePath(result));
+  }
+  if (toolName === "blueprint_roadmap_read") {
+    return trimRoadmapReadPublicFields(result);
+  }
+  if (toolName === "blueprint_phase_locate") {
+    return trimPhaseLocatePublicFields(result);
+  }
+  if (toolName === "blueprint_command_catalog") {
+    if (!shouldTrimCommandCatalogWaves(result)) {
+      return result;
+    }
+    const { waves: _waves, ...trimmedResult2 } = result;
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_phase_plan_index") {
+    if (!shouldTrimPhasePlanIndexWaves(result)) {
+      return result;
+    }
+    const { waves: _waves, ...trimmedResult2 } = result;
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_phase_execution_targets") {
+    return trimPhaseExecutionTargetsPublicFields(result);
+  }
+  if (toolName === "blueprint_phase_checkpoint_get") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_artifact_list" || toolName === "blueprint_phase_summary_index" || toolName === "blueprint_artifact_report_authoring_context") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_phase_research_status") {
+    return trimPhaseResearchStatusPlanningDiagnostics(result);
+  }
+  if (toolName === "blueprint_phase_context") {
+    if (shouldTrimPhaseContextCodebaseWarnings(result)) {
+      return trimPhaseContextCodebaseWarnings(result);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_phase_validation_render") {
+    if (shouldTrimPhaseValidationRenderValidationWarnings(result)) {
+      return trimPhaseValidationRenderValidationWarnings(result);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_impact_context_load") {
+    let trimmedResult2 = trimImpactContextLoadConfigPublicFields(result);
+    if (shouldTrimNestedWarnings(trimmedResult2, "config")) {
+      trimmedResult2 = trimNestedWarnings(trimmedResult2, "config");
+    }
+    if (shouldTrimNestedWarnings(trimmedResult2, "roadmap")) {
+      trimmedResult2 = trimNestedWarnings(trimmedResult2, "roadmap");
+    }
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_impact_analyze") {
+    return trimImpactAnalyzeDuplicatedTopLevelReportFields(result);
+  }
+  if (toolName === "blueprint_impact_scope_resolve") {
+    return trimImpactScopeResolveDuplicatedChangedFiles(result);
+  }
+  if (toolName === "blueprint_review_scope") {
+    return trimReviewScopeDuplicatedAuthoringContext(result);
+  }
+  if (toolName === "blueprint_impact_output_render") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_project_status") {
+    if (!shouldTrimProjectStatusBootstrapNextAction(result)) {
+      return result;
+    }
+    const bootstrap = asRecord2(result.bootstrap);
+    if (!bootstrap) {
+      return result;
+    }
+    const {
+      recommendedNextAction: _recommendedNextAction,
+      ...trimmedBootstrap
+    } = bootstrap;
+    return {
+      ...result,
+      bootstrap: trimmedBootstrap
+    };
+  }
+  if (toolName === "blueprint_artifact_mutate_index") {
+    if (shouldTrimMatchedEntryIds(result)) {
+      const { matchedEntryIds: _matchedEntryIds, ...trimmedResult2 } = result;
+      return trimmedResult2;
+    }
+    return result;
+  }
+  if (toolName === "blueprint_roadmap_promote_backlog") {
+    let trimmedResult2 = result;
+    if (shouldTrimSelectedBacklogIds(result)) {
+      const { selectedBacklogIds: _selectedBacklogIds, ...nextTrimmedResult } = trimmedResult2;
+      trimmedResult2 = nextTrimmedResult;
+    }
+    if (shouldTrimCreatedPhaseDirs(result)) {
+      const { createdPhaseDirs: _createdPhaseDirs, ...nextTrimmedResult } = trimmedResult2;
+      trimmedResult2 = nextTrimmedResult;
+    }
+    if (getString(result, "status") === "updated") {
+      return trimEmptyTopLevelWarnings(trimmedResult2);
+    }
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_roadmap_add_phase" || toolName === "blueprint_roadmap_insert_phase") {
+    const slugTrimmedResult = shouldTrimRoadmapPhaseSlug(toolName, result) ? (({ slug: _slug, ...trimmedResult2 }) => trimmedResult2)(result) : result;
+    if (getBoolean(result, "written") === true) {
+      return trimEmptyTopLevelWarnings(slugTrimmedResult);
+    }
+    return slugTrimmedResult;
+  }
+  if (toolName === "blueprint_roadmap_remove_phase") {
+    if (getBoolean(result, "written") === true) {
+      return trimEmptyTopLevelWarnings(result);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_artifact_scaffold") {
+    return trimEmptyTopLevelWarnings(result);
+  }
+  if (toolName === "blueprint_patch_record") {
+    const {
+      registryPath: _registryPath,
+      manifestPath: _manifestPath,
+      patchPath: _patchPath,
+      auditPath: _auditPath,
+      ...trimmedResult2
+    } = result;
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_patch_list") {
+    return trimPatchListPublicFields(result);
+  }
+  if (toolName === "blueprint_patch_reapply") {
+    const { registryPath: _registryPath, ...trimmedResult2 } = result;
+    return trimmedResult2;
+  }
+  if (toolName === "blueprint_artifact_validate") {
+    if (getBoolean(result, "valid") !== true) {
+      return result;
+    }
+    return trimEmptyTopLevelArrayFields(result, [
+      "issues",
+      "diagnostics",
+      "suggestedRepairs"
+    ]);
+  }
+  if (toolName === "blueprint_phase_summary_write" || toolName === "blueprint_codebase_artifact_write" || toolName === "blueprint_phase_validation_write" || toolName === "blueprint_artifact_report_write") {
+    const status2 = getString(result, "status");
+    const isSuccessfulWriteStatus2 = status2 === "created" || status2 === "updated" || status2 === "reused";
+    if (isSuccessfulWriteStatus2) {
+      const issues = result.issues;
+      const trimmedIssuesResult = Array.isArray(issues) && issues.length === 0 ? (({ issues: _issues, ...trimmedResult2 }) => trimmedResult2)(result) : result;
+      return trimEmptyTopLevelWarnings(trimmedIssuesResult);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_impact_report_write") {
+    const status2 = getString(result, "status");
+    const isSuccessfulWriteStatus2 = status2 === "written" || status2 === "overwritten" || status2 === "reused";
+    const errors = result.errors;
+    if (isSuccessfulWriteStatus2 && Array.isArray(errors) && errors.length === 0) {
+      const { errors: _errors, ...trimmedResult2 } = result;
+      return trimEmptyTopLevelWarnings(trimmedResult2);
+    }
+    if (status2 === "invalid") {
+      return trimEmptyTopLevelWarnings(result);
+    }
+    return result;
+  }
+  if (toolName === "blueprint_phase_checkpoint_put") {
+    if (getBoolean(result, "updated") === true) {
+      return trimEmptyTopLevelWarnings(result);
+    }
+    return result;
+  }
+  if (toolName !== "blueprint_phase_plan_write" && toolName !== "blueprint_phase_artifact_write") {
+    return result;
+  }
+  const status = getString(result, "status");
+  const validation = asRecord2(result.validation);
+  const validationValid = validation?.valid === true;
+  const isSuccessfulWriteStatus = status === "created" || status === "updated" || status === "reused";
+  const warningsTrimmedResult = trimEmptyTopLevelWarnings(result);
+  if (!isSuccessfulWriteStatus || !validationValid) {
+    return warningsTrimmedResult;
+  }
+  const { validation: _validation, ...trimmedResult } = warningsTrimmedResult;
+  return trimEmptyTopLevelWarnings(trimmedResult);
 }
 function isMutationTool(toolName) {
   return BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName);
@@ -72502,9 +73415,10 @@ function createBlueprintServer() {
       },
       async (args) => {
         const result = await executeToolHandlerWithFailureLogging(definition, args);
+        const publicResult = sanitizeToolResultForPublicResponse(definition.name, result);
         return {
           content: createToolResponseContent(definition.name, result),
-          structuredContent: result
+          structuredContent: publicResult
         };
       }
     );
@@ -72532,6 +73446,7 @@ export {
   createToolResponseContent,
   executeToolHandlerWithFailureLogging,
   isMutationTool,
+  sanitizeToolResultForPublicResponse,
   shouldLogMutationFailure,
   startServer,
   summarizeToolResult

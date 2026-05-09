@@ -404,6 +404,11 @@ type PhaseValidationValidateModelResult = {
   warnings: string[];
 };
 
+type PhaseValidationStandaloneValidateModelResult = Omit<
+  PhaseValidationValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
+
 type UatRenderCurrentTest = {
   number?: string;
   name?: string;
@@ -1035,7 +1040,7 @@ type PhasePlanWriteResult = {
     issues: string[];
     warnings: string[];
   };
-  modelValidation?: PhasePlanValidateModelResult | null;
+  modelValidation?: PhasePlanWriteModelValidationResult | null;
   warnings: string[];
 };
 
@@ -1132,6 +1137,16 @@ type PhasePlanValidateModelResult = {
   renderPreview: string | null;
   warnings: string[];
 };
+
+type PhasePlanStandaloneValidateModelResult = Omit<
+  PhasePlanValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
+
+type PhasePlanWriteModelValidationResult = Omit<
+  PhasePlanValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
 
 type PhaseSummaryRecord = {
   planId: string;
@@ -1284,6 +1299,11 @@ type PhaseSummaryValidateModelResult = {
   renderPreview: string | null;
   warnings: string[];
 };
+
+type PhaseSummaryStandaloneValidateModelResult = Omit<
+  PhaseSummaryValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
 
 type PhaseSummaryWriteResult = {
   phaseNumber: string;
@@ -7250,6 +7270,32 @@ async function phasePlanModelToContent(
   };
 }
 
+function trimPhasePlanWriteModelValidation(
+  validation: PhasePlanValidateModelResult
+): PhasePlanWriteModelValidationResult {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+
+  return trimmed;
+}
+
+function trimPhasePlanStandaloneValidateModelResult(
+  validation: PhasePlanValidateModelResult
+): PhasePlanStandaloneValidateModelResult {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+
+  return trimmed;
+}
+
 function phaseValidationDiagnostic(
   args: PhaseValidationModelDiagnostic
 ): PhaseValidationModelDiagnostic {
@@ -7267,6 +7313,32 @@ function emptyPhaseValidationDiagnosticCounts(): PhaseValidationValidateModelRes
     },
     byCode: {}
   };
+}
+
+function trimPhaseValidationStandaloneValidateModelResult(
+  validation: PhaseValidationValidateModelResult
+): PhaseValidationStandaloneValidateModelResult {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+
+  return trimmed;
+}
+
+function trimPhaseSummaryStandaloneValidateModelResult(
+  validation: PhaseSummaryValidateModelResult
+): PhaseSummaryStandaloneValidateModelResult {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...trimmed
+  } = validation;
+
+  return trimmed;
 }
 
 function countPhaseValidationDiagnostics(
@@ -10948,7 +11020,7 @@ export async function blueprintPhasePlanAuthoringContext(
 
 export async function blueprintPhasePlanValidateModel(
   args: PhasePlanValidateModelArgs
-): Promise<PhasePlanValidateModelResult> {
+): Promise<PhasePlanStandaloneValidateModelResult> {
   let context: Awaited<ReturnType<typeof resolvePhasePlanAuthoringContextData>>;
 
   try {
@@ -10965,7 +11037,7 @@ export async function blueprintPhasePlanValidateModel(
       })
     ];
 
-    return {
+    return trimPhasePlanStandaloneValidateModelResult({
       status: "invalid",
       valid: false,
       target: phasePlanValidateModelTarget({
@@ -10989,13 +11061,15 @@ export async function blueprintPhasePlanValidateModel(
       normalizedModel: null,
       renderPreview: null,
       warnings: []
-    };
+    });
   }
 
-  return validatePhasePlanModelWithContext({
+  const validation = await validatePhasePlanModelWithContext({
     model: args.model,
     context
   });
+
+  return trimPhasePlanStandaloneValidateModelResult(validation);
 }
 
 export async function blueprintPhasePlanWrite(
@@ -11070,7 +11144,7 @@ export async function blueprintPhasePlanWrite(
     let normalizedContent: string;
     let modelCoverageIssues: string[] = [];
     let modelWarnings: string[] = [];
-    let modelValidation: PhasePlanValidateModelResult | null = null;
+    let modelValidation: PhasePlanWriteModelValidationResult | null = null;
 
     if (hasModel) {
       const authoringContext = await resolvePhasePlanAuthoringContextData({
@@ -11079,7 +11153,7 @@ export async function blueprintPhasePlanWrite(
         planId
       });
       const modelRender = await phasePlanModelToContent(args.model, authoringContext);
-      modelValidation = modelRender.validation;
+      modelValidation = trimPhasePlanWriteModelValidation(modelRender.validation);
 
       if (!modelRender.content) {
         return {
@@ -12988,7 +13062,9 @@ export const phaseToolDefinitions = [
       "Validate a structured phase.verification or phase.uat model against the runtime task schema and return a canonical render preview without writing files.",
     inputSchema: phaseValidationValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintPhaseValidationValidateModel(args as PhaseValidationValidateModelArgs)
+      trimPhaseValidationStandaloneValidateModelResult(
+        await blueprintPhaseValidationValidateModel(args as PhaseValidationValidateModelArgs)
+      )
   },
   {
     name: "blueprint_phase_validation_write",
@@ -13068,7 +13144,9 @@ export const phaseToolDefinitions = [
       "Validate Markdown phase.summary draft content, or render a legacy structured model, and return semantic diagnostics plus a SUMMARY preview without writing files.",
     inputSchema: phaseSummaryValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintPhaseSummaryValidateModel(args as PhaseSummaryValidateModelArgs)
+      trimPhaseSummaryStandaloneValidateModelResult(
+        await blueprintPhaseSummaryValidateModel(args as PhaseSummaryValidateModelArgs)
+      )
   },
   {
     name: "blueprint_phase_summary_write",

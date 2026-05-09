@@ -657,6 +657,11 @@ type ArtifactReportValidateModelResult = {
   warnings: string[];
 };
 
+type ArtifactReportValidateModelPublicResult = Omit<
+  ArtifactReportValidateModelResult,
+  "taskSchema" | "normalizedModel" | "renderPreview"
+>;
+
 type ArtifactCodebaseWriteArgs = {
   cwd?: string;
   artifactId: CodebaseArtifactContractId;
@@ -12823,6 +12828,19 @@ export async function blueprintArtifactReportValidateModel(
   };
 }
 
+async function blueprintArtifactReportValidateModelPublic(
+  args: ArtifactReportValidateModelArgs
+): Promise<ArtifactReportValidateModelPublicResult> {
+  const {
+    taskSchema: _taskSchema,
+    normalizedModel: _normalizedModel,
+    renderPreview: _renderPreview,
+    ...publicResult
+  } = await blueprintArtifactReportValidateModel(args);
+
+  return publicResult;
+}
+
 function reportModelWriteIssues(reportName: string): string[] {
   const contractId = resolveReportContractId(reportName);
 
@@ -13274,7 +13292,7 @@ export const artifactToolDefinitions = [
       "Validate a structured report.add-tests or report.audit-fix model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
     inputSchema: artifactReportValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
-      blueprintArtifactReportValidateModel(args as ArtifactReportValidateModelArgs)
+      blueprintArtifactReportValidateModelPublic(args as ArtifactReportValidateModelArgs)
   },
   {
     name: "blueprint_artifact_report_write",

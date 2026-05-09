@@ -534,6 +534,7 @@ type ArtifactReportValidateModelResult = {
     renderPreview: string | null;
     warnings: string[];
 };
+type ArtifactReportValidateModelPublicResult = Omit<ArtifactReportValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
 type ArtifactCodebaseWriteArgs = {
     cwd?: string;
     artifactId: CodebaseArtifactContractId;
@@ -952,7 +953,7 @@ export declare const artifactToolDefinitions: ({
             scopeFiles: z.ZodArray<z.ZodString>;
         }, z.core.$strip>>;
     };
-    handler: (args: Record<string, unknown>) => Promise<ArtifactReportValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<ArtifactReportValidateModelPublicResult>;
 } | {
     name: string;
     description: string;

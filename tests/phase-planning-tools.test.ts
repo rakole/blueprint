@@ -728,7 +728,8 @@ test("phase plan writes persist structured models as canonical plan markdown", a
 
   assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
   assert.match(validated.schemaPath ?? "", /phase\.plan\.model\.schema\.json/);
-  assert.match(validated.renderPreview ?? "", /# Phase 03: Phase Discovery - Plan 01/);
+  assert.equal("normalizedModel" in validated, false);
+  assert.equal("renderPreview" in validated, false);
   assert.equal(created.status, "created", JSON.stringify(created, null, 2));
   assert.equal(created.planId, "01");
   assert.equal(created.path, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md");
@@ -1262,6 +1263,9 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   assert.equal(missingEvidence.modelValidation.status, "invalid");
   assert.equal(missingEvidence.modelValidation.target.artifact, "phase.plan");
   assert.ok(missingEvidence.modelValidation.diagnostics.length > 0);
+  assert.equal("taskSchema" in missingEvidence.modelValidation, false);
+  assert.equal("normalizedModel" in missingEvidence.modelValidation, false);
+  assert.equal("renderPreview" in missingEvidence.modelValidation, false);
   assert.match(
     missingEvidence.modelValidation.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n"),
     /Re-read blueprint_phase_plan_authoring_context/

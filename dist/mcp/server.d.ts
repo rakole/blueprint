@@ -13,10 +13,11 @@ export declare const blueprintToolRegistry: {
 };
 export declare const blueprintToolNames: string[];
 export declare function summarizeToolResult(toolName: string, result: ToolResult): string;
-export declare function createToolResponseContent(_toolName: string, result: ToolResult): Array<{
+export declare function createToolResponseContent(toolName: string, result: ToolResult): Array<{
     type: "text";
     text: string;
 }>;
+export declare function sanitizeToolResultForPublicResponse(toolName: string, result: ToolResult): ToolResult;
 export declare function isMutationTool(toolName: string): boolean;
 export declare function shouldLogMutationFailure(toolName: string, result: ToolResult): boolean;
 export declare function executeToolHandlerWithFailureLogging(definition: ToolDefinition, args: Record<string, unknown>): Promise<ToolResult>;

@@ -308,6 +308,7 @@ type PhaseValidationValidateModelResult = {
     renderPreview: string | null;
     warnings: string[];
 };
+type PhaseValidationStandaloneValidateModelResult = Omit<PhaseValidationValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
 type UatRenderCurrentTest = {
     number?: string;
     name?: string;
@@ -875,7 +876,7 @@ type PhasePlanWriteResult = {
         issues: string[];
         warnings: string[];
     };
-    modelValidation?: PhasePlanValidateModelResult | null;
+    modelValidation?: PhasePlanWriteModelValidationResult | null;
     warnings: string[];
 };
 type PhasePlanAuthoringContextResult = {
@@ -958,6 +959,8 @@ type PhasePlanValidateModelResult = {
     renderPreview: string | null;
     warnings: string[];
 };
+type PhasePlanStandaloneValidateModelResult = Omit<PhasePlanValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
+type PhasePlanWriteModelValidationResult = Omit<PhasePlanValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
 type PhaseSummaryRecord = {
     planId: string;
     path: string;
@@ -1091,6 +1094,7 @@ type PhaseSummaryValidateModelResult = {
     renderPreview: string | null;
     warnings: string[];
 };
+type PhaseSummaryStandaloneValidateModelResult = Omit<PhaseSummaryValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
 type PhaseSummaryWriteResult = {
     phaseNumber: string;
     phasePrefix: string;
@@ -1277,7 +1281,7 @@ export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<P
 export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise<PhasePlanReadResult>;
 export declare function blueprintPhasePlanValidate(args?: PhasePlanValidateArgs): Promise<PhasePlanValidationResult>;
 export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAuthoringContextArgs): Promise<PhasePlanAuthoringContextResult>;
-export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanValidateModelResult>;
+export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanStandaloneValidateModelResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
 export declare function blueprintPhaseSummaryAuthoringContext(args: PhaseSummaryAuthoringContextArgs): Promise<PhaseSummaryAuthoringContextResult>;
@@ -1543,7 +1547,7 @@ export declare const phaseToolDefinitions: ({
         }>;
         model: z.ZodUnknown;
     };
-    handler: (args: Record<string, unknown>) => Promise<PhaseValidationValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<PhaseValidationStandaloneValidateModelResult>;
 } | {
     name: string;
     description: string;
@@ -1598,7 +1602,7 @@ export declare const phaseToolDefinitions: ({
         planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         model: z.ZodUnknown;
     };
-    handler: (args: Record<string, unknown>) => Promise<PhasePlanValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<PhasePlanStandaloneValidateModelResult>;
 } | {
     name: string;
     description: string;
@@ -1655,7 +1659,7 @@ export declare const phaseToolDefinitions: ({
         content: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodUnknown>;
     };
-    handler: (args: Record<string, unknown>) => Promise<PhaseSummaryValidateModelResult>;
+    handler: (args: Record<string, unknown>) => Promise<PhaseSummaryStandaloneValidateModelResult>;
 } | {
     name: string;
     description: string;
