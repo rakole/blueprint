@@ -97,8 +97,24 @@ evidence, uncertainty, and consequences if wrong. The agent must not write
 artifacts, update state, fetch external sources independently, or draft command
 output as if it owned synthesis.
 
-If no suitable agent exists, use the same five-area analysis in the parent
-command without reducing output quality.
+## Single-Agent Fallback
+
+If no suitable agent exists, the parent command must run the same five-area
+analysis without reducing evidence depth or output quality. Do not substitute
+browser-only, web-search-only, shell-only, or generic helpers for Blueprint
+phase and workflow analysis.
+
+Work sequentially, one assumption area at a time:
+
+1. Build a compact carry-forward note from the resolved MCP reads: phase
+   boundary, workflow posture, saved context signals, and already-captured
+   corrections.
+2. Pick the next assumption area.
+3. Derive only that area's assumptions from current MCP evidence.
+4. Summarize the completed area back into the carry-forward note with the
+   assumption, evidence, uncertainty, why it matters, and any correction prompt
+   still worth asking.
+5. Move to the next area only after the current one is complete.
 
 ## Waiting State And Next Safe Action
 

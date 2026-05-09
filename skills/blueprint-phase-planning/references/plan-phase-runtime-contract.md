@@ -219,7 +219,10 @@ for Blueprint planning, codebase, or workflow analysis agents.
 
 ## No-Subagent Fallback
 
-When planner/checker agents are unavailable, continue sequentially:
+When planner/checker agents are unavailable, continue sequentially with the
+same plan quality, evidence coverage, and review bar expected from the bounded
+subagent path. Do not substitute browser-only, web-search-only, shell-only, or
+generic helpers for Blueprint planning, codebase, or workflow analysis.
 
 1. Compress the read context into a carry-forward note containing phase goal,
    requirements, locked decisions, deferred ideas, config gates, codebase
@@ -231,10 +234,13 @@ When planner/checker agents are unavailable, continue sequentially:
    readiness, must-have quality, and invalid scope-reduction language. This
    checklist is always required, and it becomes the final review fallback when
    `workflow.plan_check=true` but no suitable checker agent is available.
-4. Persist only after the current plan passes the inline checklist.
-5. Move to the next dependency wave only after summarizing what was already
+4. Compress the completed plan or topic back into the carry-forward note with
+   plan ids, requirement coverage decisions, evidence used, remaining blockers,
+   and what the next wave can assume.
+5. Persist only after the current plan passes the inline checklist.
+6. Move to the next dependency wave only after summarizing what was already
    written and what evidence still carries forward.
-6. If the inline checklist finds a blocker, repair the affected plan before
+7. If the inline checklist finds a blocker, repair the affected plan before
    drafting more plans.
 
 ## Retry And Repair Behavior
