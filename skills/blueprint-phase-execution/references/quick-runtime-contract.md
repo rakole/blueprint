@@ -26,9 +26,30 @@ helper guidance that apply to non-trivial quick runs.
 - Use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and
   `blueprint-verifier` only for bounded work that stays inside the confirmed
   quick-run scope.
+- If those Blueprint agents are unavailable, unnecessary, or unsafe for the
+  bounded scope, continue inline with the same evidence depth and output
+  quality one confirmed branch at a time.
+- Do not substitute browser-only, web-search-only, shell-only, or generic
+  helper agents for these Blueprint roles.
 - Tracker-backed branching is allowed only as session-local coordination for
   branchy bounded quick work. Pair it with visible `write_todos`, and do not
   let it impersonate a saved phase plan or lifecycle execution.
+
+## No-Subagent Fallback
+
+When optional Blueprint agents are unavailable or skipped, keep the quick run
+single-agent and sequential:
+
+1. Resolve the bounded task and any explicitly confirmed depth gate before
+   acting.
+2. Read only the evidence needed for the current branch or section.
+3. Complete one discuss, research, execution, or validation unit at a time
+   where the agent path could have isolated or parallelized work.
+4. After each completed unit, compress the result into compact carry-forward
+   context: scope handled, evidence used, decisions made, verification status,
+   and the next bounded unit.
+5. Persist the same durable quick-run evidence through MCP and keep routing
+   inside the implemented Blueprint surface.
 
 ## Persistence And Routing
 
