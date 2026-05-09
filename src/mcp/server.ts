@@ -93,7 +93,7 @@ const MUTATION_FAILURE_STATUSES = new Set([
   "error"
 ]);
 const DIAGNOSTIC_SUMMARY_LIMIT = 3;
-const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1000;
+const MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
 
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {

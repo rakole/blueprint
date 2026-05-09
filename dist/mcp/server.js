@@ -72119,7 +72119,7 @@ var MUTATION_FAILURE_STATUSES = /* @__PURE__ */ new Set([
   "error"
 ]);
 var DIAGNOSTIC_SUMMARY_LIMIT = 3;
-var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1e3;
+var MAX_DIAGNOSTIC_SUMMARY_LENGTH = 1500;
 for (const toolName of REQUIRED_CONFIG_TOOL_NAMES) {
   if (!TOOL_DEFINITIONS.some((definition) => definition.name === toolName)) {
     throw new Error(`Missing required config tool registration: ${toolName}`);

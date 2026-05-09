@@ -189,6 +189,28 @@ test("invalid model validation summaries surface diagnostic messages", () => {
   );
 });
 
+test("diagnostic summaries allow messages up to ten thousand characters before truncation", () => {
+  const longMessage = "A".repeat(5000);
+  const summary = summarizeToolResult("blueprint_phase_plan_validate_model", {
+    status: "invalid",
+    valid: false,
+    planId: "01",
+    path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+    diagnostics: [
+      {
+        source: "schema",
+        path: "model.summary",
+        code: "schema.longMessage",
+        message: longMessage
+      }
+    ],
+    warnings: []
+  });
+
+  assert.match(summary, new RegExp(`Diagnostics: ${longMessage}\\.$`));
+  assert.doesNotMatch(summary, /\.\.\.$/);
+});
+
 test("phase plan model tools mirror rich schema details into MCP text", () => {
   const planDiagnostics = [
     {
