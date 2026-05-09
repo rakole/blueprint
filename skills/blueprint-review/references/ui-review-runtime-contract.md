@@ -212,7 +212,9 @@ acceptable substitutes for `blueprint-ui-auditor`.
 ## No-Subagent Fallback
 
 If `blueprint-ui-auditor` is unavailable or unnecessary, continue sequentially
-in the parent session.
+in the parent session. The fallback must preserve the same evidence depth,
+scored-pillar rigor, and artifact quality as the auditor path; the only change
+is that the audit runs one pillar at a time in the parent flow.
 
 1. Read saved evidence first: summaries, UI spec, context or plans when
    available, validation or UAT artifacts, existing UI review for comparison

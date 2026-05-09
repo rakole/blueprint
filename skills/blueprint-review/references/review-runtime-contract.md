@@ -233,7 +233,10 @@ acceptable substitutes for `blueprint-reviewer` or for external reviewer CLIs.
 ## No-Subagent Fallback
 
 If `blueprint-reviewer` is unavailable or unnecessary, continue sequentially in
-the parent session.
+the parent session. The fallback must preserve the same saved-evidence depth,
+reviewer honesty, and artifact quality as the subagent path; the only change is
+that packet assembly and synthesis happen one isolated unit at a time in the
+parent flow.
 
 1. Assemble the review packet one evidence group at a time: phase identity,
    roadmap intent, plan list, plan bodies, requirements/context, research, and
