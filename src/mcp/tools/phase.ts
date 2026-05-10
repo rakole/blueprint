@@ -105,6 +105,18 @@ import {
   uniqueSortedStrings,
   type PhaseExecutionTargetConflictSurface
 } from "./phase-execution-surfaces.js";
+import {
+  completedRouteAfterSelectedCompletion,
+  dependencyPlanRowsForPlan,
+  extractPhaseSummaryMarkerValue,
+  formatCompletedSummaryRoute,
+  normalizeDependencyPlanIds,
+  parseSummaryArtifactPath,
+  phaseSummaryCompletedRoute,
+  routesMatch,
+  summaryPathFor,
+  type PhaseSummaryCompletedRouteValidation
+} from "./phase-summary-routing.js";
 
 type RoadmapReadArgs = {
   cwd?: string;
@@ -1270,16 +1282,6 @@ type PhaseSummaryStructuredModel = {
   }>;
   nextSafeAction: string;
 };
-
-type PhaseSummaryCompletedRoute = {
-  readiness: Extract<PhaseSummaryReadiness, "ready-for-validation" | "not-ready-for-validation">;
-  nextSafeAction: string;
-};
-
-type PhaseSummaryCompletedRouteValidation =
-  | { mode: "skip" }
-  | { mode: "exact"; route: PhaseSummaryCompletedRoute }
-  | { mode: "indexed" };
 
 type PhaseSummaryAuthoringContextResult = {
   status: "ready" | "invalid";
@@ -4040,28 +4042,6 @@ function selectRelevantPlanValidationIssues(
   });
 }
 
-function parseSummaryArtifactPath(
-  pathValue: string,
-  phasePrefix: string
-): string | null {
-  const match = pathValue.match(
-    new RegExp(`${phasePrefix.replace(".", "\\.")}-(\\d+)-SUMMARY\\.md$`)
-  );
-
-  return match ? normalizePlanId(match[1]) : null;
-}
-
-function summaryPathFor(
-  located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">,
-  planId: string
-): string {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    `-${normalizePlanId(planId)}-SUMMARY.md`
-  );
-}
-
 function toPhasePlanRecord(
   planId: string,
   pathValue: string,
@@ -4102,117 +4082,6 @@ function collectMissingDependencyPlanPaths(
       return availablePlanIds.has(normalizedDependency)
         ? []
         : [planPathFor(resolved, normalizedDependency)];
-    } catch {
-      return [];
-    }
-  });
-}
-
-function normalizeSummaryMarkerValue(value: string | null): string | null {
-  if (value === null) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-
-  if (
-    (trimmed.startsWith("`") && trimmed.endsWith("`")) ||
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1).trim();
-  }
-
-  return trimmed;
-}
-
-function phaseSummaryCompletedRoute(args: {
-  phaseNumber: string;
-  hasRemainingPendingPlans: boolean;
-}): PhaseSummaryCompletedRoute {
-  return args.hasRemainingPendingPlans
-    ? {
-        readiness: "not-ready-for-validation",
-        nextSafeAction: `/blu-execute-phase ${args.phaseNumber}`
-      }
-    : {
-        readiness: "ready-for-validation",
-        nextSafeAction: `/blu-validate-phase ${args.phaseNumber}`
-      };
-}
-
-function remainingPlanIdsAfterSelectedCompletion(args: {
-  planIds: string[];
-  completedPlanIds: ReadonlySet<string>;
-  selectedPlanId: string;
-}): string[] {
-  const completedAfterSelection = new Set(args.completedPlanIds);
-  completedAfterSelection.add(args.selectedPlanId);
-
-  return args.planIds.filter((planId) => !completedAfterSelection.has(planId));
-}
-
-function completedRouteAfterSelectedCompletion(args: {
-  phaseNumber: string;
-  planIds: string[];
-  completedPlanIds: ReadonlySet<string>;
-  selectedPlanId: string;
-}): PhaseSummaryCompletedRoute {
-  return phaseSummaryCompletedRoute({
-    phaseNumber: args.phaseNumber,
-    hasRemainingPendingPlans:
-      remainingPlanIdsAfterSelectedCompletion(args).length > 0
-  });
-}
-
-function routesMatch(
-  actual: { readiness: string | null; nextSafeAction: string | null },
-  expected: PhaseSummaryCompletedRoute
-): boolean {
-  return (
-    actual.readiness === expected.readiness &&
-    actual.nextSafeAction === expected.nextSafeAction
-  );
-}
-
-function formatCompletedSummaryRoute(route: PhaseSummaryCompletedRoute): string {
-  return `**Readiness:** ${route.readiness} and **Next Safe Action:** ${route.nextSafeAction}`;
-}
-
-function extractPhaseSummaryMarkerValue(content: string, marker: string): string | null {
-  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = content.match(new RegExp(`^\\*\\*${escapedMarker}:\\*\\*\\s*(.+)$`, "m"));
-
-  return normalizeSummaryMarkerValue(match?.[1] ?? null);
-}
-
-function dependencyPlanRowsForPlan(
-  dependsOn: string[],
-  availablePlanIds: ReadonlySet<string>,
-  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
-): Array<{ planId: string; path: string }> {
-  return dependsOn.flatMap((dependency) => {
-    try {
-      const normalizedDependency = normalizePlanId(dependency);
-
-      return availablePlanIds.has(normalizedDependency)
-        ? [
-            {
-              planId: normalizedDependency,
-              path: planPathFor(resolved, normalizedDependency)
-            }
-          ]
-        : [];
-    } catch {
-      return [];
-    }
-  });
-}
-
-function normalizeDependencyPlanIds(dependsOn: string[]): string[] {
-  return dependsOn.flatMap((dependency) => {
-    try {
-      return [normalizePlanId(dependency)];
     } catch {
       return [];
     }

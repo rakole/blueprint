@@ -27026,6 +27026,88 @@ var init_phase_execution_surfaces = __esm({
   }
 });
 
+// src/mcp/tools/phase-summary-routing.ts
+function parseSummaryArtifactPath(pathValue, phasePrefix2) {
+  const match = pathValue.match(
+    new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-SUMMARY\\.md$`)
+  );
+  return match ? normalizePlanId(match[1]) : null;
+}
+function summaryPathFor(located, planId2) {
+  return `${located.phaseDir}/${located.phasePrefix}-${normalizePlanId(planId2)}-SUMMARY.md`;
+}
+function normalizeSummaryMarkerValue(value) {
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`") || trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+function phaseSummaryCompletedRoute(args) {
+  return args.hasRemainingPendingPlans ? {
+    readiness: "not-ready-for-validation",
+    nextSafeAction: `/blu-execute-phase ${args.phaseNumber}`
+  } : {
+    readiness: "ready-for-validation",
+    nextSafeAction: `/blu-validate-phase ${args.phaseNumber}`
+  };
+}
+function remainingPlanIdsAfterSelectedCompletion(args) {
+  const completedAfterSelection = new Set(args.completedPlanIds);
+  completedAfterSelection.add(args.selectedPlanId);
+  return args.planIds.filter((planId2) => !completedAfterSelection.has(planId2));
+}
+function completedRouteAfterSelectedCompletion(args) {
+  return phaseSummaryCompletedRoute({
+    phaseNumber: args.phaseNumber,
+    hasRemainingPendingPlans: remainingPlanIdsAfterSelectedCompletion(args).length > 0
+  });
+}
+function routesMatch(actual, expected) {
+  return actual.readiness === expected.readiness && actual.nextSafeAction === expected.nextSafeAction;
+}
+function formatCompletedSummaryRoute(route) {
+  return `**Readiness:** ${route.readiness} and **Next Safe Action:** ${route.nextSafeAction}`;
+}
+function extractPhaseSummaryMarkerValue(content, marker) {
+  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = content.match(new RegExp(`^\\*\\*${escapedMarker}:\\*\\*\\s*(.+)$`, "m"));
+  return normalizeSummaryMarkerValue(match?.[1] ?? null);
+}
+function dependencyPlanRowsForPlan(dependsOn, availablePlanIds, resolved) {
+  return dependsOn.flatMap((dependency) => {
+    try {
+      const normalizedDependency = normalizePlanId(dependency);
+      return availablePlanIds.has(normalizedDependency) ? [
+        {
+          planId: normalizedDependency,
+          path: planPathFor(resolved, normalizedDependency)
+        }
+      ] : [];
+    } catch {
+      return [];
+    }
+  });
+}
+function normalizeDependencyPlanIds(dependsOn) {
+  return dependsOn.flatMap((dependency) => {
+    try {
+      return [normalizePlanId(dependency)];
+    } catch {
+      return [];
+    }
+  });
+}
+var init_phase_summary_routing = __esm({
+  "src/mcp/tools/phase-summary-routing.ts"() {
+    "use strict";
+    init_phase_plan_identifiers();
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -28601,19 +28683,6 @@ function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
     return issue2.includes(`dependency ${planId2} `) || issue2.includes(`plan "${planId2}"`) || issue2.includes(`plan ${planId2}`) || issue2.includes(`plan_id "${planId2}"`) || issue2.includes(`path plan id "${planId2}"`);
   });
 }
-function parseSummaryArtifactPath(pathValue, phasePrefix2) {
-  const match = pathValue.match(
-    new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-SUMMARY\\.md$`)
-  );
-  return match ? normalizePlanId(match[1]) : null;
-}
-function summaryPathFor(located, planId2) {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    `-${normalizePlanId(planId2)}-SUMMARY.md`
-  );
-}
 function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
   const validation = validatePlanArtifactContent(content, expectedPhase);
   return {
@@ -28640,71 +28709,6 @@ function collectMissingDependencyPlanPaths(dependsOn, availablePlanIds, resolved
     try {
       const normalizedDependency = normalizePlanId(dependency);
       return availablePlanIds.has(normalizedDependency) ? [] : [planPathFor(resolved, normalizedDependency)];
-    } catch {
-      return [];
-    }
-  });
-}
-function normalizeSummaryMarkerValue(value) {
-  if (value === null) {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (trimmed.startsWith("`") && trimmed.endsWith("`") || trimmed.startsWith('"') && trimmed.endsWith('"') || trimmed.startsWith("'") && trimmed.endsWith("'")) {
-    return trimmed.slice(1, -1).trim();
-  }
-  return trimmed;
-}
-function phaseSummaryCompletedRoute(args) {
-  return args.hasRemainingPendingPlans ? {
-    readiness: "not-ready-for-validation",
-    nextSafeAction: `/blu-execute-phase ${args.phaseNumber}`
-  } : {
-    readiness: "ready-for-validation",
-    nextSafeAction: `/blu-validate-phase ${args.phaseNumber}`
-  };
-}
-function remainingPlanIdsAfterSelectedCompletion(args) {
-  const completedAfterSelection = new Set(args.completedPlanIds);
-  completedAfterSelection.add(args.selectedPlanId);
-  return args.planIds.filter((planId2) => !completedAfterSelection.has(planId2));
-}
-function completedRouteAfterSelectedCompletion(args) {
-  return phaseSummaryCompletedRoute({
-    phaseNumber: args.phaseNumber,
-    hasRemainingPendingPlans: remainingPlanIdsAfterSelectedCompletion(args).length > 0
-  });
-}
-function routesMatch(actual, expected) {
-  return actual.readiness === expected.readiness && actual.nextSafeAction === expected.nextSafeAction;
-}
-function formatCompletedSummaryRoute(route) {
-  return `**Readiness:** ${route.readiness} and **Next Safe Action:** ${route.nextSafeAction}`;
-}
-function extractPhaseSummaryMarkerValue(content, marker) {
-  const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = content.match(new RegExp(`^\\*\\*${escapedMarker}:\\*\\*\\s*(.+)$`, "m"));
-  return normalizeSummaryMarkerValue(match?.[1] ?? null);
-}
-function dependencyPlanRowsForPlan(dependsOn, availablePlanIds, resolved) {
-  return dependsOn.flatMap((dependency) => {
-    try {
-      const normalizedDependency = normalizePlanId(dependency);
-      return availablePlanIds.has(normalizedDependency) ? [
-        {
-          planId: normalizedDependency,
-          path: planPathFor(resolved, normalizedDependency)
-        }
-      ] : [];
-    } catch {
-      return [];
-    }
-  });
-}
-function normalizeDependencyPlanIds(dependsOn) {
-  return dependsOn.flatMap((dependency) => {
-    try {
-      return [normalizePlanId(dependency)];
     } catch {
       return [];
     }
@@ -35084,6 +35088,7 @@ var init_phase = __esm({
     init_phase_markdown();
     init_phase_plan_identifiers();
     init_phase_execution_surfaces();
+    init_phase_summary_routing();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
