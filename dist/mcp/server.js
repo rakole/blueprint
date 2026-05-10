@@ -27314,6 +27314,26 @@ var init_phase_execution_surfaces = __esm({
   }
 });
 
+// src/mcp/tools/phase-collection-helpers.ts
+function uniquePreservingOrder(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
+var init_phase_collection_helpers = __esm({
+  "src/mcp/tools/phase-collection-helpers.ts"() {
+    "use strict";
+  }
+});
+
 // src/mcp/tools/phase-summary-routing.ts
 function parseSummaryArtifactPath(pathValue, phasePrefix2) {
   const match = pathValue.match(
@@ -27681,6 +27701,143 @@ var init_phase_validation_rendering = __esm({
   "src/mcp/tools/phase-validation-rendering.ts"() {
     "use strict";
     init_phase_markdown();
+  }
+});
+
+// src/mcp/tools/phase-plan-rendering.ts
+function quoteYamlScalar(value) {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+function renderYamlList(items) {
+  return items.map((item) => `  - ${quoteYamlScalar(item)}`).join("\n");
+}
+function renderMarkdownTableRows(rows) {
+  return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
+}
+function renderPhasePlanModelContent(model, resolved, planId2) {
+  const acceptanceCriteria = uniquePreservingOrder(
+    model.tasks.flatMap((task) => task.acceptanceCriteria)
+  );
+  const dependsOn = model.dependsOn.map((dependency) => normalizePlanId(dependency));
+  const gapClosureFrontmatter = model.gapClosure === true ? "gap_closure: true\n" : "";
+  const taskSections = model.tasks.map(
+    (task, index) => `### Task ${index + 1}: ${task.id} - ${task.title}
+
+#### Read First
+
+${renderBulletList(task.readFirst)}
+
+#### Action
+
+${renderBulletList(task.action)}
+
+#### Acceptance Criteria
+
+${renderBulletList(task.acceptanceCriteria)}`
+  ).join("\n\n");
+  const verificationItems = model.verification.map(
+    (item) => `${item.item} (${item.method}): ${item.evidence}`
+  );
+  const requirementRows = renderMarkdownTableRows(
+    model.requirementCoverage.map((row) => [
+      row.requirement,
+      row.status,
+      row.coveredByTasks.join(", ") || "none",
+      row.evidence,
+      row.rationale
+    ])
+  );
+  const evidenceRows = renderMarkdownTableRows(
+    model.evidenceCoverage.map((row) => [row.artifact, row.status, row.rationale])
+  );
+  const fileRows = renderMarkdownTableRows(
+    model.fileSurfaceCoverage.map((row) => [
+      row.surface,
+      row.coveredByTasks.join(", "),
+      row.verification,
+      row.rationale
+    ])
+  );
+  const unknownRows = renderMarkdownTableRows(
+    model.unknownsAndDeferrals.map((row) => [
+      row.item,
+      row.disposition,
+      row.rationale,
+      row.followUp
+    ])
+  );
+  return normalizeTextContent2(`---
+phase: ${resolved.phaseNumber}
+plan_id: ${quoteYamlScalar(planId2)}
+title: ${quoteYamlScalar(model.title)}
+wave: ${model.wave}
+status: ${model.status}
+${gapClosureFrontmatter}objective: ${quoteYamlScalar(model.objective)}
+depends_on: [${dependsOn.map((dependency) => quoteYamlScalar(dependency)).join(", ")}]
+requirements:
+${renderYamlList(model.requirements)}
+files_modified:
+${renderYamlList(model.filesModified)}
+read_first:
+${renderYamlList(model.readFirst)}
+acceptance_criteria:
+${renderYamlList(acceptanceCriteria)}
+autonomous: ${model.autonomous}
+---
+
+# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Plan ${planId2}
+
+## Goal
+
+${model.goal}
+
+## Scope
+
+${renderBulletList(model.scope)}
+
+## Tasks
+
+${taskSections}
+
+## Verification
+
+${renderBulletList(verificationItems)}
+
+## Must Haves
+
+${renderBulletList(model.mustHaves)}
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+${requirementRows}
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+${evidenceRows}
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+${fileRows}
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+${unknownRows}
+`);
+}
+var init_phase_plan_rendering = __esm({
+  "src/mcp/tools/phase-plan-rendering.ts"() {
+    "use strict";
+    init_phase_markdown();
+    init_phase_plan_identifiers();
+    init_phase_collection_helpers();
   }
 });
 
@@ -30030,19 +30187,6 @@ function phasePlanAuthoringContextBlockers(context) {
     `Phase ${context.resolved.phaseNumber} has no roadmap requirements; phase.plan model authoring cannot invent requirement coverage.`
   ] : [];
 }
-function uniquePreservingOrder(values) {
-  const seen = /* @__PURE__ */ new Set();
-  const result = [];
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (trimmed.length === 0 || seen.has(trimmed)) {
-      continue;
-    }
-    seen.add(trimmed);
-    result.push(trimmed);
-  }
-  return result;
-}
 function normalizePhasePlanModelSurface(value) {
   return normalizeExecutionSurfacePath(value);
 }
@@ -30410,133 +30554,6 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     repairAction: "replace",
     suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage named in the diagnostic."
   });
-}
-function quoteYamlScalar(value) {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-function renderYamlList(items) {
-  return items.map((item) => `  - ${quoteYamlScalar(item)}`).join("\n");
-}
-function renderMarkdownTableRows(rows) {
-  return rows.map((row) => `| ${row.map((cell) => markdownCell(cell)).join(" | ")} |`).join("\n");
-}
-function renderPhasePlanModelContent(model, resolved, planId2) {
-  const acceptanceCriteria = uniquePreservingOrder(
-    model.tasks.flatMap((task) => task.acceptanceCriteria)
-  );
-  const dependsOn = model.dependsOn.map((dependency) => normalizePlanId(dependency));
-  const gapClosureFrontmatter = model.gapClosure === true ? "gap_closure: true\n" : "";
-  const taskSections = model.tasks.map(
-    (task, index) => `### Task ${index + 1}: ${task.id} - ${task.title}
-
-#### Read First
-
-${renderBulletList(task.readFirst)}
-
-#### Action
-
-${renderBulletList(task.action)}
-
-#### Acceptance Criteria
-
-${renderBulletList(task.acceptanceCriteria)}`
-  ).join("\n\n");
-  const verificationItems = model.verification.map(
-    (item) => `${item.item} (${item.method}): ${item.evidence}`
-  );
-  const requirementRows = renderMarkdownTableRows(
-    model.requirementCoverage.map((row) => [
-      row.requirement,
-      row.status,
-      row.coveredByTasks.join(", ") || "none",
-      row.evidence,
-      row.rationale
-    ])
-  );
-  const evidenceRows = renderMarkdownTableRows(
-    model.evidenceCoverage.map((row) => [row.artifact, row.status, row.rationale])
-  );
-  const fileRows = renderMarkdownTableRows(
-    model.fileSurfaceCoverage.map((row) => [
-      row.surface,
-      row.coveredByTasks.join(", "),
-      row.verification,
-      row.rationale
-    ])
-  );
-  const unknownRows = renderMarkdownTableRows(
-    model.unknownsAndDeferrals.map((row) => [
-      row.item,
-      row.disposition,
-      row.rationale,
-      row.followUp
-    ])
-  );
-  return normalizeTextContent2(`---
-phase: ${resolved.phaseNumber}
-plan_id: ${quoteYamlScalar(planId2)}
-title: ${quoteYamlScalar(model.title)}
-wave: ${model.wave}
-status: ${model.status}
-${gapClosureFrontmatter}objective: ${quoteYamlScalar(model.objective)}
-depends_on: [${dependsOn.map((dependency) => quoteYamlScalar(dependency)).join(", ")}]
-requirements:
-${renderYamlList(model.requirements)}
-files_modified:
-${renderYamlList(model.filesModified)}
-read_first:
-${renderYamlList(model.readFirst)}
-acceptance_criteria:
-${renderYamlList(acceptanceCriteria)}
-autonomous: ${model.autonomous}
----
-
-# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Plan ${planId2}
-
-## Goal
-
-${model.goal}
-
-## Scope
-
-${renderBulletList(model.scope)}
-
-## Tasks
-
-${taskSections}
-
-## Verification
-
-${renderBulletList(verificationItems)}
-
-## Must Haves
-
-${renderBulletList(model.mustHaves)}
-
-## Requirement Coverage
-
-| Requirement | Status | Covered By Tasks | Evidence | Rationale |
-|-------------|--------|------------------|----------|-----------|
-${requirementRows}
-
-## Evidence Coverage
-
-| Artifact | Status | Rationale |
-|----------|--------|-----------|
-${evidenceRows}
-
-## File / Surface Coverage
-
-| Surface | Covered By Tasks | Verification | Rationale |
-|---------|------------------|--------------|-----------|
-${fileRows}
-
-## Unknowns And Deferrals
-
-| Item | Disposition | Rationale | Follow-Up |
-|------|-------------|-----------|-----------|
-${unknownRows}
-`);
 }
 async function validatePhasePlanModelWithContext(args) {
   const diagnostics = phasePlanAuthoringContextBlockers(
@@ -35141,8 +35158,10 @@ var init_phase = __esm({
     init_phase_json_helpers();
     init_phase_schema_paths();
     init_phase_execution_surfaces();
+    init_phase_collection_helpers();
     init_phase_summary_routing();
     init_phase_validation_rendering();
+    init_phase_plan_rendering();
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };
