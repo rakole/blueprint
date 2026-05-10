@@ -26,6 +26,8 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /derivedStatus\.milestoneAudit/);
+  assert.match(commandFile, /derivedStatus\.nextAction/);
+  assert.match(commandFile, /Do not treat report-local readiness alone as sufficient/);
   assert.match(commandFile, /READY_TO_CLOSE/);
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /\/blu-plan-milestone-gaps/);
@@ -53,7 +55,9 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /derivedStatus\.milestoneAudit/);
+  assert.match(skillFile, /derivedStatus\.nextAction/);
   assert.match(skillFile, /readyForCompletion/);
+  assert.match(skillFile, /Do not treat report-local readiness alone as sufficient/);
   assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /\/blu-plan-milestone-gaps/);
   assert.match(skillFile, /report-driven and state-driven/i);

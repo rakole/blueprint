@@ -41817,14 +41817,17 @@ function roadmapDetailStatusIsComplete(status) {
   return ["completed", "done"].includes(status.trim().toLowerCase().replace(/-/g, "_"));
 }
 function readRoadmapPhaseDetailSignals(raw) {
-  const phaseDetailsMatch = raw.match(/(?:^|\n)## Phase Details\s*\n([\s\S]*?)(?=\n## |\s*$)/);
-  const phaseDetails = phaseDetailsMatch?.[1] ?? "";
+  const phaseDetails = extractMarkdownSection4(raw, "Phase Details");
   const phases = [];
-  for (const match of phaseDetails.matchAll(
-    /^### Phase\s+(\d+(?:\.\d+)?):[^\n]*(?:\n([\s\S]*?))?(?=^### Phase\s+\d+(?:\.\d+)?:|^## |\s*$)/gm
-  )) {
+  for (const rawBlock of phaseDetails.split(/^### Phase\s+/gm).slice(1)) {
+    const newlineIndex = rawBlock.indexOf("\n");
+    const heading = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
+    const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
+    const match = heading.match(/^(\d+(?:\.\d+)?)(?=$|\s|:|-|–|—)/);
+    if (!match) {
+      continue;
+    }
     const phaseNumber = normalizeBlueprintPhaseRef(match[1] ?? "") ?? (match[1] ?? "");
-    const body = match[2] ?? "";
     const status = body.match(/^\*\*Status\*\*:\s*(.+)$/im)?.[1]?.trim() ?? null;
     phases.push({
       phaseNumber,
@@ -42121,7 +42124,7 @@ function extractNextActionPhaseSelection(nextAction) {
 }
 function resolveStoredPhaseRoutingOverride(args) {
   const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
-  if (nextActionSelection.command === null || !STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(nextActionSelection.command)) {
+  if (!PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(args.activeCommand) || nextActionSelection.command === null || nextActionSelection.command === args.activeCommand || !STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(nextActionSelection.command)) {
     return null;
   }
   if (args.currentPhase === null || args.roadmapCurrentPhase === null || nextActionSelection.currentPhase !== args.currentPhase) {
@@ -42667,7 +42670,7 @@ async function readRoadmapSignals(projectRoot) {
     const raw = await fs7.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const checkboxPhases = [...raw.matchAll(
-      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?)(?:\*\*)?\s*(?::|-)\s+/gm
     )].map((match) => ({
       phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
       completed: match[1].toLowerCase() === "x"
@@ -43106,12 +43109,13 @@ async function buildSyncedState(projectRoot, patch = {}) {
   const requestedCurrentPhaseExists = requestedCurrentPhase !== null && await phaseDirectoryExists(projectRoot, requestedCurrentPhase);
   const effectivePatchCurrentPhase = requestedCurrentPhaseExists ? requestedCurrentPhase : null;
   const statePhaseIsAheadOfRoadmap = roadmapSignals.currentPhase !== null && existingState.currentPhase.length > 0 && comparePhaseNumbers2(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
-  const patchedPhaseRoutingOverride = resolvePatchedPhaseRoutingOverride({
+  const patchedPhaseRoutingOverride = patch.activeCommand !== void 0 || patch.currentPhase !== void 0 ? resolvePatchedPhaseRoutingOverride({
     activeCommand: patch.activeCommand ?? existingState.activeCommand,
     currentPhase: effectivePatchCurrentPhase ?? normalizeSelectedPhase(existingState.currentPhase),
     roadmapCurrentPhase: roadmapSignals.currentPhase
-  });
+  }) : null;
   const storedPhaseRoutingOverride = patch.activeCommand === void 0 && patch.currentPhase === void 0 ? resolveStoredPhaseRoutingOverride({
+    activeCommand: existingState.activeCommand,
     currentPhase: normalizeSelectedPhase(existingState.currentPhase),
     nextAction: existingState.nextAction,
     roadmapCurrentPhase: roadmapSignals.currentPhase
@@ -43141,7 +43145,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
   }
   if (storedPhaseRoutingOverride !== null && roadmapSignals.currentPhase !== null) {
     warnings.push(
-      `STATE.md preserved selected phase ${storedPhaseRoutingOverride} from the stored next action ${existingState.nextAction} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
+      `STATE.md preserved selected phase ${storedPhaseRoutingOverride} from ${existingState.activeCommand} follow-up ${existingState.nextAction} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
     );
   }
   if (qualityGateDebtPhase !== null && roadmapSignals.currentPhase !== null && qualityGateDebtPhase !== roadmapSignals.currentPhase) {
@@ -43470,7 +43474,7 @@ async function blueprintStateSync(args = {}) {
     statePath: toRepoRelativePath(projectRoot, statePath)
   };
 }
-var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, STORED_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise2, stateToolDefinitions;
+var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise2, stateToolDefinitions;
 var init_state = __esm({
   "src/mcp/tools/state.ts"() {
     "use strict";
@@ -43518,7 +43522,10 @@ var init_state = __esm({
       blueprintDirectCommand("verify-work"),
       blueprintDirectCommand("add-tests")
     ];
-    STORED_PHASE_OVERRIDE_COMMANDS = [
+    PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = new Set(
+      PATCH_PHASE_OVERRIDE_COMMANDS
+    );
+    STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = /* @__PURE__ */ new Set([
       blueprintDirectCommand("research-phase"),
       blueprintDirectCommand("ui-phase"),
       blueprintDirectCommand("plan-phase"),
@@ -43526,13 +43533,7 @@ var init_state = __esm({
       blueprintDirectCommand("validate-phase"),
       blueprintDirectCommand("verify-work"),
       blueprintDirectCommand("add-tests")
-    ];
-    PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = new Set(
-      PATCH_PHASE_OVERRIDE_COMMANDS
-    );
-    STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS = new Set(
-      STORED_PHASE_OVERRIDE_COMMANDS
-    );
+    ]);
     stateUpdateInputSchema = {
       cwd: string2().optional(),
       base: _enum(["stored", "synced"]).optional(),
@@ -54294,7 +54295,14 @@ function extractMarkdownTableDataRows(section) {
   return section.split("\n").map((line) => line.trim()).filter((line) => isMarkdownTableRow(line) && !isMarkdownTableHeaderRow(line)).map((line) => parseMarkdownTableCells(line)).filter((cells) => cells.some((cell) => cell.length > 0));
 }
 function extractBlueprintCommands(section) {
-  return [...new Set(section.match(/\/blu-[a-z0-9]+(?:-[a-z0-9]+)*/gi) ?? [])];
+  const commands = section.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/gi) ?? [];
+  return [
+    ...new Set(
+      commands.map(
+        (command) => command.trim().replace(/^\/blu\s+/i, "/blu-")
+      )
+    )
+  ];
 }
 async function getImplementedCommandNames3() {
   if (!implementedCommandNamesPromise3) {
@@ -56202,6 +56210,14 @@ function validateReportArtifactContent(content, reportName2) {
       ["Flow Gaps", flowGaps],
       ["Optional Gaps", optionalGaps]
     ];
+    const verdict = auditVerdict.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m)?.[1] ?? null;
+    const nextSafeAction = extractMarkdownSection6(content, "Next Safe Action");
+    const unsafeNonReadyNextActions = /* @__PURE__ */ new Set([
+      "/blu-complete-milestone",
+      "/blu-milestone-summary",
+      "/blu-new-milestone"
+    ]);
+    const unsafeNonReadyNextActionCommands = extractBlueprintCommands(nextSafeAction).map((command) => command.toLowerCase()).filter((command) => unsafeNonReadyNextActions.has(command));
     if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
       issues.push(
         "Report artifact section Audit Verdict must include a concrete Verdict line using READY_TO_CLOSE, FOLLOW_UP, or BLOCKED."
@@ -56209,6 +56225,11 @@ function validateReportArtifactContent(content, reportName2) {
     }
     if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
       issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+    if ((verdict === "FOLLOW_UP" || verdict === "BLOCKED") && unsafeNonReadyNextActionCommands.length > 0) {
+      issues.push(
+        `Report artifact section Next Safe Action must not route ${verdict} milestone audits to closeout or archival commands: ${unsafeNonReadyNextActionCommands.join(", ")}.`
+      );
     }
     issues.push(
       ...validateMilestoneEvidenceLedger(content, "Report artifact", "Milestone Evidence Dimensions", [
