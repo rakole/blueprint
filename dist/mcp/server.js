@@ -27168,6 +27168,68 @@ var init_phase_json_helpers = __esm({
   }
 });
 
+// src/mcp/tools/phase-task-schema-helpers.ts
+function setArrayItemEnum(schema, values) {
+  if (!schema || values.length === 0) {
+    return;
+  }
+  const items = getJsonObjectProperty(schema, "items");
+  if (items) {
+    items.enum = values;
+  }
+}
+function setArrayMaxItems(schema, maxItems) {
+  if (!schema) {
+    return;
+  }
+  schema.maxItems = maxItems;
+}
+function allowOnlyEmptyArray(schema) {
+  if (!schema) {
+    return;
+  }
+  schema.minItems = 0;
+  schema.maxItems = 0;
+}
+function exactObjectPropertyContains(propertyName, value) {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+function objectPropertyContainsAtLeast(propertyName, value) {
+  return {
+    contains: {
+      type: "object",
+      required: [propertyName],
+      properties: {
+        [propertyName]: { const: value }
+      }
+    },
+    minContains: 1
+  };
+}
+function exactStringArrayContains(value) {
+  return {
+    contains: { const: value },
+    minContains: 1,
+    maxContains: 1
+  };
+}
+var init_phase_task_schema_helpers = __esm({
+  "src/mcp/tools/phase-task-schema-helpers.ts"() {
+    "use strict";
+    init_phase_json_helpers();
+  }
+});
+
 // src/mcp/tools/phase-schema-paths.ts
 function ajvInstancePathToModelPath(instancePath) {
   if (instancePath.length === 0) {
@@ -30442,53 +30504,6 @@ async function validatePhasePlanModelCommands(model) {
     `Phase plan model references non-implemented Blueprint command(s): ${nonImplementedCommands.join(", ")}.`
   ] : [];
 }
-function setArrayItemEnum(schema, values) {
-  if (!schema || values.length === 0) {
-    return;
-  }
-  const items = getJsonObjectProperty(schema, "items");
-  if (items) {
-    items.enum = values;
-  }
-}
-function setArrayMaxItems(schema, maxItems) {
-  if (!schema) {
-    return;
-  }
-  schema.maxItems = maxItems;
-}
-function allowOnlyEmptyArray(schema) {
-  if (!schema) {
-    return;
-  }
-  schema.minItems = 0;
-  schema.maxItems = 0;
-}
-function exactObjectPropertyContains(propertyName, value) {
-  return {
-    contains: {
-      type: "object",
-      required: [propertyName],
-      properties: {
-        [propertyName]: { const: value }
-      }
-    },
-    minContains: 1,
-    maxContains: 1
-  };
-}
-function objectPropertyContainsAtLeast(propertyName, value) {
-  return {
-    contains: {
-      type: "object",
-      required: [propertyName],
-      properties: {
-        [propertyName]: { const: value }
-      }
-    },
-    minContains: 1
-  };
-}
 function buildPhasePlanTaskSchema(args) {
   const schema = cloneJsonObject2(args.baseSchema);
   const properties = getJsonObjectProperty(schema, "properties");
@@ -31104,13 +31119,6 @@ async function buildPhaseVerificationAllowedNextActions(phaseNumber) {
     readyAction: implementedReady,
     repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
     allowedActions: [implementedReady, ...implementedRepairs.length > 0 ? implementedRepairs : repairActions]
-  };
-}
-function exactStringArrayContains(value) {
-  return {
-    contains: { const: value },
-    minContains: 1,
-    maxContains: 1
   };
 }
 function buildPhaseVerificationTaskSchema(args) {
@@ -35248,6 +35256,7 @@ var init_phase = __esm({
     init_phase_plan_identifiers();
     init_phase_locations();
     init_phase_json_helpers();
+    init_phase_task_schema_helpers();
     init_phase_schema_paths();
     init_phase_execution_surfaces();
     init_phase_collection_helpers();
