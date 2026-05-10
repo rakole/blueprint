@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
+import { type ErrorObject } from "ajv/dist/2020.js";
 import * as z from "zod/v4";
 
 import {
@@ -116,6 +116,13 @@ import {
   type PhaseArtifactKind,
   type PhaseValidationArtifactKind
 } from "./phase-locations.js";
+import {
+  asJsonObject,
+  cloneJsonObject,
+  collectModelStringValues,
+  createAjvValidator,
+  getJsonObjectProperty
+} from "./phase-json-helpers.js";
 import {
   normalizeExecutionSurfacePath,
   sharedExecutionSurfaces,
@@ -4677,47 +4684,6 @@ type CommandCatalogResult = {
 };
 
 let phasePlanImplementedCommandNamesPromise: Promise<Set<string> | null> | null = null;
-
-function collectModelStringValues(value: unknown): string[] {
-  if (typeof value === "string") {
-    return [value];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectModelStringValues(item));
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).flatMap((item) => collectModelStringValues(item));
-  }
-
-  return [];
-}
-
-function cloneJsonObject<T extends Record<string, unknown>>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function asJsonObject(value: unknown): Record<string, unknown> | null {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function getJsonObjectProperty(
-  value: Record<string, unknown>,
-  key: string
-): Record<string, unknown> | null {
-  return asJsonObject(value[key]);
-}
-
-function createAjvValidator(): Ajv2020 {
-  return new Ajv2020({
-    allErrors: true,
-    strict: false,
-    validateSchema: true
-  });
-}
 
 function phasePlanDiagnostic(args: PhasePlanModelDiagnostic): PhasePlanModelDiagnostic {
   const modelPath =
