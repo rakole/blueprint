@@ -857,6 +857,48 @@ test("phase plan model schema rejects unsupported, missing, and out-of-scope val
   );
 });
 
+test("phase plan model allows intentional placeholder token prose in narrative fields", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  model.unknownsAndDeferrals = [
+    {
+      item: "Endpoint URL shape is intentionally deferred.",
+      disposition: "deferred",
+      rationale:
+        "We will add placeholder {url}.{portNumber} until the endpoint wiring phase replaces it.",
+      followUp: "Replace the temporary token in the endpoint wiring phase."
+    }
+  ];
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+
+  assert.equal(
+    validated.status,
+    "valid",
+    validated.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(
+    validated.diagnostics.some((diagnostic) => diagnostic.code === "content.placeholder"),
+    false
+  );
+  assert.equal(written.status, "created", written.validation.issues.join("\n"));
+  assert.equal(written.written, true);
+});
+
 test("phase plan model schema rejects newline injection in frontmatter-rendered fields", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
