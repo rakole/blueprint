@@ -124,6 +124,13 @@ import {
   getJsonObjectProperty
 } from "./phase-json-helpers.js";
 import {
+  ajvAllowedValues,
+  ajvInstancePathToModelPath,
+  appendJsonPointerSegment,
+  getValueAtJsonPointer,
+  modelPathToJsonPointer
+} from "./phase-schema-paths.js";
+import {
   normalizeExecutionSurfacePath,
   sharedExecutionSurfaces,
   uniqueSortedStrings,
@@ -4692,7 +4699,7 @@ function phasePlanDiagnostic(args: PhasePlanModelDiagnostic): PhasePlanModelDiag
     args.jsonPointer !== undefined
       ? args.jsonPointer
       : modelPath
-        ? phasePlanModelPathToJsonPointer(modelPath)
+        ? modelPathToJsonPointer(modelPath)
         : null;
 
   return {
@@ -4783,100 +4790,6 @@ function formatPhasePlanDiagnostic(diagnostic: PhasePlanModelDiagnostic): string
   return `${diagnostic.source}:${pathHint}:${diagnostic.code}: ${diagnostic.message}${actionHint} Suggestion: ${diagnostic.suggestion}`;
 }
 
-function ajvPathToPhasePlanModelPath(instancePath: string): string {
-  if (instancePath.length === 0) {
-    return "model";
-  }
-
-  return `model${instancePath
-    .split("/")
-    .filter((segment) => segment.length > 0)
-    .map((segment) => {
-      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
-      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
-    })
-    .join("")}`;
-}
-
-function phasePlanModelPathToJsonPointer(pathValue: string): string | null {
-  if (pathValue === "model") {
-    return "";
-  }
-
-  if (!pathValue.startsWith("model.")) {
-    return null;
-  }
-
-  const pathWithoutRoot = pathValue.slice("model.".length);
-  const segments = pathWithoutRoot
-    .replace(/\[(\d+)\]/g, ".$1")
-    .split(".")
-    .filter((segment) => segment.length > 0)
-    .map((segment) => segment.replace(/~/g, "~0").replace(/\//g, "~1"));
-
-  return `/${segments.join("/")}`;
-}
-
-function appendJsonPointerSegment(pointer: string, segment: string): string {
-  const encoded = segment.replace(/~/g, "~0").replace(/\//g, "~1");
-
-  return pointer.length === 0 ? `/${encoded}` : `${pointer}/${encoded}`;
-}
-
-function getValueAtJsonPointer(value: unknown, pointer: string | null): unknown {
-  if (pointer === null) {
-    return undefined;
-  }
-
-  if (pointer === "") {
-    return value;
-  }
-
-  let current: unknown = value;
-  const segments = pointer
-    .split("/")
-    .slice(1)
-    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"));
-
-  for (const segment of segments) {
-    if (Array.isArray(current)) {
-      const index = Number.parseInt(segment, 10);
-      current = Number.isInteger(index) ? current[index] : undefined;
-      continue;
-    }
-
-    if (typeof current === "object" && current !== null) {
-      current = (current as Record<string, unknown>)[segment];
-      continue;
-    }
-
-    return undefined;
-  }
-
-  return current;
-}
-
-function ajvAllowedValues(error: ErrorObject): unknown[] | undefined {
-  if (
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "allowedValues" in error.params &&
-    Array.isArray(error.params.allowedValues)
-  ) {
-    return error.params.allowedValues;
-  }
-
-  if (
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "allowedValue" in error.params
-  ) {
-    return [error.params.allowedValue];
-  }
-
-  return undefined;
-}
-
 function phasePlanSchemaRepairAction(error: ErrorObject): PhasePlanModelRepairAction {
   if (error.keyword === "required" || error.keyword === "contains" || error.keyword === "minItems") {
     return "add";
@@ -4931,7 +4844,7 @@ function schemaDiagnosticFromAjvError(
     typeof error.params.additionalProperty === "string"
       ? error.params.additionalProperty
       : null;
-  const basePath = ajvPathToPhasePlanModelPath(error.instancePath);
+  const basePath = ajvInstancePathToModelPath(error.instancePath);
   const pathValue =
     missingProperty !== null
       ? `${basePath}.${missingProperty}`
@@ -5710,7 +5623,7 @@ function phasePlanCoverageDiagnosticFromIssue(
         taskIndex >= 0 && criterionIndex >= 0
           ? {
               op: "replace",
-              path: phasePlanModelPathToJsonPointer(pathValue) ?? "",
+              path: modelPathToJsonPointer(pathValue) ?? "",
               value: "npm test -- tests/<focused-test>.test.ts exits 0"
             }
           : undefined,
@@ -6214,21 +6127,6 @@ function formatPhaseValidationDiagnostic(diagnostic: PhaseValidationModelDiagnos
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
 
-function ajvPathToPhaseValidationModelPath(instancePath: string): string {
-  if (instancePath.length === 0) {
-    return "model";
-  }
-
-  return `model${instancePath
-    .split("/")
-    .filter((segment) => segment.length > 0)
-    .map((segment) => {
-      const decoded = segment.replace(/~1/g, "/").replace(/~0/g, "~");
-      return /^\d+$/.test(decoded) ? `[${decoded}]` : `.${decoded}`;
-    })
-    .join("")}`;
-}
-
 function schemaDiagnosticFromPhaseValidationAjvError(
   error: ErrorObject
 ): PhaseValidationModelDiagnostic {
@@ -6246,7 +6144,7 @@ function schemaDiagnosticFromPhaseValidationAjvError(
     typeof error.params.additionalProperty === "string"
       ? error.params.additionalProperty
       : null;
-  const basePath = ajvPathToPhaseValidationModelPath(error.instancePath);
+  const basePath = ajvInstancePathToModelPath(error.instancePath);
   const pathValue =
     missingProperty !== null
       ? `${basePath}.${missingProperty}`
