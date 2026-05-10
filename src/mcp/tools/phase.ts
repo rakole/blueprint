@@ -6288,12 +6288,6 @@ async function validatePhasePlanModelCommands(model: Record<string, unknown>): P
     : [];
 }
 
-function hasPhasePlanModelPlaceholderLanguage(value: string): boolean {
-  return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
-    value
-  );
-}
-
 function phasePlanModelResidualDiagnostics(model: Record<string, unknown>): PhasePlanModelDiagnostic[] {
   const diagnostics: PhasePlanModelDiagnostic[] = [];
   const modelContract = readArtifactContract("phase.plan").modelContract;
@@ -6325,21 +6319,6 @@ function phasePlanModelResidualDiagnostics(model: Record<string, unknown>): Phas
         message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
         context: { signal },
         suggestion: "Replace copied example wording with evidence from the selected phase."
-      })
-    );
-  }
-
-  for (const value of collectModelStringValues(model).filter((item) =>
-    hasPhasePlanModelPlaceholderLanguage(item)
-  )) {
-    diagnostics.push(
-      phasePlanDiagnostic({
-        source: "residual",
-        path: "model",
-        code: "content.placeholder",
-        message: `Phase plan model contains placeholder language: ${value}.`,
-        context: { value },
-        suggestion: "Replace placeholder language with concrete phase-specific evidence."
       })
     );
   }

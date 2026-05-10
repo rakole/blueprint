@@ -152,7 +152,7 @@
     },
     "unknownsAndDeferrals": {
       "type": "array",
-      "description": "Known unknowns, deferrals, blockers, or a concrete no-open-items row. Generic placeholder rows are still rejected by residual validation.",
+      "description": "Known unknowns, deferrals, blockers, or a concrete no-open-items row.",
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/unknownOrDeferralRow"

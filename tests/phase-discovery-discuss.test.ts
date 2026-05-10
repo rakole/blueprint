@@ -391,6 +391,17 @@ test("discuss-phase context validation accepts the exact Open Questions none sen
   assert.deepEqual(validation.issues, []);
 });
 
+test("discuss-phase context validation allows intentional placeholder token prose", () => {
+  const content = buildValidDiscussContext("- none").replace(
+    "## Deferred Ideas\n- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.",
+    "## Deferred Ideas\n- Scope creep or later follow-up: Keep placeholder {url}.{portNumber} documented until the endpoint wiring phase replaces it."
+  );
+  const validation = validatePhaseArtifactContent(content, "context");
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
+});
+
 test("discuss-phase context validation rejects malformed Open Questions empty-state variants", () => {
   const invalidSections = [
     "none",

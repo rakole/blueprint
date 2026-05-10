@@ -1216,6 +1216,18 @@ test("research contract rejects skeleton content that lacks substantive section 
   );
 });
 
+test("research contract allows intentional placeholder token prose", () => {
+  const research = canonicalResearchContent(
+    "Keep placeholder {url}.{portNumber} as a documented interim token until endpoint wiring replaces it.",
+    "| LIFE-01 | Keep endpoint research grounded. | The interim token is explicitly scoped to later wiring. |"
+  );
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
+});
+
 test("review and report contracts validate canonical sections while keeping extra headings compatible", () => {
   const review = `# Phase 05: Security - Code Review
 
