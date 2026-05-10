@@ -27871,6 +27871,92 @@ var init_phase_validation_rendering = __esm({
   }
 });
 
+// src/mcp/tools/phase-validation-contracts.ts
+function clonePhaseValidationAllowedValues() {
+  return {
+    verification: {
+      gateStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gateStates],
+      coverageStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.coverageStates],
+      manualCoverageStatuses: [
+        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.manualCoverageStatuses
+      ],
+      gapClasses: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gapClasses],
+      readinessByGate: {
+        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate
+      },
+      readyForUatCommand: PHASE_VALIDATION_ALLOWED_VALUES.verification.readyForUatCommand,
+      repairCommands: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.repairCommands]
+    },
+    uat: {
+      statuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.statuses],
+      resumeStates: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.resumeStates],
+      completeCheckpoint: PHASE_VALIDATION_ALLOWED_VALUES.uat.completeCheckpoint,
+      testResults: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.testResults],
+      structuredGapStatuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapStatuses],
+      structuredGapSeverities: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapSeverities]
+    }
+  };
+}
+function validationArtifactContractId(artifact) {
+  return artifact === "verification" ? "phase.verification" : "phase.uat";
+}
+function validationArtifactContractContext(resolved) {
+  if (!resolved) {
+    return {};
+  }
+  return {
+    phaseLabel: `Phase ${resolved.phasePrefix}: ${resolved.phaseName}`,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    summaryFile: `${resolved.phasePrefix}-01-SUMMARY.md`,
+    summaryPath: `${resolved.phaseDir}/${resolved.phasePrefix}-01-SUMMARY.md`
+  };
+}
+function validationArtifactContract(artifact, resolved) {
+  return readArtifactContract(
+    validationArtifactContractId(artifact),
+    validationArtifactContractContext(resolved)
+  );
+}
+var PHASE_VALIDATION_ALLOWED_VALUES;
+var init_phase_validation_contracts = __esm({
+  "src/mcp/tools/phase-validation-contracts.ts"() {
+    "use strict";
+    init_artifact_contracts();
+    PHASE_VALIDATION_ALLOWED_VALUES = {
+      verification: {
+        gateStates: ["PASS", "PARTIAL", "BLOCKED"],
+        coverageStates: ["PASS", "COVERED", "covered", "MANUAL", "DEFERRED", "BLOCKED"],
+        manualCoverageStatuses: ["MANUAL", "DEFERRED", "NONE"],
+        gapClasses: [
+          "missing-evidence",
+          "partial-coverage",
+          "manual-only",
+          "deferred-test",
+          "contradiction",
+          "none"
+        ],
+        readinessByGate: {
+          PASS: "ready for UAT",
+          PARTIAL: "not ready for UAT",
+          BLOCKED: "not ready for UAT"
+        },
+        readyForUatCommand: "/blu-verify-work",
+        repairCommands: ["/blu-add-tests", "/blu-audit-fix"]
+      },
+      uat: {
+        statuses: ["PASS", "FAIL", "PARTIAL"],
+        resumeStates: ["RESUMED", "NEW", "CONTINUED"],
+        completeCheckpoint: "none",
+        testResults: ["pending", "pass", "issue", "skipped", "blocked"],
+        structuredGapStatuses: ["failed", "partial", "blocked", "none"],
+        structuredGapSeverities: ["blocker", "major", "minor", "cosmetic", "none"]
+      }
+    };
+  }
+});
+
 // src/mcp/tools/phase-plan-rendering.ts
 function quoteYamlScalar(value) {
   return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
@@ -29773,53 +29859,6 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
     blockedAction: implemented.includes(blockedAction) ? blockedAction : blockedAction,
     allowedActions: implemented.length > 0 ? implemented : fallback
   };
-}
-function clonePhaseValidationAllowedValues() {
-  return {
-    verification: {
-      gateStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gateStates],
-      coverageStates: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.coverageStates],
-      manualCoverageStatuses: [
-        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.manualCoverageStatuses
-      ],
-      gapClasses: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.gapClasses],
-      readinessByGate: {
-        ...PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate
-      },
-      readyForUatCommand: PHASE_VALIDATION_ALLOWED_VALUES.verification.readyForUatCommand,
-      repairCommands: [...PHASE_VALIDATION_ALLOWED_VALUES.verification.repairCommands]
-    },
-    uat: {
-      statuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.statuses],
-      resumeStates: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.resumeStates],
-      completeCheckpoint: PHASE_VALIDATION_ALLOWED_VALUES.uat.completeCheckpoint,
-      testResults: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.testResults],
-      structuredGapStatuses: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapStatuses],
-      structuredGapSeverities: [...PHASE_VALIDATION_ALLOWED_VALUES.uat.structuredGapSeverities]
-    }
-  };
-}
-function validationArtifactContractId(artifact) {
-  return artifact === "verification" ? "phase.verification" : "phase.uat";
-}
-function validationArtifactContractContext(resolved) {
-  if (!resolved) {
-    return {};
-  }
-  return {
-    phaseLabel: `Phase ${resolved.phasePrefix}: ${resolved.phaseName}`,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    summaryFile: `${resolved.phasePrefix}-01-SUMMARY.md`,
-    summaryPath: `${resolved.phaseDir}/${resolved.phasePrefix}-01-SUMMARY.md`
-  };
-}
-function validationArtifactContract(artifact, resolved) {
-  return readArtifactContract(
-    validationArtifactContractId(artifact),
-    validationArtifactContractContext(resolved)
-  );
 }
 function phasePlanDiagnostic(args) {
   const modelPath = args.modelPath ?? (args.path === "model" || args.path.startsWith("model.") ? args.path : void 0);
@@ -35145,7 +35184,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -35171,6 +35210,7 @@ var init_phase = __esm({
     init_phase_summary_routing();
     init_phase_summary_rendering();
     init_phase_validation_rendering();
+    init_phase_validation_contracts();
     init_phase_plan_rendering();
     roadmapReadInputSchema = {
       cwd: string2().optional()
@@ -35419,36 +35459,6 @@ var init_phase = __esm({
       phase: numericBlueprintInputSchema.optional(),
       expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
       expectedMode: phaseCheckpointResumeModeSchema.optional()
-    };
-    PHASE_VALIDATION_ALLOWED_VALUES = {
-      verification: {
-        gateStates: ["PASS", "PARTIAL", "BLOCKED"],
-        coverageStates: ["PASS", "COVERED", "covered", "MANUAL", "DEFERRED", "BLOCKED"],
-        manualCoverageStatuses: ["MANUAL", "DEFERRED", "NONE"],
-        gapClasses: [
-          "missing-evidence",
-          "partial-coverage",
-          "manual-only",
-          "deferred-test",
-          "contradiction",
-          "none"
-        ],
-        readinessByGate: {
-          PASS: "ready for UAT",
-          PARTIAL: "not ready for UAT",
-          BLOCKED: "not ready for UAT"
-        },
-        readyForUatCommand: "/blu-verify-work",
-        repairCommands: ["/blu-add-tests", "/blu-audit-fix"]
-      },
-      uat: {
-        statuses: ["PASS", "FAIL", "PARTIAL"],
-        resumeStates: ["RESUMED", "NEW", "CONTINUED"],
-        completeCheckpoint: "none",
-        testResults: ["pending", "pass", "issue", "skipped", "blocked"],
-        structuredGapStatuses: ["failed", "partial", "blocked", "none"],
-        structuredGapSeverities: ["blocker", "major", "minor", "cosmetic", "none"]
-      }
     };
     phasePlanImplementedCommandNamesPromise = null;
     phaseToolDefinitions = [

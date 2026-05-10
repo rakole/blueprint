@@ -7,6 +7,7 @@ import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phas
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
 import { type PhaseSummaryStructuredModel } from "./phase-summary-rendering.js";
 import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
+import { type PhaseValidationAllowedValues } from "./phase-validation-contracts.js";
 import { type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
 type RoadmapReadArgs = {
     cwd?: string;
@@ -90,25 +91,6 @@ type PhaseValidationSummaryEvidence = {
     verification: string[];
     followUps: string[];
     evidence: string[];
-};
-type PhaseValidationAllowedValues = {
-    verification: {
-        gateStates: string[];
-        coverageStates: string[];
-        manualCoverageStatuses: string[];
-        gapClasses: string[];
-        readinessByGate: Record<string, string>;
-        readyForUatCommand: string;
-        repairCommands: string[];
-    };
-    uat: {
-        statuses: string[];
-        resumeStates: string[];
-        completeCheckpoint: string;
-        testResults: string[];
-        structuredGapStatuses: string[];
-        structuredGapSeverities: string[];
-    };
 };
 type PhaseValidationAuthoringContextResult = {
     status: "ready" | "invalid";
