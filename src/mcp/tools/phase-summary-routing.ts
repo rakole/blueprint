@@ -2,11 +2,7 @@ import {
   normalizePlanId,
   planPathFor
 } from "./phase-plan-identifiers.js";
-
-type PhaseSummaryPathLocation = {
-  phaseDir: string;
-  phasePrefix: string;
-};
+import { buildArtifactPath, type PhasePathLocation } from "./phase-locations.js";
 
 export type PhaseSummaryCompletedRoute = {
   readiness: "ready-for-validation" | "not-ready-for-validation";
@@ -30,10 +26,14 @@ export function parseSummaryArtifactPath(
 }
 
 export function summaryPathFor(
-  located: PhaseSummaryPathLocation,
+  located: PhasePathLocation,
   planId: string
 ): string {
-  return `${located.phaseDir}/${located.phasePrefix}-${normalizePlanId(planId)}-SUMMARY.md`;
+  return buildArtifactPath(
+    located.phaseDir,
+    located.phasePrefix,
+    `-${normalizePlanId(planId)}-SUMMARY.md`
+  );
 }
 
 function normalizeSummaryMarkerValue(value: string | null): string | null {
@@ -117,7 +117,7 @@ export function extractPhaseSummaryMarkerValue(content: string, marker: string):
 export function dependencyPlanRowsForPlan(
   dependsOn: string[],
   availablePlanIds: ReadonlySet<string>,
-  resolved: PhaseSummaryPathLocation
+  resolved: PhasePathLocation
 ): Array<{ planId: string; path: string }> {
   return dependsOn.flatMap((dependency) => {
     try {

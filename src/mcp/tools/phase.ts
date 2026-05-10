@@ -100,6 +100,23 @@ import {
   reconcileAutoAssignedPlanContent
 } from "./phase-plan-identifiers.js";
 import {
+  artifactPathFor,
+  buildArtifactPath,
+  checkpointPathFor,
+  findArtifact,
+  findPhaseDirectory,
+  listPhaseArtifacts,
+  materializePhaseDirectory,
+  pathExists,
+  readMarkdownDocument,
+  readRoadmap,
+  resolveRequestedPhase,
+  validationArtifactPathFor,
+  type ParsedRoadmap,
+  type PhaseArtifactKind,
+  type PhaseValidationArtifactKind
+} from "./phase-locations.js";
+import {
   normalizeExecutionSurfacePath,
   sharedExecutionSurfaces,
   uniqueSortedStrings,
@@ -173,9 +190,6 @@ type PhaseLookupArgs = {
   cwd?: string;
   phase?: NumericInput;
 };
-
-type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
-type PhaseValidationArtifactKind = "verification" | "uat";
 
 type PlanIndexArgs = PhaseLookupArgs;
 
@@ -652,12 +666,6 @@ type ResolvedPhaseLocation = {
   phasePrefix: string;
   phaseName: string;
   phaseDir: string;
-};
-
-type ParsedRoadmap = {
-  path: string;
-  milestone: string | null;
-  phases: ParsedRoadmapPhase[];
 };
 
 type RoadmapAddPhaseResult = {
@@ -1466,18 +1474,6 @@ type RoadmapReadResult = {
     phaseDir: string | null;
   }>;
 };
-
-const PHASE_ARTIFACT_SUFFIXES: Record<PhaseArtifactKind, string> = {
-  context: "-CONTEXT.md",
-  "discussion-log": "-DISCUSSION-LOG.md",
-  research: "-RESEARCH.md",
-  "ui-spec": "-UI-SPEC.md"
-};
-const PHASE_VALIDATION_ARTIFACT_SUFFIXES: Record<PhaseValidationArtifactKind, string> = {
-  verification: "-VERIFICATION.md",
-  uat: "-UAT.md"
-};
-const PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
 
 const roadmapReadInputSchema = {
   cwd: z.string().optional()
@@ -2841,147 +2837,6 @@ async function syncRoadmapPhaseCompletion(
   return warnings;
 }
 
-async function pathExists(targetPath: string): Promise<boolean> {
-  try {
-    await fs.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function materializePhaseDirectory(
-  projectRoot: string,
-  phaseDir: string
-): Promise<{
-  phaseDirPath: string;
-  created: boolean;
-  warnings: string[];
-}> {
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
-
-  try {
-    const stats = await fs.stat(phaseDirPath);
-
-    if (!stats.isDirectory()) {
-      throw new Error(
-        `Phase directory path exists but is not a directory: ${phaseDir}. Resolve the drift before mutating the roadmap.`
-      );
-    }
-
-    return {
-      phaseDirPath,
-      created: false,
-      warnings: [`Phase directory already exists and can be reused: ${phaseDir}`]
-    };
-  } catch (error) {
-    const statError = error as NodeJS.ErrnoException;
-
-    if (statError.code !== "ENOENT") {
-      throw error;
-    }
-  }
-
-  await fs.mkdir(phaseDirPath, { recursive: true });
-  return {
-    phaseDirPath,
-    created: true,
-    warnings: []
-  };
-}
-
-async function listPhaseArtifacts(
-  rootPath: string,
-  projectRoot: string
-): Promise<string[]> {
-  if (!(await pathExists(rootPath))) {
-    return [];
-  }
-
-  const entries = await fs.readdir(rootPath, { withFileTypes: true });
-  const files: string[] = [];
-
-  for (const entry of entries) {
-    const absolutePath = path.join(rootPath, entry.name);
-
-    if (entry.isDirectory()) {
-      files.push(...(await listPhaseArtifacts(absolutePath, projectRoot)));
-      continue;
-    }
-
-    files.push(toRepoRelativePath(projectRoot, absolutePath));
-  }
-
-  return files.sort();
-}
-
-async function findPhaseDirectory(
-  projectRoot: string,
-  phaseNumber: string
-): Promise<{
-  phaseDir: string | null;
-  reason: "missing" | "ambiguous" | null;
-}> {
-  const phasesRoot = resolveBlueprintPath(projectRoot, BLUEPRINT_PHASES_PATH);
-
-  if (!(await pathExists(phasesRoot))) {
-    return {
-      phaseDir: null,
-      reason: "missing"
-    };
-  }
-
-  const entries = await fs.readdir(phasesRoot, { withFileTypes: true });
-  const target = normalizePhaseNumber(phaseNumber);
-  const matches = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .filter((directoryName) => {
-      const prefix = extractPhaseNumberToken(directoryName);
-      return prefix === target;
-    });
-
-  if (matches.length === 0) {
-    return {
-      phaseDir: null,
-      reason: "missing"
-    };
-  }
-
-  if (matches.length > 1) {
-    return {
-      phaseDir: null,
-      reason: "ambiguous"
-    };
-  }
-
-  return {
-    phaseDir: toRepoRelativePath(projectRoot, path.join(phasesRoot, matches[0])),
-    reason: null
-  };
-}
-
-async function readRoadmap(
-  projectRoot: string
-): Promise<ParsedRoadmap> {
-  const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
-
-  if (!(await pathExists(roadmapPath))) {
-    throw new Error(
-      `Missing prerequisite artifact: ${BLUEPRINT_DIR}/ROADMAP.md. Restore it or run /blu-new-project before using phase discovery commands.`
-    );
-  }
-
-  const raw = await fs.readFile(roadmapPath, "utf8");
-  const parsed = parseRoadmapDocument(raw);
-
-  return {
-    path: `${BLUEPRINT_DIR}/ROADMAP.md`,
-    milestone: parsed.milestone,
-    phases: parsed.phases
-  };
-}
-
 function normalizeBacklogReviewStatus(value: string | null): string {
   return value?.trim().toLowerCase() ?? "backlog";
 }
@@ -3039,70 +2894,10 @@ async function readBacklogPromotionCandidates(projectRoot: string): Promise<{
   };
 }
 
-async function resolveRequestedPhase(
-  projectRoot: string,
-  requestedPhase: NumericInput | undefined,
-  phases: ParsedRoadmapPhase[]
-): Promise<{
-  phaseNumber: string | null;
-  resolvedFrom: "explicit" | "state" | "roadmap";
-}> {
-  const explicit = requestedPhase === undefined ? undefined : normalizeBlueprintInput(requestedPhase).trim();
-
-  if (explicit) {
-    return {
-      phaseNumber: extractPhaseNumberToken(explicit),
-      resolvedFrom: "explicit"
-    };
-  }
-
-  try {
-    const state = await loadBlueprintState(projectRoot);
-    const fromState = extractPhaseNumberToken(state.currentPhase);
-
-    if (fromState) {
-      return {
-        phaseNumber: fromState,
-        resolvedFrom: "state"
-      };
-    }
-  } catch {
-    // fall back to roadmap-derived selection below
-  }
-
-  const nextPhase = phases.find((phase) => !phase.completed) ?? phases[0];
-
-  return {
-    phaseNumber: nextPhase?.phaseNumber ?? null,
-    resolvedFrom: "roadmap"
-  };
-}
-
-function buildArtifactPath(phaseDir: string, phasePrefix: string, suffix: string): string {
-  return `${phaseDir}/${phasePrefix}${suffix}`;
-}
-
-function findArtifact(artifacts: string[], suffix: string): string | null {
-  return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
-}
-
 function extractRequirementIdsFromRequirementsTable(section: string): string[] {
   return extractMarkdownTableRows(section)
     .map((row) => row[0]?.trim() ?? "")
     .filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
-}
-
-async function readMarkdownDocument(
-  projectRoot: string,
-  relativePath: string
-): Promise<string | null> {
-  const absolutePath = resolveBlueprintPath(projectRoot, relativePath);
-
-  if (!(await pathExists(absolutePath))) {
-    return null;
-  }
-
-  return await fs.readFile(absolutePath, "utf8");
 }
 
 async function readPhaseContextGrounding(
@@ -3641,29 +3436,6 @@ function toResolvedPhaseLocation(
     phaseName: located.phaseName ?? fallbackPhaseName(located.phaseDir),
     phaseDir: located.phaseDir
   };
-}
-
-function artifactPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">, artifact: PhaseArtifactKind): string {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    PHASE_ARTIFACT_SUFFIXES[artifact]
-  );
-}
-
-function validationArtifactPathFor(
-  located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">,
-  artifact: PhaseValidationArtifactKind
-): string {
-  return buildArtifactPath(
-    located.phaseDir,
-    located.phasePrefix,
-    PHASE_VALIDATION_ARTIFACT_SUFFIXES[artifact]
-  );
-}
-
-function checkpointPathFor(located: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">): string {
-  return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
 }
 
 function extractHeadingPhaseDetails(
