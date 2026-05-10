@@ -3,6 +3,7 @@ import { type ArtifactContractReadResult } from "../artifact-contracts/index.js"
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
 import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
+import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
 type RoadmapReadArgs = {
     cwd?: string;
@@ -50,8 +51,6 @@ type PhaseLookupArgs = {
     cwd?: string;
     phase?: NumericInput;
 };
-type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
-type PhaseValidationArtifactKind = "verification" | "uat";
 type PlanIndexArgs = PhaseLookupArgs;
 type PhaseArtifactReadArgs = PhaseLookupArgs & {
     artifact: PhaseArtifactKind;

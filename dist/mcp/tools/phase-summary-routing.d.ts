@@ -1,7 +1,4 @@
-type PhaseSummaryPathLocation = {
-    phaseDir: string;
-    phasePrefix: string;
-};
+import { type PhasePathLocation } from "./phase-locations.js";
 export type PhaseSummaryCompletedRoute = {
     readiness: "ready-for-validation" | "not-ready-for-validation";
     nextSafeAction: string;
@@ -15,7 +12,7 @@ export type PhaseSummaryCompletedRouteValidation = {
     mode: "indexed";
 };
 export declare function parseSummaryArtifactPath(pathValue: string, phasePrefix: string): string | null;
-export declare function summaryPathFor(located: PhaseSummaryPathLocation, planId: string): string;
+export declare function summaryPathFor(located: PhasePathLocation, planId: string): string;
 export declare function phaseSummaryCompletedRoute(args: {
     phaseNumber: string;
     hasRemainingPendingPlans: boolean;
@@ -32,9 +29,8 @@ export declare function routesMatch(actual: {
 }, expected: PhaseSummaryCompletedRoute): boolean;
 export declare function formatCompletedSummaryRoute(route: PhaseSummaryCompletedRoute): string;
 export declare function extractPhaseSummaryMarkerValue(content: string, marker: string): string | null;
-export declare function dependencyPlanRowsForPlan(dependsOn: string[], availablePlanIds: ReadonlySet<string>, resolved: PhaseSummaryPathLocation): Array<{
+export declare function dependencyPlanRowsForPlan(dependsOn: string[], availablePlanIds: ReadonlySet<string>, resolved: PhasePathLocation): Array<{
     planId: string;
     path: string;
 }>;
 export declare function normalizeDependencyPlanIds(dependsOn: string[]): string[];
-export {};
