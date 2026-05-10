@@ -121,6 +121,14 @@ import {
   getJsonObjectProperty
 } from "./phase-json-helpers.js";
 import {
+  allowOnlyEmptyArray,
+  exactObjectPropertyContains,
+  exactStringArrayContains,
+  objectPropertyContainsAtLeast,
+  setArrayItemEnum,
+  setArrayMaxItems
+} from "./phase-task-schema-helpers.js";
+import {
   modelPathToJsonPointer
 } from "./phase-schema-paths.js";
 import {
@@ -3947,61 +3955,6 @@ async function validatePhasePlanModelCommands(model: Record<string, unknown>): P
     : [];
 }
 
-function setArrayItemEnum(schema: Record<string, unknown> | null, values: string[]): void {
-  if (!schema || values.length === 0) {
-    return;
-  }
-
-  const items = getJsonObjectProperty(schema, "items");
-  if (items) {
-    items.enum = values;
-  }
-}
-
-function setArrayMaxItems(schema: Record<string, unknown> | null, maxItems: number): void {
-  if (!schema) {
-    return;
-  }
-
-  schema.maxItems = maxItems;
-}
-
-function allowOnlyEmptyArray(schema: Record<string, unknown> | null): void {
-  if (!schema) {
-    return;
-  }
-
-  schema.minItems = 0;
-  schema.maxItems = 0;
-}
-
-function exactObjectPropertyContains(propertyName: string, value: string): Record<string, unknown> {
-  return {
-    contains: {
-      type: "object",
-      required: [propertyName],
-      properties: {
-        [propertyName]: { const: value }
-      }
-    },
-    minContains: 1,
-    maxContains: 1
-  };
-}
-
-function objectPropertyContainsAtLeast(propertyName: string, value: string): Record<string, unknown> {
-  return {
-    contains: {
-      type: "object",
-      required: [propertyName],
-      properties: {
-        [propertyName]: { const: value }
-      }
-    },
-    minContains: 1
-  };
-}
-
 function buildPhasePlanTaskSchema(args: {
   baseSchema: Record<string, unknown>;
   knownRequirements: string[];
@@ -4828,14 +4781,6 @@ async function buildPhaseVerificationAllowedNextActions(phaseNumber: string): Pr
     readyAction: implementedReady,
     repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
     allowedActions: [implementedReady, ...(implementedRepairs.length > 0 ? implementedRepairs : repairActions)]
-  };
-}
-
-function exactStringArrayContains(value: string): Record<string, unknown> {
-  return {
-    contains: { const: value },
-    minContains: 1,
-    maxContains: 1
   };
 }
 
