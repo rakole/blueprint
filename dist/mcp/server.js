@@ -26267,44 +26267,7 @@ var init_state = __esm({
   }
 });
 
-// src/mcp/tools/phase.ts
-var phase_exports = {};
-__export(phase_exports, {
-  blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
-  blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
-  blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
-  blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
-  blueprintPhaseCheckpointPut: () => blueprintPhaseCheckpointPut,
-  blueprintPhaseContext: () => blueprintPhaseContext,
-  blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
-  blueprintPhaseLocate: () => blueprintPhaseLocate,
-  blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
-  blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
-  blueprintPhasePlanRead: () => blueprintPhasePlanRead,
-  blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
-  blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
-  blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
-  blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
-  blueprintPhaseSummaryAuthoringContext: () => blueprintPhaseSummaryAuthoringContext,
-  blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
-  blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
-  blueprintPhaseSummaryValidateModel: () => blueprintPhaseSummaryValidateModel,
-  blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
-  blueprintPhaseValidationAuthoringContext: () => blueprintPhaseValidationAuthoringContext,
-  blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
-  blueprintPhaseValidationRender: () => blueprintPhaseValidationRender,
-  blueprintPhaseValidationValidateModel: () => blueprintPhaseValidationValidateModel,
-  blueprintPhaseValidationWrite: () => blueprintPhaseValidationWrite,
-  blueprintRoadmapAddPhase: () => blueprintRoadmapAddPhase,
-  blueprintRoadmapInsertPhase: () => blueprintRoadmapInsertPhase,
-  blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
-  blueprintRoadmapRead: () => blueprintRoadmapRead,
-  blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
-  buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
-  phaseToolDefinitions: () => phaseToolDefinitions
-});
-import { promises as fs3 } from "node:fs";
-import path5 from "node:path";
+// src/mcp/tools/phase-numbering.ts
 function normalizeBlueprintInput(value) {
   if (typeof value === "number") {
     return String(value);
@@ -26355,6 +26318,58 @@ function isIntegerPhaseNumber(value) {
 function slugToTitle(value) {
   return value.split("-").filter((segment) => segment.length > 0).map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
 }
+function normalizePhaseDescription(value) {
+  return value.trim().replace(/\s+/g, " ");
+}
+function slugifyPhaseName(value) {
+  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug.length > 0 ? slug : "new-phase";
+}
+var init_phase_numbering = __esm({
+  "src/mcp/tools/phase-numbering.ts"() {
+    "use strict";
+    init_security();
+  }
+});
+
+// src/mcp/tools/phase.ts
+var phase_exports = {};
+__export(phase_exports, {
+  blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut: () => blueprintPhaseCheckpointPut,
+  blueprintPhaseContext: () => blueprintPhaseContext,
+  blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
+  blueprintPhaseLocate: () => blueprintPhaseLocate,
+  blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
+  blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
+  blueprintPhasePlanRead: () => blueprintPhasePlanRead,
+  blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
+  blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
+  blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
+  blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
+  blueprintPhaseSummaryAuthoringContext: () => blueprintPhaseSummaryAuthoringContext,
+  blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
+  blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
+  blueprintPhaseSummaryValidateModel: () => blueprintPhaseSummaryValidateModel,
+  blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
+  blueprintPhaseValidationAuthoringContext: () => blueprintPhaseValidationAuthoringContext,
+  blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
+  blueprintPhaseValidationRender: () => blueprintPhaseValidationRender,
+  blueprintPhaseValidationValidateModel: () => blueprintPhaseValidationValidateModel,
+  blueprintPhaseValidationWrite: () => blueprintPhaseValidationWrite,
+  blueprintRoadmapAddPhase: () => blueprintRoadmapAddPhase,
+  blueprintRoadmapInsertPhase: () => blueprintRoadmapInsertPhase,
+  blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
+  blueprintRoadmapRead: () => blueprintRoadmapRead,
+  blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
+  buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
+  phaseToolDefinitions: () => phaseToolDefinitions
+});
+import { promises as fs3 } from "node:fs";
+import path5 from "node:path";
 function parseRequirements(value) {
   if (!value) {
     return [];
@@ -26562,13 +26577,6 @@ function parseRoadmapDocument(raw) {
     });
   }
   return { milestone: milestone2, phases };
-}
-function normalizePhaseDescription(value) {
-  return value.trim().replace(/\s+/g, " ");
-}
-function slugifyPhaseName(value) {
-  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
-  return slug.length > 0 ? slug : "new-phase";
 }
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
   const phasePrefix2 = formatPhasePrefix2(phaseNumber);
@@ -34959,6 +34967,7 @@ var init_phase = __esm({
     init_state();
     init_security();
     init_quality_gates();
+    init_phase_numbering();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",

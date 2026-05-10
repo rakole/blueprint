@@ -1,10 +1,10 @@
 import * as z from "zod/v4";
 import { type ArtifactContractReadResult } from "../artifact-contracts/index.js";
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
+import { type NumericInput } from "./phase-numbering.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
-type NumericInput = string | number;
 type AuditBackedGapCategory = "requirement" | "integration" | "flow" | "optional";
 type AuditBackedGapRow = {
     gapId: string;
