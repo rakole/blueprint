@@ -28390,6 +28390,220 @@ var init_phase_context_model = __esm({
   }
 });
 
+// src/mcp/tools/phase-plan-diagnostics.ts
+function phasePlanDiagnostic(args) {
+  const modelPath = args.modelPath ?? (args.path === "model" || args.path.startsWith("model.") ? args.path : void 0);
+  const jsonPointer = args.jsonPointer !== void 0 ? args.jsonPointer : modelPath ? modelPathToJsonPointer(modelPath) : null;
+  return {
+    severity: "error",
+    ...args,
+    modelPath,
+    jsonPointer
+  };
+}
+function emptyPhasePlanDiagnosticCounts() {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+function countPhasePlanDiagnostics(diagnostics) {
+  const counts = emptyPhasePlanDiagnosticCounts();
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+  return counts;
+}
+function summarizePhasePlanRepairs(diagnostics) {
+  const firstPassActions = uniquePreservingOrder(
+    diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
+  );
+  const reReadAuthoringContext = diagnostics.some(
+    (diagnostic) => diagnostic.repairAction === "re-read-context" || diagnostic.code === "schema.exactCoverage" || diagnostic.source === "scope"
+  );
+  const retryInstruction = diagnostics.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once." : "Repair every diagnostic in the returned model before retrying validation once.";
+  return {
+    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
+    firstPassActions,
+    reReadAuthoringContext,
+    retryInstruction
+  };
+}
+function formatPhasePlanDiagnostic(diagnostic) {
+  const pathHint = diagnostic.jsonPointer ? `${diagnostic.path} (${diagnostic.jsonPointer})` : diagnostic.path;
+  const actionHint = diagnostic.repairAction ? ` Action: ${diagnostic.repairAction}.` : "";
+  return `${diagnostic.source}:${pathHint}:${diagnostic.code}: ${diagnostic.message}${actionHint} Suggestion: ${diagnostic.suggestion}`;
+}
+function phasePlanSchemaRepairAction(error2) {
+  if (error2.keyword === "required" || error2.keyword === "contains" || error2.keyword === "minItems") {
+    return "add";
+  }
+  if (error2.keyword === "additionalProperties" || error2.keyword === "maxItems") {
+    return "remove";
+  }
+  if (error2.keyword === "uniqueItems") {
+    return "dedupe";
+  }
+  return "replace";
+}
+function phasePlanSchemaExpected(error2, allowedValues) {
+  if (allowedValues && allowedValues.length > 0) {
+    return allowedValues;
+  }
+  if (error2.keyword === "pattern" && "pattern" in error2.params) {
+    return `Value matching pattern ${String(error2.params.pattern)}`;
+  }
+  if (error2.keyword === "minItems" && "limit" in error2.params) {
+    return `At least ${String(error2.params.limit)} item(s)`;
+  }
+  if (error2.keyword === "maxItems" && "limit" in error2.params) {
+    return `At most ${String(error2.params.limit)} item(s)`;
+  }
+  return error2.keyword;
+}
+function schemaDiagnosticFromAjvError(error2, model) {
+  const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+  const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+  const basePath = ajvInstancePathToModelPath(error2.instancePath);
+  const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  const jsonPointer = missingProperty !== null ? appendJsonPointerSegment(error2.instancePath, missingProperty) : additionalProperty !== null ? appendJsonPointerSegment(error2.instancePath, additionalProperty) : error2.instancePath;
+  const allowedValues = ajvAllowedValues(error2);
+  const actual = getValueAtJsonPointer(model, jsonPointer);
+  const repairAction = phasePlanSchemaRepairAction(error2);
+  const patchHint = additionalProperty !== null ? { op: "remove", path: jsonPointer } : allowedValues && allowedValues.length > 0 && actual !== void 0 ? { op: "replace", path: jsonPointer, value: allowedValues[0] } : void 0;
+  return phasePlanDiagnostic({
+    source: "schema",
+    path: pathValue,
+    modelPath: pathValue,
+    jsonPointer,
+    code: `schema.${error2.keyword}`,
+    message: error2.message ?? "Model does not match the phase.plan task schema.",
+    context: {
+      keyword: error2.keyword,
+      params: error2.params,
+      schemaPath: error2.schemaPath
+    },
+    expected: phasePlanSchemaExpected(error2, allowedValues),
+    actual,
+    allowedValues,
+    repairAction,
+    patchHint,
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
+  });
+}
+function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema, model) {
+  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const knownRequirements = Array.isArray(runtimeContext?.knownRequirements) ? runtimeContext.knownRequirements.filter((value) => typeof value === "string") : [];
+  const knownEvidenceArtifacts = Array.isArray(runtimeContext?.knownEvidenceArtifacts) ? runtimeContext.knownEvidenceArtifacts.filter(
+    (value) => typeof value === "string"
+  ) : [];
+  const exactContainsMatch = error2.schemaPath.match(
+    /\/properties\/(requirementCoverage|evidenceCoverage)\/allOf\/(\d+)/
+  );
+  if (error2.keyword === "contains" && exactContainsMatch) {
+    const collection = exactContainsMatch[1] ?? "";
+    const index = Number.parseInt(exactContainsMatch[2] ?? "", 10);
+    const requiredValue = collection === "requirementCoverage" ? knownRequirements[index] : knownEvidenceArtifacts[index];
+    if (requiredValue) {
+      const noun = collection === "requirementCoverage" ? "known roadmap requirement" : "known saved evidence artifact";
+      return phasePlanDiagnostic({
+        source: "schema",
+        path: `model.${collection}`,
+        modelPath: `model.${collection}`,
+        jsonPointer: `/${collection}`,
+        code: "schema.exactCoverage",
+        message: `Phase plan model ${collection} must include exactly one row for ${noun} ${requiredValue}.`,
+        context: {
+          requiredValue,
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath
+        },
+        expected: collection === "requirementCoverage" ? {
+          requirement: requiredValue,
+          status: "deferred",
+          coveredByTasks: [],
+          evidence: "Concrete evidence or rationale from the selected phase.",
+          rationale: "Explain why this requirement is deferred, irrelevant, or covered."
+        } : {
+          artifact: requiredValue,
+          status: "used",
+          rationale: "Explain how this saved evidence artifact informed the plan."
+        },
+        actual: getValueAtJsonPointer(model, `/${collection}`),
+        repairAction: collection === "evidenceCoverage" ? "re-read-context" : "add",
+        patchHint: {
+          op: "add",
+          path: `/${collection}/-`,
+          value: collection === "requirementCoverage" ? {
+            requirement: requiredValue,
+            status: "deferred",
+            coveredByTasks: [],
+            evidence: "Concrete evidence or rationale from the selected phase.",
+            rationale: "Explain why this requirement is deferred, irrelevant, or covered."
+          } : {
+            artifact: requiredValue,
+            status: "used",
+            rationale: "Explain how this saved evidence artifact informed the plan."
+          }
+        },
+        suggestion: collection === "evidenceCoverage" ? `Re-read blueprint_phase_plan_authoring_context and add one evidenceCoverage row for saved artifact ${requiredValue}, or remove duplicate rows for that artifact.` : `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
+      });
+    }
+  }
+  return schemaDiagnosticFromAjvError(error2, model);
+}
+function phasePlanModelResidualDiagnostics(model) {
+  const diagnostics = [];
+  const modelContract = readArtifactContract("phase.plan").modelContract;
+  if (!modelContract) {
+    return [
+      phasePlanDiagnostic({
+        source: "scope",
+        path: "model",
+        code: "contract.missing",
+        message: "phase.plan does not support structured model writes.",
+        context: {},
+        suggestion: "Read the live phase.plan artifact contract before authoring."
+      })
+    ];
+  }
+  const modelStrings = collectModelStringValues(model);
+  const leakedSignals = modelContract.exampleLeakageSignals.filter(
+    (signal) => modelStrings.some((value) => value.includes(signal))
+  );
+  for (const signal of leakedSignals) {
+    diagnostics.push(
+      phasePlanDiagnostic({
+        source: "residual",
+        path: "model",
+        code: "content.example_leakage",
+        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
+        context: { signal },
+        suggestion: "Replace copied example wording with evidence from the selected phase."
+      })
+    );
+  }
+  return diagnostics;
+}
+var init_phase_plan_diagnostics = __esm({
+  "src/mcp/tools/phase-plan-diagnostics.ts"() {
+    "use strict";
+    init_artifact_contracts();
+    init_phase_json_helpers();
+    init_phase_collection_helpers();
+    init_phase_schema_paths();
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -30156,37 +30370,6 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
     allowedActions: implemented.length > 0 ? implemented : fallback
   };
 }
-function phasePlanDiagnostic(args) {
-  const modelPath = args.modelPath ?? (args.path === "model" || args.path.startsWith("model.") ? args.path : void 0);
-  const jsonPointer = args.jsonPointer !== void 0 ? args.jsonPointer : modelPath ? modelPathToJsonPointer(modelPath) : null;
-  return {
-    severity: "error",
-    ...args,
-    modelPath,
-    jsonPointer
-  };
-}
-function emptyPhasePlanDiagnosticCounts() {
-  return {
-    total: 0,
-    bySource: {
-      scope: 0,
-      schema: 0,
-      residual: 0,
-      markdown: 0
-    },
-    byCode: {}
-  };
-}
-function countPhasePlanDiagnostics(diagnostics) {
-  const counts = emptyPhasePlanDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
-    counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
-  }
-  return counts;
-}
 function phasePlanValidateModelTarget(args) {
   return {
     artifact: "phase.plan",
@@ -30197,145 +30380,6 @@ function phasePlanValidateModelTarget(args) {
     path: args.path,
     schemaPath: args.schemaPath
   };
-}
-function summarizePhasePlanRepairs(diagnostics) {
-  const firstPassActions = uniquePreservingOrder(
-    diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
-  );
-  const reReadAuthoringContext = diagnostics.some(
-    (diagnostic) => diagnostic.repairAction === "re-read-context" || diagnostic.code === "schema.exactCoverage" || diagnostic.source === "scope"
-  );
-  const retryInstruction = diagnostics.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once." : "Repair every diagnostic in the returned model before retrying validation once.";
-  return {
-    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
-    firstPassActions,
-    reReadAuthoringContext,
-    retryInstruction
-  };
-}
-function formatPhasePlanDiagnostic(diagnostic) {
-  const pathHint = diagnostic.jsonPointer ? `${diagnostic.path} (${diagnostic.jsonPointer})` : diagnostic.path;
-  const actionHint = diagnostic.repairAction ? ` Action: ${diagnostic.repairAction}.` : "";
-  return `${diagnostic.source}:${pathHint}:${diagnostic.code}: ${diagnostic.message}${actionHint} Suggestion: ${diagnostic.suggestion}`;
-}
-function phasePlanSchemaRepairAction(error2) {
-  if (error2.keyword === "required" || error2.keyword === "contains" || error2.keyword === "minItems") {
-    return "add";
-  }
-  if (error2.keyword === "additionalProperties" || error2.keyword === "maxItems") {
-    return "remove";
-  }
-  if (error2.keyword === "uniqueItems") {
-    return "dedupe";
-  }
-  return "replace";
-}
-function phasePlanSchemaExpected(error2, allowedValues) {
-  if (allowedValues && allowedValues.length > 0) {
-    return allowedValues;
-  }
-  if (error2.keyword === "pattern" && "pattern" in error2.params) {
-    return `Value matching pattern ${String(error2.params.pattern)}`;
-  }
-  if (error2.keyword === "minItems" && "limit" in error2.params) {
-    return `At least ${String(error2.params.limit)} item(s)`;
-  }
-  if (error2.keyword === "maxItems" && "limit" in error2.params) {
-    return `At most ${String(error2.params.limit)} item(s)`;
-  }
-  return error2.keyword;
-}
-function schemaDiagnosticFromAjvError(error2, model) {
-  const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
-  const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
-  const basePath = ajvInstancePathToModelPath(error2.instancePath);
-  const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
-  const jsonPointer = missingProperty !== null ? appendJsonPointerSegment(error2.instancePath, missingProperty) : additionalProperty !== null ? appendJsonPointerSegment(error2.instancePath, additionalProperty) : error2.instancePath;
-  const allowedValues = ajvAllowedValues(error2);
-  const actual = getValueAtJsonPointer(model, jsonPointer);
-  const repairAction = phasePlanSchemaRepairAction(error2);
-  const patchHint = additionalProperty !== null ? { op: "remove", path: jsonPointer } : allowedValues && allowedValues.length > 0 && actual !== void 0 ? { op: "replace", path: jsonPointer, value: allowedValues[0] } : void 0;
-  return phasePlanDiagnostic({
-    source: "schema",
-    path: pathValue,
-    modelPath: pathValue,
-    jsonPointer,
-    code: `schema.${error2.keyword}`,
-    message: error2.message ?? "Model does not match the phase.plan task schema.",
-    context: {
-      keyword: error2.keyword,
-      params: error2.params,
-      schemaPath: error2.schemaPath
-    },
-    expected: phasePlanSchemaExpected(error2, allowedValues),
-    actual,
-    allowedValues,
-    repairAction,
-    patchHint,
-    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
-  });
-}
-function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema, model) {
-  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
-  const knownRequirements = Array.isArray(runtimeContext?.knownRequirements) ? runtimeContext.knownRequirements.filter((value) => typeof value === "string") : [];
-  const knownEvidenceArtifacts = Array.isArray(runtimeContext?.knownEvidenceArtifacts) ? runtimeContext.knownEvidenceArtifacts.filter(
-    (value) => typeof value === "string"
-  ) : [];
-  const exactContainsMatch = error2.schemaPath.match(
-    /\/properties\/(requirementCoverage|evidenceCoverage)\/allOf\/(\d+)/
-  );
-  if (error2.keyword === "contains" && exactContainsMatch) {
-    const collection = exactContainsMatch[1] ?? "";
-    const index = Number.parseInt(exactContainsMatch[2] ?? "", 10);
-    const requiredValue = collection === "requirementCoverage" ? knownRequirements[index] : knownEvidenceArtifacts[index];
-    if (requiredValue) {
-      const noun = collection === "requirementCoverage" ? "known roadmap requirement" : "known saved evidence artifact";
-      return phasePlanDiagnostic({
-        source: "schema",
-        path: `model.${collection}`,
-        modelPath: `model.${collection}`,
-        jsonPointer: `/${collection}`,
-        code: "schema.exactCoverage",
-        message: `Phase plan model ${collection} must include exactly one row for ${noun} ${requiredValue}.`,
-        context: {
-          requiredValue,
-          keyword: error2.keyword,
-          params: error2.params,
-          schemaPath: error2.schemaPath
-        },
-        expected: collection === "requirementCoverage" ? {
-          requirement: requiredValue,
-          status: "deferred",
-          coveredByTasks: [],
-          evidence: "Concrete evidence or rationale from the selected phase.",
-          rationale: "Explain why this requirement is deferred, irrelevant, or covered."
-        } : {
-          artifact: requiredValue,
-          status: "used",
-          rationale: "Explain how this saved evidence artifact informed the plan."
-        },
-        actual: getValueAtJsonPointer(model, `/${collection}`),
-        repairAction: collection === "evidenceCoverage" ? "re-read-context" : "add",
-        patchHint: {
-          op: "add",
-          path: `/${collection}/-`,
-          value: collection === "requirementCoverage" ? {
-            requirement: requiredValue,
-            status: "deferred",
-            coveredByTasks: [],
-            evidence: "Concrete evidence or rationale from the selected phase.",
-            rationale: "Explain why this requirement is deferred, irrelevant, or covered."
-          } : {
-            artifact: requiredValue,
-            status: "used",
-            rationale: "Explain how this saved evidence artifact informed the plan."
-          }
-        },
-        suggestion: collection === "evidenceCoverage" ? `Re-read blueprint_phase_plan_authoring_context and add one evidenceCoverage row for saved artifact ${requiredValue}, or remove duplicate rows for that artifact.` : `Add one ${collection} row for ${requiredValue}, or remove duplicate rows for that value.`
-      });
-    }
-  }
-  return schemaDiagnosticFromAjvError(error2, model);
 }
 async function getPhasePlanImplementedCommandNames() {
   if (!phasePlanImplementedCommandNamesPromise) {
@@ -30378,39 +30422,6 @@ async function validatePhasePlanModelCommands(model) {
   return nonImplementedCommands.length > 0 ? [
     `Phase plan model references non-implemented Blueprint command(s): ${nonImplementedCommands.join(", ")}.`
   ] : [];
-}
-function phasePlanModelResidualDiagnostics(model) {
-  const diagnostics = [];
-  const modelContract = readArtifactContract("phase.plan").modelContract;
-  if (!modelContract) {
-    return [
-      phasePlanDiagnostic({
-        source: "scope",
-        path: "model",
-        code: "contract.missing",
-        message: "phase.plan does not support structured model writes.",
-        context: {},
-        suggestion: "Read the live phase.plan artifact contract before authoring."
-      })
-    ];
-  }
-  const modelStrings = collectModelStringValues(model);
-  const leakedSignals = modelContract.exampleLeakageSignals.filter(
-    (signal) => modelStrings.some((value) => value.includes(signal))
-  );
-  for (const signal of leakedSignals) {
-    diagnostics.push(
-      phasePlanDiagnostic({
-        source: "residual",
-        path: "model",
-        code: "content.example_leakage",
-        message: `Phase plan model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
-        context: { signal },
-        suggestion: "Replace copied example wording with evidence from the selected phase."
-      })
-    );
-  }
-  return diagnostics;
 }
 function setArrayItemEnum(schema, values) {
   if (!schema || values.length === 0) {
@@ -35233,6 +35244,7 @@ var init_phase = __esm({
     init_phase_validation_diagnostics();
     init_phase_plan_rendering();
     init_phase_context_model();
+    init_phase_plan_diagnostics();
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };

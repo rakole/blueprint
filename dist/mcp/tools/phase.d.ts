@@ -10,6 +10,7 @@ import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type Phas
 import { type PhaseValidationAllowedValues } from "./phase-validation-contracts.js";
 import { type PhaseValidationDiagnosticCounts, type PhaseValidationModelDiagnostic } from "./phase-validation-diagnostics.js";
 import { type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
+import { type PhasePlanDiagnosticCounts, type PhasePlanModelDiagnostic, type PhasePlanRepairSummary } from "./phase-plan-diagnostics.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -636,32 +637,6 @@ type PhasePlanAuthoringContextResult = {
     reason: string | null;
     warnings: string[];
 };
-type PhasePlanModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-type PhasePlanModelDiagnosticSeverity = "error" | "warning";
-type PhasePlanModelRepairAction = "add" | "remove" | "replace" | "dedupe" | "reroute" | "make-verifiable" | "re-read-context";
-type PhasePlanModelPatchHint = {
-    op: "add" | "remove" | "replace";
-    path: string;
-    value?: unknown;
-};
-type PhasePlanModelDiagnostic = {
-    id?: string;
-    severity?: PhasePlanModelDiagnosticSeverity;
-    source: PhasePlanModelDiagnosticSource;
-    path: string;
-    modelPath?: string;
-    jsonPointer?: string | null;
-    markdownPath?: string;
-    code: string;
-    message: string;
-    context: Record<string, unknown>;
-    expected?: unknown;
-    actual?: unknown;
-    allowedValues?: unknown[];
-    repairAction?: PhasePlanModelRepairAction;
-    patchHint?: PhasePlanModelPatchHint;
-    suggestion: string;
-};
 type PhasePlanValidateModelTarget = {
     artifact: "phase.plan";
     phaseNumber: string | null;
@@ -670,12 +645,6 @@ type PhasePlanValidateModelTarget = {
     planId: string | null;
     path: string | null;
     schemaPath: string | null;
-};
-type PhasePlanRepairSummary = {
-    blockingCount: number;
-    firstPassActions: string[];
-    reReadAuthoringContext: boolean;
-    retryInstruction: string;
 };
 type PhasePlanValidateModelResult = {
     status: "valid" | "invalid";
@@ -692,11 +661,7 @@ type PhasePlanValidateModelResult = {
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
     diagnostics: PhasePlanModelDiagnostic[];
-    diagnosticCounts: {
-        total: number;
-        bySource: Record<PhasePlanModelDiagnosticSource, number>;
-        byCode: Record<string, number>;
-    };
+    diagnosticCounts: PhasePlanDiagnosticCounts;
     normalizedModel: PhasePlanStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
