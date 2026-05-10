@@ -28240,6 +28240,156 @@ var init_phase_plan_rendering = __esm({
   }
 });
 
+// src/mcp/tools/phase-context-model.ts
+function renderContextBulletList(items) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+function renderContextTable(headers, rows) {
+  return [
+    `| ${headers.map(markdownTableCell).join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+    ...rows.map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`)
+  ].join("\n");
+}
+function renderPhaseContextModelContent(args) {
+  const openQuestions = args.model.openQuestions.length === 1 && args.model.openQuestions[0].trim().toLowerCase() === "none" ? "- none" : renderContextBulletList(args.model.openQuestions);
+  return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
+
+## Phase Boundary
+
+- **Goal** ${args.model.phaseBoundary.goal}
+- **In scope**
+${renderContextBulletList(args.model.phaseBoundary.inScope)}
+- **Out of scope**
+${renderContextBulletList(args.model.phaseBoundary.outOfScope)}
+- **Success criteria**
+${renderContextBulletList(args.model.phaseBoundary.successCriteria)}
+
+## Discovery Grounding
+
+- **Project brief** ${args.model.discoveryGrounding.projectBrief}
+- **Requirements grounding**
+${renderContextBulletList(args.model.discoveryGrounding.requirementsGrounding)}
+- **Workflow posture** ${args.model.discoveryGrounding.workflowPosture}
+- **Confirmed decisions**
+${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
+
+## Implementation Decisions
+
+${renderContextTable(
+    ["Decision", "Tradeoff Or Constraint"],
+    args.model.implementationDecisions.map((row) => [
+      row.decision,
+      row.tradeoffOrConstraint
+    ])
+  )}
+
+## Specific Ideas
+
+${renderContextBulletList(args.model.specificIdeas)}
+
+## Existing Code Insights
+
+${renderContextBulletList(args.model.existingCodeInsights)}
+
+## Dependencies
+
+- Prior phase artifacts:
+${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
+- External constraints:
+${renderContextBulletList(args.model.dependencies.externalConstraints)}
+- Required follow-up reads:
+${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
+
+## Open Questions
+
+${openQuestions}
+
+## Deferred Ideas
+
+${renderContextBulletList(args.model.deferredIdeas)}
+
+## Canonical References
+
+${renderContextTable(
+    ["Source", "Relevance"],
+    args.model.canonicalReferences.map((row) => [row.source, row.relevance])
+  )}
+`;
+}
+function validatePhaseContextModelInput(model) {
+  const modelObject = asJsonObject(model);
+  const diagnostics = [];
+  if (!modelObject) {
+    diagnostics.push({
+      path: "model",
+      code: "schema.type",
+      message: "phase.context model must be a JSON object.",
+      repair: "Pass a JSON object matching phase.context.modelContract.",
+      retryable: true,
+      nextTool: "blueprint_phase_artifact_write"
+    });
+  } else {
+    const contract = readArtifactContract("phase.context");
+    const schema = contract.modelContract?.jsonSchema;
+    if (!schema) {
+      diagnostics.push({
+        path: "model",
+        code: "schema.missing",
+        message: "phase.context does not expose a model schema.",
+        repair: "Read blueprint_artifact_contract_read for phase.context before retrying.",
+        retryable: true,
+        nextTool: "blueprint_phase_artifact_write"
+      });
+    } else {
+      const validate = createAjvValidator().compile(schema);
+      const valid = validate(modelObject);
+      if (!valid) {
+        diagnostics.push(
+          ...(validate.errors ?? []).map((error2) => {
+            const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+            const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+            const basePath = error2.instancePath.length === 0 ? "model" : `model${error2.instancePath.replace(/\//g, ".")}`;
+            const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+            return {
+              path: pathValue,
+              code: `schema.${error2.keyword}`,
+              message: `phase.context model schema violation at ${pathValue}: ${error2.message ?? error2.keyword}.`,
+              missing: missingProperty ? [missingProperty] : void 0,
+              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
+              retryable: true,
+              nextTool: "blueprint_phase_artifact_write"
+            };
+          })
+        );
+      }
+    }
+  }
+  if (diagnostics.length > 0) {
+    return {
+      model: null,
+      validation: {
+        valid: false,
+        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        warnings: [],
+        diagnostics
+      }
+    };
+  }
+  return {
+    model: modelObject,
+    validation: null
+  };
+}
+var init_phase_context_model = __esm({
+  "src/mcp/tools/phase-context-model.ts"() {
+    "use strict";
+    init_artifact_contracts();
+    init_phase_json_helpers();
+    init_phase_markdown();
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -32678,146 +32828,6 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
     `Add a real ${artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
   ];
 }
-function renderContextBulletList(items) {
-  return items.map((item) => `- ${item}`).join("\n");
-}
-function renderContextTable(headers, rows) {
-  return [
-    `| ${headers.map(markdownTableCell).join(" | ")} |`,
-    `| ${headers.map(() => "---").join(" | ")} |`,
-    ...rows.map((row) => `| ${row.map(markdownTableCell).join(" | ")} |`)
-  ].join("\n");
-}
-function renderPhaseContextModelContent(args) {
-  const openQuestions = args.model.openQuestions.length === 1 && args.model.openQuestions[0].trim().toLowerCase() === "none" ? "- none" : renderContextBulletList(args.model.openQuestions);
-  return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
-
-## Phase Boundary
-
-- **Goal** ${args.model.phaseBoundary.goal}
-- **In scope**
-${renderContextBulletList(args.model.phaseBoundary.inScope)}
-- **Out of scope**
-${renderContextBulletList(args.model.phaseBoundary.outOfScope)}
-- **Success criteria**
-${renderContextBulletList(args.model.phaseBoundary.successCriteria)}
-
-## Discovery Grounding
-
-- **Project brief** ${args.model.discoveryGrounding.projectBrief}
-- **Requirements grounding**
-${renderContextBulletList(args.model.discoveryGrounding.requirementsGrounding)}
-- **Workflow posture** ${args.model.discoveryGrounding.workflowPosture}
-- **Confirmed decisions**
-${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
-
-## Implementation Decisions
-
-${renderContextTable(
-    ["Decision", "Tradeoff Or Constraint"],
-    args.model.implementationDecisions.map((row) => [
-      row.decision,
-      row.tradeoffOrConstraint
-    ])
-  )}
-
-## Specific Ideas
-
-${renderContextBulletList(args.model.specificIdeas)}
-
-## Existing Code Insights
-
-${renderContextBulletList(args.model.existingCodeInsights)}
-
-## Dependencies
-
-- Prior phase artifacts:
-${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
-- External constraints:
-${renderContextBulletList(args.model.dependencies.externalConstraints)}
-- Required follow-up reads:
-${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
-
-## Open Questions
-
-${openQuestions}
-
-## Deferred Ideas
-
-${renderContextBulletList(args.model.deferredIdeas)}
-
-## Canonical References
-
-${renderContextTable(
-    ["Source", "Relevance"],
-    args.model.canonicalReferences.map((row) => [row.source, row.relevance])
-  )}
-`;
-}
-function validatePhaseContextModelInput(model) {
-  const modelObject = asJsonObject(model);
-  const diagnostics = [];
-  if (!modelObject) {
-    diagnostics.push({
-      path: "model",
-      code: "schema.type",
-      message: "phase.context model must be a JSON object.",
-      repair: "Pass a JSON object matching phase.context.modelContract.",
-      retryable: true,
-      nextTool: "blueprint_phase_artifact_write"
-    });
-  } else {
-    const contract = readArtifactContract("phase.context");
-    const schema = contract.modelContract?.jsonSchema;
-    if (!schema) {
-      diagnostics.push({
-        path: "model",
-        code: "schema.missing",
-        message: "phase.context does not expose a model schema.",
-        repair: "Read blueprint_artifact_contract_read for phase.context before retrying.",
-        retryable: true,
-        nextTool: "blueprint_phase_artifact_write"
-      });
-    } else {
-      const validate = createAjvValidator().compile(schema);
-      const valid = validate(modelObject);
-      if (!valid) {
-        diagnostics.push(
-          ...(validate.errors ?? []).map((error2) => {
-            const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
-            const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
-            const basePath = error2.instancePath.length === 0 ? "model" : `model${error2.instancePath.replace(/\//g, ".")}`;
-            const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
-            return {
-              path: pathValue,
-              code: `schema.${error2.keyword}`,
-              message: `phase.context model schema violation at ${pathValue}: ${error2.message ?? error2.keyword}.`,
-              missing: missingProperty ? [missingProperty] : void 0,
-              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
-              retryable: true,
-              nextTool: "blueprint_phase_artifact_write"
-            };
-          })
-        );
-      }
-    }
-  }
-  if (diagnostics.length > 0) {
-    return {
-      model: null,
-      validation: {
-        valid: false,
-        issues: diagnostics.map((diagnostic) => diagnostic.message),
-        warnings: [],
-        diagnostics
-      }
-    };
-  }
-  return {
-    model: modelObject,
-    validation: null
-  };
-}
 function phaseArtifactRetryPlan(artifact, diagnostics) {
   const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, diagnostics);
   const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : "/blu-ui-phase";
@@ -35222,6 +35232,7 @@ var init_phase = __esm({
     init_phase_validation_contracts();
     init_phase_validation_diagnostics();
     init_phase_plan_rendering();
+    init_phase_context_model();
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };
