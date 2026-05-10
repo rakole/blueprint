@@ -3356,7 +3356,15 @@ function extractMarkdownTableDataRows(section: string): string[][] {
 }
 
 function extractBlueprintCommands(section: string): string[] {
-  return [...new Set(section.match(/\/blu-[a-z0-9]+(?:-[a-z0-9]+)*/gi) ?? [])];
+  const commands = section.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/gi) ?? [];
+
+  return [
+    ...new Set(
+      commands.map((command) =>
+        command.trim().replace(/^\/blu\s+/i, "/blu-")
+      )
+    )
+  ];
 }
 
 let implementedCommandNamesPromise: Promise<Set<string>> | null = null;
@@ -6188,6 +6196,16 @@ export function validateReportArtifactContent(
       ["Flow Gaps", flowGaps],
       ["Optional Gaps", optionalGaps]
     ] as const;
+    const verdict = auditVerdict.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m)?.[1] ?? null;
+    const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
+    const unsafeNonReadyNextActions = new Set([
+      "/blu-complete-milestone",
+      "/blu-milestone-summary",
+      "/blu-new-milestone"
+    ]);
+    const unsafeNonReadyNextActionCommands = extractBlueprintCommands(nextSafeAction)
+      .map((command) => command.toLowerCase())
+      .filter((command) => unsafeNonReadyNextActions.has(command));
 
     if (!/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/m.test(auditVerdict)) {
       issues.push(
@@ -6197,6 +6215,11 @@ export function validateReportArtifactContent(
 
     if (/\bREADY_TO_CLOSE\|FOLLOW_UP\|BLOCKED\b/.test(auditVerdict)) {
       issues.push("Report artifact section Audit Verdict still contains scaffold verdict placeholder text.");
+    }
+    if ((verdict === "FOLLOW_UP" || verdict === "BLOCKED") && unsafeNonReadyNextActionCommands.length > 0) {
+      issues.push(
+        `Report artifact section Next Safe Action must not route ${verdict} milestone audits to closeout or archival commands: ${unsafeNonReadyNextActionCommands.join(", ")}.`
+      );
     }
 
     issues.push(

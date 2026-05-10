@@ -246,15 +246,20 @@ function roadmapDetailStatusIsComplete(status: string | null): boolean | null {
 }
 
 function readRoadmapPhaseDetailSignals(raw: string): RoadmapPhaseDetailSignal[] {
-  const phaseDetailsMatch = raw.match(/(?:^|\n)## Phase Details\s*\n([\s\S]*?)(?=\n## |\s*$)/);
-  const phaseDetails = phaseDetailsMatch?.[1] ?? "";
+  const phaseDetails = extractMarkdownSection(raw, "Phase Details");
   const phases: RoadmapPhaseDetailSignal[] = [];
 
-  for (const match of phaseDetails.matchAll(
-    /^### Phase\s+(\d+(?:\.\d+)?):[^\n]*(?:\n([\s\S]*?))?(?=^### Phase\s+\d+(?:\.\d+)?:|^## |\s*$)/gm
-  )) {
+  for (const rawBlock of phaseDetails.split(/^### Phase\s+/gm).slice(1)) {
+    const newlineIndex = rawBlock.indexOf("\n");
+    const heading = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
+    const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
+    const match = heading.match(/^(\d+(?:\.\d+)?)(?=$|\s|:|-|–|—)/);
+
+    if (!match) {
+      continue;
+    }
+
     const phaseNumber = normalizeBlueprintPhaseRef(match[1] ?? "") ?? (match[1] ?? "");
-    const body = match[2] ?? "";
     const status = body.match(/^\*\*Status\*\*:\s*(.+)$/im)?.[1]?.trim() ?? null;
 
     phases.push({
@@ -384,7 +389,10 @@ const PATCH_PHASE_OVERRIDE_COMMANDS = [
   blueprintDirectCommand("verify-work"),
   blueprintDirectCommand("add-tests")
 ] as const;
-const STORED_PHASE_OVERRIDE_COMMANDS = [
+const PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS: ReadonlySet<string> = new Set(
+  PATCH_PHASE_OVERRIDE_COMMANDS
+);
+const STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS: ReadonlySet<string> = new Set([
   blueprintDirectCommand("research-phase"),
   blueprintDirectCommand("ui-phase"),
   blueprintDirectCommand("plan-phase"),
@@ -392,13 +400,7 @@ const STORED_PHASE_OVERRIDE_COMMANDS = [
   blueprintDirectCommand("validate-phase"),
   blueprintDirectCommand("verify-work"),
   blueprintDirectCommand("add-tests")
-] as const;
-const PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS: ReadonlySet<string> = new Set(
-  PATCH_PHASE_OVERRIDE_COMMANDS
-);
-const STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS: ReadonlySet<string> = new Set(
-  STORED_PHASE_OVERRIDE_COMMANDS
-);
+]);
 
 const stateUpdateInputSchema = {
   cwd: z.string().optional(),
@@ -792,6 +794,7 @@ function extractNextActionPhaseSelection(nextAction: string): {
 }
 
 function resolveStoredPhaseRoutingOverride(args: {
+  activeCommand: string;
   currentPhase: string | null;
   nextAction: string;
   roadmapCurrentPhase: string | null;
@@ -799,7 +802,9 @@ function resolveStoredPhaseRoutingOverride(args: {
   const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
 
   if (
+    !PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(args.activeCommand) ||
     nextActionSelection.command === null ||
+    nextActionSelection.command === args.activeCommand ||
     !STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(nextActionSelection.command)
   ) {
     return null;
@@ -1539,7 +1544,7 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
     const raw = await fs.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
     const checkboxPhases = [...raw.matchAll(
-      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?)(?:\*\*)?\s*(?::|-)\s+/gm
     )].map((match) => ({
       phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
       completed: match[1].toLowerCase() === "x"
@@ -2355,15 +2360,18 @@ async function buildSyncedState(
     existingState.currentPhase.length > 0 &&
     comparePhaseNumbers(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
   const patchedPhaseRoutingOverride =
-    resolvePatchedPhaseRoutingOverride({
-      activeCommand: patch.activeCommand ?? existingState.activeCommand,
-      currentPhase:
-        effectivePatchCurrentPhase ?? normalizeSelectedPhase(existingState.currentPhase),
-      roadmapCurrentPhase: roadmapSignals.currentPhase
-    });
+    patch.activeCommand !== undefined || patch.currentPhase !== undefined
+      ? resolvePatchedPhaseRoutingOverride({
+          activeCommand: patch.activeCommand ?? existingState.activeCommand,
+          currentPhase:
+            effectivePatchCurrentPhase ?? normalizeSelectedPhase(existingState.currentPhase),
+          roadmapCurrentPhase: roadmapSignals.currentPhase
+        })
+      : null;
   const storedPhaseRoutingOverride =
     patch.activeCommand === undefined && patch.currentPhase === undefined
       ? resolveStoredPhaseRoutingOverride({
+          activeCommand: existingState.activeCommand,
           currentPhase: normalizeSelectedPhase(existingState.currentPhase),
           nextAction: existingState.nextAction,
           roadmapCurrentPhase: roadmapSignals.currentPhase
@@ -2421,7 +2429,7 @@ async function buildSyncedState(
     roadmapSignals.currentPhase !== null
   ) {
     warnings.push(
-      `STATE.md preserved selected phase ${storedPhaseRoutingOverride} from the stored next action ${existingState.nextAction} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
+      `STATE.md preserved selected phase ${storedPhaseRoutingOverride} from ${existingState.activeCommand} follow-up ${existingState.nextAction} instead of the roadmap current phase ${roadmapSignals.currentPhase}.`
     );
   }
 

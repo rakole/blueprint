@@ -2261,11 +2261,179 @@ test("project status does not close a milestone while later roadmap detail phase
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
   const state = await blueprintStateLoad({ cwd: repoPath });
+  assert.equal(status.currentPhase, "4");
+  assert.equal(state.derivedStatus.currentPhase, "4");
+  assert.match(status.nextAction, /\/blu-research-phase 4/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-research-phase 4/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
+});
+
+test("project status does not close a milestone while drifted roadmap detail headings remain planned", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("audit");
+  const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/04-follow-up-delivery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(nextPhaseRoot, { recursive: true });
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Milestone Closeout Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 2: Validation Hardening**
+- [x] **Phase 3: Milestone Closeout**
+
+## Phase Details
+
+### Phase 2: Validation Hardening
+**Goal**: Finish the earlier validation slice.
+**Requirements**: CLOSE-01
+**Status**: completed
+
+### Phase 3: Milestone Closeout
+**Goal**: Finalize milestone evidence and archival routing.
+**Requirements**: CLOSE-02
+**Status**: completed
+
+### Phase 4 Follow-Up Delivery
+**Goal**: Continue the roadmap after the first two completed phases.
+**Requirements**: CLOSE-04
+**Status**: planned
+
+### Phase 5 – Release Polish
+**Goal**: Finish the remaining milestone polish.
+**Requirements**: CLOSE-05
+**Status**: planned
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(nextPhaseRoot, "04-CONTEXT.md"),
+    `# Phase 04: Follow-Up Delivery - Context
+
+## Decisions
+- Phase 4 is still part of the active roadmap and must run before milestone closeout.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  assert.equal(status.currentPhase, "4");
+  assert.equal(state.derivedStatus.currentPhase, "4");
+  assert.match(status.nextAction, /\/blu-research-phase 4/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-research-phase 4/);
+  assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
+});
+
+test("project status advances past stale phase-scoped STATE.md when later bold roadmap phases are planned", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("audit");
+  const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/04-follow-up-delivery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(nextPhaseRoot, { recursive: true });
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Milestone Closeout Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 2**: Validation Hardening
+- [x] **Phase 3**: Milestone Closeout
+- [ ] **Phase 4**: Follow-Up Delivery
+- [ ] **Phase 5**: Release Polish
+
+## Phase Details
+
+### Phase 2 - Validation Hardening
+**Goal**: Finish the earlier validation slice.
+**Requirements**: CLOSE-01
+**Status**: completed
+
+### Phase 3 - Milestone Closeout
+**Goal**: Finalize milestone evidence and archival routing.
+**Requirements**: CLOSE-02
+**Status**: completed
+
+### Phase 4 - Follow-Up Delivery
+**Goal**: Continue the roadmap after Phase 3 is complete.
+**Requirements**: CLOSE-04
+**Status**: planned
+
+### Phase 5 - Release Polish
+**Goal**: Finish the remaining milestone polish.
+**Requirements**: CLOSE-05
+**Status**: planned
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: 3
+- Active command: /blu-validate-phase
+- Next action: Run /blu-validate-phase 3 to validate the completed phase execution
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2, workflow: { code_review: false } }, null, 2),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-milestone-closeout/03-UI-REVIEW.md"),
+    `# Phase 03: Milestone Closeout - UI Review
+
+**Verdict:** PASS
+
+## Findings
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(nextPhaseRoot, "04-CONTEXT.md"),
+    `# Phase 04: Follow-Up Delivery - Context
+
+## Decisions
+- Phase 4 is the next planned roadmap slice after Phase 3 closeout.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
 
   assert.equal(status.currentPhase, "4");
   assert.equal(state.derivedStatus.currentPhase, "4");
   assert.match(status.nextAction, /\/blu-research-phase 4/);
   assert.match(state.derivedStatus.nextAction, /\/blu-research-phase 4/);
+  assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-validate-phase 3/);
   assert.doesNotMatch(status.nextAction, /\/blu-complete-milestone/);
   assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });

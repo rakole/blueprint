@@ -1299,6 +1299,73 @@ test("project status keeps blocked milestone audit reports on gap planning inste
   assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
+test("artifact report write rejects non-ready milestone audit reports with unsafe next actions", async (t) => {
+  const repoPaths: string[] = [];
+  t.after(async () => {
+    await Promise.all(
+      repoPaths.map((repoPath) => rm(path.dirname(repoPath), { recursive: true, force: true }))
+    );
+  });
+
+  const cases = [
+    {
+      verdict: "FOLLOW_UP" as const,
+      normalizedCommand: "/blu-complete-milestone",
+      nextSafeAction: "/blu-complete-milestone v2"
+    },
+    {
+      verdict: "FOLLOW_UP" as const,
+      normalizedCommand: "/blu-complete-milestone",
+      nextSafeAction: "/blu complete-milestone v2"
+    },
+    {
+      verdict: "BLOCKED" as const,
+      blockers: ["Milestone closeout must pause until the blocker is resolved."],
+      normalizedCommand: "/blu-milestone-summary",
+      nextSafeAction: "/blu-milestone-summary v2"
+    },
+    {
+      verdict: "BLOCKED" as const,
+      blockers: ["Milestone closeout must pause until the blocker is resolved."],
+      normalizedCommand: "/blu-milestone-summary",
+      nextSafeAction: "/blu milestone-summary v2"
+    },
+    {
+      verdict: "FOLLOW_UP" as const,
+      normalizedCommand: "/blu-new-milestone",
+      nextSafeAction: "/blu-new-milestone"
+    },
+    {
+      verdict: "FOLLOW_UP" as const,
+      normalizedCommand: "/blu-new-milestone",
+      nextSafeAction: "/blu new-milestone"
+    }
+  ];
+
+  for (const testCase of cases) {
+    const repoPath = await createMilestoneAuditRepo();
+    repoPaths.push(repoPath);
+
+    const invalid = await blueprintArtifactReportWrite({
+      cwd: repoPath,
+      reportName: "milestone-audit-v2",
+      content: renderMilestoneAuditReport({
+        verdict: testCase.verdict,
+        blockers: testCase.blockers,
+        nextSafeAction: testCase.nextSafeAction
+      })
+    });
+
+    assert.equal(invalid.status, "invalid");
+    assert.equal(invalid.written, false);
+    assert.equal(invalid.created, false);
+    assert.equal(invalid.overwritten, false);
+    assert.match(invalid.issues.join("\n"), /must not route (FOLLOW_UP|BLOCKED) milestone audits/);
+    assert.match(invalid.issues.join("\n"), new RegExp(testCase.normalizedCommand));
+    await assert.rejects(() => readFile(path.join(repoPath, invalid.path), "utf8"), /ENOENT/);
+  }
+});
+
 test("project status honors a FOLLOW_UP audit verdict even when the evidence sections are empty", async (t) => {
   const repoPath = await createMilestoneAuditRepo();
   t.after(async () => {
