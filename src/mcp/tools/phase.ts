@@ -172,6 +172,15 @@ import {
   type PhaseValidationAllowedValues
 } from "./phase-validation-contracts.js";
 import {
+  countPhaseValidationDiagnostics,
+  formatPhaseValidationDiagnostic,
+  phaseValidationDiagnostic,
+  phaseValidationResidualDiagnostics,
+  schemaDiagnosticFromPhaseValidationAjvError,
+  type PhaseValidationDiagnosticCounts,
+  type PhaseValidationModelDiagnostic
+} from "./phase-validation-diagnostics.js";
+import {
   renderPhasePlanModelContent,
   type PhasePlanStructuredModel
 } from "./phase-plan-rendering.js";
@@ -333,17 +342,6 @@ type PhaseValidationAuthoringContextResult = {
   reason: string | null;
 };
 
-type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-
-type PhaseValidationModelDiagnostic = {
-  source: PhaseValidationDiagnosticSource;
-  path: string;
-  code: string;
-  message: string;
-  context: Record<string, unknown>;
-  suggestion: string;
-};
-
 type PhaseValidationValidateModelArgs = PhaseValidationAuthoringContextArgs & {
   model: unknown;
 };
@@ -357,11 +355,7 @@ type PhaseValidationValidateModelResult = {
   schemaPath: string | null;
   taskSchema: Record<string, unknown> | null;
   diagnostics: PhaseValidationModelDiagnostic[];
-  diagnosticCounts: {
-    total: number;
-    bySource: Record<PhaseValidationDiagnosticSource, number>;
-    byCode: Record<string, number>;
-  };
+  diagnosticCounts: PhaseValidationDiagnosticCounts;
   normalizedModel: PhaseVerificationStructuredModel | PhaseUatStructuredModel | null;
   renderPreview: string | null;
   warnings: string[];
@@ -5249,25 +5243,6 @@ function trimPhasePlanStandaloneValidateModelResult(
   return trimmed;
 }
 
-function phaseValidationDiagnostic(
-  args: PhaseValidationModelDiagnostic
-): PhaseValidationModelDiagnostic {
-  return args;
-}
-
-function emptyPhaseValidationDiagnosticCounts(): PhaseValidationValidateModelResult["diagnosticCounts"] {
-  return {
-    total: 0,
-    bySource: {
-      scope: 0,
-      schema: 0,
-      residual: 0,
-      markdown: 0
-    },
-    byCode: {}
-  };
-}
-
 function trimPhaseValidationStandaloneValidateModelResult(
   validation: PhaseValidationValidateModelResult
 ): PhaseValidationStandaloneValidateModelResult {
@@ -5292,101 +5267,6 @@ function trimPhaseSummaryStandaloneValidateModelResult(
   } = validation;
 
   return trimmed;
-}
-
-function countPhaseValidationDiagnostics(
-  diagnostics: PhaseValidationModelDiagnostic[]
-): PhaseValidationValidateModelResult["diagnosticCounts"] {
-  const counts = emptyPhaseValidationDiagnosticCounts();
-
-  for (const diagnostic of diagnostics) {
-    counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
-  }
-
-  return counts;
-}
-
-function formatPhaseValidationDiagnostic(diagnostic: PhaseValidationModelDiagnostic): string {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
-}
-
-function schemaDiagnosticFromPhaseValidationAjvError(
-  error: ErrorObject
-): PhaseValidationModelDiagnostic {
-  const missingProperty =
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "missingProperty" in error.params &&
-    typeof error.params.missingProperty === "string"
-      ? error.params.missingProperty
-      : null;
-  const additionalProperty =
-    typeof error.params === "object" &&
-    error.params !== null &&
-    "additionalProperty" in error.params &&
-    typeof error.params.additionalProperty === "string"
-      ? error.params.additionalProperty
-      : null;
-  const basePath = ajvInstancePathToModelPath(error.instancePath);
-  const pathValue =
-    missingProperty !== null
-      ? `${basePath}.${missingProperty}`
-      : additionalProperty !== null
-        ? `${basePath}.${additionalProperty}`
-        : basePath;
-
-  return phaseValidationDiagnostic({
-    source: "schema",
-    path: pathValue,
-    code: `schema.${error.keyword}`,
-    message: error.message ?? "Model does not match the phase validation task schema.",
-    context: {
-      keyword: error.keyword,
-      params: error.params,
-      schemaPath: error.schemaPath
-    },
-    suggestion:
-      missingProperty !== null
-        ? `Add required field ${missingProperty}.`
-        : additionalProperty !== null
-          ? `Remove unsupported field ${additionalProperty}.`
-          : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
-  });
-}
-
-function collectModelStringEntries(
-  value: unknown,
-  pathValue = "model"
-): Array<{ path: string; value: string }> {
-  if (typeof value === "string") {
-    return [{ path: pathValue, value }];
-  }
-
-  if (Array.isArray(value)) {
-    return value.flatMap((item, index) =>
-      collectModelStringEntries(item, `${pathValue}[${index}]`)
-    );
-  }
-
-  if (typeof value === "object" && value !== null) {
-    return Object.entries(value).flatMap(([key, item]) =>
-      collectModelStringEntries(item, `${pathValue}.${key}`)
-    );
-  }
-
-  return [];
-}
-
-function isGenericNoneValue(value: string): boolean {
-  return /^(?:none|n\/a|na|not applicable)$/i.test(value.trim());
-}
-
-function hasPhaseValidationPlaceholderLanguage(value: string): boolean {
-  return /\b(?:todo|tbd|placeholder|replace with|replace me|fill in|insert here|coming soon|static for now)\b/i.test(
-    value
-  );
 }
 
 async function buildPhaseVerificationAllowedNextActions(phaseNumber: string): Promise<{
@@ -5772,90 +5652,6 @@ async function phaseUatModelSchemas(args: {
     baseSchema,
     taskSchema
   };
-}
-
-function phaseValidationResidualDiagnostics(
-  model: Record<string, unknown>,
-  modelContract: ArtifactContractReadResult["modelContract"],
-  artifact: PhaseValidationArtifactKind
-): PhaseValidationModelDiagnostic[] {
-  const diagnostics: PhaseValidationModelDiagnostic[] = [];
-  const contractId = validationArtifactContractId(artifact);
-  const artifactLabel = artifact === "verification" ? "verification" : "UAT";
-
-  if (!modelContract) {
-    return [
-      phaseValidationDiagnostic({
-        source: "scope",
-        path: "model",
-        code: "contract.missing",
-        message: `${contractId} does not support structured model writes.`,
-        context: {},
-        suggestion: `Read the live ${contractId} artifact contract before authoring.`
-      })
-    ];
-  }
-
-  const modelStrings = collectModelStringEntries(model);
-  const leakedSignals = modelContract.exampleLeakageSignals.filter((signal) =>
-    modelStrings.some((entry) => entry.value.includes(signal))
-  );
-
-  for (const signal of leakedSignals) {
-    diagnostics.push(
-      phaseValidationDiagnostic({
-        source: "residual",
-        path: "model",
-        code: "content.example_leakage",
-        message: `Phase ${artifactLabel} model copied example leakage signal from ${modelContract.schemaId}: ${signal}.`,
-        context: { signal },
-        suggestion: "Replace copied example wording with evidence from the selected phase summaries."
-      })
-    );
-  }
-
-  for (const entry of modelStrings) {
-    if (hasPhaseValidationPlaceholderLanguage(entry.value)) {
-      diagnostics.push(
-        phaseValidationDiagnostic({
-          source: "residual",
-          path: entry.path,
-          code: "content.placeholder",
-          message: `Phase ${artifactLabel} model contains placeholder language: ${entry.value}.`,
-          context: { value: entry.value },
-          suggestion: "Replace placeholder language with concrete phase evidence."
-        })
-      );
-    }
-  }
-
-  const genericNoneRequiredEvidencePaths =
-    artifact === "verification"
-      ? ["model.coverageSummary", "model.signOff", "model.validationSummary"]
-      : ["model.uatSummary", "model.sessionState", "model.observedBehavior"];
-
-  for (const entry of modelStrings.filter((candidate) =>
-    genericNoneRequiredEvidencePaths.some((pathPrefix) =>
-      candidate.path.startsWith(pathPrefix)
-    )
-  )) {
-    if (!isGenericNoneValue(entry.value)) {
-      continue;
-    }
-
-    diagnostics.push(
-      phaseValidationDiagnostic({
-        source: "residual",
-        path: entry.path,
-        code: "content.generic_text",
-        message: `Phase ${artifactLabel} model must use concrete evidence text instead of generic none.`,
-        context: { value: entry.value },
-        suggestion: "Replace the generic value with a specific saved-summary-backed claim."
-      })
-    );
-  }
-
-  return diagnostics;
 }
 
 async function validatePhaseValidationModelCommands(

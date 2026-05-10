@@ -8,6 +8,7 @@ import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surf
 import { type PhaseSummaryStructuredModel } from "./phase-summary-rendering.js";
 import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
 import { type PhaseValidationAllowedValues } from "./phase-validation-contracts.js";
+import { type PhaseValidationDiagnosticCounts, type PhaseValidationModelDiagnostic } from "./phase-validation-diagnostics.js";
 import { type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
 type RoadmapReadArgs = {
     cwd?: string;
@@ -116,15 +117,6 @@ type PhaseValidationAuthoringContextResult = {
     warnings: string[];
     reason: string | null;
 };
-type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-type PhaseValidationModelDiagnostic = {
-    source: PhaseValidationDiagnosticSource;
-    path: string;
-    code: string;
-    message: string;
-    context: Record<string, unknown>;
-    suggestion: string;
-};
 type PhaseValidationValidateModelArgs = PhaseValidationAuthoringContextArgs & {
     model: unknown;
 };
@@ -137,11 +129,7 @@ type PhaseValidationValidateModelResult = {
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
     diagnostics: PhaseValidationModelDiagnostic[];
-    diagnosticCounts: {
-        total: number;
-        bySource: Record<PhaseValidationDiagnosticSource, number>;
-        byCode: Record<string, number>;
-    };
+    diagnosticCounts: PhaseValidationDiagnosticCounts;
     normalizedModel: PhaseVerificationStructuredModel | PhaseUatStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
