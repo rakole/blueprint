@@ -27120,6 +27120,43 @@ var init_phase_locations = __esm({
   }
 });
 
+// src/mcp/tools/phase-json-helpers.ts
+function collectModelStringValues(value) {
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectModelStringValues(item));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap((item) => collectModelStringValues(item));
+  }
+  return [];
+}
+function cloneJsonObject2(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+function asJsonObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
+}
+function getJsonObjectProperty(value, key) {
+  return asJsonObject(value[key]);
+}
+function createAjvValidator() {
+  return new import__.Ajv2020({
+    allErrors: true,
+    strict: false,
+    validateSchema: true
+  });
+}
+var import__;
+var init_phase_json_helpers = __esm({
+  "src/mcp/tools/phase-json-helpers.ts"() {
+    "use strict";
+    import__ = __toESM(require__(), 1);
+  }
+});
+
 // src/mcp/tools/phase-execution-surfaces.ts
 import path6 from "node:path";
 function normalizeExecutionSurfacePath(value) {
@@ -29264,34 +29301,6 @@ function validationArtifactContract(artifact, resolved) {
     validationArtifactContractId(artifact),
     validationArtifactContractContext(resolved)
   );
-}
-function collectModelStringValues(value) {
-  if (typeof value === "string") {
-    return [value];
-  }
-  if (Array.isArray(value)) {
-    return value.flatMap((item) => collectModelStringValues(item));
-  }
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).flatMap((item) => collectModelStringValues(item));
-  }
-  return [];
-}
-function cloneJsonObject2(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-function asJsonObject(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
-}
-function getJsonObjectProperty(value, key) {
-  return asJsonObject(value[key]);
-}
-function createAjvValidator() {
-  return new import__.Ajv2020({
-    allErrors: true,
-    strict: false,
-    validateSchema: true
-  });
 }
 function phasePlanDiagnostic(args) {
   const modelPath = args.modelPath ?? (args.path === "model" || args.path.startsWith("model.") ? args.path : void 0);
@@ -35098,11 +35107,10 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var import__, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
-    import__ = __toESM(require__(), 1);
     init_v4();
     init_artifact_contracts();
     init_command_paths();
@@ -35118,6 +35126,7 @@ var init_phase = __esm({
     init_phase_markdown();
     init_phase_plan_identifiers();
     init_phase_locations();
+    init_phase_json_helpers();
     init_phase_execution_surfaces();
     init_phase_summary_routing();
     roadmapReadInputSchema = {
