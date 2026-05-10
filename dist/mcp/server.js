@@ -282,10 +282,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path14) {
-  if (!path14)
+function getElementAtPath(obj, path15) {
+  if (!path15)
     return obj;
-  return path14.reduce((acc, key) => acc?.[key], obj);
+  return path15.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -597,11 +597,11 @@ function aborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path14, issues) {
+function prefixIssues(path15, issues) {
   return issues.map((iss) => {
     var _a2;
     (_a2 = iss).path ?? (_a2.path = []);
-    iss.path.unshift(path14);
+    iss.path.unshift(path15);
     return iss;
   });
 }
@@ -10713,8 +10713,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path14) {
-      let input = path14;
+    function removeDotSegments(path15) {
+      let input = path15;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -10913,8 +10913,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path14, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path14 && path14 !== "/" ? path14 : void 0;
+        const [path15, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path15 && path15 !== "/" ? path15 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -26943,6 +26943,89 @@ var init_phase_plan_identifiers = __esm({
   }
 });
 
+// src/mcp/tools/phase-execution-surfaces.ts
+import path5 from "node:path";
+function normalizeExecutionSurfacePath(value) {
+  const normalized = value.replaceAll("\\", "/").trim();
+  const withoutDotPrefix = normalized.replace(/^\.\//, "");
+  const collapsed = path5.posix.normalize(withoutDotPrefix);
+  if (collapsed === ".") {
+    return withoutDotPrefix.replace(/\/+$/u, "");
+  }
+  return collapsed.replace(/\/+$/u, "");
+}
+function classifyExecutionSurfaceKind(source, value) {
+  const normalized = normalizeExecutionSurfacePath(value);
+  if (source === "files_modified" && (/^\.blueprint\//u.test(normalized) || /^dist\//u.test(normalized))) {
+    return "generated_artifact";
+  }
+  return source;
+}
+function executionSurfacePathsOverlap(left, right) {
+  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+}
+function executionSurfaceSharedValue(left, right) {
+  if (left === right) {
+    return left;
+  }
+  return left.startsWith(`${right}/`) ? right : left;
+}
+function uniqueSortedStrings(values) {
+  return [...new Set(values.filter((value) => value.trim().length > 0))].sort(
+    (left, right) => left.localeCompare(right)
+  );
+}
+function planExecutionSurfaces(plan) {
+  const surfaces = [
+    ...plan.filesModified.map((value) => ({
+      kind: classifyExecutionSurfaceKind("files_modified", value),
+      value: normalizeExecutionSurfacePath(value)
+    })),
+    ...plan.readFirst.map((value) => ({
+      kind: classifyExecutionSurfaceKind("read_first", value),
+      value: normalizeExecutionSurfacePath(value)
+    }))
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  return surfaces.filter((surface) => {
+    if (surface.value.length === 0) {
+      return false;
+    }
+    const key = `${surface.kind}:${surface.value}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+function sharedExecutionSurfaces(left, right) {
+  const shared = /* @__PURE__ */ new Map();
+  const leftSurfaces = planExecutionSurfaces(left);
+  const rightSurfaces = planExecutionSurfaces(right);
+  for (const leftSurface of leftSurfaces) {
+    for (const rightSurface of rightSurfaces) {
+      if (!executionSurfacePathsOverlap(leftSurface.value, rightSurface.value)) {
+        continue;
+      }
+      const value = executionSurfaceSharedValue(leftSurface.value, rightSurface.value);
+      const kinds = uniqueSortedStrings([leftSurface.kind, rightSurface.kind]);
+      const key = `${value}:${kinds.join(",")}`;
+      if (!shared.has(key)) {
+        shared.set(key, { value, kinds });
+      }
+    }
+  }
+  return [...shared.values()].sort(
+    (leftSurface, rightSurface) => leftSurface.value.localeCompare(rightSurface.value)
+  );
+}
+var init_phase_execution_surfaces = __esm({
+  "src/mcp/tools/phase-execution-surfaces.ts"() {
+    "use strict";
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -26980,7 +27063,7 @@ __export(phase_exports, {
   phaseToolDefinitions: () => phaseToolDefinitions
 });
 import { promises as fs3 } from "node:fs";
-import path5 from "node:path";
+import path6 from "node:path";
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
   const phasePrefix2 = formatPhasePrefix2(phaseNumber);
   const normalizedPhaseName = normalizePhaseDescription(phaseName);
@@ -27708,7 +27791,7 @@ async function listPhaseArtifacts2(rootPath, projectRoot) {
   const entries = await fs3.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path5.join(rootPath, entry.name);
+    const absolutePath = path6.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listPhaseArtifacts2(absolutePath, projectRoot));
       continue;
@@ -27744,7 +27827,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   return {
-    phaseDir: toRepoRelativePath(projectRoot, path5.join(phasesRoot, matches[0])),
+    phaseDir: toRepoRelativePath(projectRoot, path6.join(phasesRoot, matches[0])),
     reason: null
   };
 }
@@ -28227,7 +28310,7 @@ function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   return recovery;
 }
 function fallbackPhaseName(phaseDir) {
-  return slugToTitle(path5.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
+  return slugToTitle(path6.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -28529,81 +28612,6 @@ function summaryPathFor(located, planId2) {
     located.phaseDir,
     located.phasePrefix,
     `-${normalizePlanId(planId2)}-SUMMARY.md`
-  );
-}
-function normalizeExecutionSurfacePath(value) {
-  const normalized = value.replaceAll("\\", "/").trim();
-  const withoutDotPrefix = normalized.replace(/^\.\//, "");
-  const collapsed = path5.posix.normalize(withoutDotPrefix);
-  if (collapsed === ".") {
-    return withoutDotPrefix.replace(/\/+$/u, "");
-  }
-  return collapsed.replace(/\/+$/u, "");
-}
-function classifyExecutionSurfaceKind(source, value) {
-  const normalized = normalizeExecutionSurfacePath(value);
-  if (source === "files_modified" && (/^\.blueprint\//u.test(normalized) || /^dist\//u.test(normalized))) {
-    return "generated_artifact";
-  }
-  return source;
-}
-function executionSurfacePathsOverlap(left, right) {
-  return left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
-}
-function executionSurfaceSharedValue(left, right) {
-  if (left === right) {
-    return left;
-  }
-  return left.startsWith(`${right}/`) ? right : left;
-}
-function uniqueSortedStrings(values) {
-  return [...new Set(values.filter((value) => value.trim().length > 0))].sort(
-    (left, right) => left.localeCompare(right)
-  );
-}
-function planExecutionSurfaces(plan) {
-  const surfaces = [
-    ...plan.filesModified.map((value) => ({
-      kind: classifyExecutionSurfaceKind("files_modified", value),
-      value: normalizeExecutionSurfacePath(value)
-    })),
-    ...plan.readFirst.map((value) => ({
-      kind: classifyExecutionSurfaceKind("read_first", value),
-      value: normalizeExecutionSurfacePath(value)
-    }))
-  ];
-  const seen = /* @__PURE__ */ new Set();
-  return surfaces.filter((surface) => {
-    if (surface.value.length === 0) {
-      return false;
-    }
-    const key = `${surface.kind}:${surface.value}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-function sharedExecutionSurfaces(left, right) {
-  const shared = /* @__PURE__ */ new Map();
-  const leftSurfaces = planExecutionSurfaces(left);
-  const rightSurfaces = planExecutionSurfaces(right);
-  for (const leftSurface of leftSurfaces) {
-    for (const rightSurface of rightSurfaces) {
-      if (!executionSurfacePathsOverlap(leftSurface.value, rightSurface.value)) {
-        continue;
-      }
-      const value = executionSurfaceSharedValue(leftSurface.value, rightSurface.value);
-      const kinds = uniqueSortedStrings([leftSurface.kind, rightSurface.kind]);
-      const key = `${value}:${kinds.join(",")}`;
-      if (!shared.has(key)) {
-        shared.set(key, { value, kinds });
-      }
-    }
-  }
-  return [...shared.values()].sort(
-    (leftSurface, rightSurface) => leftSurface.value.localeCompare(rightSurface.value)
   );
 }
 function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
@@ -31805,9 +31813,9 @@ async function renamePhaseArtifactsInPlace(projectRoot, rootDirectoryPath, oldPh
   const renamedArtifacts = [];
   const entries = await fs3.readdir(rootDirectoryPath, { withFileTypes: true });
   for (const entry of entries) {
-    const currentPath = path5.join(rootDirectoryPath, entry.name);
+    const currentPath = path6.join(rootDirectoryPath, entry.name);
     const renamedEntry = renameLeadingPhaseToken(entry.name, oldPhaseNumber, newPhasePrefix);
-    const nextPath = renamedEntry ? path5.join(rootDirectoryPath, renamedEntry) : currentPath;
+    const nextPath = renamedEntry ? path6.join(rootDirectoryPath, renamedEntry) : currentPath;
     if (renamedEntry) {
       await fs3.rename(currentPath, nextPath);
       renamedArtifacts.push({
@@ -31945,7 +31953,7 @@ async function blueprintRoadmapRemovePhase(args) {
   await fs3.rm(targetPhaseDirPath, { recursive: true, force: true });
   for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
     const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
-    const previousDirectoryName = path5.basename(previousPhaseDirPath);
+    const previousDirectoryName = path6.basename(previousPhaseDirPath);
     const newPhasePrefix = formatPhasePrefix2(newPhaseNumber);
     const renamedDirectoryName = renameLeadingPhaseToken(
       previousDirectoryName,
@@ -31957,7 +31965,7 @@ async function blueprintRoadmapRemovePhase(args) {
         `Phase directory ${previousPhaseDir} does not start with the expected phase number ${previousPhase.phaseNumber}.`
       );
     }
-    const newPhaseDirPath = path5.join(path5.dirname(previousPhaseDirPath), renamedDirectoryName);
+    const newPhaseDirPath = path6.join(path6.dirname(previousPhaseDirPath), renamedDirectoryName);
     await fs3.rename(previousPhaseDirPath, newPhaseDirPath);
     const renamedArtifacts = await renamePhaseArtifactsInPlace(
       projectRoot,
@@ -32010,7 +32018,7 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
     if (reservedDirectory.phaseDir) {
       const reservedPhaseDirPath = resolveBlueprintPath(projectRoot, reservedDirectory.phaseDir);
       const renamedDirectoryName = renameLeadingPhaseToken(
-        path5.basename(reservedPhaseDirPath),
+        path6.basename(reservedPhaseDirPath),
         item.reservedPhase,
         phasePrefix2
       );
@@ -32019,8 +32027,8 @@ async function materializePromotedBacklogPhaseDirectory(projectRoot, item, phase
           `Reserved phase directory ${reservedDirectory.phaseDir} does not start with ${item.reservedPhase}.`
         );
       }
-      const promotedPhaseDirPath = path5.join(
-        path5.dirname(reservedPhaseDirPath),
+      const promotedPhaseDirPath = path6.join(
+        path6.dirname(reservedPhaseDirPath),
         renamedDirectoryName
       );
       if (promotedPhaseDirPath !== reservedPhaseDirPath && await pathExists(promotedPhaseDirPath)) {
@@ -35075,6 +35083,7 @@ var init_phase = __esm({
     init_phase_checkpoint_records();
     init_phase_markdown();
     init_phase_plan_identifiers();
+    init_phase_execution_surfaces();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
@@ -35557,7 +35566,7 @@ var init_phase = __esm({
 // src/mcp/tools/artifacts.ts
 import { execFile } from "node:child_process";
 import { promises as fs4 } from "node:fs";
-import path6 from "node:path";
+import path7 from "node:path";
 import { promisify } from "node:util";
 function isScaffoldGeneratedArtifact(content) {
   return content.includes(SCAFFOLD_GENERATED_MARKER);
@@ -36414,13 +36423,13 @@ async function pathExists2(targetPath) {
   }
 }
 function toPosixPath(relativePath) {
-  return relativePath.split(path6.sep).join("/");
+  return relativePath.split(path7.sep).join("/");
 }
 function getProjectRoot(cwd) {
-  return path6.resolve(cwd ?? process.cwd());
+  return path7.resolve(cwd ?? process.cwd());
 }
 function getBlueprintRoot(cwd) {
-  return path6.join(getProjectRoot(cwd), BLUEPRINT_DIR);
+  return path7.join(getProjectRoot(cwd), BLUEPRINT_DIR);
 }
 async function blueprintPathExists(targetPath) {
   return pathExists2(targetPath);
@@ -36442,7 +36451,7 @@ async function resolveGitTopLevel(projectRoot) {
 }
 async function ensureRepoRoot(cwd) {
   const projectRoot = getProjectRoot(cwd);
-  const gitPath = path6.join(projectRoot, ".git");
+  const gitPath = path7.join(projectRoot, ".git");
   if (!await pathExists2(gitPath)) {
     throw new Error(
       "Blueprint commands must run from the repository root; no .git entry was found in the current directory."
@@ -36461,7 +36470,7 @@ async function ensureRepoRoot(cwd) {
   return projectRoot;
 }
 function toRepoRelativePath(projectRoot, absolutePath) {
-  return toPosixPath(path6.relative(projectRoot, absolutePath));
+  return toPosixPath(path7.relative(projectRoot, absolutePath));
 }
 function resolveRepoRelativePath(projectRoot, relativePath) {
   try {
@@ -36477,7 +36486,7 @@ function resolveRepoRelativePath(projectRoot, relativePath) {
 }
 function resolveBlueprintPath(projectRoot, relativePath) {
   assertNoNullBytes(relativePath, "Blueprint path");
-  if (path6.isAbsolute(relativePath)) {
+  if (path7.isAbsolute(relativePath)) {
     throw new Error(`Blueprint paths must be repo-relative, not absolute: ${relativePath}`);
   }
   if (!relativePath.startsWith(`${BLUEPRINT_DIR}/`)) {
@@ -36496,7 +36505,7 @@ function resolveBlueprintPath(projectRoot, relativePath) {
   return absolutePath;
 }
 async function ensureParentDirectory2(targetPath) {
-  await fs4.mkdir(path6.dirname(targetPath), { recursive: true });
+  await fs4.mkdir(path7.dirname(targetPath), { recursive: true });
 }
 async function readJsonIfPresent(filePath) {
   if (!await pathExists2(filePath)) {
@@ -36515,12 +36524,12 @@ async function writeTextFile(filePath, value, options = {}) {
     content: value.replace(/\r\n/g, "\n"),
     warnings: []
   } : prepareTextForPersistence(value, {
-    label: options.label ?? path6.basename(filePath)
+    label: options.label ?? path7.basename(filePath)
   });
   await ensureParentDirectory2(filePath);
-  const tempPath = path6.join(
-    path6.dirname(filePath),
-    `.${path6.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
+  const tempPath = path7.join(
+    path7.dirname(filePath),
+    `.${path7.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
   );
   try {
     await fs4.writeFile(tempPath, prepared.content, "utf8");
@@ -36855,7 +36864,7 @@ function isRepoRelativePlanPath(value) {
   if (rawValue.length === 0) {
     return false;
   }
-  if (path6.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
+  if (path7.isAbsolute(rawValue) || /^[A-Za-z]:\//.test(rawValue) || rawValue.startsWith("//") || rawValue.startsWith("~")) {
     return false;
   }
   const normalized = normalizePlanPathForValidation(rawValue);
@@ -39718,7 +39727,7 @@ function validateSummaryPlanReference(content, options = {}) {
       issues.push("Summary artifact must reference a matching plan artifact.");
     } else {
       const expectedPlanPath = options.linkedPlanPath;
-      const expectedPlanFile = path6.basename(expectedPlanPath);
+      const expectedPlanFile = path7.basename(expectedPlanPath);
       if (summaryPlanReference !== expectedPlanPath && summaryPlanReference !== expectedPlanFile) {
         warnings.push(
           `Summary artifact Plan marker ${summaryPlanReference} does not match linked plan path ${expectedPlanPath}; canonical filename linkage will be used.`
@@ -39869,7 +39878,7 @@ async function listRelativeFiles(rootPath, projectRoot) {
   const entries = await fs4.readdir(rootPath, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    const absolutePath = path6.join(rootPath, entry.name);
+    const absolutePath = path7.join(rootPath, entry.name);
     if (entry.isDirectory()) {
       files.push(...await listRelativeFiles(absolutePath, projectRoot));
       continue;
@@ -40175,7 +40184,7 @@ function inferProjectName(projectRoot, requestedName) {
   if (trimmed) {
     return trimmed;
   }
-  return path6.basename(projectRoot);
+  return path7.basename(projectRoot);
 }
 async function blueprintArtifactScaffold(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -41354,7 +41363,7 @@ async function buildArtifactDigestSections(projectRoot, artifactPaths) {
     const summary = summarizeArtifactContent(raw);
     digest.push({
       artifact: artifactPath,
-      title: summary.title.length > 0 ? summary.title : path6.basename(artifactPath, path6.extname(artifactPath)),
+      title: summary.title.length > 0 ? summary.title : path7.basename(artifactPath, path7.extname(artifactPath)),
       summary: summary.summary,
       evidence: [artifactPath]
     });
@@ -41869,7 +41878,7 @@ function normalizeSummaryLinkedPlanPath(summaryPath2, planReference) {
     return planReference;
   }
   if (!planReference.includes("/") && /-PLAN\.md$/.test(planReference)) {
-    return `${path6.posix.dirname(summaryPath2)}/${planReference}`;
+    return `${path7.posix.dirname(summaryPath2)}/${planReference}`;
   }
   return planReference;
 }
@@ -44949,7 +44958,7 @@ var init_artifacts = __esm({
 // src/mcp/tools/review.ts
 import { createHash } from "node:crypto";
 import { promises as fs5 } from "node:fs";
-import path7 from "node:path";
+import path8 from "node:path";
 function createAjvValidator2() {
   return new import__3.Ajv2020({
     allErrors: true,
@@ -45468,7 +45477,7 @@ async function buildPeerReviewAuthoringContext(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -45946,7 +45955,7 @@ async function buildReviewFixAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -46547,7 +46556,7 @@ async function buildSecurityAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -46895,7 +46904,7 @@ async function buildUiReviewAuthoringContext(args) {
   const phase = {
     phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -50446,7 +50455,7 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
     if (requestedPath.length === 0) {
       continue;
     }
-    if (path7.isAbsolute(requestedPath)) {
+    if (path8.isAbsolute(requestedPath)) {
       warnings.push(
         `Invalid ${sourceLabel} path: ${requestedPath} (absolute filesystem paths are not allowed).`
       );
@@ -50783,7 +50792,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -50817,7 +50826,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -50885,7 +50894,7 @@ async function blueprintReviewScope(args) {
       phase: {
         phaseNumber: located.phaseNumber,
         phasePrefix: located.phasePrefix,
-        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+        phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
         phaseDir: located.phaseDir,
         resolvedFrom: located.resolvedFrom
       },
@@ -50909,7 +50918,7 @@ async function blueprintReviewScope(args) {
   const phase = {
     phaseNumber: located.phaseNumber,
     phasePrefix: located.phasePrefix,
-    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path7.basename(located.phaseDir)}`,
+    phaseName: located.phaseName ?? `Phase ${located.phasePrefix} ${path8.basename(located.phaseDir)}`,
     phaseDir: located.phaseDir,
     resolvedFrom: located.resolvedFrom
   };
@@ -51925,7 +51934,7 @@ var init_review = __esm({
 import { execFile as execFile2 } from "node:child_process";
 import { promises as fs6 } from "node:fs";
 import os from "node:os";
-import path8 from "node:path";
+import path9 from "node:path";
 import { promisify as promisify2 } from "node:util";
 function defaultUpdatePlanMode(host) {
   return host === "gemini" ? "ask_user" : "manual";
@@ -51936,7 +51945,7 @@ function expandHomePath(value) {
     return os.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path8.join(os.homedir(), trimmed.slice(2));
+    return path9.join(os.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -52019,19 +52028,19 @@ async function resolveInstalledVersion(extensionPath, manifestFileName) {
       warnings
     };
   }
-  const normalizedExtensionPath = path8.resolve(extensionPath);
+  const normalizedExtensionPath = path9.resolve(extensionPath);
   if (!await pathExists4(normalizedExtensionPath)) {
     warnings.push(`Configured extension path does not exist: ${normalizedExtensionPath}`);
     return {
       extensionPathState: "missing",
-      extensionManifestPath: path8.join(normalizedExtensionPath, manifestFileName),
+      extensionManifestPath: path9.join(normalizedExtensionPath, manifestFileName),
       installedVersion: null,
       warnings
     };
   }
-  const extensionManifestPath = path8.join(normalizedExtensionPath, manifestFileName);
+  const extensionManifestPath = path9.join(normalizedExtensionPath, manifestFileName);
   const manifestResult = await readJsonObject(extensionManifestPath);
-  const packageJsonResult = await readJsonObject(path8.join(normalizedExtensionPath, "package.json"));
+  const packageJsonResult = await readJsonObject(path9.join(normalizedExtensionPath, "package.json"));
   const manifest = manifestResult.value;
   const packageJson = packageJsonResult.value;
   if (manifestResult.warning) {
@@ -52289,7 +52298,7 @@ function compareSemver(left, right) {
 async function resolveUpdateCheck(args = {}, env = process.env) {
   const cwd = normalizeOptionalString(args.cwd) ?? process.cwd();
   const runtimeHost = resolveBlueprintRuntimeHost(env);
-  const extensionPath = runtimeHost.extensionPath ? path8.resolve(expandHomePath(runtimeHost.extensionPath)) : null;
+  const extensionPath = runtimeHost.extensionPath ? path9.resolve(expandHomePath(runtimeHost.extensionPath)) : null;
   const warnings = [];
   if (extensionPath) {
     assertNoNullBytes(extensionPath, "Blueprint extension path");
@@ -52532,7 +52541,7 @@ async function persistUpdatePlanArtifacts(generatedAt, plan) {
     await writeJsonFile(metadataTmpPath, serializedPlan);
     await writeTextFile(checklistTmpPath, checklistMarkdown, {
       enforcePromptBoundary: false,
-      label: path8.basename(plan.savedPaths.checklistPath)
+      label: path9.basename(plan.savedPaths.checklistPath)
     });
     if (await pathExists4(plan.savedPaths.metadataPath)) {
       await fs6.rename(plan.savedPaths.metadataPath, metadataBackupPath);
@@ -52588,9 +52597,9 @@ async function blueprintUpdatePlan(args = {}, env = process.env) {
   const runtimeHost = resolveBlueprintRuntimeHost(env);
   const mode = args.mode ?? defaultUpdatePlanMode(runtimeHost.host);
   const check2 = await resolveUpdateCheck(args, env);
-  const updatesDir = path8.resolve(expandHomePath(runtimeHost.updatesDir));
-  const metadataPath = path8.join(updatesDir, UPDATE_PLAN_FILE);
-  const checklistPath = path8.join(updatesDir, UPDATE_CHECKLIST_FILE);
+  const updatesDir = path9.resolve(expandHomePath(runtimeHost.updatesDir));
+  const metadataPath = path9.join(updatesDir, UPDATE_PLAN_FILE);
+  const checklistPath = path9.join(updatesDir, UPDATE_CHECKLIST_FILE);
   const created = !(await pathExists4(metadataPath) || await pathExists4(checklistPath));
   const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
   const savedPaths = {
@@ -52659,7 +52668,7 @@ import { execFile as execFile3 } from "node:child_process";
 import { createHash as createHash2 } from "node:crypto";
 import { promises as fs7 } from "node:fs";
 import os2 from "node:os";
-import path9 from "node:path";
+import path10 from "node:path";
 import { promisify as promisify3 } from "node:util";
 function expandHomePath2(value) {
   const trimmed = value.trim();
@@ -52667,7 +52676,7 @@ function expandHomePath2(value) {
     return os2.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path9.join(os2.homedir(), trimmed.slice(2));
+    return path10.join(os2.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -52708,7 +52717,7 @@ async function canonicalizePath(candidatePath) {
   try {
     return await fs7.realpath(candidatePath);
   } catch {
-    return path9.resolve(candidatePath);
+    return path10.resolve(candidatePath);
   }
 }
 function normalizeTextForComparison(value) {
@@ -52912,7 +52921,7 @@ function renderWorkstreamsIndex(workstreams) {
 }
 async function writeFileAtomically(filePath, content) {
   const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
-  await fs7.mkdir(path9.dirname(filePath), { recursive: true });
+  await fs7.mkdir(path10.dirname(filePath), { recursive: true });
   await fs7.writeFile(tempPath, content, "utf8");
   await fs7.rename(tempPath, filePath);
 }
@@ -52952,7 +52961,7 @@ async function restoreFileSnapshots(snapshots) {
       await fs7.rm(snapshot.path, { force: true }).catch(() => void 0);
       continue;
     }
-    await fs7.mkdir(path9.dirname(snapshot.path), { recursive: true });
+    await fs7.mkdir(path10.dirname(snapshot.path), { recursive: true });
     await fs7.writeFile(snapshot.path, snapshot.content ?? "", "utf8");
   }
 }
@@ -52969,7 +52978,7 @@ function workstreamsIndexAbsolute(projectRoot) {
   return resolveBlueprintPath(projectRoot, WORKSTREAMS_INDEX_PATH);
 }
 function workstreamStateAbsolute(projectRoot, slug) {
-  return path9.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
+  return path10.join(workstreamsRootAbsolute(projectRoot), slug, WORKSTREAM_STATE_FILENAME);
 }
 function workstreamSummary(projectRoot, entry) {
   return {
@@ -53010,7 +53019,7 @@ function buildResumeStatePatch(snapshot) {
   };
 }
 async function loadWorkstreamStore(projectRoot) {
-  const blueprintRoot = path9.join(projectRoot, BLUEPRINT_DIR);
+  const blueprintRoot = path10.join(projectRoot, BLUEPRINT_DIR);
   const rootPath = workstreamsRootAbsolute(projectRoot);
   const indexPath = workstreamsIndexAbsolute(projectRoot);
   if (!await pathExists5(blueprintRoot)) {
@@ -53055,7 +53064,7 @@ async function loadWorkstreamStore(projectRoot) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const statePath = path9.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
+      const statePath = path10.join(rootPath, entry.name, WORKSTREAM_STATE_FILENAME);
       if (!await pathExists5(statePath)) {
         throw new Error(`Workstream directory is missing ${WORKSTREAM_STATE_FILENAME}: ${entry.name}`);
       }
@@ -53167,7 +53176,7 @@ async function persistWorkstreamState(projectRoot, workstreams, affectedSlugs) {
   const snapshots = await snapshotFiles([indexPath, ...statePaths]);
   const directorySnapshots = await snapshotDirectories([
     workstreamsRootAbsolute(projectRoot),
-    ...uniqueSlugs.map((slug) => path9.dirname(workstreamStateAbsolute(projectRoot, slug)))
+    ...uniqueSlugs.map((slug) => path10.dirname(workstreamStateAbsolute(projectRoot, slug)))
   ]);
   try {
     for (const slug of uniqueSlugs) {
@@ -53224,7 +53233,7 @@ function maybeFailWorkspaceRegistryWrite(registryPath) {
   if (!injectedFailure) {
     return;
   }
-  const matchesRegistry = injectedFailure === "1" || path9.resolve(injectedFailure) === path9.resolve(registryPath);
+  const matchesRegistry = injectedFailure === "1" || path10.resolve(injectedFailure) === path10.resolve(registryPath);
   if (!matchesRegistry) {
     return;
   }
@@ -53410,10 +53419,10 @@ function normalizeWorkspaceRepoMember(value, fallbackStrategy) {
   };
 }
 async function writeWorkspaceRegistryDocument(registryPath, document) {
-  const directory = path9.dirname(registryPath);
-  const tempPath = path9.join(
+  const directory = path10.dirname(registryPath);
+  const tempPath = path10.join(
     directory,
-    `${path9.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
+    `${path10.basename(registryPath)}.tmp-${process.pid}-${Date.now()}`
   );
   await fs7.mkdir(directory, { recursive: true });
   await fs7.writeFile(tempPath, `${JSON.stringify(document, null, 2)}
@@ -53428,9 +53437,9 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
     await fs7.rename(tempPath, registryPath);
     return;
   }
-  const backupPath = path9.join(
+  const backupPath = path10.join(
     directory,
-    `${path9.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
+    `${path10.basename(registryPath)}.bak-${process.pid}-${Date.now()}`
   );
   let restoredOriginal = false;
   try {
@@ -53451,10 +53460,10 @@ async function writeWorkspaceRegistryDocument(registryPath, document) {
   await fs7.rm(backupPath, { force: true }).catch(() => void 0);
 }
 function workspaceRegistryLockOwnerPath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
+  return path10.join(lockPath, WORKSPACE_REGISTRY_LOCK_OWNER_FILE);
 }
 function workspaceRegistryLockLeasePath(lockPath) {
-  return path9.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
+  return path10.join(lockPath, WORKSPACE_REGISTRY_LOCK_LEASE_FILE);
 }
 async function writeWorkspaceRegistryLockFile(filePath, contents) {
   await fs7.writeFile(filePath, `${contents}
@@ -53516,7 +53525,7 @@ async function createWorkspaceRegistryLockHandle(lockPath) {
   return lockHandle;
 }
 async function acquireWorkspaceRegistryLock(lockPath) {
-  await fs7.mkdir(path9.dirname(lockPath), { recursive: true });
+  await fs7.mkdir(path10.dirname(lockPath), { recursive: true });
   for (; ; ) {
     try {
       await fs7.mkdir(lockPath);
@@ -53594,16 +53603,16 @@ function normalizeRecordedPatchId(value, indexPath) {
   }
 }
 function patchIndexPath(registryPath) {
-  return path9.join(registryPath, "index.json");
+  return path10.join(registryPath, "index.json");
 }
 function patchManifestPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.json`);
+  return path10.join(registryPath, `${patchId}.json`);
 }
 function patchContentPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.patch`);
+  return path10.join(registryPath, `${patchId}.patch`);
 }
 function patchAuditPath(registryPath, patchId) {
-  return path9.join(registryPath, `${patchId}.audit.ndjson`);
+  return path10.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
   return createHash2("sha256").update(value).digest("hex");
@@ -53612,11 +53621,11 @@ function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
   for (const trackedFile of trackedFiles) {
     assertNoNullBytes(trackedFile, "Patch tracked file");
-    const candidatePath = path9.isAbsolute(trackedFile) ? path9.resolve(trackedFile) : path9.resolve(repoRoot, trackedFile);
+    const candidatePath = path10.isAbsolute(trackedFile) ? path10.resolve(trackedFile) : path10.resolve(repoRoot, trackedFile);
     ensurePathWithinRootSync(repoRoot, candidatePath, {
       label: "Patch tracked file"
     });
-    const relativePath = path9.relative(repoRoot, candidatePath).replaceAll(path9.sep, "/");
+    const relativePath = path10.relative(repoRoot, candidatePath).replaceAll(path10.sep, "/");
     if (!relativePath || relativePath === ".") {
       throw new Error("Patch tracked file must resolve to a file path inside the repo.");
     }
@@ -53752,9 +53761,9 @@ function assertNotInstalledExtensionTarget(repoRoot) {
   if (!extensionPath) {
     return;
   }
-  const resolvedRepoRoot = path9.resolve(repoRoot);
-  const resolvedExtensionPath = path9.resolve(extensionPath);
-  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path9.sep}`)) {
+  const resolvedRepoRoot = path10.resolve(repoRoot);
+  const resolvedExtensionPath = path10.resolve(extensionPath);
+  if (resolvedRepoRoot === resolvedExtensionPath || resolvedRepoRoot.startsWith(`${resolvedExtensionPath}${path10.sep}`)) {
     throw new Error(
       `Patch replay must not target the installed extension directory: ${resolvedExtensionPath}`
     );
@@ -53774,7 +53783,7 @@ async function buildPatchCompatibilityStatus(manifest, repoRoot) {
   }
   const runtimeHost = resolveBlueprintRuntimeHost();
   const reasons = [];
-  const repoName = path9.basename(repoRoot);
+  const repoName = path10.basename(repoRoot);
   if (manifest.compatibility.host && manifest.compatibility.host !== runtimeHost.host) {
     reasons.push(
       `Recorded for host ${manifest.compatibility.host}, but active host is ${runtimeHost.host}.`
@@ -53835,14 +53844,14 @@ async function resolveDefaultWorkspaceRoot(cwd) {
       throw error2;
     }
   }
-  return path9.join(os2.homedir(), "blueprint-workspaces");
+  return path10.join(os2.homedir(), "blueprint-workspaces");
 }
 async function resolveWorkspacePath(args) {
   if (args.path) {
-    return path9.resolve(expandHomePath2(args.path));
+    return path10.resolve(expandHomePath2(args.path));
   }
   const workspaceRoot = await resolveDefaultWorkspaceRoot(args.cwd);
-  return path9.join(workspaceRoot, normalizeWorkspaceName(args.name));
+  return path10.join(workspaceRoot, normalizeWorkspaceName(args.name));
 }
 async function validateWorkspaceBranchName(branch) {
   const trimmed = branch.trim();
@@ -53872,18 +53881,18 @@ async function resolveSourceRepos(repoInputs, cwd) {
   const seen = /* @__PURE__ */ new Set();
   for (const repoInput of repoInputs) {
     assertNoNullBytes(repoInput, "Workspace repo");
-    const candidatePath = path9.resolve(cwd ?? process.cwd(), expandHomePath2(repoInput));
+    const candidatePath = path10.resolve(cwd ?? process.cwd(), expandHomePath2(repoInput));
     const sourcePath = await resolveGitRepoRoot(candidatePath);
     if (seen.has(sourcePath)) {
       continue;
     }
     seen.add(sourcePath);
     resolved.push({
-      name: slugifyRepoName(path9.basename(sourcePath)),
+      name: slugifyRepoName(path10.basename(sourcePath)),
       sourcePath,
       defaultBranch: await gitCurrentBranch(sourcePath),
       head: await gitHeadSha(sourcePath),
-      blueprintProject: await pathExists5(path9.join(sourcePath, ".blueprint"))
+      blueprintProject: await pathExists5(path10.join(sourcePath, ".blueprint"))
     });
   }
   if (resolved.length === 0) {
@@ -53905,10 +53914,10 @@ async function ensureWorkspaceTargetDoesNotExist(workspacePath) {
 }
 function resolveWorkspaceTargetPath(value, cwd) {
   assertNoNullBytes(value, "Workspace path");
-  return path9.resolve(cwd ?? process.cwd(), expandHomePath2(value));
+  return path10.resolve(cwd ?? process.cwd(), expandHomePath2(value));
 }
 function buildWorkspaceManifestPath(workspacePath) {
-  return path9.join(workspacePath, WORKSPACE_MANIFEST_FILE);
+  return path10.join(workspacePath, WORKSPACE_MANIFEST_FILE);
 }
 function assertNotInstalledExtensionPath(candidatePath, label) {
   const extensionPath = resolveBlueprintRuntimeHost().extensionPath;
@@ -53917,7 +53926,7 @@ function assertNotInstalledExtensionPath(candidatePath, label) {
   }
   if (isPathWithinRootSync(extensionPath, candidatePath)) {
     throw new Error(
-      `${label} must not target the installed extension directory: ${path9.resolve(extensionPath)}`
+      `${label} must not target the installed extension directory: ${path10.resolve(extensionPath)}`
     );
   }
 }
@@ -53944,7 +53953,7 @@ async function createWorkspaceMember(workspacePath, sourceRepo, strategy, reques
     duplicateIndex += 1;
   }
   usedTargetNames.add(candidateName);
-  const memberPath = path9.join(workspacePath, candidateName);
+  const memberPath = path10.join(workspacePath, candidateName);
   if (strategy === "worktree") {
     const localBranchAlreadyExists = requestedBranch ? await localBranchExists(sourceRepo.sourcePath, requestedBranch) : false;
     const partialCreatedBranch = requestedBranch && !localBranchAlreadyExists ? requestedBranch : null;
@@ -54067,7 +54076,7 @@ function resolveWorkspaceRemovalEntry(workspaces, name, workspacePath) {
   }
   if (workspacePath) {
     const exactMatches = nameMatches.filter(
-      (workspace) => path9.resolve(workspace.path) === workspacePath
+      (workspace) => path10.resolve(workspace.path) === workspacePath
     );
     if (exactMatches.length > 1) {
       throw new Error(
@@ -54096,12 +54105,12 @@ async function ensurePathRemoved(targetPath, label) {
   }
 }
 function workspaceEntriesMatch(registryEntry, manifestEntry) {
-  if (registryEntry.name !== manifestEntry.name || path9.resolve(registryEntry.path) !== path9.resolve(manifestEntry.path) || path9.resolve(registryEntry.manifestPath) !== path9.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
+  if (registryEntry.name !== manifestEntry.name || path10.resolve(registryEntry.path) !== path10.resolve(manifestEntry.path) || path10.resolve(registryEntry.manifestPath) !== path10.resolve(manifestEntry.manifestPath) || registryEntry.strategy !== manifestEntry.strategy || registryEntry.branch !== manifestEntry.branch || registryEntry.createdAt !== manifestEntry.createdAt || registryEntry.repos.length !== manifestEntry.repos.length) {
     return false;
   }
   return registryEntry.repos.every((member, index) => {
     const manifestMember = manifestEntry.repos[index];
-    return manifestMember !== void 0 && member.name === manifestMember.name && path9.resolve(member.sourcePath) === path9.resolve(manifestMember.sourcePath) && path9.resolve(member.path) === path9.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
+    return manifestMember !== void 0 && member.name === manifestMember.name && path10.resolve(member.sourcePath) === path10.resolve(manifestMember.sourcePath) && path10.resolve(member.path) === path10.resolve(manifestMember.path) && member.strategy === manifestMember.strategy && member.branch === manifestMember.branch && member.head === manifestMember.head && member.blueprintProject === manifestMember.blueprintProject;
   });
 }
 async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryPath) {
@@ -54119,9 +54128,9 @@ async function readWorkspaceManifestEntry(manifestPath, workspaceName, registryP
   }
 }
 async function verifyWorkspaceRemovalEntry(entry, registryPath) {
-  const workspacePath = path9.resolve(entry.path);
-  const manifestPath = path9.resolve(entry.manifestPath);
-  const expectedManifestPath = path9.resolve(buildWorkspaceManifestPath(workspacePath));
+  const workspacePath = path10.resolve(entry.path);
+  const manifestPath = path10.resolve(entry.manifestPath);
+  const expectedManifestPath = path10.resolve(buildWorkspaceManifestPath(workspacePath));
   assertNotInstalledExtensionPath(workspacePath, "Workspace removal target");
   if (manifestPath !== expectedManifestPath) {
     throw new Error(
@@ -54145,7 +54154,7 @@ async function verifyWorkspaceRemovalEntry(entry, registryPath) {
     );
   }
   for (const member of entry.repos) {
-    const memberPath = path9.resolve(member.path);
+    const memberPath = path10.resolve(member.path);
     ensurePathWithinRootSync(workspacePath, memberPath, {
       label: "Workspace repo member"
     });
@@ -54333,7 +54342,7 @@ async function blueprintWorkspaceCreate(args) {
   return withWorkspaceRegistryLock(registryPath, async () => {
     const registry2 = await readWorkspaceRegistryDocument(registryPath);
     if (registry2.workspaces.some(
-      (workspace) => workspace.name === normalizedName || path9.resolve(workspace.path) === path9.resolve(workspacePath)
+      (workspace) => workspace.name === normalizedName || path10.resolve(workspace.path) === path10.resolve(workspacePath)
     )) {
       throw new Error(
         `Workspace registry already contains ${normalizedName} or ${workspacePath}; choose a unique workspace name and target path.`
@@ -54343,7 +54352,7 @@ async function blueprintWorkspaceCreate(args) {
     const usedTargetNames = /* @__PURE__ */ new Set();
     const createdAt = (/* @__PURE__ */ new Date()).toISOString();
     try {
-      await fs7.mkdir(path9.dirname(workspacePath), { recursive: true });
+      await fs7.mkdir(path10.dirname(workspacePath), { recursive: true });
       await fs7.mkdir(workspacePath, { recursive: false });
       for (const sourceRepo of sourceRepos) {
         const createdMember = await createWorkspaceMember(
@@ -54779,7 +54788,7 @@ async function blueprintPatchRecord(args) {
     sourceVersion = args.sourceVersion ?? await gitHeadSha(repoRoot);
     compatibility = {
       host: args.compatibility?.host ?? runtimeHost.host,
-      repoRootName: args.compatibility?.repoRootName ?? path9.basename(repoRoot),
+      repoRootName: args.compatibility?.repoRootName ?? path10.basename(repoRoot),
       remoteUrl: args.compatibility?.remoteUrl === void 0 ? repoRemote : args.compatibility.remoteUrl
     };
   }
@@ -54789,9 +54798,9 @@ async function blueprintPatchRecord(args) {
     label: args.label?.trim() || null,
     createdAt: existingManifest?.createdAt ?? createdAt,
     sourceVersion,
-    repoRootName: path9.basename(repoRoot),
+    repoRootName: path10.basename(repoRoot),
     repoRemote,
-    patchFile: path9.basename(patchPath),
+    patchFile: path10.basename(patchPath),
     patchHash,
     trackedFiles,
     compatibility,
@@ -54812,7 +54821,7 @@ async function blueprintPatchRecord(args) {
     timestamp: createdAt,
     action: args.audit?.action ?? "record",
     outcome: args.audit?.outcome ?? "recorded",
-    cwd: path9.resolve(args.cwd ?? process.cwd()),
+    cwd: path10.resolve(args.cwd ?? process.cwd()),
     repoRoot,
     targetHead: args.audit?.targetHead ?? sourceVersion,
     trackedFiles,
@@ -55077,7 +55086,7 @@ import { execFile as execFile4 } from "node:child_process";
 import { createHash as createHash3 } from "node:crypto";
 import { promises as fs8 } from "node:fs";
 import os3 from "node:os";
-import path10 from "node:path";
+import path11 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function stableHash(value) {
   return createHash3("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
@@ -55152,7 +55161,7 @@ function hasPathSegment(filePath, segment) {
   return filePath === segment || filePath.startsWith(`${segment}/`) || filePath.endsWith(`/${segment}`) || filePath.includes(`/${segment}/`);
 }
 function hasConfigName(filePath) {
-  const basename = path10.posix.basename(filePath);
+  const basename = path11.posix.basename(filePath);
   return basename.startsWith(".") || basename.includes("config") || basename.includes("settings") || hasPathSegment(filePath, "config") || hasPathSegment(filePath, ".github");
 }
 function isGeneratedPath(filePath) {
@@ -55162,7 +55171,7 @@ function isTestPath(filePath) {
   return TEST_FILE_PATTERNS.some((pattern) => pattern.test(filePath));
 }
 function isDocsPath(filePath) {
-  const extension = path10.posix.extname(filePath).toLowerCase();
+  const extension = path11.posix.extname(filePath).toLowerCase();
   return hasPathSegment(filePath, "docs") || DOC_FILE_EXTENSIONS.has(extension);
 }
 function areaForSurface(surface) {
@@ -55209,8 +55218,8 @@ function areaForSurface(surface) {
 }
 function classifyImpactFile(filePath) {
   const normalizedPath = normalizeRepoPathForClassification(filePath);
-  const basename = path10.posix.basename(normalizedPath);
-  const extension = path10.posix.extname(normalizedPath).toLowerCase();
+  const basename = path11.posix.basename(normalizedPath);
+  const extension = path11.posix.extname(normalizedPath).toLowerCase();
   const rules = [];
   if (SECRET_PATH_PATTERN.test(normalizedPath)) {
     addSurfaceRule(
@@ -55898,7 +55907,7 @@ function matchesRepoPattern(filePath, pattern) {
     return false;
   }
   if (!normalizedPattern.includes("/")) {
-    return globPatternToRegExp(normalizedPattern).test(path10.posix.basename(normalizedPath));
+    return globPatternToRegExp(normalizedPattern).test(path11.posix.basename(normalizedPath));
   }
   return globPatternToRegExp(normalizedPattern).test(normalizedPath);
 }
@@ -55941,7 +55950,7 @@ function expandHomePath3(value) {
     return os3.homedir();
   }
   if (trimmed.startsWith("~/") || trimmed.startsWith("~\\")) {
-    return path10.join(os3.homedir(), trimmed.slice(2));
+    return path11.join(os3.homedir(), trimmed.slice(2));
   }
   return trimmed;
 }
@@ -55958,7 +55967,7 @@ function resolveContainedInputPath(projectRoot, inputPath, label) {
   if (trimmed.length === 0) {
     throw new Error(`${label} must not be blank.`);
   }
-  const candidatePath = path10.isAbsolute(trimmed) ? trimmed : path10.resolve(projectRoot, trimmed);
+  const candidatePath = path11.isAbsolute(trimmed) ? trimmed : path11.resolve(projectRoot, trimmed);
   return ensurePathWithinRootSync(projectRoot, candidatePath, { label });
 }
 function toRepoRelativeInputPath(projectRoot, inputPath, label) {
@@ -56023,15 +56032,15 @@ function normalizeAnalyzeFileSources(projectRoot, sources, warnings) {
 }
 function getImpactDefaultsPath() {
   const runtimeHost = resolveBlueprintRuntimeHost();
-  return path10.resolve(
+  return path11.resolve(
     expandHomePath3(
-      path10.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
+      path11.join(runtimeHost.globalBlueprintDir, IMPACT_GLOBAL_DEFAULTS_BASENAME)
     )
   );
 }
 function isUnsafeRepoPattern(value) {
   const normalized = value.trim().replaceAll("\\", "/");
-  return normalized.length === 0 || normalized.includes("\0") || path10.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
+  return normalized.length === 0 || normalized.includes("\0") || path11.isAbsolute(value) || normalized === ".." || normalized.startsWith("../") || normalized.includes("/../");
 }
 function validateConfigPathArrays(config2) {
   const errors = [];
@@ -56521,7 +56530,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
       continue;
     }
     const root = normalizedPattern.split("/")[0];
-    const absoluteRoot = path10.join(projectRoot, root);
+    const absoluteRoot = path11.join(projectRoot, root);
     if (!await pathExists6(absoluteRoot)) {
       continue;
     }
@@ -56531,7 +56540,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
         continue;
       }
       const relativePath = `${root}/${entry.name}`;
-      if (await pathExists6(path10.join(projectRoot, relativePath, "package.json"))) {
+      if (await pathExists6(path11.join(projectRoot, relativePath, "package.json"))) {
         directories.push(relativePath);
       }
     }
@@ -56539,7 +56548,7 @@ async function resolveSimpleWorkspaceDirectories(projectRoot, workspacePatterns)
   return uniqueSorted2(directories);
 }
 async function loadPackageJsonDependencySource(projectRoot, nodes, edges, evidence, warnings) {
-  const packagePath = path10.join(projectRoot, "package.json");
+  const packagePath = path11.join(projectRoot, "package.json");
   const parsed = await readJsonObjectIfPresent(packagePath, "Impact package.json");
   const packageNameByWorkspacePath = /* @__PURE__ */ new Map();
   if (!parsed) {
@@ -56576,7 +56585,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   for (const workspacePath of workspaceDirectories) {
     try {
       const workspacePackage = await readJsonObjectIfPresent(
-        path10.join(projectRoot, workspacePath, "package.json"),
+        path11.join(projectRoot, workspacePath, "package.json"),
         `Impact workspace package ${workspacePath}/package.json`
       );
       if (!workspacePackage) {
@@ -56606,7 +56615,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   }
   for (const workspacePath of workspaceDirectories) {
     const workspacePackage = await readJsonObjectIfPresent(
-      path10.join(projectRoot, workspacePath, "package.json"),
+      path11.join(projectRoot, workspacePath, "package.json"),
       `Impact workspace package ${workspacePath}/package.json`
     );
     if (!workspacePackage) {
@@ -56640,7 +56649,7 @@ async function loadPackageJsonDependencySource(projectRoot, nodes, edges, eviden
   return { used: true, packageNameByWorkspacePath };
 }
 async function loadPackageLockDependencySource(projectRoot, nodes, evidence, unknowns, warnings) {
-  const lockPath = path10.join(projectRoot, "package-lock.json");
+  const lockPath = path11.join(projectRoot, "package-lock.json");
   if (!await pathExists6(lockPath)) {
     return false;
   }
@@ -56694,7 +56703,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
   const results = /* @__PURE__ */ new Set();
   const queue = [];
   for (const root of roots) {
-    if (await pathExists6(path10.join(projectRoot, root))) {
+    if (await pathExists6(path11.join(projectRoot, root))) {
       queue.push({ relativePath: root, depth: 0 });
     }
   }
@@ -56703,7 +56712,7 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
     if (!current || current.depth > 8) {
       continue;
     }
-    const absolutePath = path10.join(projectRoot, current.relativePath);
+    const absolutePath = path11.join(projectRoot, current.relativePath);
     const entries = await fs8.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
       if (results.size >= 600) {
@@ -56718,13 +56727,13 @@ async function listBoundedSourceFiles(projectRoot, roots, changedFiles) {
           continue;
         }
         queue.push({ relativePath, depth: current.depth + 1 });
-      } else if (SOURCE_FILE_EXTENSIONS.has(path10.posix.extname(relativePath).toLowerCase())) {
+      } else if (SOURCE_FILE_EXTENSIONS.has(path11.posix.extname(relativePath).toLowerCase())) {
         results.add(relativePath);
       }
     }
   }
   for (const file2 of changedFiles) {
-    if (SOURCE_FILE_EXTENSIONS.has(path10.posix.extname(file2).toLowerCase())) {
+    if (SOURCE_FILE_EXTENSIONS.has(path11.posix.extname(file2).toLowerCase())) {
       results.add(file2);
     }
   }
@@ -56734,7 +56743,7 @@ function resolveImportSpecifierToRepoPath(importerPath, specifier, knownRepoPath
   if (!specifier.startsWith(".")) {
     return null;
   }
-  const base = path10.posix.normalize(path10.posix.join(path10.posix.dirname(importerPath), specifier));
+  const base = path11.posix.normalize(path11.posix.join(path11.posix.dirname(importerPath), specifier));
   const candidates = [
     base,
     `${base}.ts`,
@@ -56780,7 +56789,7 @@ async function loadTsImportScanDependencySource(projectRoot, changedFiles, surfa
       skippedSecretCount += 1;
       continue;
     }
-    const absolutePath = path10.join(projectRoot, file2);
+    const absolutePath = path11.join(projectRoot, file2);
     if (!await pathExists6(absolutePath)) {
       continue;
     }
@@ -57757,7 +57766,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const missingMcpRuntimeBundleCoverage = mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
-  if (hasRuntimeOrExtension && !await pathExists6(path10.join(projectRoot, "dist/mcp/server.js"))) {
+  if (hasRuntimeOrExtension && !await pathExists6(path11.join(projectRoot, "dist/mcp/server.js"))) {
     const evidenceRef = addEvidence(evidence, {
       kind: "build",
       source: "dist-entrypoint",
@@ -58265,7 +58274,7 @@ async function blueprintImpactConfigGet(args = {}) {
   const errors = [];
   const layersApplied = ["built-in"];
   const defaultsPath = getImpactDefaultsPath();
-  const projectConfigPath = path10.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
+  const projectConfigPath = path11.join(projectRoot, IMPACT_PROJECT_CONFIG_PATH);
   let appliedDefaultsPath = null;
   let appliedProjectPath = null;
   let appliedInvocationPath = null;
@@ -58685,7 +58694,7 @@ async function blueprintImpactScopeResolve(args = {}) {
   return resolveScopeWithGit(projectRoot, seededArgs, mode, description, warnings);
 }
 async function readPackageMetadata(projectRoot) {
-  const packageJsonPath = path10.join(projectRoot, "package.json");
+  const packageJsonPath = path11.join(projectRoot, "package.json");
   if (!await pathExists6(packageJsonPath)) {
     return {
       loaded: false,
@@ -58728,7 +58737,7 @@ async function readPackageMetadata(projectRoot) {
 async function listExistingTopLevelPaths(projectRoot, candidates) {
   const existing = [];
   for (const candidate of candidates) {
-    if (await pathExists6(path10.join(projectRoot, candidate))) {
+    if (await pathExists6(path11.join(projectRoot, candidate))) {
       existing.push(candidate);
     }
   }
@@ -59393,7 +59402,7 @@ function canonicalizeImpactReport(report) {
   };
 }
 function normalizeExpectedFilePath(value) {
-  return path10.posix.normalize(value.trim().replaceAll("\\", "/"));
+  return path11.posix.normalize(value.trim().replaceAll("\\", "/"));
 }
 function normalizeExpectedEvidencePathsById(expectedPathsById) {
   if (expectedPathsById === void 0) {
@@ -59692,17 +59701,17 @@ function validateReportRepoRelativePath(projectRoot, value, label, errors) {
     errors.push(`${label} must not contain null bytes.`);
     return;
   }
-  if (path10.isAbsolute(trimmed) || path10.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
+  if (path11.isAbsolute(trimmed) || path11.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed)) {
     errors.push(`${label} must be repo-relative, not absolute: ${value}`);
     return;
   }
-  const normalizedPath = path10.posix.normalize(slashNormalized);
+  const normalizedPath = path11.posix.normalize(slashNormalized);
   if (normalizedPath === ".." || normalizedPath.startsWith("../")) {
     errors.push(`${label} escapes the repository: ${value}`);
     return;
   }
   try {
-    ensurePathWithinRootSync(projectRoot, path10.resolve(projectRoot, normalizedPath), {
+    ensurePathWithinRootSync(projectRoot, path11.resolve(projectRoot, normalizedPath), {
       label
     });
   } catch (error2) {
@@ -59723,7 +59732,7 @@ function shouldValidateReportScopeSource(scope) {
   }
   const trimmed = scope.source.trim();
   const slashNormalized = trimmed.replaceAll("\\", "/");
-  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path10.isAbsolute(trimmed) || path10.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
+  return scope.kind === "diff-file" || !NON_PATH_SCOPE_SOURCES.has(trimmed) || trimmed.includes("\0") || path11.isAbsolute(trimmed) || path11.posix.isAbsolute(slashNormalized) || /^[A-Za-z]:[\\/]/u.test(trimmed) || hasPathTraversalSegment(trimmed);
 }
 function validateReportScopeSource(projectRoot, scope, errors) {
   if (!shouldValidateReportScopeSource(scope)) {
@@ -60399,10 +60408,10 @@ function renderImpactHumanText(report, verbosity) {
 `;
 }
 function ensureImpactBundleDir(projectRoot, impactId) {
-  const impactRoot = ensurePathWithinRootSync(projectRoot, path10.join(projectRoot, IMPACT_REPORT_ROOT), {
+  const impactRoot = ensurePathWithinRootSync(projectRoot, path11.join(projectRoot, IMPACT_REPORT_ROOT), {
     label: "impact report root"
   });
-  const impactDir = ensurePathWithinRootSync(impactRoot, path10.join(impactRoot, impactId), {
+  const impactDir = ensurePathWithinRootSync(impactRoot, path11.join(impactRoot, impactId), {
     label: "impact report directory"
   });
   ensurePathWithinRootSync(projectRoot, impactDir, { label: "impact report directory" });
@@ -60414,7 +60423,7 @@ async function compareImpactBundle(projectRoot, impactDir, files) {
     return { existing: false, identical: false };
   }
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path11.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
@@ -60440,7 +60449,7 @@ async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
   const entries = await fs8.readdir(impactDir, { withFileTypes: true });
   for (const entry of entries) {
     if (!files.has(entry.name)) {
-      const stalePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, entry.name), {
+      const stalePath = ensurePathWithinRootSync(impactDir, path11.join(impactDir, entry.name), {
         label: "stale impact report file"
       });
       ensurePathWithinRootSync(projectRoot, stalePath, { label: "stale impact report file" });
@@ -60450,7 +60459,7 @@ async function pruneImpactStaleBundleFiles(projectRoot, impactDir, files) {
 }
 async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
   for (const [fileName, content] of files) {
-    const filePath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, fileName), {
+    const filePath = ensurePathWithinRootSync(impactDir, path11.join(impactDir, fileName), {
       label: "impact report file"
     });
     ensurePathWithinRootSync(projectRoot, filePath, { label: "impact report file" });
@@ -60461,7 +60470,7 @@ async function writeImpactBundleFilesAtomically(projectRoot, impactDir, files) {
 }
 async function readSavedImpactReport(projectRoot, impactId) {
   const impactDir = ensureImpactBundleDir(projectRoot, impactId);
-  const reportPath = ensurePathWithinRootSync(impactDir, path10.join(impactDir, "impact.json"), {
+  const reportPath = ensurePathWithinRootSync(impactDir, path11.join(impactDir, "impact.json"), {
     label: "saved impact report"
   });
   if (!await pathExists6(reportPath)) {
@@ -61258,7 +61267,7 @@ __export(project_exports, {
   projectToolDefinitions: () => projectToolDefinitions
 });
 import { promises as fs9 } from "node:fs";
-import path11 from "node:path";
+import path12 from "node:path";
 function bundledUrl(relativePath) {
   const rootDepth = import.meta.url.includes("/dist/mcp/") ? "../../" : "../../../";
   return new URL(`${rootDepth}${relativePath}`, import.meta.url);
@@ -61337,7 +61346,7 @@ async function pathExists7(targetPath) {
 }
 async function readPackageProjectName(projectRoot) {
   try {
-    const raw = await fs9.readFile(path11.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs9.readFile(path12.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -61349,7 +61358,7 @@ async function readPackageProjectName(projectRoot) {
 }
 async function readPackageDescription(projectRoot) {
   try {
-    const raw = await fs9.readFile(path11.join(projectRoot, "package.json"), "utf8");
+    const raw = await fs9.readFile(path12.join(projectRoot, "package.json"), "utf8");
     const parsed = safeJsonParseObject(raw, {
       label: "package.json",
       maxBytes: 1024 * 1024
@@ -61364,13 +61373,13 @@ async function inferProjectName2(projectRoot, requestedName) {
   if (explicit) {
     return explicit;
   }
-  return await readPackageProjectName(projectRoot) ?? path11.basename(projectRoot);
+  return await readPackageProjectName(projectRoot) ?? path12.basename(projectRoot);
 }
 async function readRepoSummary(projectRoot) {
   const readmePaths = ["README.md", "README"];
   for (const candidate of readmePaths) {
     try {
-      const raw = await fs9.readFile(path11.join(projectRoot, candidate), "utf8");
+      const raw = await fs9.readFile(path12.join(projectRoot, candidate), "utf8");
       const summary = raw.split("\n").map((line) => line.trim()).find((line) => line.length > 0 && !line.startsWith("#"));
       if (summary) {
         return summary;
@@ -62647,8 +62656,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path14, errorMaps, issueData } = params;
-  const fullPath = [...path14, ...issueData.path || []];
+  const { data, path: path15, errorMaps, issueData } = params;
+  const fullPath = [...path15, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -62763,11 +62772,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path14, key) {
+  constructor(parent, value, path15, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path14;
+    this._path = path15;
     this._key = key;
   }
   get path() {
@@ -72326,7 +72335,7 @@ async function loadBlueprintSkillInputs(skillName, commandPath, readRelativePath
       preferredPath ?? null,
       blueprintDiscoverableSkillPath(skillName),
       blueprintLegacySkillPath(skillName)
-    ].filter((path14) => typeof path14 === "string" && path14.length > 0)
+    ].filter((path15) => typeof path15 === "string" && path15.length > 0)
   );
   for (const candidatePath of candidatePaths) {
     const content = await readRelativePath(candidatePath);
@@ -72634,7 +72643,7 @@ function registerBlueprintCommandResources(server) {
 }
 
 // src/mcp/response-sanitizer.ts
-import path12 from "node:path";
+import path13 from "node:path";
 
 // src/mcp/tool-result-utils.ts
 function getString(result, key) {
@@ -72766,7 +72775,7 @@ function trimUpdatePlanPublicFields(result) {
   const updatesDir = typeof savedPaths?.updatesDir === "string" ? savedPaths.updatesDir : null;
   const metadataPath = typeof savedPaths?.metadataPath === "string" ? savedPaths.metadataPath : null;
   const checklistPath = typeof savedPaths?.checklistPath === "string" ? savedPaths.checklistPath : null;
-  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path12.dirname(metadataPath) === updatesDir && path12.dirname(checklistPath) === updatesDir;
+  const shouldTrimUpdatesDir = updatesDir !== null && metadataPath !== null && checklistPath !== null && path13.dirname(metadataPath) === updatesDir && path13.dirname(checklistPath) === updatesDir;
   if (shouldTrimUpdatesDir && savedPaths !== null) {
     const { updatesDir: _updatesDir, ...trimmedSavedPaths } = savedPaths;
     trimmedResult = {
@@ -73574,7 +73583,7 @@ var blueprintToolNames = TOOL_DEFINITIONS.map(
 // src/mcp/write-failure-log.ts
 init_artifacts();
 import { promises as fs11 } from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 var BLUEPRINT_DIR2 = ".blueprint";
 var MCP_WRITE_FAILURE_LOG_PATH = `${BLUEPRINT_DIR2}/mcp-write-failures.ndjson`;
 var LOG_SCHEMA_VERSION = 1;
@@ -73654,8 +73663,8 @@ function toLoggedError(error2) {
 async function appendFailureEntry(cwd, entry) {
   try {
     const projectRoot = await ensureRepoRoot(cwd);
-    const absoluteLogPath = path13.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
-    await fs11.mkdir(path13.dirname(absoluteLogPath), { recursive: true });
+    const absoluteLogPath = path14.join(projectRoot, MCP_WRITE_FAILURE_LOG_PATH);
+    await fs11.mkdir(path14.dirname(absoluteLogPath), { recursive: true });
     await fs11.appendFile(
       absoluteLogPath,
       `${JSON.stringify({
@@ -74052,7 +74061,7 @@ function summarizeMutationOutcome(toolName, result) {
 function summarizeToolResult(toolName, result) {
   const subject = buildSubject(toolName, result);
   const reason = getString(result, "reason");
-  const path14 = findSummaryPath(result);
+  const path15 = findSummaryPath(result);
   const nextAction = getNextAction(result);
   const found = getBoolean(result, "found");
   const phaseFound = getBoolean(result, "phaseFound");
@@ -74068,8 +74077,8 @@ function summarizeToolResult(toolName, result) {
     return reason ? `No ${subject} found: ${cleanSentenceFragment(reason)}.` : `No ${subject} found.`;
   }
   const details = [];
-  if (path14) {
-    details.push(`at \`${path14}\``);
+  if (path15) {
+    details.push(`at \`${path15}\``);
   }
   if (content) {
     details.push(`(${formatByteCount(Buffer.byteLength(content, "utf8"))})`);

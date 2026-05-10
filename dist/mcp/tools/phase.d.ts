@@ -3,6 +3,7 @@ import { type ArtifactContractReadResult } from "../artifact-contracts/index.js"
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
 import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
+import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -1089,10 +1090,6 @@ type PhaseExecutionTargetSummary = {
 type PhaseExecutionTargetPlan = PhasePlanRecord & {
     missingDependencyPlans: string[];
     summary: PhaseExecutionTargetSummary;
-};
-type PhaseExecutionTargetConflictSurface = {
-    value: string;
-    kinds: Array<"files_modified" | "read_first" | "generated_artifact" | "other">;
 };
 type PhaseExecutionTargetConflictGroup = {
     planIds: string[];
