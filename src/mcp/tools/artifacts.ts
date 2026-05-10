@@ -2381,7 +2381,21 @@ export async function writeTextFile(
         });
 
   await ensureParentDirectory(filePath);
-  await fs.writeFile(filePath, prepared.content, "utf8");
+  const tempPath = path.join(
+    path.dirname(filePath),
+    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random()
+      .toString(36)
+      .slice(2)}.tmp`
+  );
+
+  try {
+    await fs.writeFile(tempPath, prepared.content, "utf8");
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+
   return prepared.warnings;
 }
 

@@ -646,6 +646,12 @@ type ParsedRoadmapPhase = {
   requirements: string[];
 };
 
+type ParsedRoadmap = {
+  path: string;
+  milestone: string | null;
+  phases: ParsedRoadmapPhase[];
+};
+
 type RoadmapAddPhaseResult = {
   phaseNumber: string;
   phasePrefix: string;
@@ -2337,6 +2343,126 @@ function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
   return String(maxIntegerPhase + 1);
 }
 
+function normalizedPhaseText(value: string | null | undefined): string {
+  return normalizePhaseDescription(value ?? "").toLowerCase();
+}
+
+function findMatchingAuditBackedPhase(
+  phases: ParsedRoadmapPhase[],
+  phaseName: string,
+  auditBackedDetails: RoadmapAuditBackedDetails | null
+): ParsedRoadmapPhase | null {
+  if (!auditBackedDetails) {
+    return null;
+  }
+
+  const expectedRequirements = auditBackedDetails.repairRequirementIds ?? [];
+  const expectedGoal = normalizedPhaseText(auditBackedDetails.goal);
+
+  return phases.find((phase) => {
+    if (normalizedPhaseText(phase.phaseName) !== normalizedPhaseText(phaseName)) {
+      return false;
+    }
+
+    if (expectedRequirements.length > 0) {
+      return expectedRequirements.every((requirementId) =>
+        phase.requirements.includes(requirementId)
+      );
+    }
+
+    return expectedGoal.length > 0 && normalizedPhaseText(phase.goal) === expectedGoal;
+  }) ?? null;
+}
+
+async function reuseAuditBackedPhase(
+  projectRoot: string,
+  roadmap: ParsedRoadmap,
+  phase: ParsedRoadmapPhase,
+  auditBackedDetails: RoadmapAuditBackedDetails
+): Promise<RoadmapAddPhaseResult> {
+  const locatedPhaseDir = await findPhaseDirectory(projectRoot, phase.phaseNumber);
+
+  if (locatedPhaseDir.reason === "ambiguous") {
+    throw new Error(
+      `Phase ${phase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before reusing the audit-backed phase.`
+    );
+  }
+
+  const phaseDir =
+    locatedPhaseDir.phaseDir ??
+    buildBlueprintPhaseDirectoryPath(phase.phaseNumber, phase.phaseName);
+  const phaseDirState = await materializePhaseDirectory(projectRoot, phaseDir);
+  const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+  const requirementsAbsolutePath = resolveBlueprintPath(projectRoot, requirementsPath);
+  const warnings = [
+    `Reused existing audit-backed Phase ${phase.phaseNumber} instead of appending a duplicate.`
+  ];
+  const requirementRepair = auditBackedDetails.repairRequirementIds?.length
+    ? await repairRequirementsTraceability(
+        projectRoot,
+        auditBackedDetails.repairRequirementIds,
+        phase.phaseNumber,
+        phase.phaseName,
+        auditBackedDetails.sourceReportPath
+      )
+    : null;
+  const originalRequirements = requirementRepair
+    ? await fs.readFile(requirementsAbsolutePath, "utf8")
+    : null;
+  const preparedRequirements = requirementRepair
+    ? prepareTextForPersistence(requirementRepair.content, {
+        label: requirementsPath
+      })
+    : null;
+
+  warnings.push(...phaseDirState.warnings);
+  warnings.push(...(preparedRequirements?.warnings ?? []));
+
+  try {
+    if (requirementRepair) {
+      warnings.push(...requirementRepair.warnings);
+      warnings.push(
+        ...await writeTextFile(
+          requirementsAbsolutePath,
+          preparedRequirements?.content ?? requirementRepair.content,
+          {
+            label: requirementsPath,
+            enforcePromptBoundary: false
+          }
+        )
+      );
+    }
+  } catch (error) {
+    if (originalRequirements !== null) {
+      await writeTextFile(requirementsAbsolutePath, originalRequirements, {
+        label: requirementsPath,
+        enforcePromptBoundary: false
+      }).catch(() => undefined);
+    }
+
+    if (phaseDirState.created) {
+      await fs.rm(phaseDirState.phaseDirPath, {
+        recursive: true,
+        force: true
+      }).catch(() => undefined);
+    }
+
+    throw error;
+  }
+
+  return {
+    phaseNumber: phase.phaseNumber,
+    phasePrefix: phase.phasePrefix,
+    phaseName: phase.phaseName,
+    slug: slugifyPhaseName(phase.phaseName),
+    phaseDir,
+    roadmapPath: roadmap.path,
+    milestone: roadmap.milestone,
+    written: true,
+    warnings
+  };
+}
+
 function previousIntegerPhaseNumber(value: NumericInput): string | null {
   const normalizedPhaseNumber = normalizePhaseNumber(value);
 
@@ -3237,6 +3363,46 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+async function materializePhaseDirectory(
+  projectRoot: string,
+  phaseDir: string
+): Promise<{
+  phaseDirPath: string;
+  created: boolean;
+  warnings: string[];
+}> {
+  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+
+  try {
+    const stats = await fs.stat(phaseDirPath);
+
+    if (!stats.isDirectory()) {
+      throw new Error(
+        `Phase directory path exists but is not a directory: ${phaseDir}. Resolve the drift before mutating the roadmap.`
+      );
+    }
+
+    return {
+      phaseDirPath,
+      created: false,
+      warnings: [`Phase directory already exists and can be reused: ${phaseDir}`]
+    };
+  } catch (error) {
+    const statError = error as NodeJS.ErrnoException;
+
+    if (statError.code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  await fs.mkdir(phaseDirPath, { recursive: true });
+  return {
+    phaseDirPath,
+    created: true,
+    warnings: []
+  };
+}
+
 async function listPhaseArtifacts(
   rootPath: string,
   projectRoot: string
@@ -3310,11 +3476,7 @@ async function findPhaseDirectory(
 
 async function readRoadmap(
   projectRoot: string
-): Promise<{
-  path: string;
-  milestone: string | null;
-  phases: ParsedRoadmapPhase[];
-}> {
+): Promise<ParsedRoadmap> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
 
   if (!(await pathExists(roadmapPath))) {
@@ -9085,6 +9247,25 @@ export async function blueprintRoadmapAddPhase(
 
   return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
     const roadmap = await readRoadmap(projectRoot);
+    const existingAuditBackedPhase = findMatchingAuditBackedPhase(
+      roadmap.phases,
+      normalizedDescription,
+      auditBackedDetails
+    );
+
+    if (
+      existingAuditBackedPhase &&
+      (!args.expectedPhaseNumber ||
+        normalizePhaseNumber(args.expectedPhaseNumber) === existingAuditBackedPhase.phaseNumber)
+    ) {
+      return reuseAuditBackedPhase(
+        projectRoot,
+        roadmap,
+        existingAuditBackedPhase,
+        auditBackedDetails as RoadmapAuditBackedDetails
+      );
+    }
+
     const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
 
     if (
@@ -9130,31 +9311,63 @@ export async function blueprintRoadmapAddPhase(
         : { dependsOnPhaseNumber }
     );
     const warnings: string[] = [];
-    const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+    const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
+      label: roadmap.path
+    });
+    const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+    const requirementsAbsolutePath = resolveBlueprintPath(projectRoot, requirementsPath);
+    const preparedRequirements = requirementRepair
+      ? prepareTextForPersistence(requirementRepair.content, {
+          label: requirementsPath
+        })
+      : null;
+    const originalRequirements = requirementRepair
+      ? await fs.readFile(requirementsAbsolutePath, "utf8")
+      : null;
 
-    warnings.push(
-      ...await writeTextFile(roadmapPath, updatedRoadmap, {
-        label: roadmap.path
-      })
-    );
+    warnings.push(...preparedRoadmap.warnings);
+    warnings.push(...(preparedRequirements?.warnings ?? []));
+    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
 
-    if (requirementRepair) {
-      warnings.push(...requirementRepair.warnings);
+    warnings.push(...materializedPhaseDir.warnings);
+
+    try {
+      if (requirementRepair) {
+        warnings.push(...requirementRepair.warnings);
+        warnings.push(
+          ...await writeTextFile(
+            requirementsAbsolutePath,
+            preparedRequirements?.content ?? requirementRepair.content,
+            {
+              label: requirementsPath,
+              enforcePromptBoundary: false
+            }
+          )
+        );
+      }
+
       warnings.push(
-        ...await writeTextFile(
-          resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`),
-          requirementRepair.content,
-          {
-            label: `${BLUEPRINT_DIR}/REQUIREMENTS.md`
-          }
-        )
+        ...await writeTextFile(roadmapPath, preparedRoadmap.content, {
+          label: roadmap.path,
+          enforcePromptBoundary: false
+        })
       );
-    }
+    } catch (error) {
+      if (requirementRepair && originalRequirements !== null) {
+        await writeTextFile(requirementsAbsolutePath, originalRequirements, {
+          label: requirementsPath,
+          enforcePromptBoundary: false
+        }).catch(() => undefined);
+      }
 
-    if (await pathExists(phaseDirPath)) {
-      warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
-    } else {
-      await fs.mkdir(phaseDirPath, { recursive: true });
+      if (materializedPhaseDir.created) {
+        await fs.rm(materializedPhaseDir.phaseDirPath, {
+          recursive: true,
+          force: true
+        }).catch(() => undefined);
+      }
+
+      throw error;
     }
 
     return {
@@ -9175,7 +9388,6 @@ export async function blueprintRoadmapInsertPhase(
   args: RoadmapInsertPhaseArgs
 ): Promise<RoadmapInsertPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
   const normalizedDescription = normalizePhaseDescription(args.description);
 
   if (normalizedDescription.length === 0) {
@@ -9206,97 +9418,111 @@ export async function blueprintRoadmapInsertPhase(
     );
   }
 
-  const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
+  return withBlueprintRepoLock(projectRoot, "roadmap-insert-phase", async () => {
+    const roadmap = await readRoadmap(projectRoot);
+    const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
 
-  if (!targetPhase) {
-    throw new Error(
-      `Phase ${afterPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+    if (!targetPhase) {
+      throw new Error(
+        `Phase ${afterPhaseNumber} does not exist in ${BLUEPRINT_DIR}/ROADMAP.md.`
+      );
+    }
+
+    const targetPhaseDirectory = await findPhaseDirectory(projectRoot, afterPhaseNumber);
+
+    if (!targetPhaseDirectory.phaseDir) {
+      throw new Error(
+        targetPhaseDirectory.reason === "ambiguous"
+          ? `Phase ${afterPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
+          : `Phase ${afterPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
+      );
+    }
+
+    const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
+    const phasePrefix = formatPhasePrefix(phaseNumber);
+    const slug = slugifyPhaseName(normalizedDescription);
+    const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
+    const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
+
+    if (
+      existingDecimalDirectory.reason === "ambiguous" ||
+      (existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir)
+    ) {
+      throw new Error(
+        existingDecimalDirectory.reason === "ambiguous"
+          ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.`
+          : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
+      );
+    }
+
+    const groupPhases = roadmap.phases.filter(
+      (phase) => basePhaseNumber(phase.phaseNumber) === afterPhaseNumber
     );
-  }
-
-  const targetPhaseDirectory = await findPhaseDirectory(projectRoot, afterPhaseNumber);
-
-  if (!targetPhaseDirectory.phaseDir) {
-    throw new Error(
-      targetPhaseDirectory.reason === "ambiguous"
-        ? `Phase ${afterPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
-        : `Phase ${afterPhaseNumber} is missing a matching directory under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting a decimal phase after it.`
+    const insertionAnchor = groupPhases.at(-1)?.phaseNumber ?? afterPhaseNumber;
+    const insertionAnchorIndex = roadmap.phases.findIndex(
+      (phase) => phase.phaseNumber === insertionAnchor
     );
-  }
 
-  const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
-  const phasePrefix = formatPhasePrefix(phaseNumber);
-  const slug = slugifyPhaseName(normalizedDescription);
-  const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
-  const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
+    if (insertionAnchorIndex === -1) {
+      throw new Error(
+        `Phase ${afterPhaseNumber} could not be located in the roadmap phases list.`
+      );
+    }
 
-  if (
-    existingDecimalDirectory.reason === "ambiguous" ||
-    (existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir)
-  ) {
-    throw new Error(
-      existingDecimalDirectory.reason === "ambiguous"
-        ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.`
-        : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
+    const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
+    const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
+    const insertedPhaseLines = insertPhaseLineToRoadmap(
+      rawRoadmap,
+      insertionAnchor,
+      phaseNumber,
+      normalizedDescription
     );
-  }
-
-  const groupPhases = roadmap.phases.filter(
-    (phase) => basePhaseNumber(phase.phaseNumber) === afterPhaseNumber
-  );
-  const insertionAnchor = groupPhases.at(-1)?.phaseNumber ?? afterPhaseNumber;
-  const insertionAnchorIndex = roadmap.phases.findIndex(
-    (phase) => phase.phaseNumber === insertionAnchor
-  );
-
-  if (insertionAnchorIndex === -1) {
-    throw new Error(
-      `Phase ${afterPhaseNumber} could not be located in the roadmap phases list.`
+    const updatedRoadmap = insertPhaseDetailsToRoadmap(
+      insertedPhaseLines,
+      groupPhases.map((phase) => phase.phaseNumber),
+      phaseNumber,
+      normalizedDescription,
+      afterPhaseNumber
     );
-  }
-
-  const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
-  const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
-  const insertedPhaseLines = insertPhaseLineToRoadmap(
-    rawRoadmap,
-    insertionAnchor,
-    phaseNumber,
-    normalizedDescription
-  );
-  const updatedRoadmap = insertPhaseDetailsToRoadmap(
-    insertedPhaseLines,
-    groupPhases.map((phase) => phase.phaseNumber),
-    phaseNumber,
-    normalizedDescription,
-    afterPhaseNumber
-  );
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
-  const warnings: string[] = [];
-
-  warnings.push(
-    ...await writeTextFile(roadmapPath, updatedRoadmap, {
+    const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
-    })
-  );
+    });
+    const warnings: string[] = [...preparedRoadmap.warnings];
+    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
 
-  if (existingDecimalDirectory.phaseDir === phaseDir || (await pathExists(phaseDirPath))) {
-    warnings.push(`Phase directory already exists and can be reused: ${phaseDir}`);
-  } else {
-    await fs.mkdir(phaseDirPath, { recursive: true });
-  }
+    warnings.push(...materializedPhaseDir.warnings);
 
-  return {
-    afterPhaseNumber,
-    phaseNumber,
-    phasePrefix,
-    phaseName: normalizedDescription,
-    slug,
-    phaseDir,
-    roadmapPath: roadmap.path,
-    milestone: roadmap.milestone,
-    written: true,
-    warnings
-  };
+    try {
+      warnings.push(
+        ...await writeTextFile(roadmapPath, preparedRoadmap.content, {
+          label: roadmap.path,
+          enforcePromptBoundary: false
+        })
+      );
+    } catch (error) {
+      if (materializedPhaseDir.created) {
+        await fs.rm(materializedPhaseDir.phaseDirPath, {
+          recursive: true,
+          force: true
+        }).catch(() => undefined);
+      }
+
+      throw error;
+    }
+
+    return {
+      afterPhaseNumber,
+      phaseNumber,
+      phasePrefix,
+      phaseName: normalizedDescription,
+      slug,
+      phaseDir,
+      roadmapPath: roadmap.path,
+      milestone: roadmap.milestone,
+      written: true,
+      warnings
+    };
+  });
 }
 
 function renameLeadingPhaseToken(
