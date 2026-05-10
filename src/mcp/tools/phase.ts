@@ -148,6 +148,13 @@ import {
   type PhaseSummaryStructuredModel
 } from "./phase-summary-rendering.js";
 import {
+  countPhaseSummaryDiagnostics,
+  formatPhaseSummaryDiagnostic,
+  phaseSummaryDiagnostic,
+  type PhaseSummaryDiagnosticCounts,
+  type PhaseSummaryModelDiagnostic
+} from "./phase-summary-diagnostics.js";
+import {
   normalizeVerificationStructuredModel,
   renderUatContent,
   renderVerificationContent,
@@ -991,17 +998,6 @@ type PhaseSummaryAuthoringContextResult = {
   warnings: string[];
 };
 
-type PhaseSummaryModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-
-type PhaseSummaryModelDiagnostic = {
-  source: PhaseSummaryModelDiagnosticSource;
-  path: string;
-  code: string;
-  message: string;
-  context: Record<string, unknown>;
-  suggestion: string;
-};
-
 type PhaseSummaryValidateModelResult = {
   status: "valid" | "invalid";
   valid: boolean;
@@ -1012,11 +1008,7 @@ type PhaseSummaryValidateModelResult = {
   schemaPath: string | null;
   taskSchema: Record<string, unknown> | null;
   diagnostics: PhaseSummaryModelDiagnostic[];
-  diagnosticCounts: {
-    total: number;
-    bySource: Record<PhaseSummaryModelDiagnosticSource, number>;
-    byCode: Record<string, number>;
-  };
+  diagnosticCounts: PhaseSummaryDiagnosticCounts;
   normalizedModel: PhaseSummaryStructuredModel | null;
   renderPreview: string | null;
   warnings: string[];
@@ -3879,43 +3871,6 @@ function phaseSummaryContractContext(
     summaryFile: `${resolved.phasePrefix}-${normalizedPlanId}-SUMMARY.md`,
     summaryPath: summaryPathFor(resolved, normalizedPlanId)
   };
-}
-
-function phaseSummaryDiagnostic(
-  args: PhaseSummaryModelDiagnostic
-): PhaseSummaryModelDiagnostic {
-  return args;
-}
-
-function emptyPhaseSummaryDiagnosticCounts(): PhaseSummaryValidateModelResult["diagnosticCounts"] {
-  return {
-    total: 0,
-    bySource: {
-      scope: 0,
-      schema: 0,
-      residual: 0,
-      markdown: 0
-    },
-    byCode: {}
-  };
-}
-
-function countPhaseSummaryDiagnostics(
-  diagnostics: PhaseSummaryModelDiagnostic[]
-): PhaseSummaryValidateModelResult["diagnosticCounts"] {
-  const counts = emptyPhaseSummaryDiagnosticCounts();
-
-  for (const diagnostic of diagnostics) {
-    counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
-  }
-
-  return counts;
-}
-
-function formatPhaseSummaryDiagnostic(diagnostic: PhaseSummaryModelDiagnostic): string {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
 
 async function buildPhaseSummaryAllowedNextActions(phaseNumber: string): Promise<{

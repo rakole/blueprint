@@ -27588,6 +27588,40 @@ var init_phase_summary_rendering = __esm({
   }
 });
 
+// src/mcp/tools/phase-summary-diagnostics.ts
+function phaseSummaryDiagnostic(args) {
+  return args;
+}
+function emptyPhaseSummaryDiagnosticCounts() {
+  return {
+    total: 0,
+    bySource: {
+      scope: 0,
+      schema: 0,
+      residual: 0,
+      markdown: 0
+    },
+    byCode: {}
+  };
+}
+function countPhaseSummaryDiagnostics(diagnostics) {
+  const counts = emptyPhaseSummaryDiagnosticCounts();
+  for (const diagnostic of diagnostics) {
+    counts.total += 1;
+    counts.bySource[diagnostic.source] += 1;
+    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
+  }
+  return counts;
+}
+function formatPhaseSummaryDiagnostic(diagnostic) {
+  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
+}
+var init_phase_summary_diagnostics = __esm({
+  "src/mcp/tools/phase-summary-diagnostics.ts"() {
+    "use strict";
+  }
+});
+
 // src/mcp/tools/phase-validation-rendering.ts
 function normalizeRenderList(value) {
   if (Array.isArray(value)) {
@@ -30356,33 +30390,6 @@ function phaseSummaryContractContext(resolved, planId2) {
     summaryFile: `${resolved.phasePrefix}-${normalizedPlanId}-SUMMARY.md`,
     summaryPath: summaryPathFor(resolved, normalizedPlanId)
   };
-}
-function phaseSummaryDiagnostic(args) {
-  return args;
-}
-function emptyPhaseSummaryDiagnosticCounts() {
-  return {
-    total: 0,
-    bySource: {
-      scope: 0,
-      schema: 0,
-      residual: 0,
-      markdown: 0
-    },
-    byCode: {}
-  };
-}
-function countPhaseSummaryDiagnostics(diagnostics) {
-  const counts = emptyPhaseSummaryDiagnosticCounts();
-  for (const diagnostic of diagnostics) {
-    counts.total += 1;
-    counts.bySource[diagnostic.source] += 1;
-    counts.byCode[diagnostic.code] = (counts.byCode[diagnostic.code] ?? 0) + 1;
-  }
-  return counts;
-}
-function formatPhaseSummaryDiagnostic(diagnostic) {
-  return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
 async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
   const readyAction = `/blu-validate-phase ${phaseNumber}`;
@@ -35246,6 +35253,7 @@ var init_phase = __esm({
     init_phase_collection_helpers();
     init_phase_summary_routing();
     init_phase_summary_rendering();
+    init_phase_summary_diagnostics();
     init_phase_validation_rendering();
     init_phase_validation_contracts();
     init_phase_validation_diagnostics();

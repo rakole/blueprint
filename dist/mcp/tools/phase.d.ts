@@ -6,6 +6,7 @@ import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type 
 import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
 import { type PhaseSummaryStructuredModel } from "./phase-summary-rendering.js";
+import { type PhaseSummaryDiagnosticCounts, type PhaseSummaryModelDiagnostic } from "./phase-summary-diagnostics.js";
 import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
 import { type PhaseValidationAllowedValues } from "./phase-validation-contracts.js";
 import { type PhaseValidationDiagnosticCounts, type PhaseValidationModelDiagnostic } from "./phase-validation-diagnostics.js";
@@ -727,15 +728,6 @@ type PhaseSummaryAuthoringContextResult = {
     reason: string | null;
     warnings: string[];
 };
-type PhaseSummaryModelDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
-type PhaseSummaryModelDiagnostic = {
-    source: PhaseSummaryModelDiagnosticSource;
-    path: string;
-    code: string;
-    message: string;
-    context: Record<string, unknown>;
-    suggestion: string;
-};
 type PhaseSummaryValidateModelResult = {
     status: "valid" | "invalid";
     valid: boolean;
@@ -746,11 +738,7 @@ type PhaseSummaryValidateModelResult = {
     schemaPath: string | null;
     taskSchema: Record<string, unknown> | null;
     diagnostics: PhaseSummaryModelDiagnostic[];
-    diagnosticCounts: {
-        total: number;
-        bySource: Record<PhaseSummaryModelDiagnosticSource, number>;
-        byCode: Record<string, number>;
-    };
+    diagnosticCounts: PhaseSummaryDiagnosticCounts;
     normalizedModel: PhaseSummaryStructuredModel | null;
     renderPreview: string | null;
     warnings: string[];
