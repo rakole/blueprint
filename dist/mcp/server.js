@@ -19328,6 +19328,7 @@ var init_artifact_contracts = __esm({
           "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
           "Code-review writes are model-only and render through MCP-owned canonical Markdown before persistence.",
           "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
+          "Persisted code-review findings must use MCP-rendered canonical bullets with `[severity][disposition]`, an `F-XX` id, a `file:line` location, and Evidence/Impact/Fix fields; legacy freehand finding bullets are rejected.",
           "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
           "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
           "Severity Summary counts must match the persisted Findings section."
@@ -55724,7 +55725,7 @@ function validateReviewArtifactContent(content, artifact) {
   if (!validation.valid || artifact !== "code-review") {
     return validation;
   }
-  const issues = [...validation.issues, ...validateCodeReviewArtifactCoreQuality(content)];
+  const issues = [...validation.issues, ...validateCodeReviewArtifactRenderedShape(content)];
   return {
     valid: issues.length === 0,
     issues,
@@ -55772,27 +55773,6 @@ function extractScopeReviewedPaths(section) {
   }
   return [...paths].sort((left, right) => left.localeCompare(right));
 }
-function inferReviewArtifactSeverity(item) {
-  const source = item.toLowerCase();
-  if (/\b(?:critical|p0)\b/.test(source)) {
-    return "critical";
-  }
-  if (/\b(?:high|p1)\b/.test(source)) {
-    return "high";
-  }
-  if (/\b(?:medium|p2)\b/.test(source)) {
-    return "medium";
-  }
-  if (/\b(?:low|p3)\b/.test(source)) {
-    return "low";
-  }
-  return "unknown";
-}
-function containsLineBackedRepoFileEvidence(item) {
-  return /(?:^|[\s(])`?(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
-    item
-  );
-}
 function parseSeveritySummaryCounts(section) {
   const counts = {};
   for (const line of section.split("\n")) {
@@ -55806,7 +55786,7 @@ function parseSeveritySummaryCounts(section) {
   }
   return counts;
 }
-function validateCodeReviewArtifactCoreQuality(content) {
+function validateCodeReviewArtifactRenderedShape(content) {
   const issues = [];
   const scopeReviewed = extractMarkdownSection6(content, "Scope Reviewed");
   const scopedPaths = extractScopeReviewedPaths(scopeReviewed);
@@ -55827,12 +55807,14 @@ function validateCodeReviewArtifactCoreQuality(content) {
     {}
   );
   for (const item of findingItems) {
-    actualCounts[inferReviewArtifactSeverity(item)] += 1;
-    if (!containsLineBackedRepoFileEvidence(item)) {
+    const canonicalFinding = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN2);
+    if (!canonicalFinding) {
       issues.push(
-        `Review artifact finding must include repo-relative file:line evidence: ${item}`
+        `Review artifact finding must use the canonical MCP-rendered shape [severity][disposition] \`F-XX\` \`file:line\` - Evidence: ... Impact: ... Fix/verification: ...: ${item}`
       );
+      continue;
     }
+    actualCounts[canonicalFinding[1].toLowerCase()] += 1;
   }
   const severitySummary = extractMarkdownSection6(content, "Severity Summary");
   const declaredCounts = parseSeveritySummaryCounts(severitySummary);
@@ -61104,7 +61086,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__4, execFileAsync4, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -61570,6 +61552,7 @@ var init_artifacts = __esm({
       "low",
       "unknown"
     ];
+    CANONICAL_CODE_REVIEW_FINDING_PATTERN2 = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`F-[A-Z0-9][A-Z0-9._-]*`\s+`[^`]+:\d+(?:-\d+)?`\s+-\s+Evidence:\s+\S.*?\s+Impact:\s+\S.*?\s+Fix\/verification:\s+\S.*$/i;
     BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
       ".blueprint/PROJECT.md": "bootstrap.project",
       ".blueprint/REQUIREMENTS.md": "bootstrap.requirements",

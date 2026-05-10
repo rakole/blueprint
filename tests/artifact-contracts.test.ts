@@ -1248,7 +1248,7 @@ test("review and report contracts validate canonical sections while keeping extr
 
 ## Findings
 
-- [high] \`src/mcp/tools/review.ts:1\` - Missing contract validation would let malformed review artifacts persist.
+- [high][follow-up] \`F-01\` \`src/mcp/tools/review.ts:1\` - Evidence: Missing contract validation would let malformed review artifacts persist. Impact: Invalid review artifacts could be saved. Fix/verification: Add canonical review validation before persistence.
 
 ## Follow-Ups
 
@@ -1273,6 +1273,46 @@ test("review and report contracts validate canonical sections while keeping extr
 ## Findings
 
 - [high] Missing contract validation would let malformed review artifacts persist.
+
+## Follow-Ups
+
+- Add canonical review validation before persistence.
+
+## Next Safe Action
+
+- /blu-progress
+`;
+  const legacyReview = `# Phase 05: Security - Code Review
+
+**Verdict:** FOLLOW_UP
+
+## Review Summary
+
+- Severity summary: critical 0, high 1, medium 0, low 0, unknown 0.
+
+## Scope Reviewed
+
+- src/mcp/tools/review.ts
+
+## Evidence Reviewed
+
+- .blueprint/phases/05-review-scope/05-01-PLAN.md
+
+## Positive Signals
+
+- Review scope stayed bounded to the saved plan outputs.
+
+## Severity Summary
+
+- critical: 0
+- high: 1
+- medium: 0
+- low: 0
+- unknown: 0
+
+## Findings
+
+- [high] \`src/mcp/tools/review.ts:1\` - Missing contract validation would let malformed review artifacts persist.
 
 ## Follow-Ups
 
@@ -1668,6 +1708,7 @@ test("review and report contracts validate canonical sections while keeping extr
 - Non-contract report payloads stay permissive.
 `;
   const reviewValidation = validateReviewArtifactContent(review, "code-review");
+  const legacyReviewValidation = validateReviewArtifactContent(legacyReview, "code-review");
   const thinReviewValidation = validateReviewArtifactContent(thinReview, "code-review");
   const reviewScaffoldValidation = validateReviewArtifactContent(
     readArtifactContract("review.code-review").authoringTemplate,
@@ -1815,6 +1856,8 @@ test("review and report contracts validate canonical sections while keeping extr
   const customReportValidation = validateReportArtifactContent(customReport, "custom-team-notes");
 
   assert.equal(reviewValidation.valid, true, reviewValidation.issues.join("\n"));
+  assert.equal(legacyReviewValidation.valid, false);
+  assert.match(legacyReviewValidation.issues.join("\n"), /canonical MCP-rendered shape/);
   assert.equal(thinReviewValidation.valid, false);
   assert.equal(reviewScaffoldValidation.valid, false, reviewScaffoldValidation.issues.join("\n"));
   assert.match(
