@@ -27168,6 +27168,67 @@ var init_phase_json_helpers = __esm({
   }
 });
 
+// src/mcp/tools/phase-command-actions.ts
+async function getPhasePlanImplementedCommandNames() {
+  if (!implementedCommandNamesPromise2) {
+    implementedCommandNamesPromise2 = (async () => {
+      try {
+        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+        const catalog = await projectModule.blueprintCommandCatalog();
+        const implementedCommands = new Set(
+          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+        return implementedCommands.size > 0 ? implementedCommands : null;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return implementedCommandNamesPromise2;
+}
+function extractBlueprintDirectCommands(value) {
+  return [
+    ...new Set(
+      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
+    )
+  ];
+}
+function filterImplementedBlueprintActions(actions, implementedCommands) {
+  return actions.filter(
+    (action) => extractBlueprintDirectCommands(action).every(
+      (command) => implementedCommands.has(command)
+    )
+  );
+}
+var implementedCommandNamesPromise2;
+var init_phase_command_actions = __esm({
+  "src/mcp/tools/phase-command-actions.ts"() {
+    "use strict";
+    init_command_paths();
+    implementedCommandNamesPromise2 = null;
+  }
+});
+
+// src/mcp/tools/phase-collection-helpers.ts
+function uniquePreservingOrder(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
+var init_phase_collection_helpers = __esm({
+  "src/mcp/tools/phase-collection-helpers.ts"() {
+    "use strict";
+  }
+});
+
 // src/mcp/tools/phase-task-schema-helpers.ts
 function setArrayItemEnum(schema, values) {
   if (!schema || values.length === 0) {
@@ -27227,67 +27288,6 @@ var init_phase_task_schema_helpers = __esm({
   "src/mcp/tools/phase-task-schema-helpers.ts"() {
     "use strict";
     init_phase_json_helpers();
-  }
-});
-
-// src/mcp/tools/phase-command-actions.ts
-async function getPhasePlanImplementedCommandNames() {
-  if (!implementedCommandNamesPromise2) {
-    implementedCommandNamesPromise2 = (async () => {
-      try {
-        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
-        const catalog = await projectModule.blueprintCommandCatalog();
-        const implementedCommands = new Set(
-          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
-        );
-        return implementedCommands.size > 0 ? implementedCommands : null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-  return implementedCommandNamesPromise2;
-}
-function extractBlueprintDirectCommands(value) {
-  return [
-    ...new Set(
-      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
-    )
-  ];
-}
-function filterImplementedBlueprintActions(actions, implementedCommands) {
-  return actions.filter(
-    (action) => extractBlueprintDirectCommands(action).every(
-      (command) => implementedCommands.has(command)
-    )
-  );
-}
-var implementedCommandNamesPromise2;
-var init_phase_command_actions = __esm({
-  "src/mcp/tools/phase-command-actions.ts"() {
-    "use strict";
-    init_command_paths();
-    implementedCommandNamesPromise2 = null;
-  }
-});
-
-// src/mcp/tools/phase-collection-helpers.ts
-function uniquePreservingOrder(values) {
-  const seen = /* @__PURE__ */ new Set();
-  const result = [];
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (trimmed.length === 0 || seen.has(trimmed)) {
-      continue;
-    }
-    seen.add(trimmed);
-    result.push(trimmed);
-  }
-  return result;
-}
-var init_phase_collection_helpers = __esm({
-  "src/mcp/tools/phase-collection-helpers.ts"() {
-    "use strict";
   }
 });
 
@@ -27594,6 +27594,82 @@ var init_phase_validation_schemas = __esm({
     "use strict";
     init_phase_command_actions();
     init_phase_collection_helpers();
+    init_phase_json_helpers();
+    init_phase_task_schema_helpers();
+  }
+});
+
+// src/mcp/tools/phase-plan-schemas.ts
+function buildPhasePlanTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const task = defs ? getJsonObjectProperty(defs, "task") : null;
+  const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
+  const requirementCoverageRow = defs ? getJsonObjectProperty(defs, "requirementCoverageRow") : null;
+  const requirementCoverageRowProperties = requirementCoverageRow ? getJsonObjectProperty(requirementCoverageRow, "properties") : null;
+  const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
+  const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty(evidenceCoverageRow, "properties") : null;
+  if (!properties) {
+    return schema;
+  }
+  const dependsOn = getJsonObjectProperty(properties, "dependsOn");
+  if (dependsOn) {
+    if (args.allowedDependencyPlanIds.length > 0) {
+      setArrayItemEnum(dependsOn, args.allowedDependencyPlanIds);
+    } else {
+      dependsOn.maxItems = 0;
+    }
+  }
+  if (args.knownRequirements.length > 0) {
+    setArrayItemEnum(getJsonObjectProperty(properties, "requirements"), args.knownRequirements);
+    if (taskProperties) {
+      setArrayItemEnum(
+        getJsonObjectProperty(taskProperties, "requirements"),
+        args.knownRequirements
+      );
+    }
+    const requirement = requirementCoverageRowProperties ? getJsonObjectProperty(requirementCoverageRowProperties, "requirement") : null;
+    if (requirement) {
+      requirement.enum = args.knownRequirements;
+    }
+    const requirementCoverage = getJsonObjectProperty(properties, "requirementCoverage");
+    if (requirementCoverage) {
+      requirementCoverage.allOf = args.knownRequirements.map(
+        (requirementId) => exactObjectPropertyContains("requirement", requirementId)
+      );
+    }
+  } else {
+    setArrayMaxItems(getJsonObjectProperty(properties, "requirements"), 0);
+    if (taskProperties) {
+      setArrayMaxItems(getJsonObjectProperty(taskProperties, "requirements"), 0);
+    }
+    setArrayMaxItems(getJsonObjectProperty(properties, "requirementCoverage"), 0);
+  }
+  if (args.knownEvidenceArtifacts.length > 0) {
+    const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact") : null;
+    if (artifact) {
+      artifact.enum = args.knownEvidenceArtifacts;
+    }
+    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
+    if (evidenceCoverage) {
+      evidenceCoverage.allOf = args.knownEvidenceArtifacts.map(
+        (artifactPath) => exactObjectPropertyContains("artifact", artifactPath)
+      );
+    }
+  } else {
+    allowOnlyEmptyArray(getJsonObjectProperty(properties, "evidenceCoverage"));
+  }
+  schema["x-blueprint-runtimeContext"] = {
+    knownRequirements: args.knownRequirements,
+    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
+    allowedDependencyPlanIds: args.allowedDependencyPlanIds
+  };
+  return schema;
+}
+var init_phase_plan_schemas = __esm({
+  "src/mcp/tools/phase-plan-schemas.ts"() {
+    "use strict";
     init_phase_json_helpers();
     init_phase_task_schema_helpers();
   }
@@ -30811,73 +30887,6 @@ async function validatePhasePlanModelCommands(model) {
   return nonImplementedCommands.length > 0 ? [
     `Phase plan model references non-implemented Blueprint command(s): ${nonImplementedCommands.join(", ")}.`
   ] : [];
-}
-function buildPhasePlanTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
-  const task = defs ? getJsonObjectProperty(defs, "task") : null;
-  const taskProperties = task ? getJsonObjectProperty(task, "properties") : null;
-  const requirementCoverageRow = defs ? getJsonObjectProperty(defs, "requirementCoverageRow") : null;
-  const requirementCoverageRowProperties = requirementCoverageRow ? getJsonObjectProperty(requirementCoverageRow, "properties") : null;
-  const evidenceCoverageRow = defs ? getJsonObjectProperty(defs, "evidenceCoverageRow") : null;
-  const evidenceCoverageRowProperties = evidenceCoverageRow ? getJsonObjectProperty(evidenceCoverageRow, "properties") : null;
-  if (!properties) {
-    return schema;
-  }
-  const dependsOn = getJsonObjectProperty(properties, "dependsOn");
-  if (dependsOn) {
-    if (args.allowedDependencyPlanIds.length > 0) {
-      setArrayItemEnum(dependsOn, args.allowedDependencyPlanIds);
-    } else {
-      dependsOn.maxItems = 0;
-    }
-  }
-  if (args.knownRequirements.length > 0) {
-    setArrayItemEnum(getJsonObjectProperty(properties, "requirements"), args.knownRequirements);
-    if (taskProperties) {
-      setArrayItemEnum(
-        getJsonObjectProperty(taskProperties, "requirements"),
-        args.knownRequirements
-      );
-    }
-    const requirement = requirementCoverageRowProperties ? getJsonObjectProperty(requirementCoverageRowProperties, "requirement") : null;
-    if (requirement) {
-      requirement.enum = args.knownRequirements;
-    }
-    const requirementCoverage = getJsonObjectProperty(properties, "requirementCoverage");
-    if (requirementCoverage) {
-      requirementCoverage.allOf = args.knownRequirements.map(
-        (requirementId) => exactObjectPropertyContains("requirement", requirementId)
-      );
-    }
-  } else {
-    setArrayMaxItems(getJsonObjectProperty(properties, "requirements"), 0);
-    if (taskProperties) {
-      setArrayMaxItems(getJsonObjectProperty(taskProperties, "requirements"), 0);
-    }
-    setArrayMaxItems(getJsonObjectProperty(properties, "requirementCoverage"), 0);
-  }
-  if (args.knownEvidenceArtifacts.length > 0) {
-    const artifact = evidenceCoverageRowProperties ? getJsonObjectProperty(evidenceCoverageRowProperties, "artifact") : null;
-    if (artifact) {
-      artifact.enum = args.knownEvidenceArtifacts;
-    }
-    const evidenceCoverage = getJsonObjectProperty(properties, "evidenceCoverage");
-    if (evidenceCoverage) {
-      evidenceCoverage.allOf = args.knownEvidenceArtifacts.map(
-        (artifactPath) => exactObjectPropertyContains("artifact", artifactPath)
-      );
-    }
-  } else {
-    allowOnlyEmptyArray(getJsonObjectProperty(properties, "evidenceCoverage"));
-  }
-  schema["x-blueprint-runtimeContext"] = {
-    knownRequirements: args.knownRequirements,
-    knownEvidenceArtifacts: args.knownEvidenceArtifacts,
-    allowedDependencyPlanIds: args.allowedDependencyPlanIds
-  };
-  return schema;
 }
 function phasePlanAuthoringContextBlockers(context) {
   return context.knownRequirements.length === 0 ? [
@@ -35267,8 +35276,8 @@ var init_phase = __esm({
     init_phase_plan_identifiers();
     init_phase_locations();
     init_phase_json_helpers();
-    init_phase_task_schema_helpers();
     init_phase_validation_schemas();
+    init_phase_plan_schemas();
     init_phase_schema_paths();
     init_phase_execution_surfaces();
     init_phase_summary_routing();
@@ -41642,7 +41651,7 @@ function cloneJsonObject3(value) {
 function asJsonObject2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty2(object3, propertyName) {
+function getJsonObjectProperty3(object3, propertyName) {
   const value = object3?.[propertyName];
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
@@ -42480,13 +42489,13 @@ async function buildAddTestsAllowedNextActions(args) {
 }
 function buildAddTestsReportTaskSchema(args) {
   const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
-  const defs = getJsonObjectProperty2(schema, "$defs");
+  const properties = getJsonObjectProperty3(schema, "properties");
+  const defs = getJsonObjectProperty3(schema, "$defs");
   const summaryPaths = args.completedSummaries.map((summary) => summary.path);
   const evidencePaths = [...summaryPaths, ...args.validationEvidencePaths];
   if (properties) {
-    setArrayEnum(getJsonObjectProperty2(properties, "evidenceUsed"), evidencePaths);
-    const summaryEvidence = getJsonObjectProperty2(properties, "summaryEvidence");
+    setArrayEnum(getJsonObjectProperty3(properties, "evidenceUsed"), evidencePaths);
+    const summaryEvidence = getJsonObjectProperty3(properties, "summaryEvidence");
     if (summaryEvidence) {
       summaryEvidence.required = summaryPaths;
       summaryEvidence.minProperties = summaryPaths.length;
@@ -42524,10 +42533,10 @@ function buildAddTestsReportTaskSchema(args) {
           }
         ])
       );
-      const additionalProperties = getJsonObjectProperty2(summaryEvidence, "additionalProperties");
-      const additionalPropertiesProperties = additionalProperties ? getJsonObjectProperty2(additionalProperties, "properties") : null;
-      const linkedPlanPath = additionalPropertiesProperties ? getJsonObjectProperty2(additionalPropertiesProperties, "linkedPlanPath") : null;
-      const planId2 = additionalPropertiesProperties ? getJsonObjectProperty2(additionalPropertiesProperties, "planId") : null;
+      const additionalProperties = getJsonObjectProperty3(summaryEvidence, "additionalProperties");
+      const additionalPropertiesProperties = additionalProperties ? getJsonObjectProperty3(additionalProperties, "properties") : null;
+      const linkedPlanPath = additionalPropertiesProperties ? getJsonObjectProperty3(additionalPropertiesProperties, "linkedPlanPath") : null;
+      const planId2 = additionalPropertiesProperties ? getJsonObjectProperty3(additionalPropertiesProperties, "planId") : null;
       if (linkedPlanPath) {
         linkedPlanPath.enum = args.completedSummaries.map((summary) => summary.linkedPlanPath);
       }
@@ -42535,16 +42544,16 @@ function buildAddTestsReportTaskSchema(args) {
         planId2.enum = args.completedSummaries.map((summary) => summary.planId);
       }
     }
-    const pendingPlans = getJsonObjectProperty2(properties, "pendingPlans");
+    const pendingPlans = getJsonObjectProperty3(properties, "pendingPlans");
     if (args.pendingPlans.length === 0) {
       allowOnlyEmptyArray2(pendingPlans);
     } else if (pendingPlans) {
       pendingPlans.minItems = args.pendingPlans.length;
       pendingPlans.maxItems = args.pendingPlans.length;
-      const items = getJsonObjectProperty2(pendingPlans, "items");
-      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
-      const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
+      const items = getJsonObjectProperty3(pendingPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
       if (planId2) {
         planId2.enum = args.pendingPlans.map((plan) => plan.planId);
       }
@@ -42555,16 +42564,16 @@ function buildAddTestsReportTaskSchema(args) {
         (plan) => exactObjectPropertyContains2("planId", plan.planId)
       );
     }
-    const dependencyPlans = getJsonObjectProperty2(properties, "dependencyPlans");
+    const dependencyPlans = getJsonObjectProperty3(properties, "dependencyPlans");
     if (args.dependencyPlans.length === 0) {
       allowOnlyEmptyArray2(dependencyPlans);
     } else if (dependencyPlans) {
       dependencyPlans.minItems = args.dependencyPlans.length;
       dependencyPlans.maxItems = args.dependencyPlans.length;
-      const items = getJsonObjectProperty2(dependencyPlans, "items");
-      const itemProperties = items ? getJsonObjectProperty2(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty2(itemProperties, "planId") : null;
-      const pathProperty = itemProperties ? getJsonObjectProperty2(itemProperties, "path") : null;
+      const items = getJsonObjectProperty3(dependencyPlans, "items");
+      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
       if (planId2) {
         planId2.enum = args.dependencyPlans.map((plan) => plan.planId);
       }
@@ -42585,7 +42594,7 @@ function buildAddTestsReportTaskSchema(args) {
         maxContains: 1
       }));
     }
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
@@ -42762,11 +42771,11 @@ async function collectAuditFixReportContext(args) {
 }
 function buildAuditFixReportTaskSchema(args) {
   const schema = cloneJsonObject3(args.baseSchema);
-  const properties = getJsonObjectProperty2(schema, "properties");
-  const defs = getJsonObjectProperty2(schema, "$defs");
+  const properties = getJsonObjectProperty3(schema, "properties");
+  const defs = getJsonObjectProperty3(schema, "$defs");
   const summaryPaths = args.completedSummaries.map((summary) => summary.path);
   if (properties) {
-    const summaryEvidence = getJsonObjectProperty2(properties, "summaryEvidence");
+    const summaryEvidence = getJsonObjectProperty3(properties, "summaryEvidence");
     if (summaryEvidence) {
       summaryEvidence.required = summaryPaths;
       summaryEvidence.minProperties = summaryPaths.length;
@@ -42805,14 +42814,14 @@ function buildAuditFixReportTaskSchema(args) {
         ])
       );
     }
-    const classificationProps = getJsonObjectProperty2(
-      getJsonObjectProperty2(defs ?? {}, "classificationRow"),
+    const classificationProps = getJsonObjectProperty3(
+      getJsonObjectProperty3(defs ?? {}, "classificationRow"),
       "properties"
     );
     if (classificationProps) {
-      const evidenceSource = getJsonObjectProperty2(classificationProps, "evidenceSource");
-      const severity = getJsonObjectProperty2(classificationProps, "severity");
-      const implicatedFiles = getJsonObjectProperty2(classificationProps, "implicatedFiles");
+      const evidenceSource = getJsonObjectProperty3(classificationProps, "evidenceSource");
+      const severity = getJsonObjectProperty3(classificationProps, "severity");
+      const implicatedFiles = getJsonObjectProperty3(classificationProps, "implicatedFiles");
       if (evidenceSource) {
         evidenceSource.enum = args.selectedEvidencePaths;
       }
@@ -42827,13 +42836,13 @@ function buildAuditFixReportTaskSchema(args) {
         };
       }
     }
-    const changesProps = getJsonObjectProperty2(
-      getJsonObjectProperty2(defs ?? {}, "changeRow"),
+    const changesProps = getJsonObjectProperty3(
+      getJsonObjectProperty3(defs ?? {}, "changeRow"),
       "properties"
     );
     if (changesProps) {
-      const changedFiles = getJsonObjectProperty2(changesProps, "changedFiles");
-      const status = getJsonObjectProperty2(changesProps, "status");
+      const changedFiles = getJsonObjectProperty3(changesProps, "changedFiles");
+      const status = getJsonObjectProperty3(changesProps, "status");
       if (changedFiles) {
         changedFiles.uniqueItems = true;
         changedFiles.items = { type: "string", enum: args.scopeFiles };
@@ -42843,19 +42852,19 @@ function buildAuditFixReportTaskSchema(args) {
         status.enum = args.dryRun ? ["planned", "failed", "skipped"] : ["fixed", "planned", "failed", "skipped"];
       }
     }
-    const pendingPlans = getJsonObjectProperty2(properties, "pendingPlans");
+    const pendingPlans = getJsonObjectProperty3(properties, "pendingPlans");
     if (args.pendingPlans.length === 0) {
       allowOnlyEmptyArray2(pendingPlans);
     } else if (pendingPlans) {
       pendingPlans.minItems = args.pendingPlans.length;
       pendingPlans.maxItems = args.pendingPlans.length;
-      const itemProperties = getJsonObjectProperty2(
-        getJsonObjectProperty2(defs ?? {}, "pendingPlanRow"),
+      const itemProperties = getJsonObjectProperty3(
+        getJsonObjectProperty3(defs ?? {}, "pendingPlanRow"),
         "properties"
       );
       if (itemProperties) {
-        const planId2 = getJsonObjectProperty2(itemProperties, "planId");
-        const pathProperty = getJsonObjectProperty2(itemProperties, "path");
+        const planId2 = getJsonObjectProperty3(itemProperties, "planId");
+        const pathProperty = getJsonObjectProperty3(itemProperties, "path");
         if (planId2) {
           planId2.enum = args.pendingPlans.map((plan) => plan.planId);
         }
@@ -42867,20 +42876,20 @@ function buildAuditFixReportTaskSchema(args) {
         (plan) => exactObjectPropertyContains2("planId", plan.planId)
       );
     }
-    const dependencyPlans = getJsonObjectProperty2(properties, "dependencyPlans");
+    const dependencyPlans = getJsonObjectProperty3(properties, "dependencyPlans");
     if (args.dependencyPlans.length === 0) {
       allowOnlyEmptyArray2(dependencyPlans);
     } else if (dependencyPlans) {
       dependencyPlans.minItems = args.dependencyPlans.length;
       dependencyPlans.maxItems = args.dependencyPlans.length;
-      const itemProperties = getJsonObjectProperty2(
-        getJsonObjectProperty2(defs ?? {}, "dependencyPlanRow"),
+      const itemProperties = getJsonObjectProperty3(
+        getJsonObjectProperty3(defs ?? {}, "dependencyPlanRow"),
         "properties"
       );
       if (itemProperties) {
-        const planId2 = getJsonObjectProperty2(itemProperties, "planId");
-        const pathProperty = getJsonObjectProperty2(itemProperties, "path");
-        const status = getJsonObjectProperty2(itemProperties, "status");
+        const planId2 = getJsonObjectProperty3(itemProperties, "planId");
+        const pathProperty = getJsonObjectProperty3(itemProperties, "path");
+        const status = getJsonObjectProperty3(itemProperties, "status");
         if (planId2) {
           planId2.enum = args.dependencyPlans.map((plan) => plan.planId);
         }
@@ -42905,7 +42914,7 @@ function buildAuditFixReportTaskSchema(args) {
         maxContains: 1
       }));
     }
-    const evidence = getJsonObjectProperty2(properties, "evidence");
+    const evidence = getJsonObjectProperty3(properties, "evidence");
     if (evidence) {
       const requiredSources = uniqueSorted([...args.selectedEvidencePaths, ...summaryPaths]);
       evidence.allOf = requiredSources.map((source) => ({
@@ -42921,7 +42930,7 @@ function buildAuditFixReportTaskSchema(args) {
         maxContains: 1
       }));
     }
-    const nextSafeAction = getJsonObjectProperty2(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedActions;
     }
@@ -45366,18 +45375,18 @@ function buildTaskLocationSchema(scopeFiles) {
 function asJsonObject3(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value : null;
 }
-function getJsonObjectProperty3(value, key) {
+function getJsonObjectProperty4(value, key) {
   return asJsonObject3(value[key]);
 }
 function buildCodeReviewTaskSchema(args) {
   const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
-  const defs = getJsonObjectProperty3(schema, "$defs");
-  const finding = defs ? getJsonObjectProperty3(defs, "finding") : null;
-  const findingProperties = finding ? getJsonObjectProperty3(finding, "properties") : null;
-  const location = findingProperties ? getJsonObjectProperty3(findingProperties, "location") : null;
+  const properties = getJsonObjectProperty4(schema, "properties");
+  const defs = getJsonObjectProperty4(schema, "$defs");
+  const finding = defs ? getJsonObjectProperty4(defs, "finding") : null;
+  const findingProperties = finding ? getJsonObjectProperty4(finding, "properties") : null;
+  const location = findingProperties ? getJsonObjectProperty4(findingProperties, "location") : null;
   if (properties) {
-    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty4(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -45498,16 +45507,16 @@ async function collectPeerReviewEvidenceArtifacts(args) {
 }
 function buildPeerReviewTaskSchema(args) {
   const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
+  const properties = getJsonObjectProperty4(schema, "properties");
   if (properties) {
-    const planReviews = getJsonObjectProperty3(properties, "planReviews");
+    const planReviews = getJsonObjectProperty4(properties, "planReviews");
     if (planReviews) {
       planReviews.minItems = args.plans.length;
       planReviews.maxItems = args.plans.length;
-      const items = getJsonObjectProperty3(planReviews, "items");
-      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
-      const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
-      const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
+      const items = getJsonObjectProperty4(planReviews, "items");
+      const itemProperties = items ? getJsonObjectProperty4(items, "properties") : null;
+      const planId2 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
+      const pathProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "path") : null;
       if (planId2) {
         planId2.enum = args.plans.map((plan) => plan.planId);
       }
@@ -45527,7 +45536,7 @@ function buildPeerReviewTaskSchema(args) {
         maxContains: 1
       }));
     }
-    const evidenceCoverage = getJsonObjectProperty3(properties, "evidenceCoverage");
+    const evidenceCoverage = getJsonObjectProperty4(properties, "evidenceCoverage");
     if (evidenceCoverage) {
       evidenceCoverage.additionalProperties = false;
       evidenceCoverage.required = args.knownEvidenceArtifacts;
@@ -45538,7 +45547,7 @@ function buildPeerReviewTaskSchema(args) {
         ])
       );
     }
-    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty4(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -45867,19 +45876,19 @@ function reviewFixEvidenceKindForSource(source) {
 }
 async function buildReviewFixTaskSchema(args) {
   const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
+  const properties = getJsonObjectProperty4(schema, "properties");
   if (properties) {
-    const status = getJsonObjectProperty3(properties, "status");
+    const status = getJsonObjectProperty4(properties, "status");
     if (status && !args.allowCompleted) {
       status.enum = ["PARTIAL", "BLOCKED"];
     }
-    const findingsAddressed = getJsonObjectProperty3(properties, "findingsAddressed");
+    const findingsAddressed = getJsonObjectProperty4(properties, "findingsAddressed");
     if (findingsAddressed) {
       findingsAddressed.minItems = args.selectedTargetIds.length;
       findingsAddressed.maxItems = args.selectedTargetIds.length;
-      const items = getJsonObjectProperty3(findingsAddressed, "items");
-      const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
-      const findingId = itemProperties ? getJsonObjectProperty3(itemProperties, "findingId") : null;
+      const items = getJsonObjectProperty4(findingsAddressed, "items");
+      const itemProperties = items ? getJsonObjectProperty4(items, "properties") : null;
+      const findingId = itemProperties ? getJsonObjectProperty4(itemProperties, "findingId") : null;
       if (findingId) {
         findingId.enum = args.selectedTargetIds;
       }
@@ -45887,18 +45896,18 @@ async function buildReviewFixTaskSchema(args) {
         (targetId) => exactObjectPropertyContains3("findingId", targetId)
       );
     }
-    const dependencyPlans = getJsonObjectProperty3(properties, "dependencyPlans");
+    const dependencyPlans = getJsonObjectProperty4(properties, "dependencyPlans");
     if (dependencyPlans) {
       if (args.dependencyPlans.length === 0) {
         allowOnlyEmptyArray3(dependencyPlans);
       } else {
         dependencyPlans.minItems = args.dependencyPlans.length;
         dependencyPlans.maxItems = args.dependencyPlans.length;
-        const items = getJsonObjectProperty3(dependencyPlans, "items");
-        const itemProperties = items ? getJsonObjectProperty3(items, "properties") : null;
-        const planId2 = itemProperties ? getJsonObjectProperty3(itemProperties, "planId") : null;
-        const pathProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "path") : null;
-        const statusProperty = itemProperties ? getJsonObjectProperty3(itemProperties, "status") : null;
+        const items = getJsonObjectProperty4(dependencyPlans, "items");
+        const itemProperties = items ? getJsonObjectProperty4(items, "properties") : null;
+        const planId2 = itemProperties ? getJsonObjectProperty4(itemProperties, "planId") : null;
+        const pathProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "path") : null;
+        const statusProperty = itemProperties ? getJsonObjectProperty4(itemProperties, "status") : null;
         const unsatisfiedDependencyIds = new Set(
           args.executionDebt.unsatisfiedDependencyPlans.map((dependency) => dependency.planId)
         );
@@ -45926,7 +45935,7 @@ async function buildReviewFixTaskSchema(args) {
         }));
       }
     }
-    const evidence = getJsonObjectProperty3(properties, "evidence");
+    const evidence = getJsonObjectProperty4(properties, "evidence");
     if (evidence) {
       evidence.minItems = args.knownEvidenceArtifacts.length;
       delete evidence.maxItems;
@@ -45941,7 +45950,7 @@ async function buildReviewFixTaskSchema(args) {
           (artifactPath) => reviewFixEvidenceKindForSource(artifactPath) === "summary"
         )
       };
-      const items = getJsonObjectProperty3(evidence, "items");
+      const items = getJsonObjectProperty4(evidence, "items");
       if (items) {
         items.allOf = [
           ...Array.isArray(items.allOf) ? items.allOf : [],
@@ -46001,7 +46010,7 @@ async function buildReviewFixTaskSchema(args) {
         })
       );
     }
-    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty4(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -46543,14 +46552,14 @@ function parseThreatFlagsFromSummaryContent(content, sourceSummary) {
 }
 function buildSecurityTaskSchema(args) {
   const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
-  const defs = getJsonObjectProperty3(schema, "$defs");
+  const properties = getJsonObjectProperty4(schema, "properties");
+  const defs = getJsonObjectProperty4(schema, "$defs");
   if (properties) {
-    const status = getJsonObjectProperty3(properties, "status");
+    const status = getJsonObjectProperty4(properties, "status");
     if (status && !args.allowCompleted) {
       status.enum = ["PARTIAL", "BLOCKED"];
     }
-    const evidenceCoverage = getJsonObjectProperty3(properties, "evidenceCoverage");
+    const evidenceCoverage = getJsonObjectProperty4(properties, "evidenceCoverage");
     if (evidenceCoverage) {
       evidenceCoverage.additionalProperties = { $ref: "#/$defs/evidenceCoverageEntry" };
       delete evidenceCoverage.required;
@@ -46562,7 +46571,7 @@ function buildSecurityTaskSchema(args) {
       );
       evidenceCoverage.description = "Coverage decisions for evidence artifacts. Prefer exact keys from blueprint_review_authoring_context.authoringContext.knownEvidenceArtifacts; missing or extra bookkeeping is warning-only unless the artifact is directly cited elsewhere in the model.";
     }
-    const threatRegister = getJsonObjectProperty3(properties, "threatRegister");
+    const threatRegister = getJsonObjectProperty4(properties, "threatRegister");
     if (threatRegister) {
       if (args.declaredThreats.length === 0) {
         threatRegister.minItems = 0;
@@ -46571,13 +46580,13 @@ function buildSecurityTaskSchema(args) {
       } else {
         threatRegister.minItems = args.declaredThreats.length;
         threatRegister.maxItems = args.declaredThreats.length;
-        const items = getJsonObjectProperty3(threatRegister, "items");
+        const items = getJsonObjectProperty4(threatRegister, "items");
         const oneOf = Array.isArray(items?.oneOf) ? items.oneOf : null;
         const realThreatRow = oneOf ? oneOf.find((candidate) => asJsonObject3(candidate)?.$ref === "#/$defs/threatRegisterRow") : null;
         const threatRowSchema = asJsonObject3(realThreatRow);
-        const threatRow = threatRowSchema ? getJsonObjectProperty3(defs ?? {}, "threatRegisterRow") : getJsonObjectProperty3(defs ?? {}, "threatRegisterRow");
-        const threatProperties = threatRow ? getJsonObjectProperty3(threatRow, "properties") : null;
-        const threatId = threatProperties ? getJsonObjectProperty3(threatProperties, "threatId") : null;
+        const threatRow = threatRowSchema ? getJsonObjectProperty4(defs ?? {}, "threatRegisterRow") : getJsonObjectProperty4(defs ?? {}, "threatRegisterRow");
+        const threatProperties = threatRow ? getJsonObjectProperty4(threatRow, "properties") : null;
+        const threatId = threatProperties ? getJsonObjectProperty4(threatProperties, "threatId") : null;
         if (threatId) {
           threatId.enum = args.declaredThreats.map((threat) => threat.threatId);
         }
@@ -46586,13 +46595,13 @@ function buildSecurityTaskSchema(args) {
         );
       }
     }
-    const acceptedRisks = getJsonObjectProperty3(properties, "acceptedRisks");
-    const findings = getJsonObjectProperty3(properties, "findings");
+    const acceptedRisks = getJsonObjectProperty4(properties, "acceptedRisks");
+    const findings = getJsonObjectProperty4(properties, "findings");
     const threatIdEnum = args.declaredThreats.map((threat) => threat.threatId);
     for (const definitionName of ["acceptedRiskRow", "findingRow"]) {
-      const definition = getJsonObjectProperty3(defs ?? {}, definitionName);
-      const definitionProperties = definition ? getJsonObjectProperty3(definition, "properties") : null;
-      const threatId = definitionProperties ? getJsonObjectProperty3(definitionProperties, "threatId") : null;
+      const definition = getJsonObjectProperty4(defs ?? {}, definitionName);
+      const definitionProperties = definition ? getJsonObjectProperty4(definition, "properties") : null;
+      const threatId = definitionProperties ? getJsonObjectProperty4(definitionProperties, "threatId") : null;
       if (threatId && threatIdEnum.length > 0) {
         threatId.enum = definitionName === "findingRow" ? [...threatIdEnum, "unregistered"] : threatIdEnum;
       } else if (threatId && definitionName === "findingRow") {
@@ -46604,7 +46613,7 @@ function buildSecurityTaskSchema(args) {
       acceptedRisks.maxItems = 1;
       acceptedRisks.items = { $ref: "#/$defs/noAcceptedRiskRow" };
     }
-    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty4(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
@@ -46897,9 +46906,9 @@ async function buildAllowedUiReviewNextActions(args) {
 }
 function buildUiReviewTaskSchema(args) {
   const schema = cloneJsonObject4(args.baseSchema);
-  const properties = getJsonObjectProperty3(schema, "properties");
+  const properties = getJsonObjectProperty4(schema, "properties");
   if (properties) {
-    const verdict = getJsonObjectProperty3(properties, "verdict");
+    const verdict = getJsonObjectProperty4(properties, "verdict");
     if (verdict && !args.allowPass) {
       verdict.enum = ["FOLLOW_UP", "BLOCKED"];
     }
@@ -46915,14 +46924,14 @@ function buildUiReviewTaskSchema(args) {
         ])
       )
     };
-    const nextSafeAction = getJsonObjectProperty3(properties, "nextSafeAction");
+    const nextSafeAction = getJsonObjectProperty4(properties, "nextSafeAction");
     if (nextSafeAction) {
       nextSafeAction.enum = args.allowedNextActions;
     }
-    const defs = getJsonObjectProperty3(schema, "$defs");
-    const auditTrail = defs ? getJsonObjectProperty3(defs, "auditTrail") : null;
-    const auditTrailProperties = auditTrail ? getJsonObjectProperty3(auditTrail, "properties") : null;
-    const existingReviewPosture = auditTrailProperties ? getJsonObjectProperty3(auditTrailProperties, "existingReviewPosture") : null;
+    const defs = getJsonObjectProperty4(schema, "$defs");
+    const auditTrail = defs ? getJsonObjectProperty4(defs, "auditTrail") : null;
+    const auditTrailProperties = auditTrail ? getJsonObjectProperty4(auditTrail, "properties") : null;
+    const existingReviewPosture = auditTrailProperties ? getJsonObjectProperty4(auditTrailProperties, "existingReviewPosture") : null;
     if (existingReviewPosture) {
       existingReviewPosture.enum = args.allowedExistingReviewPostures;
     }
@@ -46934,18 +46943,18 @@ function buildUiReviewTaskSchema(args) {
         pattern: "^(?:(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+:\\d+(?:-\\d+)?|screenshots?: [^\\r\\n|]+|visual observation: [^\\r\\n|]+|not supplied: [^\\r\\n|]+)$"
       }
     ];
-    const pillarScore = defs ? getJsonObjectProperty3(defs, "pillarScore") : null;
-    const pillarScoreProperties = pillarScore ? getJsonObjectProperty3(pillarScore, "properties") : null;
-    const pillarEvidence = pillarScoreProperties ? getJsonObjectProperty3(pillarScoreProperties, "evidence") : null;
+    const pillarScore = defs ? getJsonObjectProperty4(defs, "pillarScore") : null;
+    const pillarScoreProperties = pillarScore ? getJsonObjectProperty4(pillarScore, "properties") : null;
+    const pillarEvidence = pillarScoreProperties ? getJsonObjectProperty4(pillarScoreProperties, "evidence") : null;
     if (pillarEvidence) {
       delete pillarEvidence.$ref;
       pillarEvidence.anyOf = allowedEvidenceValues.map(
         (entry) => typeof entry === "string" ? { const: entry } : entry
       );
     }
-    const findingRow = defs ? getJsonObjectProperty3(defs, "findingRow") : null;
-    const findingRowProperties = findingRow ? getJsonObjectProperty3(findingRow, "properties") : null;
-    const findingEvidence = findingRowProperties ? getJsonObjectProperty3(findingRowProperties, "evidence") : null;
+    const findingRow = defs ? getJsonObjectProperty4(defs, "findingRow") : null;
+    const findingRowProperties = findingRow ? getJsonObjectProperty4(findingRow, "properties") : null;
+    const findingEvidence = findingRowProperties ? getJsonObjectProperty4(findingRowProperties, "evidence") : null;
     if (findingEvidence) {
       delete findingEvidence.$ref;
       findingEvidence.anyOf = allowedEvidenceValues.map(
@@ -56234,7 +56243,7 @@ function createAjvValidator3() {
     allowUnionTypes: true
   });
 }
-function getJsonObjectProperty4(value, key) {
+function getJsonObjectProperty5(value, key) {
   const candidate = value?.[key];
   return isPlainObject6(candidate) ? candidate : null;
 }
@@ -56253,34 +56262,34 @@ function reportImpactBaseSchema() {
 }
 function buildImpactReportTaskSchema(report, expectations = {}) {
   const schema = reportImpactBaseSchema();
-  const properties = getJsonObjectProperty4(schema, "properties");
-  const defs = getJsonObjectProperty4(schema, "$defs");
+  const properties = getJsonObjectProperty5(schema, "properties");
+  const defs = getJsonObjectProperty5(schema, "$defs");
   const expectedImpactId = expectations.impactId ?? report.impactId;
   const expectedScopeFingerprint = expectations.scopeFingerprint ?? report.scope.fingerprint;
   const expectedFiles = expectations.files ?? report.surfaces.map((surface) => surface.path).sort();
   if (properties) {
-    const impactId = getJsonObjectProperty4(properties, "impactId");
+    const impactId = getJsonObjectProperty5(properties, "impactId");
     if (impactId) {
       impactId.const = expectedImpactId;
     }
-    const files = getJsonObjectProperty4(properties, "files");
+    const files = getJsonObjectProperty5(properties, "files");
     if (files) {
       files.const = expectedFiles;
     }
-    const blockingFindings = getJsonObjectProperty4(properties, "blockingFindings");
+    const blockingFindings = getJsonObjectProperty5(properties, "blockingFindings");
     if (blockingFindings) {
       blockingFindings.const = report.findings.filter((finding) => finding.status === "BLOCK");
     }
-    const warningFindings = getJsonObjectProperty4(properties, "warningFindings");
+    const warningFindings = getJsonObjectProperty5(properties, "warningFindings");
     if (warningFindings) {
       warningFindings.const = report.findings.filter((finding) => finding.status === "WARN");
     }
   }
-  const scope = defs ? getJsonObjectProperty4(defs, "scope") : null;
-  const scopeProperties = scope ? getJsonObjectProperty4(scope, "properties") : null;
-  const fingerprint = scopeProperties ? getJsonObjectProperty4(scopeProperties, "fingerprint") : null;
-  const source = scopeProperties ? getJsonObjectProperty4(scopeProperties, "source") : null;
-  const description = scopeProperties ? getJsonObjectProperty4(scopeProperties, "description") : null;
+  const scope = defs ? getJsonObjectProperty5(defs, "scope") : null;
+  const scopeProperties = scope ? getJsonObjectProperty5(scope, "properties") : null;
+  const fingerprint = scopeProperties ? getJsonObjectProperty5(scopeProperties, "fingerprint") : null;
+  const source = scopeProperties ? getJsonObjectProperty5(scopeProperties, "source") : null;
+  const description = scopeProperties ? getJsonObjectProperty5(scopeProperties, "description") : null;
   if (fingerprint) {
     fingerprint.const = expectedScopeFingerprint;
   }
@@ -56292,9 +56301,9 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
   }
   const evidenceIds = report.evidence.map((evidence) => evidence.id);
   for (const definitionName of ["finding", "obligation", "unknown"]) {
-    const definition = defs ? getJsonObjectProperty4(defs, definitionName) : null;
-    const definitionProperties = definition ? getJsonObjectProperty4(definition, "properties") : null;
-    const evidenceRefs = definitionProperties ? getJsonObjectProperty4(definitionProperties, "evidenceRefs") : null;
+    const definition = defs ? getJsonObjectProperty5(defs, definitionName) : null;
+    const definitionProperties = definition ? getJsonObjectProperty5(definition, "properties") : null;
+    const evidenceRefs = definitionProperties ? getJsonObjectProperty5(definitionProperties, "evidenceRefs") : null;
     if (evidenceRefs) {
       evidenceRefs.items = {
         type: "string",
@@ -56302,12 +56311,12 @@ function buildImpactReportTaskSchema(report, expectations = {}) {
       };
     }
   }
-  const ownership = defs ? getJsonObjectProperty4(defs, "ownership") : null;
-  const ownershipProperties = ownership ? getJsonObjectProperty4(ownership, "properties") : null;
-  const matches = ownershipProperties ? getJsonObjectProperty4(ownershipProperties, "matches") : null;
-  const matchItems = matches ? getJsonObjectProperty4(matches, "items") : null;
-  const matchProperties = matchItems ? getJsonObjectProperty4(matchItems, "properties") : null;
-  const matchEvidenceRefs = matchProperties ? getJsonObjectProperty4(matchProperties, "evidenceRefs") : null;
+  const ownership = defs ? getJsonObjectProperty5(defs, "ownership") : null;
+  const ownershipProperties = ownership ? getJsonObjectProperty5(ownership, "properties") : null;
+  const matches = ownershipProperties ? getJsonObjectProperty5(ownershipProperties, "matches") : null;
+  const matchItems = matches ? getJsonObjectProperty5(matches, "items") : null;
+  const matchProperties = matchItems ? getJsonObjectProperty5(matchItems, "properties") : null;
+  const matchEvidenceRefs = matchProperties ? getJsonObjectProperty5(matchProperties, "evidenceRefs") : null;
   if (matchEvidenceRefs) {
     matchEvidenceRefs.items = {
       type: "string",
