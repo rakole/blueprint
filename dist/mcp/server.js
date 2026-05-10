@@ -26548,6 +26548,182 @@ var init_phase_roadmap_parser = __esm({
   }
 });
 
+// src/mcp/tools/phase-checkpoint-records.ts
+function ensureCheckpointObject(checkpoint, checkpointPath) {
+  if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
+    throw new Error(`${checkpointPath} must contain a JSON object.`);
+  }
+  return checkpoint;
+}
+function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
+  const parsed = phaseCheckpointWriteSchema.safeParse(
+    ensureCheckpointObject(checkpoint, checkpointPath)
+  );
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
+    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+  }
+  return parsed.data;
+}
+function checkpointStringField(record2, key) {
+  const value = record2[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+function checkpointResumeMeta(record2) {
+  const resumeMeta = record2.resumeMeta;
+  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
+    return null;
+  }
+  return resumeMeta;
+}
+function checkpointOwnerCommand(record2) {
+  return checkpointStringField(record2, "ownerCommand");
+}
+function checkpointResumeMode(record2) {
+  return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
+}
+function isKnownCheckpointOwnerCommand(value) {
+  return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
+}
+function isKnownCheckpointResumeMode(value) {
+  return value !== null && PHASE_CHECKPOINT_RESUME_MODES.includes(value);
+}
+function checkpointExpectedOwnerFromMode(value) {
+  switch (value) {
+    case "discuss":
+      return "/blu-discuss-phase";
+    case "research":
+      return "/blu-research-phase";
+    default:
+      return null;
+  }
+}
+function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
+  const details = warnings.join(" ");
+  return `Refusing to ${action} ${checkpointPath} because ${details}`;
+}
+function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
+  const ownerCommand = checkpointOwnerCommand(checkpoint);
+  const resumeMode = checkpointResumeMode(checkpoint);
+  const warnings = [];
+  if (!ownerCommand) {
+    warnings.push(
+      `${checkpointPath} does not declare ownerCommand; treating it as a legacy checkpoint.`
+    );
+  } else if (!isKnownCheckpointOwnerCommand(ownerCommand)) {
+    warnings.push(`${checkpointPath} declares unknown ownerCommand "${ownerCommand}".`);
+  }
+  if (!resumeMode) {
+    warnings.push(`${checkpointPath} does not declare a resumable mode.`);
+  } else if (!isKnownCheckpointResumeMode(resumeMode)) {
+    warnings.push(`${checkpointPath} declares unknown resumeMeta.mode "${resumeMode}".`);
+  }
+  if (isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode) {
+    warnings.push(
+      `${checkpointPath} ownerCommand "${ownerCommand}" does not match resumeMeta.mode "${resumeMode}".`
+    );
+  }
+  if (expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand) {
+    warnings.push(
+      `${checkpointPath} belongs to ${ownerCommand}, not ${expectedOwnerCommand}; do not resume it for this command.`
+    );
+  }
+  if (expectedMode && resumeMode && resumeMode !== expectedMode) {
+    warnings.push(
+      `${checkpointPath} has resumeMeta.mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
+    );
+  }
+  const hasForeignOwner = Boolean(expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand);
+  const hasForeignMode = Boolean(expectedMode && resumeMode && resumeMode !== expectedMode);
+  const hasUnknownOwner = Boolean(ownerCommand && !isKnownCheckpointOwnerCommand(ownerCommand));
+  const hasUnknownMode = Boolean(resumeMode && !isKnownCheckpointResumeMode(resumeMode));
+  const missingExpectedMode = Boolean(expectedMode && !resumeMode);
+  const ownerModeMismatch = Boolean(
+    isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode
+  );
+  return {
+    ownerCommand,
+    resumeMode,
+    safeToResume: !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
+    warnings
+  };
+}
+var PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema;
+var init_phase_checkpoint_records = __esm({
+  "src/mcp/tools/phase-checkpoint-records.ts"() {
+    "use strict";
+    init_v4();
+    PHASE_CHECKPOINT_OWNER_COMMANDS = [
+      "/blu-discuss-phase",
+      "/blu-research-phase"
+    ];
+    PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research"];
+    PHASE_CHECKPOINT_OWNER_MODES = {
+      "/blu-discuss-phase": "discuss",
+      "/blu-research-phase": "research"
+    };
+    phaseCheckpointDecisionSchema = object2({
+      topic: string2().min(1),
+      decision: string2().min(1),
+      rationale: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointDeferredIdeaSchema = object2({
+      idea: string2().min(1),
+      reason: string2().min(1).optional(),
+      revisitWhen: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointReferenceSchema = object2({
+      label: string2().min(1),
+      target: string2().min(1),
+      note: string2().min(1).optional()
+    }).catchall(unknown());
+    phaseCheckpointOwnerCommandSchema = _enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
+    phaseCheckpointResumeModeSchema = _enum(PHASE_CHECKPOINT_RESUME_MODES);
+    phaseCheckpointResumeMetaSchema = object2({
+      mode: phaseCheckpointResumeModeSchema,
+      pendingTopics: array(string2().min(1)),
+      completedTopics: array(string2().min(1)),
+      currentQuestion: string2().min(1).optional(),
+      notes: array(string2().min(1)),
+      resumeHint: string2().min(1).optional(),
+      updatedAt: string2().min(1)
+    }).catchall(unknown());
+    phaseCheckpointWriteSchema = object2({
+      ownerCommand: phaseCheckpointOwnerCommandSchema,
+      completedAreas: array(string2().min(1)),
+      remainingAreas: array(string2().min(1)),
+      decisions: array(phaseCheckpointDecisionSchema),
+      deferredIdeas: array(phaseCheckpointDeferredIdeaSchema),
+      canonicalReferences: array(phaseCheckpointReferenceSchema),
+      resumeMeta: phaseCheckpointResumeMetaSchema
+    }).catchall(unknown()).superRefine((value, context) => {
+      const requiredSections = [
+        "ownerCommand",
+        "completedAreas",
+        "remainingAreas",
+        "decisions",
+        "deferredIdeas",
+        "canonicalReferences",
+        "resumeMeta"
+      ];
+      if (!requiredSections.every((key) => key in value)) {
+        context.addIssue({
+          code: "custom",
+          message: "Checkpoint writes must include ownerCommand, completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
+        });
+      }
+      const expectedMode = PHASE_CHECKPOINT_OWNER_MODES[value.ownerCommand];
+      if (expectedMode && value.resumeMeta.mode !== expectedMode) {
+        context.addIssue({
+          code: "custom",
+          path: ["resumeMeta", "mode"],
+          message: `${value.ownerCommand} checkpoints must use resumeMeta.mode "${expectedMode}".`
+        });
+      }
+    });
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -31315,107 +31491,8 @@ async function blueprintPhaseValidationRender(args) {
     warnings
   };
 }
-function ensureCheckpointObject(checkpoint, checkpointPath) {
-  if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
-    throw new Error(`${checkpointPath} must contain a JSON object.`);
-  }
-  return checkpoint;
-}
-function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
-  const parsed = phaseCheckpointWriteSchema.safeParse(
-    ensureCheckpointObject(checkpoint, checkpointPath)
-  );
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
-    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
-  }
-  return parsed.data;
-}
-function checkpointStringField(record2, key) {
-  const value = record2[key];
-  return typeof value === "string" && value.trim() ? value : null;
-}
-function checkpointResumeMeta(record2) {
-  const resumeMeta = record2.resumeMeta;
-  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
-    return null;
-  }
-  return resumeMeta;
-}
-function checkpointOwnerCommand(record2) {
-  return checkpointStringField(record2, "ownerCommand");
-}
-function checkpointResumeMode(record2) {
-  return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
-}
 function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
-}
-function isKnownCheckpointOwnerCommand(value) {
-  return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
-}
-function isKnownCheckpointResumeMode(value) {
-  return value !== null && PHASE_CHECKPOINT_RESUME_MODES.includes(value);
-}
-function checkpointExpectedOwnerFromMode(value) {
-  switch (value) {
-    case "discuss":
-      return "/blu-discuss-phase";
-    case "research":
-      return "/blu-research-phase";
-    default:
-      return null;
-  }
-}
-function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
-  const details = warnings.join(" ");
-  return `Refusing to ${action} ${checkpointPath} because ${details}`;
-}
-function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
-  const ownerCommand = checkpointOwnerCommand(checkpoint);
-  const resumeMode = checkpointResumeMode(checkpoint);
-  const warnings = [];
-  if (!ownerCommand) {
-    warnings.push(
-      `${checkpointPath} does not declare ownerCommand; treating it as a legacy checkpoint.`
-    );
-  } else if (!isKnownCheckpointOwnerCommand(ownerCommand)) {
-    warnings.push(`${checkpointPath} declares unknown ownerCommand "${ownerCommand}".`);
-  }
-  if (!resumeMode) {
-    warnings.push(`${checkpointPath} does not declare a resumable mode.`);
-  } else if (!isKnownCheckpointResumeMode(resumeMode)) {
-    warnings.push(`${checkpointPath} declares unknown resumeMeta.mode "${resumeMode}".`);
-  }
-  if (isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode) {
-    warnings.push(
-      `${checkpointPath} ownerCommand "${ownerCommand}" does not match resumeMeta.mode "${resumeMode}".`
-    );
-  }
-  if (expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand) {
-    warnings.push(
-      `${checkpointPath} belongs to ${ownerCommand}, not ${expectedOwnerCommand}; do not resume it for this command.`
-    );
-  }
-  if (expectedMode && resumeMode && resumeMode !== expectedMode) {
-    warnings.push(
-      `${checkpointPath} has resumeMeta.mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
-    );
-  }
-  const hasForeignOwner = Boolean(expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand);
-  const hasForeignMode = Boolean(expectedMode && resumeMode && resumeMode !== expectedMode);
-  const hasUnknownOwner = Boolean(ownerCommand && !isKnownCheckpointOwnerCommand(ownerCommand));
-  const hasUnknownMode = Boolean(resumeMode && !isKnownCheckpointResumeMode(resumeMode));
-  const missingExpectedMode = Boolean(expectedMode && !resumeMode);
-  const ownerModeMismatch = Boolean(
-    isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode
-  );
-  return {
-    ownerCommand,
-    resumeMode,
-    safeToResume: !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
-    warnings
-  };
 }
 async function resolveLocatedPhaseForMutation(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -34961,7 +35038,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var import__, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var import__, PHASE_ARTIFACT_SUFFIXES, PHASE_VALIDATION_ARTIFACT_SUFFIXES, PHASE_CHECKPOINT_SUFFIX, roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, PHASE_VALIDATION_ALLOWED_VALUES, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -34977,6 +35054,7 @@ var init_phase = __esm({
     init_quality_gates();
     init_phase_numbering();
     init_phase_roadmap_parser();
+    init_phase_checkpoint_records();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
@@ -34988,15 +35066,6 @@ var init_phase = __esm({
       uat: "-UAT.md"
     };
     PHASE_CHECKPOINT_SUFFIX = "-DISCUSS-CHECKPOINT.json";
-    PHASE_CHECKPOINT_OWNER_COMMANDS = [
-      "/blu-discuss-phase",
-      "/blu-research-phase"
-    ];
-    PHASE_CHECKPOINT_RESUME_MODES = ["discuss", "research"];
-    PHASE_CHECKPOINT_OWNER_MODES = {
-      "/blu-discuss-phase": "discuss",
-      "/blu-research-phase": "research"
-    };
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };
@@ -35228,65 +35297,6 @@ var init_phase = __esm({
       authoringMode: _enum(["content-compatible", "model-only"]).optional(),
       overwrite: boolean2().optional()
     };
-    phaseCheckpointDecisionSchema = object2({
-      topic: string2().min(1),
-      decision: string2().min(1),
-      rationale: string2().min(1).optional()
-    }).catchall(unknown());
-    phaseCheckpointDeferredIdeaSchema = object2({
-      idea: string2().min(1),
-      reason: string2().min(1).optional(),
-      revisitWhen: string2().min(1).optional()
-    }).catchall(unknown());
-    phaseCheckpointReferenceSchema = object2({
-      label: string2().min(1),
-      target: string2().min(1),
-      note: string2().min(1).optional()
-    }).catchall(unknown());
-    phaseCheckpointOwnerCommandSchema = _enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
-    phaseCheckpointResumeModeSchema = _enum(PHASE_CHECKPOINT_RESUME_MODES);
-    phaseCheckpointResumeMetaSchema = object2({
-      mode: phaseCheckpointResumeModeSchema,
-      pendingTopics: array(string2().min(1)),
-      completedTopics: array(string2().min(1)),
-      currentQuestion: string2().min(1).optional(),
-      notes: array(string2().min(1)),
-      resumeHint: string2().min(1).optional(),
-      updatedAt: string2().min(1)
-    }).catchall(unknown());
-    phaseCheckpointWriteSchema = object2({
-      ownerCommand: phaseCheckpointOwnerCommandSchema,
-      completedAreas: array(string2().min(1)),
-      remainingAreas: array(string2().min(1)),
-      decisions: array(phaseCheckpointDecisionSchema),
-      deferredIdeas: array(phaseCheckpointDeferredIdeaSchema),
-      canonicalReferences: array(phaseCheckpointReferenceSchema),
-      resumeMeta: phaseCheckpointResumeMetaSchema
-    }).catchall(unknown()).superRefine((value, context) => {
-      const requiredSections = [
-        "ownerCommand",
-        "completedAreas",
-        "remainingAreas",
-        "decisions",
-        "deferredIdeas",
-        "canonicalReferences",
-        "resumeMeta"
-      ];
-      if (!requiredSections.every((key) => key in value)) {
-        context.addIssue({
-          code: "custom",
-          message: "Checkpoint writes must include ownerCommand, completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
-        });
-      }
-      const expectedMode = PHASE_CHECKPOINT_OWNER_MODES[value.ownerCommand];
-      if (expectedMode && value.resumeMeta.mode !== expectedMode) {
-        context.addIssue({
-          code: "custom",
-          path: ["resumeMeta", "mode"],
-          message: `${value.ownerCommand} checkpoints must use resumeMeta.mode "${expectedMode}".`
-        });
-      }
-    });
     phaseCheckpointGetInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
