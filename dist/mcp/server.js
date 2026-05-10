@@ -26781,6 +26781,168 @@ var init_phase_markdown = __esm({
   }
 });
 
+// src/mcp/tools/phase-plan-identifiers.ts
+function normalizePlanId(value) {
+  const normalizedInput = normalizeBlueprintInput(value).trim();
+  if (/^0+$/.test(normalizedInput)) {
+    throw new Error("Plan id must be greater than zero.");
+  }
+  return normalizeNumericArtifactId(normalizedInput, "Plan id");
+}
+function parsePlanArtifactPath(pathValue, phasePrefix2) {
+  const match = pathValue.match(
+    new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-PLAN\\.md$`)
+  );
+  return match ? normalizePlanId(match[1]) : null;
+}
+function planPathFor(located, planId2) {
+  return `${located.phaseDir}/${located.phasePrefix}-${normalizePlanId(planId2)}-PLAN.md`;
+}
+function escapeForRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
+  const candidates = /* @__PURE__ */ new Set(["YY"]);
+  if (fromPlanId) {
+    candidates.add(fromPlanId);
+  }
+  let updated = value;
+  for (const candidate of candidates) {
+    updated = updated.replace(
+      new RegExp(`\\bPlan\\s+${escapeForRegex(candidate)}\\b`, "g"),
+      `Plan ${toPlanId}`
+    );
+  }
+  return updated;
+}
+function extractPlanSlotLabelFromFrontmatterLine(line) {
+  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
+  const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+  const trimmed = rawValue?.trim() ?? "";
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  if (/^0+$/.test(trimmed)) {
+    return trimmed.padStart(2, "0");
+  }
+  return normalizePlanId(trimmed);
+}
+function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
+  const match = line.match(/^(\s*title:\s*)(.+)$/);
+  if (!match) {
+    return null;
+  }
+  const prefix = match[1] ?? "";
+  const rawValue = match[2]?.trim() ?? "";
+  const quoteMatch = rawValue.match(/^(['"])([\s\S]*?)\1$/);
+  const quote = quoteMatch?.[1] ?? "";
+  const value = quoteMatch?.[2] ?? rawValue;
+  const updatedValue = replacePlanSlotLabel(value, fromPlanId, toPlanId);
+  if (updatedValue === value) {
+    return null;
+  }
+  return `${prefix}${quote}${updatedValue}${quote}`;
+}
+function reconcilePlanHeadingLine(line, fromPlanId, toPlanId) {
+  if (!/^#\s+/.test(line)) {
+    return null;
+  }
+  const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
+  return updatedLine === line ? null : updatedLine;
+}
+function reconcileAutoAssignedPlanContent(content, planId2) {
+  const normalizedPlanId = normalizePlanId(planId2);
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---(\n|$)/);
+  if (!frontmatterMatch || frontmatterMatch.index === void 0) {
+    return content;
+  }
+  const frontmatter = frontmatterMatch[1] ?? "";
+  const updatedFrontmatterLines = frontmatter.split("\n");
+  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanSlotLabelFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
+  const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
+  if (planIdLineIndex >= 0) {
+    updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
+  } else {
+    const phaseLineIndex = updatedFrontmatterLines.findIndex((line) => /^phase:\s*/.test(line));
+    if (phaseLineIndex >= 0) {
+      updatedFrontmatterLines.splice(phaseLineIndex + 1, 0, `plan_id: "${normalizedPlanId}"`);
+    } else {
+      updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
+    }
+  }
+  const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
+  if (titleLineIndex >= 0) {
+    const updatedTitleLine = reconcilePlanTitleLine(
+      updatedFrontmatterLines[titleLineIndex] ?? "",
+      sourcePlanId,
+      normalizedPlanId
+    );
+    if (updatedTitleLine) {
+      updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
+    }
+  }
+  const contentStart = frontmatterMatch.index;
+  const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
+  const reconciledBody = (() => {
+    let headingRewritten = false;
+    return contentAfterFrontmatter.split("\n").map((line) => {
+      if (headingRewritten || !/^#\s+/.test(line)) {
+        return line;
+      }
+      headingRewritten = true;
+      return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
+    }).join("\n");
+  })();
+  return `---
+${updatedFrontmatterLines.join("\n")}
+---${reconciledBody}`;
+}
+function collectInvalidPlanDependencyIssues(planPath, dependsOn) {
+  const issues = [];
+  for (const dependency of dependsOn) {
+    try {
+      normalizePlanId(dependency);
+    } catch {
+      issues.push(`${planPath}: invalid depends_on reference: ${dependency}`);
+    }
+  }
+  return issues;
+}
+function normalizeMaybePlanId(value) {
+  if (!value || !/^\d+$/.test(value)) {
+    return null;
+  }
+  return normalizePlanId(value);
+}
+function extractHeadingText(content) {
+  return content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
+}
+function extractReferencedPlanId(value) {
+  if (!value) {
+    return null;
+  }
+  const placeholderMatch = value.match(/\bPlan\s+(YY)\b/i);
+  if (placeholderMatch) {
+    return placeholderMatch[1].toUpperCase();
+  }
+  const numericMatch = value.match(/\bPlan\s+(\d+)\b/i);
+  if (!numericMatch) {
+    return null;
+  }
+  try {
+    return normalizePlanId(numericMatch[1]);
+  } catch {
+    return null;
+  }
+}
+var init_phase_plan_identifiers = __esm({
+  "src/mcp/tools/phase-plan-identifiers.ts"() {
+    "use strict";
+    init_phase_numbering();
+    init_security();
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -26928,12 +27090,12 @@ function previousIntegerPhaseNumber(value) {
 }
 function nextDecimalPhaseNumber(phases, afterPhaseNumber) {
   const normalizedAfterPhase = normalizePhaseNumber2(afterPhaseNumber);
-  const decimalMatcher = new RegExp(`^${escapeForRegex(normalizedAfterPhase)}\\.(\\d+)$`);
+  const decimalMatcher = new RegExp(`^${escapeForRegex2(normalizedAfterPhase)}\\.(\\d+)$`);
   const suffixes = phases.map((phase) => phase.phaseNumber).map((phaseNumber) => phaseNumber.match(decimalMatcher)?.[1] ?? null).filter((suffix) => suffix !== null).map((suffix) => Number.parseInt(suffix, 10)).filter((suffix) => !Number.isNaN(suffix));
   const nextSuffix = suffixes.length === 0 ? 1 : Math.max(...suffixes) + 1;
   return `${normalizedAfterPhase}.${nextSuffix}`;
 }
-function escapeForRegex(value) {
+function escapeForRegex2(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function replaceWithPlaceholders(value, replacements) {
@@ -26965,7 +27127,7 @@ function rewriteDependencyLines(value, renumberMap) {
       }
       const phasePrefix2 = entry.startsWith("Phase ") ? "Phase " : entry.startsWith("phase ") ? "phase " : "";
       return rawEntry.replace(
-        new RegExp(`${escapeForRegex(phasePrefix2)}${escapeForRegex(phaseNumber)}\\b`),
+        new RegExp(`${escapeForRegex2(phasePrefix2)}${escapeForRegex2(phaseNumber)}\\b`),
         `${phasePrefix2}${replacement}`
       );
     }).join(",");
@@ -26975,11 +27137,11 @@ function rewriteDependencyLines(value, renumberMap) {
 function rewriteRoadmapPhaseReferences(value, renumberMap) {
   const replacements = [...renumberMap.entries()].flatMap(([from, to]) => [
     {
-      pattern: new RegExp(`\\bPhase ${escapeForRegex(from)}\\b`, "g"),
+      pattern: new RegExp(`\\bPhase ${escapeForRegex2(from)}\\b`, "g"),
       replacement: `Phase ${to}`
     },
     {
-      pattern: new RegExp(`\\bphase ${escapeForRegex(from)}\\b`, "g"),
+      pattern: new RegExp(`\\bphase ${escapeForRegex2(from)}\\b`, "g"),
       replacement: `phase ${to}`
     }
   ]);
@@ -27199,7 +27361,7 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
   };
 }
 function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName, detailOptions = {}) {
-  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
+  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex2(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
@@ -27229,7 +27391,7 @@ ${detailBlock.trimEnd()}`;
 ${detailBlock}`;
 }
 function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber, detailOptions = {}) {
-  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex(phaseNumber)}: `, "m");
+  const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex2(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
     return raw;
   }
@@ -27347,7 +27509,7 @@ function removePhaseDetailsFromRoadmap(raw, phaseNumber) {
 function replacePhaseLineCompletionMarker(raw, phaseNumber, completed) {
   const marker = completed ? "x" : " ";
   const pattern = new RegExp(
-    `^(- \\[)([ xX])(\\] (?:\\*\\*)?Phase ${escapeForRegex(phaseNumber)}: [^\\n]+)$`,
+    `^(- \\[)([ xX])(\\] (?:\\*\\*)?Phase ${escapeForRegex2(phaseNumber)}: [^\\n]+)$`,
     "m"
   );
   const match = raw.match(pattern);
@@ -28094,156 +28256,6 @@ function validationArtifactPathFor(located, artifact) {
 }
 function checkpointPathFor(located) {
   return buildArtifactPath(located.phaseDir, located.phasePrefix, PHASE_CHECKPOINT_SUFFIX);
-}
-function normalizePlanId(value) {
-  const normalizedInput = normalizeBlueprintInput(value).trim();
-  if (/^0+$/.test(normalizedInput)) {
-    throw new Error("Plan id must be greater than zero.");
-  }
-  return normalizeNumericArtifactId(normalizedInput, "Plan id");
-}
-function parsePlanArtifactPath(pathValue, phasePrefix2) {
-  const match = pathValue.match(
-    new RegExp(`${phasePrefix2.replace(".", "\\.")}-(\\d+)-PLAN\\.md$`)
-  );
-  return match ? normalizePlanId(match[1]) : null;
-}
-function planPathFor(located, planId2) {
-  return buildArtifactPath(located.phaseDir, located.phasePrefix, `-${normalizePlanId(planId2)}-PLAN.md`);
-}
-function replacePlanSlotLabel(value, fromPlanId, toPlanId) {
-  const candidates = /* @__PURE__ */ new Set(["YY"]);
-  if (fromPlanId) {
-    candidates.add(fromPlanId);
-  }
-  let updated = value;
-  for (const candidate of candidates) {
-    updated = updated.replace(
-      new RegExp(`\\bPlan\\s+${escapeForRegex(candidate)}\\b`, "g"),
-      `Plan ${toPlanId}`
-    );
-  }
-  return updated;
-}
-function extractPlanSlotLabelFromFrontmatterLine(line) {
-  const match = line.match(/^plan_id:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))\s*$/);
-  const rawValue = match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
-  const trimmed = rawValue?.trim() ?? "";
-  if (!/^\d+$/.test(trimmed)) {
-    return null;
-  }
-  if (/^0+$/.test(trimmed)) {
-    return trimmed.padStart(2, "0");
-  }
-  return normalizePlanId(trimmed);
-}
-function reconcilePlanTitleLine(line, fromPlanId, toPlanId) {
-  const match = line.match(/^(\s*title:\s*)(.+)$/);
-  if (!match) {
-    return null;
-  }
-  const prefix = match[1] ?? "";
-  const rawValue = match[2]?.trim() ?? "";
-  const quoteMatch = rawValue.match(/^(['"])([\s\S]*?)\1$/);
-  const quote = quoteMatch?.[1] ?? "";
-  const value = quoteMatch?.[2] ?? rawValue;
-  const updatedValue = replacePlanSlotLabel(value, fromPlanId, toPlanId);
-  if (updatedValue === value) {
-    return null;
-  }
-  return `${prefix}${quote}${updatedValue}${quote}`;
-}
-function reconcilePlanHeadingLine(line, fromPlanId, toPlanId) {
-  if (!/^#\s+/.test(line)) {
-    return null;
-  }
-  const updatedLine = replacePlanSlotLabel(line, fromPlanId, toPlanId);
-  return updatedLine === line ? null : updatedLine;
-}
-function reconcileAutoAssignedPlanContent(content, planId2) {
-  const normalizedPlanId = normalizePlanId(planId2);
-  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---(\n|$)/);
-  if (!frontmatterMatch || frontmatterMatch.index === void 0) {
-    return content;
-  }
-  const frontmatter = frontmatterMatch[1] ?? "";
-  const updatedFrontmatterLines = frontmatter.split("\n");
-  const sourcePlanId = updatedFrontmatterLines.map((line) => extractPlanSlotLabelFromFrontmatterLine(line)).find((value) => value !== null) ?? null;
-  const planIdLineIndex = updatedFrontmatterLines.findIndex((line) => /^plan_id:\s*/.test(line));
-  if (planIdLineIndex >= 0) {
-    updatedFrontmatterLines[planIdLineIndex] = `plan_id: "${normalizedPlanId}"`;
-  } else {
-    const phaseLineIndex = updatedFrontmatterLines.findIndex((line) => /^phase:\s*/.test(line));
-    if (phaseLineIndex >= 0) {
-      updatedFrontmatterLines.splice(phaseLineIndex + 1, 0, `plan_id: "${normalizedPlanId}"`);
-    } else {
-      updatedFrontmatterLines.unshift(`plan_id: "${normalizedPlanId}"`);
-    }
-  }
-  const titleLineIndex = updatedFrontmatterLines.findIndex((line) => /^title:\s*/.test(line));
-  if (titleLineIndex >= 0) {
-    const updatedTitleLine = reconcilePlanTitleLine(
-      updatedFrontmatterLines[titleLineIndex] ?? "",
-      sourcePlanId,
-      normalizedPlanId
-    );
-    if (updatedTitleLine) {
-      updatedFrontmatterLines[titleLineIndex] = updatedTitleLine;
-    }
-  }
-  const contentStart = frontmatterMatch.index;
-  const contentAfterFrontmatter = content.slice(contentStart + frontmatterMatch[0].length);
-  const reconciledBody = (() => {
-    let headingRewritten = false;
-    return contentAfterFrontmatter.split("\n").map((line) => {
-      if (headingRewritten || !/^#\s+/.test(line)) {
-        return line;
-      }
-      headingRewritten = true;
-      return reconcilePlanHeadingLine(line, sourcePlanId, normalizedPlanId) ?? line;
-    }).join("\n");
-  })();
-  return `---
-${updatedFrontmatterLines.join("\n")}
----${reconciledBody}`;
-}
-function collectInvalidPlanDependencyIssues(planPath, dependsOn) {
-  const issues = [];
-  for (const dependency of dependsOn) {
-    try {
-      normalizePlanId(dependency);
-    } catch {
-      issues.push(`${planPath}: invalid depends_on reference: ${dependency}`);
-    }
-  }
-  return issues;
-}
-function normalizeMaybePlanId(value) {
-  if (!value || !/^\d+$/.test(value)) {
-    return null;
-  }
-  return normalizePlanId(value);
-}
-function extractHeadingText(content) {
-  return content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
-}
-function extractReferencedPlanId(value) {
-  if (!value) {
-    return null;
-  }
-  const placeholderMatch = value.match(/\bPlan\s+(YY)\b/i);
-  if (placeholderMatch) {
-    return placeholderMatch[1].toUpperCase();
-  }
-  const numericMatch = value.match(/\bPlan\s+(\d+)\b/i);
-  if (!numericMatch) {
-    return null;
-  }
-  try {
-    return normalizePlanId(numericMatch[1]);
-  } catch {
-    return null;
-  }
 }
 function extractHeadingPhaseDetails(heading) {
   if (!heading) {
@@ -35062,6 +35074,7 @@ var init_phase = __esm({
     init_phase_roadmap_parser();
     init_phase_checkpoint_records();
     init_phase_markdown();
+    init_phase_plan_identifiers();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
