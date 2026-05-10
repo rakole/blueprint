@@ -410,6 +410,7 @@ type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
 type AddTestsReportPersistenceStatus = "created" | "updated" | "reused";
+type QuickRunVerificationResult = "pass" | "partial" | "blocked" | "not-run";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -475,6 +476,27 @@ type AddTestsReportModel = {
   remainingGaps: Array<{ gap: string; evidence: string; repair: string; status: AddTestsGapStatus }>;
   followUpFixes: string[];
   verificationWrite: { status: AddTestsVerificationWriteStatus; evidence: string };
+  nextSafeAction: string;
+};
+
+type QuickRunReportModel = {
+  taskSummary: string[];
+  changedSurfaces: Array<{
+    surface: string;
+    change: string;
+    rationale: string;
+  }>;
+  evidenceUsed: Array<{
+    source: string;
+    summary: string;
+  }>;
+  changesMade: string[];
+  verification: Array<{
+    check: string;
+    result: QuickRunVerificationResult;
+    evidence: string;
+  }>;
+  followUps: string[];
   nextSafeAction: string;
 };
 
@@ -652,7 +674,7 @@ type ArtifactReportValidateModelResult = {
   taskSchema: Record<string, unknown> | null;
   diagnostics: ArtifactReportDiagnostic[];
   repairSummary: ArtifactRepairSummary;
-  normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
+  normalizedModel: AddTestsReportModel | AuditFixReportModel | QuickRunReportModel | null;
   renderPreview: string | null;
   warnings: string[];
 };
@@ -11407,7 +11429,11 @@ export async function blueprintArtifactReportAuthoringContext(
   const pathValue = buildBlueprintReportPath(args.reportName);
   const contractId = resolveReportContractId(args.reportName);
 
-  if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
+  if (
+    contractId !== "report.add-tests" &&
+    contractId !== "report.audit-fix" &&
+    contractId !== "report.quick-run"
+  ) {
     return {
       status: "invalid",
       reportName: normalizeReportSlug(args.reportName),
@@ -11429,9 +11455,39 @@ export async function blueprintArtifactReportAuthoringContext(
       taskSchema: null,
       modelOnly: true,
       prerequisiteBlockers: [
-        `blueprint_artifact_report_authoring_context currently supports report.add-tests and report.audit-fix only; ${args.reportName} is not one of those report contracts.`
+        `blueprint_artifact_report_authoring_context currently supports report.add-tests, report.audit-fix, and report.quick-run only; ${args.reportName} is not one of those report contracts.`
       ],
       reason: "Unsupported report contract for schema-first report authoring.",
+      warnings: []
+    };
+  }
+
+  if (contractId === "report.quick-run") {
+    const contract = readArtifactContract("report.quick-run");
+    const modelContract = contract.modelContract;
+
+    return {
+      status: modelContract ? "ready" : "invalid",
+      reportName: normalizeReportSlug(args.reportName),
+      path: pathValue,
+      phase: null,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      selectedEvidencePaths: [],
+      scopeFiles: [],
+      auditFixContext: null,
+      writeArgs: {
+        reportName: normalizeReportSlug(args.reportName)
+      },
+      allowedNextActions: [],
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema: modelContract ? cloneJsonObject(modelContract.jsonSchema) : null,
+      taskSchema: modelContract ? cloneJsonObject(modelContract.jsonSchema) : null,
+      modelOnly: true,
+      prerequisiteBlockers: modelContract ? [] : ["report.quick-run does not expose a modelContract."],
+      reason: modelContract ? null : "Missing report.quick-run model contract.",
       warnings: []
     };
   }
@@ -11547,6 +11603,83 @@ function normalizeStringArray(value: unknown): string[] | null {
   return Array.isArray(value) && value.every((item) => typeof item === "string")
     ? value.map((item) => item.trim())
     : null;
+}
+
+function normalizeQuickRunReportModel(model: Record<string, unknown>): QuickRunReportModel | null {
+  const taskSummary = normalizeStringArray(model.taskSummary);
+  const changesMade = normalizeStringArray(model.changesMade);
+  const followUps = normalizeStringArray(model.followUps);
+
+  if (
+    taskSummary === null ||
+    changesMade === null ||
+    followUps === null ||
+    typeof model.nextSafeAction !== "string"
+  ) {
+    return null;
+  }
+
+  const normalizeRows = <T>(
+    value: unknown,
+    mapper: (row: Record<string, unknown>) => T | null
+  ): T[] | null => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+
+    const rows = value.map((row) => {
+      const rowObject = asJsonObject(row);
+
+      return rowObject ? mapper(rowObject) : null;
+    });
+
+    return rows.some((row) => row === null) ? null : rows as T[];
+  };
+
+  const changedSurfaces = normalizeRows(model.changedSurfaces, (row) =>
+    typeof row.surface === "string" &&
+    typeof row.change === "string" &&
+    typeof row.rationale === "string"
+      ? {
+          surface: row.surface.trim(),
+          change: row.change.trim(),
+          rationale: row.rationale.trim()
+        }
+      : null
+  );
+  const evidenceUsed = normalizeRows(model.evidenceUsed, (row) =>
+    typeof row.source === "string" && typeof row.summary === "string"
+      ? {
+          source: row.source.trim(),
+          summary: row.summary.trim()
+        }
+      : null
+  );
+  const verification = normalizeRows(model.verification, (row) =>
+    typeof row.check === "string" &&
+    typeof row.result === "string" &&
+    typeof row.evidence === "string"
+      ? {
+          check: row.check.trim(),
+          result: row.result as QuickRunVerificationResult,
+          evidence: row.evidence.trim()
+        }
+      : null
+  );
+
+  if (changedSurfaces === null || evidenceUsed === null || verification === null) {
+    return null;
+  }
+
+  return {
+    taskSummary,
+    changedSurfaces,
+    evidenceUsed,
+    changesMade,
+    verification,
+    followUps,
+    nextSafeAction: model.nextSafeAction.trim()
+  };
 }
 
 function normalizeAddTestsReportModel(model: Record<string, unknown>): AddTestsReportModel | null {
@@ -12333,6 +12466,48 @@ function renderMarkdownTable(headers: string[], rows: string[][]): string {
     .join("\n");
 }
 
+function renderQuickRunReportModelContent(model: QuickRunReportModel): string {
+  return `# Quick Run Report
+
+## Task Summary
+
+${renderBulletList(model.taskSummary)}
+
+## Changed Surfaces
+
+${renderMarkdownTable(
+  ["Surface", "Change", "Rationale"],
+  model.changedSurfaces.map((row) => [row.surface, row.change, row.rationale])
+)}
+
+## Evidence Used
+
+${renderMarkdownTable(
+  ["Source", "Summary"],
+  model.evidenceUsed.map((row) => [row.source, row.summary])
+)}
+
+## Changes Made
+
+${renderBulletList(model.changesMade)}
+
+## Verification
+
+${renderMarkdownTable(
+  ["Check", "Result", "Evidence"],
+  model.verification.map((row) => [row.check, row.result, row.evidence])
+)}
+
+## Follow-Ups
+
+${renderBulletList(model.followUps)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`;
+}
+
 function renderAddTestsReportModelContent(args: {
   model: AddTestsReportModel;
   context: ArtifactReportAuthoringContextResult;
@@ -12692,19 +12867,23 @@ export async function blueprintArtifactReportValidateModel(
         message: `${contractId ?? "report"} did not expose a runtime task schema.`,
         context: {},
         repair:
-          contractId === "report.audit-fix"
+          contractId === "report.quick-run"
+            ? "Read the live report.quick-run authoring context before writing."
+            : contractId === "report.audit-fix"
             ? "Read the live report.audit-fix authoring context before writing."
             : "Read the live report.add-tests authoring context before writing.",
         retryable: true,
         suggestion:
-          contractId === "report.audit-fix"
+          contractId === "report.quick-run"
+            ? "Read the live report.quick-run authoring context before writing."
+            : contractId === "report.audit-fix"
             ? "Read the live report.audit-fix authoring context before writing."
             : "Read the live report.add-tests authoring context before writing."
       })
     );
   }
 
-  let normalizedModel: AddTestsReportModel | AuditFixReportModel | null = null;
+  let normalizedModel: AddTestsReportModel | AuditFixReportModel | QuickRunReportModel | null = null;
 
   if (modelObject && context.taskSchema) {
     const validate = createArtifactAjvValidator().compile(context.taskSchema);
@@ -12715,14 +12894,22 @@ export async function blueprintArtifactReportValidateModel(
         ...(validate.errors ?? []).map((error) =>
           schemaDiagnosticFromArtifactReportAjvError(
             error,
-            contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests",
+            contractId === "report.quick-run"
+              ? "report.quick-run"
+              : contractId === "report.audit-fix"
+                ? "report.audit-fix"
+                : "report.add-tests",
             modelObject
           )
         )
       );
     }
 
-    if (contractId === "report.audit-fix") {
+    if (contractId === "report.quick-run") {
+      if (schemaValid) {
+        normalizedModel = normalizeQuickRunReportModel(modelObject);
+      }
+    } else if (contractId === "report.audit-fix") {
       normalizedModel = normalizeAuditFixReportModel(modelObject);
       diagnostics.push(
         ...await collectAuditFixResidualDiagnostics({
@@ -12750,7 +12937,9 @@ export async function blueprintArtifactReportValidateModel(
 
   if (diagnostics.length === 0 && normalizedModel) {
     const rendered =
-      contractId === "report.audit-fix"
+      contractId === "report.quick-run"
+        ? renderQuickRunReportModelContent(normalizedModel as QuickRunReportModel)
+        : contractId === "report.audit-fix"
         ? renderAuditFixReportModelContent({
             model: normalizedModel as AuditFixReportModel,
             context
@@ -12770,12 +12959,16 @@ export async function blueprintArtifactReportValidateModel(
           message: issue,
           context: {},
           repair:
-            contractId === "report.audit-fix"
+            contractId === "report.quick-run"
+              ? "Repair the model so MCP-rendered Markdown satisfies the report.quick-run artifact contract."
+              : contractId === "report.audit-fix"
               ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract."
               : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract.",
           retryable: true,
           suggestion:
-            contractId === "report.audit-fix"
+            contractId === "report.quick-run"
+              ? "Repair the model so MCP-rendered Markdown satisfies the report.quick-run artifact contract."
+              : contractId === "report.audit-fix"
               ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract."
               : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
         })
@@ -12836,7 +13029,9 @@ function reportModelWriteIssues(reportName: string): string[] {
   }
 
   return [
-    contractId === "report.add-tests" || contractId === "report.audit-fix"
+    contractId === "report.add-tests" ||
+    contractId === "report.audit-fix" ||
+    contractId === "report.quick-run"
       ? ""
       : `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
   ];
@@ -12880,7 +13075,13 @@ export async function blueprintArtifactReportWrite(
     ]);
   }
 
-  if ((contractId === "report.add-tests" || contractId === "report.audit-fix") && hasContent) {
+  if (
+    (
+      contractId === "report.add-tests" ||
+      contractId === "report.audit-fix" ||
+      contractId === "report.quick-run"
+    ) && hasContent
+  ) {
     return artifactReportWriteInvalidResult(pathValue, [
       `${contractId} is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write.`
     ], [], [
@@ -12895,7 +13096,11 @@ export async function blueprintArtifactReportWrite(
   }
 
   if (hasModel) {
-    if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
+    if (
+      contractId !== "report.add-tests" &&
+      contractId !== "report.audit-fix" &&
+      contractId !== "report.quick-run"
+    ) {
       return artifactReportWriteInvalidResult(
         pathValue,
         reportModelWriteIssues(args.reportName).filter((issue) => issue.length > 0)
@@ -12924,7 +13129,9 @@ export async function blueprintArtifactReportWrite(
     const contentForStatus = (status: AddTestsReportPersistenceStatus) =>
       contractId === "report.audit-fix"
         ? withAuditFixReportWriteStatus(renderPreview, status, pathValue)
-        : withAddTestsReportWriteStatus(renderPreview, status, pathValue);
+        : contractId === "report.add-tests"
+          ? withAddTestsReportWriteStatus(renderPreview, status, pathValue)
+          : renderPreview;
     const exists = await pathExists(absolutePath);
     const warnings = [...modelValidation.warnings];
 
@@ -13258,7 +13465,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_authoring_context",
     description:
-      "Return the schema-first report authoring context for report.add-tests or report.audit-fix, including the base model schema and runtime-narrowed task schema for the selected report contract.",
+      "Return the schema-first report authoring context for report.quick-run, report.add-tests, or report.audit-fix, including the base model schema and runtime-narrowed task schema for the selected report contract.",
     inputSchema: artifactReportAuthoringContextInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportAuthoringContext(args as ArtifactReportAuthoringContextArgs)
@@ -13266,7 +13473,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_validate_model",
     description:
-      "Validate a structured report.add-tests or report.audit-fix model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
+      "Validate a structured report.quick-run, report.add-tests, or report.audit-fix model against the runtime task schema and return a canonical Markdown preview without writing files.",
     inputSchema: artifactReportValidateModelInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportValidateModelPublic(args as ArtifactReportValidateModelArgs)
@@ -13274,7 +13481,7 @@ export const artifactToolDefinitions = [
   {
     name: "blueprint_artifact_report_write",
     description:
-      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests and report.audit-fix are model-only and reject Markdown content fallback.",
+      "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.quick-run, report.add-tests, and report.audit-fix are model-only and reject Markdown content fallback.",
     inputSchema: artifactReportWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintArtifactReportWrite(args as ArtifactReportWriteArgs)

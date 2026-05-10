@@ -56,7 +56,8 @@ type PhaseArtifactReadArgs = PhaseLookupArgs & {
 };
 type PhaseArtifactWriteArgs = PhaseLookupArgs & {
     artifact: PhaseArtifactKind;
-    content: string;
+    content?: string;
+    model?: Record<string, unknown>;
     overwrite?: boolean;
     validationMode?: "strict" | "warn";
 };
@@ -1424,7 +1425,8 @@ export declare const phaseToolDefinitions: ({
             research: "research";
             "ui-spec": "ui-spec";
         }>;
-        content: z.ZodString;
+        content: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         validationMode: z.ZodOptional<z.ZodEnum<{
             strict: "strict";

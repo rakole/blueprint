@@ -11,7 +11,7 @@ Treat the referenced runtime contract as the source of truth for the detailed fl
 
 Command-local constraints:
 - Use only the MCP tools listed in the response requirements for persistent state work.
-- The live `phase.context` and `phase.discussion-log` `contract.authoringTemplate` values remain the schema authority for saved artifacts. Any scaffold starter, whether returned through the scaffold MCP path today or surfaced as a separate scaffold template later, is starter-only and must be fully rewritten into real artifact content before the final write.
+- The live `phase.context` `modelContract` and `phase.discussion-log` `contract.authoringTemplate` values remain the schema authority for saved artifacts. Context writes pass a structured model and let MCP render Markdown; discussion logs remain Markdown-authored. Any scaffold starter, whether returned through the scaffold MCP path today or surfaced as a separate scaffold template later, is starter-only and must be fully replaced before the final write.
 - `/blu-discuss-phase` is the sole lifecycle command that authors or repairs phase context, and it writes only `.blueprint/phases/<phase>/<XX>-CONTEXT.md`; Blueprint does not create or manage repo-root `CONTEXT.md`.
 - The authored phase context artifact is the saved `XX-CONTEXT.md` file for the resolved phase.
 - Require explicit confirmation before replacing substantive user-authored artifacts; scaffold-generated placeholders may be replaced by validated authored content.

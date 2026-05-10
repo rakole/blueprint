@@ -22,6 +22,7 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "../src/mcp/tools/state.js";
+import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
@@ -857,7 +858,10 @@ test("research-phase synced state update stays on an explicitly selected earlier
     cwd: repoPath,
     phase: "2",
     artifact: "context",
-    content: validContextContent("2", "Earlier Discovery"),
+    model: validPhaseContextModel({
+      phaseLabel: "phase 2",
+      openQuestions: ["none"]
+    }),
     overwrite: true
   });
   const researchWrite = await blueprintPhaseArtifactWrite({

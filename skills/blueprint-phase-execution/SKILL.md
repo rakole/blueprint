@@ -111,7 +111,8 @@ contracts from manifests, local references, and MCP/artifact contract reads.
   validation metadata by contract id instead of relying on copied prompt-local
   templates.
 - `blueprint_artifact_report_write`: pass a bare report name such as
-  `quick-run-latest`, not a `.blueprint/reports/...` path. Use the returned
+  `quick-run-latest`, plus the structured quick-run report `model`, not
+  Markdown `content` and not a `.blueprint/reports/...` path. Use the returned
   `path` as authoritative.
 - `blueprint_state_update`: when refreshed artifact truth should drive routing,
   call it with `base: "synced"` so `STATE.md` recomputes the next safe action.

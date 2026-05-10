@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
@@ -8,6 +8,7 @@ import {
   blueprintPhaseArtifactWrite,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
+import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function createPhaseRepo(): Promise<string> {
@@ -54,7 +55,7 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
-test("phase context write returns actionable diagnostics and retry plan", async (t) => {
+test("phase context write rejects Markdown fallback with actionable diagnostics", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -74,12 +75,33 @@ test("phase context write returns actionable diagnostics and retry plan", async 
 
   assert.equal(invalid.status, "invalid");
   assert.equal(invalid.written, false);
-  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.code === "context.missing_required_section"));
+  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.code === "write.model_only"));
   assert.ok(invalid.diagnostics?.every((diagnostic) => diagnostic.retryable));
-  assert.match(invalid.diagnostics?.map((diagnostic) => diagnostic.path).join("\n") ?? "", /content\.sections\./);
-  assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /every required heading/i);
+  assert.match(invalid.diagnostics?.map((diagnostic) => diagnostic.path).join("\n") ?? "", /args\.content/);
+  assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /structured phase\.context model/i);
   assert.equal(invalid.retryPlan?.nextTool, "blueprint_phase_artifact_write");
   assert.match(invalid.retryPlan?.steps.join("\n") ?? "", /phase\.context/);
+});
+
+test("phase context write accepts structured model and renders canonical context markdown", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({ openQuestions: ["none"] })
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  const savedContent = await readFile(path.join(repoPath, written.path), "utf8");
+
+  assert.match(savedContent, /## Phase Boundary/);
+  assert.match(savedContent, /## Canonical References/);
+  assert.match(savedContent, /\| Source \| Relevance \|/);
 });
 
 test("phase research status surfaces underlying context validation issues", async (t) => {

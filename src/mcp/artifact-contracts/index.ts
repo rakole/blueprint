@@ -4663,10 +4663,21 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     canonicalName: "Quick Run Report",
     canonicalFilePattern: ".blueprint/reports/quick-run-latest.md",
     freehandPolicy: "additional-top-level-headings",
-    requiredHeadings: ["Task Summary", "Changes Made", "Verification", "Follow-Ups", "Next Safe Action"],
+    requiredHeadings: [
+      "Task Summary",
+      "Changed Surfaces",
+      "Evidence Used",
+      "Changes Made",
+      "Verification",
+      "Follow-Ups",
+      "Next Safe Action"
+    ],
     lockedMarkers: [],
     placeholderSignals: [],
-    notes: ["Quick reports capture bounded execution without impersonating saved plans."],
+    notes: [
+      "Quick reports capture bounded execution without impersonating saved plans.",
+      "Quick-run reports are schema-backed and model-authored; blueprint_artifact_report_write renders canonical Markdown from the structured model and rejects Markdown content fallback."
+    ],
     modelContract: QUICK_RUN_MODEL_CONTRACT,
     renderScaffoldTemplate: renderQuickRunTemplate,
     renderAuthoringTemplate: renderQuickRunTemplate
