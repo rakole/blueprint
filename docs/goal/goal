@@ -1,0 +1,52 @@
+Complete a repo-wide schema-first document authoring and validation migration for Blueprint without stopping until every schema/model-backed document write path treats structured models and MCP renderers as the source of truth, Markdown validation is reduced to renderer-output shape checks only, legacy/freehand/hand-written Markdown compatibility is removed from those schema-backed persistence gates, all affected contracts/tests/docs are aligned, and the full verification suite passes.
+
+Work in direct Codex harness/tooling mode only. Do not use GSD or Blueprint workflow commands to perform this work.
+
+Repo and setup:
+- Repository: /Users/rhishi/dev/repositories/blueprint
+- Before any file edits, create a fresh worktree/branch with the codex/ prefix and do all work there.
+- In the fresh worktree, run npm ci before build/typecheck/test.
+- Keep changes scoped to the document authoring, rendering, validation, and persistence flow.
+- Do not start from the old code-review severity-count bug. Treat that only as prior context for the policy decision: schema/residual validation owns semantics; persisted Markdown validation must not infer semantics from prose.
+
+Read first:
+- AGENTS.md
+- src/mcp/artifact-contracts/index.ts
+- src/mcp/tools/artifacts.ts
+- src/mcp/tools/phase.ts
+- src/mcp/tools/review.ts
+- any report/document write validators under src/mcp/tools/
+- src/mcp/artifact-contracts/schemas/*.schema.json
+- tests/artifact-contracts.test.ts
+- tests covering phase plan/summary/validation writes, review writes, report writes, and any Markdown validation helpers
+
+Migration policy:
+- For every schema-first or model-only document flow, make the structured model schema plus residual validation the semantic authority.
+- MCP renderers own Markdown generation. Persisted Markdown validation should only verify renderer-output shape, required headings/markers, route/scope/evidence extractability where needed for downstream runtime, and canonical machine-readable row/bullet/table formats.
+- Remove fuzzy Markdown semantic inference for schema-backed artifacts, including prose scanning, legacy heading aliases, freehand bullet interpretation, placeholder legacy accommodations, or hand-written Markdown compatibility.
+- Do not remove Markdown validation for genuinely freehand/non-schema artifacts unless they are migrated to a schema-backed renderer in this same change.
+- If a persisted artifact is schema-backed, reject non-canonical/freehand Markdown at write time with clear diagnostics.
+- Keep downstream readers deterministic: they may parse canonical rendered artifacts, but they should not need to support arbitrary hand-written legacy variants for schema-backed artifacts.
+- Update artifact contract notes/templates and runtime-facing docs/tests so they clearly say schema/model first, renderer-owned Markdown, no legacy/freehand compatibility for schema-backed writes.
+
+Implementation checkpoints:
+1. Inventory all document write/validate flows and classify them as schema-backed/model-only, schema-backed/model-preferred, or genuinely freehand.
+2. Patch validators and render/record flows so schema-backed artifacts no longer perform fuzzy prose/legacy Markdown validation.
+3. Update schemas/contracts/docs/diagnostics so users are pointed to model/schema repair, not hand-editing Markdown.
+4. Add or update regression tests proving canonical rendered output is accepted and legacy/freehand Markdown is rejected for each affected artifact family.
+5. Rebuild generated dist artifacts when source changes require it.
+6. Keep a concise progress log listing changed artifact families, removed legacy behaviors, and tests run.
+
+Validation:
+- Run targeted tests for every touched artifact family.
+- Run npm run typecheck.
+- Run npm run build.
+- Run npm test.
+- If a test fails, fix the implementation or the intentionally changed contract test, then rerun the relevant targeted test before continuing.
+- Stop only when all validation passes, the branch is pushed, a PR is opened, merged to origin/main, local main is fast-forwarded, and the temporary branch/worktree are cleaned up.
+
+Final report:
+- Summarize the artifact families migrated.
+- List the legacy/freehand behaviors removed.
+- List verification commands and results.
+- Include the PR URL and final main commit.
