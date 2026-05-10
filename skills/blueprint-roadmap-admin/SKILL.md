@@ -186,9 +186,10 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 4. Preserve the locked gap-closure intent by grouping related requirement, integration, and flow gaps into a few coherent roadmap phases rather than adding one phase per gap, and keep any requirements traceability repair in the grouped plan instead of scattering it across phases.
 5. Keep the grouping reviewable: show which gaps each proposed phase closes, separate optional nice-to-have gaps from must-close work, and surface the sectioned requirement / integration / flow / optional breakdown from the audit.
 6. Require one explicit confirmation before any roadmap mutation, and prefer Gemini CLI `ask_user` for that confirmation gate when available.
-7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt, and do not imply code or git mutation.
-8. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
-9. Keep follow-up routing inside implemented Blueprint commands only.
+7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls with `auditBackedDetails` populated from the source audit report, grouped repair requirement IDs, success criteria, and gap rows; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt, and do not imply code or git mutation.
+8. Treat an existing-audit-backed-phase reuse warning from `blueprint_roadmap_add_phase` as retry recovery. Continue from the returned canonical `phaseNumber`, `phasePrefix`, and `phaseDir` rather than appending the same grouped gaps again.
+9. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+10. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `complete-milestone`
 

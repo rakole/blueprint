@@ -14,7 +14,7 @@ Follow this flow exactly:
 6. If the audit shows no actionable gaps, stop without writing and explain that the milestone does not need additional gap-closure phases right now. Route the user to `/blu-progress`.
 7. Present a concise “Gap Closure Plan” summary with the milestone, the audit report used, structured gap sections for requirement, integration, flow, and optional items, the grouped proposed phases, which gaps each phase closes, and any nice-to-have gaps that could be deferred.
 8. Require one explicit confirmation gate before any write. Prefer Gemini CLI `ask_user` for that confirmation gate, and do not append phases until the user clearly approves the grouped plan.
-9. After confirmation, call `mcp_blueprint_blueprint_roadmap_add_phase` once per approved gap-closure phase in the confirmed order. Let the tool assign the next integer phase number each time and treat each returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative instead of inventing them manually.
+9. After confirmation, call `mcp_blueprint_blueprint_roadmap_add_phase` once per approved gap-closure phase in the confirmed order. Pass `auditBackedDetails` for each call with the source audit report path, the grouped repair requirement IDs, success criteria, and gap rows that justified that phase, so retries can reuse an already-added audit-backed phase instead of appending a duplicate. Let the tool assign the next integer phase number each time and treat each returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative instead of inventing them manually.
 10. Use `mcp_blueprint_blueprint_state_update` to set `/blu-plan-milestone-gaps` as the active command, point `currentPhase` at the first newly added gap-closure phase, and set the next safe implemented action to `/blu-discuss-phase <first new phase number>`.
 11. Return a concise completion summary covering the milestone audited, the report used, phases added, any deferred gaps, and the next safe Blueprint action.
 
@@ -28,5 +28,6 @@ Response requirements:
 - Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-plan-milestone-gaps`.
 - Do not turn `/blu-plan-milestone-gaps` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Preserve the grouped-gap behavior from the locked Blueprint contract, while keeping Blueprint host-native and MCP-owned rather than rewriting files directly.
+- Treat duplicate audit-backed add results as retry recovery when the returned warnings say an existing audit-backed phase was reused; continue from the returned canonical phase metadata instead of calling add-phase again for the same grouped gaps.
 - Do not recommend planned-only follow-ups. After creation, route to `/blu-discuss-phase <first new phase number>` instead of later milestone commands that are not yet implemented.
 """
