@@ -5,6 +5,7 @@ import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
 import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
+import { type PhaseSummaryStructuredModel } from "./phase-summary-rendering.js";
 import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
 import { type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
 type RoadmapReadArgs = {
@@ -768,52 +769,6 @@ type PhaseSummaryReadResult = {
         warnings: string[];
     } | null;
     reason: string | null;
-};
-type PhaseSummaryStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
-type PhaseSummaryReadiness = "ready-for-validation" | "not-ready-for-validation" | "blocked";
-type PhaseSummaryCompletionState = "complete" | "pending" | "blocked";
-type PhaseSummaryVerificationResult = "pass" | "fail" | "blocked" | "not-run";
-type PhaseSummaryManualStatus = "MANUAL" | "DEFERRED" | "NONE";
-type PhaseSummaryGapStatus = "OPEN" | "BLOCKED" | "NONE";
-type PhaseSummaryEvidenceKind = "artifact" | "repo-path" | "command" | "test" | "other";
-type PhaseSummaryStructuredModel = {
-    status: PhaseSummaryStatus;
-    readiness: PhaseSummaryReadiness;
-    completionState: PhaseSummaryCompletionState;
-    outcome: string[];
-    changesMade: string[];
-    targetedVerification: Array<{
-        check: string;
-        command: string;
-        result: PhaseSummaryVerificationResult;
-        evidence: string;
-        notes: string;
-    }>;
-    dependencyPlans: Array<{
-        planId: string;
-        path: string;
-        status: "satisfied";
-        evidence: string;
-    }>;
-    manualOrDeferredWork: Array<{
-        item: string;
-        reason: string;
-        followUp: string;
-        status: PhaseSummaryManualStatus;
-    }>;
-    gapRoutes: Array<{
-        gap: string;
-        evidence: string;
-        repair: string;
-        status: PhaseSummaryGapStatus;
-    }>;
-    followUps: string[];
-    evidence: Array<{
-        kind: PhaseSummaryEvidenceKind;
-        source: string;
-        summary: string;
-    }>;
-    nextSafeAction: string;
 };
 type PhaseSummaryAuthoringContextResult = {
     status: "ready" | "invalid";
