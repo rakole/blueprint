@@ -26332,44 +26332,7 @@ var init_phase_numbering = __esm({
   }
 });
 
-// src/mcp/tools/phase.ts
-var phase_exports = {};
-__export(phase_exports, {
-  blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
-  blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
-  blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
-  blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
-  blueprintPhaseCheckpointPut: () => blueprintPhaseCheckpointPut,
-  blueprintPhaseContext: () => blueprintPhaseContext,
-  blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
-  blueprintPhaseLocate: () => blueprintPhaseLocate,
-  blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
-  blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
-  blueprintPhasePlanRead: () => blueprintPhasePlanRead,
-  blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
-  blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
-  blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
-  blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
-  blueprintPhaseSummaryAuthoringContext: () => blueprintPhaseSummaryAuthoringContext,
-  blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
-  blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
-  blueprintPhaseSummaryValidateModel: () => blueprintPhaseSummaryValidateModel,
-  blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
-  blueprintPhaseValidationAuthoringContext: () => blueprintPhaseValidationAuthoringContext,
-  blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
-  blueprintPhaseValidationRender: () => blueprintPhaseValidationRender,
-  blueprintPhaseValidationValidateModel: () => blueprintPhaseValidationValidateModel,
-  blueprintPhaseValidationWrite: () => blueprintPhaseValidationWrite,
-  blueprintRoadmapAddPhase: () => blueprintRoadmapAddPhase,
-  blueprintRoadmapInsertPhase: () => blueprintRoadmapInsertPhase,
-  blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
-  blueprintRoadmapRead: () => blueprintRoadmapRead,
-  blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
-  buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
-  phaseToolDefinitions: () => phaseToolDefinitions
-});
-import { promises as fs3 } from "node:fs";
-import path5 from "node:path";
+// src/mcp/tools/phase-roadmap-parser.ts
 function parseRequirements(value) {
   if (!value) {
     return [];
@@ -26578,6 +26541,51 @@ function parseRoadmapDocument(raw) {
   }
   return { milestone: milestone2, phases };
 }
+var init_phase_roadmap_parser = __esm({
+  "src/mcp/tools/phase-roadmap-parser.ts"() {
+    "use strict";
+    init_phase_numbering();
+  }
+});
+
+// src/mcp/tools/phase.ts
+var phase_exports = {};
+__export(phase_exports, {
+  blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut: () => blueprintPhaseCheckpointPut,
+  blueprintPhaseContext: () => blueprintPhaseContext,
+  blueprintPhaseExecutionTargets: () => blueprintPhaseExecutionTargets,
+  blueprintPhaseLocate: () => blueprintPhaseLocate,
+  blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
+  blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
+  blueprintPhasePlanRead: () => blueprintPhasePlanRead,
+  blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
+  blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
+  blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
+  blueprintPhaseResearchStatus: () => blueprintPhaseResearchStatus,
+  blueprintPhaseSummaryAuthoringContext: () => blueprintPhaseSummaryAuthoringContext,
+  blueprintPhaseSummaryIndex: () => blueprintPhaseSummaryIndex,
+  blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
+  blueprintPhaseSummaryValidateModel: () => blueprintPhaseSummaryValidateModel,
+  blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
+  blueprintPhaseValidationAuthoringContext: () => blueprintPhaseValidationAuthoringContext,
+  blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
+  blueprintPhaseValidationRender: () => blueprintPhaseValidationRender,
+  blueprintPhaseValidationValidateModel: () => blueprintPhaseValidationValidateModel,
+  blueprintPhaseValidationWrite: () => blueprintPhaseValidationWrite,
+  blueprintRoadmapAddPhase: () => blueprintRoadmapAddPhase,
+  blueprintRoadmapInsertPhase: () => blueprintRoadmapInsertPhase,
+  blueprintRoadmapPromoteBacklog: () => blueprintRoadmapPromoteBacklog,
+  blueprintRoadmapRead: () => blueprintRoadmapRead,
+  blueprintRoadmapRemovePhase: () => blueprintRoadmapRemovePhase,
+  buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
+  phaseToolDefinitions: () => phaseToolDefinitions
+});
+import { promises as fs3 } from "node:fs";
+import path5 from "node:path";
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
   const phasePrefix2 = formatPhasePrefix2(phaseNumber);
   const normalizedPhaseName = normalizePhaseDescription(phaseName);
@@ -34968,6 +34976,7 @@ var init_phase = __esm({
     init_security();
     init_quality_gates();
     init_phase_numbering();
+    init_phase_roadmap_parser();
     PHASE_ARTIFACT_SUFFIXES = {
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
