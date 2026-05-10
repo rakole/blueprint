@@ -70,7 +70,7 @@ Evidence:
 
 - README has install and quick start steps, but no transcript, GIF, screenshot, sample output, or before/after artifact diff (`README.md:46-127`).
 - The strongest demo guidance exists in internal presentation material: `/blu-impact --staged` is named as the best first demo (`docs/presentation/blueprint-team-presentation-qa.md:45-49`, `docs/presentation/blueprint-team-presentation-qa.md:653-657`).
-- Public assets include brand images and diagrams (`resources/*.png`, `docs/diagrams/*.drawio`, `docs/presentation/output.pptx`), but README only embeds the banner (`README.md:3`). The available PNGs are brand/banner graphics, not CLI screenshots or real report examples.
+- Public assets include brand images and presentation output (`resources/*.png`, `docs/presentation/output.pptx`), but README only embeds the banner (`README.md:3`). The available PNGs are brand/banner graphics, not CLI screenshots or real report examples.
 
 Impact:
 
@@ -270,7 +270,7 @@ Recommended hardening:
 - `sed -n '1,240p' commands/blu-progress.toml`
 - `sed -n '1,220p' commands/blu-next.toml`
 - `find docs -maxdepth 2 -type d -print | sort`
-- `find resources docs -maxdepth 3 -type f \( -iname '*.png' -o -iname '*.drawio' -o -iname '*.pptx' \) -print | sort`
+- `find resources docs -maxdepth 3 -type f \( -iname '*.png' -o -iname '*.pptx' \) -print | sort`
 - `find . -maxdepth 2 -path './node_modules' -prune -o -path './dist' -prune -o -type f \( -iname 'CONTRIBUTING*' -o -iname 'LICENSE*' -o -iname 'CHANGELOG*' -o -iname 'RELEASE*' -o -iname 'SECURITY*' -o -iname 'CODE_OF_CONDUCT*' \) -print`
 
 ## Residual Uncertainty
