@@ -27230,6 +27230,375 @@ var init_phase_task_schema_helpers = __esm({
   }
 });
 
+// src/mcp/tools/phase-command-actions.ts
+async function getPhasePlanImplementedCommandNames() {
+  if (!implementedCommandNamesPromise2) {
+    implementedCommandNamesPromise2 = (async () => {
+      try {
+        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+        const catalog = await projectModule.blueprintCommandCatalog();
+        const implementedCommands = new Set(
+          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+        return implementedCommands.size > 0 ? implementedCommands : null;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return implementedCommandNamesPromise2;
+}
+function extractBlueprintDirectCommands(value) {
+  return [
+    ...new Set(
+      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
+    )
+  ];
+}
+function filterImplementedBlueprintActions(actions, implementedCommands) {
+  return actions.filter(
+    (action) => extractBlueprintDirectCommands(action).every(
+      (command) => implementedCommands.has(command)
+    )
+  );
+}
+var implementedCommandNamesPromise2;
+var init_phase_command_actions = __esm({
+  "src/mcp/tools/phase-command-actions.ts"() {
+    "use strict";
+    init_command_paths();
+    implementedCommandNamesPromise2 = null;
+  }
+});
+
+// src/mcp/tools/phase-collection-helpers.ts
+function uniquePreservingOrder(values) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (trimmed.length === 0 || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result;
+}
+var init_phase_collection_helpers = __esm({
+  "src/mcp/tools/phase-collection-helpers.ts"() {
+    "use strict";
+  }
+});
+
+// src/mcp/tools/phase-validation-schemas.ts
+async function buildPhaseVerificationAllowedNextActions(phaseNumber) {
+  const readyAction = `/blu-verify-work ${phaseNumber}`;
+  const repairActions = [`/blu-add-tests ${phaseNumber}`, `/blu-audit-fix ${phaseNumber}`];
+  const implementedCommands = await getPhasePlanImplementedCommandNames();
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return {
+      readyAction,
+      repairActions,
+      allowedActions: [readyAction, ...repairActions]
+    };
+  }
+  const implementedReady = filterImplementedBlueprintActions([readyAction], implementedCommands)[0] ?? readyAction;
+  const implementedRepairs = filterImplementedBlueprintActions(
+    repairActions,
+    implementedCommands
+  );
+  return {
+    readyAction: implementedReady,
+    repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
+    allowedActions: [implementedReady, ...implementedRepairs.length > 0 ? implementedRepairs : repairActions]
+  };
+}
+function buildPhaseVerificationTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  if (properties) {
+    const evidenceReviewedSummaryPaths = getJsonObjectProperty(
+      properties,
+      "evidenceReviewedSummaryPaths"
+    );
+    if (evidenceReviewedSummaryPaths) {
+      evidenceReviewedSummaryPaths.minItems = args.summaryPaths.length;
+      evidenceReviewedSummaryPaths.maxItems = args.summaryPaths.length;
+      evidenceReviewedSummaryPaths.uniqueItems = true;
+      evidenceReviewedSummaryPaths.items = args.summaryPaths.length > 0 ? { type: "string", enum: args.summaryPaths } : { type: "string" };
+      if (args.summaryPaths.length > 0) {
+        evidenceReviewedSummaryPaths.allOf = args.summaryPaths.map(exactStringArrayContains);
+      } else {
+        delete evidenceReviewedSummaryPaths.allOf;
+      }
+    }
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["gateState"],
+        properties: {
+          gateState: { const: "PASS" }
+        }
+      },
+      then: {
+        properties: {
+          requirementCoverage: {
+            items: {
+              type: "object",
+              required: ["coverageState"],
+              properties: {
+                coverageState: { enum: ["PASS", "COVERED", "covered"] }
+              }
+            }
+          },
+          nextSafeAction: { const: args.readyAction },
+          manualOrDeferredCoverage: {
+            items: {
+              type: "object",
+              required: ["item", "whyManualOrDeferred", "followUp", "status"],
+              properties: {
+                item: { const: "none" },
+                whyManualOrDeferred: { const: "none" },
+                followUp: { const: "none" },
+                status: { const: "NONE" }
+              }
+            }
+          },
+          gapClassification: {
+            items: {
+              type: "object",
+              required: ["gapClass", "scope", "evidence", "repair"],
+              properties: {
+                gapClass: { const: "none" },
+                scope: { const: "none" },
+                evidence: { const: "none" },
+                repair: { const: "none" }
+              }
+            }
+          },
+          gapsFound: {
+            items: { const: "none" }
+          },
+          suggestedRepairs: {
+            items: { const: "none" }
+          }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["gateState"],
+        properties: {
+          gateState: { enum: ["PARTIAL", "BLOCKED"] }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.repairActions },
+          manualOrDeferredCoverage: {
+            minItems: 1
+          },
+          gapClassification: {
+            contains: {
+              type: "object",
+              required: ["gapClass"],
+              properties: {
+                gapClass: {
+                  enum: [
+                    "missing-evidence",
+                    "partial-coverage",
+                    "manual-only",
+                    "deferred-test",
+                    "contradiction"
+                  ]
+                }
+              }
+            },
+            minContains: 1
+          },
+          gapsFound: {
+            contains: { not: { const: "none" } },
+            minContains: 1
+          },
+          suggestedRepairs: {
+            contains: { not: { const: "none" } },
+            minContains: 1
+          }
+        }
+      }
+    }
+  ];
+  schema["x-blueprint-runtimeContext"] = {
+    summaryPaths: args.summaryPaths,
+    readyAction: args.readyAction,
+    repairActions: args.repairActions,
+    allowedActions: args.allowedActions
+  };
+  return schema;
+}
+async function phaseVerificationModelSchemas(args) {
+  const modelContract = args.contract.modelContract;
+  if (!modelContract) {
+    throw new Error("phase.verification does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("phase.verification modelContract does not expose a schemaPath.");
+  }
+  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
+  const taskSchema = buildPhaseVerificationTaskSchema({
+    baseSchema,
+    summaryPaths: args.summaryPaths,
+    ...allowedNextActions
+  });
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema
+  };
+}
+async function buildPhaseUatAllowedNextActions(phaseNumber) {
+  const completeAction = "/blu-progress";
+  const continuationActions = [
+    `/blu-verify-work ${phaseNumber}`,
+    `/blu-audit-fix ${phaseNumber}`,
+    `/blu-add-tests ${phaseNumber}`
+  ];
+  const implementedCommands = await getPhasePlanImplementedCommandNames();
+  if (implementedCommands === null || implementedCommands.size === 0) {
+    return {
+      completeAction,
+      continuationActions,
+      allowedActions: [completeAction, ...continuationActions]
+    };
+  }
+  const implementedComplete = filterImplementedBlueprintActions([completeAction], implementedCommands)[0] ?? completeAction;
+  const implementedContinuation = filterImplementedBlueprintActions(
+    continuationActions,
+    implementedCommands
+  );
+  const continuation = implementedContinuation.length > 0 ? implementedContinuation : continuationActions;
+  return {
+    completeAction: implementedComplete,
+    continuationActions: continuation,
+    allowedActions: [implementedComplete, ...continuation]
+  };
+}
+function buildPhaseUatTaskSchema(args) {
+  const schema = cloneJsonObject2(args.baseSchema);
+  const properties = getJsonObjectProperty(schema, "properties");
+  const defs = getJsonObjectProperty(schema, "$defs");
+  const testMatrixRow = defs ? getJsonObjectProperty(defs, "testMatrixRow") : null;
+  const testMatrixRowProperties = testMatrixRow ? getJsonObjectProperty(testMatrixRow, "properties") : null;
+  const evidencePaths = uniquePreservingOrder([
+    ...args.summaryPaths,
+    ...args.verificationPath ? [args.verificationPath] : []
+  ]);
+  const requiredEvidencePaths = evidencePaths;
+  if (properties) {
+    const testMatrix = getJsonObjectProperty(properties, "testMatrix");
+    const evidence = testMatrixRowProperties ? getJsonObjectProperty(testMatrixRowProperties, "evidence") : null;
+    if (requiredEvidencePaths.length > 0) {
+      if (evidence) {
+        evidence.enum = evidencePaths;
+      }
+      if (testMatrix) {
+        testMatrix.allOf = requiredEvidencePaths.map(
+          (evidencePath) => objectPropertyContainsAtLeast("evidence", evidencePath)
+        );
+      }
+    } else {
+      allowOnlyEmptyArray(testMatrix);
+    }
+    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
+    if (nextSafeAction) {
+      nextSafeAction.enum = args.allowedActions;
+    }
+  }
+  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
+  schema.allOf = [
+    ...existingAllOf,
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { const: "PASS" }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { const: args.completeAction }
+        }
+      }
+    },
+    {
+      if: {
+        required: ["status"],
+        properties: {
+          status: { enum: ["FAIL", "PARTIAL"] }
+        }
+      },
+      then: {
+        properties: {
+          nextSafeAction: { enum: args.continuationActions }
+        }
+      }
+    }
+  ];
+  schema["x-blueprint-runtimeContext"] = {
+    summaryPaths: args.summaryPaths,
+    verificationPath: args.verificationPath,
+    evidencePaths,
+    completeAction: args.completeAction,
+    continuationActions: args.continuationActions,
+    allowedActions: args.allowedActions,
+    upstreamContext: {
+      summaryPaths: "required upstream context",
+      verificationPath: "required upstream context"
+    }
+  };
+  return schema;
+}
+async function phaseUatModelSchemas(args) {
+  const modelContract = args.contract.modelContract;
+  if (!modelContract) {
+    throw new Error("phase.uat does not expose a modelContract.");
+  }
+  if (!modelContract.schemaPath) {
+    throw new Error("phase.uat modelContract does not expose a schemaPath.");
+  }
+  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
+  const allowedNextActions = await buildPhaseUatAllowedNextActions(args.phaseNumber);
+  const taskSchema = buildPhaseUatTaskSchema({
+    baseSchema,
+    summaryPaths: args.summaryPaths,
+    verificationPath: args.verificationPath,
+    ...allowedNextActions
+  });
+  return {
+    schemaPath: modelContract.schemaPath,
+    baseSchema,
+    taskSchema
+  };
+}
+var init_phase_validation_schemas = __esm({
+  "src/mcp/tools/phase-validation-schemas.ts"() {
+    "use strict";
+    init_phase_command_actions();
+    init_phase_collection_helpers();
+    init_phase_json_helpers();
+    init_phase_task_schema_helpers();
+  }
+});
+
 // src/mcp/tools/phase-schema-paths.ts
 function ajvInstancePathToModelPath(instancePath) {
   if (instancePath.length === 0) {
@@ -27372,26 +27741,6 @@ function sharedExecutionSurfaces(left, right) {
 }
 var init_phase_execution_surfaces = __esm({
   "src/mcp/tools/phase-execution-surfaces.ts"() {
-    "use strict";
-  }
-});
-
-// src/mcp/tools/phase-collection-helpers.ts
-function uniquePreservingOrder(values) {
-  const seen = /* @__PURE__ */ new Set();
-  const result = [];
-  for (const value of values) {
-    const trimmed = value.trim();
-    if (trimmed.length === 0 || seen.has(trimmed)) {
-      continue;
-    }
-    seen.add(trimmed);
-    result.push(trimmed);
-  }
-  return result;
-}
-var init_phase_collection_helpers = __esm({
-  "src/mcp/tools/phase-collection-helpers.ts"() {
     "use strict";
   }
 });
@@ -28697,47 +29046,6 @@ var init_phase_plan_diagnostics = __esm({
     init_phase_json_helpers();
     init_phase_collection_helpers();
     init_phase_schema_paths();
-  }
-});
-
-// src/mcp/tools/phase-command-actions.ts
-async function getPhasePlanImplementedCommandNames() {
-  if (!implementedCommandNamesPromise2) {
-    implementedCommandNamesPromise2 = (async () => {
-      try {
-        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
-        const catalog = await projectModule.blueprintCommandCatalog();
-        const implementedCommands = new Set(
-          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
-        );
-        return implementedCommands.size > 0 ? implementedCommands : null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-  return implementedCommandNamesPromise2;
-}
-function extractBlueprintDirectCommands(value) {
-  return [
-    ...new Set(
-      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
-    )
-  ];
-}
-function filterImplementedBlueprintActions(actions, implementedCommands) {
-  return actions.filter(
-    (action) => extractBlueprintDirectCommands(action).every(
-      (command) => implementedCommands.has(command)
-    )
-  );
-}
-var implementedCommandNamesPromise2;
-var init_phase_command_actions = __esm({
-  "src/mcp/tools/phase-command-actions.ts"() {
-    "use strict";
-    init_command_paths();
-    implementedCommandNamesPromise2 = null;
   }
 });
 
@@ -31098,303 +31406,6 @@ function trimPhaseSummaryStandaloneValidateModelResult(validation) {
     ...trimmed
   } = validation;
   return trimmed;
-}
-async function buildPhaseVerificationAllowedNextActions(phaseNumber) {
-  const readyAction = `/blu-verify-work ${phaseNumber}`;
-  const repairActions = [`/blu-add-tests ${phaseNumber}`, `/blu-audit-fix ${phaseNumber}`];
-  const implementedCommands = await getPhasePlanImplementedCommandNames();
-  if (implementedCommands === null || implementedCommands.size === 0) {
-    return {
-      readyAction,
-      repairActions,
-      allowedActions: [readyAction, ...repairActions]
-    };
-  }
-  const implementedReady = filterImplementedBlueprintActions([readyAction], implementedCommands)[0] ?? readyAction;
-  const implementedRepairs = filterImplementedBlueprintActions(
-    repairActions,
-    implementedCommands
-  );
-  return {
-    readyAction: implementedReady,
-    repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
-    allowedActions: [implementedReady, ...implementedRepairs.length > 0 ? implementedRepairs : repairActions]
-  };
-}
-function buildPhaseVerificationTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  if (properties) {
-    const evidenceReviewedSummaryPaths = getJsonObjectProperty(
-      properties,
-      "evidenceReviewedSummaryPaths"
-    );
-    if (evidenceReviewedSummaryPaths) {
-      evidenceReviewedSummaryPaths.minItems = args.summaryPaths.length;
-      evidenceReviewedSummaryPaths.maxItems = args.summaryPaths.length;
-      evidenceReviewedSummaryPaths.uniqueItems = true;
-      evidenceReviewedSummaryPaths.items = args.summaryPaths.length > 0 ? { type: "string", enum: args.summaryPaths } : { type: "string" };
-      if (args.summaryPaths.length > 0) {
-        evidenceReviewedSummaryPaths.allOf = args.summaryPaths.map(exactStringArrayContains);
-      } else {
-        delete evidenceReviewedSummaryPaths.allOf;
-      }
-    }
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
-    if (nextSafeAction) {
-      nextSafeAction.enum = args.allowedActions;
-    }
-  }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
-    ...existingAllOf,
-    {
-      if: {
-        required: ["gateState"],
-        properties: {
-          gateState: { const: "PASS" }
-        }
-      },
-      then: {
-        properties: {
-          requirementCoverage: {
-            items: {
-              type: "object",
-              required: ["coverageState"],
-              properties: {
-                coverageState: { enum: ["PASS", "COVERED", "covered"] }
-              }
-            }
-          },
-          nextSafeAction: { const: args.readyAction },
-          manualOrDeferredCoverage: {
-            items: {
-              type: "object",
-              required: ["item", "whyManualOrDeferred", "followUp", "status"],
-              properties: {
-                item: { const: "none" },
-                whyManualOrDeferred: { const: "none" },
-                followUp: { const: "none" },
-                status: { const: "NONE" }
-              }
-            }
-          },
-          gapClassification: {
-            items: {
-              type: "object",
-              required: ["gapClass", "scope", "evidence", "repair"],
-              properties: {
-                gapClass: { const: "none" },
-                scope: { const: "none" },
-                evidence: { const: "none" },
-                repair: { const: "none" }
-              }
-            }
-          },
-          gapsFound: {
-            items: { const: "none" }
-          },
-          suggestedRepairs: {
-            items: { const: "none" }
-          }
-        }
-      }
-    },
-    {
-      if: {
-        required: ["gateState"],
-        properties: {
-          gateState: { enum: ["PARTIAL", "BLOCKED"] }
-        }
-      },
-      then: {
-        properties: {
-          nextSafeAction: { enum: args.repairActions },
-          manualOrDeferredCoverage: {
-            minItems: 1
-          },
-          gapClassification: {
-            contains: {
-              type: "object",
-              required: ["gapClass"],
-              properties: {
-                gapClass: {
-                  enum: [
-                    "missing-evidence",
-                    "partial-coverage",
-                    "manual-only",
-                    "deferred-test",
-                    "contradiction"
-                  ]
-                }
-              }
-            },
-            minContains: 1
-          },
-          gapsFound: {
-            contains: { not: { const: "none" } },
-            minContains: 1
-          },
-          suggestedRepairs: {
-            contains: { not: { const: "none" } },
-            minContains: 1
-          }
-        }
-      }
-    }
-  ];
-  schema["x-blueprint-runtimeContext"] = {
-    summaryPaths: args.summaryPaths,
-    readyAction: args.readyAction,
-    repairActions: args.repairActions,
-    allowedActions: args.allowedActions
-  };
-  return schema;
-}
-async function phaseVerificationModelSchemas(args) {
-  const modelContract = args.contract.modelContract;
-  if (!modelContract) {
-    throw new Error("phase.verification does not expose a modelContract.");
-  }
-  if (!modelContract.schemaPath) {
-    throw new Error("phase.verification modelContract does not expose a schemaPath.");
-  }
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
-  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
-  const taskSchema = buildPhaseVerificationTaskSchema({
-    baseSchema,
-    summaryPaths: args.summaryPaths,
-    ...allowedNextActions
-  });
-  return {
-    schemaPath: modelContract.schemaPath,
-    baseSchema,
-    taskSchema
-  };
-}
-async function buildPhaseUatAllowedNextActions(phaseNumber) {
-  const completeAction = "/blu-progress";
-  const continuationActions = [
-    `/blu-verify-work ${phaseNumber}`,
-    `/blu-audit-fix ${phaseNumber}`,
-    `/blu-add-tests ${phaseNumber}`
-  ];
-  const implementedCommands = await getPhasePlanImplementedCommandNames();
-  if (implementedCommands === null || implementedCommands.size === 0) {
-    return {
-      completeAction,
-      continuationActions,
-      allowedActions: [completeAction, ...continuationActions]
-    };
-  }
-  const implementedComplete = filterImplementedBlueprintActions([completeAction], implementedCommands)[0] ?? completeAction;
-  const implementedContinuation = filterImplementedBlueprintActions(
-    continuationActions,
-    implementedCommands
-  );
-  const continuation = implementedContinuation.length > 0 ? implementedContinuation : continuationActions;
-  return {
-    completeAction: implementedComplete,
-    continuationActions: continuation,
-    allowedActions: [implementedComplete, ...continuation]
-  };
-}
-function buildPhaseUatTaskSchema(args) {
-  const schema = cloneJsonObject2(args.baseSchema);
-  const properties = getJsonObjectProperty(schema, "properties");
-  const defs = getJsonObjectProperty(schema, "$defs");
-  const testMatrixRow = defs ? getJsonObjectProperty(defs, "testMatrixRow") : null;
-  const testMatrixRowProperties = testMatrixRow ? getJsonObjectProperty(testMatrixRow, "properties") : null;
-  const evidencePaths = uniquePreservingOrder([
-    ...args.summaryPaths,
-    ...args.verificationPath ? [args.verificationPath] : []
-  ]);
-  const requiredEvidencePaths = evidencePaths;
-  if (properties) {
-    const testMatrix = getJsonObjectProperty(properties, "testMatrix");
-    const evidence = testMatrixRowProperties ? getJsonObjectProperty(testMatrixRowProperties, "evidence") : null;
-    if (requiredEvidencePaths.length > 0) {
-      if (evidence) {
-        evidence.enum = evidencePaths;
-      }
-      if (testMatrix) {
-        testMatrix.allOf = requiredEvidencePaths.map(
-          (evidencePath) => objectPropertyContainsAtLeast("evidence", evidencePath)
-        );
-      }
-    } else {
-      allowOnlyEmptyArray(testMatrix);
-    }
-    const nextSafeAction = getJsonObjectProperty(properties, "nextSafeAction");
-    if (nextSafeAction) {
-      nextSafeAction.enum = args.allowedActions;
-    }
-  }
-  const existingAllOf = Array.isArray(schema.allOf) ? schema.allOf : [];
-  schema.allOf = [
-    ...existingAllOf,
-    {
-      if: {
-        required: ["status"],
-        properties: {
-          status: { const: "PASS" }
-        }
-      },
-      then: {
-        properties: {
-          nextSafeAction: { const: args.completeAction }
-        }
-      }
-    },
-    {
-      if: {
-        required: ["status"],
-        properties: {
-          status: { enum: ["FAIL", "PARTIAL"] }
-        }
-      },
-      then: {
-        properties: {
-          nextSafeAction: { enum: args.continuationActions }
-        }
-      }
-    }
-  ];
-  schema["x-blueprint-runtimeContext"] = {
-    summaryPaths: args.summaryPaths,
-    verificationPath: args.verificationPath,
-    evidencePaths,
-    completeAction: args.completeAction,
-    continuationActions: args.continuationActions,
-    allowedActions: args.allowedActions,
-    upstreamContext: {
-      summaryPaths: "required upstream context",
-      verificationPath: "required upstream context"
-    }
-  };
-  return schema;
-}
-async function phaseUatModelSchemas(args) {
-  const modelContract = args.contract.modelContract;
-  if (!modelContract) {
-    throw new Error("phase.uat does not expose a modelContract.");
-  }
-  if (!modelContract.schemaPath) {
-    throw new Error("phase.uat modelContract does not expose a schemaPath.");
-  }
-  const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
-  const allowedNextActions = await buildPhaseUatAllowedNextActions(args.phaseNumber);
-  const taskSchema = buildPhaseUatTaskSchema({
-    baseSchema,
-    summaryPaths: args.summaryPaths,
-    verificationPath: args.verificationPath,
-    ...allowedNextActions
-  });
-  return {
-    schemaPath: modelContract.schemaPath,
-    baseSchema,
-    taskSchema
-  };
 }
 async function validatePhaseValidationModelCommands(model, artifact) {
   const commands = [
@@ -35257,9 +35268,9 @@ var init_phase = __esm({
     init_phase_locations();
     init_phase_json_helpers();
     init_phase_task_schema_helpers();
+    init_phase_validation_schemas();
     init_phase_schema_paths();
     init_phase_execution_surfaces();
-    init_phase_collection_helpers();
     init_phase_summary_routing();
     init_phase_summary_rendering();
     init_phase_summary_diagnostics();
