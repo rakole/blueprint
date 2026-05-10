@@ -41810,6 +41810,43 @@ var init_project = __esm({
 
 // src/mcp/tools/state.ts
 import { promises as fs7 } from "node:fs";
+function roadmapDetailStatusIsComplete(status) {
+  if (status === null) {
+    return null;
+  }
+  return ["completed", "done"].includes(status.trim().toLowerCase().replace(/-/g, "_"));
+}
+function readRoadmapPhaseDetailSignals(raw) {
+  const phaseDetailsMatch = raw.match(/(?:^|\n)## Phase Details\s*\n([\s\S]*?)(?=\n## |\s*$)/);
+  const phaseDetails = phaseDetailsMatch?.[1] ?? "";
+  const phases = [];
+  for (const match of phaseDetails.matchAll(
+    /^### Phase\s+(\d+(?:\.\d+)?):[^\n]*(?:\n([\s\S]*?))?(?=^### Phase\s+\d+(?:\.\d+)?:|^## |\s*$)/gm
+  )) {
+    const phaseNumber = normalizeBlueprintPhaseRef(match[1] ?? "") ?? (match[1] ?? "");
+    const body = match[2] ?? "";
+    const status = body.match(/^\*\*Status\*\*:\s*(.+)$/im)?.[1]?.trim() ?? null;
+    phases.push({
+      phaseNumber,
+      completed: roadmapDetailStatusIsComplete(status)
+    });
+  }
+  return phases;
+}
+function mergeRoadmapPhaseSignals(checkboxPhases, detailPhases) {
+  const phaseByNumber = /* @__PURE__ */ new Map();
+  for (const phase of checkboxPhases) {
+    phaseByNumber.set(phase.phaseNumber, phase);
+  }
+  for (const phase of detailPhases) {
+    const existing = phaseByNumber.get(phase.phaseNumber);
+    phaseByNumber.set(phase.phaseNumber, {
+      phaseNumber: phase.phaseNumber,
+      completed: existing ? phase.completed === null ? existing.completed : existing.completed && phase.completed : phase.completed ?? false
+    });
+  }
+  return [...phaseByNumber.values()];
+}
 function emptyMilestoneAuditReportStatus() {
   return {
     found: false,
@@ -42629,12 +42666,16 @@ async function readRoadmapSignals(projectRoot) {
   try {
     const raw = await fs7.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const phases = [...raw.matchAll(
-      /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+    const checkboxPhases = [...raw.matchAll(
+      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
     )].map((match) => ({
       phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
       completed: match[1].toLowerCase() === "x"
     }));
+    const phases = mergeRoadmapPhaseSignals(
+      checkboxPhases,
+      readRoadmapPhaseDetailSignals(raw)
+    );
     const currentPhase2 = phases.find((phase) => !phase.completed)?.phaseNumber ?? phases.at(-1)?.phaseNumber ?? null;
     return {
       currentMilestone: milestoneMatch?.[1]?.trim() ?? null,

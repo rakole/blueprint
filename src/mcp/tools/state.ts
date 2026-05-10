@@ -232,6 +232,66 @@ type RoadmapPhaseSignal = {
   completed: boolean;
 };
 
+type RoadmapPhaseDetailSignal = {
+  phaseNumber: string;
+  completed: boolean | null;
+};
+
+function roadmapDetailStatusIsComplete(status: string | null): boolean | null {
+  if (status === null) {
+    return null;
+  }
+
+  return ["completed", "done"].includes(status.trim().toLowerCase().replace(/-/g, "_"));
+}
+
+function readRoadmapPhaseDetailSignals(raw: string): RoadmapPhaseDetailSignal[] {
+  const phaseDetailsMatch = raw.match(/(?:^|\n)## Phase Details\s*\n([\s\S]*?)(?=\n## |\s*$)/);
+  const phaseDetails = phaseDetailsMatch?.[1] ?? "";
+  const phases: RoadmapPhaseDetailSignal[] = [];
+
+  for (const match of phaseDetails.matchAll(
+    /^### Phase\s+(\d+(?:\.\d+)?):[^\n]*(?:\n([\s\S]*?))?(?=^### Phase\s+\d+(?:\.\d+)?:|^## |\s*$)/gm
+  )) {
+    const phaseNumber = normalizeBlueprintPhaseRef(match[1] ?? "") ?? (match[1] ?? "");
+    const body = match[2] ?? "";
+    const status = body.match(/^\*\*Status\*\*:\s*(.+)$/im)?.[1]?.trim() ?? null;
+
+    phases.push({
+      phaseNumber,
+      completed: roadmapDetailStatusIsComplete(status)
+    });
+  }
+
+  return phases;
+}
+
+function mergeRoadmapPhaseSignals(
+  checkboxPhases: RoadmapPhaseSignal[],
+  detailPhases: RoadmapPhaseDetailSignal[]
+): RoadmapPhaseSignal[] {
+  const phaseByNumber = new Map<string, RoadmapPhaseSignal>();
+
+  for (const phase of checkboxPhases) {
+    phaseByNumber.set(phase.phaseNumber, phase);
+  }
+
+  for (const phase of detailPhases) {
+    const existing = phaseByNumber.get(phase.phaseNumber);
+
+    phaseByNumber.set(phase.phaseNumber, {
+      phaseNumber: phase.phaseNumber,
+      completed: existing
+        ? phase.completed === null
+          ? existing.completed
+          : existing.completed && phase.completed
+        : (phase.completed ?? false)
+    });
+  }
+
+  return [...phaseByNumber.values()];
+}
+
 type MilestoneEvidenceStatus = {
   missingVerificationPhases: string[];
   missingUatPhases: string[];
@@ -1478,12 +1538,16 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
   try {
     const raw = await fs.readFile(roadmapPath, "utf8");
     const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const phases = [...raw.matchAll(
-      /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
+    const checkboxPhases = [...raw.matchAll(
+      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):/gm
     )].map((match) => ({
       phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
       completed: match[1].toLowerCase() === "x"
     }));
+    const phases = mergeRoadmapPhaseSignals(
+      checkboxPhases,
+      readRoadmapPhaseDetailSignals(raw)
+    );
     const currentPhase =
       phases.find((phase) => !phase.completed)?.phaseNumber ??
       phases.at(-1)?.phaseNumber ??
