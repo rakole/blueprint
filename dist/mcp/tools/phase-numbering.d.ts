@@ -1,0 +1,12 @@
+export type NumericInput = string | number;
+export declare function normalizeBlueprintInput(value: NumericInput): string;
+export declare function normalizePhaseNumber(value: NumericInput): string;
+export declare function basePhaseNumber(value: NumericInput): string;
+export declare function comparePhaseNumbers(left: NumericInput, right: NumericInput): number;
+export declare function formatPhasePrefix(value: NumericInput): string;
+export declare function extractPhaseNumberToken(value: NumericInput): string | null;
+export declare function extractExactPhaseNumberToken(value: NumericInput): string | null;
+export declare function isIntegerPhaseNumber(value: NumericInput): boolean;
+export declare function slugToTitle(value: string): string;
+export declare function normalizePhaseDescription(value: string): string;
+export declare function slugifyPhaseName(value: string): string;
