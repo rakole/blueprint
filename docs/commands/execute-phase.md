@@ -8,7 +8,6 @@
 
 ## Shared Runtime Contract
 
-- Detailed Draw.io workflow: [`docs/diagrams/execute-phase-workflow-end-to-end.drawio`](../diagrams/execute-phase-workflow-end-to-end.drawio)
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`,
   `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate,
