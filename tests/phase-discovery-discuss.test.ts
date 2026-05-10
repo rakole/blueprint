@@ -21,6 +21,7 @@ import {
   blueprintPhaseContext
 } from "../src/mcp/tools/phase.js";
 import { blueprintStateLoad, blueprintStateUpdate } from "../src/mcp/tools/state.js";
+import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
@@ -433,7 +434,7 @@ test("discuss-phase context write preserves the exact Open Questions none sentin
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: buildValidDiscussContext("- none"),
+    model: validPhaseContextModel({ openQuestions: ["none"] }),
     overwrite: true
   });
 
@@ -445,7 +446,7 @@ test("discuss-phase context write preserves the exact Open Questions none sentin
     "utf8"
   );
 
-  assert.match(saved, /## Open Questions\n- none\n/);
+  assert.match(saved, /## Open Questions\n\n- none\n/);
   assert.doesNotMatch(saved, /None that block this phase|no open questions currently/i);
 });
 
@@ -546,51 +547,15 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: `# Phase 03: Phase Discovery - Context
-
-## Phase Boundary
-- Keep discovery scoped to phase 3 and the saved artifacts in .blueprint/phases/03-phase-discovery/.
-- Capture durable context, not planning or execution detail.
-- Leave the next safe action in STATE.md.
-
-## Discovery Grounding
-- Project brief - discovery should stay phase-scoped and resumable.
-- Requirements grounding - keep the saved requirements visible in the context.
-- Workflow posture - prefer evidence-backed questions, progress recaps, and checkpointed follow-up.
-- Prior-context sweep - review existing context, discussion log, and codebase scout notes before asking fresh questions.
-
-## Implementation Decisions
-- Use one-question ask_user branching for gray areas and resume/discard decisions.
-- Record stronger assumptions-mode analysis when the workflow posture asks for evidence-first corrections.
-- Refresh checkpoint-per-area state after each major gray area so the flow can resume cleanly.
-- End with an explicit STATE.md update that points to /blu-progress.
-
-## Specific Ideas
-- Keep a short progress recap after each area so the session stays legible.
-- Fold deferred ideas into the saved record.
-- Reuse canonical references instead of re-eliciting them.
-
-## Existing Code Insights
-- The codebase scout notes are the right place for brownfield constraints and reusable patterns.
-- Existing artifacts already identify the phase directory and the current roadmap anchor.
-
-## Dependencies
-- Prior phase artifacts, the roadmap, and saved checkpoint state all constrain the next questions.
-- The command must not advertise power, chain, or auto behavior as shipped.
-- Explicit overwrite confirmation is required before replacing substantive context.
-
-## Open Questions
-- Which gray area should be discussed next?
-- What follow-up depends on the current phase checkpoint?
-
-## Deferred Ideas
-- Revisit any follow-up ideas that were already captured in the context after the current area closes.
-- Preserve later follow-up ideas in the discussion log rather than dropping them.
-
-## Canonical References
-- ROADMAP.md and STATE.md define the current phase boundary and follow-up routing.
-- Prior phase context and discussion-log artifacts hold the saved discovery history.
-`,
+    model: validPhaseContextModel({
+      decision:
+        "Refresh checkpoint-per-area state after each major gray area so the flow can resume cleanly.",
+      openQuestions: [
+        "Which gray area should be discussed next?",
+        "What follow-up depends on the current phase checkpoint?"
+      ],
+      projectBrief: "Discovery should stay phase-scoped and resumable."
+    }),
     overwrite: true
   });
   const discussionWrite = await blueprintPhaseArtifactWrite({
@@ -683,7 +648,10 @@ test("discuss-phase synced state update stays on an explicitly selected earlier 
     cwd: repoPath,
     phase: "2",
     artifact: "context",
-    content: buildValidDiscussContext("- none").replaceAll("Phase 03", "Phase 02"),
+    model: validPhaseContextModel({
+      phaseLabel: "phase 2",
+      openQuestions: ["none"]
+    }),
     overwrite: true
   });
   const stateUpdate = await blueprintStateUpdate({
@@ -758,50 +726,14 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: `# Phase 03: Phase Discovery - Context
-
-## Phase Boundary
-- Keep discovery scoped to phase 3 and preserve resumability until final state sync succeeds.
-- Capture durable context, not planning or execution detail.
-- Leave the next safe action in STATE.md.
-
-## Discovery Grounding
-- Project brief - discovery should stay phase-scoped and resumable.
-- Requirements grounding - keep the saved requirements visible in the context.
-- Workflow posture - finalization should report routing from refreshed state.
-- Prior-context sweep - review existing context, checkpoint state, and roadmap evidence before closing.
-
-## Implementation Decisions
-- Call state_update with base synced only after context and optional discussion-log writes succeed.
-- Call state_load after state_update and use the loaded next action for the summary.
-- Keep the checkpoint if final state sync or state load fails.
-
-## Specific Ideas
-- Gate checkpoint deletion on the full finalize sequence.
-- Use the checkpoint resume hint to recover from a state write failure.
-- Prefer /blu-progress if refreshed routing is unclear.
-
-## Existing Code Insights
-- STATE.md is the durable routing surface.
-- The phase checkpoint carries the current question and completed areas.
-
-## Dependencies
-- Context writes, optional discussion logs, synced state update, and state load all precede checkpoint deletion.
-- The command must not treat state_update.updatedFields as routing.
-- Explicit overwrite confirmation is required before replacing substantive context.
-
-## Open Questions
-- What follow-up should resume if finalization fails?
-- Which state repair should happen before checkpoint deletion?
-
-## Deferred Ideas
-- Revisit checkpoint deletion only after state routing is refreshed.
-- Preserve follow-up ideas in the saved context.
-
-## Canonical References
-- STATE.md defines the refreshed next safe action.
-- The discuss checkpoint defines resumability after a failed finalize attempt.
-`,
+    model: validPhaseContextModel({
+      decision:
+        "Keep the checkpoint if final state sync or state load fails.",
+      openQuestions: [
+        "What follow-up should resume if finalization fails?",
+        "Which state repair should happen before checkpoint deletion?"
+      ]
+    }),
     overwrite: true
   });
 
@@ -879,35 +811,10 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: `# Phase 03: Phase Discovery - Context
-
-## Phase Boundary
-- Keep discovery scoped to phase 3 and preserve resumability.
-
-## Discovery Grounding
-- Project brief and requirements grounding are available in saved Blueprint artifacts.
-
-## Implementation Decisions
-- Auto mode is shipped and power mode is available for this command.
-
-## Specific Ideas
-- Later follow-up: revisit plan inventory after the context is repaired.
-
-## Existing Code Insights
-- Artifact validation runs through the phase artifact write tool.
-
-## Dependencies
-- Existing plans already cover this phase and should be mentioned in the closeout.
-
-## Open Questions
-- Which validation repair should happen before finalization?
-
-## Deferred Ideas
-- No deferred ideas.
-
-## Canonical References
-- No canonical references identified yet.
-`,
+    model: validPhaseContextModel({
+      decision: "Auto mode is shipped and power mode is available for this command.",
+      openQuestions: ["Which validation repair should happen before finalization?"]
+    }),
     overwrite: true
   });
 
@@ -919,9 +826,6 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   assert.equal(invalidContext.status, "invalid");
   assert.equal(invalidContext.written, false);
   assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
-  assert.match(invalidContext.validation.issues.join("\n"), /Canonical References/i);
-  assert.match(invalidContext.validation.issues.join("\n"), /Deferred Ideas section/i);
-  assert.match(invalidContext.validation.warnings.join("\n"), /\/blu-plan-phase refresh warning/i);
   assert.equal(retained.found, true);
   assert.deepEqual(retained.checkpoint?.remainingAreas, ["Plan inventory warning"]);
 });
@@ -952,41 +856,10 @@ test("discuss-phase write keeps overwrite explicit for authored invalid artifact
         cwd: repoPath,
         phase: "3",
         artifact: "context",
-        content: `# Phase 03 Context
-
-## Phase Boundary
-- Repair the incomplete context after confirmation.
-
-## Discovery Grounding
-- Project brief - keep the repair phase scoped.
-- Requirements grounding - preserve saved requirements.
-- Workflow posture - use discuss-phase only.
-- Confirmed decisions - repair after explicit confirmation.
-
-## Implementation Decisions
-- Decision 1 - keep overwrite explicit for authored invalid artifacts.
-- Tradeoffs or constraints - scaffold replacement remains the only implicit replace path.
-
-## Specific Ideas
-- Specific idea 1 - retain validated repair behavior.
-
-## Existing Code Insights
-- Existing code insight 1 - the phase artifact writer owns overwrite protection.
-
-## Dependencies
-- Prior phase artifacts - existing context.
-- External constraints - explicit confirmation.
-- Required follow-up reads - roadmap and phase context.
-
-## Open Questions
-- Which details still need user confirmation?
-
-## Deferred Ideas
-- Later follow-up - revisit after planning.
-
-## Canonical References
-- .blueprint/ROADMAP.md
-`
+        model: validPhaseContextModel({
+          decision: "Keep overwrite explicit for authored invalid artifacts.",
+          openQuestions: ["Which details still need user confirmation?"]
+        })
       }),
     /already exists/
   );

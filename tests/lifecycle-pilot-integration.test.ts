@@ -8,6 +8,7 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
   blueprintArtifactReportAuthoringContext,
+  blueprintArtifactReportValidateModel,
   blueprintArtifactReportWrite
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
@@ -848,10 +849,51 @@ test("artifact report writes report blocking input issues and contract-gate mode
     content: validAddTestsReportContent(),
     model: { taskSummary: ["Completed a focused quick run."] }
   });
+  const markdownFallback = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    content: "# Quick Run Report\n\n## Task Summary\n\n- Completed a focused quick run.\n"
+  });
   const modelOnly = await blueprintArtifactReportWrite({
     cwd: repoPath,
     reportName: "quick-run-latest",
     model: { taskSummary: ["Completed a focused quick run."] }
+  });
+  const quickRunModel = {
+    taskSummary: ["Completed a focused quick run."],
+    changedSurfaces: [
+      {
+        surface: "docs/commands/quick.md",
+        change: "Confirmed quick-run reporting behavior.",
+        rationale: "The lifecycle pilot exercised the quick report gate."
+      }
+    ],
+    evidenceUsed: [
+      {
+        source: "tests/lifecycle-pilot-integration.test.ts",
+        summary: "The integration fixture exercises report-write input validation."
+      }
+    ],
+    changesMade: ["Recorded quick-run report evidence through the model-backed writer."],
+    verification: [
+      {
+        check: "blueprintArtifactReportWrite quick-run model",
+        result: "pass",
+        evidence: "The writer returned created for quick-run-latest."
+      }
+    ],
+    followUps: ["none"],
+    nextSafeAction: "/blu-progress"
+  };
+  const validatedQuickRun = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: quickRunModel
+  });
+  const writtenQuickRun = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "quick-run-latest",
+    model: quickRunModel
   });
   const nonStructuredContractModel = await blueprintArtifactReportWrite({
     cwd: repoPath,
@@ -870,11 +912,14 @@ test("artifact report writes report blocking input issues and contract-gate mode
   assert.equal(bothInputs.status, "invalid");
   assert.match(bothInputs.issues.join("\n"), /exactly one of content or model/i);
   assert.deepEqual(bothInputs.warnings, []);
+  assert.equal(markdownFallback.status, "invalid");
+  assert.match(markdownFallback.issues.join("\n"), /model-only|Markdown content fallback/i);
   assert.equal(modelOnly.status, "invalid");
-  assert.match(modelOnly.issues.join("\n"), /report\.quick-run/i);
-  assert.match(modelOnly.issues.join("\n"), /blueprint\.report\.quick-run\.model/i);
-  assert.match(modelOnly.issues.join("\n"), /not yet supported/i);
+  assert.match(modelOnly.issues.join("\n"), /schema\.required|required property/i);
   assert.deepEqual(modelOnly.warnings, []);
+  assert.equal(validatedQuickRun.status, "valid");
+  assert.match(validatedQuickRun.renderPreview ?? "", /## Changed Surfaces/);
+  assert.equal(writtenQuickRun.status, "created");
   assert.equal(nonStructuredContractModel.status, "invalid");
   assert.match(nonStructuredContractModel.issues.join("\n"), /report\.debug/i);
   assert.match(nonStructuredContractModel.issues.join("\n"), /does not expose a modelContract/i);
@@ -883,5 +928,5 @@ test("artifact report writes report blocking input issues and contract-gate mode
   assert.match(genericReportModel.issues.join("\n"), /known report contract/i);
   assert.deepEqual(genericReportModel.warnings, []);
   assert.equal(modelOnly.written, false);
-  await assert.rejects(readFile(reportPath, "utf8"), /ENOENT/);
+  assert.match(await readFile(reportPath, "utf8"), /# Quick Run Report/);
 });

@@ -55,7 +55,9 @@ single-agent and sequential:
 
 - Persist durable quick-run evidence only through
   `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical
-  report name `quick-run-latest`.
+  report name `quick-run-latest` and a structured `report.quick-run` model.
+- Do not hand-build the final Markdown report or pass Markdown `content`;
+  MCP validates the model and renders the canonical report body.
 - Require explicit overwrite confirmation before replacing the canonical quick
   report unless `--force` is present.
 - After completion, call `mcp_blueprint_blueprint_state_update` so `STATE.md`

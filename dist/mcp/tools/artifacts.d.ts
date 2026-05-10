@@ -281,6 +281,7 @@ type AddTestsManualStatus = "MANUAL" | "DEFERRED" | "NONE";
 type AddTestsGapStatus = "OPEN" | "BLOCKED" | "NONE";
 type AddTestsBugStatus = "BUG" | "BLOCKER" | "NONE";
 type AddTestsVerificationWriteStatus = "written" | "reused" | "invalid" | "blocked";
+type QuickRunVerificationResult = "pass" | "partial" | "blocked" | "not-run";
 type AuditFixReportSource = "review" | "security" | "verification" | "uat" | "all";
 type AuditFixReportSeverityFilter = "medium" | "high" | "all";
 type AuditFixReportStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
@@ -367,6 +368,26 @@ type AddTestsReportModel = {
         status: AddTestsVerificationWriteStatus;
         evidence: string;
     };
+    nextSafeAction: string;
+};
+type QuickRunReportModel = {
+    taskSummary: string[];
+    changedSurfaces: Array<{
+        surface: string;
+        change: string;
+        rationale: string;
+    }>;
+    evidenceUsed: Array<{
+        source: string;
+        summary: string;
+    }>;
+    changesMade: string[];
+    verification: Array<{
+        check: string;
+        result: QuickRunVerificationResult;
+        evidence: string;
+    }>;
+    followUps: string[];
     nextSafeAction: string;
 };
 type AuditFixReportModel = {
@@ -530,7 +551,7 @@ type ArtifactReportValidateModelResult = {
     taskSchema: Record<string, unknown> | null;
     diagnostics: ArtifactReportDiagnostic[];
     repairSummary: ArtifactRepairSummary;
-    normalizedModel: AddTestsReportModel | AuditFixReportModel | null;
+    normalizedModel: AddTestsReportModel | AuditFixReportModel | QuickRunReportModel | null;
     renderPreview: string | null;
     warnings: string[];
 };

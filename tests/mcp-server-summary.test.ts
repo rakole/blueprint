@@ -41,6 +41,7 @@ import {
 import { blueprintReviewLoadFindings } from "../src/mcp/tools/review.js";
 import { blueprintStateSync, blueprintStateUpdate } from "../src/mcp/tools/state.js";
 import { blueprintWorkstreamList, blueprintWorkstreamMutate } from "../src/mcp/tools/workspace.js";
+import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const execFileAsync = promisify(execFile);
@@ -6970,13 +6971,13 @@ test("project status live MCP response preserves distinct bootstrap guidance on 
   }
 });
 
-test("public phase artifact write tool preserves non-empty success warnings while trimming empty invalid warnings at the MCP boundary only", async () => {
+test("public phase artifact write tool trims success validation and preserves context model-only diagnostics", async () => {
   const repoPath = await createPhasePlanWriteRepo();
   const directSuccessResult = await blueprintPhaseArtifactWrite({
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: validPhaseArtifactWriteContent(),
+    model: validPhaseContextModel(),
     overwrite: true
   });
   const directInvalidResult = await blueprintPhaseArtifactWrite({
@@ -6988,7 +6989,6 @@ test("public phase artifact write tool preserves non-empty success warnings whil
   });
 
   assert.ok(Array.isArray(directSuccessResult.warnings));
-  assert.ok((directSuccessResult.warnings?.length ?? 0) > 0);
   assert.ok("validation" in directSuccessResult);
   assert.deepEqual(directInvalidResult.warnings, []);
   assert.ok("validation" in directInvalidResult);
@@ -7009,7 +7009,7 @@ test("public phase artifact write tool preserves non-empty success warnings whil
         cwd: repoPath,
         phase: "3",
         artifact: "context",
-        content: validPhaseArtifactWriteContent(),
+        model: validPhaseContextModel(),
         overwrite: true
       }
     });
@@ -7031,11 +7031,7 @@ test("public phase artifact write tool preserves non-empty success warnings whil
     assert.ok(!("validation" in successResponse.structuredContent));
     assert.ok(Array.isArray(successResponse.structuredContent.warnings));
     assert.ok((successResponse.structuredContent.warnings?.length ?? 0) > 0);
-    assert.ok(
-      successResponse.structuredContent.warnings.includes(
-        "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
-      )
-    );
+    assert.match(successResponse.structuredContent.warnings.join("\n"), /content was unchanged/i);
     assert.doesNotMatch(successResponse.content[0]?.text ?? "", /"validation":/);
     assert.match(successResponse.content[0]?.text ?? "", /"warnings":\[/);
 

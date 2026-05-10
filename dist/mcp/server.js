@@ -19670,10 +19670,21 @@ var init_artifact_contracts = __esm({
         canonicalName: "Quick Run Report",
         canonicalFilePattern: ".blueprint/reports/quick-run-latest.md",
         freehandPolicy: "additional-top-level-headings",
-        requiredHeadings: ["Task Summary", "Changes Made", "Verification", "Follow-Ups", "Next Safe Action"],
+        requiredHeadings: [
+          "Task Summary",
+          "Changed Surfaces",
+          "Evidence Used",
+          "Changes Made",
+          "Verification",
+          "Follow-Ups",
+          "Next Safe Action"
+        ],
         lockedMarkers: [],
         placeholderSignals: [],
-        notes: ["Quick reports capture bounded execution without impersonating saved plans."],
+        notes: [
+          "Quick reports capture bounded execution without impersonating saved plans.",
+          "Quick-run reports are schema-backed and model-authored; blueprint_artifact_report_write renders canonical Markdown from the structured model and rejects Markdown content fallback."
+        ],
         modelContract: QUICK_RUN_MODEL_CONTRACT,
         renderScaffoldTemplate: renderQuickRunTemplate,
         renderAuthoringTemplate: renderQuickRunTemplate
@@ -49566,6 +49577,149 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
     `Add a real ${artifact} artifact title, remove scaffold placeholders, and populate at least one contract section before retrying.`
   ];
 }
+function markdownTableCell2(value) {
+  return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim();
+}
+function renderContextBulletList(items) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+function renderContextTable(headers, rows) {
+  return [
+    `| ${headers.map(markdownTableCell2).join(" | ")} |`,
+    `| ${headers.map(() => "---").join(" | ")} |`,
+    ...rows.map((row) => `| ${row.map(markdownTableCell2).join(" | ")} |`)
+  ].join("\n");
+}
+function renderPhaseContextModelContent(args) {
+  const openQuestions = args.model.openQuestions.length === 1 && args.model.openQuestions[0].trim().toLowerCase() === "none" ? "- none" : renderContextBulletList(args.model.openQuestions);
+  return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
+
+## Phase Boundary
+
+- **Goal** ${args.model.phaseBoundary.goal}
+- **In scope**
+${renderContextBulletList(args.model.phaseBoundary.inScope)}
+- **Out of scope**
+${renderContextBulletList(args.model.phaseBoundary.outOfScope)}
+- **Success criteria**
+${renderContextBulletList(args.model.phaseBoundary.successCriteria)}
+
+## Discovery Grounding
+
+- **Project brief** ${args.model.discoveryGrounding.projectBrief}
+- **Requirements grounding**
+${renderContextBulletList(args.model.discoveryGrounding.requirementsGrounding)}
+- **Workflow posture** ${args.model.discoveryGrounding.workflowPosture}
+- **Confirmed decisions**
+${renderContextBulletList(args.model.discoveryGrounding.confirmedDecisions)}
+
+## Implementation Decisions
+
+${renderContextTable(
+    ["Decision", "Tradeoff Or Constraint"],
+    args.model.implementationDecisions.map((row) => [
+      row.decision,
+      row.tradeoffOrConstraint
+    ])
+  )}
+
+## Specific Ideas
+
+${renderContextBulletList(args.model.specificIdeas)}
+
+## Existing Code Insights
+
+${renderContextBulletList(args.model.existingCodeInsights)}
+
+## Dependencies
+
+- Prior phase artifacts:
+${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
+- External constraints:
+${renderContextBulletList(args.model.dependencies.externalConstraints)}
+- Required follow-up reads:
+${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
+
+## Open Questions
+
+${openQuestions}
+
+## Deferred Ideas
+
+${renderContextBulletList(args.model.deferredIdeas)}
+
+## Canonical References
+
+${renderContextTable(
+    ["Source", "Relevance"],
+    args.model.canonicalReferences.map((row) => [row.source, row.relevance])
+  )}
+`;
+}
+function validatePhaseContextModelInput(model) {
+  const modelObject = asJsonObject2(model);
+  const diagnostics = [];
+  if (!modelObject) {
+    diagnostics.push({
+      path: "model",
+      code: "schema.type",
+      message: "phase.context model must be a JSON object.",
+      repair: "Pass a JSON object matching phase.context.modelContract.",
+      retryable: true,
+      nextTool: "blueprint_phase_artifact_write"
+    });
+  } else {
+    const contract = readArtifactContract("phase.context");
+    const schema = contract.modelContract?.jsonSchema;
+    if (!schema) {
+      diagnostics.push({
+        path: "model",
+        code: "schema.missing",
+        message: "phase.context does not expose a model schema.",
+        repair: "Read blueprint_artifact_contract_read for phase.context before retrying.",
+        retryable: true,
+        nextTool: "blueprint_phase_artifact_write"
+      });
+    } else {
+      const validate = createAjvValidator3().compile(schema);
+      const valid = validate(modelObject);
+      if (!valid) {
+        diagnostics.push(
+          ...(validate.errors ?? []).map((error2) => {
+            const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
+            const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
+            const basePath = error2.instancePath.length === 0 ? "model" : `model${error2.instancePath.replace(/\//g, ".")}`;
+            const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+            return {
+              path: pathValue,
+              code: `schema.${error2.keyword}`,
+              message: `phase.context model schema violation at ${pathValue}: ${error2.message ?? error2.keyword}.`,
+              missing: missingProperty ? [missingProperty] : void 0,
+              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
+              retryable: true,
+              nextTool: "blueprint_phase_artifact_write"
+            };
+          })
+        );
+      }
+    }
+  }
+  if (diagnostics.length > 0) {
+    return {
+      model: null,
+      validation: {
+        valid: false,
+        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        warnings: [],
+        diagnostics
+      }
+    };
+  }
+  return {
+    model: modelObject,
+    validation: null
+  };
+}
 function phaseArtifactRetryPlan(artifact, diagnostics) {
   const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, diagnostics);
   const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : "/blu-ui-phase";
@@ -49611,7 +49765,100 @@ async function blueprintPhaseArtifactWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const artifactPath = artifactPathFor(resolved, args.artifact);
   const absolutePath = resolveBlueprintPath(projectRoot, artifactPath);
-  const normalizedContent = normalizeTextContent3(args.content);
+  const hasContent = args.content !== void 0;
+  const hasModel = args.model !== void 0;
+  if (hasContent === hasModel) {
+    return invalidPhaseArtifactWriteResult({
+      resolved,
+      artifact: args.artifact,
+      path: artifactPath,
+      validation: {
+        valid: false,
+        issues: ["Phase artifact writes must supply exactly one of content or model."],
+        warnings: [],
+        diagnostics: [
+          {
+            path: "args",
+            code: "write.exactly_one_input",
+            message: "Phase artifact writes must supply exactly one of content or model.",
+            repair: "Pass either finalized Markdown content for freehand phase artifacts or a structured model for phase.context, not both.",
+            retryable: true,
+            nextTool: "blueprint_phase_artifact_write"
+          }
+        ]
+      },
+      warnings: []
+    });
+  }
+  if (hasModel && args.artifact !== "context") {
+    return invalidPhaseArtifactWriteResult({
+      resolved,
+      artifact: args.artifact,
+      path: artifactPath,
+      validation: {
+        valid: false,
+        issues: [`phase.${args.artifact} does not support structured model writes. Supply canonical Markdown content instead.`],
+        warnings: [],
+        diagnostics: [
+          {
+            path: "args.model",
+            code: "write.unsupported_model",
+            message: `phase.${args.artifact} does not support structured model writes.`,
+            repair: 'Use Markdown content for this freehand phase artifact, or use artifact: "context" with a phase.context structured model.',
+            retryable: true,
+            nextTool: "blueprint_phase_artifact_write"
+          }
+        ]
+      },
+      warnings: []
+    });
+  }
+  if (args.artifact === "context" && hasContent) {
+    return invalidPhaseArtifactWriteResult({
+      resolved,
+      artifact: args.artifact,
+      path: artifactPath,
+      validation: {
+        valid: false,
+        issues: [
+          "phase.context is model-only; Markdown content fallback is not supported."
+        ],
+        warnings: [],
+        diagnostics: [
+          {
+            path: "args.content",
+            code: "write.model_only",
+            message: "phase.context is model-only; Markdown content fallback is not supported.",
+            repair: "Remove content, pass the structured phase.context model, and let blueprint_phase_artifact_write render canonical Markdown.",
+            retryable: true,
+            nextTool: "blueprint_phase_artifact_write"
+          }
+        ]
+      },
+      warnings: []
+    });
+  }
+  let normalizedContent;
+  if (hasModel) {
+    const modelValidation = validatePhaseContextModelInput(args.model);
+    if (!modelValidation.model) {
+      return invalidPhaseArtifactWriteResult({
+        resolved,
+        artifact: args.artifact,
+        path: artifactPath,
+        validation: modelValidation.validation,
+        warnings: []
+      });
+    }
+    normalizedContent = normalizeTextContent3(
+      renderPhaseContextModelContent({
+        resolved,
+        model: modelValidation.model
+      })
+    );
+  } else {
+    normalizedContent = normalizeTextContent3(args.content ?? "");
+  }
   const exists = await pathExists6(absolutePath);
   const warnings = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
@@ -51955,7 +52202,8 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["context", "discussion-log", "research", "ui-spec"]),
-      content: string2(),
+      content: string2().optional(),
+      model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       validationMode: _enum(["strict", "warn"]).optional()
     };
@@ -52288,7 +52536,7 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_artifact_write",
-        description: "Persist substantive phase-scoped discovery artifact content with overwrite protection.",
+        description: "Persist substantive phase-scoped discovery artifacts with overwrite protection; phase.context is model-only and rendered by MCP.",
         inputSchema: phaseArtifactWriteInputSchema,
         handler: async (args) => blueprintPhaseArtifactWrite(args)
       },
@@ -59666,7 +59914,7 @@ async function blueprintArtifactReportAuthoringContext(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const pathValue = buildBlueprintReportPath(args.reportName);
   const contractId = resolveReportContractId(args.reportName);
-  if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
+  if (contractId !== "report.add-tests" && contractId !== "report.audit-fix" && contractId !== "report.quick-run") {
     return {
       status: "invalid",
       reportName: normalizeReportSlug(args.reportName),
@@ -59688,9 +59936,37 @@ async function blueprintArtifactReportAuthoringContext(args) {
       taskSchema: null,
       modelOnly: true,
       prerequisiteBlockers: [
-        `blueprint_artifact_report_authoring_context currently supports report.add-tests and report.audit-fix only; ${args.reportName} is not one of those report contracts.`
+        `blueprint_artifact_report_authoring_context currently supports report.add-tests, report.audit-fix, and report.quick-run only; ${args.reportName} is not one of those report contracts.`
       ],
       reason: "Unsupported report contract for schema-first report authoring.",
+      warnings: []
+    };
+  }
+  if (contractId === "report.quick-run") {
+    const contract2 = readArtifactContract("report.quick-run");
+    const modelContract = contract2.modelContract;
+    return {
+      status: modelContract ? "ready" : "invalid",
+      reportName: normalizeReportSlug(args.reportName),
+      path: pathValue,
+      phase: null,
+      completedSummaries: [],
+      pendingPlans: [],
+      dependencyPlans: [],
+      validationEvidencePaths: [],
+      selectedEvidencePaths: [],
+      scopeFiles: [],
+      auditFixContext: null,
+      writeArgs: {
+        reportName: normalizeReportSlug(args.reportName)
+      },
+      allowedNextActions: [],
+      schemaPath: modelContract?.schemaPath ?? null,
+      baseSchema: modelContract ? cloneJsonObject5(modelContract.jsonSchema) : null,
+      taskSchema: modelContract ? cloneJsonObject5(modelContract.jsonSchema) : null,
+      modelOnly: true,
+      prerequisiteBlockers: modelContract ? [] : ["report.quick-run does not expose a modelContract."],
+      reason: modelContract ? null : "Missing report.quick-run model contract.",
       warnings: []
     };
   }
@@ -59786,6 +60062,59 @@ async function blueprintArtifactReportAuthoringContext(args) {
 }
 function normalizeStringArray2(value) {
   return Array.isArray(value) && value.every((item) => typeof item === "string") ? value.map((item) => item.trim()) : null;
+}
+function normalizeQuickRunReportModel(model) {
+  const taskSummary = normalizeStringArray2(model.taskSummary);
+  const changesMade = normalizeStringArray2(model.changesMade);
+  const followUps = normalizeStringArray2(model.followUps);
+  if (taskSummary === null || changesMade === null || followUps === null || typeof model.nextSafeAction !== "string") {
+    return null;
+  }
+  const normalizeRows = (value, mapper) => {
+    if (!Array.isArray(value)) {
+      return null;
+    }
+    const rows = value.map((row) => {
+      const rowObject = asJsonObject3(row);
+      return rowObject ? mapper(rowObject) : null;
+    });
+    return rows.some((row) => row === null) ? null : rows;
+  };
+  const changedSurfaces = normalizeRows(
+    model.changedSurfaces,
+    (row) => typeof row.surface === "string" && typeof row.change === "string" && typeof row.rationale === "string" ? {
+      surface: row.surface.trim(),
+      change: row.change.trim(),
+      rationale: row.rationale.trim()
+    } : null
+  );
+  const evidenceUsed = normalizeRows(
+    model.evidenceUsed,
+    (row) => typeof row.source === "string" && typeof row.summary === "string" ? {
+      source: row.source.trim(),
+      summary: row.summary.trim()
+    } : null
+  );
+  const verification = normalizeRows(
+    model.verification,
+    (row) => typeof row.check === "string" && typeof row.result === "string" && typeof row.evidence === "string" ? {
+      check: row.check.trim(),
+      result: row.result,
+      evidence: row.evidence.trim()
+    } : null
+  );
+  if (changedSurfaces === null || evidenceUsed === null || verification === null) {
+    return null;
+  }
+  return {
+    taskSummary,
+    changedSurfaces,
+    evidenceUsed,
+    changesMade,
+    verification,
+    followUps,
+    nextSafeAction: model.nextSafeAction.trim()
+  };
 }
 function normalizeAddTestsReportModel(model) {
   const coverageGoal = normalizeStringArray2(model.coverageGoal);
@@ -60353,6 +60682,47 @@ function renderMarkdownTable2(headers, rows) {
   const renderedRows = rows.length > 0 ? rows : [headers.map(() => "none")];
   return [headers, separator, ...renderedRows].map((row) => `| ${row.map(markdownCell2).join(" | ")} |`).join("\n");
 }
+function renderQuickRunReportModelContent(model) {
+  return `# Quick Run Report
+
+## Task Summary
+
+${renderBulletList3(model.taskSummary)}
+
+## Changed Surfaces
+
+${renderMarkdownTable2(
+    ["Surface", "Change", "Rationale"],
+    model.changedSurfaces.map((row) => [row.surface, row.change, row.rationale])
+  )}
+
+## Evidence Used
+
+${renderMarkdownTable2(
+    ["Source", "Summary"],
+    model.evidenceUsed.map((row) => [row.source, row.summary])
+  )}
+
+## Changes Made
+
+${renderBulletList3(model.changesMade)}
+
+## Verification
+
+${renderMarkdownTable2(
+    ["Check", "Result", "Evidence"],
+    model.verification.map((row) => [row.check, row.result, row.evidence])
+  )}
+
+## Follow-Ups
+
+${renderBulletList3(model.followUps)}
+
+## Next Safe Action
+
+- ${model.nextSafeAction}
+`;
+}
 function renderAddTestsReportModelContent(args) {
   const summaryEvidenceRows = Object.entries(args.model.summaryEvidence).map(
     ([summaryPath2, entry]) => [
@@ -60668,9 +61038,9 @@ async function blueprintArtifactReportValidateModel(args) {
         code: "contract.missing_schema",
         message: `${contractId ?? "report"} did not expose a runtime task schema.`,
         context: {},
-        repair: contractId === "report.audit-fix" ? "Read the live report.audit-fix authoring context before writing." : "Read the live report.add-tests authoring context before writing.",
+        repair: contractId === "report.quick-run" ? "Read the live report.quick-run authoring context before writing." : contractId === "report.audit-fix" ? "Read the live report.audit-fix authoring context before writing." : "Read the live report.add-tests authoring context before writing.",
         retryable: true,
-        suggestion: contractId === "report.audit-fix" ? "Read the live report.audit-fix authoring context before writing." : "Read the live report.add-tests authoring context before writing."
+        suggestion: contractId === "report.quick-run" ? "Read the live report.quick-run authoring context before writing." : contractId === "report.audit-fix" ? "Read the live report.audit-fix authoring context before writing." : "Read the live report.add-tests authoring context before writing."
       })
     );
   }
@@ -60683,13 +61053,17 @@ async function blueprintArtifactReportValidateModel(args) {
         ...(validate.errors ?? []).map(
           (error2) => schemaDiagnosticFromArtifactReportAjvError(
             error2,
-            contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests",
+            contractId === "report.quick-run" ? "report.quick-run" : contractId === "report.audit-fix" ? "report.audit-fix" : "report.add-tests",
             modelObject
           )
         )
       );
     }
-    if (contractId === "report.audit-fix") {
+    if (contractId === "report.quick-run") {
+      if (schemaValid) {
+        normalizedModel = normalizeQuickRunReportModel(modelObject);
+      }
+    } else if (contractId === "report.audit-fix") {
       normalizedModel = normalizeAuditFixReportModel(modelObject);
       diagnostics.push(
         ...await collectAuditFixResidualDiagnostics({
@@ -60713,7 +61087,7 @@ async function blueprintArtifactReportValidateModel(args) {
   }
   let renderPreview = null;
   if (diagnostics.length === 0 && normalizedModel) {
-    const rendered = contractId === "report.audit-fix" ? renderAuditFixReportModelContent({
+    const rendered = contractId === "report.quick-run" ? renderQuickRunReportModelContent(normalizedModel) : contractId === "report.audit-fix" ? renderAuditFixReportModelContent({
       model: normalizedModel,
       context
     }) : renderAddTestsReportModelContent({
@@ -60729,9 +61103,9 @@ async function blueprintArtifactReportValidateModel(args) {
           code: "markdown.invalid_render",
           message: issue2,
           context: {},
-          repair: contractId === "report.audit-fix" ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract." : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract.",
+          repair: contractId === "report.quick-run" ? "Repair the model so MCP-rendered Markdown satisfies the report.quick-run artifact contract." : contractId === "report.audit-fix" ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract." : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract.",
           retryable: true,
-          suggestion: contractId === "report.audit-fix" ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract." : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
+          suggestion: contractId === "report.quick-run" ? "Repair the model so MCP-rendered Markdown satisfies the report.quick-run artifact contract." : contractId === "report.audit-fix" ? "Repair the model so MCP-rendered Markdown satisfies the report.audit-fix artifact contract." : "Repair the model so MCP-rendered Markdown satisfies the report.add-tests artifact contract."
         })
       );
     }
@@ -60777,7 +61151,7 @@ function reportModelWriteIssues(reportName2) {
     ];
   }
   return [
-    contractId === "report.add-tests" || contractId === "report.audit-fix" ? "" : `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
+    contractId === "report.add-tests" || contractId === "report.audit-fix" || contractId === "report.quick-run" ? "" : `Report structured model writes for ${contractId} (${contract.modelContract.schemaId}) are not yet supported by blueprint_artifact_report_write. Supply canonical Markdown content instead.`
   ];
 }
 async function blueprintArtifactReportWrite(args) {
@@ -60811,7 +61185,7 @@ async function blueprintArtifactReportWrite(args) {
       })
     ]);
   }
-  if ((contractId === "report.add-tests" || contractId === "report.audit-fix") && hasContent) {
+  if ((contractId === "report.add-tests" || contractId === "report.audit-fix" || contractId === "report.quick-run") && hasContent) {
     return artifactReportWriteInvalidResult(pathValue, [
       `${contractId} is model-only; Markdown content fallback is not supported. Validate JSON with blueprint_artifact_report_validate_model, then persist the same model through blueprint_artifact_report_write.`
     ], [], [
@@ -60825,7 +61199,7 @@ async function blueprintArtifactReportWrite(args) {
     ]);
   }
   if (hasModel) {
-    if (contractId !== "report.add-tests" && contractId !== "report.audit-fix") {
+    if (contractId !== "report.add-tests" && contractId !== "report.audit-fix" && contractId !== "report.quick-run") {
       return artifactReportWriteInvalidResult(
         pathValue,
         reportModelWriteIssues(args.reportName).filter((issue2) => issue2.length > 0)
@@ -60847,7 +61221,7 @@ async function blueprintArtifactReportWrite(args) {
     }
     const renderPreview = modelValidation.renderPreview.endsWith("\n") ? modelValidation.renderPreview : `${modelValidation.renderPreview}
 `;
-    const contentForStatus = (status) => contractId === "report.audit-fix" ? withAuditFixReportWriteStatus(renderPreview, status, pathValue) : withAddTestsReportWriteStatus(renderPreview, status, pathValue);
+    const contentForStatus = (status) => contractId === "report.audit-fix" ? withAuditFixReportWriteStatus(renderPreview, status, pathValue) : contractId === "report.add-tests" ? withAddTestsReportWriteStatus(renderPreview, status, pathValue) : renderPreview;
     const exists2 = await pathExists7(absolutePath);
     const warnings2 = [...modelValidation.warnings];
     if (exists2) {
@@ -61604,19 +61978,19 @@ var init_artifacts = __esm({
       },
       {
         name: "blueprint_artifact_report_authoring_context",
-        description: "Return the schema-first report authoring context for report.add-tests or report.audit-fix, including the base model schema and runtime-narrowed task schema for the selected report contract.",
+        description: "Return the schema-first report authoring context for report.quick-run, report.add-tests, or report.audit-fix, including the base model schema and runtime-narrowed task schema for the selected report contract.",
         inputSchema: artifactReportAuthoringContextInputSchema,
         handler: async (args) => blueprintArtifactReportAuthoringContext(args)
       },
       {
         name: "blueprint_artifact_report_validate_model",
-        description: "Validate a structured report.add-tests or report.audit-fix model against the runtime-narrowed task schema and return a canonical Markdown preview without writing files.",
+        description: "Validate a structured report.quick-run, report.add-tests, or report.audit-fix model against the runtime task schema and return a canonical Markdown preview without writing files.",
         inputSchema: artifactReportValidateModelInputSchema,
         handler: async (args) => blueprintArtifactReportValidateModelPublic(args)
       },
       {
         name: "blueprint_artifact_report_write",
-        description: "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.add-tests and report.audit-fix are model-only and reject Markdown content fallback.",
+        description: "Persist a non-phase Blueprint report inside .blueprint/reports/ with overwrite protection; report.quick-run, report.add-tests, and report.audit-fix are model-only and reject Markdown content fallback.",
         inputSchema: artifactReportWriteInputSchema,
         handler: async (args) => blueprintArtifactReportWrite(args)
       }

@@ -17,6 +17,7 @@ import {
   blueprintStateLoad,
   blueprintStateUpdate
 } from "../src/mcp/tools/state.js";
+import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
@@ -484,49 +485,11 @@ test("ui-phase final next action comes from refreshed synced state", async (t) =
     cwd: repoPath,
     phase: "3",
     artifact: "context",
-    content: `# Phase 03 Context
-
-## Phase Boundary
-- Capture durable discuss-phase context for the phase.
-- Confirm the selected scope before drafting UI guidance.
-- Exclude execution planning and summary writing.
-- Downstream planning should reuse this saved discovery context.
-
-## Discovery Grounding
-- Project brief - the phase needs a durable discovery record.
-- Requirements grounding - preserve the current requirements boundary.
-- Workflow posture - keep discovery evidence-backed and MCP-owned.
-- Confirmed decisions - persist the UI-routing handoff clearly.
-
-## Implementation Decisions
-- Decision 1 - keep the UI contract phase-scoped and reusable.
-- Tradeoffs or constraints - final routing must come from synced state rather than prompt-local assumptions.
-
-## Specific Ideas
-- Specific idea 1 - keep the saved UI artifact aligned with the phase goal.
-- Specific idea 2 - let later planning consume the same saved evidence.
-- Follow-up idea - revisit only if scope changes materially.
-
-## Existing Code Insights
-- Existing code insight 1 - the phase artifacts already give state routing enough evidence.
-- Reusable pattern - preserve the canonical H1 and validated section structure.
-- Known gap or caution - avoid inventing a next action before reloading state.
-
-## Dependencies
-- Prior phase artifacts - saved research and roadmap intent.
-- External constraints - repo-level safety and implemented-only routing.
-- Required follow-up reads - roadmap, requirements, and saved research.
-
-## Open Questions
-- Which UI details still need clarification before planning?
-
-## Deferred Ideas
-- Later follow-up - record optional refinements after planning exists.
-- Reusable references - keep state-routing evidence visible for the next pass.
-
-## Canonical References
-- Roadmap, requirements, and saved discovery notes for this phase.
-`,
+    model: validPhaseContextModel({
+      decision:
+        "Keep the UI contract phase-scoped and reusable while final routing comes from synced state.",
+      openQuestions: ["Which UI details still need clarification before planning?"]
+    }),
     overwrite: true
   });
   const researchWrite = await blueprintPhaseArtifactWrite({
@@ -608,7 +571,7 @@ test("ui-phase final next action comes from refreshed synced state", async (t) =
   assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 3/);
 });
 
-test("phase artifact writes validate context, discussion-log, and ui-spec content", async (t) => {
+test("phase artifact writes reject context Markdown fallback and validate freehand artifacts", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -771,49 +734,9 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
     cwd: repoPath,
     phase: 3,
     artifact: "context",
-    content: `# Phase 03 Context
-
-## Phase Boundary
-- Capture durable discuss-phase context for the phase.
-- Confirm the phase boundary, grounding, and open issues.
-- Exclude execution planning and summary writing.
-- Downstream tools can reuse the discovery record without re-eliciting basics.
-
-## Discovery Grounding
-- Project brief - the phase needs a durable discovery record.
-- Requirements grounding - retain the saved requirements context.
-- Workflow posture - keep question asking adaptive and evidence-backed.
-- Confirmed decisions - discovery should persist the choices that matter for later planning.
-
-## Implementation Decisions
-- Decision 1 - keep the discovery record phase-scoped and resumable.
-- Tradeoffs or constraints - preserve explicit overwrite boundaries and the current router contract.
-
-## Specific Ideas
-- Specific idea 1 - carry the confirmed boundary into the next planning phase.
-- Specific idea 2 - reuse the saved checkpoint state as the starting point for later prompts.
-- Follow-up idea - turn the discovered boundary into a concrete plan stub if scope remains stable.
-
-## Existing Code Insights
-- Existing code insight 1 - the phase artifacts already provide reusable grounding for planning.
-- Reusable pattern - keep the same H1 and sectioned bullet format so the MCP writer can validate it cleanly.
-- Known gap or caution - avoid mixing execution summary language into the context record.
-
-## Dependencies
-- Prior phase artifacts - saved research and any earlier context.
-- External constraints - repo-level safety and roadmap scope.
-- Required follow-up reads - the roadmap, requirements, and saved phase artifacts.
-
-## Open Questions
-- Which unresolved gray areas still need user input?
-
-## Deferred Ideas
-- Later follow-up - revisit anything that does not block the next planning step.
-- Reusable references: keep canonical source notes handy for the next pass.
-
-## Canonical References
-- Roadmap and requirement notes that shaped the discussion.
-`,
+    model: validPhaseContextModel({
+      openQuestions: ["Which unresolved gray areas still need user input?"]
+    }),
     overwrite: true
   });
   const validDiscussion = await blueprintPhaseArtifactWrite({
@@ -845,23 +768,19 @@ test("phase artifact writes validate context, discussion-log, and ui-spec conten
   assert.equal(invalidContext.status, "invalid");
   assert.match(
     invalidContext.validation?.issues.join("\n") ?? "",
-    /missing required contract sections/i
+    /model-only|Markdown content fallback/i
   );
   assert.equal(invalidDiscussion.status, "invalid");
   assert.match(invalidDiscussion.validation?.issues.join("\n") ?? "", /placeholder scaffold text/i);
   assert.equal(invalidContextScaffoldLiterals.status, "invalid");
   assert.match(
     invalidContextScaffoldLiterals.validation?.issues.join("\n") ?? "",
-    /placeholder scaffold text: Project brief:/i
-  );
-  assert.match(
-    invalidContextScaffoldLiterals.validation?.issues.join("\n") ?? "",
-    /placeholder scaffold text: Requirements grounding:/i
+    /model-only|Markdown content fallback/i
   );
   assert.equal(invalidContextLeadingText.status, "invalid");
   assert.match(
     invalidContextLeadingText.validation?.issues.join("\n") ?? "",
-    /must start with a markdown H1 title/i
+    /model-only|Markdown content fallback/i
   );
   assert.equal(invalidUiSpec.status, "invalid");
   assert.match(invalidUiSpec.validation?.issues.join("\n") ?? "", /Outcome Mode must not be empty/i);

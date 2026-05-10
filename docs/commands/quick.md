@@ -66,7 +66,8 @@
 ## Quick Report Contract
 
 - Read effective config through `blueprint_config_get` before deciding whether to use any optional research, planning, execution, or verification subagent path.
-- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest`, not a `.blueprint/reports/...` path.
+- Persist the durable quick-run report through `blueprint_artifact_report_write` with the bare report name `quick-run-latest` and a structured `report.quick-run` model, not Markdown `content` and not a `.blueprint/reports/...` path.
+- Quick-run report persistence is schema-backed: validate or repair the structured model against `report.quick-run.modelContract`; MCP renders the final Markdown and rejects hand-written Markdown fallback.
 - Treat the returned report `path`, `written`, and `status` as authoritative.
 
 ## In-Flight Progress Contract
