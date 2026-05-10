@@ -4321,6 +4321,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Read the canonical review contract through `blueprint_artifact_contract_read` before drafting or updating review artifacts.",
       "Code-review writes are model-only and render through MCP-owned canonical Markdown before persistence.",
       "Findings, evidence reviewed, positive signals, and severity counts must remain machine-extractable.",
+      "Persisted code-review findings must use MCP-rendered canonical bullets with `[severity][disposition]`, an `F-XX` id, a `file:line` location, and Evidence/Impact/Fix fields; legacy freehand finding bullets are rejected.",
       "Scope Reviewed must list every repo-relative file in the resolved review scope before the artifact can persist.",
       "Each material finding should include severity, disposition, repo-relative file:line evidence, impact, and concrete fix or verification guidance.",
       "Severity Summary counts must match the persisted Findings section."

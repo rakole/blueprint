@@ -5876,7 +5876,7 @@ export function validateReviewArtifactContent(
     return validation;
   }
 
-  const issues = [...validation.issues, ...validateCodeReviewArtifactCoreQuality(content)];
+  const issues = [...validation.issues, ...validateCodeReviewArtifactRenderedShape(content)];
 
   return {
     valid: issues.length === 0,
@@ -5894,6 +5894,8 @@ const REVIEW_ARTIFACT_SEVERITIES = [
   "low",
   "unknown"
 ] as const satisfies readonly ReviewArtifactSeverity[];
+const CANONICAL_CODE_REVIEW_FINDING_PATTERN =
+  /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`F-[A-Z0-9][A-Z0-9._-]*`\s+`[^`]+:\d+(?:-\d+)?`\s+-\s+Evidence:\s+\S.*?\s+Impact:\s+\S.*?\s+Fix\/verification:\s+\S.*$/i;
 
 function collectMarkdownListItems(section: string): string[] {
   return section
@@ -5971,34 +5973,6 @@ function extractScopeReviewedPaths(section: string): string[] {
   return [...paths].sort((left, right) => left.localeCompare(right));
 }
 
-function inferReviewArtifactSeverity(item: string): ReviewArtifactSeverity {
-  const source = item.toLowerCase();
-
-  if (/\b(?:critical|p0)\b/.test(source)) {
-    return "critical";
-  }
-
-  if (/\b(?:high|p1)\b/.test(source)) {
-    return "high";
-  }
-
-  if (/\b(?:medium|p2)\b/.test(source)) {
-    return "medium";
-  }
-
-  if (/\b(?:low|p3)\b/.test(source)) {
-    return "low";
-  }
-
-  return "unknown";
-}
-
-function containsLineBackedRepoFileEvidence(item: string): boolean {
-  return /(?:^|[\s(])`?(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+):\d+(?:-\d+)?`?(?=$|[\s),.;:!?])/.test(
-    item
-  );
-}
-
 function parseSeveritySummaryCounts(section: string): Partial<Record<ReviewArtifactSeverity, number>> {
   const counts: Partial<Record<ReviewArtifactSeverity, number>> = {};
 
@@ -6017,7 +5991,7 @@ function parseSeveritySummaryCounts(section: string): Partial<Record<ReviewArtif
   return counts;
 }
 
-function validateCodeReviewArtifactCoreQuality(content: string): string[] {
+function validateCodeReviewArtifactRenderedShape(content: string): string[] {
   const issues: string[] = [];
   const scopeReviewed = extractMarkdownSection(content, "Scope Reviewed");
   const scopedPaths = extractScopeReviewedPaths(scopeReviewed);
@@ -6041,13 +6015,16 @@ function validateCodeReviewArtifactCoreQuality(content: string): string[] {
   );
 
   for (const item of findingItems) {
-    actualCounts[inferReviewArtifactSeverity(item)] += 1;
+    const canonicalFinding = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
 
-    if (!containsLineBackedRepoFileEvidence(item)) {
+    if (!canonicalFinding) {
       issues.push(
-        `Review artifact finding must include repo-relative file:line evidence: ${item}`
+        `Review artifact finding must use the canonical MCP-rendered shape [severity][disposition] \`F-XX\` \`file:line\` - Evidence: ... Impact: ... Fix/verification: ...: ${item}`
       );
+      continue;
     }
+
+    actualCounts[canonicalFinding[1].toLowerCase() as ReviewArtifactSeverity] += 1;
   }
 
   const severitySummary = extractMarkdownSection(content, "Severity Summary");

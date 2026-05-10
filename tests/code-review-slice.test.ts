@@ -1368,6 +1368,114 @@ test("blueprint_review_record persists structured code-review models as canonica
   });
 });
 
+test("blueprint_review_record preserves distinct critical and high counts when finding prose mentions another severity", async (t) => {
+  const scopeFiles = [
+    "src/feature.ts",
+    "src/cache.ts",
+    "src/error.ts",
+    "tests/feature.test.ts",
+    "tests/error.test.ts"
+  ];
+  const repoPath = await createCodeReviewRepo({
+    planFilesModified: scopeFiles
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const model = createStructuredCodeReviewModel({
+    reviewSummary: [
+      "Phase 5 review found one critical issue and four high issues across the scoped files."
+    ],
+    findings: [
+      {
+        severity: "critical",
+        disposition: "follow-up",
+        location: "src/feature.ts:1",
+        evidence: "The write path can silently drop user data.",
+        impact: "Users can lose committed work without any recovery path.",
+        recommendation: "Block the write until the data-loss path is repaired."
+      },
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/cache.ts:1",
+        evidence: "The cache path can reuse stale phase evidence.",
+        impact: "A critical path can be reviewed against the wrong inputs.",
+        recommendation: "Invalidate cached evidence before reviewing the changed files."
+      },
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "src/error.ts:1",
+        evidence: "The error path hides failed persistence.",
+        impact: "Operators can believe a high-risk write succeeded when it did not.",
+        recommendation: "Surface the persistence failure before routing forward."
+      },
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "tests/feature.test.ts:1",
+        evidence: "The regression suite lacks coverage for the failed write branch.",
+        impact: "The critical recovery behavior can regress unnoticed.",
+        recommendation: "Add a focused regression test for failed persistence."
+      },
+      {
+        severity: "high",
+        disposition: "follow-up",
+        location: "tests/error.test.ts:1",
+        evidence: "The error fixture does not assert user-visible repair guidance.",
+        impact: "High-severity operator guidance can disappear without a failing test.",
+        recommendation: "Assert the repair guidance in the error-path test."
+      }
+    ],
+    followUps: [
+      "Repair the data-loss write path.",
+      "Invalidate cached evidence before review.",
+      "Surface persistence failures.",
+      "Add failed-write regression coverage.",
+      "Assert error-path repair guidance."
+    ]
+  });
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: scopeFiles,
+    model
+  });
+
+  assert.equal(validation.status, "valid", reviewResultMessages(validation));
+  assert.match(validation.renderPreview ?? "", /- critical: 1/);
+  assert.match(validation.renderPreview ?? "", /- high: 4/);
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model,
+    scopeFiles,
+    scopeSource: "explicit-files"
+  });
+  assert.equal(created.status, "created");
+
+  const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
+  assert.match(saved, /- critical: 1/);
+  assert.match(saved, /- high: 4/);
+
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review"
+  });
+  assert.deepEqual(loaded.severityCounts, {
+    critical: 1,
+    high: 4,
+    medium: 0,
+    low: 0,
+    unknown: 0
+  });
+});
+
 test("blueprint_review_load_findings derives stable ids for legacy code-review markdown without visible ids", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
