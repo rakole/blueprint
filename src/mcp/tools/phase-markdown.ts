@@ -74,3 +74,17 @@ export function markdownCell(value: unknown): string {
 export function markdownTableCell(value: string): string {
   return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim();
 }
+
+export function renderBulletList(items: string[] | undefined, fallback = "none"): string {
+  const lines = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
+
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+
+  return lines.map((item) => `- ${item}`).join("\n");
+}
+
+export function normalizeTextContent(content: string): string {
+  return content.endsWith("\n") ? content : `${content}\n`;
+}

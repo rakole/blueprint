@@ -26775,6 +26775,17 @@ function markdownCell(value) {
 function markdownTableCell(value) {
   return value.replace(/\r?\n/g, " ").replace(/\|/g, "\\|").trim();
 }
+function renderBulletList(items, fallback = "none") {
+  const lines = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
+  if (lines.length === 0) {
+    return `- ${fallback}`;
+  }
+  return lines.map((item) => `- ${item}`).join("\n");
+}
+function normalizeTextContent2(content) {
+  return content.endsWith("\n") ? content : `${content}
+`;
+}
 var init_phase_markdown = __esm({
   "src/mcp/tools/phase-markdown.ts"() {
     "use strict";
@@ -27387,6 +27398,289 @@ var init_phase_summary_routing = __esm({
     "use strict";
     init_phase_plan_identifiers();
     init_phase_locations();
+  }
+});
+
+// src/mcp/tools/phase-validation-rendering.ts
+function normalizeRenderList(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value === void 0 ? [] : [value];
+}
+function normalizeVerificationCoverageState(value) {
+  const normalized = String(value ?? "").trim();
+  return normalized.toLowerCase() === "covered" ? "COVERED" : normalized;
+}
+function normalizeVerificationStructuredModel(model) {
+  return {
+    ...model,
+    validationSummary: normalizeRenderList(model.validationSummary),
+    requirementCoverage: model.requirementCoverage.map((row) => ({
+      ...row,
+      coverageState: normalizeVerificationCoverageState(row.coverageState)
+    }))
+  };
+}
+function renderVerificationOptionalSections(args) {
+  const sections = [];
+  if ((args.sessionState ?? []).length > 0) {
+    sections.push(`## Session State
+
+${renderBulletList(args.sessionState)}`);
+  }
+  if (args.checkpoint?.trim()) {
+    sections.push(`## Checkpoint
+
+- ${args.checkpoint.trim()}`);
+  }
+  if ((args.testMatrix ?? []).length > 0) {
+    const testRows = (args.testMatrix ?? []).map(
+      (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+    ).join("\n");
+    sections.push(`## Validation Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+${testRows}`);
+  }
+  if (args.resultSummary) {
+    sections.push(`## Result Summary
+
+- Total: ${args.resultSummary.total ?? ""}
+- Passed: ${args.resultSummary.passed ?? ""}
+- Issues: ${args.resultSummary.issues ?? ""}
+- Pending: ${args.resultSummary.pending ?? ""}
+- Skipped: ${args.resultSummary.skipped ?? ""}
+- Blocked: ${args.resultSummary.blocked ?? ""}`);
+  }
+  if ((args.observedBehavior ?? []).length > 0) {
+    sections.push(`## Observed Behavior
+
+${renderBulletList(args.observedBehavior)}`);
+  }
+  if ((args.unresolvedGaps ?? []).length > 0) {
+    sections.push(`## Unresolved Gaps
+
+${renderBulletList(args.unresolvedGaps)}`);
+  }
+  if ((args.structuredGaps ?? []).length > 0) {
+    const structuredGapRows = (args.structuredGaps ?? []).map(
+      (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+    ).join("\n");
+    sections.push(`## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+${structuredGapRows}`);
+  }
+  if ((args.followUpFixes ?? []).length > 0) {
+    sections.push(`## Follow-Up Fixes
+
+${renderBulletList(args.followUpFixes)}`);
+  }
+  return sections.length > 0 ? `
+
+${sections.join("\n\n")}` : "";
+}
+function renderVerificationContent(args, resolved, summaryPaths, readinessByGate) {
+  const evidenceReviewedSummaryPaths = args.evidenceReviewedSummaryPaths ?? summaryPaths;
+  const requirementRows = (args.requirementCoverage ?? []).map(
+    (row) => `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(normalizeVerificationCoverageState(row.coverageState))} | ${markdownCell(row.notes)} |`
+  ).join("\n");
+  const manualRows = (args.manualOrDeferredCoverage ?? []).length > 0 ? (args.manualOrDeferredCoverage ?? []).map(
+    (row) => `| ${markdownCell(row.item)} | ${markdownCell(row.whyManualOrDeferred)} | ${markdownCell(row.followUp)} | ${markdownCell(row.status)} |`
+  ).join("\n") : "| none | none | none | NONE |";
+  const gapRows = (args.gapClassification ?? []).length > 0 ? (args.gapClassification ?? []).map(
+    (row) => `| ${markdownCell(row.gapClass)} | ${markdownCell(row.scope)} | ${markdownCell(row.evidence)} | ${markdownCell(row.repair)} |`
+  ).join("\n") : "| none | none | none | none |";
+  return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Verification
+
+**Coverage:** ${args.coverageSummary ?? ""}
+**Gate State:** ${args.gateState ?? ""}
+**Sign-off:** ${args.signOff ?? ""}
+
+## Validation Summary
+
+${renderBulletList(normalizeRenderList(args.validationSummary))}
+
+## Requirement / Task Coverage
+
+| Requirement | Task or Check | Evidence | Coverage State | Notes |
+|-------------|---------------|----------|----------------|-------|
+${requirementRows}
+
+## Evidence Reviewed
+
+${renderBulletList(evidenceReviewedSummaryPaths)}
+
+## Test Infrastructure / Evidence Metadata
+
+${renderBulletList(args.evidenceMetadata)}
+
+## Manual-Only or Deferred Coverage
+
+| Item | Why manual or deferred | Follow-Up | Status |
+|------|------------------------|-----------|--------|
+${manualRows}
+
+## Gate State
+
+- Gate: ${args.gateState ?? ""}
+- Sign-off: ${args.signOff ?? ""}
+- Readiness: ${readinessByGate[args.gateState ?? ""] ?? ""}
+
+## Gap Classification
+
+| Gap class | Scope | Evidence | Repair |
+|-----------|-------|----------|--------|
+${gapRows}
+
+## Gaps Found
+
+${renderBulletList(args.gapsFound)}
+
+## Suggested Repairs
+
+${renderBulletList(args.suggestedRepairs)}${renderVerificationOptionalSections(args)}
+
+## Next Safe Action
+
+- ${args.nextSafeAction ?? ""}
+`);
+}
+function renderUatContent(args, resolved) {
+  const currentTest = args.currentTest ?? {};
+  const resultSummary = args.resultSummary ?? {};
+  const testRows = (args.testMatrix ?? []).length > 0 ? (args.testMatrix ?? []).map(
+    (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
+  ).join("\n") : "";
+  const structuredGapRows = (args.structuredGaps ?? []).length > 0 ? (args.structuredGaps ?? []).map(
+    (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
+  ).join("\n") : "| none | none | none | none | none | none |";
+  return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UAT
+
+**Status:** ${args.status ?? ""}
+**Resume State:** ${args.resumeState ?? ""}
+**Checkpoint:** ${args.checkpoint ?? ""}
+
+## UAT Summary
+
+${renderBulletList(args.uatSummary)}
+
+## Session State
+
+${renderBulletList(args.sessionState)}
+
+## Current Test
+
+- Number: ${currentTest.number ?? ""}
+- Name: ${currentTest.name ?? ""}
+- Expected: ${currentTest.expected ?? ""}
+- Awaiting: ${currentTest.awaiting ?? ""}
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+${testRows}
+
+## Result Summary
+
+- Total: ${resultSummary.total ?? ""}
+- Passed: ${resultSummary.passed ?? ""}
+- Issues: ${resultSummary.issues ?? ""}
+- Pending: ${resultSummary.pending ?? ""}
+- Skipped: ${resultSummary.skipped ?? ""}
+- Blocked: ${resultSummary.blocked ?? ""}
+
+## Questions Asked
+
+${renderBulletList(args.questionsAsked)}
+
+## Observed Behavior
+
+${renderBulletList(args.observedBehavior)}
+
+## Unresolved Gaps
+
+${renderBulletList(args.unresolvedGaps)}
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+${structuredGapRows}
+
+## Follow-Up Fixes
+
+${renderBulletList(args.followUpFixes)}
+
+## Next Safe Action
+
+- ${args.nextSafeAction ?? ""}
+`);
+}
+function verificationPayloadIssues(args) {
+  const issues = [];
+  if (!args.coverageSummary?.trim()) {
+    issues.push("Verification render payload must include coverageSummary.");
+  }
+  if (!args.gateState?.trim()) {
+    issues.push("Verification render payload must include gateState.");
+  }
+  if (!args.signOff?.trim()) {
+    issues.push("Verification render payload must include signOff.");
+  }
+  if (normalizeRenderList(args.validationSummary).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("Verification render payload must include validationSummary.");
+  }
+  if ((args.requirementCoverage ?? []).length === 0) {
+    issues.push("Verification render payload must include at least one requirementCoverage row.");
+  }
+  if ((args.evidenceMetadata ?? []).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("Verification render payload must include evidenceMetadata.");
+  }
+  if (!args.nextSafeAction?.trim()) {
+    issues.push("Verification render payload must include nextSafeAction.");
+  }
+  return issues;
+}
+function uatPayloadIssues(args) {
+  const issues = [];
+  if (!args.status?.trim()) {
+    issues.push("UAT render payload must include status.");
+  }
+  if (!args.resumeState?.trim()) {
+    issues.push("UAT render payload must include resumeState.");
+  }
+  if (!args.checkpoint?.trim()) {
+    issues.push("UAT render payload must include checkpoint.");
+  }
+  if (args.status === "PASS" && args.checkpoint?.trim().toLowerCase() !== "none") {
+    issues.push("UAT render payload must use checkpoint none when status is PASS.");
+  }
+  if ((args.status === "FAIL" || args.status === "PARTIAL") && args.checkpoint?.trim().toLowerCase() === "none") {
+    issues.push("UAT render payload must keep a non-empty checkpoint label until status is PASS.");
+  }
+  if ((args.uatSummary ?? []).filter((item) => item.trim().length > 0).length === 0) {
+    issues.push("UAT render payload must include uatSummary.");
+  }
+  if ((args.testMatrix ?? []).length === 0) {
+    issues.push("UAT render payload must include at least one testMatrix row.");
+  }
+  if (!args.resultSummary) {
+    issues.push("UAT render payload must include resultSummary.");
+  }
+  if (!args.nextSafeAction?.trim()) {
+    issues.push("UAT render payload must include nextSafeAction.");
+  }
+  return issues;
+}
+var init_phase_validation_rendering = __esm({
+  "src/mcp/tools/phase-validation-rendering.ts"() {
+    "use strict";
+    init_phase_markdown();
   }
 });
 
@@ -29018,10 +29312,6 @@ function validateSummaryAgainstLivePlanInventory(content, args) {
     issues,
     warnings
   };
-}
-function normalizeTextContent2(content) {
-  return content.endsWith("\n") ? content : `${content}
-`;
 }
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
@@ -30951,288 +31241,6 @@ async function collectValidationAuthoringSummaryEvidence(projectRoot, summaries,
   }
   return { summaryPaths, evidence, warnings };
 }
-function renderBulletList(items, fallback = "none") {
-  const lines = (items ?? []).map((item) => item.trim()).filter((item) => item.length > 0);
-  if (lines.length === 0) {
-    return `- ${fallback}`;
-  }
-  return lines.map((item) => `- ${item}`).join("\n");
-}
-function normalizeRenderList(value) {
-  if (Array.isArray(value)) {
-    return value;
-  }
-  return value === void 0 ? [] : [value];
-}
-function normalizeVerificationCoverageState(value) {
-  const normalized = String(value ?? "").trim();
-  return normalized.toLowerCase() === "covered" ? "COVERED" : normalized;
-}
-function normalizeVerificationStructuredModel(model) {
-  return {
-    ...model,
-    validationSummary: normalizeRenderList(model.validationSummary),
-    requirementCoverage: model.requirementCoverage.map((row) => ({
-      ...row,
-      coverageState: normalizeVerificationCoverageState(row.coverageState)
-    }))
-  };
-}
-function renderVerificationOptionalSections(args) {
-  const sections = [];
-  if ((args.sessionState ?? []).length > 0) {
-    sections.push(`## Session State
-
-${renderBulletList(args.sessionState)}`);
-  }
-  if (args.checkpoint?.trim()) {
-    sections.push(`## Checkpoint
-
-- ${args.checkpoint.trim()}`);
-  }
-  if ((args.testMatrix ?? []).length > 0) {
-    const testRows = (args.testMatrix ?? []).map(
-      (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
-    ).join("\n");
-    sections.push(`## Validation Test Matrix
-
-| # | Test | Expected Behavior | Evidence | Result | Notes |
-|---|------|-------------------|----------|--------|-------|
-${testRows}`);
-  }
-  if (args.resultSummary) {
-    sections.push(`## Result Summary
-
-- Total: ${args.resultSummary.total ?? ""}
-- Passed: ${args.resultSummary.passed ?? ""}
-- Issues: ${args.resultSummary.issues ?? ""}
-- Pending: ${args.resultSummary.pending ?? ""}
-- Skipped: ${args.resultSummary.skipped ?? ""}
-- Blocked: ${args.resultSummary.blocked ?? ""}`);
-  }
-  if ((args.observedBehavior ?? []).length > 0) {
-    sections.push(`## Observed Behavior
-
-${renderBulletList(args.observedBehavior)}`);
-  }
-  if ((args.unresolvedGaps ?? []).length > 0) {
-    sections.push(`## Unresolved Gaps
-
-${renderBulletList(args.unresolvedGaps)}`);
-  }
-  if ((args.structuredGaps ?? []).length > 0) {
-    const structuredGapRows = (args.structuredGaps ?? []).map(
-      (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
-    ).join("\n");
-    sections.push(`## Structured Gaps
-
-| Test | Truth | Status | Severity | Reason | Follow-Up |
-|------|-------|--------|----------|--------|-----------|
-${structuredGapRows}`);
-  }
-  if ((args.followUpFixes ?? []).length > 0) {
-    sections.push(`## Follow-Up Fixes
-
-${renderBulletList(args.followUpFixes)}`);
-  }
-  return sections.length > 0 ? `
-
-${sections.join("\n\n")}` : "";
-}
-function renderVerificationContent(args, resolved, summaryPaths) {
-  const evidenceReviewedSummaryPaths = args.evidenceReviewedSummaryPaths ?? summaryPaths;
-  const requirementRows = (args.requirementCoverage ?? []).map(
-    (row) => `| ${markdownCell(row.requirement)} | ${markdownCell(row.taskOrCheck)} | ${markdownCell(row.evidence)} | ${markdownCell(normalizeVerificationCoverageState(row.coverageState))} | ${markdownCell(row.notes)} |`
-  ).join("\n");
-  const manualRows = (args.manualOrDeferredCoverage ?? []).length > 0 ? (args.manualOrDeferredCoverage ?? []).map(
-    (row) => `| ${markdownCell(row.item)} | ${markdownCell(row.whyManualOrDeferred)} | ${markdownCell(row.followUp)} | ${markdownCell(row.status)} |`
-  ).join("\n") : "| none | none | none | NONE |";
-  const gapRows = (args.gapClassification ?? []).length > 0 ? (args.gapClassification ?? []).map(
-    (row) => `| ${markdownCell(row.gapClass)} | ${markdownCell(row.scope)} | ${markdownCell(row.evidence)} | ${markdownCell(row.repair)} |`
-  ).join("\n") : "| none | none | none | none |";
-  return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - Verification
-
-**Coverage:** ${args.coverageSummary ?? ""}
-**Gate State:** ${args.gateState ?? ""}
-**Sign-off:** ${args.signOff ?? ""}
-
-## Validation Summary
-
-${renderBulletList(normalizeRenderList(args.validationSummary))}
-
-## Requirement / Task Coverage
-
-| Requirement | Task or Check | Evidence | Coverage State | Notes |
-|-------------|---------------|----------|----------------|-------|
-${requirementRows}
-
-## Evidence Reviewed
-
-${renderBulletList(evidenceReviewedSummaryPaths)}
-
-## Test Infrastructure / Evidence Metadata
-
-${renderBulletList(args.evidenceMetadata)}
-
-## Manual-Only or Deferred Coverage
-
-| Item | Why manual or deferred | Follow-Up | Status |
-|------|------------------------|-----------|--------|
-${manualRows}
-
-## Gate State
-
-- Gate: ${args.gateState ?? ""}
-- Sign-off: ${args.signOff ?? ""}
-- Readiness: ${PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate[args.gateState ?? ""] ?? ""}
-
-## Gap Classification
-
-| Gap class | Scope | Evidence | Repair |
-|-----------|-------|----------|--------|
-${gapRows}
-
-## Gaps Found
-
-${renderBulletList(args.gapsFound)}
-
-## Suggested Repairs
-
-${renderBulletList(args.suggestedRepairs)}${renderVerificationOptionalSections(args)}
-
-## Next Safe Action
-
-- ${args.nextSafeAction ?? ""}
-`);
-}
-function renderUatContent(args, resolved) {
-  const currentTest = args.currentTest ?? {};
-  const resultSummary = args.resultSummary ?? {};
-  const testRows = (args.testMatrix ?? []).length > 0 ? (args.testMatrix ?? []).map(
-    (row, index) => `| ${markdownCell(row.number ?? String(index + 1))} | ${markdownCell(row.test)} | ${markdownCell(row.expectedBehavior)} | ${markdownCell(row.evidence)} | ${markdownCell(row.result)} | ${markdownCell(row.notes)} |`
-  ).join("\n") : "";
-  const structuredGapRows = (args.structuredGaps ?? []).length > 0 ? (args.structuredGaps ?? []).map(
-    (row) => `| ${markdownCell(row.test)} | ${markdownCell(row.truth)} | ${markdownCell(row.status)} | ${markdownCell(row.severity)} | ${markdownCell(row.reason)} | ${markdownCell(row.followUp)} |`
-  ).join("\n") : "| none | none | none | none | none | none |";
-  return normalizeTextContent2(`# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UAT
-
-**Status:** ${args.status ?? ""}
-**Resume State:** ${args.resumeState ?? ""}
-**Checkpoint:** ${args.checkpoint ?? ""}
-
-## UAT Summary
-
-${renderBulletList(args.uatSummary)}
-
-## Session State
-
-${renderBulletList(args.sessionState)}
-
-## Current Test
-
-- Number: ${currentTest.number ?? ""}
-- Name: ${currentTest.name ?? ""}
-- Expected: ${currentTest.expected ?? ""}
-- Awaiting: ${currentTest.awaiting ?? ""}
-
-## Test Matrix
-
-| # | Test | Expected Behavior | Evidence | Result | Notes |
-|---|------|-------------------|----------|--------|-------|
-${testRows}
-
-## Result Summary
-
-- Total: ${resultSummary.total ?? ""}
-- Passed: ${resultSummary.passed ?? ""}
-- Issues: ${resultSummary.issues ?? ""}
-- Pending: ${resultSummary.pending ?? ""}
-- Skipped: ${resultSummary.skipped ?? ""}
-- Blocked: ${resultSummary.blocked ?? ""}
-
-## Questions Asked
-
-${renderBulletList(args.questionsAsked)}
-
-## Observed Behavior
-
-${renderBulletList(args.observedBehavior)}
-
-## Unresolved Gaps
-
-${renderBulletList(args.unresolvedGaps)}
-
-## Structured Gaps
-
-| Test | Truth | Status | Severity | Reason | Follow-Up |
-|------|-------|--------|----------|--------|-----------|
-${structuredGapRows}
-
-## Follow-Up Fixes
-
-${renderBulletList(args.followUpFixes)}
-
-## Next Safe Action
-
-- ${args.nextSafeAction ?? ""}
-`);
-}
-function verificationPayloadIssues(args) {
-  const issues = [];
-  if (!args.coverageSummary?.trim()) {
-    issues.push("Verification render payload must include coverageSummary.");
-  }
-  if (!args.gateState?.trim()) {
-    issues.push("Verification render payload must include gateState.");
-  }
-  if (!args.signOff?.trim()) {
-    issues.push("Verification render payload must include signOff.");
-  }
-  if (normalizeRenderList(args.validationSummary).filter((item) => item.trim().length > 0).length === 0) {
-    issues.push("Verification render payload must include validationSummary.");
-  }
-  if ((args.requirementCoverage ?? []).length === 0) {
-    issues.push("Verification render payload must include at least one requirementCoverage row.");
-  }
-  if ((args.evidenceMetadata ?? []).filter((item) => item.trim().length > 0).length === 0) {
-    issues.push("Verification render payload must include evidenceMetadata.");
-  }
-  if (!args.nextSafeAction?.trim()) {
-    issues.push("Verification render payload must include nextSafeAction.");
-  }
-  return issues;
-}
-function uatPayloadIssues(args) {
-  const issues = [];
-  if (!args.status?.trim()) {
-    issues.push("UAT render payload must include status.");
-  }
-  if (!args.resumeState?.trim()) {
-    issues.push("UAT render payload must include resumeState.");
-  }
-  if (!args.checkpoint?.trim()) {
-    issues.push("UAT render payload must include checkpoint.");
-  }
-  if (args.status === "PASS" && args.checkpoint?.trim().toLowerCase() !== "none") {
-    issues.push("UAT render payload must use checkpoint none when status is PASS.");
-  }
-  if ((args.status === "FAIL" || args.status === "PARTIAL") && args.checkpoint?.trim().toLowerCase() === "none") {
-    issues.push("UAT render payload must keep a non-empty checkpoint label until status is PASS.");
-  }
-  if ((args.uatSummary ?? []).filter((item) => item.trim().length > 0).length === 0) {
-    issues.push("UAT render payload must include uatSummary.");
-  }
-  if ((args.testMatrix ?? []).length === 0) {
-    issues.push("UAT render payload must include at least one testMatrix row.");
-  }
-  if (!args.resultSummary) {
-    issues.push("UAT render payload must include resultSummary.");
-  }
-  if (!args.nextSafeAction?.trim()) {
-    issues.push("UAT render payload must include nextSafeAction.");
-  }
-  return issues;
-}
 async function validationPrerequisiteBlockers(projectRoot, resolved, artifact, summaryPaths) {
   const blockers = [];
   let verification = null;
@@ -31438,7 +31446,8 @@ async function blueprintPhaseValidationValidateModel(args) {
         ...normalizedModel
       },
       resolved,
-      context.summaryPaths
+      context.summaryPaths,
+      PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate
     ) : renderUatContent(
       {
         cwd: args.cwd,
@@ -31527,7 +31536,12 @@ async function blueprintPhaseValidationRender(args) {
     args.artifact,
     summaryEvidence.summaryPaths
   );
-  const content = args.artifact === "verification" ? renderVerificationContent(args, resolved, summaryEvidence.summaryPaths) : renderUatContent(args, resolved);
+  const content = args.artifact === "verification" ? renderVerificationContent(
+    args,
+    resolved,
+    summaryEvidence.summaryPaths,
+    PHASE_VALIDATION_ALLOWED_VALUES.verification.readinessByGate
+  ) : renderUatContent(args, resolved);
   const referencedSummaryPaths = collectReferencedValidatedSummaryPaths(
     content,
     summaryIndex.summaries,
@@ -35128,6 +35142,7 @@ var init_phase = __esm({
     init_phase_schema_paths();
     init_phase_execution_surfaces();
     init_phase_summary_routing();
+    init_phase_validation_rendering();
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };

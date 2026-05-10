@@ -5,6 +5,7 @@ import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
 import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
 import { type PhaseExecutionTargetConflictSurface } from "./phase-execution-surfaces.js";
+import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -131,155 +132,6 @@ type PhaseValidationAuthoringContextResult = {
     warnings: string[];
     reason: string | null;
 };
-type VerificationRenderCoverageRow = {
-    requirement?: string;
-    taskOrCheck?: string;
-    evidence?: string;
-    coverageState?: string;
-    notes?: string;
-};
-type VerificationManualCoverageRow = {
-    item?: string;
-    whyManualOrDeferred?: string;
-    followUp?: string;
-    status?: string;
-};
-type VerificationGapClassificationRow = {
-    gapClass?: string;
-    scope?: string;
-    evidence?: string;
-    repair?: string;
-};
-type VerificationCoverageState = "PASS" | "COVERED" | "MANUAL" | "DEFERRED" | "BLOCKED";
-type VerificationTestMatrixRow = {
-    number?: string;
-    test?: string;
-    expectedBehavior?: string;
-    evidence?: string;
-    result?: "pending" | "pass" | "issue" | "skipped" | "blocked";
-    notes?: string;
-};
-type VerificationResultSummary = {
-    total?: number;
-    passed?: number;
-    issues?: number;
-    pending?: number;
-    skipped?: number;
-    blocked?: number;
-};
-type VerificationStructuredGapRow = {
-    test?: string;
-    truth?: string;
-    status?: "failed" | "partial" | "blocked" | "none";
-    severity?: "blocker" | "major" | "minor" | "cosmetic" | "none";
-    reason?: string;
-    followUp?: string;
-};
-type VerificationRenderArgs = PhaseLookupArgs & {
-    artifact: "verification";
-    coverageSummary?: string;
-    status?: string;
-    gateState?: string;
-    signOff?: string;
-    validationSummary?: string | string[];
-    requirementCoverage?: VerificationRenderCoverageRow[];
-    evidenceReviewedSummaryPaths?: string[];
-    evidenceMetadata?: string[];
-    manualOrDeferredCoverage?: VerificationManualCoverageRow[];
-    gapClassification?: VerificationGapClassificationRow[];
-    gapsFound?: string[];
-    suggestedRepairs?: string[];
-    sessionState?: string[];
-    checkpoint?: string;
-    testMatrix?: VerificationTestMatrixRow[];
-    resultSummary?: VerificationResultSummary;
-    observedBehavior?: string[];
-    unresolvedGaps?: string[];
-    structuredGaps?: VerificationStructuredGapRow[];
-    followUpFixes?: string[];
-    nextSafeAction?: string;
-};
-type PhaseVerificationStructuredModel = {
-    coverageSummary: string;
-    status: "PASS" | "PARTIAL" | "BLOCKED";
-    gateState: "PASS" | "PARTIAL" | "BLOCKED";
-    signOff: string;
-    validationSummary: string | string[];
-    requirementCoverage: Array<{
-        requirement: string;
-        taskOrCheck: string;
-        evidence: string;
-        coverageState: VerificationCoverageState | "covered";
-        notes: string;
-    }>;
-    evidenceReviewedSummaryPaths: string[];
-    evidenceMetadata: string[];
-    manualOrDeferredCoverage: Array<{
-        item: string;
-        whyManualOrDeferred: string;
-        followUp: string;
-        status: "MANUAL" | "DEFERRED" | "NONE";
-    }>;
-    gapClassification: Array<{
-        gapClass: "missing-evidence" | "partial-coverage" | "manual-only" | "deferred-test" | "contradiction" | "none";
-        scope: string;
-        evidence: string;
-        repair: string;
-    }>;
-    gapsFound: string[];
-    suggestedRepairs: string[];
-    sessionState?: string[];
-    checkpoint?: string;
-    testMatrix?: Array<Required<VerificationTestMatrixRow>>;
-    resultSummary?: Required<VerificationResultSummary>;
-    observedBehavior?: string[];
-    unresolvedGaps?: string[];
-    structuredGaps?: Array<Required<VerificationStructuredGapRow>>;
-    followUpFixes?: string[];
-    nextSafeAction: string;
-};
-type PhaseUatStructuredModel = {
-    status: "PASS" | "FAIL" | "PARTIAL";
-    resumeState: "RESUMED" | "NEW" | "CONTINUED";
-    checkpoint: string;
-    uatSummary: string[];
-    sessionState: string[];
-    currentTest: {
-        number: string;
-        name: string;
-        expected: string;
-        awaiting: string;
-    };
-    testMatrix: Array<{
-        number: string;
-        test: string;
-        expectedBehavior: string;
-        evidence: string;
-        result: "pending" | "pass" | "issue" | "skipped" | "blocked";
-        notes: string;
-    }>;
-    resultSummary: {
-        total: number;
-        passed: number;
-        issues: number;
-        pending: number;
-        skipped: number;
-        blocked: number;
-    };
-    questionsAsked: string[];
-    observedBehavior: string[];
-    unresolvedGaps: string[];
-    structuredGaps: Array<{
-        test: string;
-        truth: string;
-        status: "failed" | "partial" | "blocked" | "none";
-        severity: "blocker" | "major" | "minor" | "cosmetic" | "none";
-        reason: string;
-        followUp: string;
-    }>;
-    followUpFixes: string[];
-    nextSafeAction: string;
-};
 type PhaseValidationDiagnosticSource = "scope" | "schema" | "residual" | "markdown";
 type PhaseValidationModelDiagnostic = {
     source: PhaseValidationDiagnosticSource;
@@ -311,54 +163,6 @@ type PhaseValidationValidateModelResult = {
     warnings: string[];
 };
 type PhaseValidationStandaloneValidateModelResult = Omit<PhaseValidationValidateModelResult, "taskSchema" | "normalizedModel" | "renderPreview">;
-type UatRenderCurrentTest = {
-    number?: string;
-    name?: string;
-    expected?: string;
-    awaiting?: string;
-};
-type UatRenderTestMatrixRow = {
-    number?: string;
-    test?: string;
-    expectedBehavior?: string;
-    evidence?: string;
-    result?: string;
-    notes?: string;
-};
-type UatRenderResultSummary = {
-    total?: number;
-    passed?: number;
-    issues?: number;
-    pending?: number;
-    skipped?: number;
-    blocked?: number;
-};
-type UatRenderStructuredGapRow = {
-    test?: string;
-    truth?: string;
-    status?: string;
-    severity?: string;
-    reason?: string;
-    followUp?: string;
-};
-type UatRenderArgs = PhaseLookupArgs & {
-    artifact: "uat";
-    status?: string;
-    resumeState?: string;
-    checkpoint?: string;
-    uatSummary?: string[];
-    sessionState?: string[];
-    currentTest?: UatRenderCurrentTest;
-    testMatrix?: UatRenderTestMatrixRow[];
-    resultSummary?: UatRenderResultSummary;
-    questionsAsked?: string[];
-    observedBehavior?: string[];
-    unresolvedGaps?: string[];
-    structuredGaps?: UatRenderStructuredGapRow[];
-    followUpFixes?: string[];
-    nextSafeAction?: string;
-};
-type PhaseValidationRenderArgs = VerificationRenderArgs | UatRenderArgs;
 type PhaseValidationRenderResult = {
     phaseFound: boolean;
     phaseNumber: string | null;

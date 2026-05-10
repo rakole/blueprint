@@ -9,3 +9,5 @@ export declare function sectionToList(section: string): string[];
 export declare function summarizeContextPieces(pieces: string[], emptyMessage: string): string;
 export declare function markdownCell(value: unknown): string;
 export declare function markdownTableCell(value: string): string;
+export declare function renderBulletList(items: string[] | undefined, fallback?: string): string;
+export declare function normalizeTextContent(content: string): string;
