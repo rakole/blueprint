@@ -2,6 +2,7 @@ import * as z from "zod/v4";
 import { type ArtifactContractReadResult } from "../artifact-contracts/index.js";
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
 import { type NumericInput } from "./phase-numbering.js";
+import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
 type RoadmapReadArgs = {
     cwd?: string;
 };
@@ -378,42 +379,6 @@ type PhaseValidationRenderResult = {
     readyToWrite: boolean;
     issues: string[];
     warnings: string[];
-};
-type PhaseCheckpointRecord = Record<string, unknown>;
-type PhaseCheckpointDecisionRecord = {
-    topic: string;
-    decision: string;
-    rationale?: string;
-};
-type PhaseCheckpointDeferredIdeaRecord = {
-    idea: string;
-    reason?: string;
-    revisitWhen?: string;
-};
-type PhaseCheckpointReferenceRecord = {
-    label: string;
-    target: string;
-    note?: string;
-};
-type PhaseCheckpointOwnerCommand = "/blu-discuss-phase" | "/blu-research-phase";
-type PhaseCheckpointResumeMode = "discuss" | "research";
-type PhaseCheckpointResumeMetaRecord = {
-    mode: PhaseCheckpointResumeMode;
-    pendingTopics: string[];
-    completedTopics: string[];
-    currentQuestion?: string;
-    notes: string[];
-    resumeHint?: string;
-    updatedAt: string;
-};
-type PhaseCheckpointWriteRecord = PhaseCheckpointRecord & {
-    ownerCommand: PhaseCheckpointOwnerCommand;
-    completedAreas: string[];
-    remainingAreas: string[];
-    decisions: PhaseCheckpointDecisionRecord[];
-    deferredIdeas: PhaseCheckpointDeferredIdeaRecord[];
-    canonicalReferences: PhaseCheckpointReferenceRecord[];
-    resumeMeta: PhaseCheckpointResumeMetaRecord;
 };
 type PhaseCheckpointGetArgs = PhaseLookupArgs & {
     expectedOwnerCommand?: PhaseCheckpointOwnerCommand;
