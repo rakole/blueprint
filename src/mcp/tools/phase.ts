@@ -7,7 +7,6 @@ import {
   readArtifactContract,
   type ArtifactContractReadResult
 } from "../artifact-contracts/index.js";
-import { blueprintDirectCommand } from "../command-paths.js";
 import {
   isBootstrapStarterContext,
   isScaffoldGeneratedArtifact,
@@ -193,6 +192,11 @@ import {
   type PhasePlanModelDiagnostic,
   type PhasePlanRepairSummary
 } from "./phase-plan-diagnostics.js";
+import {
+  extractBlueprintDirectCommands,
+  filterImplementedBlueprintActions,
+  getPhasePlanImplementedCommandNames
+} from "./phase-command-actions.js";
 
 type RoadmapReadArgs = {
   cwd?: string;
@@ -3935,13 +3939,7 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber: string): Promise
     };
   }
 
-  const filterImplemented = (actions: string[]): string[] =>
-    actions.filter((action) =>
-      extractBlueprintDirectCommands(action).every((command) =>
-        implementedCommands.has(command)
-      )
-    );
-  const implemented = filterImplemented(fallback);
+  const implemented = filterImplementedBlueprintActions(fallback, implementedCommands);
 
   return {
     readyAction: implemented.includes(readyAction) ? readyAction : readyAction,
@@ -3950,12 +3948,6 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber: string): Promise
     allowedActions: implemented.length > 0 ? implemented : fallback
   };
 }
-
-type CommandCatalogResult = {
-  commands: Record<string, { implemented: boolean }>;
-};
-
-let phasePlanImplementedCommandNamesPromise: Promise<Set<string> | null> | null = null;
 
 function phasePlanValidateModelTarget(args: {
   phase: ResolvedPhaseLocation | null;
@@ -3972,38 +3964,6 @@ function phasePlanValidateModelTarget(args: {
     path: args.path,
     schemaPath: args.schemaPath
   };
-}
-
-async function getPhasePlanImplementedCommandNames(): Promise<Set<string> | null> {
-  if (!phasePlanImplementedCommandNamesPromise) {
-    phasePlanImplementedCommandNamesPromise = (async () => {
-      try {
-        const projectModule = (await import("./project.js")) as {
-          blueprintCommandCatalog: () => Promise<CommandCatalogResult>;
-        };
-        const catalog = await projectModule.blueprintCommandCatalog();
-        const implementedCommands = new Set(
-          Object.entries(catalog.commands)
-            .filter(([, entry]) => entry.implemented)
-            .map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
-        );
-
-        return implementedCommands.size > 0 ? implementedCommands : null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-
-  return phasePlanImplementedCommandNamesPromise;
-}
-
-function extractBlueprintDirectCommands(value: string): string[] {
-  return [
-    ...new Set(
-      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
-    )
-  ];
 }
 
 async function validatePhasePlanModelCommands(model: Record<string, unknown>): Promise<string[]> {
@@ -4902,14 +4862,12 @@ async function buildPhaseVerificationAllowedNextActions(phaseNumber: string): Pr
     };
   }
 
-  const filterImplemented = (actions: string[]): string[] =>
-    actions.filter((action) =>
-      extractBlueprintDirectCommands(action).every((command) =>
-        implementedCommands.has(command)
-      )
-    );
-  const implementedReady = filterImplemented([readyAction])[0] ?? readyAction;
-  const implementedRepairs = filterImplemented(repairActions);
+  const implementedReady =
+    filterImplementedBlueprintActions([readyAction], implementedCommands)[0] ?? readyAction;
+  const implementedRepairs = filterImplementedBlueprintActions(
+    repairActions,
+    implementedCommands
+  );
 
   return {
     readyAction: implementedReady,
@@ -5124,14 +5082,12 @@ async function buildPhaseUatAllowedNextActions(phaseNumber: string): Promise<{
     };
   }
 
-  const filterImplemented = (actions: string[]): string[] =>
-    actions.filter((action) =>
-      extractBlueprintDirectCommands(action).every((command) =>
-        implementedCommands.has(command)
-      )
-    );
-  const implementedComplete = filterImplemented([completeAction])[0] ?? completeAction;
-  const implementedContinuation = filterImplemented(continuationActions);
+  const implementedComplete =
+    filterImplementedBlueprintActions([completeAction], implementedCommands)[0] ?? completeAction;
+  const implementedContinuation = filterImplementedBlueprintActions(
+    continuationActions,
+    implementedCommands
+  );
   const continuation =
     implementedContinuation.length > 0 ? implementedContinuation : continuationActions;
 

@@ -28604,6 +28604,47 @@ var init_phase_plan_diagnostics = __esm({
   }
 });
 
+// src/mcp/tools/phase-command-actions.ts
+async function getPhasePlanImplementedCommandNames() {
+  if (!implementedCommandNamesPromise2) {
+    implementedCommandNamesPromise2 = (async () => {
+      try {
+        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
+        const catalog = await projectModule.blueprintCommandCatalog();
+        const implementedCommands = new Set(
+          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
+        );
+        return implementedCommands.size > 0 ? implementedCommands : null;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return implementedCommandNamesPromise2;
+}
+function extractBlueprintDirectCommands(value) {
+  return [
+    ...new Set(
+      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
+    )
+  ];
+}
+function filterImplementedBlueprintActions(actions, implementedCommands) {
+  return actions.filter(
+    (action) => extractBlueprintDirectCommands(action).every(
+      (command) => implementedCommands.has(command)
+    )
+  );
+}
+var implementedCommandNamesPromise2;
+var init_phase_command_actions = __esm({
+  "src/mcp/tools/phase-command-actions.ts"() {
+    "use strict";
+    init_command_paths();
+    implementedCommandNamesPromise2 = null;
+  }
+});
+
 // src/mcp/tools/phase.ts
 var phase_exports = {};
 __export(phase_exports, {
@@ -30357,12 +30398,7 @@ async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
       allowedActions: fallback
     };
   }
-  const filterImplemented = (actions) => actions.filter(
-    (action) => extractBlueprintDirectCommands(action).every(
-      (command) => implementedCommands.has(command)
-    )
-  );
-  const implemented = filterImplemented(fallback);
+  const implemented = filterImplementedBlueprintActions(fallback, implementedCommands);
   return {
     readyAction: implemented.includes(readyAction) ? readyAction : readyAction,
     partialAction: implemented.includes(partialAction) ? partialAction : partialAction,
@@ -30380,30 +30416,6 @@ function phasePlanValidateModelTarget(args) {
     path: args.path,
     schemaPath: args.schemaPath
   };
-}
-async function getPhasePlanImplementedCommandNames() {
-  if (!phasePlanImplementedCommandNamesPromise) {
-    phasePlanImplementedCommandNamesPromise = (async () => {
-      try {
-        const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
-        const catalog = await projectModule.blueprintCommandCatalog();
-        const implementedCommands = new Set(
-          Object.entries(catalog.commands).filter(([, entry]) => entry.implemented).map(([commandName]) => blueprintDirectCommand(commandName).toLowerCase())
-        );
-        return implementedCommands.size > 0 ? implementedCommands : null;
-      } catch {
-        return null;
-      }
-    })();
-  }
-  return phasePlanImplementedCommandNamesPromise;
-}
-function extractBlueprintDirectCommands(value) {
-  return [
-    ...new Set(
-      [...value.matchAll(/\/blu-[a-z0-9-]+/gi)].map((match) => match[0].toLowerCase())
-    )
-  ];
 }
 async function validatePhasePlanModelCommands(model) {
   const commands = [
@@ -31076,13 +31088,11 @@ async function buildPhaseVerificationAllowedNextActions(phaseNumber) {
       allowedActions: [readyAction, ...repairActions]
     };
   }
-  const filterImplemented = (actions) => actions.filter(
-    (action) => extractBlueprintDirectCommands(action).every(
-      (command) => implementedCommands.has(command)
-    )
+  const implementedReady = filterImplementedBlueprintActions([readyAction], implementedCommands)[0] ?? readyAction;
+  const implementedRepairs = filterImplementedBlueprintActions(
+    repairActions,
+    implementedCommands
   );
-  const implementedReady = filterImplemented([readyAction])[0] ?? readyAction;
-  const implementedRepairs = filterImplemented(repairActions);
   return {
     readyAction: implementedReady,
     repairActions: implementedRepairs.length > 0 ? implementedRepairs : repairActions,
@@ -31262,13 +31272,11 @@ async function buildPhaseUatAllowedNextActions(phaseNumber) {
       allowedActions: [completeAction, ...continuationActions]
     };
   }
-  const filterImplemented = (actions) => actions.filter(
-    (action) => extractBlueprintDirectCommands(action).every(
-      (command) => implementedCommands.has(command)
-    )
+  const implementedComplete = filterImplementedBlueprintActions([completeAction], implementedCommands)[0] ?? completeAction;
+  const implementedContinuation = filterImplementedBlueprintActions(
+    continuationActions,
+    implementedCommands
   );
-  const implementedComplete = filterImplemented([completeAction])[0] ?? completeAction;
-  const implementedContinuation = filterImplemented(continuationActions);
   const continuation = implementedContinuation.length > 0 ? implementedContinuation : continuationActions;
   return {
     completeAction: implementedComplete,
@@ -35214,13 +35222,12 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phasePlanImplementedCommandNamesPromise, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
     init_v4();
     init_artifact_contracts();
-    init_command_paths();
     init_artifacts();
     init_config();
     init_state();
@@ -35245,6 +35252,7 @@ var init_phase = __esm({
     init_phase_plan_rendering();
     init_phase_context_model();
     init_phase_plan_diagnostics();
+    init_phase_command_actions();
     roadmapReadInputSchema = {
       cwd: string2().optional()
     };
@@ -35493,7 +35501,6 @@ var init_phase = __esm({
       expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
       expectedMode: phaseCheckpointResumeModeSchema.optional()
     };
-    phasePlanImplementedCommandNamesPromise = null;
     phaseToolDefinitions = [
       {
         name: "blueprint_roadmap_read",
@@ -37314,8 +37321,8 @@ function extractBlueprintCommands(section) {
   ];
 }
 async function getImplementedCommandNames2() {
-  if (!implementedCommandNamesPromise2) {
-    implementedCommandNamesPromise2 = (async () => {
+  if (!implementedCommandNamesPromise3) {
+    implementedCommandNamesPromise3 = (async () => {
       try {
         const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
         const catalog = await projectModule.blueprintCommandCatalog();
@@ -37327,7 +37334,7 @@ async function getImplementedCommandNames2() {
       }
     })();
   }
-  return implementedCommandNamesPromise2;
+  return implementedCommandNamesPromise3;
 }
 function summarizeMarkdownTableRow(line) {
   const cells = line.slice(1, -1).split("|").map((cell) => cell.trim());
@@ -44536,7 +44543,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise2, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -44877,7 +44884,7 @@ var init_artifacts = __esm({
       "workspace",
       "workspaces"
     ]);
-    implementedCommandNamesPromise2 = null;
+    implementedCommandNamesPromise3 = null;
     VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS = [
       { pattern: /\bPhase XX\b/i, signal: "Phase XX" },
       { pattern: /<Phase Name>/i, signal: "<Phase Name>" },
@@ -45248,8 +45255,8 @@ function inferCodeReviewSecondaryNextSafeAction(allowedNextActions, preferredNex
   return repairAction;
 }
 async function getImplementedCommandNames3() {
-  if (!implementedCommandNamesPromise3) {
-    implementedCommandNamesPromise3 = (async () => {
+  if (!implementedCommandNamesPromise4) {
+    implementedCommandNamesPromise4 = (async () => {
       try {
         const projectModule = await Promise.resolve().then(() => (init_project(), project_exports));
         const catalog = await projectModule.blueprintCommandCatalog();
@@ -45265,7 +45272,7 @@ async function getImplementedCommandNames3() {
       }
     })();
   }
-  return implementedCommandNamesPromise3;
+  return implementedCommandNamesPromise4;
 }
 function extractBlueprintDirectCommands2(value) {
   return [
@@ -51875,7 +51882,7 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__3, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, LEGACY_CODE_REVIEW_FINDING_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise3, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__3, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, LEGACY_CODE_REVIEW_FINDING_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise4, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -52003,7 +52010,7 @@ var init_review = __esm({
       () => "/blu-progress"
     ];
     REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE = "Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record.";
-    implementedCommandNamesPromise3 = null;
+    implementedCommandNamesPromise4 = null;
     PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS = [
       ".blueprint/ROADMAP.md",
       ".blueprint/REQUIREMENTS.md"
