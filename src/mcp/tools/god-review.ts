@@ -12,6 +12,7 @@ import {
   resolveBlueprintPath,
   resolveRepoRelativePath
 } from "./artifacts.js";
+import { blueprintPhaseLocate } from "./phase.js";
 import { blueprintReviewScope } from "./review.js";
 
 /**
@@ -350,6 +351,28 @@ export type GodReviewStartResult = {
   warnings: string[];
 };
 
+export type GodReviewNextResult = {
+  status: "ready" | "complete" | "stale" | "invalid" | "refused";
+  activated: boolean;
+  refusal?: string;
+  reason: string | null;
+  runId: string | null;
+  sessionPath: string | null;
+  humanStatePath: string | null;
+  reportPath: string | null;
+  scopeKind: GodReviewScopeKind | null;
+  phase: string | number | null;
+  files: string[];
+  scopeFingerprint: GodReviewScopeFingerprint | null;
+  currentFingerprint: GodReviewScopeFingerprint | null;
+  staleReasons: string[];
+  nextGroup: GodReviewGroupState | null;
+  nextGroupId: GodReviewGroupId | null;
+  nextCommand: string | null;
+  written: false;
+  warnings: string[];
+};
+
 const godReviewStartInputSchema = {
   cwd: z.string().optional(),
   activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
@@ -362,6 +385,17 @@ const godReviewStartInputSchema = {
 };
 const godReviewStartArgsSchema = z.object(godReviewStartInputSchema);
 type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
+
+const godReviewNextInputSchema = {
+  cwd: z.string().optional(),
+  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  rawInvocation: z.string(),
+  phase: z.union([z.string(), z.number()]).optional(),
+  runId: z.string().optional(),
+  sessionPath: z.string().optional()
+};
+const godReviewNextArgsSchema = z.object(godReviewNextInputSchema);
+type GodReviewNextArgs = z.infer<typeof godReviewNextArgsSchema>;
 
 function hasGodReviewFlag(rawInvocation: string): boolean {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
@@ -792,6 +826,33 @@ function invalidStartResult(args: {
   };
 }
 
+function invalidNextResult(args: {
+  activated?: boolean;
+  reason: string;
+  warnings?: string[];
+}): GodReviewNextResult {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    runId: null,
+    sessionPath: null,
+    humanStatePath: null,
+    reportPath: null,
+    scopeKind: null,
+    phase: null,
+    files: [],
+    scopeFingerprint: null,
+    currentFingerprint: null,
+    staleReasons: [],
+    nextGroup: null,
+    nextGroupId: null,
+    nextCommand: null,
+    written: false,
+    warnings: args.warnings ?? []
+  };
+}
+
 function determineScopeKind(args: GodReviewStartArgs): GodReviewScopeKind {
   if (args.scopeKind) {
     return args.scopeKind;
@@ -835,6 +896,387 @@ function parsePhaseFromInvocation(rawInvocation: string): string | null {
   }
 
   return null;
+}
+
+function parseFlagValue(rawInvocation: string, flag: string): string | null {
+  const tokens = rawInvocation.trim().split(/\s+/);
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index] === flag) {
+      return tokens[index + 1] ?? null;
+    }
+
+    if (tokens[index].startsWith(`${flag}=`)) {
+      return tokens[index].slice(flag.length + 1);
+    }
+  }
+
+  return null;
+}
+
+function normalizeGodReviewSessionPath(rawPath: string): GodReviewRepoPathResult {
+  const requestedPath = normalizePathSeparators(rawPath.trim());
+
+  if (requestedPath.length === 0) {
+    return { valid: false, path: null, reason: "Session path must not be empty." };
+  }
+
+  if (path.isAbsolute(requestedPath)) {
+    return {
+      valid: false,
+      path: null,
+      reason: "Absolute filesystem paths are not allowed."
+    };
+  }
+
+  if (hasGlobPattern(requestedPath)) {
+    return { valid: false, path: null, reason: "Globs are not allowed." };
+  }
+
+  const normalizedPath = path.posix.normalize(requestedPath);
+
+  if (!normalizedPath.startsWith(".blueprint/")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review sessions must stay inside .blueprint."
+    };
+  }
+
+  if (!normalizedPath.endsWith(".json")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review session path must point to a JSON file."
+    };
+  }
+
+  return { valid: true, path: normalizedPath };
+}
+
+async function resolveGodReviewSessionPath(
+  args: GodReviewNextArgs,
+  projectRoot: string
+): Promise<{ valid: true; path: string } | { valid: false; reason: string }> {
+  const explicitSessionPath = args.sessionPath ?? parseFlagValue(args.rawInvocation, "--session");
+
+  if (explicitSessionPath) {
+    const normalized = normalizeGodReviewSessionPath(explicitSessionPath);
+
+    return normalized.valid
+      ? { valid: true, path: normalized.path }
+      : { valid: false, reason: normalized.reason };
+  }
+
+  const runId = args.runId ?? parseFlagValue(args.rawInvocation, "--run-id");
+
+  if (runId) {
+    if (!isValidRunId(runId)) {
+      return {
+        valid: false,
+        reason: "runId may contain only letters, numbers, dots, underscores, and dashes."
+      };
+    }
+
+    return {
+      valid: true,
+      path: buildGodReviewReportPaths({ runId }).sessionPath
+    };
+  }
+
+  const phase = args.phase ?? parsePhaseFromInvocation(args.rawInvocation);
+
+  if (phase === null || phase === undefined) {
+    return {
+      valid: false,
+      reason:
+        "Unable to resolve god-review session path. Provide phase, runId, or sessionPath."
+    };
+  }
+
+  const located = await blueprintPhaseLocate({
+    cwd: projectRoot,
+    phase
+  });
+
+  if (
+    !located.found ||
+    !located.phasePrefix ||
+    !located.phaseDir
+  ) {
+    return {
+      valid: false,
+      reason: located.reason ?? "Phase could not be resolved for god-review continuation."
+    };
+  }
+
+  return {
+    valid: true,
+    path: buildGodReviewPhasePaths({
+      phaseDir: located.phaseDir,
+      phasePrefix: located.phasePrefix
+    }).sessionPath
+  };
+}
+
+async function loadGodReviewSession(args: {
+  projectRoot: string;
+  sessionPath: string;
+}): Promise<
+  | { valid: true; session: GodReviewSession }
+  | { valid: false; reason: string; warnings: string[] }
+> {
+  const absolutePath = resolveBlueprintPath(args.projectRoot, args.sessionPath);
+  const raw = await readTextIfPresent(absolutePath);
+
+  if (raw === null) {
+    return {
+      valid: false,
+      reason: `${args.sessionPath} does not exist.`,
+      warnings: []
+    };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return {
+      valid: false,
+      reason: `${args.sessionPath} is not valid JSON.`,
+      warnings: []
+    };
+  }
+
+  const session = godReviewSessionSchema.safeParse(parsed);
+
+  if (!session.success) {
+    return {
+      valid: false,
+      reason: `${args.sessionPath} is not a valid god-review session.`,
+      warnings: session.error.issues.map((issue) => issue.message)
+    };
+  }
+
+  return { valid: true, session: session.data };
+}
+
+function compareGodReviewFingerprints(args: {
+  saved: GodReviewScopeFingerprint;
+  current: GodReviewScopeFingerprint;
+}): string[] {
+  const staleReasons: string[] = [];
+
+  for (const field of ["baseSha", "headSha", "diffHash", "fileSetHash", "prNumber"] as const) {
+    if (args.saved[field] !== args.current[field]) {
+      staleReasons.push(
+        `${field} changed from ${args.saved[field] ?? "null"} to ${args.current[field] ?? "null"}`
+      );
+    }
+  }
+
+  return staleReasons;
+}
+
+async function fingerprintStoredFileSet(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+}): Promise<{
+  fingerprint: GodReviewScopeFingerprint;
+  staleReasons: string[];
+  warnings: string[];
+}> {
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files: args.session.files,
+    sourceLabel: "saved god-review session"
+  });
+  const headSha = await currentGitHead(args.projectRoot);
+  const fingerprint = {
+    ...args.session.scopeFingerprint,
+    baseSha: headSha,
+    headSha,
+    diffHash: args.session.scopeFingerprint.diffHash,
+    fileSetHash: hashGodReviewFileSet({
+      files: args.session.files,
+      skippedFiles: args.session.skippedFiles
+    })
+  };
+  const staleReasons = compareGodReviewFingerprints({
+    saved: args.session.scopeFingerprint,
+    current: fingerprint
+  });
+
+  if (!resolvedFiles.valid) {
+    staleReasons.push(
+      resolvedFiles.reason ?? "Saved god-review session files are no longer valid."
+    );
+  }
+
+  return {
+    fingerprint,
+    staleReasons,
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function fingerprintCurrentDiffForSession(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+}): Promise<{
+  fingerprint: GodReviewScopeFingerprint;
+  staleReasons: string[];
+  warnings: string[];
+}> {
+  const [changed, untracked] = await Promise.all([
+    runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand(
+      "git",
+      ["ls-files", "--others", "--exclude-standard"],
+      args.projectRoot
+    )
+  ]);
+  const currentFiles = [...changed.split("\n"), ...untracked.split("\n")]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files: currentFiles,
+    sourceLabel: "current-diff god-review scope"
+  });
+  const headSha = await currentGitHead(args.projectRoot);
+  const fingerprint = {
+    baseSha: headSha,
+    headSha,
+    diffHash:
+      resolvedFiles.files.length > 0
+        ? await hashCurrentDiff(args.projectRoot, resolvedFiles.files)
+        : stableHash(""),
+    fileSetHash: hashGodReviewFileSet({
+      files: resolvedFiles.files,
+      skippedFiles: resolvedFiles.skippedFiles
+    }),
+    prNumber: null
+  };
+
+  return {
+    fingerprint,
+    staleReasons: compareGodReviewFingerprints({
+      saved: args.session.scopeFingerprint,
+      current: fingerprint
+    }),
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function fingerprintPrForSession(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+}): Promise<{
+  fingerprint: GodReviewScopeFingerprint;
+  staleReasons: string[];
+  warnings: string[];
+}> {
+  const prNumber = args.session.scopeFingerprint.prNumber;
+
+  if (prNumber === null) {
+    return {
+      fingerprint: args.session.scopeFingerprint,
+      staleReasons: ["Saved PR god-review session is missing prNumber."],
+      warnings: []
+    };
+  }
+
+  const pr = String(prNumber);
+  const [nameOnly, diff, viewJson] = await Promise.all([
+    runExternalCommand("gh", ["pr", "diff", pr, "--name-only"], args.projectRoot),
+    runExternalCommand("gh", ["pr", "diff", pr], args.projectRoot),
+    runExternalCommand(
+      "gh",
+      ["pr", "view", pr, "--json", "baseRefOid,headRefOid"],
+      args.projectRoot
+    )
+  ]);
+  const files = nameOnly
+    .split("\n")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files,
+    sourceLabel: "PR god-review scope"
+  });
+  let prView: { baseRefOid?: unknown; headRefOid?: unknown };
+
+  try {
+    prView = JSON.parse(viewJson) as { baseRefOid?: unknown; headRefOid?: unknown };
+  } catch {
+    return {
+      fingerprint: args.session.scopeFingerprint,
+      staleReasons: ["gh pr view did not return valid JSON for PR god-review scope."],
+      warnings: []
+    };
+  }
+
+  const fingerprint = {
+    baseSha:
+      typeof prView.baseRefOid === "string" && prView.baseRefOid.length > 0
+        ? prView.baseRefOid
+        : null,
+    headSha:
+      typeof prView.headRefOid === "string" && prView.headRefOid.length > 0
+        ? prView.headRefOid
+        : null,
+    diffHash: stableHash(diff),
+    fileSetHash: hashGodReviewFileSet({
+      files: resolvedFiles.files,
+      skippedFiles: resolvedFiles.skippedFiles
+    }),
+    prNumber
+  };
+
+  return {
+    fingerprint,
+    staleReasons: compareGodReviewFingerprints({
+      saved: args.session.scopeFingerprint,
+      current: fingerprint
+    }),
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function computeCurrentFingerprintForSession(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+}): Promise<{
+  fingerprint: GodReviewScopeFingerprint;
+  staleReasons: string[];
+  warnings: string[];
+}> {
+  switch (args.session.scopeKind) {
+    case "phase":
+    case "explicit-files":
+      return fingerprintStoredFileSet(args);
+    case "current-diff":
+      return fingerprintCurrentDiffForSession(args);
+    case "pr":
+      return fingerprintPrForSession(args);
+  }
+}
+
+function nextPendingGodReviewGroup(
+  session: GodReviewSession
+): GodReviewGroupState | null {
+  if (session.nextGroupId !== null) {
+    return session.groups.find((group) => group.id === session.nextGroupId) ?? null;
+  }
+
+  return (
+    session.groups.find(
+      (group) => group.status === "pending" || group.status === "in-progress"
+    ) ?? null
+  );
 }
 
 async function resolvePhaseScope(args: {
@@ -1323,6 +1765,130 @@ export async function blueprintGodReviewStart(
   });
 }
 
+export async function blueprintGodReviewNext(
+  rawArgs: GodReviewNextArgs
+): Promise<GodReviewNextResult> {
+  const parsed = godReviewNextArgsSchema.safeParse(rawArgs);
+
+  if (!parsed.success) {
+    return invalidNextResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_next arguments.",
+      warnings: parsed.error.issues.map((issue) => issue.message)
+    });
+  }
+
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      runId: null,
+      sessionPath: null,
+      humanStatePath: null,
+      reportPath: null,
+      scopeKind: null,
+      phase: null,
+      files: [],
+      scopeFingerprint: null,
+      currentFingerprint: null,
+      staleReasons: [],
+      nextGroup: null,
+      nextGroupId: null,
+      nextCommand: null,
+      written: false,
+      warnings: []
+    };
+  }
+
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+
+  if (!sessionPath.valid) {
+    return invalidNextResult({
+      reason: sessionPath.reason
+    });
+  }
+
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+
+  if (!loaded.valid) {
+    return invalidNextResult({
+      reason: loaded.reason,
+      warnings: loaded.warnings
+    });
+  }
+
+  const session = loaded.session;
+  const fingerprint = await computeCurrentFingerprintForSession({
+    projectRoot,
+    session
+  });
+  const nextCommand = nextGodReviewCommand({
+    activeCommand: session.activeCommand,
+    scopeKind: session.scopeKind,
+    phase: session.phase ?? null,
+    runId: session.runId
+  });
+
+  if (fingerprint.staleReasons.length > 0) {
+    return {
+      status: "stale",
+      activated: true,
+      reason:
+        "God-review scope fingerprint changed. Start a new hidden review run instead of continuing this session.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      scopeKind: session.scopeKind,
+      phase: session.phase ?? null,
+      files: session.files,
+      scopeFingerprint: session.scopeFingerprint,
+      currentFingerprint: fingerprint.fingerprint,
+      staleReasons: fingerprint.staleReasons,
+      nextGroup: null,
+      nextGroupId: session.nextGroupId,
+      nextCommand,
+      written: false,
+      warnings: fingerprint.warnings
+    };
+  }
+
+  const nextGroup = nextPendingGodReviewGroup(session);
+
+  return {
+    status: nextGroup === null ? "complete" : "ready",
+    activated: true,
+    reason: nextGroup === null ? "No pending god-review groups remain." : null,
+    runId: session.runId,
+    sessionPath: session.sessionPath,
+    humanStatePath: session.humanStatePath,
+    reportPath: session.reportPath,
+    scopeKind: session.scopeKind,
+    phase: session.phase ?? null,
+    files: session.files,
+    scopeFingerprint: session.scopeFingerprint,
+    currentFingerprint: fingerprint.fingerprint,
+    staleReasons: [],
+    nextGroup,
+    nextGroupId: nextGroup?.id ?? null,
+    nextCommand,
+    written: false,
+    warnings: fingerprint.warnings
+  };
+}
+
 function parseBulletValue(lines: string[], label: string): string | null {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
@@ -1459,5 +2025,13 @@ export const godReviewToolDefinitions: ToolDefinition[] = [
     inputSchema: godReviewStartInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintGodReviewStart(args as GodReviewStartArgs)
+  },
+  {
+    name: "blueprint_god_review_next",
+    description:
+      "Private hidden god-review continuation tool: loads a saved session, checks the frozen scope fingerprint for staleness, and returns the next pending review group without rediscovering or rewriting scope.",
+    inputSchema: godReviewNextInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintGodReviewNext(args as GodReviewNextArgs)
   }
 ];
