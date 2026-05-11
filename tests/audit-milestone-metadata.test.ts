@@ -20,6 +20,10 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   assert.doesNotMatch(commandFile, /agents\/blueprint-verifier\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(
+    commandFile,
+    /Use the exact `mcp_blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(commandFile, /mcp_blueprint_blueprint_phase_summary_index/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
@@ -47,6 +51,10 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-audit-milestone/);
   assert.match(skillFile, /report\.milestone-audit/);
+  assert.match(
+    skillFile,
+    /Use the exact `blueprint_roadmap_read\.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-verifier/);

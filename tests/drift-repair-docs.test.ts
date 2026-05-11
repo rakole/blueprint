@@ -112,8 +112,8 @@ test("drift-repair docs capture the status vocabulary and the repaired future-co
   assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-update/);
   assert.match(catalog, /STRUCTURE\.md/);
   assert.match(artifactSchema, /`STRUCTURE\.md`/);
-  assert.match(artifactSchema, /`reports\/milestone-complete-<version>\.md`/);
-  assert.match(artifactSchema, /`reports\/milestone-summary-<version>\.md`/);
+  assert.match(artifactSchema, /`reports\/milestone-complete-<milestone>\.md`/);
+  assert.match(artifactSchema, /`reports\/milestone-summary-<milestone>\.md`/);
   assert.match(artifactSchema, /`reports\/pause-work-latest\.md`/);
   assert.match(skills, /`blueprint-router` .* `next`, `do`/);
   assert.match(skills, /`blueprint-governance` .* `pause-work`, `resume-work`/);

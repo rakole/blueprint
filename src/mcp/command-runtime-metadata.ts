@@ -1009,7 +1009,7 @@ export const COMPLETE_MILESTONE_RUNTIME_METADATA = {
       "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
     ],
     writes: [
-      ".blueprint/reports/milestone-complete-<version>.md",
+      ".blueprint/reports/milestone-complete-<milestone>.md",
       ".blueprint/STATE.md"
     ]
   },
@@ -1022,7 +1022,7 @@ export const COMPLETE_MILESTONE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ROADMAP_ADMIN_HOOKS,
     contractNotes:
-      "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
+      "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<milestone>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1054,7 +1054,7 @@ export const MILESTONE_SUMMARY_RUNTIME_METADATA = {
       "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
     ],
     writes: [
-      ".blueprint/reports/milestone-summary-<version>.md",
+      ".blueprint/reports/milestone-summary-<milestone>.md",
       ".blueprint/STATE.md"
     ]
   },
@@ -1067,7 +1067,7 @@ export const MILESTONE_SUMMARY_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ROADMAP_ADMIN_HOOKS,
     contractNotes:
-      "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
+      "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

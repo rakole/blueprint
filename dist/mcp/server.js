@@ -15182,7 +15182,7 @@ var init_command_runtime_metadata = __esm({
           "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
         ],
         writes: [
-          ".blueprint/reports/milestone-complete-<version>.md",
+          ".blueprint/reports/milestone-complete-<milestone>.md",
           ".blueprint/STATE.md"
         ]
       },
@@ -15194,7 +15194,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: COMPLETE_MILESTONE_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<milestone>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15224,7 +15224,7 @@ var init_command_runtime_metadata = __esm({
           "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
         ],
         writes: [
-          ".blueprint/reports/milestone-summary-<version>.md",
+          ".blueprint/reports/milestone-summary-<milestone>.md",
           ".blueprint/STATE.md"
         ]
       },
@@ -15236,7 +15236,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: MILESTONE_SUMMARY_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -17912,7 +17912,7 @@ function summaryPath(context) {
   return context?.summaryPath?.trim() || `.blueprint/phases/<phase-dir>/${summaryFile(context)}`;
 }
 function milestone(context) {
-  return context?.milestone?.trim() || "<milestone-version>";
+  return context?.milestone?.trim() || "<milestone>";
 }
 function currentPhase(context) {
   return context?.currentPhase?.trim() || "none";
@@ -22339,7 +22339,7 @@ var init_artifact_contracts = __esm({
         ],
         lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
         placeholderSignals: [
-          "<milestone-version>",
+          "<milestone>",
           "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
           "<roadmap evidence>",
           "<validation evidence>",
@@ -22370,7 +22370,7 @@ var init_artifact_contracts = __esm({
         ],
         lockedMarkers: ["**Decision:**", "**Audit Report Used:**", "**Evidence Ledger:**"],
         placeholderSignals: [
-          "<milestone-version>",
+          "<milestone>",
           "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
           "<saved milestone audit report path>",
           "<roadmap, validation, UAT, carry-forward evidence ledger>",
@@ -22405,7 +22405,7 @@ var init_artifact_contracts = __esm({
         ],
         lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
         placeholderSignals: [
-          "<milestone-version>",
+          "<milestone>",
           "<saved audit report, completion report, and roadmap evidence>",
           "<audit, completion, roadmap, carry-forward evidence ledger>",
           "<seed context for /blu-new-milestone>",
@@ -25506,12 +25506,35 @@ function isNoneLikeReportSignal(line) {
   const normalized = normalizeReportSignalLine(line);
   return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
 }
-function extractBlueprintCommand2(line) {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
-  return match?.[0]?.trim().replace(/[`'").,;:!?]+$/g, "") ?? null;
+function extractBlueprintCommand2(line, exactMilestoneArgument) {
+  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
+  if (!match || match.index === void 0) {
+    return null;
+  }
+  const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
+  let argumentText = line.slice(match.index + match[0].length).trimStart();
+  if (exactMilestoneArgument && (command === "/blu-audit-milestone" || command === "/blu-complete-milestone" || command === "/blu-milestone-summary") && argumentText.includes(exactMilestoneArgument)) {
+    return `${command} ${exactMilestoneArgument}`;
+  }
+  if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
+    return command;
+  }
+  const wrapperIndex = argumentText.search(/[`'"]/);
+  if (wrapperIndex >= 0) {
+    argumentText = argumentText.slice(0, wrapperIndex);
+  }
+  argumentText = argumentText.replace(/\s+(?:to|then|so)\s+.+$/i, "").replace(/[.,;:!?]+$/g, "").trim();
+  if (argumentText.length === 0 || /^(?:to|then|so)\b/i.test(argumentText)) {
+    return command;
+  }
+  if (command === "/blu-audit-milestone" || command === "/blu-complete-milestone" || command === "/blu-milestone-summary") {
+    return `${command} ${argumentText}`;
+  }
+  const simpleArgument = argumentText.match(/^[^\s`'").,;:!?]+/)?.[0] ?? null;
+  return simpleArgument ? `${command} ${simpleArgument}` : command;
 }
 function extractNextSafeActionCommand(content) {
-  return extractMarkdownSectionLines(content, "Next Safe Action").map(extractBlueprintCommand2).find((command) => command !== null) ?? null;
+  return extractMarkdownSectionLines(content, "Next Safe Action").map((line) => extractBlueprintCommand2(line)).find((command) => command !== null) ?? null;
 }
 function hasDeferredTestGap(content) {
   const gapRows = extractMarkdownTableRows(
@@ -25570,7 +25593,7 @@ async function inspectMilestoneAuditReportStatus(args) {
     const nextSafeActionLines = extractMarkdownSectionLines(raw, "Next Safe Action");
     const verdict = auditVerdictLines.map((line) => line.match(/^- Verdict:\s*(READY_TO_CLOSE|FOLLOW_UP|BLOCKED)\s*$/)?.[1] ?? null).find((value) => value !== null) ?? null;
     const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
-    const nextSafeAction = nextSafeActionLines.map(extractBlueprintCommand2).find((command) => command !== null) ?? null;
+    const nextSafeAction = nextSafeActionLines.map((line) => extractBlueprintCommand2(line, args.currentMilestone)).find((command) => command !== null) ?? null;
     const gapSections = {
       requirement: requirementGapRows,
       integration: integrationGapRows,
@@ -36518,6 +36541,45 @@ function normalizeReportSlug(value) {
 function buildBlueprintReportPath(reportName2) {
   return `${BLUEPRINT_REPORTS_PATH}/${normalizeReportSlug(reportName2)}.md`;
 }
+function milestoneReportLooseNameIssue(reportName2) {
+  const trimmedReportName = reportName2.trim();
+  const canonicalReportName = normalizeReportSlug(reportName2);
+  const canonicalMilestonePrefix = MILESTONE_REPORT_PREFIXES.find(
+    (prefix) => canonicalReportName.startsWith(prefix)
+  );
+  if (canonicalMilestonePrefix && !MILESTONE_REPORT_PREFIXES.some((prefix) => trimmedReportName.startsWith(prefix))) {
+    return `Milestone closeout reportName must use the exact raw prefix "${canonicalMilestonePrefix}" followed by the active roadmap milestone; "${reportName2}" is not a contract report name.`;
+  }
+  return null;
+}
+function milestoneReportPrefix(reportName2) {
+  const trimmedReportName = reportName2.trim();
+  return MILESTONE_REPORT_PREFIXES.find((prefix) => trimmedReportName.startsWith(prefix)) ?? null;
+}
+async function readActiveMilestone(projectRoot) {
+  try {
+    const roadmap = await fs5.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
+    return roadmap.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+async function milestoneReportRoadmapNameIssue(projectRoot, reportName2) {
+  const reportPrefix = milestoneReportPrefix(reportName2);
+  if (!reportPrefix) {
+    return null;
+  }
+  const activeMilestone = await readActiveMilestone(projectRoot);
+  if (!activeMilestone) {
+    return null;
+  }
+  const expectedReportName = `${reportPrefix}${activeMilestone}`;
+  const actualMilestone = reportName2.trim().slice(reportPrefix.length);
+  if (actualMilestone !== activeMilestone) {
+    return `Milestone closeout reportName must match the active roadmap milestone: use "${expectedReportName}" instead of "${reportName2}".`;
+  }
+  return null;
+}
 function slugToTitle2(value) {
   return value.split("-").filter((segment) => segment.length > 0).map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
 }
@@ -44292,6 +44354,30 @@ async function blueprintArtifactReportWrite(args) {
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   const contractId = resolveReportContractId(args.reportName);
+  const looseMilestoneNameIssue = milestoneReportLooseNameIssue(args.reportName);
+  if (looseMilestoneNameIssue) {
+    return artifactReportWriteInvalidResult(pathValue, [looseMilestoneNameIssue], [], [
+      mcpWriteDiagnostic({
+        path: "args.reportName",
+        code: "report_name.non_contract_milestone",
+        message: looseMilestoneNameIssue,
+        repair: "Retry with the exact raw milestone report prefix plus the exact blueprint_roadmap_read.milestone value.",
+        retryable: true
+      })
+    ]);
+  }
+  const roadmapMilestoneNameIssue = await milestoneReportRoadmapNameIssue(projectRoot, args.reportName);
+  if (roadmapMilestoneNameIssue) {
+    return artifactReportWriteInvalidResult(pathValue, [roadmapMilestoneNameIssue], [], [
+      mcpWriteDiagnostic({
+        path: "args.reportName",
+        code: "report_name.milestone_mismatch",
+        message: roadmapMilestoneNameIssue,
+        repair: "Use the exact blueprint_roadmap_read.milestone value as the milestone token; blueprint_artifact_report_write owns normalization.",
+        retryable: true
+      })
+    ]);
+  }
   if (hasContent === hasModel) {
     return artifactReportWriteInvalidResult(pathValue, [
       "Artifact report writes must supply exactly one of content or model."
@@ -44580,7 +44666,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -44898,6 +44984,11 @@ var init_artifacts = __esm({
       ".blueprint/codebase/INTEGRATIONS.md": "Integrations",
       ".blueprint/codebase/CONCERNS.md": "Concerns"
     };
+    MILESTONE_REPORT_PREFIXES = [
+      "milestone-audit-",
+      "milestone-complete-",
+      "milestone-summary-"
+    ];
     PLAN_TASK_ABSOLUTE_PATH_ROOTS = /* @__PURE__ */ new Set([
       "Applications",
       "Library",

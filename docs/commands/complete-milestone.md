@@ -24,14 +24,14 @@
 
 - CLI command path: `/blu-complete-milestone`
 - Root router form: `/blu complete-milestone`
-- Argument hint: `<version>`
+- Argument hint: `<milestone>`
 - `/blu-complete-milestone v1.0`
 - `/blu complete-milestone`
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A matching `milestone-audit-<version>.md` report should already exist in `.blueprint/reports/`, and its saved verdict should already be `READY_TO_CLOSE`.
+- A matching `milestone-audit-<milestone>.md` report should already exist in `.blueprint/reports/`, and its saved verdict should already be `READY_TO_CLOSE`.
 - The audit report should have no actionable gaps or archival blockers left open, and the milestone should already have saved verification and UAT evidence for every completed phase.
 - Replacing an existing milestone completion report requires explicit overwrite confirmation.
 - Read the canonical `report.milestone-complete` contract before drafting or revising the report.
@@ -58,7 +58,7 @@
 ## Blueprint And Global State Writes
 
 
-- `.blueprint/reports/milestone-complete-<version>.md`
+- `.blueprint/reports/milestone-complete-<milestone>.md`
 - `.blueprint/STATE.md`
 
 
@@ -77,7 +77,7 @@
 
 - Read `report.milestone-complete` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final completion body to the returned `contract.authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
-- Pass only the bare report name `milestone-complete-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
+- Pass only the bare report name `milestone-complete-<milestone>` into `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
 
 ## Skills And Subagents

@@ -5,7 +5,8 @@ import { readFile } from "node:fs/promises";
 import {
   artifactContractIds,
   listArtifactContracts,
-  readArtifactContract
+  readArtifactContract,
+  resolveReportContractId
 } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
@@ -1901,6 +1902,9 @@ test("review and report contracts validate canonical sections while keeping extr
     invalidStatusMilestoneAuditValidation.issues.join("\n"),
     /keep each evidence row in the Dimension, Evidence, Status, and Notes columns/
   );
+  assert.equal(resolveReportContractId("milestone audit v2"), null);
+  assert.equal(resolveReportContractId("milestone complete v2"), null);
+  assert.equal(resolveReportContractId("milestone summary v2"), null);
   assert.equal(thinMilestoneAuditValidation.valid, false);
   assert.match(thinMilestoneAuditValidation.issues.join("\n"), /Audit Verdict/);
   assert.match(thinMilestoneAuditValidation.issues.join("\n"), /Milestone Evidence Dimensions/);

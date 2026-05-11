@@ -31,7 +31,7 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- Matching `milestone-audit-<version>.md` and `milestone-complete-<version>.md` reports should already exist in `.blueprint/reports/`.
+- Matching `milestone-audit-<milestone>.md` and `milestone-complete-<milestone>.md` reports should already exist in `.blueprint/reports/`.
 - Replacing an existing milestone summary report requires explicit overwrite confirmation.
 - Read the canonical `report.milestone-summary` contract before drafting or revising the report.
 
@@ -56,7 +56,7 @@
 ## Blueprint And Global State Writes
 
 
-- `.blueprint/reports/milestone-summary-<version>.md`
+- `.blueprint/reports/milestone-summary-<milestone>.md`
 - `.blueprint/STATE.md`
 
 
@@ -74,7 +74,7 @@
 
 - Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned `contract.authoringTemplate` when the contract provides one.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
-- Pass only the bare report name `milestone-summary-<milestone>` into `blueprint_artifact_report_write`. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
+- Pass only the bare report name `milestone-summary-<milestone>` into `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
 
 ## Skills And Subagents

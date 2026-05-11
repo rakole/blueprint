@@ -136,7 +136,7 @@ function phaseDir(context?: ArtifactTemplateContext): string {
 }
 
 function milestone(context?: ArtifactTemplateContext): string {
-  return context?.milestone?.trim() || "<milestone-version>";
+  return context?.milestone?.trim() || "<milestone>";
 }
 
 function currentPhase(context?: ArtifactTemplateContext): string {
@@ -4556,7 +4556,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     lockedMarkers: ["**Verdict:**", "**Evidence Dimensions:**"],
     placeholderSignals: [
-      "<milestone-version>",
+      "<milestone>",
       "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
       "<roadmap evidence>",
       "<validation evidence>",
@@ -4587,7 +4587,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     lockedMarkers: ["**Decision:**", "**Audit Report Used:**", "**Evidence Ledger:**"],
     placeholderSignals: [
-      "<milestone-version>",
+      "<milestone>",
       "READY_TO_CLOSE|FOLLOW_UP|BLOCKED",
       "<saved milestone audit report path>",
       "<roadmap, validation, UAT, carry-forward evidence ledger>",
@@ -4622,7 +4622,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
     placeholderSignals: [
-      "<milestone-version>",
+      "<milestone>",
       "<saved audit report, completion report, and roadmap evidence>",
       "<audit, completion, roadmap, carry-forward evidence ledger>",
       "<seed context for /blu-new-milestone>",

@@ -18,6 +18,10 @@ test("complete-milestone manifest references report-driven closeout tools and su
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(
+    commandFile,
+    /Use the exact `mcp_blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_load/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
@@ -50,6 +54,10 @@ test("roadmap-admin skill captures report-driven milestone closeout behavior", a
 
   assert.match(skillFile, /\/blu-complete-milestone/);
   assert.match(skillFile, /report\.milestone-complete/);
+  assert.match(
+    skillFile,
+    /Use the exact `blueprint_roadmap_read\.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(skillFile, /blueprint_artifact_list/);
   assert.match(skillFile, /blueprint_state_load/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
