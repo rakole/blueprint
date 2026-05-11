@@ -110,6 +110,12 @@ const GOD_REVIEW_SELECTED_BY_VALUES = [
   "severity-filter",
   "all"
 ] as const;
+const GOD_REVIEW_FIX_SELECTION_STATUS_VALUES = [
+  "ready",
+  "empty",
+  "stale",
+  "invalid"
+] as const;
 
 export const GOD_REVIEW_GROUPS = [
   {
@@ -189,6 +195,8 @@ export type GodReviewFixEligibility = typeof GOD_REVIEW_FIX_ELIGIBILITY_VALUES[n
 export type GodReviewRemediationStatus =
   typeof GOD_REVIEW_REMEDIATION_STATUS_VALUES[number];
 export type GodReviewSelectedBy = typeof GOD_REVIEW_SELECTED_BY_VALUES[number];
+export type GodReviewFixSelectionStatus =
+  typeof GOD_REVIEW_FIX_SELECTION_STATUS_VALUES[number];
 
 export const godReviewScopeKindSchema = z.enum(GOD_REVIEW_SCOPE_KIND_VALUES);
 export const godReviewSessionStatusSchema = z.enum(GOD_REVIEW_SESSION_STATUS_VALUES);
@@ -322,6 +330,29 @@ export type GodReviewParseResult = {
   warnings: string[];
 };
 
+export type GodReviewFixTarget = {
+  id: string;
+  title: string;
+  severity: GodReviewSeverity | null;
+  disposition: GodReviewDisposition | null;
+  fixEligibility: GodReviewFixEligibility | null;
+  files: string[];
+  selectedBy: GodReviewSelectedBy;
+  requiresConfirmationForCodeEdit: boolean;
+};
+
+export type GodReviewFixSelection = {
+  status: GodReviewFixSelectionStatus;
+  selectedBy: GodReviewSelectedBy;
+  reason: string | null;
+  targets: GodReviewFixTarget[];
+  excluded: Array<{ id: string; reason: string }>;
+  staleReasons: string[];
+  fingerprintFresh: boolean;
+  evidenceFresh: boolean;
+  currentFingerprint: GodReviewScopeFingerprint | null;
+};
+
 type GodReviewScopeResolution = {
   scopeKind: GodReviewScopeKind;
   phase: string | number | null;
@@ -418,6 +449,7 @@ export type GodReviewLoadFindingsResult = {
   sessionPath: string | null;
   findings: GodReviewParsedFinding[];
   remediations: GodReviewParsedRemediation[];
+  selection: GodReviewFixSelection | null;
   warnings: string[];
 };
 
@@ -478,7 +510,10 @@ const godReviewLoadFindingsInputSchema = {
   phase: z.union([z.string(), z.number()]).optional(),
   runId: z.string().optional(),
   sessionPath: z.string().optional(),
-  reportPath: z.string().optional()
+  reportPath: z.string().optional(),
+  findingIds: z.array(z.string()).optional(),
+  severity: z.string().optional(),
+  all: z.boolean().optional()
 };
 const godReviewLoadFindingsArgsSchema = z.object(godReviewLoadFindingsInputSchema);
 type GodReviewLoadFindingsArgs = z.infer<typeof godReviewLoadFindingsArgsSchema>;
@@ -979,6 +1014,7 @@ function invalidLoadFindingsResult(args: {
     sessionPath: args.sessionPath ?? null,
     findings: [],
     remediations: [],
+    selection: null,
     warnings: args.warnings ?? []
   };
 }
@@ -1042,6 +1078,37 @@ function parseFlagValue(rawInvocation: string, flag: string): string | null {
   }
 
   return null;
+}
+
+function parseFlagValues(rawInvocation: string, flag: string): string[] {
+  const tokens = rawInvocation.trim().split(/\s+/);
+  const values: string[] = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index] === flag) {
+      const value = tokens[index + 1];
+
+      if (value && !value.startsWith("--")) {
+        values.push(value);
+      }
+
+      continue;
+    }
+
+    if (tokens[index].startsWith(`${flag}=`)) {
+      const value = tokens[index].slice(flag.length + 1);
+
+      if (value.length > 0) {
+        values.push(value);
+      }
+    }
+  }
+
+  return values;
+}
+
+function hasInvocationFlag(rawInvocation: string, flag: string): boolean {
+  return new RegExp(`(^|\\s)${flag}(?=$|\\s)`).test(rawInvocation);
 }
 
 function normalizeGodReviewSessionPath(rawPath: string): GodReviewRepoPathResult {
@@ -1242,15 +1309,56 @@ async function resolveGodReviewReportReference(
   if (args.reportPath) {
     const normalized = normalizeGodReviewReportPath(args.reportPath);
 
-    return normalized.valid
-      ? { valid: true, reportPath: normalized.path, sessionPath: null }
-      : {
+    if (!normalized.valid) {
+      return {
           valid: false,
           reason: normalized.reason,
           reportPath: null,
           sessionPath: null,
           warnings: []
         };
+    }
+
+    const explicitSessionPath = args.sessionPath;
+    const runId = args.runId;
+
+    if (explicitSessionPath) {
+      const normalizedSessionPath = normalizeGodReviewSessionPath(explicitSessionPath);
+
+      return normalizedSessionPath.valid
+        ? {
+            valid: true,
+            reportPath: normalized.path,
+            sessionPath: normalizedSessionPath.path
+          }
+        : {
+            valid: false,
+            reason: normalizedSessionPath.reason,
+            reportPath: normalized.path,
+            sessionPath: null,
+            warnings: []
+          };
+    }
+
+    if (runId) {
+      if (!isValidRunId(runId)) {
+        return {
+          valid: false,
+          reason: "runId may contain only letters, numbers, dots, underscores, and dashes.",
+          reportPath: normalized.path,
+          sessionPath: null,
+          warnings: []
+        };
+      }
+
+      return {
+        valid: true,
+        reportPath: normalized.path,
+        sessionPath: buildGodReviewReportPaths({ runId }).sessionPath
+      };
+    }
+
+    return { valid: true, reportPath: normalized.path, sessionPath: null };
   }
 
   const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
@@ -1711,6 +1819,441 @@ function attachRemediationState(args: {
       stale: latestAttempt?.status === "stale"
     };
   });
+}
+
+function invalidFixSelection(args: {
+  selectedBy?: GodReviewSelectedBy;
+  reason: string;
+  staleReasons?: string[];
+  fingerprintFresh?: boolean;
+  evidenceFresh?: boolean;
+  currentFingerprint?: GodReviewScopeFingerprint | null;
+}): GodReviewFixSelection {
+  return {
+    status: "invalid",
+    selectedBy: args.selectedBy ?? "default",
+    reason: args.reason,
+    targets: [],
+    excluded: [],
+    staleReasons: args.staleReasons ?? [],
+    fingerprintFresh: args.fingerprintFresh ?? false,
+    evidenceFresh: args.evidenceFresh ?? false,
+    currentFingerprint: args.currentFingerprint ?? null
+  };
+}
+
+function normalizeRequestedFindingIds(args: GodReviewLoadFindingsArgs): string[] {
+  return stableUniqueSorted([
+    ...(args.findingIds ?? []),
+    ...parseFlagValues(args.rawInvocation, "--finding")
+  ]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0));
+}
+
+function resolveGodReviewFixSelectionIntent(args: GodReviewLoadFindingsArgs):
+  | {
+      valid: true;
+      selectedBy: GodReviewSelectedBy;
+      findingIds: string[];
+      severity: GodReviewSeverity | null;
+    }
+  | { valid: false; selectedBy: GodReviewSelectedBy; reason: string } {
+  const findingIds = normalizeRequestedFindingIds(args);
+  const severityRaw = args.severity ?? parseFlagValue(args.rawInvocation, "--severity");
+  const all = args.all === true || hasInvocationFlag(args.rawInvocation, "--all");
+
+  if (findingIds.length > 0) {
+    return {
+      valid: true,
+      selectedBy: "explicit-id",
+      findingIds,
+      severity: null
+    };
+  }
+
+  if (all) {
+    return {
+      valid: true,
+      selectedBy: "all",
+      findingIds: [],
+      severity: null
+    };
+  }
+
+  if (severityRaw) {
+    const severity = normalizeVocabularyValue(severityRaw, GOD_REVIEW_SEVERITY_VALUES);
+
+    if (severity === null) {
+      return {
+        valid: false,
+        selectedBy: "severity-filter",
+        reason: `Unsupported god-review fix severity selector: ${severityRaw}.`
+      };
+    }
+
+    return {
+      valid: true,
+      selectedBy: "severity-filter",
+      findingIds: [],
+      severity
+    };
+  }
+
+  return {
+    valid: true,
+    selectedBy: "default",
+    findingIds: [],
+    severity: null
+  };
+}
+
+function godReviewFindingExclusionReason(args: {
+  finding: GodReviewParsedFinding;
+  selectedBy: GodReviewSelectedBy;
+  findingIds: string[];
+  severity: GodReviewSeverity | null;
+}): string | null {
+  if (args.selectedBy === "explicit-id" && !args.findingIds.includes(args.finding.id)) {
+    return "not explicitly selected";
+  }
+
+  if (args.selectedBy === "explicit-id") {
+    if (args.finding.fixEligibility !== "eligible") {
+      return `fix eligibility is ${args.finding.fixEligibility ?? "missing"}`;
+    }
+
+    return null;
+  }
+
+  if (args.finding.disposition !== "follow-up") {
+    return `disposition is ${args.finding.disposition ?? "missing"}`;
+  }
+
+  if (args.finding.fixEligibility !== "eligible") {
+    return `fix eligibility is ${args.finding.fixEligibility ?? "missing"}`;
+  }
+
+  if (
+    args.selectedBy === "default" &&
+    args.finding.severity !== "high" &&
+    args.finding.severity !== "medium"
+  ) {
+    return `severity is ${args.finding.severity ?? "missing"}`;
+  }
+
+  if (
+    args.selectedBy === "severity-filter" &&
+    args.finding.severity !== args.severity
+  ) {
+    return `severity is ${args.finding.severity ?? "missing"}`;
+  }
+
+  return null;
+}
+
+function selectGodReviewFixTargets(args: {
+  findings: GodReviewParsedFinding[];
+  selectedBy: GodReviewSelectedBy;
+  findingIds: string[];
+  severity: GodReviewSeverity | null;
+}):
+  | {
+      valid: true;
+      targets: GodReviewFixTarget[];
+      excluded: Array<{ id: string; reason: string }>;
+    }
+  | {
+      valid: false;
+      reason: string;
+      excluded: Array<{ id: string; reason: string }>;
+    } {
+  const targets: GodReviewFixTarget[] = [];
+  const excluded: Array<{ id: string; reason: string }> = [];
+
+  for (const finding of args.findings) {
+    const reason = godReviewFindingExclusionReason({
+      finding,
+      selectedBy: args.selectedBy,
+      findingIds: args.findingIds,
+      severity: args.severity
+    });
+
+    if (reason !== null) {
+      excluded.push({ id: finding.id, reason });
+      continue;
+    }
+
+    targets.push({
+      id: finding.id,
+      title: finding.title,
+      severity: finding.severity,
+      disposition: finding.disposition,
+      fixEligibility: finding.fixEligibility,
+      files: finding.files,
+      selectedBy: args.selectedBy,
+      requiresConfirmationForCodeEdit: finding.disposition !== "follow-up"
+    });
+  }
+
+  if (args.selectedBy === "explicit-id") {
+    const existingIds = new Set(args.findings.map((finding) => finding.id));
+    const missingIds = args.findingIds.filter((findingId) => !existingIds.has(findingId));
+
+    if (missingIds.length > 0) {
+      return {
+        valid: false,
+        reason: `Selected god-review finding IDs do not exist: ${missingIds.join(", ")}.`,
+        excluded
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    targets,
+    excluded
+  };
+}
+
+function parseGodReviewFileReference(
+  rawReference: string
+): GodReviewRepoPathResult & { line: number | null } {
+  const trimmed = rawReference.trim();
+  const lineMatch = trimmed.match(/^(.+):(\d+)$/);
+  const rawPath = lineMatch ? lineMatch[1] : trimmed;
+  const line = lineMatch ? Number(lineMatch[2]) : null;
+  const normalized = normalizeGodReviewRepoRelativeFilePath(rawPath);
+
+  if (!normalized.valid) {
+    return { ...normalized, line };
+  }
+
+  return {
+    valid: true,
+    path: normalized.path,
+    line
+  };
+}
+
+function extractNearbyEvidenceSnippets(evidence: string | null): string[] {
+  return parseBacktickedList(evidence)
+    .map((snippet) => snippet.trim())
+    .filter((snippet) => snippet.length > 0);
+}
+
+async function validateGodReviewFixTargetEvidence(args: {
+  projectRoot: string;
+  target: GodReviewFixTarget;
+  finding: GodReviewParsedFinding;
+}): Promise<string[]> {
+  const staleReasons: string[] = [];
+  const targetFiles = args.finding.files.length > 0 ? args.finding.files : args.target.files;
+
+  if (targetFiles.length === 0) {
+    return [`${args.target.id} has no referenced files.`];
+  }
+
+  const readableFileTexts = new Map<string, string>();
+
+  for (const fileReference of targetFiles) {
+    const parsedReference = parseGodReviewFileReference(fileReference);
+
+    if (!parsedReference.valid) {
+      staleReasons.push(
+        `${args.target.id} references invalid file ${fileReference}: ${parsedReference.reason}`
+      );
+      continue;
+    }
+
+    let absolutePath: string;
+
+    try {
+      absolutePath = resolveRepoRelativePath(args.projectRoot, parsedReference.path);
+    } catch (error) {
+      staleReasons.push(
+        `${args.target.id} references invalid file ${parsedReference.path}: ${
+          error instanceof Error ? error.message : "could not resolve path"
+        }`
+      );
+      continue;
+    }
+
+    let stats;
+
+    try {
+      stats = await fs.stat(absolutePath);
+    } catch {
+      staleReasons.push(`${args.target.id} references missing file ${parsedReference.path}.`);
+      continue;
+    }
+
+    if (!stats.isFile()) {
+      staleReasons.push(`${args.target.id} references non-file path ${parsedReference.path}.`);
+      continue;
+    }
+
+    const fileText = await fs.readFile(absolutePath, "utf8");
+    readableFileTexts.set(parsedReference.path, fileText);
+
+    if (parsedReference.line !== null) {
+      const lineCount = fileText.split("\n").length;
+
+      if (parsedReference.line < 1 || parsedReference.line > lineCount) {
+        staleReasons.push(
+          `${args.target.id} references ${parsedReference.path}:${parsedReference.line}, but the file has ${lineCount} line(s).`
+        );
+      }
+    }
+  }
+
+  const snippets = extractNearbyEvidenceSnippets(args.finding.evidence);
+
+  for (const snippet of snippets) {
+    const snippetFound = [...readableFileTexts.values()].some((text) =>
+      text.includes(snippet)
+    );
+
+    if (!snippetFound) {
+      staleReasons.push(
+        `${args.target.id} evidence snippet \`${snippet}\` was not found near referenced files.`
+      );
+    }
+  }
+
+  return stableUniqueSorted(staleReasons);
+}
+
+async function resolveGodReviewFixSelection(args: {
+  projectRoot: string;
+  loadArgs: GodReviewLoadFindingsArgs;
+  sessionPath: string | null;
+  findings: GodReviewParsedFinding[];
+}): Promise<GodReviewFixSelection | null> {
+  if (args.loadArgs.activeCommand !== "/blu-code-review-fix") {
+    return null;
+  }
+
+  const intent = resolveGodReviewFixSelectionIntent(args.loadArgs);
+
+  if (!intent.valid) {
+    return invalidFixSelection({
+      selectedBy: intent.selectedBy,
+      reason: intent.reason
+    });
+  }
+
+  if (args.sessionPath === null) {
+    return invalidFixSelection({
+      selectedBy: intent.selectedBy,
+      reason:
+        "Hidden god-review fix selection requires a saved session path so the frozen scope fingerprint can be revalidated."
+    });
+  }
+
+  const loaded = await loadGodReviewSession({
+    projectRoot: args.projectRoot,
+    sessionPath: args.sessionPath
+  });
+
+  if (!loaded.valid) {
+    return invalidFixSelection({
+      selectedBy: intent.selectedBy,
+      reason: loaded.reason,
+      staleReasons: loaded.warnings
+    });
+  }
+
+  const fingerprint = await computeCurrentFingerprintForSession({
+    projectRoot: args.projectRoot,
+    session: loaded.session
+  });
+
+  if (fingerprint.staleReasons.length > 0) {
+    return {
+      status: "stale",
+      selectedBy: intent.selectedBy,
+      reason:
+        "God-review scope fingerprint changed. Start a new hidden review before fixing saved findings.",
+      targets: [],
+      excluded: [],
+      staleReasons: fingerprint.staleReasons,
+      fingerprintFresh: false,
+      evidenceFresh: false,
+      currentFingerprint: fingerprint.fingerprint
+    };
+  }
+
+  const selected = selectGodReviewFixTargets({
+    findings: args.findings,
+    selectedBy: intent.selectedBy,
+    findingIds: intent.findingIds,
+    severity: intent.severity
+  });
+
+  if (!selected.valid) {
+    return invalidFixSelection({
+      selectedBy: intent.selectedBy,
+      reason: selected.reason,
+      fingerprintFresh: true,
+      evidenceFresh: true,
+      currentFingerprint: fingerprint.fingerprint
+    });
+  }
+
+  const findingsById = new Map(args.findings.map((finding) => [finding.id, finding]));
+  const staleReasons = (
+    await Promise.all(
+      selected.targets.map((target) =>
+        validateGodReviewFixTargetEvidence({
+          projectRoot: args.projectRoot,
+          target,
+          finding: findingsById.get(target.id) ?? {
+            id: target.id,
+            title: target.title,
+            severity: target.severity,
+            disposition: target.disposition,
+            confidence: null,
+            files: target.files,
+            evidence: null,
+            impact: null,
+            recommendation: null,
+            fixEligibility: target.fixEligibility
+          }
+        })
+      )
+    )
+  ).flat();
+
+  if (staleReasons.length > 0) {
+    return {
+      status: "stale",
+      selectedBy: intent.selectedBy,
+      reason:
+        "Selected god-review findings have stale referenced files, cited lines, or nearby evidence.",
+      targets: [],
+      excluded: selected.excluded,
+      staleReasons: stableUniqueSorted(staleReasons),
+      fingerprintFresh: true,
+      evidenceFresh: false,
+      currentFingerprint: fingerprint.fingerprint
+    };
+  }
+
+  return {
+    status: selected.targets.length > 0 ? "ready" : "empty",
+    selectedBy: intent.selectedBy,
+    reason:
+      selected.targets.length > 0
+        ? null
+        : "No god-review findings matched the hidden fix selection rules.",
+    targets: selected.targets,
+    excluded: selected.excluded,
+    staleReasons: [],
+    fingerprintFresh: true,
+    evidenceFresh: true,
+    currentFingerprint: fingerprint.fingerprint
+  };
 }
 
 async function resolvePhaseScope(args: {
@@ -2578,6 +3121,7 @@ export async function blueprintGodReviewLoadFindings(
       sessionPath: null,
       findings: [],
       remediations: [],
+      selection: null,
       warnings: []
     };
   }
@@ -2606,6 +3150,7 @@ export async function blueprintGodReviewLoadFindings(
       sessionPath: reference.sessionPath,
       findings: [],
       remediations: [],
+      selection: null,
       warnings: []
     };
   }
@@ -2622,14 +3167,23 @@ export async function blueprintGodReviewLoadFindings(
     });
   }
 
+  const findings = attachRemediationState(parsedReport);
+  const selection = await resolveGodReviewFixSelection({
+    projectRoot,
+    loadArgs: args,
+    sessionPath: reference.sessionPath,
+    findings
+  });
+
   return {
     status: "found",
     activated: true,
     reason: null,
     reportPath: reference.reportPath,
     sessionPath: reference.sessionPath,
-    findings: attachRemediationState(parsedReport),
+    findings,
     remediations: parsedReport.remediations,
+    selection,
     warnings: parsedReport.warnings
   };
 }
@@ -2790,7 +3344,7 @@ export const godReviewToolDefinitions: ToolDefinition[] = [
   {
     name: "blueprint_god_review_load_findings",
     description:
-      "Private hidden god-review finding loader: parses GOD findings and remediation attempts only from the durable god-review report.",
+      "Private hidden god-review finding loader: parses GOD findings/remediation attempts only from the durable god-review report and, in hidden fix mode, returns edit-ready selection after scope and evidence freshness checks.",
     inputSchema: godReviewLoadFindingsInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintGodReviewLoadFindings(args as GodReviewLoadFindingsArgs)

@@ -13,6 +13,7 @@ declare const GOD_REVIEW_DISPOSITION_VALUES: readonly ["follow-up", "observation
 declare const GOD_REVIEW_FIX_ELIGIBILITY_VALUES: readonly ["eligible", "needs-confirmation", "not-eligible"];
 declare const GOD_REVIEW_REMEDIATION_STATUS_VALUES: readonly ["fixed", "skipped", "deferred", "stale", "blocked"];
 declare const GOD_REVIEW_SELECTED_BY_VALUES: readonly ["default", "explicit-id", "severity-filter", "all"];
+declare const GOD_REVIEW_FIX_SELECTION_STATUS_VALUES: readonly ["ready", "empty", "stale", "invalid"];
 export declare const GOD_REVIEW_GROUPS: readonly [{
     readonly id: "correctness-contracts";
     readonly prefix: "COR";
@@ -61,6 +62,7 @@ export type GodReviewDisposition = typeof GOD_REVIEW_DISPOSITION_VALUES[number];
 export type GodReviewFixEligibility = typeof GOD_REVIEW_FIX_ELIGIBILITY_VALUES[number];
 export type GodReviewRemediationStatus = typeof GOD_REVIEW_REMEDIATION_STATUS_VALUES[number];
 export type GodReviewSelectedBy = typeof GOD_REVIEW_SELECTED_BY_VALUES[number];
+export type GodReviewFixSelectionStatus = typeof GOD_REVIEW_FIX_SELECTION_STATUS_VALUES[number];
 export declare const godReviewScopeKindSchema: z.ZodEnum<{
     phase: "phase";
     "explicit-files": "explicit-files";
@@ -284,6 +286,30 @@ export type GodReviewParseResult = {
     remediations: GodReviewParsedRemediation[];
     warnings: string[];
 };
+export type GodReviewFixTarget = {
+    id: string;
+    title: string;
+    severity: GodReviewSeverity | null;
+    disposition: GodReviewDisposition | null;
+    fixEligibility: GodReviewFixEligibility | null;
+    files: string[];
+    selectedBy: GodReviewSelectedBy;
+    requiresConfirmationForCodeEdit: boolean;
+};
+export type GodReviewFixSelection = {
+    status: GodReviewFixSelectionStatus;
+    selectedBy: GodReviewSelectedBy;
+    reason: string | null;
+    targets: GodReviewFixTarget[];
+    excluded: Array<{
+        id: string;
+        reason: string;
+    }>;
+    staleReasons: string[];
+    fingerprintFresh: boolean;
+    evidenceFresh: boolean;
+    currentFingerprint: GodReviewScopeFingerprint | null;
+};
 export type GodReviewStartResult = {
     status: "started" | "reused" | "invalid" | "refused";
     activated: boolean;
@@ -366,6 +392,7 @@ export type GodReviewLoadFindingsResult = {
     sessionPath: string | null;
     findings: GodReviewParsedFinding[];
     remediations: GodReviewParsedRemediation[];
+    selection: GodReviewFixSelection | null;
     warnings: string[];
 };
 declare const godReviewStartArgsSchema: z.ZodObject<{
@@ -448,6 +475,9 @@ declare const godReviewLoadFindingsArgsSchema: z.ZodObject<{
     runId: z.ZodOptional<z.ZodString>;
     sessionPath: z.ZodOptional<z.ZodString>;
     reportPath: z.ZodOptional<z.ZodString>;
+    findingIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    severity: z.ZodOptional<z.ZodString>;
+    all: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
 type GodReviewLoadFindingsArgs = z.infer<typeof godReviewLoadFindingsArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;

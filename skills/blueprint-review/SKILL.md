@@ -81,6 +81,28 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
      or the session is blocked.
   5. Do not call normal `blueprint_review_record`, do not write `XX-REVIEW.md`,
      and do not update quality gates or normal `STATE.md`.
+- Hidden `/blu-code-review-fix --feels-like-god` selection is private and
+  no-edit-on-stale:
+  1. After the activation guard passes, call
+     `mcp_blueprint_blueprint_god_review_load_findings` before source edits.
+     Pass active command, raw invocation, and any supplied `--run-id`,
+     `--session`, `--finding`, `--severity`, or `--all` selector.
+  2. Treat the returned `selection.status`, `selection.targets`,
+     `selection.excluded`, and `selection.staleReasons` as authoritative.
+     Default hidden fix selection includes only high or medium actionable
+     `follow-up` findings with `Fix Eligibility: eligible`.
+  3. Use `--finding`, `--severity`, and `--all` as the only widening selectors.
+     Do not widen from chat memory, normal `XX-REVIEW.md`, normal
+     `XX-REVIEW-FIX.md`, `.blueprint/STATE.md`, or current git drift.
+  4. If `selection.status` is `stale`, `invalid`, or `empty`, stop with a
+     no-edit hidden outcome and name the stale reasons, invalid reason, or empty
+     selection. Do not write normal review-fix artifacts, commits, branches, PRs,
+     staging changes, or quality-gate state.
+  5. If `selection.status` is `ready`, re-read only the selected target files,
+     make bounded source edits only for the returned target ids, and run focused
+     verification. Until the private remediation recorder exists, report the
+     selected ids and verification in the hidden response without writing a
+     remediation log entry.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
