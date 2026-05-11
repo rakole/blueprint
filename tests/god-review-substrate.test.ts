@@ -225,14 +225,16 @@ test("only implemented god-review private tools are registered as callable MCP t
     assert.equal(
       blueprintToolNames.includes(toolName),
       toolName === "blueprint_god_review_start" ||
-        toolName === "blueprint_god_review_next"
+        toolName === "blueprint_god_review_next" ||
+        toolName === "blueprint_god_review_append"
     );
   }
 
   for (const toolName of GOD_REVIEW_MUTATION_TOOL_NAMES) {
     assert.equal(
       BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName),
-      toolName === "blueprint_god_review_start"
+      toolName === "blueprint_god_review_start" ||
+        toolName === "blueprint_god_review_append"
     );
   }
 });
