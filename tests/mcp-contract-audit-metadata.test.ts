@@ -451,7 +451,7 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(addTestsCommand, /current verification status/i);
   assert.match(addTestsCommand, /report status/i);
   assert.match(addTestsCommand, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(addTestsCommand, /Prefer Gemini CLI's built-in `ask_user` tool/i);
+  assert.match(addTestsCommand, /Prefer\s+`ask_user` tool/i);
   assert.match(addTestsCommand, /bare report name `add-tests-<phase>`/i);
   assert.match(addTestsCommand, /returned `path` plus `summaryPaths`, `written`, and `status` as authoritative/i);
   assert.match(addTestsCommand, /tool-owned result/i);

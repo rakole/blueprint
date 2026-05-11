@@ -25,7 +25,7 @@ test("remove-phase manifest references roadmap removal tools, confirmation gate,
   assert.match(commandFile, /future-phase-guard/);
   assert.match(commandFile, /remove-phase-confirmation/);
   assert.match(commandFile, /force-remove-confirmation/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /force: true/);
   assert.match(commandFile, /explicit confirmation/i);
   assert.match(commandFile, /future-phase guard|current or past phases/i);

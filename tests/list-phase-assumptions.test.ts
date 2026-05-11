@@ -69,7 +69,7 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   assert.match(raw, /Do not guess a nearest replacement phase/);
   assert.match(raw, /Execution profile: `interactive-read`/);
   assert.match(raw, /name that waiting state plainly/i);
-  assert.match(raw, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `\/blu-list-phase-assumptions`\./);
+  assert.match(raw, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-list-phase-assumptions`\./);
   assert.match(raw, /Do not turn `\/blu-list-phase-assumptions` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching\./);
   assert.match(raw, /do not present planned or blocked commands as runnable/i);
   assert.doesNotMatch(raw, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);

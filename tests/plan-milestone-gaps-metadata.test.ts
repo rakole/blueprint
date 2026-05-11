@@ -29,7 +29,7 @@ test("plan-milestone-gaps manifest references the audit-first gap-planning tools
   assert.match(commandFile, /missing-milestone-audit/);
   assert.match(commandFile, /no-actionable-gaps/);
   assert.match(commandFile, /gap-plan-confirmation/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /structured gap sections/i);
   assert.match(commandFile, /\/blu-discuss-phase <first new phase number>/);
   assert.doesNotMatch(commandFile, /may also mutate code or git state/i);

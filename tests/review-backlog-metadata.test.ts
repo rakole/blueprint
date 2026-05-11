@@ -27,7 +27,7 @@ test("review-backlog manifest references preview, promotion, backlog updates, an
   assert.match(commandFile, /status: "promoted"/);
   assert.match(commandFile, /status: "archived"/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
-  assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool for structured promote or remove decisions/);
+  assert.match(commandFile, /Prefer\s+`ask_user` tool for structured promote or remove decisions/);
   assert.match(commandFile, /keep is the default safe path/i);
   assert.match(commandFile, /\/blu-discuss-phase <first promoted phase>/);
 });

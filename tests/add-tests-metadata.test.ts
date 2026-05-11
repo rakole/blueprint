@@ -70,7 +70,7 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /current verification status/i);
   assert.match(commandFile, /report status/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
-  assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool/i);
+  assert.match(commandFile, /Prefer\s+`ask_user` tool/i);
   assert.match(commandFile, /`blueprint-executor` subagent/);
   assert.match(commandFile, /`blueprint-verifier` subagent/);
 
