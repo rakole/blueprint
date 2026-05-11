@@ -551,6 +551,24 @@ If Blueprint later needs true non-discoverability, that is a separate design:
 add a hidden-tool registration or client-filtering layer before registering
 these tools. Do not imply that undocumented MCP tools are invisible.
 
+### Hidden Instruction Placement Contract
+
+Do not add a new command-specific skill input, manifest reference, resource
+input, or runtime-contract entry whose path/name exposes god mode. Public runtime
+contract resources currently surface command `skillInputs`, so a new hidden
+instruction file can become public even when help/catalog text stays clean.
+
+MVP hidden instructions must either:
+
+- live inside already-public command/skill inputs without adding public-facing
+  path names that mention god mode, or
+- be loaded through an implementation-local path that is explicitly filtered out
+  of public runtime-contract resources before exposure.
+
+Tests must assert public runtime-contract resources for `/blu-code-review` and
+`/blu-code-review-fix` do not expose `--feels-like-god`, god-review file names,
+private tool IDs, hidden instruction paths, or hidden branch names.
+
 Candidate private tools:
 
 - `blueprint_god_review_start`
@@ -808,6 +826,183 @@ read-only implementation reconnaissance, not an approved implementation plan.
   `tsx --test tests/mcp-server-summary.test.ts tests/built-assets-smoke.test.ts tests/extension-runtime-contracts.test.ts`;
   then `npm run typecheck`; then full `npm test` so built outputs and bundled
   runtime stay in sync.
+
+## Implementation Slices
+
+These slices are ordered for sequential implementation. Each slice should keep
+the normal review and review-fix lifecycle green before the next slice starts.
+
+### S01: Public Surface Leak Guardrails
+
+- Depends: none.
+- Deliverables: add or extend regression assertions that public command docs,
+  root routing, help, progress, next guidance, runtime catalog output, and
+  public runtime-contract resources do not mention `--feels-like-god`,
+  god-review report paths, god-review state paths, or private god-review tool
+  IDs.
+- Tests: focused metadata/router/doc safety tests for `/blu-code-review`,
+  `/blu-code-review-fix`, `/blu`, `/blu-help`, `/blu-progress`, and
+  `/blu-next`.
+- Non-goals: do not add hidden branches, private tools, report writers, or
+  public catalog metadata in this slice.
+
+### S02: Hidden Activation Branch Skeleton
+
+- Depends: S01.
+- Deliverables: add the hidden branch entry points for `/blu-code-review` and
+  `/blu-code-review-fix` only when the raw invocation includes
+  `--feels-like-god`; add the hard refusal path for accidental god-mode skill
+  activation before any MCP call, repo read, or file write.
+- Tests: activation tests that prove valid invocations enter the hidden branch
+  and invalid activation returns only the short refusal with no side effects.
+  Assert public runtime-contract resources do not expose hidden instruction
+  paths, hidden branch names, private tool IDs, or the hidden flag. Re-run S01
+  leak tests.
+- Non-goals: do not register private MCP tools, resolve scope, create session
+  files, or change normal command metadata/status.
+
+### S03: Private MCP Substrate Scaffolding
+
+- Depends: S02.
+- Deliverables: add an internal god-review tool module with schemas, typed result
+  shapes, path helpers, parser/renderer helper shells, private maintainer
+  comments, and mutation-failure logging integration points for future mutating
+  tools. Keep the module unregistered until each tool has minimally
+  contract-complete behavior.
+- Tests: direct helper/schema tests plus registry assertions that no private
+  god-review MCP tool is discoverable yet, and S01 public leak tests still pass.
+- Non-goals: do not register callable MCP stubs, do not expose private tool IDs
+  to clients, and do not imply private MCP tools are invisible once registered.
+
+### S04: Scope Resolution And Session Start
+
+- Depends: S03.
+- Deliverables: implement `blueprint_god_review_start` for phase, PR,
+  current-diff, and explicit-files scopes; resolve repo-relative files once;
+  reject directories, globs, absolute paths, missing files, and `.blueprint/**`;
+  register `blueprint_god_review_start` only when that behavior is present; write
+  schema-versioned session JSON, initial report metadata, and temporary
+  `.god-review-state.md` without touching normal `STATE.md`.
+- Tests: one start test per scope kind, path safety tests, PR/current-diff
+  report-scoped path tests, explicit-files rejection tests, and assertions that
+  normal `XX-REVIEW.md`, `XX-REVIEW-FIX.md`, and `STATE.md` are unchanged.
+  Exercise `/blu-progress`, `/blu-next`, and lifecycle/quality-gate evaluation
+  against a repo containing `.god-review-state.md` and session JSON, and assert
+  they ignore those files.
+- Non-goals: do not append review groups, parse findings, run fix mode, or add a
+  refresh-scope feature.
+
+### S05: Frozen Continuation And Stale Scope Detection
+
+- Depends: S04.
+- Deliverables: implement `blueprint_god_review_next` to load the saved session,
+  register `blueprint_god_review_next` only when that behavior is present, reuse
+  stored `files` and `scopeFingerprint`, return the next pending group, and stop
+  on fingerprint mismatch while preserving the existing session and report.
+- Tests: continuation does not rediscover scope, changed PR/diff/file-set
+  fingerprints block continuation, and stale review continuation preserves the
+  existing session and durable report unchanged.
+- Non-goals: do not mutate the frozen scope, do not create linked refresh runs,
+  and do not use `STATE.md` as continuation state.
+
+### S06: One-Group Report Append
+
+- Depends: S05.
+- Deliverables: implement `blueprint_god_review_append` to append exactly one
+  group section in session order, register `blueprint_god_review_append` only
+  when that behavior is present, validate group status, normalize severity and
+  disposition vocabulary, assign stable `GOD-<PREFIX>-<NNN>` finding IDs, update
+  `groups[*].status`, `findingIds`, `nextGroupId`, and the temporary human state
+  file.
+- Tests: one-call-one-group enforcement, group order enforcement, ID stability,
+  validation failures for unsupported severities/dispositions, and no rewrite of
+  completed group sections.
+- Non-goals: do not record remediation entries, do not create normal review
+  artifacts, and do not advance quality gates or next actions.
+
+### S07: God-Review Finding And Remediation Parser
+
+- Depends: S06.
+- Deliverables: implement `blueprint_god_review_load_findings` to parse only the
+  durable god-review report for `GOD-*` findings and the optional
+  `Remediation Log`; register `blueprint_god_review_load_findings` only when that
+  behavior is present; return structured severity, disposition, confidence,
+  files, fix eligibility, stale/remediated status, and remediation attempts.
+- Tests: parser extracts findings without `XX-REVIEW.md`, ignores normal review
+  artifacts, rejects malformed duplicate IDs, parses multiple remediation
+  attempts, and preserves accepted-risk/observation/blocked dispositions.
+- Non-goals: do not select fixes, edit code, or bridge god-review findings into
+  `blueprint_review_load_findings`.
+
+### S08: Hidden Review Orchestration
+
+- Depends: S06 and S07.
+- Deliverables: wire the hidden `/blu-code-review --feels-like-god` branch to
+  start or continue the private session, process exactly one pending review
+  group, append the group section, update the temporary state, and end with the
+  next exact hidden continuation command or terminal review status.
+- Tests: fresh run creates session/report/state, continuation appends only the
+  next group, terminal review is reported only after all groups are completed or
+  blocked, and normal `/blu-code-review` still writes normal `XX-REVIEW.md`.
+- Non-goals: do not run hidden fix mode, do not auto-chain via hooks, and do not
+  create commits, branches, PRs, or staging changes.
+
+### S09: Hidden Fix Selection And Evidence Checks
+
+- Depends: S07.
+- Deliverables: wire `/blu-code-review-fix --feels-like-god` selection logic so
+  the default target set is only high/medium actionable `follow-up` findings
+  with `Fix Eligibility: eligible`; implement explicit widening through
+  `--finding`, `--severity`, and `--all`; revalidate scope fingerprint, target
+  finding existence, referenced files, and nearby evidence before edits.
+- Tests: default selection excludes low, unknown, observation, accepted-risk, and
+  blocked findings; explicit selectors widen only as specified; stale evidence
+  prevents edits and produces a no-edit stale outcome.
+- Non-goals: do not create `XX-GOD-REVIEW-FIX.md`, normal `XX-REVIEW-FIX.md`,
+  commits, branches, PRs, staging changes, or public routing behavior.
+
+### S10: Remediation Log Recording
+
+- Depends: S09.
+- Deliverables: implement `blueprint_god_review_record_fix` to append exactly one
+  `GOD-FIX-<NNN>` remediation entry per finding attempt into the same durable
+  god-review report; register `blueprint_god_review_record_fix` only when that
+  behavior is present; include selected-by reason, status, changed files,
+  verification, evidence, and follow-up.
+- Tests: repeated remediation attempts append new IDs without renumbering,
+  entries target exactly one finding, stale/skipped/deferred/blocked entries are
+  represented without claiming code edits, and the report remains the only MVP
+  remediation artifact.
+- Non-goals: do not write normal review-fix artifacts, do not mark quality gates
+  fixed, and do not claim git operations unless separately requested outside
+  god mode.
+
+### S11: Cleanup Gate
+
+- Depends: S08 and S10.
+- Deliverables: implement `blueprint_god_review_cleanup` so it deletes only the
+  temporary session JSON and `.god-review-state.md` after both review terminal
+  status and hidden fix terminal status are true; register
+  `blueprint_god_review_cleanup` only when that behavior is present; preserve the
+  durable god-review report and remediation log.
+- Tests: cleanup is blocked before terminal review, blocked before terminal
+  hidden fix, succeeds after a no-op terminal hidden fix with no eligible
+  findings, preserves reports, and never deletes normal review, review-fix,
+  phase, or Blueprint state artifacts.
+- Non-goals: do not archive reports, do not update normal `STATE.md`, and do not
+  introduce lifecycle routing for god mode.
+
+### S12: Built Runtime And End-To-End Regression Pass
+
+- Depends: S01 through S11.
+- Deliverables: rebuild tracked runtime outputs, refresh only expected dist
+  files, and run the focused review/god-mode suites before the broader
+  typecheck/full-test pass.
+- Tests: focused `tsx --test` suites for review, review-fix, metadata, router,
+  MCP response shaping, built-assets smoke, and extension runtime contracts;
+  then `npm run typecheck`; then full `npm test` where feasible.
+- Non-goals: do not broaden public documentation, change command status
+  semantics, or use god mode as a normal review quality gate.
 
 ## Research-Backed Principles
 
