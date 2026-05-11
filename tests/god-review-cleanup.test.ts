@@ -232,3 +232,36 @@ test("blueprint_god_review_cleanup preserves durable report and normal Blueprint
     true
   );
 });
+
+test("blueprint_god_review_cleanup refuses session paths outside generated god-review state", async () => {
+  const repoPath = await writeCleanupRepo();
+  const { reportPath, sessionPath, humanStatePath, nextGroupId } =
+    await startCleanupRun(repoPath);
+  await appendRemainingGroups({ repoPath, nextGroupId });
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    "# Blueprint State\n\n- Active command: /blu-progress\n",
+    "utf8"
+  );
+  const session = JSON.parse(await readFile(path.join(repoPath, sessionPath), "utf8"));
+  await writeFile(
+    path.join(repoPath, sessionPath),
+    `${JSON.stringify({ ...session, humanStatePath: ".blueprint/STATE.md" }, null, 2)}\n`,
+    "utf8"
+  );
+
+  const cleanup = await blueprintGodReviewCleanup({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review-fix",
+    rawInvocation: "/blu-code-review-fix --feels-like-god --run-id god-cleanup",
+    runId: "god-cleanup",
+    noEligibleFindingsTerminal: true
+  });
+
+  assert.equal(cleanup.status, "invalid");
+  assert.match(cleanup.reason ?? "", /not a valid god-review session/);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/STATE.md")), true);
+  assert.equal(await pathExists(path.join(repoPath, sessionPath)), true);
+  assert.equal(await pathExists(path.join(repoPath, humanStatePath)), true);
+  assert.equal(await pathExists(path.join(repoPath, reportPath)), true);
+});

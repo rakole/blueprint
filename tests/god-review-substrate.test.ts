@@ -50,14 +50,26 @@ test("god-review activation helper validates only hidden code-review command inv
     activeCommand: "/blu-code-review",
     rawInvocation: "/blu-code-review 5"
   });
+  const substringFlag = evaluateGodReviewActivation({
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review 5 --feels-like-godly"
+  });
+  const mismatchedRawCommand = evaluateGodReviewActivation({
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-progress --feels-like-god"
+  });
   const wrongCommand = evaluateGodReviewActivation({
     activeCommand: "/blu-progress",
     rawInvocation: "/blu-progress --feels-like-god"
   });
 
   assert.equal(missingFlag.status, "refused");
+  assert.equal(substringFlag.status, "refused");
+  assert.equal(mismatchedRawCommand.status, "refused");
   assert.equal(wrongCommand.status, "refused");
   assert.equal(missingFlag.sideEffectsAllowed, false);
+  assert.equal(substringFlag.sideEffectsAllowed, false);
+  assert.equal(mismatchedRawCommand.sideEffectsAllowed, false);
   assert.match(missingFlag.refusal, /No `thunderbolt` today\./);
 });
 

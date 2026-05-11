@@ -329,7 +329,24 @@ test("review commands resolve docs-free manifest and local runtime-contract inpu
     assert.deepEqual(inputs.commandSpecific, [manifestPath, runtimeContractPath]);
     assert.deepEqual(inputs.effective, [manifestPath, runtimeContractPath]);
     assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+    assert.equal(
+      inputs.effective.some((input) => input.includes("blueprint-god-review")),
+      false
+    );
   }
+});
+
+test("private blueprint-god-review skill is not part of public review input bundles", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-god-review",
+    "/blu-code-review",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-god-review");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, []);
+  assert.deepEqual(inputs.effective, []);
 });
 
 test("docs-update resolves docs-free manifest and local runtime-contract inputs", async () => {

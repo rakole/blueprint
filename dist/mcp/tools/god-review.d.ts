@@ -564,6 +564,10 @@ export declare function normalizeGodReviewRepoRelativeFilePath(rawPath: string):
 export declare function hashGodReviewFileSet(args: {
     files: string[];
     skippedFiles?: string[];
+    contentHashes?: Array<{
+        path: string;
+        hash: string;
+    }>;
 }): string;
 export declare function buildGodReviewPhasePaths(args: {
     phaseDir: string;

@@ -255,7 +255,7 @@ test("hidden god-review fix explicit selectors widen only the requested target s
   assert.deepEqual(selectedIds(missingFinding), []);
 });
 
-test("hidden god-review fix stale evidence prevents edit-ready selection without rewriting artifacts", async () => {
+test("hidden god-review fix stale scope prevents edit-ready selection without rewriting artifacts", async () => {
   const repoPath = await writeSelectionRepo();
   const { reportPath, sessionPath } = await startSelectionReport(repoPath);
   const beforeReport = await readFile(path.join(repoPath, reportPath), "utf8");
@@ -276,32 +276,38 @@ test("hidden god-review fix stale evidence prevents edit-ready selection without
 
   assert.equal(result.status, "found");
   assert.equal(result.selection?.status, "stale");
-  assert.equal(result.selection?.fingerprintFresh, true);
+  assert.equal(result.selection?.fingerprintFresh, false);
   assert.equal(result.selection?.evidenceFresh, false);
   assert.deepEqual(selectedIds(result), []);
   assert.ok(
     result.selection?.staleReasons.some((reason) =>
-      /GOD-COR-001 evidence snippet `featureValue`/.test(reason)
+      /fileSetHash changed/.test(reason)
     )
   );
   assert.equal(await readFile(path.join(repoPath, reportPath), "utf8"), beforeReport);
   assert.equal(await readFile(path.join(repoPath, sessionPath), "utf8"), beforeSession);
 });
 
-test("hidden code-review-fix branch instructions load private findings selection before edits", async () => {
+test("hidden code-review-fix dispatcher defers private findings selection before edits", async () => {
   const manifest = await readRepoFile("commands/blu-code-review-fix.toml");
-  const skill = await readRepoFile("skills/blueprint-review/SKILL.md");
+  const publicSkill = await readRepoFile("skills/blueprint-review/SKILL.md");
+  const privateSkill = await readRepoFile("skills/blueprint-god-review/SKILL.md");
 
-  for (const text of [manifest, skill]) {
-    assert.match(text, /mcp_blueprint_blueprint_god_review_load_findings/);
-    assert.match(text, /selection\.status/);
-    assert.match(text, /--finding/);
-    assert.match(text, /--severity/);
-    assert.match(text, /--all/);
-    assert.match(text, /stale/i);
+  assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md`/);
+  for (const privateTool of [
+    /mcp_blueprint_blueprint_god_review_load_findings/,
+    /mcp_blueprint_blueprint_god_review_record_fix/,
+    /mcp_blueprint_blueprint_god_review_cleanup/
+  ]) {
+    assert.doesNotMatch(manifest, privateTool);
+    assert.doesNotMatch(publicSkill, privateTool);
+    assert.match(privateSkill, privateTool);
   }
 
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
-  assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, `XX-GOD-REVIEW-FIX\.md`/i);
+  assert.match(privateSkill, /selection\.status/);
+  assert.match(privateSkill, /--finding/);
+  assert.match(privateSkill, /--severity/);
+  assert.match(privateSkill, /--all/);
+  assert.match(privateSkill, /stale/i);
+  assert.match(privateSkill, /Do not write normal review-fix artifacts/i);
 });

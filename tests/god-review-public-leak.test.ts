@@ -17,6 +17,7 @@ const HIDDEN_GOD_REVIEW_PATTERNS = [
   /god-mode/i,
   /god review/i,
   /god-review/i,
+  /blueprint-god-review/i,
   /\.god-review/i,
   /GOD-REVIEW/,
   /XX-GOD-REVIEW-FIX/,
@@ -25,7 +26,8 @@ const HIDDEN_GOD_REVIEW_PATTERNS = [
   /blueprint_god_review_append/,
   /blueprint_god_review_load_findings/,
   /blueprint_god_review_record_fix/,
-  /blueprint_god_review_cleanup/
+  /blueprint_god_review_cleanup/,
+  /skills\/blueprint-god-review\/SKILL\.md/i
 ] as const;
 
 const PUBLIC_DOCUMENT_PATHS = [
