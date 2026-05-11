@@ -35,7 +35,8 @@
 - A Blueprint project and roadmap must already exist.
 - An existing integer phase number is required as the insertion anchor (`after`). Decimal insertion targets are rejected.
 - A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug, while the returned `phasePrefix` determines the scaffolded context filename.
-- A concrete ROADMAP objective and 2-5 observable success criteria are required and passed as `goal` and `successCriteria`; durable requirement IDs are passed as `requirementIds` when the urgent decimal insertion already has committed requirement grounding.
+- A concrete ROADMAP objective, 2-5 observable success criteria, and at least one confirmed durable requirement ID declared in `.blueprint/REQUIREMENTS.md` are required and passed as `goal`, `successCriteria`, and `requirementIds`.
+- Requirement mappings such as `none yet`, placeholder text, blank values, or IDs not declared in `.blueprint/REQUIREMENTS.md` are invalid for inserted phases.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
 
@@ -44,7 +45,7 @@
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
-- Repo side effects: Inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
+- Repo side effects: Maps the confirmed requirement rows in `.blueprint/REQUIREMENTS.md`, inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
 - In-flight posture: none beyond a concise inline summary or confirmation gate; `insert-phase` does not expose the long-running progress layer.
 
 
@@ -52,12 +53,14 @@
 
 
 - The current roadmap and milestone inventory through `blueprint_roadmap_read`
+- Durable requirement ID declarations in `.blueprint/REQUIREMENTS.md`, enforced by `blueprint_roadmap_insert_phase` before mutation
 
 
 ## Blueprint And Global State Writes
 
 
 - `.blueprint/ROADMAP.md`
+- `.blueprint/REQUIREMENTS.md`
 - `.blueprint/phases/<phasePrefix>-<phaseSlug>/`
 - `.blueprint/STATE.md`
 
@@ -72,7 +75,7 @@
 
 ## Phase Insertion Contract
 
-- Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and any confirmed `requirementIds`.
+- Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
@@ -116,7 +119,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the integer insertion target, computed next decimal number, objective, success criteria, any requirement IDs, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
 
 
 ## Edge Cases
@@ -146,6 +149,8 @@
 - Creates the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` scaffold.
 - Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
 - Writes concrete goal and success criteria at ROADMAP mutation time so `/blu-discuss-phase` is not expected to backfill placeholders.
+- Writes confirmed durable requirement IDs at ROADMAP mutation time and never records `none yet` requirement mappings for inserted phases.
+- Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.

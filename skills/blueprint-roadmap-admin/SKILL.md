@@ -110,7 +110,7 @@ substitutes for `blueprint-roadmapper` or `blueprint-verifier`.
 
 ## Shared MCP Contracts
 
-- `blueprint_roadmap_add_phase` and `blueprint_roadmap_insert_phase`: for add-phase, pass the phase description plus confirmed durable `requirementIds`, concrete `goal`, and 2-5 item `successCriteria`; for insertion, pass the integer `after` anchor, description, concrete `goal`, 2-5 item `successCriteria`, and any confirmed durable `requirementIds`. Do not precompute phase numbers, slugs, or directory paths; use returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
+- `blueprint_roadmap_add_phase` and `blueprint_roadmap_insert_phase`: for add-phase, pass the phase description plus confirmed durable `requirementIds`, concrete `goal`, and 2-5 item `successCriteria`; for insertion, pass the integer `after` anchor, description, concrete `goal`, 2-5 item `successCriteria`, and confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`. Do not precompute phase numbers, slugs, or directory paths; use returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative. Do not use `none yet`, placeholder text, blank values, or undeclared IDs as requirement grounding.
 - `blueprint_artifact_scaffold`: pass only supported repo-relative Blueprint artifact paths. Use the scaffold to seed starter docs or `XX-CONTEXT.md`, not as the final authored milestone or phase content.
 - `blueprint_artifact_summary_digest`: pass repo-relative `artifactPaths` only, and treat `inputsUsed` as the authoritative digest scope.
 - `blueprint_artifact_report_write`: pass a bare report name such as `milestone-audit-v1` or `milestone-summary-v2`, not a `.blueprint/reports/...` path. Use the returned `path` as authoritative.
@@ -144,15 +144,16 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 
 1. Require an explicit integer phase number and a non-empty phase description before any mutation.
 2. Read the roadmap first and stop with recovery guidance if the roadmap is missing or malformed.
-3. Require explicit confirmation before inserting the decimal phase, and prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation. Preview the computed decimal number, concrete roadmap objective, 2-5 observable success criteria, any confirmed requirement IDs, and the fact that later phases will not be renumbered automatically.
-4. Persist the roadmap mutation through `blueprint_roadmap_insert_phase` with the confirmed `goal`, `successCriteria`, and any confirmed `requirementIds`; do not rewrite `.blueprint/ROADMAP.md` or hand-create phase directories directly from the command prompt.
+3. Require explicit confirmation before inserting the decimal phase, and prefer Gemini CLI `ask_user` for that confirmation gate when available instead of prose-only confirmation. Preview the computed decimal number, concrete roadmap objective, 2-5 observable success criteria, confirmed durable requirement IDs from `.blueprint/REQUIREMENTS.md`, and the fact that later phases will not be renumbered automatically.
+4. Persist the roadmap mutation through `blueprint_roadmap_insert_phase` with the confirmed `goal`, `successCriteria`, and confirmed durable `requirementIds`; do not rewrite `.blueprint/ROADMAP.md` or hand-create phase directories directly from the command prompt.
 5. Treat integer-only targets as mandatory and reject decimal targets.
-6. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
-7. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
-8. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
-9. Keep follow-up routing inside implemented Blueprint commands only.
-10. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
-11. Treat scaffold text as starter material only. Do not author final `XX-CONTEXT.md` content or create insert-phase-specific reports; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
+6. Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `.blueprint/REQUIREMENTS.md`; inserted phases must have durable requirement grounding before mutation.
+7. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
+8. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
+9. Update `STATE.md` through `blueprint_state_update` so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
+10. Keep follow-up routing inside implemented Blueprint commands only.
+11. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
+12. Treat scaffold text as starter material only. Do not author final `XX-CONTEXT.md` content or create insert-phase-specific reports; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
 
 ### `remove-phase`
 

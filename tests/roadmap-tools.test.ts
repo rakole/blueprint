@@ -11,6 +11,7 @@ import {
   blueprintArtifactValidate
 } from "../src/mcp/tools/artifacts.js";
 import {
+  blueprintPhasePlanAuthoringContext,
   blueprintRoadmapAddPhase,
   blueprintRoadmapInsertPhase,
   blueprintRoadmapPromoteBacklog,
@@ -57,7 +58,8 @@ const insertPhaseRoadmapDetails = {
   successCriteria: [
     "API stabilization decisions are captured in phase context.",
     "Release hardening can proceed without renumbering later phases."
-  ]
+  ],
+  requirementIds: ["RQ-03"]
 };
 
 async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
@@ -185,7 +187,22 @@ async function createInsertRoadmapRepo(): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Insert Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Keep core runtime traceable. | Pending | Phase 2 coverage. |
+| RQ-03 | Add the inserted API stabilization slice. | Pending | Reserved for inserted decimal phase. |
+| RQ-04 | Keep release hardening traceable. | Pending | Phase 4 coverage. |
+| RQ-05 | Add the inserted validation sweep slice. | Pending | Reserved for a second inserted decimal phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Insert Fixture
@@ -968,6 +985,11 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+  const planContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "2.1"
+  });
 
   assert.equal(result.afterPhaseNumber, "2");
   assert.equal(result.phaseNumber, "2.1");
@@ -987,6 +1009,14 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
     true
   );
   assert.match(roadmapBody, /\*\*Inserted\*\*: yes/);
+  assert.match(roadmapBody, /Phase 2\.1: API Stabilization \(Requirements: RQ-03\)/);
+  assert.match(roadmapBody, /### Phase 2\.1: API Stabilization[\s\S]*\*\*Requirements\*\*: RQ-03/);
+  assert.match(
+    requirementsBody,
+    /\| RQ-03 \| Add the inserted API stabilization slice\. \| Pending \| Reserved for inserted decimal phase\. Mapped to inserted Phase 2\.1 \(API Stabilization\)\. \|/
+  );
+  assert.equal(planContext.status, "ready", planContext.reason ?? "");
+  assert.deepEqual(planContext.knownRequirements, ["RQ-03"]);
   assert.match(
     roadmapBody,
     /Phase 2: Core Runtime[\s\S]*Phase 2\.1: API Stabilization[\s\S]*Phase 4: Release Hardening/
@@ -998,8 +1028,98 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   assert.match(roadmapBody, /\*\*Depends on\*\*: Phase 2/);
 });
 
+test("blueprint_roadmap_insert_phase rejects missing requirement IDs before mutation", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: 2,
+        description: "API Stabilization",
+        goal: insertPhaseRoadmapDetails.goal,
+        successCriteria: insertPhaseRoadmapDetails.successCriteria
+      }),
+    /Requirement IDs required.*\/blu-insert-phase.*durable requirement ID/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-api-stabilization")),
+    false
+  );
+});
+
+test("blueprint_roadmap_insert_phase rejects requirement IDs absent from REQUIREMENTS before mutation", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: 2,
+        description: "API Stabilization",
+        ...insertPhaseRoadmapDetails,
+        requirementIds: ["RQ-99"]
+      }),
+    /requirement IDs are not declared in \.blueprint\/REQUIREMENTS\.md Requirements Table: RQ-99/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-api-stabilization")),
+    false
+  );
+});
+
+test("blueprint_roadmap_insert_phase rejects requirement IDs already mapped in ROADMAP before mutation", async (t) => {
+  const repoPath = await createInsertRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+
+  await assert.rejects(
+    () =>
+      blueprintRoadmapInsertPhase({
+        cwd: repoPath,
+        after: 2,
+        description: "API Stabilization",
+        ...insertPhaseRoadmapDetails,
+        requirementIds: ["RQ-02"]
+      }),
+    /requirement IDs are already mapped in \.blueprint\/ROADMAP\.md: RQ-02 \(Phase 2\)/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-api-stabilization")),
+    false
+  );
+});
+
 test("blueprint_roadmap_insert_phase keeps the mutated ROADMAP artifact-valid", async (t) => {
-  const repoPath = await createContractRoadmapRepo();
+  const repoPath = await createContractRoadmapRepo({ includePhaseThreeRequirement: true });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
@@ -1014,7 +1134,7 @@ test("blueprint_roadmap_insert_phase keeps the mutated ROADMAP artifact-valid", 
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
 
-  assert.match(roadmapBody, /### Phase 2\.1: API Stabilization[\s\S]*\*\*Requirements\*\*: none yet/);
+  assert.match(roadmapBody, /### Phase 2\.1: API Stabilization[\s\S]*\*\*Requirements\*\*: RQ-03/);
   assert.match(roadmapBody, /- \[ \] Phase 2\.1: API Stabilization/);
   assert.match(roadmapBody, /  - Objective: Stabilize the API surface before the release hardening phase\./);
   assert.match(roadmapBody, /\*\*Goal\*\*: Stabilize the API surface before the release hardening phase\./);
@@ -1025,7 +1145,7 @@ test("blueprint_roadmap_insert_phase keeps the mutated ROADMAP artifact-valid", 
 });
 
 test("blueprint_roadmap_insert_phase accepts ROADMAPs without an existing Phase Details section", async (t) => {
-  const repoPath = await createContractRoadmapRepo();
+  const repoPath = await createContractRoadmapRepo({ includePhaseThreeRequirement: true });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
@@ -1099,7 +1219,8 @@ test("blueprint_roadmap_insert_phase increments the decimal suffix from roadmap 
     cwd: repoPath,
     after: "2",
     description: "Validation Sweep",
-    ...insertPhaseRoadmapDetails
+    ...insertPhaseRoadmapDetails,
+    requirementIds: ["RQ-05"]
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
@@ -1131,7 +1252,8 @@ test("blueprint_roadmap_insert_phase serializes concurrent inserts after the sam
       cwd: repoPath,
       after: 2,
       description: "Validation Sweep",
-      ...insertPhaseRoadmapDetails
+      ...insertPhaseRoadmapDetails,
+      requirementIds: ["RQ-05"]
     })
   ]);
   const after = await blueprintRoadmapRead({ cwd: repoPath });
