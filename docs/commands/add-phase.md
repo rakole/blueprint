@@ -34,8 +34,10 @@
 
 - A Blueprint project and roadmap must already exist.
 - A non-empty phase description is required. The description becomes the new phase title and drives the scaffolded phase slug.
+- At least one durable requirement ID from `.blueprint/ROADMAP.md` or `.blueprint/REQUIREMENTS.md` is required for a plain whole-number add. Confirmed IDs are passed as `requirementIds`.
+- A concrete ROADMAP objective plus 2-5 observable success criteria are required and passed as `goal` and `successCriteria`.
 - The next phase number is the next integer after the highest base phase number already present in the roadmap. Decimal suffixes are ignored for numbering, so `2.1` and `2.2` still advance the next append target to `3`.
-- The computed next phase number must be previewed from the roadmap read result before any mutation.
+- The computed next phase number, requirement IDs, objective, and success criteria must be previewed from the roadmap read result before any mutation.
 
 
 ## Outputs
@@ -71,7 +73,7 @@
 ## Phase Creation Contract
 
 - Preview the exact computed next integer phase number from the roadmap read result before append, then use `ask_user` for the confirmation gate before any mutation.
-- Call `blueprint_roadmap_add_phase` with the confirmed phase description and the confirmed next phase number in `expectedPhaseNumber` after the user approves the previewed number. Do not precompute the slug or directory path yourself.
+- Call `blueprint_roadmap_add_phase` with the confirmed phase description, the confirmed next phase number in `expectedPhaseNumber`, the confirmed durable IDs in `requirementIds`, the confirmed objective in `goal`, and 2-5 confirmed criteria in `successCriteria` after the user approves the previewed roadmap grounding. Do not precompute the slug or directory path yourself.
 - Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
 - Scaffold the initial context file at `${phaseDir}/${phasePrefix}-CONTEXT.md` from the returned phase metadata. Do not treat scaffold text as finished phase context.
 
@@ -113,6 +115,7 @@
 
 - Preview the exact computed next integer phase number from the roadmap read result before append.
 - Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number.
+- Include the requirement grounding, objective, and success criteria in that same confirmation preview.
 
 
 ## Edge Cases
@@ -130,6 +133,8 @@
 - If scaffold creation fails, report the exact `${phaseDir}/${phasePrefix}-CONTEXT.md` path and stop without manually writing the file.
 - If state update fails after roadmap append and scaffold success, report the completed writes, the state-update failure, and `/blu-progress` as the recovery route instead of manually editing `STATE.md`.
 - Stop without mutation when the phase description is missing, the roadmap is unavailable, or the previewed next phase number cannot be confirmed.
+- Stop without mutation when a plain add-phase request has no confirmed requirement IDs.
+- Stop without mutation when a plain add-phase request has no concrete objective or lacks 2-5 observable success criteria.
 
 
 ## Acceptance Criteria
@@ -137,6 +142,8 @@
 
 - Keeps roadmap, phase directories, and state synchronized for add-phase only.
 - Previews the exact next integer phase number before append and confirms it through `ask_user`.
+- Chooses, previews, confirms, and passes at least one durable requirement ID for plain whole-number add-phase.
+- Confirms and passes a concrete objective plus 2-5 observable success criteria so `/blu-discuss-phase` is not expected to backfill ROADMAP placeholders.
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
 - Refuses to append when the confirmed next phase number is stale.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.

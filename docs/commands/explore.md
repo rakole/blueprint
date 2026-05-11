@@ -73,7 +73,7 @@
 
 - Read effective config through `blueprint_config_get` before deciding whether to use the optional `blueprint-researcher` path or stay inline.
 - Capture routes use `blueprint_artifact_mutate_index` in append mode: omit `action`, pass the normalized idea in `entry.text`, and use returned entry ids as authoritative.
-- Roadmap promotion uses `blueprint_roadmap_add_phase` with only the confirmed phase description. Treat the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
+- Roadmap promotion uses `blueprint_roadmap_add_phase` with the confirmed phase description plus confirmed durable `requirementIds`, concrete `goal`, and 2-5 item `successCriteria`. Treat the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative.
 - When scaffolding the roadmap route, build the initial context path from the returned `phaseDir` plus returned `phasePrefix`. Do not invent the phase slug or path from user prose.
 
 
@@ -114,7 +114,7 @@
 
 
 - Confirm the final routing target before any durable write. Prefer Gemini CLI `ask_user` when a structured choice helps, otherwise keep the same gate explicit in prose.
-- Confirm the final phase description before promoting an explored idea directly into the active roadmap.
+- Confirm the final phase description, requirement IDs, objective, and success criteria before promoting an explored idea directly into the active roadmap.
 
 
 ## Edge Cases

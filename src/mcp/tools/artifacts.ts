@@ -8548,7 +8548,7 @@ const BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
 } as const satisfies Record<string, ArtifactContractId>;
 
 const BOOTSTRAP_REPAIR =
-  "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract.";
+  "Re-run /blu-new-project to regenerate bootstrap artifacts from the canonical contract, or repair the named artifact with durable requirement and roadmap mappings before retrying.";
 
 function diagnosticCodeFromIssue(message: string): string {
   const normalized = message

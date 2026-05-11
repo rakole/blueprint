@@ -25,14 +25,23 @@ and all persistent state changes must stay on the Blueprint MCP tools.
   the recovery guidance instead of appending.
 - Derive the previewed next integer from the read result only: take the highest
   base phase number and ignore decimal suffixes such as `2.1` or `2.2`.
+- Choose at least one durable requirement ID from `.blueprint/ROADMAP.md` or
+  `.blueprint/REQUIREMENTS.md` for the new whole-number phase. Plain add-phase
+  appends must not proceed with empty requirement grounding.
+- Capture a concrete roadmap objective and 2-5 observable success criteria for
+  the new phase. Do not use `/blu-discuss-phase` placeholder wording as ROADMAP
+  content.
 
 ### Decide
 
 - Preview the exact computed phase number together with the exact description.
+- Preview the durable requirement IDs, objective, and success criteria that will
+  ground the new phase.
 - Use Gemini CLI `ask_user` for the confirmation gate before any mutation.
 - Keep the waiting state explicit as `phase-number-confirmation`.
 - The confirmation question must ask whether to append that exact phase number
-  and description, not whether to generally continue roadmap work.
+  and description with the selected requirement IDs, objective, and success
+  criteria, not whether to generally continue roadmap work.
 - If the user declines, stop without mutation and route to `/blu-progress`.
 
 ### Execute
@@ -40,6 +49,11 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 - Call `mcp_blueprint_blueprint_roadmap_add_phase` only after confirmation.
 - Pass the confirmed description and the confirmed phase number in
   `expectedPhaseNumber`.
+- Pass the confirmed durable requirement IDs in `requirementIds`, the confirmed
+  objective in `goal`, and the confirmed criteria in `successCriteria`. For
+  audit-backed repair flows, preserve the existing
+  `auditBackedDetails.repairRequirementIds` traceability path while still
+  preserving concrete audit-backed goal and success criteria.
 - Treat returned `phaseNumber`, `phasePrefix`, `phaseName`, `slug`, `phaseDir`,
   `roadmapPath`, `milestone`, and `warnings` as authoritative.
 - Do not precompute slugs, directories, or artifact paths from prompt logic
@@ -123,6 +137,12 @@ confirmation gate, and the parent command must still own all MCP calls.
 ## Retry And Repair Behavior
 
 - Missing description: stop with usage guidance and no mutation.
+- Missing requirement IDs for a plain add: re-read the roadmap or requirements
+  source of truth, choose or ask the user to confirm at least one durable ID,
+  and retry with `requirementIds`.
+- Missing objective or success criteria: re-read the roadmap context as needed,
+  ask the user to confirm concrete values, and retry with `goal` plus 2-5 item
+  `successCriteria`.
 - Roadmap read warning or recovery: stop with the returned recovery guidance and
   route to `/blu-health` or `/blu-progress` only when those commands are
   implemented in the catalog.
@@ -136,6 +156,9 @@ confirmation gate, and the parent command must still own all MCP calls.
 ## Output Quality Criteria
 
 - The user can see exactly which phase was added and why that number was chosen.
+- The user can see which requirement IDs ground the whole-number phase.
+- The user can see the concrete roadmap objective and success criteria that will
+  exist before `/blu-discuss-phase` authors full phase context.
 - Decimal insertions ignored during numbering are called out when present.
 - The result distinguishes roadmap append, scaffold creation or reuse, and
   state update.
@@ -150,6 +173,10 @@ confirmation gate, and the parent command must still own all MCP calls.
 - `mcp_blueprint_blueprint_roadmap_read` completed and the next integer was
   previewed from its result.
 - The exact phase number and description were confirmed with `ask_user`.
+- The requirement IDs were chosen from roadmap or requirements context,
+  confirmed, and passed as `requirementIds` for plain add-phase.
+- The objective and 2-5 success criteria were confirmed and passed as `goal`
+  and `successCriteria`.
 - `mcp_blueprint_blueprint_roadmap_add_phase` succeeded with
   `expectedPhaseNumber`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through

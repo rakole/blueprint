@@ -5800,12 +5800,23 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
   const directAddResult = await blueprintToolRegistry.blueprint_roadmap_add_phase.handler({
     cwd: directAddRepoPath,
     description: "Offline mode",
-    expectedPhaseNumber: "3"
+    expectedPhaseNumber: "3",
+    goal: "Add offline mode as traceable roadmap work.",
+    requirementIds: ["RQ-03"],
+    successCriteria: [
+      "Offline mode scope is captured before planning.",
+      "Offline mode requirement coverage remains artifact-valid."
+    ]
   });
   const directInsertResult = await blueprintToolRegistry.blueprint_roadmap_insert_phase.handler({
     cwd: directInsertRepoPath,
     after: "2",
-    description: "Research follow-up"
+    description: "Research follow-up",
+    goal: "Capture a focused research follow-up before release hardening.",
+    successCriteria: [
+      "Research follow-up scope is captured before planning.",
+      "Later phase numbering remains unchanged."
+    ]
   });
 
   assert.deepEqual(directAddResult.warnings, []);
@@ -5826,7 +5837,13 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
       arguments: {
         cwd: publicRepoPath,
         description: "Offline mode",
-        expectedPhaseNumber: "3"
+        expectedPhaseNumber: "3",
+        goal: "Add offline mode as traceable roadmap work.",
+        requirementIds: ["RQ-03"],
+        successCriteria: [
+          "Offline mode scope is captured before planning.",
+          "Offline mode requirement coverage remains artifact-valid."
+        ]
       }
     });
 
@@ -5845,7 +5862,12 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
       arguments: {
         cwd: publicRepoPath,
         after: "2",
-        description: "Research follow-up"
+        description: "Research follow-up",
+        goal: "Capture a focused research follow-up before release hardening.",
+        successCriteria: [
+          "Research follow-up scope is captured before planning.",
+          "Later phase numbering remains unchanged."
+        ]
       }
     });
 
