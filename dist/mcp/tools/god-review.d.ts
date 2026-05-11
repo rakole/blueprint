@@ -415,6 +415,22 @@ export type GodReviewRecordFixResult = {
     staleReasons: string[];
     warnings: string[];
 };
+export type GodReviewCleanupResult = {
+    status: "cleaned" | "blocked" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    runId: string | null;
+    sessionPath: string | null;
+    humanStatePath: string | null;
+    reportPath: string | null;
+    deletedPaths: string[];
+    preservedPaths: string[];
+    cleanupEligible: boolean;
+    reviewTerminal: boolean;
+    godFixTerminal: boolean;
+    warnings: string[];
+};
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     activeCommand: z.ZodEnum<{
@@ -529,6 +545,16 @@ declare const godReviewRecordFixArgsSchema: z.ZodObject<{
     terminal: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
 type GodReviewRecordFixArgs = z.infer<typeof godReviewRecordFixArgsSchema>;
+declare const godReviewCleanupArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodLiteral<"/blu-code-review-fix">;
+    rawInvocation: z.ZodString;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    runId: z.ZodOptional<z.ZodString>;
+    sessionPath: z.ZodOptional<z.ZodString>;
+    noEligibleFindingsTerminal: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+type GodReviewCleanupArgs = z.infer<typeof godReviewCleanupArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -570,6 +596,7 @@ export declare function blueprintGodReviewNext(rawArgs: GodReviewNextArgs): Prom
 export declare function blueprintGodReviewAppend(rawArgs: GodReviewAppendArgs): Promise<GodReviewAppendResult>;
 export declare function blueprintGodReviewLoadFindings(rawArgs: GodReviewLoadFindingsArgs): Promise<GodReviewLoadFindingsResult>;
 export declare function blueprintGodReviewRecordFix(rawArgs: GodReviewRecordFixArgs): Promise<GodReviewRecordFixResult>;
+export declare function blueprintGodReviewCleanup(rawArgs: GodReviewCleanupArgs): Promise<GodReviewCleanupResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
 export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};

@@ -68,13 +68,15 @@ test("code-review-fix hidden activation branch runs before normal MCP-backed rem
   assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, `XX-GOD-REVIEW-FIX\.md`, normal `STATE\.md`/i);
   assert.match(manifest, /mcp_blueprint_blueprint_god_review_load_findings/);
   assert.match(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
+  assert.match(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
   assert.match(manifest, /selection\.status/);
   assert.match(manifest, /Do not fall through into normal review-fix persistence or source edits/i);
 
   for (const toolId of PRIVATE_TOOL_IDS.filter(
     (privateToolId) =>
       privateToolId !== "blueprint_god_review_load_findings" &&
-      privateToolId !== "blueprint_god_review_record_fix"
+      privateToolId !== "blueprint_god_review_record_fix" &&
+      privateToolId !== "blueprint_god_review_cleanup"
   )) {
     assert.doesNotMatch(manifest, new RegExp(toolId));
   }
@@ -100,6 +102,7 @@ test("blueprint-review skill refuses accidental hidden activation before MCP or 
   assert.match(skill, /mcp_blueprint_blueprint_god_review_append/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_load_findings/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_record_fix/);
+  assert.match(skill, /mcp_blueprint_blueprint_god_review_cleanup/);
 });
 
 test("public runtime-contract resources still hide hidden branch text", async () => {

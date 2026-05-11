@@ -108,8 +108,15 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
      code edits; use `stale`, `skipped`, `deferred`, or `blocked` for no-edit
      outcomes with no changed files.
   7. Set the record call's `terminal` flag only when the hidden fix pass has
-     reached a terminal result for the run. Do not call hidden cleanup until its
-     private tool exists.
+     reached a terminal result for the run.
+  8. When hidden review and hidden fix are both terminal, use
+     `mcp_blueprint_blueprint_god_review_cleanup` only for private temporary
+     state cleanup. For a no-op hidden fix pass with no eligible findings, pass
+     `noEligibleFindingsTerminal: true` only after `selection.status` is
+     `empty`. Cleanup may delete only the hidden session JSON and
+     `.god-review-state.md`; it must preserve the durable god-review report and
+     remediation log plus all normal Blueprint review, review-fix, state, and
+     quality-gate artifacts.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
