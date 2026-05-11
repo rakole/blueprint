@@ -224,7 +224,8 @@ test("only implemented god-review private tools are registered as callable MCP t
     assert.equal(isGodReviewPrivateToolName(toolName), true);
     assert.equal(
       blueprintToolNames.includes(toolName),
-      toolName === "blueprint_god_review_start"
+      toolName === "blueprint_god_review_start" ||
+        toolName === "blueprint_god_review_next"
     );
   }
 

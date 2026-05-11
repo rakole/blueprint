@@ -302,6 +302,27 @@ export type GodReviewStartResult = {
     createdPaths: string[];
     warnings: string[];
 };
+export type GodReviewNextResult = {
+    status: "ready" | "complete" | "stale" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    runId: string | null;
+    sessionPath: string | null;
+    humanStatePath: string | null;
+    reportPath: string | null;
+    scopeKind: GodReviewScopeKind | null;
+    phase: string | number | null;
+    files: string[];
+    scopeFingerprint: GodReviewScopeFingerprint | null;
+    currentFingerprint: GodReviewScopeFingerprint | null;
+    staleReasons: string[];
+    nextGroup: GodReviewGroupState | null;
+    nextGroupId: GodReviewGroupId | null;
+    nextCommand: string | null;
+    written: false;
+    warnings: string[];
+};
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     activeCommand: z.ZodEnum<{
@@ -321,6 +342,18 @@ declare const godReviewStartArgsSchema: z.ZodObject<{
     runId: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
+declare const godReviewNextArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodEnum<{
+        "/blu-code-review": "/blu-code-review";
+        "/blu-code-review-fix": "/blu-code-review-fix";
+    }>;
+    rawInvocation: z.ZodString;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    runId: z.ZodOptional<z.ZodString>;
+    sessionPath: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+type GodReviewNextArgs = z.infer<typeof godReviewNextArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -358,6 +391,7 @@ export declare function renderGodReviewHumanState(args: {
     nextCommand: string;
 }): string;
 export declare function blueprintGodReviewStart(rawArgs: GodReviewStartArgs): Promise<GodReviewStartResult>;
+export declare function blueprintGodReviewNext(rawArgs: GodReviewNextArgs): Promise<GodReviewNextResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
 export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};
