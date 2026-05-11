@@ -349,6 +349,33 @@ test("private blueprint-god-review skill is not part of public review input bund
   assert.deepEqual(inputs.effective, []);
 });
 
+test("private blueprint-god-review references are loaded by the hidden skill, not public input bundles", async () => {
+  const privateReferencePaths = [
+    "skills/blueprint-god-review/references/review-method.md",
+    "skills/blueprint-god-review/references/lane-rubrics.md",
+    "skills/blueprint-god-review/references/finding-quality.md",
+    "skills/blueprint-god-review/references/context-selection.md",
+    "skills/blueprint-god-review/references/finding-examples.md",
+    "skills/blueprint-god-review/references/final-curation.md"
+  ];
+  const skill = await readRelativePath("skills/blueprint-god-review/SKILL.md");
+
+  for (const referencePath of privateReferencePaths) {
+    assert.match(skill, new RegExp(referencePath.replaceAll("/", "\\/")));
+  }
+  assert.match(skill, /finding-examples\.md` only when classifying duplicate, weak, or no-edit\s+outcomes/i);
+  assert.match(skill, /final-curation\.md` only after a\s+hidden review invocation reaches terminal review status/i);
+
+  const publicInputs = await loadBlueprintSkillInputs(
+    "blueprint-review",
+    "/blu-code-review",
+    readRelativePath
+  );
+  for (const referencePath of privateReferencePaths) {
+    assert.equal(publicInputs.effective.includes(referencePath), false);
+  }
+});
+
 test("docs-update resolves docs-free manifest and local runtime-contract inputs", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-docs",

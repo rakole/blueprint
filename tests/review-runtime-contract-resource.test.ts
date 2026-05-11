@@ -24,7 +24,27 @@ const HIDDEN_GOD_REVIEW_PATTERNS = [
   /blueprint_god_review_append/,
   /blueprint_god_review_load_findings/,
   /blueprint_god_review_record_fix/,
-  /blueprint_god_review_cleanup/
+  /blueprint_god_review_cleanup/,
+  /skills\/blueprint-god-review\/references\/review-method\.md/i,
+  /skills\/blueprint-god-review\/references\/lane-rubrics\.md/i,
+  /skills\/blueprint-god-review\/references\/finding-quality\.md/i,
+  /skills\/blueprint-god-review\/references\/context-selection\.md/i,
+  /skills\/blueprint-god-review\/references\/finding-examples\.md/i,
+  /skills\/blueprint-god-review\/references\/final-curation\.md/i,
+  /Fresh-Context Loop/i,
+  /Terminal Curation Mindset/i,
+  /Strong Actionable Finding Template/i,
+  /Weak Finding To Drop/i,
+  /Unsupported Hypothesis To Drop/i,
+  /Duplicate Root Cause Merge/i,
+  /Stale No-Edit Fix/i,
+  /Dedupe Protocol/i,
+  /Severity Reconciliation/i,
+  /Weak-Finding Rejection/i,
+  /Cross-Lane Synthesis/i,
+  /Terminal Response Shape/i,
+  /No-Side-Effect Curation/i,
+  /Fix Eligibility/i
 ] as const;
 
 function bundledRelativePath(value: unknown): string | null {
