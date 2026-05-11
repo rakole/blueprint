@@ -8328,7 +8328,15 @@ function parsePlanIdForSuffix(
   return match[1].padStart(2, "0");
 }
 
+function isNormalReviewArtifactPath(artifactPath: string): boolean {
+  return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
+}
+
 function findPhaseArtifact(artifacts: string[], suffix: string): string | null {
+  if (suffix === "-REVIEW.md") {
+    return artifacts.find((artifact) => isNormalReviewArtifactPath(artifact)) ?? null;
+  }
+
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
 }
 
@@ -9973,9 +9981,11 @@ export async function blueprintReviewLoadFindings(
   }
 
   const artifactPath =
-    located.artifacts.find((candidate) =>
-      candidate.endsWith(REVIEW_ARTIFACT_SUFFIXES[artifact])
-    ) ?? null;
+    artifact === "code-review"
+      ? findPhaseArtifact(located.artifacts, REVIEW_ARTIFACT_SUFFIXES[artifact])
+      : located.artifacts.find((candidate) =>
+          candidate.endsWith(REVIEW_ARTIFACT_SUFFIXES[artifact])
+        ) ?? null;
 
   if (!artifactPath) {
     return {
