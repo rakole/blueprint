@@ -18,6 +18,9 @@ Agreed direction:
   by `--feels-like-god`.
 - Run one focused review group per invocation, append that pass to one durable
   god-review report, then stop with the next exact continuation command.
+- Record hidden fix-mode remediation back into the same god-review report as an
+  append-only remediation log. Do not create a separate god-review-fix artifact
+  in the MVP.
 - Resolve scope once on the first run and persist it in session JSON. Later runs
   reuse that saved scope; if the scope fingerprint changes, the run stops and
   the user starts a new run.
@@ -234,6 +237,242 @@ should carry file/line evidence, impact, confidence or uncertainty notes, and a
 remediation handoff. If a reliable line cannot be named, the finding must say
 why and should normally use `severity: unknown` or `disposition: observation`.
 
+## Private Contract Lock
+
+This is the implementation contract for the hidden god-mode substrate. Later
+implementation can rename internal helper functions, but behavior should not
+drift without updating this section first.
+
+### Activation Contract
+
+God-mode execution is invalid unless all of these are true:
+
+- active command is `/blu-code-review` or `/blu-code-review-fix`
+- raw invocation includes `--feels-like-god`
+- invocation is handled through the hidden branch of the matching command
+- no MCP call, repo read, or file write has happened before this check passes
+
+Invalid activation returns only the short refusal message and no side effects.
+It must not inspect `.blueprint/`, call `blueprint_state_load`, read repo files,
+or try to infer intent from `STATE.md.activeCommand`.
+
+### Session JSON Contract
+
+Session files are private Blueprint runtime state. They use `schemaVersion: 1`
+and must remain JSON objects, not Markdown. The minimum session shape is:
+
+```json
+{
+  "schemaVersion": 1,
+  "runId": "god-2026-05-11-abc123",
+  "parentRunId": null,
+  "status": "in-progress",
+  "createdAt": "2026-05-11T00:00:00.000Z",
+  "updatedAt": "2026-05-11T00:00:00.000Z",
+  "activeCommand": "/blu-code-review",
+  "scopeKind": "phase",
+  "phase": 5,
+  "sessionPath": ".blueprint/phases/05-example/.god-review-session.json",
+  "reportPath": ".blueprint/phases/05-example/05-GOD-REVIEW.md",
+  "files": ["src/example.ts", "tests/example.test.ts"],
+  "skippedFiles": [],
+  "scopeFingerprint": {
+    "baseSha": "abc123",
+    "headSha": "def456",
+    "diffHash": "sha256:...",
+    "fileSetHash": "sha256:...",
+    "prNumber": null
+  },
+  "groups": [
+    {
+      "id": "correctness-contracts",
+      "prefix": "COR",
+      "status": "completed",
+      "findingIds": ["GOD-COR-001"]
+    },
+    {
+      "id": "security-privacy-auth",
+      "prefix": "SEC",
+      "status": "pending",
+      "findingIds": []
+    }
+  ],
+  "nextGroupId": "security-privacy-auth"
+}
+```
+
+Locked invariants:
+
+- `runId` is unique per report. A linked refresh creates a new `runId` and sets
+  `parentRunId`; it does not rewrite the existing session scope.
+- `phase` is present only when `scopeKind: "phase"`.
+- PR and current-diff sessions always write under `.blueprint/reports/`.
+- `files` are repo-relative file paths only. No directories, globs, absolute
+  paths, or `.blueprint/**` entries.
+- `skippedFiles` records files omitted because of size, unsupported type, scope
+  filters, or safety policy.
+- `groups[*].status` is `pending|in-progress|completed|blocked`.
+- Completion means every group is `completed` or `blocked`; blocked groups must
+  have a report section explaining the missing evidence or unsafe scope.
+
+### Scope Fingerprint Contract
+
+Continuation compares the stored fingerprint to current repo/PR/diff state.
+On mismatch, review continuation stops and preserves the existing session/report
+unchanged. Hidden fix mode also blocks source edits on mismatch; it may append a
+no-edit `stale` remediation entry only through the remediation-log contract.
+
+Fingerprint fields:
+
+- `baseSha`: merge-base, PR base, or previous comparison SHA when available
+- `headSha`: reviewed HEAD SHA
+- `diffHash`: normalized diff hash for PR and current-diff scopes; `null` for
+  pure phase/explicit-files runs when no diff scope exists
+- `fileSetHash`: hash of sorted `files` plus `skippedFiles`
+- `prNumber`: PR number for PR scope, otherwise `null`
+
+The exact hash algorithm can be implementation-local, but it must be
+deterministic, stable across process restarts, and insensitive to file ordering.
+
+### Report Contract
+
+Every god-review report starts with stable run metadata:
+
+```md
+# God Review: <runId>
+
+Status: in-progress|completed|blocked|stale
+Scope Kind: phase|pr|current-diff|explicit-files
+Session: `.blueprint/.../.god-review-session.json`
+Scope Fingerprint: `<short fingerprint summary>`
+```
+
+Each review group appends exactly one top-level group section:
+
+```md
+## GOD-02 Security, Privacy, And Authorization
+
+Status: completed|blocked
+Group ID: security-privacy-auth
+Scope: frozen session scope
+Files Reviewed:
+- `src/example.ts`
+Evidence Reviewed:
+- `.blueprint/phases/05-example/05-01-SUMMARY.md`
+
+### Findings
+
+#### GOD-SEC-001: Missing authorization check before project mutation
+- Severity: high
+- Disposition: follow-up
+- Confidence: high|medium|low
+- Files: `src/example.ts:42`
+- Evidence: ...
+- Impact: ...
+- Recommendation: ...
+- Fix Eligibility: eligible|needs-confirmation|not-eligible
+
+### Positive Signals
+
+- ...
+
+### Uncertainties
+
+- ...
+```
+
+Report invariants:
+
+- group section order follows the session `groups` order
+- a continuation may append the next group but must not rewrite completed group
+  sections except through an explicit future repair command
+- every finding heading starts with one stable `GOD-*` ID
+- findings use severity `critical|high|medium|low|unknown`
+- findings use disposition `follow-up|observation|blocked|accepted-risk`
+- actionable findings must include `Files`, `Evidence`, `Impact`, and
+  `Recommendation`
+
+### Finding ID Contract
+
+Finding IDs are stable within one report:
+
+- format: `GOD-<GROUP_PREFIX>-<NNN>`
+- group prefixes:
+  - `COR`: correctness and contracts
+  - `SEC`: security, privacy, and authorization
+  - `DAT`: data, state, and consistency
+  - `REL`: failure handling and reliability
+  - `TST`: tests and verification
+  - `ARC`: architecture and maintainability
+  - `PER`: performance and scalability
+  - `OPS`: operations, portability, and product surface
+- numbering starts at `001` per group prefix
+- IDs are never renumbered after being written
+- duplicate findings should be deduped before append; if two lanes find the same
+  issue, keep the first ID and reference it from later notes
+
+### Remediation Log Contract
+
+MVP hidden fix mode writes remediation evidence into the same god-review report.
+It does not create `XX-GOD-REVIEW-FIX.md`.
+
+The report has at most one remediation log section:
+
+```md
+## Remediation Log
+
+### GOD-FIX-001: GOD-SEC-001
+- Status: fixed|skipped|deferred|stale|blocked
+- Finding: GOD-SEC-001
+- Selected By: default|explicit-id|severity-filter|all
+- Files Changed: `src/example.ts`
+- Verification: `npm test -- tests/example.test.ts` - passed
+- Evidence: ...
+- Follow-Up: none|...
+```
+
+Remediation entry invariants:
+
+- remediation IDs use `GOD-FIX-<NNN>` and are never renumbered
+- each entry targets exactly one `GOD-*` finding
+- multiple remediation attempts for one finding append multiple log entries
+- entries must not claim a normal `XX-REVIEW-FIX.md` write
+- entries must not claim commits, branches, PRs, or staging unless the user
+  explicitly requested those actions outside god mode
+
+### Fix Selection Contract
+
+Default hidden fix selection includes only findings that satisfy all of:
+
+- `Disposition: follow-up`
+- `Severity: high` or `Severity: medium`
+- `Fix Eligibility: eligible`
+- current scope fingerprint matches the session fingerprint
+- referenced files still exist and the cited evidence is not stale
+
+Widening rules:
+
+- explicit `--finding <GOD-ID>` selects the named finding if it exists
+- explicit `--severity <level>` selects matching actionable `follow-up` findings
+- explicit `--all` selects all non-stale `follow-up` findings, including `low`
+  and `unknown`
+- `observation`, `accepted-risk`, and `blocked` findings are not selected unless
+  explicitly named by ID, and even then may only produce `skipped`, `deferred`,
+  or `blocked` remediation entries unless the user confirms code edits
+
+### Stale Evidence Contract
+
+Before editing, hidden fix mode revalidates:
+
+- session fingerprint still matches current scope
+- target finding ID exists in the report
+- cited files still exist
+- cited line or nearby evidence still matches closely enough to act
+
+If any check fails, fix mode writes or proposes a no-edit `stale` remediation
+entry and does not edit code unless the user explicitly confirms a fresh review
+or a new linked run.
+
 ## Private MCP Substrate
 
 Prefer private MCP tools over prompt-owned direct file writes, even though the
@@ -248,6 +487,20 @@ Candidate private tools:
 - `blueprint_god_review_append`
 - `blueprint_god_review_load_findings`
 - `blueprint_god_review_record_fix`
+
+Tool behavior is locked to the private contracts above:
+
+- `blueprint_god_review_start`: validates activation context, resolves/fingerprints
+  scope, creates or reuses session/report metadata, and returns the next group.
+- `blueprint_god_review_next`: loads a session, checks fingerprint freshness,
+  and returns the next pending group without rediscovering scope.
+- `blueprint_god_review_append`: appends one group section and advances group
+  status. It rejects attempts to append two groups in one call.
+- `blueprint_god_review_load_findings`: parses `GOD-*` findings and the
+  remediation log from the god-review report only. It never falls back to normal
+  `XX-REVIEW.md`.
+- `blueprint_god_review_record_fix`: appends one remediation log entry for one
+  finding, after stale-evidence checks and explicit selection rules.
 
 The TypeScript implementation should include maintainer comments explaining:
 
@@ -315,9 +568,9 @@ defaults to conservative selection:
 - stay bounded to the frozen session scope and implicated files
 - avoid commits, branches, PRs, staging, and hidden automation unless separately
   requested
-- append remediation evidence to the god-review report or a separate
-  `XX-GOD-REVIEW-FIX.md` style report, but do not update normal review-fix
-  artifacts
+- append remediation evidence to the same god-review report's `Remediation Log`
+- do not create a separate `XX-GOD-REVIEW-FIX.md` artifact in the MVP
+- do not update normal review-fix artifacts
 
 If current code no longer matches saved evidence, fix mode should mark the
 finding stale or ask for explicit user confirmation before editing.
@@ -347,12 +600,14 @@ Implementation-oriented coverage:
 - one invocation appends exactly one review group
 - report parser extracts `GOD-*` findings without requiring `XX-REVIEW.md`
 - severity and disposition validation accepts only Blueprint vocabularies
+- report parser extracts remediation log entries from the same god-review report
 - fix mode default selection includes only actionable high/medium `follow-up`
   findings
 - explicit IDs, `--all`, and severity filters widen selection only when explicit
 - fix mode handles stale evidence before editing
 - fix mode does not create commits, branches, PRs, staging changes, or normal
   review-fix artifacts by default
+- fix mode does not create `XX-GOD-REVIEW-FIX.md` in the MVP
 - tracked built outputs and runtime tests remain fresh after implementation
 
 ## Codebase Mapping Notes
@@ -764,7 +1019,7 @@ beyond severity, add safety gates for compatibility/migration/operations/securit
 risk, and evaluate missed high-signal issues, unsupported claims, duplicate
 findings, and fix-mode outcomes.
 
-## Open Questions
+## MVP Contract Status
 
-- Should remediation evidence append to `XX-GOD-REVIEW.md`, write a separate
-  god-review-fix report, or support both?
+The private contract is locked for MVP implementation. New implementation
+discoveries should be recorded as contract amendments before changing behavior.
