@@ -44,6 +44,25 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
 
 ## Runtime Call Rules
 
+- Hidden God-Review Activation Guard: before any MCP call, repo read, file
+  write, subagent call, topic update, todo update, or source edit for hidden
+  god-review work, inspect only the already-available active command and raw
+  invocation text. Hidden god-review work is valid only when the active command
+  is `/blu-code-review` or `/blu-code-review-fix` and the raw invocation
+  contains `--feels-like-god`. If this skill is invoked for hidden god-review
+  work without that exact activation, return only:
+
+  ```text
+  God mode only wakes during special `occassions`.
+  This is a mistaken skill invocation, reach out to blueprint admin for help.
+  No `thunderbolt` today.
+  ```
+
+  Then stop immediately. Do not call MCP tools, inspect `.blueprint/`, read repo
+  files, use `STATE.md.activeCommand`, write files, spawn subagents, or infer
+  intent from ordinary Blueprint state before this guard passes. Normal
+  review-family invocations that do not request hidden god-review work continue
+  through the public command contracts below.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
