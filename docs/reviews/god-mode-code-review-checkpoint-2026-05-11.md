@@ -1004,6 +1004,136 @@ the normal review and review-fix lifecycle green before the next slice starts.
 - Non-goals: do not broaden public documentation, change command status
   semantics, or use god mode as a normal review quality gate.
 
+## Goal Execution Plan
+
+This section turns the slice plan into a Codex `/goal` run. It follows the
+OpenAI Codex guidance to use a goal only when the work has one durable objective,
+an explicit stopping condition, known inputs, validation artifacts, checkpoints,
+and compact progress reports:
+https://developers.openai.com/codex/use-cases/follow-goals
+
+### Recommended Goal Prompt
+
+Use this exact prompt when starting the implementation run:
+
+```text
+/goal Implement the hidden Blueprint god-mode code-review and code-review-fix MVP described in docs/reviews/god-mode-code-review-checkpoint-2026-05-11.md, completing S01 through S12 one slice at a time without stopping until every slice is merged to origin/main, local main is fast-forwarded, temporary worktrees/branches are cleaned up, tracked dist outputs are fresh, required focused verification has passed for each slice, final typecheck/full-test verification has passed or has a concrete environment-blocker note, and the checkpoint doc's locked private contract remains satisfied. Treat /Users/rhishi/dev/repositories/blueprint as the authoritative checkout; use any planning worktree only as read-only context, and create every implementation worktree from the authoritative main checkout. Read the checkpoint doc, AGENTS.md, docs/DECISIONS.md, docs/ARCHITECTURE.md, docs/ARTIFACT-SCHEMA.md, docs/GEMINI-CONSTRAINTS.md, docs/MCP-TOOLS.md, docs/COMMAND-CATALOG.md, docs/PHASE-LIFECYCLE.md, docs/SKILLS-AND-AGENTS.md, docs/commands/code-review.md, docs/commands/code-review-fix.md, commands/blu-code-review.toml, commands/blu-code-review-fix.toml, skills/blueprint-review/SKILL.md, src/mcp/tools/review.ts, src/mcp/tools/project.ts, src/mcp/tools/state.ts, src/mcp/server.ts, src/mcp/command-resources.ts, src/mcp/command-runtime-metadata.ts, src/mcp/skill-metadata.ts, and the named review/metadata/router/runtime-contract/MCP/built-assets tests before editing. Work in checkpoints, one implementation slice per PR unless a smaller rollback-safe split is needed. For each slice, create a fresh worktree, run npm ci before build/typecheck/test commands, make only the slice's scoped changes, run the slice's focused tests plus leak/non-interference tests, rebuild dist whenever runtime source changes, push a branch, open and merge a PR with gh, fast-forward /Users/rhishi/dev/repositories/blueprint main, delete the temporary branch/worktree, then continue to the next slice. Keep public docs/help/catalog/progress/next/runtime-contract resources free of --feels-like-god and hidden paths/tool IDs, keep normal STATE.md/XX-REVIEW.md/XX-REVIEW-FIX.md/quality-gate behavior untouched, and pause only for a real blocker or a contract ambiguity that cannot be resolved from the checkpoint.
+```
+
+### Goal Inputs
+
+Read these before the first edit:
+
+- this checkpoint doc, especially `Private Contract Lock`, `Private MCP
+  Substrate`, `Goal Execution Plan`, and `Implementation Slices`
+- repo instructions in `AGENTS.md`
+- architecture and command contracts in `docs/DECISIONS.md`,
+  `docs/ARCHITECTURE.md`, `docs/ARTIFACT-SCHEMA.md`,
+  `docs/GEMINI-CONSTRAINTS.md`, `docs/MCP-TOOLS.md`,
+  `docs/COMMAND-CATALOG.md`, `docs/PHASE-LIFECYCLE.md`, and
+  `docs/SKILLS-AND-AGENTS.md`
+- command specs and manifests for `/blu-code-review` and
+  `/blu-code-review-fix`
+- current review substrate in `src/mcp/tools/review.ts`,
+  `src/mcp/tools/project.ts`, `src/mcp/tools/state.ts`, `src/mcp/server.ts`,
+  `src/mcp/command-resources.ts`, `src/mcp/command-runtime-metadata.ts`, and
+  `src/mcp/skill-metadata.ts`
+- exact leak, metadata, and runtime tests already named in the mapping notes:
+  `tests/code-review-metadata.test.ts`,
+  `tests/code-review-fix-metadata.test.ts`, `tests/help-metadata.test.ts`,
+  `tests/next.test.ts`, `tests/command-catalog.test.ts`,
+  `tests/review-docs-safety-regression.test.ts`,
+  `tests/skill-metadata.test.ts`,
+  `tests/review-runtime-contract-resource.test.ts`,
+  `tests/mcp-server-summary.test.ts`, `tests/built-assets-smoke.test.ts`, and
+  `tests/extension-runtime-contracts.test.ts`
+
+### Goal Loop
+
+The goal should run one implementation slice at a time.
+
+Per-slice loop:
+
+1. Start from clean, fast-forwarded `main` in
+   `/Users/rhishi/dev/repositories/blueprint`.
+2. Create a fresh `codex/` worktree branch for the slice.
+3. Run `npm ci` in that worktree before any build, typecheck, or test command.
+4. Implement only the current slice's deliverables and tests.
+5. Run the focused tests named by the slice plus public leak and
+   non-interference tests affected by the slice.
+6. Rebuild tracked `dist/` outputs whenever runtime source changes.
+7. Run `npm run typecheck` when TypeScript/runtime source changes.
+8. Run broader `npm test` at S12, and earlier whenever shared behavior changes
+   enough to justify it.
+9. Commit, push, open a PR, merge with `gh`, fast-forward the original main
+   checkout, remove the slice worktree, and delete the branch.
+10. Record a compact checkpoint summary, then continue to the next slice.
+
+### Checkpoint Progress Format
+
+Each goal checkpoint report should be short and concrete:
+
+```text
+Checkpoint: S0X <slice name>
+Status: completed|in-progress|blocked
+Merged PR: <url or none yet>
+Verification: <focused commands and results>
+Public leak status: clean|blocked
+Normal lifecycle status: untouched|blocked
+Next slice: S0Y <slice name>
+Blockers: none|<specific decision needed>
+```
+
+### Stopping Condition
+
+The goal is complete only when all of these are true:
+
+- S01 through S12 are implemented and merged to `origin/main`
+- local `/Users/rhishi/dev/repositories/blueprint` main is fast-forwarded to the
+  final merge commit
+- temporary goal worktrees and branches are cleaned up
+- tracked `dist/` outputs match runtime source
+- focused review/god-mode/metadata/router/runtime-contract/MCP/built-assets
+  tests have passed for the slices that touched them
+- `npm run typecheck` passes after runtime source changes
+- final `npm test` has passed, or any skipped portion is explicitly justified
+  with a concrete environment blocker
+- public surfaces still do not expose `--feels-like-god`, god-review paths,
+  hidden instruction paths, or private god-review tool IDs
+- normal `STATE.md`, quality gates, `XX-REVIEW.md`, `XX-REVIEW-FIX.md`,
+  progress/next routing, and normal review-fix handoff remain unchanged by god
+  mode
+- god-mode temporary state/session cleanup preserves the durable god-review
+  report and remediation log
+
+### Pause Or Block Conditions
+
+Pause the goal instead of guessing when:
+
+- the locked private contract conflicts with current runtime architecture
+- a hidden instruction path would leak through public runtime-contract resources
+  without a clear filtering strategy
+- private MCP registration would expose callable but contract-incomplete tools
+- a test failure suggests normal review/review-fix lifecycle behavior regressed
+- a migration or destructive git action is needed beyond the repo instructions
+- GitHub, npm, or environment failures prevent reliable verification after a
+  retry and there is no safe local substitute
+
+Do not pause for ordinary implementation uncertainty, local refactoring choices,
+or failing tests that can be diagnosed and fixed inside the current slice.
+
+### Goal Non-Goals
+
+- Do not change public command names, command status semantics, or root routing.
+- Do not document `--feels-like-god` in public docs, help, progress, next,
+  catalog, or public runtime-contract resources.
+- Do not turn god mode into a normal lifecycle gate.
+- Do not use hooks for continuation.
+- Do not create `XX-GOD-REVIEW-FIX.md` in the MVP.
+- Do not update normal review or review-fix artifacts from god mode.
+- Do not leave private MCP tools registered before their slice has minimally
+  contract-complete behavior.
+
 ## Research-Backed Principles
 
 These are the implementation principles carried forward from the research
