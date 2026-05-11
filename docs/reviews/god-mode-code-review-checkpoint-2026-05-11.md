@@ -24,6 +24,12 @@ Agreed direction:
 - Resolve scope once on the first run and persist it in session JSON. Later runs
   reuse that saved scope; if the scope fingerprint changes, the run stops and
   the user starts a new run.
+- Maintain a separate temporary human-readable god-mode state file. Do not write
+  to normal Blueprint `STATE.md`, and do not use it as god-mode continuation or
+  progress state.
+- Delete the temporary human-readable state file and JSON tracker after all
+  review groups are terminal and a hidden god-mode fix pass has also reached a
+  terminal outcome. The durable god-review report remains.
 - Support phase, PR, current-diff, and explicit-files scopes.
 - Keep PR and current-diff runs report-scoped only; they do not bind to a phase
   in the MVP.
@@ -273,6 +279,7 @@ and must remain JSON objects, not Markdown. The minimum session shape is:
   "scopeKind": "phase",
   "phase": 5,
   "sessionPath": ".blueprint/phases/05-example/.god-review-session.json",
+  "humanStatePath": ".blueprint/phases/05-example/.god-review-state.md",
   "reportPath": ".blueprint/phases/05-example/05-GOD-REVIEW.md",
   "files": ["src/example.ts", "tests/example.test.ts"],
   "skippedFiles": [],
@@ -297,7 +304,12 @@ and must remain JSON objects, not Markdown. The minimum session shape is:
       "findingIds": []
     }
   ],
-  "nextGroupId": "security-privacy-auth"
+  "nextGroupId": "security-privacy-auth",
+  "cleanup": {
+    "reviewTerminal": false,
+    "godFixTerminal": false,
+    "eligible": false
+  }
 }
 ```
 
@@ -307,6 +319,8 @@ Locked invariants:
   `parentRunId`; it does not rewrite the existing session scope.
 - `phase` is present only when `scopeKind: "phase"`.
 - PR and current-diff sessions always write under `.blueprint/reports/`.
+- `humanStatePath` points to a temporary god-mode state file, not normal
+  `.blueprint/STATE.md`.
 - `files` are repo-relative file paths only. No directories, globs, absolute
   paths, or `.blueprint/**` entries.
 - `skippedFiles` records files omitted because of size, unsupported type, scope
@@ -314,6 +328,42 @@ Locked invariants:
 - `groups[*].status` is `pending|in-progress|completed|blocked`.
 - Completion means every group is `completed` or `blocked`; blocked groups must
   have a report section explaining the missing evidence or unsafe scope.
+- `cleanup.eligible` becomes true only after review is terminal and a hidden
+  god-mode fix pass has also reached a terminal result. A no-op fix pass with no
+  eligible findings counts as terminal only when invoked through
+  `/blu-code-review-fix --feels-like-god`.
+
+### God-Mode State Contract
+
+God mode owns a temporary human-readable state file beside the private session
+JSON:
+
+- phase scope: `.blueprint/phases/<phase-slug>/.god-review-state.md`
+- PR, current-diff, and explicit-files scopes:
+  `.blueprint/reports/<run-id>.god-review-state.md`
+
+This state file is a user-facing progress aid for hidden god-mode runs. It is
+not Blueprint workflow state.
+
+State file invariants:
+
+- private MCP tools may update `.god-review-state.md`, but they must not update
+  normal `.blueprint/STATE.md`
+- after valid activation, private MCP tools may read ordinary phase/review
+  artifacts for scope evidence, but `STATE.md` is not the source of truth for
+  god-mode progress or continuation
+- normal progress, next-action, lifecycle, and quality-gate routing must ignore
+  `.god-review-state.md`
+- the file records only god-mode progress: run ID, scope summary, current/next
+  group, review terminal status, hidden fix terminal status, stale-scope status,
+  and the next exact hidden command
+- the file must not become the source of truth for continuation; session JSON is
+  the machine tracker until cleanup
+- when `cleanup.eligible` is true, the private tool deletes both
+  `.god-review-state.md` and `.god-review-session.json`
+- cleanup must preserve the durable god-review report and its remediation log
+- cleanup must not delete normal review, review-fix, phase, or Blueprint state
+  artifacts
 
 ### Scope Fingerprint Contract
 
@@ -480,6 +530,27 @@ mode is hidden. The tools can be omitted from public docs while still giving the
 hidden command branch deterministic path safety, append behavior, scope reuse,
 and parsing.
 
+### Private MCP Visibility Contract
+
+MCP tools are generally discoverable by clients after registration. In the MVP,
+`private MCP` is therefore not a true invisibility or security boundary.
+
+Private means:
+
+- undocumented in public command docs, user help, root routing, progress, next,
+  and public catalog guidance
+- not used by normal `/blu-code-review` or `/blu-code-review-fix` branches
+- not routable from public command branches or public router recommendations
+- not part of normal review lifecycle state, `STATE.md`, quality gates, or
+  review-fix handoff
+- intended only for hidden command branches that pass the activation contract
+- covered by regression tests so hidden support exists without leaking into
+  public surfaces
+
+If Blueprint later needs true non-discoverability, that is a separate design:
+add a hidden-tool registration or client-filtering layer before registering
+these tools. Do not imply that undocumented MCP tools are invisible.
+
 Candidate private tools:
 
 - `blueprint_god_review_start`
@@ -487,6 +558,7 @@ Candidate private tools:
 - `blueprint_god_review_append`
 - `blueprint_god_review_load_findings`
 - `blueprint_god_review_record_fix`
+- `blueprint_god_review_cleanup`
 
 Tool behavior is locked to the private contracts above:
 
@@ -501,6 +573,9 @@ Tool behavior is locked to the private contracts above:
   `XX-REVIEW.md`.
 - `blueprint_god_review_record_fix`: appends one remediation log entry for one
   finding, after stale-evidence checks and explicit selection rules.
+- `blueprint_god_review_cleanup`: deletes only the temporary god-mode session
+  JSON and human-readable state file after review and hidden fix both reach
+  terminal states. It preserves the god-review report.
 
 The TypeScript implementation should include maintainer comments explaining:
 
@@ -508,6 +583,8 @@ The TypeScript implementation should include maintainer comments explaining:
 - normal `review.code-review` and `review.review-fix` flows must not depend on
   them
 - session JSON owns continuation scope
+- `.god-review-state.md` is a human-readable progress aid, not Blueprint
+  workflow state
 - continuation must not silently rediscover scope
 - god-review findings must not flow through `blueprint_review_load_findings`
 - fix mode defaults exclude observations, `low`, and `unknown` findings unless
@@ -524,9 +601,12 @@ Suggested module-level comment:
  * surfaces. They exist so the hidden command branch can get deterministic path
  * safety, session continuation, report append behavior, and finding parsing
  * without overloading the normal `review.code-review` / `XX-REVIEW.md` flow.
+ * MCP registration may make these tools discoverable to clients; privacy here
+ * means undocumented and hidden-branch-only, not invisible.
  *
  * Do not wire these results into quality-gate routing, `STATE.md` next actions,
- * public command catalog output, or `blueprint_review_load_findings`.
+ * public command catalog output, or `blueprint_review_load_findings`. The
+ * temporary `.god-review-state.md` file is a god-mode progress aid only.
  */
 ```
 
@@ -583,10 +663,13 @@ Implementation-oriented coverage:
 - hidden `--feels-like-god` branches exist for code-review and code-review-fix
 - public docs, help, root router, progress, next, and command catalog do not
   mention the flag
+- private MCP tools are treated as undocumented/internal, while tests do not
+  assume MCP registration makes them truly invisible to clients
 - normal `/blu-code-review` still uses `review.code-review` and `XX-REVIEW.md`
-- god mode writes only god-review session/report paths
+- god mode writes only god-review session, temporary state, and report paths
 - god mode does not update `STATE.md`, next actions, quality-gate status, normal
   review artifacts, or normal review-fix artifacts
+- normal progress/next/lifecycle routing ignores the temporary god-mode state file
 - accidental god-mode skill activation without the hidden flag stops before MCP
   calls, repo reads, or writes
 - phase, PR, current-diff, and explicit-files scope modes resolve and persist
@@ -601,6 +684,9 @@ Implementation-oriented coverage:
 - report parser extracts `GOD-*` findings without requiring `XX-REVIEW.md`
 - severity and disposition validation accepts only Blueprint vocabularies
 - report parser extracts remediation log entries from the same god-review report
+- cleanup deletes temporary god-mode state and session JSON only after review is
+  terminal and hidden fix has also reached a terminal result
+- cleanup preserves the durable god-review report and remediation log
 - fix mode default selection includes only actionable high/medium `follow-up`
   findings
 - explicit IDs, `--all`, and severity filters widen selection only when explicit
