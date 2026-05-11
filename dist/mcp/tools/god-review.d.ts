@@ -1,0 +1,335 @@
+import * as z from "zod/v4";
+/**
+ * Private god-review substrate for hidden `--feels-like-god` review/fix modes.
+ *
+ * These helpers are intentionally not registered as MCP tools yet. They exist
+ * so the hidden command branch can share deterministic path safety, session
+ * shapes, report rendering shells, and finding parsing without overloading the
+ * normal `review.code-review` / `XX-REVIEW.md` flow.
+ *
+ * MCP registration may make tools discoverable to clients; privacy here means
+ * undocumented and hidden-branch-only, not invisible. Do not wire these results
+ * into quality-gate routing, `STATE.md` next actions, public command catalog
+ * output, or `blueprint_review_load_findings`. The temporary
+ * `.god-review-state.md` file is a god-mode progress aid only, while session
+ * JSON owns continuation scope.
+ */
+export declare const GOD_REVIEW_FLAG: "--feels-like-god";
+export declare const GOD_REVIEW_REFUSAL: string;
+export declare const GOD_REVIEW_PRIVATE_TOOL_NAMES: readonly ["blueprint_god_review_start", "blueprint_god_review_next", "blueprint_god_review_append", "blueprint_god_review_load_findings", "blueprint_god_review_record_fix", "blueprint_god_review_cleanup"];
+export declare const GOD_REVIEW_MUTATION_TOOL_NAMES: readonly ["blueprint_god_review_start", "blueprint_god_review_append", "blueprint_god_review_record_fix", "blueprint_god_review_cleanup"];
+export declare const GOD_REVIEW_ACTIVE_COMMANDS: readonly ["/blu-code-review", "/blu-code-review-fix"];
+declare const GOD_REVIEW_SCOPE_KIND_VALUES: readonly ["phase", "pr", "current-diff", "explicit-files"];
+declare const GOD_REVIEW_SESSION_STATUS_VALUES: readonly ["in-progress", "completed", "blocked", "stale"];
+declare const GOD_REVIEW_GROUP_STATUS_VALUES: readonly ["pending", "in-progress", "completed", "blocked"];
+declare const GOD_REVIEW_SEVERITY_VALUES: readonly ["critical", "high", "medium", "low", "unknown"];
+declare const GOD_REVIEW_DISPOSITION_VALUES: readonly ["follow-up", "observation", "blocked", "accepted-risk"];
+declare const GOD_REVIEW_FIX_ELIGIBILITY_VALUES: readonly ["eligible", "needs-confirmation", "not-eligible"];
+declare const GOD_REVIEW_REMEDIATION_STATUS_VALUES: readonly ["fixed", "skipped", "deferred", "stale", "blocked"];
+declare const GOD_REVIEW_SELECTED_BY_VALUES: readonly ["default", "explicit-id", "severity-filter", "all"];
+export declare const GOD_REVIEW_GROUPS: readonly [{
+    readonly id: "correctness-contracts";
+    readonly prefix: "COR";
+    readonly title: "Correctness And Contracts";
+}, {
+    readonly id: "security-privacy-auth";
+    readonly prefix: "SEC";
+    readonly title: "Security, Privacy, And Authorization";
+}, {
+    readonly id: "data-state-consistency";
+    readonly prefix: "DAT";
+    readonly title: "Data, State, And Consistency";
+}, {
+    readonly id: "failure-reliability";
+    readonly prefix: "REL";
+    readonly title: "Failure Handling And Reliability";
+}, {
+    readonly id: "tests-verification";
+    readonly prefix: "TST";
+    readonly title: "Tests And Verification";
+}, {
+    readonly id: "architecture-maintainability";
+    readonly prefix: "ARC";
+    readonly title: "Architecture And Maintainability";
+}, {
+    readonly id: "performance-scalability";
+    readonly prefix: "PER";
+    readonly title: "Performance And Scalability";
+}, {
+    readonly id: "operations-portability-product";
+    readonly prefix: "OPS";
+    readonly title: "Operations, Portability, And Product Surface";
+}];
+declare const GOD_REVIEW_GROUP_ID_VALUES: ["correctness-contracts", "security-privacy-auth", "data-state-consistency", "failure-reliability", "tests-verification", "architecture-maintainability", "performance-scalability", "operations-portability-product"];
+declare const GOD_REVIEW_GROUP_PREFIX_VALUES: ["COR", "SEC", "DAT", "REL", "TST", "ARC", "PER", "OPS"];
+export type GodReviewPrivateToolName = typeof GOD_REVIEW_PRIVATE_TOOL_NAMES[number];
+export type GodReviewMutationToolName = typeof GOD_REVIEW_MUTATION_TOOL_NAMES[number];
+export type GodReviewActiveCommand = typeof GOD_REVIEW_ACTIVE_COMMANDS[number];
+export type GodReviewScopeKind = typeof GOD_REVIEW_SCOPE_KIND_VALUES[number];
+export type GodReviewSessionStatus = typeof GOD_REVIEW_SESSION_STATUS_VALUES[number];
+export type GodReviewGroupId = typeof GOD_REVIEW_GROUP_ID_VALUES[number];
+export type GodReviewGroupPrefix = typeof GOD_REVIEW_GROUP_PREFIX_VALUES[number];
+export type GodReviewGroupStatus = typeof GOD_REVIEW_GROUP_STATUS_VALUES[number];
+export type GodReviewSeverity = typeof GOD_REVIEW_SEVERITY_VALUES[number];
+export type GodReviewDisposition = typeof GOD_REVIEW_DISPOSITION_VALUES[number];
+export type GodReviewFixEligibility = typeof GOD_REVIEW_FIX_ELIGIBILITY_VALUES[number];
+export type GodReviewRemediationStatus = typeof GOD_REVIEW_REMEDIATION_STATUS_VALUES[number];
+export type GodReviewSelectedBy = typeof GOD_REVIEW_SELECTED_BY_VALUES[number];
+export declare const godReviewScopeKindSchema: z.ZodEnum<{
+    phase: "phase";
+    "explicit-files": "explicit-files";
+    pr: "pr";
+    "current-diff": "current-diff";
+}>;
+export declare const godReviewSessionStatusSchema: z.ZodEnum<{
+    blocked: "blocked";
+    completed: "completed";
+    "in-progress": "in-progress";
+    stale: "stale";
+}>;
+export declare const godReviewGroupStatusSchema: z.ZodEnum<{
+    blocked: "blocked";
+    completed: "completed";
+    pending: "pending";
+    "in-progress": "in-progress";
+}>;
+export declare const godReviewSeveritySchema: z.ZodEnum<{
+    unknown: "unknown";
+    high: "high";
+    low: "low";
+    medium: "medium";
+    critical: "critical";
+}>;
+export declare const godReviewDispositionSchema: z.ZodEnum<{
+    blocked: "blocked";
+    "follow-up": "follow-up";
+    observation: "observation";
+    "accepted-risk": "accepted-risk";
+}>;
+export declare const godReviewFixEligibilitySchema: z.ZodEnum<{
+    eligible: "eligible";
+    "needs-confirmation": "needs-confirmation";
+    "not-eligible": "not-eligible";
+}>;
+export declare const godReviewRemediationStatusSchema: z.ZodEnum<{
+    fixed: "fixed";
+    blocked: "blocked";
+    skipped: "skipped";
+    deferred: "deferred";
+    stale: "stale";
+}>;
+export declare const godReviewSelectedBySchema: z.ZodEnum<{
+    default: "default";
+    all: "all";
+    "explicit-id": "explicit-id";
+    "severity-filter": "severity-filter";
+}>;
+export declare const godReviewScopeFingerprintSchema: z.ZodObject<{
+    baseSha: z.ZodNullable<z.ZodString>;
+    headSha: z.ZodNullable<z.ZodString>;
+    diffHash: z.ZodNullable<z.ZodString>;
+    fileSetHash: z.ZodString;
+    prNumber: z.ZodNullable<z.ZodNumber>;
+}, z.core.$strip>;
+export declare const godReviewGroupStateSchema: z.ZodObject<{
+    id: z.ZodEnum<{
+        "correctness-contracts": "correctness-contracts";
+        "security-privacy-auth": "security-privacy-auth";
+        "data-state-consistency": "data-state-consistency";
+        "failure-reliability": "failure-reliability";
+        "tests-verification": "tests-verification";
+        "architecture-maintainability": "architecture-maintainability";
+        "performance-scalability": "performance-scalability";
+        "operations-portability-product": "operations-portability-product";
+    }>;
+    prefix: z.ZodEnum<{
+        COR: "COR";
+        SEC: "SEC";
+        DAT: "DAT";
+        REL: "REL";
+        TST: "TST";
+        ARC: "ARC";
+        PER: "PER";
+        OPS: "OPS";
+    }>;
+    status: z.ZodEnum<{
+        blocked: "blocked";
+        completed: "completed";
+        pending: "pending";
+        "in-progress": "in-progress";
+    }>;
+    findingIds: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+export declare const godReviewSessionSchema: z.ZodObject<{
+    schemaVersion: z.ZodLiteral<1>;
+    runId: z.ZodString;
+    parentRunId: z.ZodNullable<z.ZodString>;
+    status: z.ZodEnum<{
+        blocked: "blocked";
+        completed: "completed";
+        "in-progress": "in-progress";
+        stale: "stale";
+    }>;
+    createdAt: z.ZodString;
+    updatedAt: z.ZodString;
+    activeCommand: z.ZodEnum<{
+        "/blu-code-review": "/blu-code-review";
+        "/blu-code-review-fix": "/blu-code-review-fix";
+    }>;
+    scopeKind: z.ZodEnum<{
+        phase: "phase";
+        "explicit-files": "explicit-files";
+        pr: "pr";
+        "current-diff": "current-diff";
+    }>;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    sessionPath: z.ZodString;
+    humanStatePath: z.ZodString;
+    reportPath: z.ZodString;
+    files: z.ZodArray<z.ZodString>;
+    skippedFiles: z.ZodArray<z.ZodString>;
+    scopeFingerprint: z.ZodObject<{
+        baseSha: z.ZodNullable<z.ZodString>;
+        headSha: z.ZodNullable<z.ZodString>;
+        diffHash: z.ZodNullable<z.ZodString>;
+        fileSetHash: z.ZodString;
+        prNumber: z.ZodNullable<z.ZodNumber>;
+    }, z.core.$strip>;
+    groups: z.ZodArray<z.ZodObject<{
+        id: z.ZodEnum<{
+            "correctness-contracts": "correctness-contracts";
+            "security-privacy-auth": "security-privacy-auth";
+            "data-state-consistency": "data-state-consistency";
+            "failure-reliability": "failure-reliability";
+            "tests-verification": "tests-verification";
+            "architecture-maintainability": "architecture-maintainability";
+            "performance-scalability": "performance-scalability";
+            "operations-portability-product": "operations-portability-product";
+        }>;
+        prefix: z.ZodEnum<{
+            COR: "COR";
+            SEC: "SEC";
+            DAT: "DAT";
+            REL: "REL";
+            TST: "TST";
+            ARC: "ARC";
+            PER: "PER";
+            OPS: "OPS";
+        }>;
+        status: z.ZodEnum<{
+            blocked: "blocked";
+            completed: "completed";
+            pending: "pending";
+            "in-progress": "in-progress";
+        }>;
+        findingIds: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
+    nextGroupId: z.ZodNullable<z.ZodEnum<{
+        "correctness-contracts": "correctness-contracts";
+        "security-privacy-auth": "security-privacy-auth";
+        "data-state-consistency": "data-state-consistency";
+        "failure-reliability": "failure-reliability";
+        "tests-verification": "tests-verification";
+        "architecture-maintainability": "architecture-maintainability";
+        "performance-scalability": "performance-scalability";
+        "operations-portability-product": "operations-portability-product";
+    }>>;
+    cleanup: z.ZodObject<{
+        reviewTerminal: z.ZodBoolean;
+        godFixTerminal: z.ZodBoolean;
+        eligible: z.ZodBoolean;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export type GodReviewScopeFingerprint = z.infer<typeof godReviewScopeFingerprintSchema>;
+export type GodReviewGroupState = z.infer<typeof godReviewGroupStateSchema>;
+export type GodReviewSession = z.infer<typeof godReviewSessionSchema>;
+export type GodReviewActivationResult = {
+    status: "valid";
+    activeCommand: GodReviewActiveCommand;
+    mode: "review" | "fix";
+    hiddenFlag: true;
+} | {
+    status: "refused";
+    refusal: string;
+    sideEffectsAllowed: false;
+    reason: string;
+};
+export type GodReviewRepoPathResult = {
+    valid: true;
+    path: string;
+} | {
+    valid: false;
+    path: null;
+    reason: string;
+};
+export type GodReviewPhasePaths = {
+    sessionPath: string;
+    humanStatePath: string;
+    reportPath: string;
+};
+export type GodReviewReportPaths = GodReviewPhasePaths;
+export type GodReviewParsedFinding = {
+    id: string;
+    title: string;
+    severity: GodReviewSeverity | null;
+    disposition: GodReviewDisposition | null;
+    confidence: "high" | "medium" | "low" | null;
+    files: string[];
+    evidence: string | null;
+    impact: string | null;
+    recommendation: string | null;
+    fixEligibility: GodReviewFixEligibility | null;
+};
+export type GodReviewParsedRemediation = {
+    id: string;
+    findingId: string;
+    status: GodReviewRemediationStatus | null;
+    selectedBy: GodReviewSelectedBy | null;
+    filesChanged: string[];
+    verification: string | null;
+    evidence: string | null;
+    followUp: string | null;
+};
+export type GodReviewParseResult = {
+    findings: GodReviewParsedFinding[];
+    remediations: GodReviewParsedRemediation[];
+    warnings: string[];
+};
+export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
+export declare function evaluateGodReviewActivation(args: {
+    activeCommand: string;
+    rawInvocation: string;
+}): GodReviewActivationResult;
+export declare function normalizeGodReviewRepoRelativeFilePath(rawPath: string): GodReviewRepoPathResult;
+export declare function hashGodReviewFileSet(args: {
+    files: string[];
+    skippedFiles?: string[];
+}): string;
+export declare function buildGodReviewPhasePaths(args: {
+    phaseDir: string;
+    phasePrefix: string;
+}): GodReviewPhasePaths;
+export declare function buildGodReviewReportPaths(args: {
+    runId: string;
+}): GodReviewReportPaths;
+export declare function buildInitialGodReviewGroups(): GodReviewGroupState[];
+export declare function renderGodReviewReportHeader(args: {
+    runId: string;
+    status: GodReviewSessionStatus;
+    scopeKind: GodReviewScopeKind;
+    sessionPath: string;
+    scopeFingerprintSummary: string;
+}): string;
+export declare function renderGodReviewHumanState(args: {
+    runId: string;
+    scopeKind: GodReviewScopeKind;
+    fileCount: number;
+    currentGroupId: GodReviewGroupId | null;
+    nextGroupId: GodReviewGroupId | null;
+    reviewTerminal: boolean;
+    godFixTerminal: boolean;
+    stale: boolean;
+    nextCommand: string;
+}): string;
+export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
+export {};
