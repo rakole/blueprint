@@ -241,6 +241,9 @@ type RoadmapAddPhaseArgs = {
   cwd?: string;
   description: string;
   expectedPhaseNumber?: string;
+  goal?: string;
+  requirementIds?: string[];
+  successCriteria?: string[];
   auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 
@@ -248,6 +251,9 @@ type RoadmapInsertPhaseArgs = {
   cwd?: string;
   after: NumericInput;
   description: string;
+  goal?: string;
+  requirementIds?: string[];
+  successCriteria?: string[];
 };
 
 type RoadmapRemovePhaseArgs = {
@@ -1158,6 +1164,9 @@ const roadmapAddPhaseInputSchema = {
   cwd: z.string().optional(),
   description: z.string(),
   expectedPhaseNumber: z.string().optional(),
+  goal: z.string().optional(),
+  requirementIds: z.array(z.string()).optional(),
+  successCriteria: z.array(z.string()).optional(),
   auditBackedDetails: z
     .object({
       sourceReportPath: z.string().optional(),
@@ -1185,7 +1194,10 @@ const roadmapAddPhaseInputSchema = {
 const roadmapInsertPhaseInputSchema = {
   cwd: z.string().optional(),
   after: z.union([z.string(), z.number()]),
-  description: z.string()
+  description: z.string(),
+  goal: z.string().optional(),
+  requirementIds: z.array(z.string()).optional(),
+  successCriteria: z.array(z.string()).optional()
 };
 const roadmapRemovePhaseInputSchema = {
   cwd: z.string().optional(),
@@ -1684,12 +1696,82 @@ function rewriteRoadmapPhaseReferences(
   return rewriteDependencyLines(replaceWithPlaceholders(value, replacements), renumberMap);
 }
 
+function normalizeRoadmapGoal(value: string | undefined): string {
+  return (value ?? "").trim();
+}
+
+function normalizeRoadmapSuccessCriteriaList(values: string[] | undefined): string[] {
+  return [
+    ...new Set(
+      (values ?? [])
+        .flatMap((value) => value.split(/\s*;\s*/))
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  ];
+}
+
+function normalizeRoadmapSuccessCriteriaString(value: string | undefined): string[] {
+  return normalizeRoadmapSuccessCriteriaList(value ? [value] : undefined);
+}
+
+function requireRoadmapPhaseMetadata(options: {
+  command: "/blu-add-phase" | "/blu-insert-phase";
+  goal: string;
+  successCriteria: string[];
+}): void {
+  if (options.goal.length === 0) {
+    throw new Error(
+      `Phase goal required. Re-run ${options.command} with a concrete ROADMAP objective for the new phase.`
+    );
+  }
+
+  if (options.successCriteria.length < 2 || options.successCriteria.length > 5) {
+    throw new Error(
+      `Phase successCriteria must include 2-5 concrete criteria. Re-run ${options.command} with successCriteria containing 2-5 items.`
+    );
+  }
+}
+
+function buildRoadmapPhaseListBlock(options: {
+  phaseNumber: string;
+  phaseName: string;
+  requirementIds?: string[];
+  goal: string;
+  successCriteria: string[];
+  inserted?: boolean;
+}): string {
+  const requirements = normalizeRoadmapDetailList(options.requirementIds);
+  const requirementsSuffix =
+    requirements.length > 0 ? ` (Requirements: ${requirements.join(", ")})` : "";
+  const insertedLine = options.inserted ? "\n  - Inserted: yes" : "";
+  const successCriteria = options.successCriteria
+    .map((criterion) => `    - ${criterion}`)
+    .join("\n");
+
+  return `- [ ] Phase ${options.phaseNumber}: ${options.phaseName}${requirementsSuffix}${insertedLine}
+  - Objective: ${options.goal}
+  - Success Criteria:
+${successCriteria}`;
+}
+
 function appendPhaseLineToRoadmap(
   raw: string,
   phaseNumber: string,
-  phaseName: string
+  phaseName: string,
+  options: {
+    requirementIds?: string[];
+    goal: string;
+    successCriteria: string[];
+  }
 ): string {
-  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+  const phaseBlock = buildRoadmapPhaseListBlock({
+    phaseNumber,
+    phaseName,
+    requirementIds: options.requirementIds,
+    goal: options.goal,
+    successCriteria: options.successCriteria
+  });
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phasesSectionPattern.test(raw)) {
@@ -1700,19 +1782,57 @@ function appendPhaseLineToRoadmap(
 
   return raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
     const trimmedBody = body.trimEnd();
-    const nextBody = trimmedBody.length === 0 ? phaseLine : `${trimmedBody}\n${phaseLine}`;
+    const nextBody = trimmedBody.length === 0 ? phaseBlock : `${trimmedBody}\n${phaseBlock}`;
     return `${header}${nextBody}\n`;
   });
+}
+
+function splitRoadmapPhaseListBlocks(body: string): string[] {
+  const blocks: string[] = [];
+  let currentBlock: string[] = [];
+
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock.join("\n").trimEnd());
+      }
+
+      currentBlock = [line];
+      continue;
+    }
+
+    if (currentBlock.length > 0) {
+      currentBlock.push(line);
+    }
+  }
+
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join("\n").trimEnd());
+  }
+
+  return blocks;
 }
 
 function insertPhaseLineToRoadmap(
   raw: string,
   insertAfterPhaseNumber: string,
   phaseNumber: string,
-  phaseName: string
+  phaseName: string,
+  options: {
+    requirementIds?: string[];
+    goal: string;
+    successCriteria: string[];
+  }
 ): string {
   const normalizedAnchor = normalizePhaseNumber(insertAfterPhaseNumber);
-  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+  const phaseBlock = buildRoadmapPhaseListBlock({
+    phaseNumber,
+    phaseName,
+    requirementIds: options.requirementIds,
+    goal: options.goal,
+    successCriteria: options.successCriteria,
+    inserted: true
+  });
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phasesSectionPattern.test(raw)) {
@@ -1724,11 +1844,10 @@ function insertPhaseLineToRoadmap(
   let inserted = false;
 
   const content = raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
-    const lines = body
-      .split("\n")
-      .filter((line) => line.trim().length > 0);
-    const anchorIndex = lines.findIndex((line) => {
-      const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
+    const blocks = splitRoadmapPhaseListBlocks(body);
+    const anchorIndex = blocks.findIndex((block) => {
+      const firstLine = block.split("\n")[0] ?? "";
+      const match = firstLine.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
       return match ? normalizePhaseNumber(match[1]) === normalizedAnchor : false;
     });
 
@@ -1736,10 +1855,10 @@ function insertPhaseLineToRoadmap(
       return `${header}${body}`;
     }
 
-    lines.splice(anchorIndex + 1, 0, phaseLine);
+    blocks.splice(anchorIndex + 1, 0, phaseBlock);
     inserted = true;
 
-    return `${header}${lines.join("\n")}\n`;
+    return `${header}${blocks.join("\n")}\n`;
   });
 
   if (!inserted) {
@@ -1821,31 +1940,26 @@ ${rows}`;
 }
 
 function normalizeRoadmapSuccessCriteriaField(value: string | undefined): string {
-  const criteria = (value?.trim()
-    ? value
-    : "Persist context, planning, execution, validation, and UAT evidence for this phase.; Keep roadmap requirements, dependencies, and follow-up evidence traceable."
-  )
-    .split(/\s*;\s*/)
-    .map((criterion) => criterion.trim())
-    .filter((criterion) => criterion.length > 0);
+  const criteria = normalizeRoadmapSuccessCriteriaString(value);
 
-  if (criteria.length === 0) {
-    return [
-      "Persist context, planning, execution, validation, and UAT evidence for this phase.",
-      "Keep roadmap requirements, dependencies, and follow-up evidence traceable."
-    ].join("; ");
+  if (criteria.length < 2 || criteria.length > 5) {
+    throw new Error(
+      `Roadmap phase details require 2-5 success criteria before writing ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
   }
 
-  if (criteria.length === 1) {
-    criteria.push("Keep roadmap requirements, dependencies, and follow-up evidence traceable.");
-  }
-
-  return criteria.slice(0, 5).join("; ");
+  return criteria.join("; ");
 }
 
 function buildPhaseDetailBlock(options: PhaseDetailBlockOptions): string {
-  const goal =
-    options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const goal = options.goal?.trim();
+
+  if (!goal) {
+    throw new Error(
+      `Roadmap phase details require a concrete goal before writing ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
   const requirements = normalizeRoadmapDetailList(options.requirements);
   const successCriteria = normalizeRoadmapSuccessCriteriaField(options.successCriteria);
   const auditBackedDetails = options.auditBackedDetails ?? null;
@@ -1874,6 +1988,17 @@ function buildPhaseDetailBlock(options: PhaseDetailBlockOptions): string {
 ${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}\n` : ""}**Success Criteria**: ${successCriteria}
 **Status**: planned
 ${auditSections ? `\n${auditSections}\n` : ""}`;
+}
+
+function appendPhaseDetailsSection(raw: string, detailBlock: string): string {
+  const section = `\n\n## Phase Details\n\n${detailBlock.trimEnd()}\n`;
+  const notesHeadingPattern = /(\n## Notes\s*\n)/;
+
+  if (notesHeadingPattern.test(raw)) {
+    return raw.replace(notesHeadingPattern, `${section}$1`);
+  }
+
+  return `${raw.trimEnd()}${section}`;
 }
 
 type RequirementTableRow = {
@@ -2055,11 +2180,7 @@ function appendPhaseDetailsToRoadmap(
     );
   }
 
-  return `${raw.trimEnd()}
-
-## Phase Details
-
-${detailBlock}`;
+  return appendPhaseDetailsSection(raw, detailBlock);
 }
 
 function insertPhaseDetailsToRoadmap(
@@ -2086,9 +2207,7 @@ function insertPhaseDetailsToRoadmap(
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
 
   if (!phaseDetailsSectionPattern.test(raw)) {
-    throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding a top-level "## Phase Details" section with a "### Phase ${dependsOnPhaseNumber}: <title>" block before re-running /blu-insert-phase.`
-    );
+    return appendPhaseDetailsSection(raw, detailBlock);
   }
 
   const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber(value)));
@@ -2111,9 +2230,7 @@ function insertPhaseDetailsToRoadmap(
       }
 
       if (insertIndex === -1) {
-        throw new Error(
-          `Phase ${dependsOnPhaseNumber} is missing field "Phase Details" block under ${BLUEPRINT_DIR}/ROADMAP.md "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding "### Phase ${dependsOnPhaseNumber}: <title>" with Goal, Requirements, Depends on, Success Criteria, and Status fields, then re-run /blu-insert-phase.`
-        );
+        insertIndex = blocks.length;
       }
 
       blocks.splice(insertIndex, 0, detailBlock);
@@ -2156,25 +2273,25 @@ function removePhaseLineFromRoadmap(
 
   let removed = false;
   const content = raw.replace(phasesSectionPattern, (_full, header: string, body: string) => {
-    const nextLines = body
-      .split("\n")
-      .filter((line) => {
-        const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
+    const blocks = splitRoadmapPhaseListBlocks(body);
 
-        if (!match) {
-          return line.trim().length > 0;
-        }
+    if (blocks.length === 0) {
+      return `${header}${body}`;
+    }
 
-        if (normalizePhaseNumber(match[1]) === phaseNumber) {
-          removed = true;
-          return false;
-        }
+    const nextBlocks = blocks.filter((block) => {
+      const firstLine = block.split("\n")[0] ?? "";
+      const match = firstLine.match(/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+[^\n]+$/);
 
-        return true;
-      })
-      .join("\n");
+      if (match && normalizePhaseNumber(match[1]) === phaseNumber) {
+        removed = true;
+        return false;
+      }
 
-    return `${header}${nextLines.trimEnd()}\n`;
+      return true;
+    });
+
+    return `${header}${nextBlocks.join("\n").trimEnd()}\n`;
   });
 
   return {
@@ -5293,13 +5410,47 @@ export async function blueprintRoadmapAddPhase(
 ): Promise<RoadmapAddPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
-  const auditBackedDetails = args.auditBackedDetails ?? null;
+  const normalizedRepairRequirementIds = normalizeRoadmapDetailList(
+    args.auditBackedDetails?.repairRequirementIds
+  );
+  const normalizedRequirementIds = normalizeRoadmapDetailList(args.requirementIds);
+  const effectiveRequirementIds =
+    normalizedRepairRequirementIds.length > 0
+      ? normalizedRepairRequirementIds
+      : normalizedRequirementIds;
+  const effectiveGoal = normalizeRoadmapGoal(args.auditBackedDetails?.goal ?? args.goal);
+  const effectiveSuccessCriteria = args.auditBackedDetails
+    ? normalizeRoadmapSuccessCriteriaString(args.auditBackedDetails.successCriteria)
+    : normalizeRoadmapSuccessCriteriaList(args.successCriteria);
+  const auditBackedDetails = args.auditBackedDetails
+    ? {
+        ...args.auditBackedDetails,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria.join("; "),
+        repairRequirementIds:
+          normalizedRepairRequirementIds.length > 0
+            ? normalizedRepairRequirementIds
+            : args.auditBackedDetails.repairRequirementIds
+      }
+    : null;
 
   if (normalizedDescription.length === 0) {
     throw new Error(
       "Phase description required. Re-run /blu-add-phase with a concise description."
     );
   }
+
+  if (effectiveRequirementIds.length === 0) {
+    throw new Error(
+      "Requirement IDs required. Re-run /blu-add-phase with at least one durable requirement ID from ROADMAP/REQUIREMENTS in requirementIds."
+    );
+  }
+
+  requireRoadmapPhaseMetadata({
+    command: "/blu-add-phase",
+    goal: effectiveGoal,
+    successCriteria: effectiveSuccessCriteria
+  });
 
   return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
     const roadmap = await readRoadmap(projectRoot);
@@ -5348,24 +5499,38 @@ export async function blueprintRoadmapAddPhase(
         )
       : null;
     const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
-    const updatedRoadmap = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
-      phaseNumber,
-      normalizedDescription,
-      auditBackedDetails
-        ? {
+    const updatedRoadmap = auditBackedDetails
+      ? appendPhaseDetailsToRoadmap(
+          appendPhaseLineToRoadmap(
+            rawRoadmap,
+            phaseNumber,
+            normalizedDescription,
+            {
+              requirementIds: effectiveRequirementIds,
+              goal: effectiveGoal,
+              successCriteria: effectiveSuccessCriteria
+            }
+          ),
+          phaseNumber,
+          normalizedDescription,
+          {
             dependsOnPhaseNumber,
-            goal:
-              auditBackedDetails.goal ??
-              "Close the audit-identified milestone gaps and restore requirement traceability.",
-            requirements: auditBackedDetails.repairRequirementIds,
-            successCriteria:
-              auditBackedDetails.successCriteria ??
-              "Persist audit-backed gap details and repair traceability for the affected requirements.",
+            goal: effectiveGoal,
+            requirements: effectiveRequirementIds,
+            successCriteria: effectiveSuccessCriteria.join("; "),
             auditBackedDetails
           }
-        : { dependsOnPhaseNumber }
-    );
+        )
+      : appendPhaseLineToRoadmap(
+          rawRoadmap,
+          phaseNumber,
+          normalizedDescription,
+          {
+            requirementIds: effectiveRequirementIds,
+            goal: effectiveGoal,
+            successCriteria: effectiveSuccessCriteria
+          }
+        );
     const warnings: string[] = [];
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
@@ -5445,6 +5610,9 @@ export async function blueprintRoadmapInsertPhase(
 ): Promise<RoadmapInsertPhaseResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const normalizedRequirementIds = normalizeRoadmapDetailList(args.requirementIds);
+  const effectiveGoal = normalizeRoadmapGoal(args.goal);
+  const effectiveSuccessCriteria = normalizeRoadmapSuccessCriteriaList(args.successCriteria);
 
   if (normalizedDescription.length === 0) {
     throw new Error(
@@ -5473,6 +5641,12 @@ export async function blueprintRoadmapInsertPhase(
       `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu-insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
     );
   }
+
+  requireRoadmapPhaseMetadata({
+    command: "/blu-insert-phase",
+    goal: effectiveGoal,
+    successCriteria: effectiveSuccessCriteria
+  });
 
   return withBlueprintRepoLock(projectRoot, "roadmap-insert-phase", async () => {
     const roadmap = await readRoadmap(projectRoot);
@@ -5531,14 +5705,24 @@ export async function blueprintRoadmapInsertPhase(
       rawRoadmap,
       insertionAnchor,
       phaseNumber,
-      normalizedDescription
+      normalizedDescription,
+      {
+        requirementIds: normalizedRequirementIds,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria
+      }
     );
     const updatedRoadmap = insertPhaseDetailsToRoadmap(
       insertedPhaseLines,
       groupPhases.map((phase) => phase.phaseNumber),
       phaseNumber,
       normalizedDescription,
-      afterPhaseNumber
+      afterPhaseNumber,
+      {
+        requirements: normalizedRequirementIds,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria.join("; ")
+      }
     );
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
@@ -6057,10 +6241,21 @@ export async function blueprintRoadmapPromoteBacklog(
     );
 
     roadmapBody = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
+      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
+        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+        successCriteria: [
+          `Backlog item ${item.backlogId} has an authored phase context.`,
+          `The promoted phase can move through planning with explicit scope decisions.`
+        ]
+      }),
       phaseNumber,
       phaseName,
-      { dependsOnPhaseNumber }
+      {
+        dependsOnPhaseNumber,
+        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+        successCriteria:
+          `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+      }
     );
     roadmapPhases.push({
       phaseNumber,
@@ -9342,7 +9537,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_roadmap_add_phase",
     description:
-      "Append a new integer phase to the active Blueprint roadmap, ignoring decimal insertions when choosing the next phase number.",
+      "Append a new integer phase to the active Blueprint roadmap with durable requirement IDs, ignoring decimal insertions when choosing the next phase number.",
     inputSchema: roadmapAddPhaseInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintRoadmapAddPhase(args as RoadmapAddPhaseArgs)

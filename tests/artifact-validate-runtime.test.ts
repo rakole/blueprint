@@ -626,7 +626,7 @@ test("blueprint artifact validation rejects thin bootstrap PROJECT, REQUIREMENTS
   );
   assert.match(
     runtimeValidation.suggestedRepairs.join("\n"),
-    /Re-run \/blu-new-project or \/blu-health --repair to regenerate the bootstrap artifacts from the canonical contract\./
+    /Re-run \/blu-new-project to regenerate bootstrap artifacts from the canonical contract, or repair the named artifact with durable requirement and roadmap mappings before retrying\./
   );
   assert.ok(
     runtimeValidation.diagnostics.some(

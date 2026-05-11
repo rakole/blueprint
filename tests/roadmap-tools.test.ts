@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -43,6 +43,22 @@ function comparePhaseNumberStrings(left: string, right: string): number {
 
   return 0;
 }
+
+const addPhaseRoadmapDetails = {
+  goal: "Deliver the notifications flow with durable Blueprint evidence.",
+  successCriteria: [
+    "Notifications flow scope is captured in phase context.",
+    "Notifications flow planning can cite the roadmap requirement mapping."
+  ]
+};
+
+const insertPhaseRoadmapDetails = {
+  goal: "Stabilize the API surface before the release hardening phase.",
+  successCriteria: [
+    "API stabilization decisions are captured in phase context.",
+    "Release hardening can proceed without renumbering later phases."
+  ]
+};
 
 async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
   const repoPath = await createGitRepo("blueprint-roadmap-tools-");
@@ -546,7 +562,9 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   const result = await blueprintRoadmapAddPhase({
     cwd: repoPath,
     description: "Notifications Flow",
-    expectedPhaseNumber: "3"
+    ...addPhaseRoadmapDetails,
+    expectedPhaseNumber: "3",
+    requirementIds: ["RQ-04"]
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
@@ -567,11 +585,73 @@ test("blueprint_roadmap_add_phase appends the next integer phase and slugged dir
   assert.equal(after.phases.at(-1)?.phasePrefix, "03");
   assert.equal(after.phases.at(-1)?.phaseName, "Notifications Flow");
   assert.equal(after.phases.at(-1)?.phaseDir, ".blueprint/phases/03-notifications-flow");
-  assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Notifications Flow\*\*/);
-  assert.match(roadmapBody, /### Phase 3: Notifications Flow/);
+  assert.match(roadmapBody, /- \[ \] Phase 3: Notifications Flow \(Requirements: RQ-04\)/);
+  assert.match(roadmapBody, /  - Objective: Deliver the notifications flow with durable Blueprint evidence\./);
+  assert.match(roadmapBody, /  - Success Criteria:\n    - Notifications flow scope is captured in phase context\./);
+  assert.doesNotMatch(roadmapBody, /Capture the phase boundary and implementation goal during/);
 });
 
-test("blueprint_roadmap_add_phase keeps the mutated ROADMAP artifact-valid", async (t) => {
+test("blueprint_roadmap_add_phase rejects plain appends without requirement IDs before mutation", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
+
+  await assert.rejects(
+    blueprintRoadmapAddPhase({
+      cwd: repoPath,
+      description: "Notifications Flow",
+      ...addPhaseRoadmapDetails,
+      expectedPhaseNumber: "3"
+    }),
+    /Requirement IDs required.*\/blu-add-phase.*durable requirement ID from ROADMAP\/REQUIREMENTS/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    false
+  );
+});
+
+test("blueprint_roadmap_add_phase with requirement IDs keeps the mutated ROADMAP artifact-valid", async (t) => {
+  const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Repair Follow Through",
+    goal: "Deliver repair-grade follow-through for the roadmap contract.",
+    successCriteria: [
+      "Roadmap mutations remain artifact-valid after append.",
+      "Repair follow-through requirement mapping is preserved."
+    ],
+    expectedPhaseNumber: "5",
+    requirementIds: ["RQ-05", "RQ-05", " RQ-05 "]
+  });
+
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.match(
+    roadmapBody,
+    /- \[ \] Phase 5: Repair Follow Through \(Requirements: RQ-05\)/
+  );
+  assert.match(roadmapBody, /  - Objective: Deliver repair-grade follow-through for the roadmap contract\./);
+  assert.match(roadmapBody, /  - Success Criteria:\n    - Roadmap mutations remain artifact-valid after append\./);
+  assert.doesNotMatch(roadmapBody, /Capture the phase boundary and implementation goal during/);
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.deepEqual(validation.issues, []);
+});
+
+test("blueprint_roadmap_add_phase keeps audit-backed ROADMAP appends artifact-valid", async (t) => {
   const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -584,7 +664,8 @@ test("blueprint_roadmap_add_phase keeps the mutated ROADMAP artifact-valid", asy
     auditBackedDetails: {
       sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
       goal: "Add repair-grade follow-through for the roadmap contract.",
-      successCriteria: "Roadmap mutations remain artifact-valid after append.",
+      successCriteria:
+        "Roadmap mutations remain artifact-valid after append.; Repair follow-through requirement mapping is preserved.",
       repairRequirementIds: ["RQ-05"]
     }
   });
@@ -604,7 +685,9 @@ test("add-phase scaffold path uses returned phase metadata as authoritative cont
   const result = await blueprintRoadmapAddPhase({
     cwd: repoPath,
     description: "Notifications Flow",
-    expectedPhaseNumber: "3"
+    ...addPhaseRoadmapDetails,
+    expectedPhaseNumber: "3",
+    requirementIds: ["RQ-04"]
   });
   const contextPath = `${result.phaseDir}/${result.phasePrefix}-CONTEXT.md`;
   const scaffold = await blueprintArtifactScaffold({
@@ -634,7 +717,9 @@ test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale
     blueprintRoadmapAddPhase({
       cwd: repoPath,
       description: "Notifications Flow",
-      expectedPhaseNumber: "4"
+      ...addPhaseRoadmapDetails,
+      expectedPhaseNumber: "4",
+      requirementIds: ["RQ-04"]
     }),
     /Confirmed next phase 4 no longer matches the live next phase 3/
   );
@@ -665,7 +750,9 @@ test("blueprint_roadmap_add_phase does not mutate ROADMAP when the phase path is
     blueprintRoadmapAddPhase({
       cwd: repoPath,
       description: "Notifications Flow",
-      expectedPhaseNumber: "3"
+      ...addPhaseRoadmapDetails,
+      expectedPhaseNumber: "3",
+      requirementIds: ["RQ-04"]
     }),
     /Phase directory path exists but is not a directory/
   );
@@ -687,7 +774,8 @@ test("blueprint_roadmap_add_phase persists audit-backed gap details and repairs 
     auditBackedDetails: {
       sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
       goal: "Close milestone audit gaps and restore requirement traceability.",
-      successCriteria: "Repair the affected requirements and document the closure path.",
+      successCriteria:
+        "Repair the affected requirements and document the closure path.; Milestone audit traceability can be verified from the reassigned requirements.",
       repairRequirementIds: ["GAP-001", "GAP-002"],
       gapGroups: [
         {
@@ -744,7 +832,8 @@ test("blueprint_roadmap_add_phase reuses an existing audit-backed phase on retry
   const auditBackedDetails = {
     sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
     goal: "Close milestone audit gaps and restore requirement traceability.",
-    successCriteria: "Repair the affected requirements and document the closure path.",
+    successCriteria:
+      "Repair the affected requirements and document the closure path.; Milestone audit traceability can be verified from the reassigned requirements.",
     repairRequirementIds: ["GAP-001", "GAP-002"]
   };
 
@@ -786,7 +875,8 @@ test("blueprint_roadmap_add_phase keeps requirement reassignment notes idempoten
     auditBackedDetails: {
       sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
       goal: "Close milestone audit gaps and restore requirement traceability.",
-      successCriteria: "Repair the affected requirements and document the closure path.",
+      successCriteria:
+        "Repair the affected requirements and document the closure path.; Milestone audit traceability can be verified from the reassigned requirements.",
       repairRequirementIds: ["GAP-001", "GAP-002"]
     }
   });
@@ -807,7 +897,7 @@ test("blueprint_roadmap_add_phase keeps requirement reassignment notes idempoten
   );
 });
 
-test("blueprint_roadmap_add_phase preserves the sequential dependency chain in roadmap details", async (t) => {
+test("blueprint_roadmap_add_phase writes concrete inline roadmap details without placeholder leakage", async (t) => {
   const repoPath = await createRoadmapRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -849,15 +939,19 @@ test("blueprint_roadmap_add_phase preserves the sequential dependency chain in r
 
   await blueprintRoadmapAddPhase({
     cwd: repoPath,
-    description: "Notifications Flow"
+    description: "Notifications Flow",
+    ...addPhaseRoadmapDetails,
+    requirementIds: ["RQ-04"]
   });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
   const phaseThreeBlock = roadmapBody.match(
-    /### Phase 3: Notifications Flow\n([\s\S]*?)(?=\n### Phase |\s*$)/
-  )?.[1];
+    /- \[ \] Phase 3: Notifications Flow \(Requirements: RQ-04\)\n([\s\S]*?)(?=\n## Phase Details|\s*$)/
+  )?.[0];
 
   assert.ok(phaseThreeBlock);
-  assert.match(phaseThreeBlock, /^\*\*Depends on\*\*: Phase 2$/m);
+  assert.match(phaseThreeBlock, /  - Objective: Deliver the notifications flow with durable Blueprint evidence\./);
+  assert.match(phaseThreeBlock, /  - Success Criteria:\n    - Notifications flow scope is captured in phase context\./);
+  assert.doesNotMatch(phaseThreeBlock, /Capture the phase boundary and implementation goal during/);
 });
 
 test("blueprint_roadmap_insert_phase inserts the first decimal phase after an integer target without renumbering later phases", async (t) => {
@@ -869,7 +963,8 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   const result = await blueprintRoadmapInsertPhase({
     cwd: repoPath,
     after: 2,
-    description: "API Stabilization"
+    description: "API Stabilization",
+    ...insertPhaseRoadmapDetails
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
@@ -912,11 +1007,49 @@ test("blueprint_roadmap_insert_phase keeps the mutated ROADMAP artifact-valid", 
   await blueprintRoadmapInsertPhase({
     cwd: repoPath,
     after: 2,
-    description: "API Stabilization"
+    description: "API Stabilization",
+    ...insertPhaseRoadmapDetails
   });
 
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
 
+  assert.match(roadmapBody, /### Phase 2\.1: API Stabilization[\s\S]*\*\*Requirements\*\*: none yet/);
+  assert.match(roadmapBody, /- \[ \] Phase 2\.1: API Stabilization/);
+  assert.match(roadmapBody, /  - Objective: Stabilize the API surface before the release hardening phase\./);
+  assert.match(roadmapBody, /\*\*Goal\*\*: Stabilize the API surface before the release hardening phase\./);
+  assert.match(roadmapBody, /API stabilization decisions are captured in phase context\./);
+  assert.doesNotMatch(roadmapBody, /Capture the phase boundary and implementation goal during/);
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.deepEqual(validation.issues, []);
+});
+
+test("blueprint_roadmap_insert_phase accepts ROADMAPs without an existing Phase Details section", async (t) => {
+  const repoPath = await createContractRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const originalRoadmap = await readFile(roadmapPath, "utf8");
+  const listOnlyRoadmap = originalRoadmap.replace(
+    /\n## Phase Details\n[\s\S]*?(?=\n## Notes\n)/,
+    "\n"
+  );
+
+  await writeFile(roadmapPath, listOnlyRoadmap, "utf8");
+  await blueprintRoadmapInsertPhase({
+    cwd: repoPath,
+    after: 2,
+    description: "API Stabilization",
+    ...insertPhaseRoadmapDetails
+  });
+
+  const roadmapBody = await readFile(roadmapPath, "utf8");
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.match(roadmapBody, /## Phase Details[\s\S]*### Phase 2\.1: API Stabilization/);
+  assert.match(roadmapBody, /## Phase Details[\s\S]*## Notes/);
+  assert.doesNotMatch(roadmapBody, /Capture the phase boundary and implementation goal during/);
   assert.equal(validation.valid, true, validation.issues.join("\n"));
   assert.deepEqual(validation.issues, []);
 });
@@ -939,7 +1072,8 @@ test("blueprint_roadmap_insert_phase does not mutate ROADMAP when the phase path
     blueprintRoadmapInsertPhase({
       cwd: repoPath,
       after: 2,
-      description: "API Stabilization"
+      description: "API Stabilization",
+      ...insertPhaseRoadmapDetails
     }),
     /Phase directory path exists but is not a directory/
   );
@@ -958,12 +1092,14 @@ test("blueprint_roadmap_insert_phase increments the decimal suffix from roadmap 
   await blueprintRoadmapInsertPhase({
     cwd: repoPath,
     after: "2",
-    description: "API Stabilization"
+    description: "API Stabilization",
+    ...insertPhaseRoadmapDetails
   });
   const second = await blueprintRoadmapInsertPhase({
     cwd: repoPath,
     after: "2",
-    description: "Validation Sweep"
+    description: "Validation Sweep",
+    ...insertPhaseRoadmapDetails
   });
   const after = await blueprintRoadmapRead({ cwd: repoPath });
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
@@ -988,12 +1124,14 @@ test("blueprint_roadmap_insert_phase serializes concurrent inserts after the sam
     blueprintRoadmapInsertPhase({
       cwd: repoPath,
       after: 2,
-      description: "API Stabilization"
+      description: "API Stabilization",
+      ...insertPhaseRoadmapDetails
     }),
     blueprintRoadmapInsertPhase({
       cwd: repoPath,
       after: 2,
-      description: "Validation Sweep"
+      description: "Validation Sweep",
+      ...insertPhaseRoadmapDetails
     })
   ]);
   const after = await blueprintRoadmapRead({ cwd: repoPath });
@@ -1003,14 +1141,9 @@ test("blueprint_roadmap_insert_phase serializes concurrent inserts after the sam
     ["2.1", "2.2"]
   );
   assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2", "2.1", "2.2", "4"]);
-  assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-api-stabilization")),
-    true
-  );
-  assert.equal(
-    await pathExists(path.join(repoPath, ".blueprint/phases/02.2-validation-sweep")),
-    true
-  );
+  for (const result of results) {
+    assert.equal(await pathExists(path.join(repoPath, result.phaseDir)), true);
+  }
 });
 
 test("blueprint_roadmap_promote_backlog previews backlog items and promotes confirmed entries into appended phases", async (t) => {
@@ -1153,6 +1286,33 @@ test("blueprint_roadmap_remove_phase removes a future phase and renumbers later 
   assert.doesNotMatch(roadmapBody, /Planning Drift Recovery/);
 });
 
+test("blueprint_roadmap_remove_phase removes entire inline phase detail blocks", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Notifications Flow",
+    ...addPhaseRoadmapDetails,
+    expectedPhaseNumber: "3",
+    requirementIds: ["RQ-04"]
+  });
+  await blueprintRoadmapRemovePhase({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const after = await blueprintRoadmapRead({ cwd: repoPath });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1", "2.2"]);
+  assert.doesNotMatch(roadmapBody, /Phase 3: Notifications Flow/);
+  assert.doesNotMatch(roadmapBody, /Deliver the notifications flow with durable Blueprint evidence/);
+  assert.doesNotMatch(roadmapBody, /Notifications flow scope is captured in phase context/);
+  assert.equal(after.phases.at(-1)?.goal, "Close validation gaps.");
+});
+
 test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (t) => {
   const repoPath = await createInsertRoadmapRepo();
   t.after(async () => {
@@ -1217,7 +1377,8 @@ test("blueprint_roadmap_insert_phase rejects missing integer targets", async (t)
       blueprintRoadmapInsertPhase({
         cwd: repoPath,
         after: "3",
-        description: "Emergency follow-up"
+        description: "Emergency follow-up",
+        ...insertPhaseRoadmapDetails
       }),
     /does not exist/
   );
@@ -1247,7 +1408,9 @@ test("blueprint_roadmap_add_phase malformed ROADMAP errors include recovery guid
     () =>
       blueprintRoadmapAddPhase({
         cwd: repoPath,
-        description: "Recovery Guidance"
+        description: "Recovery Guidance",
+        ...addPhaseRoadmapDetails,
+        requirementIds: ["RQ-02"]
       }),
     (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
@@ -1267,21 +1430,36 @@ test("blueprint_roadmap_insert_phase malformed ROADMAP errors include recovery g
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Malformed Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phasez
+
+- [ ] Phase 1: Foundation
+`,
+    "utf8"
+  );
 
   await assert.rejects(
     () =>
       blueprintRoadmapInsertPhase({
         cwd: repoPath,
         after: 1,
-        description: "Recovery Guidance"
+        description: "Recovery Guidance",
+        ...insertPhaseRoadmapDetails
       }),
     (error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
 
       assert.match(message, /Malformed \.blueprint\/ROADMAP\.md/);
-      assert.match(message, /missing field "## Phase Details"/);
-      assert.match(message, /Repair by adding a top-level "## Phase Details" section/);
-      assert.match(message, /re-running \/blu-insert-phase/);
+      assert.match(message, /missing field "## Phases"/);
+      assert.match(message, /Repair by adding a top-level "## Phases" section/);
+      assert.match(message, /re-run \/blu-insert-phase/);
 
       return true;
     }
@@ -1303,7 +1481,8 @@ test("blueprint_roadmap_insert_phase rejects conflicting decimal directory drift
       blueprintRoadmapInsertPhase({
         cwd: repoPath,
         after: "2",
-        description: "API Stabilization"
+        description: "API Stabilization",
+        ...insertPhaseRoadmapDetails
       }),
     /conflicting directory/
   );

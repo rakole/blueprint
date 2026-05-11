@@ -14466,7 +14466,7 @@ var init_command_runtime_metadata = __esm({
         ],
         optionalAgents: [],
         hookInvolvement: [".blueprint write guard"],
-        contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, prefer ask_user for the exact phase-number confirmation gate, pass the confirmed number as expectedPhaseNumber, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap append: load skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md, keep the command grounded in the live roadmap, preview the next integer phase while ignoring decimal suffixes, choose and confirm durable requirementIds plus a concrete goal plus 2-5 successCriteria, prefer ask_user for the exact phase-number and roadmap-metadata confirmation gate, pass the confirmed number as expectedPhaseNumber, confirmed IDs as requirementIds, objective as goal, and criteria as successCriteria, keep the waiting state explicit as phase-number-confirmation or stale-phase-number, persist the append only through the roadmap and scaffold MCP tools, scaffold ${phaseDir}/${phasePrefix}-CONTEXT.md from returned metadata without treating scaffold text as finished context, preserve the no-subagent fallback, reject browser/web-search/shell-only or generic agents as substitutes, and route the next safe action to /blu-discuss-phase <phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15028,7 +15028,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: INSERT_PHASE_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -16830,7 +16830,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: EXPLORE_REQUIRED_TOOLS,
         optionalAgents: EXPLORE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase and scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
+        contractNotes: "Docless manifest+skill-owned runtime for short ideation routing: require explicit idea text, read blueprint_project_status first, classify exactly one target among note, todo, backlog, roadmap, and no-write, use blueprint-researcher only for bounded context checks that materially affect routing, require explicit routing confirmation before persistence, write note/todo/backlog targets through blueprint_artifact_mutate_index with duplicate handling, append roadmap work through blueprint_roadmap_add_phase with confirmed requirementIds, concrete goal, and 2-5 successCriteria, scaffold only returned context paths, route follow-ups only to implemented commands, and do not use update_topic, write_todos, task trackers, or long-running progress posture.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -29352,8 +29352,49 @@ function rewriteRoadmapPhaseReferences(value, renumberMap) {
   ]);
   return rewriteDependencyLines(replaceWithPlaceholders(value, replacements), renumberMap);
 }
-function appendPhaseLineToRoadmap(raw, phaseNumber, phaseName) {
-  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+function normalizeRoadmapGoal(value) {
+  return (value ?? "").trim();
+}
+function normalizeRoadmapSuccessCriteriaList(values) {
+  return [
+    ...new Set(
+      (values ?? []).flatMap((value) => value.split(/\s*;\s*/)).map((value) => value.trim()).filter((value) => value.length > 0)
+    )
+  ];
+}
+function normalizeRoadmapSuccessCriteriaString(value) {
+  return normalizeRoadmapSuccessCriteriaList(value ? [value] : void 0);
+}
+function requireRoadmapPhaseMetadata(options) {
+  if (options.goal.length === 0) {
+    throw new Error(
+      `Phase goal required. Re-run ${options.command} with a concrete ROADMAP objective for the new phase.`
+    );
+  }
+  if (options.successCriteria.length < 2 || options.successCriteria.length > 5) {
+    throw new Error(
+      `Phase successCriteria must include 2-5 concrete criteria. Re-run ${options.command} with successCriteria containing 2-5 items.`
+    );
+  }
+}
+function buildRoadmapPhaseListBlock(options) {
+  const requirements = normalizeRoadmapDetailList(options.requirementIds);
+  const requirementsSuffix = requirements.length > 0 ? ` (Requirements: ${requirements.join(", ")})` : "";
+  const insertedLine = options.inserted ? "\n  - Inserted: yes" : "";
+  const successCriteria = options.successCriteria.map((criterion) => `    - ${criterion}`).join("\n");
+  return `- [ ] Phase ${options.phaseNumber}: ${options.phaseName}${requirementsSuffix}${insertedLine}
+  - Objective: ${options.goal}
+  - Success Criteria:
+${successCriteria}`;
+}
+function appendPhaseLineToRoadmap(raw, phaseNumber, phaseName, options) {
+  const phaseBlock = buildRoadmapPhaseListBlock({
+    phaseNumber,
+    phaseName,
+    requirementIds: options.requirementIds,
+    goal: options.goal,
+    successCriteria: options.successCriteria
+  });
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
@@ -29362,15 +29403,42 @@ function appendPhaseLineToRoadmap(raw, phaseNumber, phaseName) {
   }
   return raw.replace(phasesSectionPattern, (_full, header, body) => {
     const trimmedBody = body.trimEnd();
-    const nextBody = trimmedBody.length === 0 ? phaseLine : `${trimmedBody}
-${phaseLine}`;
+    const nextBody = trimmedBody.length === 0 ? phaseBlock : `${trimmedBody}
+${phaseBlock}`;
     return `${header}${nextBody}
 `;
   });
 }
-function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phaseName) {
+function splitRoadmapPhaseListBlocks(body) {
+  const blocks = [];
+  let currentBlock = [];
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
+      if (currentBlock.length > 0) {
+        blocks.push(currentBlock.join("\n").trimEnd());
+      }
+      currentBlock = [line];
+      continue;
+    }
+    if (currentBlock.length > 0) {
+      currentBlock.push(line);
+    }
+  }
+  if (currentBlock.length > 0) {
+    blocks.push(currentBlock.join("\n").trimEnd());
+  }
+  return blocks;
+}
+function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phaseName, options) {
   const normalizedAnchor = normalizePhaseNumber2(insertAfterPhaseNumber);
-  const phaseLine = `- [ ] **Phase ${phaseNumber}: ${phaseName}**`;
+  const phaseBlock = buildRoadmapPhaseListBlock({
+    phaseNumber,
+    phaseName,
+    requirementIds: options.requirementIds,
+    goal: options.goal,
+    successCriteria: options.successCriteria,
+    inserted: true
+  });
   const phasesSectionPattern = /(## Phases\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phasesSectionPattern.test(raw)) {
     throw new Error(
@@ -29379,17 +29447,18 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
   }
   let inserted = false;
   const content = raw.replace(phasesSectionPattern, (_full, header, body) => {
-    const lines = body.split("\n").filter((line) => line.trim().length > 0);
-    const anchorIndex = lines.findIndex((line) => {
-      const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
+    const blocks = splitRoadmapPhaseListBlocks(body);
+    const anchorIndex = blocks.findIndex((block) => {
+      const firstLine = block.split("\n")[0] ?? "";
+      const match = firstLine.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
       return match ? normalizePhaseNumber2(match[1]) === normalizedAnchor : false;
     });
     if (anchorIndex === -1) {
       return `${header}${body}`;
     }
-    lines.splice(anchorIndex + 1, 0, phaseLine);
+    blocks.splice(anchorIndex + 1, 0, phaseBlock);
     inserted = true;
-    return `${header}${lines.join("\n")}
+    return `${header}${blocks.join("\n")}
 `;
   });
   if (!inserted) {
@@ -29434,20 +29503,21 @@ function renderRequirementTraceabilityRepairSection(requirementIds, phaseNumber,
 ${rows}`;
 }
 function normalizeRoadmapSuccessCriteriaField(value) {
-  const criteria = (value?.trim() ? value : "Persist context, planning, execution, validation, and UAT evidence for this phase.; Keep roadmap requirements, dependencies, and follow-up evidence traceable.").split(/\s*;\s*/).map((criterion) => criterion.trim()).filter((criterion) => criterion.length > 0);
-  if (criteria.length === 0) {
-    return [
-      "Persist context, planning, execution, validation, and UAT evidence for this phase.",
-      "Keep roadmap requirements, dependencies, and follow-up evidence traceable."
-    ].join("; ");
+  const criteria = normalizeRoadmapSuccessCriteriaString(value);
+  if (criteria.length < 2 || criteria.length > 5) {
+    throw new Error(
+      `Roadmap phase details require 2-5 success criteria before writing ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
   }
-  if (criteria.length === 1) {
-    criteria.push("Keep roadmap requirements, dependencies, and follow-up evidence traceable.");
-  }
-  return criteria.slice(0, 5).join("; ");
+  return criteria.join("; ");
 }
 function buildPhaseDetailBlock(options) {
-  const goal = options.goal?.trim() || "Capture the phase boundary and implementation goal during /blu-discuss-phase.";
+  const goal = options.goal?.trim();
+  if (!goal) {
+    throw new Error(
+      `Roadmap phase details require a concrete goal before writing ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
   const requirements = normalizeRoadmapDetailList(options.requirements);
   const successCriteria = normalizeRoadmapSuccessCriteriaField(options.successCriteria);
   const auditBackedDetails = options.auditBackedDetails ?? null;
@@ -29472,6 +29542,19 @@ ${options.insertedMarker ? `**Inserted**: ${options.insertedMarker}
 ${auditSections ? `
 ${auditSections}
 ` : ""}`;
+}
+function appendPhaseDetailsSection(raw, detailBlock) {
+  const section = `
+
+## Phase Details
+
+${detailBlock.trimEnd()}
+`;
+  const notesHeadingPattern = /(\n## Notes\s*\n)/;
+  if (notesHeadingPattern.test(raw)) {
+    return raw.replace(notesHeadingPattern, `${section}$1`);
+  }
+  return `${raw.trimEnd()}${section}`;
 }
 function parseRequirementTableRow(line) {
   if (!/^\|.*\|$/.test(line)) {
@@ -29589,11 +29672,7 @@ ${detailBlock.trimEnd()}`;
       }
     );
   }
-  return `${raw.trimEnd()}
-
-## Phase Details
-
-${detailBlock}`;
+  return appendPhaseDetailsSection(raw, detailBlock);
 }
 function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseName, dependsOnPhaseNumber, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex2(phaseNumber)}: `, "m");
@@ -29609,9 +29688,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   }).trimEnd();
   const phaseDetailsSectionPattern = /(## Phase Details\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
   if (!phaseDetailsSectionPattern.test(raw)) {
-    throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/ROADMAP.md: missing field "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding a top-level "## Phase Details" section with a "### Phase ${dependsOnPhaseNumber}: <title>" block before re-running /blu-insert-phase.`
-    );
+    return appendPhaseDetailsSection(raw, detailBlock);
   }
   const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber2(value)));
   let inserted = false;
@@ -29629,9 +29706,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
         }
       }
       if (insertIndex === -1) {
-        throw new Error(
-          `Phase ${dependsOnPhaseNumber} is missing field "Phase Details" block under ${BLUEPRINT_DIR}/ROADMAP.md "## Phase Details" while inserting Phase ${phaseNumber}. Repair by adding "### Phase ${dependsOnPhaseNumber}: <title>" with Goal, Requirements, Depends on, Success Criteria, and Status fields, then re-run /blu-insert-phase.`
-        );
+        insertIndex = blocks.length;
       }
       blocks.splice(insertIndex, 0, detailBlock);
       inserted = true;
@@ -29658,18 +29733,20 @@ function removePhaseLineFromRoadmap(raw, phaseNumber) {
   }
   let removed = false;
   const content = raw.replace(phasesSectionPattern, (_full, header, body) => {
-    const nextLines = body.split("\n").filter((line) => {
-      const match = line.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
-      if (!match) {
-        return line.trim().length > 0;
-      }
-      if (normalizePhaseNumber2(match[1]) === phaseNumber) {
+    const blocks = splitRoadmapPhaseListBlocks(body);
+    if (blocks.length === 0) {
+      return `${header}${body}`;
+    }
+    const nextBlocks = blocks.filter((block) => {
+      const firstLine = block.split("\n")[0] ?? "";
+      const match = firstLine.match(/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+[^\n]+$/);
+      if (match && normalizePhaseNumber2(match[1]) === phaseNumber) {
         removed = true;
         return false;
       }
       return true;
-    }).join("\n");
-    return `${header}${nextLines.trimEnd()}
+    });
+    return `${header}${nextBlocks.join("\n").trimEnd()}
 `;
   });
   return {
@@ -31932,12 +32009,34 @@ async function blueprintRoadmapRead(args = {}) {
 async function blueprintRoadmapAddPhase(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
-  const auditBackedDetails = args.auditBackedDetails ?? null;
+  const normalizedRepairRequirementIds = normalizeRoadmapDetailList(
+    args.auditBackedDetails?.repairRequirementIds
+  );
+  const normalizedRequirementIds = normalizeRoadmapDetailList(args.requirementIds);
+  const effectiveRequirementIds = normalizedRepairRequirementIds.length > 0 ? normalizedRepairRequirementIds : normalizedRequirementIds;
+  const effectiveGoal = normalizeRoadmapGoal(args.auditBackedDetails?.goal ?? args.goal);
+  const effectiveSuccessCriteria = args.auditBackedDetails ? normalizeRoadmapSuccessCriteriaString(args.auditBackedDetails.successCriteria) : normalizeRoadmapSuccessCriteriaList(args.successCriteria);
+  const auditBackedDetails = args.auditBackedDetails ? {
+    ...args.auditBackedDetails,
+    goal: effectiveGoal,
+    successCriteria: effectiveSuccessCriteria.join("; "),
+    repairRequirementIds: normalizedRepairRequirementIds.length > 0 ? normalizedRepairRequirementIds : args.auditBackedDetails.repairRequirementIds
+  } : null;
   if (normalizedDescription.length === 0) {
     throw new Error(
       "Phase description required. Re-run /blu-add-phase with a concise description."
     );
   }
+  if (effectiveRequirementIds.length === 0) {
+    throw new Error(
+      "Requirement IDs required. Re-run /blu-add-phase with at least one durable requirement ID from ROADMAP/REQUIREMENTS in requirementIds."
+    );
+  }
+  requireRoadmapPhaseMetadata({
+    command: "/blu-add-phase",
+    goal: effectiveGoal,
+    successCriteria: effectiveSuccessCriteria
+  });
   return withBlueprintRepoLock(projectRoot, "roadmap-add-phase", async () => {
     const roadmap = await readRoadmap(projectRoot);
     const existingAuditBackedPhase = findMatchingAuditBackedPhase(
@@ -31972,17 +32071,35 @@ async function blueprintRoadmapAddPhase(args) {
       auditBackedDetails.sourceReportPath
     ) : null;
     const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
-    const updatedRoadmap = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(rawRoadmap, phaseNumber, normalizedDescription),
+    const updatedRoadmap = auditBackedDetails ? appendPhaseDetailsToRoadmap(
+      appendPhaseLineToRoadmap(
+        rawRoadmap,
+        phaseNumber,
+        normalizedDescription,
+        {
+          requirementIds: effectiveRequirementIds,
+          goal: effectiveGoal,
+          successCriteria: effectiveSuccessCriteria
+        }
+      ),
       phaseNumber,
       normalizedDescription,
-      auditBackedDetails ? {
+      {
         dependsOnPhaseNumber,
-        goal: auditBackedDetails.goal ?? "Close the audit-identified milestone gaps and restore requirement traceability.",
-        requirements: auditBackedDetails.repairRequirementIds,
-        successCriteria: auditBackedDetails.successCriteria ?? "Persist audit-backed gap details and repair traceability for the affected requirements.",
+        goal: effectiveGoal,
+        requirements: effectiveRequirementIds,
+        successCriteria: effectiveSuccessCriteria.join("; "),
         auditBackedDetails
-      } : { dependsOnPhaseNumber }
+      }
+    ) : appendPhaseLineToRoadmap(
+      rawRoadmap,
+      phaseNumber,
+      normalizedDescription,
+      {
+        requirementIds: effectiveRequirementIds,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria
+      }
     );
     const warnings = [];
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
@@ -32049,6 +32166,9 @@ async function blueprintRoadmapAddPhase(args) {
 async function blueprintRoadmapInsertPhase(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const normalizedDescription = normalizePhaseDescription(args.description);
+  const normalizedRequirementIds = normalizeRoadmapDetailList(args.requirementIds);
+  const effectiveGoal = normalizeRoadmapGoal(args.goal);
+  const effectiveSuccessCriteria = normalizeRoadmapSuccessCriteriaList(args.successCriteria);
   if (normalizedDescription.length === 0) {
     throw new Error(
       "Phase description required. Re-run /blu-insert-phase with an integer phase number such as 3 and a concise description."
@@ -32071,6 +32191,11 @@ async function blueprintRoadmapInsertPhase(args) {
       `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu-insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
     );
   }
+  requireRoadmapPhaseMetadata({
+    command: "/blu-insert-phase",
+    goal: effectiveGoal,
+    successCriteria: effectiveSuccessCriteria
+  });
   return withBlueprintRepoLock(projectRoot, "roadmap-insert-phase", async () => {
     const roadmap = await readRoadmap(projectRoot);
     const targetPhase = roadmap.phases.find((phase) => phase.phaseNumber === afterPhaseNumber);
@@ -32113,14 +32238,24 @@ async function blueprintRoadmapInsertPhase(args) {
       rawRoadmap,
       insertionAnchor,
       phaseNumber,
-      normalizedDescription
+      normalizedDescription,
+      {
+        requirementIds: normalizedRequirementIds,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria
+      }
     );
     const updatedRoadmap = insertPhaseDetailsToRoadmap(
       insertedPhaseLines,
       groupPhases.map((phase) => phase.phaseNumber),
       phaseNumber,
       normalizedDescription,
-      afterPhaseNumber
+      afterPhaseNumber,
+      {
+        requirements: normalizedRequirementIds,
+        goal: effectiveGoal,
+        successCriteria: effectiveSuccessCriteria.join("; ")
+      }
     );
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
@@ -32517,10 +32652,20 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
       phaseName
     );
     roadmapBody = appendPhaseDetailsToRoadmap(
-      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName),
+      appendPhaseLineToRoadmap(roadmapBody, phaseNumber, phaseName, {
+        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+        successCriteria: [
+          `Backlog item ${item.backlogId} has an authored phase context.`,
+          `The promoted phase can move through planning with explicit scope decisions.`
+        ]
+      }),
       phaseNumber,
       phaseName,
-      { dependsOnPhaseNumber }
+      {
+        dependsOnPhaseNumber,
+        goal: `Promote backlog item ${item.backlogId}: ${phaseName}.`,
+        successCriteria: `Backlog item ${item.backlogId} has an authored phase context.; The promoted phase can move through planning with explicit scope decisions.`
+      }
     );
     roadmapPhases.push({
       phaseNumber,
@@ -35320,6 +35465,9 @@ var init_phase = __esm({
       cwd: string2().optional(),
       description: string2(),
       expectedPhaseNumber: string2().optional(),
+      goal: string2().optional(),
+      requirementIds: array(string2()).optional(),
+      successCriteria: array(string2()).optional(),
       auditBackedDetails: object2({
         sourceReportPath: string2().optional(),
         goal: string2().optional(),
@@ -35343,7 +35491,10 @@ var init_phase = __esm({
     roadmapInsertPhaseInputSchema = {
       cwd: string2().optional(),
       after: union([string2(), number2()]),
-      description: string2()
+      description: string2(),
+      goal: string2().optional(),
+      requirementIds: array(string2()).optional(),
+      successCriteria: array(string2()).optional()
     };
     roadmapRemovePhaseInputSchema = {
       cwd: string2().optional(),
@@ -35570,7 +35721,7 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_roadmap_add_phase",
-        description: "Append a new integer phase to the active Blueprint roadmap, ignoring decimal insertions when choosing the next phase number.",
+        description: "Append a new integer phase to the active Blueprint roadmap with durable requirement IDs, ignoring decimal insertions when choosing the next phase number.",
         inputSchema: roadmapAddPhaseInputSchema,
         handler: async (args) => blueprintRoadmapAddPhase(args)
       },
@@ -45144,7 +45295,7 @@ var init_artifacts = __esm({
       ".blueprint/REQUIREMENTS.md": "bootstrap.requirements",
       ".blueprint/ROADMAP.md": "bootstrap.roadmap"
     };
-    BOOTSTRAP_REPAIR = "Re-run /blu-new-project or /blu-health --repair to regenerate the bootstrap artifacts from the canonical contract.";
+    BOOTSTRAP_REPAIR = "Re-run /blu-new-project to regenerate bootstrap artifacts from the canonical contract, or repair the named artifact with durable requirement and roadmap mappings before retrying.";
     artifactToolDefinitions = [
       {
         name: "blueprint_artifact_contract_read",

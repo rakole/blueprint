@@ -37,12 +37,18 @@ type RoadmapAddPhaseArgs = {
     cwd?: string;
     description: string;
     expectedPhaseNumber?: string;
+    goal?: string;
+    requirementIds?: string[];
+    successCriteria?: string[];
     auditBackedDetails?: RoadmapAuditBackedDetails;
 };
 type RoadmapInsertPhaseArgs = {
     cwd?: string;
     after: NumericInput;
     description: string;
+    goal?: string;
+    requirementIds?: string[];
+    successCriteria?: string[];
 };
 type RoadmapRemovePhaseArgs = {
     cwd?: string;
@@ -898,6 +904,9 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         description: z.ZodString;
         expectedPhaseNumber: z.ZodOptional<z.ZodString>;
+        goal: z.ZodOptional<z.ZodString>;
+        requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
         auditBackedDetails: z.ZodOptional<z.ZodObject<{
             sourceReportPath: z.ZodOptional<z.ZodString>;
             goal: z.ZodOptional<z.ZodString>;
@@ -927,6 +936,9 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         after: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         description: z.ZodString;
+        goal: z.ZodOptional<z.ZodString>;
+        requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapInsertPhaseResult>;
 } | {

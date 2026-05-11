@@ -35,6 +35,7 @@
 - A Blueprint project and roadmap must already exist.
 - An existing integer phase number is required as the insertion anchor (`after`). Decimal insertion targets are rejected.
 - A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug, while the returned `phasePrefix` determines the scaffolded context filename.
+- A concrete ROADMAP objective and 2-5 observable success criteria are required and passed as `goal` and `successCriteria`; durable requirement IDs are passed as `requirementIds` when the urgent decimal insertion already has committed requirement grounding.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
 
@@ -71,7 +72,7 @@
 
 ## Phase Insertion Contract
 
-- Call `blueprint_roadmap_insert_phase` with only the confirmed integer anchor in `after` plus the phase description.
+- Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and any confirmed `requirementIds`.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
@@ -115,7 +116,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the integer insertion target, the computed next decimal number, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Confirm the integer insertion target, computed next decimal number, objective, success criteria, any requirement IDs, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
 
 
 ## Edge Cases
@@ -132,7 +133,7 @@
 
 - Show roadmap and phase-directory drift before mutation.
 - Refuse mutation when the target phase is not an existing integer phase.
-- Refuse mutation when the roadmap cannot place the new Phase Details block immediately after the target base-phase group.
+- Refuse mutation when the roadmap cannot place the new phase under `## Phases`; create an optional `## Phase Details` section only when the existing ROADMAP shape needs one.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 - If scaffold or state update fails after roadmap insertion, report which MCP-backed steps succeeded, surface the failed step, and route to `/blu-progress` or recovery guidance instead of hand-editing `.blueprint/`.
 
@@ -144,6 +145,7 @@
 - Inserts the next decimal after the requested integer phase group and does not renumber later phases.
 - Creates the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` scaffold.
 - Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
+- Writes concrete goal and success criteria at ROADMAP mutation time so `/blu-discuss-phase` is not expected to backfill placeholders.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Creates or updates only the declared artifacts for this command.

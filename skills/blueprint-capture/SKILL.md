@@ -70,7 +70,7 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 
 - `blueprint_artifact_mutate_index`: omit `action` for append flows, pass the user text in `entry.text`, and use only returned `createdEntryIds`, `duplicateEntryIds`, `matchedEntryIds`, or `reservedPhase` as authoritative capture ids and reserved-stub metadata. Never synthesize capture ids manually.
 - `blueprint_roadmap_promote_backlog`: call with `previewOnly: true`, or with no `backlogIds`, for preview mode. Promote only with confirmed `backlogIds` from the preview result, and treat returned `promotedItems` plus `createdPhaseDirs` as authoritative.
-- `blueprint_roadmap_add_phase`: pass only the normalized phase-ready description. Do not precompute phase numbers, slugs, or phase directories; use the returned `phaseNumber`, `phasePrefix`, and `phaseDir`.
+- `blueprint_roadmap_add_phase`: pass the normalized phase-ready description plus confirmed durable `requirementIds`, concrete `goal`, and 2-5 item `successCriteria`. Do not precompute phase numbers, slugs, or phase directories; use the returned `phaseNumber`, `phasePrefix`, and `phaseDir`.
 - `blueprint_artifact_scaffold`: pass only supported repo-relative Blueprint artifact paths. Use scaffolding to seed a missing context file or reserved stub, not as the final filled-in content.
 
 ## Workflow Rules
@@ -136,7 +136,7 @@ Treat capture as short interactive routing or index mutation, not as long-runnin
 5. If the repo is not yet a Blueprint project, stop in suggestion mode and direct the user to `/blu-new-project` instead of inventing persistence.
 6. Confirm the final routing target and normalized text before any write. Review is the default safe path, and Gemini's `ask_user` tool is preferred when a structured confirmation helps.
 7. Use `blueprint_artifact_mutate_index` for confirmed `note`, `todo`, or `backlog` writes, and treat duplicate descriptions as already captured work instead of creating a second copy.
-8. Use `blueprint_roadmap_add_phase` only when the confirmed target is roadmap-ready active work; if project health is partial, route to `/blu-health` before roadmap mutation.
+8. Use `blueprint_roadmap_add_phase` only when the confirmed target is roadmap-ready active work with confirmed durable requirement IDs, a concrete roadmap objective, and 2-5 observable success criteria; if project health is partial, route to `/blu-health` before roadmap mutation.
 9. After confirmed roadmap promotion, use `blueprint_artifact_scaffold` to create or reuse the initial phase context instead of hand-writing it.
 10. Keep follow-up guidance inside implemented commands only. Prefer `/blu-check-todos` after todo capture, `/blu-review-backlog` after backlog capture, `/blu-discuss-phase <phase>` after roadmap capture, and `/blu-progress` otherwise.
 

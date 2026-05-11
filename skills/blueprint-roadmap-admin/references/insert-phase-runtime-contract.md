@@ -9,8 +9,9 @@ MCP tools.
 
 ### Resolve
 
-- Require exactly two user-facing inputs before mutation: an existing integer
-  phase number in `after` and a non-empty phase description.
+- Require an existing integer phase number in `after`, a non-empty phase
+  description, a concrete roadmap objective, and 2-5 observable success
+  criteria before mutation.
 - If either input is missing, stop with concise usage guidance:
   `/blu-insert-phase <afterPhaseNumber> <description>`.
 - Reject decimal-looking anchors such as `2.1`, `2.0`, or `02.0`. An insertion
@@ -27,6 +28,10 @@ MCP tools.
   and report the returned recovery guidance instead of mutating the roadmap.
 - Preview the target phase group from the read result: the integer anchor plus
   any existing decimal insertions already under that base phase.
+- Capture any durable requirement IDs that are already known for the urgent
+  decimal insertion. Requirement IDs may be omitted only when the decimal
+  insertion has no committed mapping yet; the objective and success criteria are
+  still required.
 - Do not precompute the final decimal suffix as persistence truth. The read
   result supports the user preview, but the insert MCP tool remains
   authoritative for the committed phase number.
@@ -34,8 +39,9 @@ MCP tools.
 ### Decide
 
 - Preview the requested anchor, the exact description, the active milestone,
-  the next decimal candidate implied by the roadmap read, and the fact that
-  later phases and dependency references will not be renumbered automatically.
+  the next decimal candidate implied by the roadmap read, the objective, the
+  success criteria, any requirement IDs, and the fact that later phases and
+  dependency references will not be renumbered automatically.
 - Use Gemini CLI `ask_user` for the confirmation gate before any mutation when
   available.
 - Keep the waiting state explicit as `phase-insert-confirmation`.
@@ -47,13 +53,15 @@ MCP tools.
 ### Execute
 
 - Call `mcp_blueprint_blueprint_roadmap_insert_phase` only after confirmation.
-- Pass only the confirmed integer `after` anchor and the confirmed
-  `description`.
+- Pass the confirmed integer `after` anchor, confirmed `description`, confirmed
+  `goal`, confirmed `successCriteria`, and any confirmed `requirementIds`.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, `phaseName`,
   `slug`, `phaseDir`, `roadmapPath`, `milestone`, `written`, and `warnings` as
   authoritative.
 - Do not hand-build decimal numbers, slugs, phase directories, roadmap list
-  lines, or Phase Details blocks from prompt logic.
+  lines, or Phase Details blocks from prompt logic. The tool writes concrete
+  roadmap intent and creates `## Phase Details` only when needed by the existing
+  ROADMAP shape.
 - If the tool reports an invalid insertion anchor or conflicting decimal
   directory, surface the condition as `invalid-insertion-anchor` or
   `conflicting-decimal-directory` and stop for recovery instead of retrying with
@@ -140,6 +148,8 @@ command must still own all MCP calls.
 ## Retry And Repair Behavior
 
 - Missing inputs: stop with usage guidance and no mutation.
+- Missing objective or success criteria: ask for concrete roadmap intent and
+  retry with `goal` plus 2-5 item `successCriteria`.
 - Decimal or malformed anchor: stop with `invalid-insertion-anchor` guidance and
   no mutation.
 - Missing target integer phase: report the invalid anchor and show valid roadmap
@@ -159,7 +169,8 @@ command must still own all MCP calls.
 ## Output Quality Criteria
 
 - The user can see exactly which urgent phase was inserted, after which anchor,
-  and why later phases were left untouched.
+  which roadmap objective and success criteria were recorded, and why later
+  phases were left untouched.
 - The result distinguishes roadmap insertion, context scaffold creation or
   reuse, and state update.
 - Warnings, drift, and uncertainty are reported instead of hidden.
@@ -176,6 +187,8 @@ command must still own all MCP calls.
   was previewed from its result.
 - The exact integer anchor and description were confirmed with `ask_user` when
   available.
+- The objective and 2-5 success criteria were confirmed and passed as `goal`
+  and `successCriteria`.
 - `mcp_blueprint_blueprint_roadmap_insert_phase` succeeded and returned
   `written: true`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through
