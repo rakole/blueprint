@@ -34,6 +34,24 @@ stay free of hidden control flow.
   Then stop immediately. Do not call MCP tools, inspect `.blueprint/`, read
   repo files, use `STATE.md.activeCommand`, write files, spawn subagents, or
   infer intent from ordinary Blueprint state before this guard passes.
+- After the activation guard passes and before ordinary review-mode lane work,
+  load these private lane references:
+  - `skills/blueprint-god-review/references/review-method.md`
+  - `skills/blueprint-god-review/references/lane-rubrics.md`
+  - `skills/blueprint-god-review/references/finding-quality.md`
+  - `skills/blueprint-god-review/references/context-selection.md`
+  - `skills/blueprint-god-review/references/finding-examples.md`
+  Do not load `skills/blueprint-god-review/references/final-curation.md` for
+  ordinary lane passes.
+  Load `skills/blueprint-god-review/references/final-curation.md` only after a
+  hidden review invocation reaches terminal review status because all hidden
+  groups are complete or blocked and no pending group remains. This terminal
+  curation reference is never required before the activation guard, before the
+  hidden MCP state reports terminal review status, or during per-lane review.
+  In fix mode, default to `finding-quality.md` and `context-selection.md` for
+  stale evidence, fix eligibility, and selected target context; load
+  `finding-examples.md` only when classifying duplicate, weak, or no-edit
+  outcomes would benefit from calibration examples.
 - Hidden `/blu-code-review --feels-like-god` orchestration is private and
   one-group-at-a-time:
   1. Start fresh hidden review state with
@@ -47,9 +65,11 @@ stay free of hidden control flow.
   3. Review exactly one returned pending group per invocation, then persist
      that group with `mcp_blueprint_blueprint_god_review_append`. Pass one
      `groupId`, one terminal group `status`, and that group's findings only.
-  4. End with the exact returned continuation command when more groups remain,
-     or the terminal review status when no pending group remains or the session
-     is blocked.
+  4. End with the exact returned continuation command when more groups remain.
+     When no pending group remains or the session is blocked, load
+     `skills/blueprint-god-review/references/final-curation.md`, curate only
+     from the durable hidden report and lane evidence, and return the terminal
+     review response described there.
   5. Do not call normal `blueprint_review_record`, do not write
      `XX-REVIEW.md`, and do not update quality gates or normal `STATE.md`.
 - Hidden `/blu-code-review-fix --feels-like-god` selection is private and

@@ -17,6 +17,19 @@ const PRIVATE_TOOL_IDS = [
 ] as const;
 
 const PRIVATE_RUNTIME_TOOL_IDS = PRIVATE_TOOL_IDS.map((toolId) => `mcp_blueprint_${toolId}`);
+const PRIVATE_LANE_REFERENCE_PATHS = [
+  "skills/blueprint-god-review/references/review-method.md",
+  "skills/blueprint-god-review/references/lane-rubrics.md",
+  "skills/blueprint-god-review/references/finding-quality.md",
+  "skills/blueprint-god-review/references/context-selection.md",
+  "skills/blueprint-god-review/references/finding-examples.md"
+] as const;
+const PRIVATE_TERMINAL_REFERENCE_PATH =
+  "skills/blueprint-god-review/references/final-curation.md";
+const PRIVATE_REFERENCE_PATHS = [
+  ...PRIVATE_LANE_REFERENCE_PATHS,
+  PRIVATE_TERMINAL_REFERENCE_PATH
+] as const;
 
 async function readRelativePath(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
@@ -111,6 +124,46 @@ test("private blueprint-god-review skill contains the hidden guard, refusal text
     skill,
     /Do not call MCP tools, inspect `\.blueprint\/`, read\s+repo files, use `STATE\.md\.activeCommand`, write files, spawn subagents/i
   );
+  assertAppearsBefore(
+    skill,
+    "Hidden God-Review Activation Guard",
+    "skills/blueprint-god-review/references/review-method.md",
+    "blueprint-god-review private reference loading"
+  );
+  assertAppearsBefore(
+    skill,
+    "skills/blueprint-god-review/references/context-selection.md",
+    "skills/blueprint-god-review/references/finding-examples.md",
+    "blueprint-god-review private example reference loading"
+  );
+  assertAppearsBefore(
+    skill,
+    "skills/blueprint-god-review/references/finding-examples.md",
+    "Hidden `/blu-code-review --feels-like-god` orchestration",
+    "blueprint-god-review private reference loading"
+  );
+  for (const referencePath of PRIVATE_LANE_REFERENCE_PATHS) {
+    assert.match(skill, new RegExp(referencePath.replaceAll("/", "\\/")));
+  }
+  assertAppearsBefore(
+    skill,
+    "Hidden God-Review Activation Guard",
+    PRIVATE_TERMINAL_REFERENCE_PATH,
+    "blueprint-god-review terminal curation loading"
+  );
+  assert.match(skill, /Do not load `skills\/blueprint-god-review\/references\/final-curation\.md` for\s+ordinary lane passes/i);
+  assert.match(
+    skill,
+    /Load `skills\/blueprint-god-review\/references\/final-curation\.md` only after a\s+hidden review invocation reaches terminal review status/i
+  );
+  assert.match(
+    skill,
+    /never required before the activation guard, before the\s+hidden MCP state reports terminal review status, or during per-lane review/i
+  );
+  assert.match(
+    skill,
+    /load\s+`finding-examples\.md` only when classifying duplicate, weak, or no-edit\s+outcomes/i
+  );
   assert.match(skill, /mcp_blueprint_blueprint_god_review_start/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_next/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_append/);
@@ -139,6 +192,85 @@ test("private blueprint-god-review skill contains the hidden guard, refusal text
   assert.match(skill, /preserve the durable god-review report and\s+remediation log/i);
 });
 
+test("private blueprint-god-review references are present and carry operational anchors", async () => {
+  const [
+    reviewMethod,
+    laneRubrics,
+    findingQuality,
+    contextSelection,
+    findingExamples
+  ] = await Promise.all(
+    PRIVATE_LANE_REFERENCE_PATHS.map((referencePath) => readRelativePath(referencePath))
+  );
+  const finalCuration = await readRelativePath(PRIVATE_TERMINAL_REFERENCE_PATH);
+
+  assert.match(reviewMethod, /Fresh-Context Loop/);
+  assert.match(reviewMethod, /Broad Scan, Then Focused Read/);
+  assert.match(reviewMethod, /Skeptical Hypothesis Loop/);
+  assert.match(reviewMethod, /One-Group Discipline/);
+  assert.match(reviewMethod, /Terminal Curation Mindset/);
+
+  for (const laneAnchor of [
+    "COR / correctness-contracts",
+    "SEC / security-privacy-auth",
+    "DAT / data-state-consistency",
+    "REL / reliability-failure-handling",
+    "TST / tests-validation",
+    "ARC / architecture-maintainability",
+    "PER / performance-scale-cost",
+    "OPS / operations-delivery"
+  ]) {
+    assert.match(laneRubrics, new RegExp(laneAnchor.replaceAll("/", "\\/")));
+  }
+  for (const section of ["Inspect:", "Evidence:", "False-positive traps:", "Finding examples:"]) {
+    assert.match(laneRubrics, new RegExp(section));
+  }
+
+  assert.match(findingQuality, /Admission Standard/);
+  assert.match(findingQuality, /Severity/);
+  assert.match(findingQuality, /Confidence/);
+  assert.match(findingQuality, /Disposition/);
+  assert.match(findingQuality, /Fix Eligibility/);
+  assert.match(findingQuality, /Duplicate Handling/);
+  assert.match(findingQuality, /accepted-risk/i);
+  assert.match(findingQuality, /observation/i);
+  assert.match(findingQuality, /follow-up/i);
+
+  for (const scopeAnchor of ["Phase Scope", "PR Scope", "Current-Diff Scope", "Explicit-Files Scope"]) {
+    assert.match(contextSelection, new RegExp(scopeAnchor));
+  }
+  assert.match(contextSelection, /Diff-first, not diff-only/);
+  assert.match(contextSelection, /Surrounding context:/);
+  assert.match(contextSelection, /Avoid:/);
+  assert.match(contextSelection, /What To Skip Or Omit/);
+
+  assert.match(findingExamples, /Strong Actionable Finding Template/);
+  assert.match(findingExamples, /Weak Finding To Drop/);
+  assert.match(findingExamples, /Unsupported Hypothesis To Drop/);
+  assert.match(findingExamples, /Observation Example/);
+  assert.match(findingExamples, /Accepted Risk Example/);
+  assert.match(findingExamples, /Duplicate Root Cause Merge Example/);
+  assert.match(findingExamples, /Stale No-Edit Fix Example/);
+  assert.match(findingExamples, /Security\/Auth Example/);
+  assert.match(findingExamples, /Data\/State Example/);
+  assert.match(findingExamples, /Tests Example/);
+  assert.match(findingExamples, /Operations\/Delivery Example/);
+
+  assert.match(finalCuration, /Terminal Review Preflight/);
+  assert.match(finalCuration, /Dedupe Protocol/);
+  assert.match(finalCuration, /Severity Reconciliation/);
+  assert.match(finalCuration, /Weak-Finding Rejection/);
+  assert.match(finalCuration, /Cross-Lane Synthesis/);
+  assert.match(finalCuration, /Terminal Response Shape/);
+  assert.match(finalCuration, /No-Side-Effect Curation/);
+  assert.match(finalCuration, /never invent missing groups/i);
+  assert.match(finalCuration, /Do not create new findings during curation unless a lane already recorded/i);
+  assert.match(finalCuration, /Keep confidence separate from severity/i);
+  assert.match(finalCuration, /Reject unsupported missing-test claims/i);
+  assert.match(finalCuration, /Do not update normal `STATE\.md`/);
+  assert.match(finalCuration, /Final curation is prompt-level only/i);
+});
+
 test("public runtime-contract resources still hide hidden branch text", async () => {
   const codeReview = await buildBlueprintCommandRuntimeContractResource("code-review");
   const codeReviewFix = await buildBlueprintCommandRuntimeContractResource("code-review-fix");
@@ -149,6 +281,24 @@ test("public runtime-contract resources still hide hidden branch text", async ()
     assert.doesNotMatch(serialized, /--feels-like-god/i);
     assert.doesNotMatch(serialized, /Hidden god-review/i);
     assert.doesNotMatch(serialized, /Hidden God-Review Activation Guard/i);
+
+    for (const referencePath of PRIVATE_REFERENCE_PATHS) {
+      assert.doesNotMatch(serialized, new RegExp(referencePath));
+    }
+    assert.doesNotMatch(serialized, /Fresh-Context Loop/i);
+    assert.doesNotMatch(serialized, /Terminal Curation Mindset/i);
+    assert.doesNotMatch(serialized, /Strong Actionable Finding Template/i);
+    assert.doesNotMatch(serialized, /Weak Finding To Drop/i);
+    assert.doesNotMatch(serialized, /Unsupported Hypothesis To Drop/i);
+    assert.doesNotMatch(serialized, /Duplicate Root Cause Merge/i);
+    assert.doesNotMatch(serialized, /Stale No-Edit Fix/i);
+    assert.doesNotMatch(serialized, /Dedupe Protocol/i);
+    assert.doesNotMatch(serialized, /Severity Reconciliation/i);
+    assert.doesNotMatch(serialized, /Weak-Finding Rejection/i);
+    assert.doesNotMatch(serialized, /Cross-Lane Synthesis/i);
+    assert.doesNotMatch(serialized, /Terminal Response Shape/i);
+    assert.doesNotMatch(serialized, /No-Side-Effect Curation/i);
+    assert.doesNotMatch(serialized, /Fix Eligibility/i);
 
     for (const toolId of PRIVATE_TOOL_IDS) {
       assert.doesNotMatch(serialized, new RegExp(toolId));
