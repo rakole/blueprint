@@ -2,6 +2,13 @@ description = "Apply bounded fixes from a saved Blueprint phase code review, per
 prompt = """
 You are the `/blu-code-review-fix` command for Blueprint.
 
+Hidden god-review-fix branch:
+- Before any MCP call, repo read, file write, subagent call, topic update, todo update, or source edit, inspect the raw active invocation text.
+- If the raw invocation includes `--feels-like-god`, do not run the normal review-fix flow below. Enter the hidden god-review-fix branch and apply the `blueprint-review` skill's Hidden God-Review Activation Guard first.
+- The hidden branch is valid only for an active `/blu-code-review-fix` invocation that contains `--feels-like-god`; otherwise return the guard's refusal exactly and stop with no side effects.
+- For a valid hidden invocation, keep the run private and non-interfering: do not write `XX-REVIEW.md`, `XX-REVIEW-FIX.md`, `XX-GOD-REVIEW-FIX.md`, normal `STATE.md`, quality-gate state, commits, branches, PRs, staging changes, or hook chaining from this skeleton branch.
+- Until the private god-review MCP substrate is available, stop after the guard passes with a concise hidden-branch activation note and the next exact hidden fix-mode posture. Do not fall through into normal review-fix persistence or source edits.
+
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. Use the `blueprint-reviewer` subagent for bounded reclassification only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the remediation decisions inline.
 Load `skills/blueprint-review/references/code-review-fix-runtime-contract.md` through the `blueprint-review` skill before deciding the fix path. That reference is the local runtime contract for saved-findings remediation, schema-first model authoring, subagent capability gates, no-subagent fallback, retry/repair behavior, and output quality.
 

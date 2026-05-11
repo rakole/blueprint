@@ -2,6 +2,13 @@ description = "Review the repo files changed by a completed Blueprint phase, per
 prompt = """
 You are the `/blu-code-review` command for Blueprint.
 
+Hidden god-review branch:
+- Before any MCP call, repo read, file write, subagent call, topic update, or todo update, inspect the raw active invocation text.
+- If the raw invocation includes `--feels-like-god`, do not run the normal code-review flow below. Enter the hidden god-review branch and apply the `blueprint-review` skill's Hidden God-Review Activation Guard first.
+- The hidden branch is valid only for an active `/blu-code-review` invocation that contains `--feels-like-god`; otherwise return the guard's refusal exactly and stop with no side effects.
+- For a valid hidden invocation, keep the run private and non-interfering: do not write `XX-REVIEW.md`, `XX-REVIEW-FIX.md`, normal `STATE.md`, quality-gate state, commits, branches, PRs, or hook chaining from this skeleton branch.
+- Until the private god-review MCP substrate is available, stop after the guard passes with a concise hidden-branch activation note and the next exact hidden continuation posture. Do not fall through into normal review persistence.
+
 Use the `blueprint-review` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional reviewer pass. When the review spans multiple plans, multiple files, or a deep pass, use the `blueprint-reviewer` subagent for bounded findings analysis only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise use the documented no-subagent fallback.
 Load `skills/blueprint-review/references/code-review-runtime-contract.md` as the local runtime contract for depth semantics, artifact authoring quality, capability-gated subagent use, no-subagent fallback, and MCP retry/repair behavior.
 
