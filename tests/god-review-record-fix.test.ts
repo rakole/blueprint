@@ -251,7 +251,7 @@ test("blueprint_god_review_record_fix blocks stale edit records but allows no-ed
   assert.equal(blocked.written, false);
   assert.ok(
     blocked.staleReasons.some((reason) =>
-      /GOD-COR-001 evidence snippet `featureValue`/.test(reason)
+      /fileSetHash changed/.test(reason)
     )
   );
   assert.equal(await readFile(path.join(repoPath, reportPath), "utf8"), beforeReport);

@@ -16,6 +16,8 @@ const PRIVATE_TOOL_IDS = [
   "blueprint_god_review_cleanup"
 ] as const;
 
+const PRIVATE_RUNTIME_TOOL_IDS = PRIVATE_TOOL_IDS.map((toolId) => `mcp_blueprint_${toolId}`);
+
 async function readRelativePath(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
@@ -29,80 +31,112 @@ function assertAppearsBefore(text: string, first: string, second: string, label:
   assert.ok(firstIndex < secondIndex, `${label} should mention ${first} before ${second}`);
 }
 
-test("code-review hidden activation branch runs before normal MCP-backed review flow", async () => {
+test("code-review manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
   const manifest = await readRelativePath("commands/blu-code-review.toml");
 
   assertAppearsBefore(
     manifest,
-    "Hidden god-review branch:",
-    "mcp_blueprint_blueprint_config_get",
+    "Dispatcher:",
+    "Use the `blueprint-review` skill as the primary orchestration contract",
     "code-review manifest"
   );
-  assert.match(manifest, /raw invocation includes `--feels-like-god`/);
-  assert.match(manifest, /active `\/blu-code-review` invocation/);
+  assert.match(manifest, /raw invocation contains a standalone `--feels-like-god` flag token/);
   assert.match(manifest, /do not run the normal code-review flow below/i);
-  assert.match(manifest, /apply the `blueprint-review` skill's Hidden God-Review Activation Guard first/);
-  assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, normal `STATE\.md`, quality-gate state/i);
-  assert.match(manifest, /Do not fall through into normal review persistence/i);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_start/);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_next/);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_append/);
-  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_load_findings/);
-  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
-  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
-});
+  assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md` for this invocation only/i);
+  assert.match(manifest, /stop if that private skill reaches a terminal outcome/i);
+  assert.doesNotMatch(manifest, /Hidden God-Review Activation Guard/i);
+  assert.doesNotMatch(manifest, /selection\.status/i);
+  assert.doesNotMatch(manifest, /\.god-review-state\.md/i);
+  assert.doesNotMatch(manifest, /scopeFingerprint/i);
 
-test("code-review-fix hidden activation branch runs before normal MCP-backed remediation flow", async () => {
-  const manifest = await readRelativePath("commands/blu-code-review-fix.toml");
-
-  assertAppearsBefore(
-    manifest,
-    "Hidden god-review-fix branch:",
-    "mcp_blueprint_blueprint_config_get",
-    "code-review-fix manifest"
-  );
-  assert.match(manifest, /raw invocation includes `--feels-like-god`/);
-  assert.match(manifest, /active `\/blu-code-review-fix` invocation/);
-  assert.match(manifest, /do not run the normal review-fix flow below/i);
-  assert.match(manifest, /apply the `blueprint-review` skill's Hidden God-Review Activation Guard first/);
-  assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, `XX-GOD-REVIEW-FIX\.md`, normal `STATE\.md`/i);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_load_findings/);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
-  assert.match(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
-  assert.match(manifest, /selection\.status/);
-  assert.match(manifest, /Do not fall through into normal review-fix persistence or source edits/i);
-
-  for (const toolId of PRIVATE_TOOL_IDS.filter(
-    (privateToolId) =>
-      privateToolId !== "blueprint_god_review_load_findings" &&
-      privateToolId !== "blueprint_god_review_record_fix" &&
-      privateToolId !== "blueprint_god_review_cleanup"
-  )) {
+  for (const toolId of PRIVATE_RUNTIME_TOOL_IDS) {
     assert.doesNotMatch(manifest, new RegExp(toolId));
   }
 });
 
-test("blueprint-review skill refuses accidental hidden activation before MCP or repo reads", async () => {
+test("code-review-fix manifest keeps the hidden dispatcher tiny and defers orchestration to the private skill", async () => {
+  const manifest = await readRelativePath("commands/blu-code-review-fix.toml");
+
+  assertAppearsBefore(
+    manifest,
+    "Dispatcher:",
+    "Use the `blueprint-review` skill as the primary orchestration contract",
+    "code-review-fix manifest"
+  );
+  assert.match(manifest, /raw invocation contains a standalone `--feels-like-god` flag token/);
+  assert.match(manifest, /do not run the normal review-fix flow below/i);
+  assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md` for this invocation only/i);
+  assert.match(manifest, /stop if that private skill reaches a terminal outcome/i);
+  assert.doesNotMatch(manifest, /Hidden God-Review Activation Guard/i);
+  assert.doesNotMatch(manifest, /selection\.status/i);
+  assert.doesNotMatch(manifest, /XX-GOD-REVIEW-FIX/i);
+  assert.doesNotMatch(manifest, /\.god-review-state\.md/i);
+
+  for (const toolId of PRIVATE_RUNTIME_TOOL_IDS) {
+    assert.doesNotMatch(manifest, new RegExp(toolId));
+  }
+});
+
+test("public blueprint-review skill stays clean of hidden god-review activation details", async () => {
   const skill = await readRelativePath("skills/blueprint-review/SKILL.md");
+
+  assert.doesNotMatch(skill, /--feels-like-god/i);
+  assert.doesNotMatch(skill, /Hidden God-Review Activation Guard/i);
+  assert.doesNotMatch(skill, /god-review/i);
+  assert.doesNotMatch(skill, /\.god-review-state\.md/i);
+  assert.doesNotMatch(skill, /XX-GOD-REVIEW-FIX/i);
+  assert.doesNotMatch(skill, /This is a mistaken skill invocation, reach out to blueprint admin for help\./);
+  assert.doesNotMatch(skill, /No `thunderbolt` today\./);
+
+  for (const toolId of PRIVATE_RUNTIME_TOOL_IDS) {
+    assert.doesNotMatch(skill, new RegExp(toolId));
+  }
+});
+
+test("private blueprint-god-review skill contains the hidden guard, refusal text, and private review flows", async () => {
+  const skill = await readRelativePath("skills/blueprint-god-review/SKILL.md");
 
   assertAppearsBefore(
     skill,
     "Hidden God-Review Activation Guard",
     "mcp_blueprint_blueprint_project_status",
-    "blueprint-review skill"
+    "blueprint-god-review skill"
   );
   assert.match(skill, /active command\s+is `\/blu-code-review` or `\/blu-code-review-fix`/i);
-  assert.match(skill, /raw invocation\s+contains `--feels-like-god`/i);
+  assert.match(skill, /raw invocation\s+contains `--feels-like-god` as a standalone flag token/i);
   assert.match(skill, /God mode only wakes during special `occassions`\./);
   assert.match(skill, /This is a mistaken skill invocation, reach out to blueprint admin for help\./);
   assert.match(skill, /No `thunderbolt` today\./);
-  assert.match(skill, /Do not call MCP tools, inspect `\.blueprint\/`, read repo\s+files, use `STATE\.md\.activeCommand`, write files, spawn subagents/i);
+  assert.match(
+    skill,
+    /Do not call MCP tools, inspect `\.blueprint\/`, read\s+repo files, use `STATE\.md\.activeCommand`, write files, spawn subagents/i
+  );
   assert.match(skill, /mcp_blueprint_blueprint_god_review_start/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_next/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_append/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_load_findings/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_record_fix/);
   assert.match(skill, /mcp_blueprint_blueprint_god_review_cleanup/);
+  assert.match(skill, /Review exactly one returned pending group per invocation/i);
+  assert.match(
+    skill,
+    /Do not call normal `blueprint_review_record`, do not write\s+`XX-REVIEW\.md`/i
+  );
+  assert.match(skill, /selection\.status/i);
+  assert.match(skill, /Fix Eligibility: eligible/);
+  assert.match(
+    skill,
+    /Use `--finding`, `--severity`, and `--all` as the only widening\s+selectors/i
+  );
+  assert.match(
+    skill,
+    /Set the record call's `terminal` flag only when the hidden fix pass has\s+reached a terminal result/i
+  );
+  assert.match(
+    skill,
+    /Cleanup may delete only the hidden session JSON and\s+`\.god-review-state\.md`/i
+  );
+  assert.match(skill, /preserve the durable god-review report and\s+remediation log/i);
 });
 
 test("public runtime-contract resources still hide hidden branch text", async () => {

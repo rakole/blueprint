@@ -15,6 +15,18 @@ const REVIEW_FAMILY_COMMANDS = [
   "ui-review"
 ] as const;
 
+const HIDDEN_GOD_REVIEW_PATTERNS = [
+  /--feels-like-god/i,
+  /blueprint-god-review/i,
+  /skills\/blueprint-god-review\/SKILL\.md/i,
+  /blueprint_god_review_start/,
+  /blueprint_god_review_next/,
+  /blueprint_god_review_append/,
+  /blueprint_god_review_load_findings/,
+  /blueprint_god_review_record_fix/,
+  /blueprint_god_review_cleanup/
+] as const;
+
 function bundledRelativePath(value: unknown): string | null {
   const pathname = value instanceof URL ? value.pathname : String(value);
   const relativePath = path.relative(process.cwd(), pathname);
@@ -75,6 +87,11 @@ test("review-family runtime contract resources do not read bundled docs at build
       `commands/blu-${commandName}.toml`,
       ...(metadata.requiredInputPaths ?? [])
     ]);
+
+    const serialized = JSON.stringify(contract, null, 2);
+    for (const pattern of HIDDEN_GOD_REVIEW_PATTERNS) {
+      assert.doesNotMatch(serialized, pattern);
+    }
   }
 
   assert.deepEqual(

@@ -253,6 +253,41 @@ test("blueprint_god_review_next blocks changed explicit file-set fingerprints wi
   assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
 });
 
+test("blueprint_god_review_next blocks uncommitted explicit-file content drift", async () => {
+  const repoPath = await writeFixtureRepo();
+  const start = await blueprintGodReviewStart({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation: "/blu-code-review --feels-like-god --files src/feature.ts",
+    scopeKind: "explicit-files",
+    files: ["src/feature.ts"],
+    runId: "god-explicit-content-next"
+  });
+  assert.equal(start.status, "started");
+
+  const sessionBefore = await readRelative(repoPath, start.sessionPath!);
+  const reportBefore = await readRelative(repoPath, start.reportPath!);
+  await writeFile(
+    path.join(repoPath, "src/feature.ts"),
+    "export function featureValue(input: number) {\n  return input + 99;\n}\n",
+    "utf8"
+  );
+
+  const next = await blueprintGodReviewNext({
+    cwd: repoPath,
+    activeCommand: "/blu-code-review",
+    rawInvocation:
+      "/blu-code-review --feels-like-god --run-id god-explicit-content-next --continue",
+    runId: "god-explicit-content-next"
+  });
+
+  assert.equal(next.status, "stale");
+  assert.match(next.staleReasons.join("\n"), /fileSetHash changed/);
+  assert.equal(next.written, false);
+  assert.equal(await readRelative(repoPath, start.sessionPath!), sessionBefore);
+  assert.equal(await readRelative(repoPath, start.reportPath!), reportBefore);
+});
+
 test("blueprint_god_review_next blocks changed current-diff fingerprints and preserves artifacts", async () => {
   const repoPath = await writeFixtureRepo();
   await writeFile(

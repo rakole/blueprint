@@ -74224,6 +74224,13 @@ var godReviewSessionSchema = object2({
       message: "phase must be omitted unless scopeKind is phase."
     });
   }
+  for (const issue2 of validateGodReviewSessionPaths(session)) {
+    context.addIssue({
+      code: "custom",
+      path: [issue2.field],
+      message: issue2.message
+    });
+  }
 });
 var godReviewStartInputSchema = {
   cwd: string2().optional(),
@@ -74313,6 +74320,9 @@ var godReviewCleanupArgsSchema = object2(godReviewCleanupInputSchema);
 function hasGodReviewFlag(rawInvocation) {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
+function rawInvocationCommand(rawInvocation) {
+  return rawInvocation.trim().split(/\s+/)[0] ?? "";
+}
 function isGodReviewActiveCommand(value) {
   return GOD_REVIEW_ACTIVE_COMMANDS.includes(value);
 }
@@ -74326,12 +74336,20 @@ function evaluateGodReviewActivation(args) {
       reason: "Active command is not a hidden god-review command."
     };
   }
+  if (rawInvocationCommand(args.rawInvocation) !== activeCommand2) {
+    return {
+      status: "refused",
+      refusal: GOD_REVIEW_REFUSAL,
+      sideEffectsAllowed: false,
+      reason: "Raw invocation command does not match the active hidden god-review command."
+    };
+  }
   if (!hasGodReviewFlag(args.rawInvocation)) {
     return {
       status: "refused",
       refusal: GOD_REVIEW_REFUSAL,
       sideEffectsAllowed: false,
-      reason: "Raw invocation does not include the hidden god-review flag."
+      reason: "Raw invocation does not contain the standalone hidden god-review flag token."
     };
   }
   return {
@@ -74388,9 +74406,28 @@ function stableUniqueSorted(values) {
 function hashGodReviewFileSet(args) {
   const payload = JSON.stringify({
     files: stableUniqueSorted(args.files),
-    skippedFiles: stableUniqueSorted(args.skippedFiles ?? [])
+    skippedFiles: stableUniqueSorted(args.skippedFiles ?? []),
+    contentHashes: [...args.contentHashes ?? []].sort(
+      (left, right) => left.path.localeCompare(right.path)
+    )
   });
   return `sha256:${createHash4("sha256").update(payload).digest("hex")}`;
+}
+async function hashGodReviewResolvedFileSet(args) {
+  const contentHashes = await Promise.all(
+    stableUniqueSorted(args.files).map(async (file2) => {
+      const content = await fs12.readFile(resolveRepoRelativePath(args.projectRoot, file2));
+      return {
+        path: file2,
+        hash: `sha256:${createHash4("sha256").update(content).digest("hex")}`
+      };
+    })
+  );
+  return hashGodReviewFileSet({
+    files: args.files,
+    skippedFiles: args.skippedFiles,
+    contentHashes
+  });
 }
 function buildGodReviewPhasePaths(args) {
   return {
@@ -74405,6 +74442,83 @@ function buildGodReviewReportPaths(args) {
     humanStatePath: `.blueprint/reports/${args.runId}.god-review-state.md`,
     reportPath: `.blueprint/reports/god-review-${args.runId}.md`
   };
+}
+function isGeneratedPhaseSessionPath(value) {
+  return /^\.blueprint\/phases\/[^/]+\/\.god-review-session\.json$/.test(value);
+}
+function isGeneratedPhaseHumanStatePath(value) {
+  return /^\.blueprint\/phases\/[^/]+\/\.god-review-state\.md$/.test(value);
+}
+function isGeneratedPhaseReportPath(value) {
+  return /^\.blueprint\/phases\/[^/]+\/[^/]+-GOD-REVIEW\.md$/.test(value);
+}
+function isGeneratedReportSessionPath(value) {
+  return /^\.blueprint\/reports\/\.god-review-[A-Za-z0-9._-]+\.json$/.test(value);
+}
+function isGeneratedReportHumanStatePath(value) {
+  return /^\.blueprint\/reports\/[A-Za-z0-9._-]+\.god-review-state\.md$/.test(value);
+}
+function isGeneratedReportReportPath(value) {
+  return /^\.blueprint\/reports\/god-review-[A-Za-z0-9._-]+\.md$/.test(value);
+}
+function normalizeSessionOwnedPath(value) {
+  return path15.posix.normalize(normalizePathSeparators(value.trim()));
+}
+function validateGodReviewSessionPaths(session) {
+  const issues = [];
+  const sessionPath = normalizeSessionOwnedPath(session.sessionPath);
+  const humanStatePath = normalizeSessionOwnedPath(session.humanStatePath);
+  const reportPath = normalizeSessionOwnedPath(session.reportPath);
+  if (sessionPath !== session.sessionPath || humanStatePath !== session.humanStatePath || reportPath !== session.reportPath) {
+    return [
+      {
+        field: "sessionPath",
+        message: "God-review session paths must be normalized repo-relative paths."
+      }
+    ];
+  }
+  if (session.scopeKind === "phase") {
+    if (!isGeneratedPhaseSessionPath(sessionPath)) {
+      issues.push({
+        field: "sessionPath",
+        message: "Phase god-review sessions must use a generated phase session path."
+      });
+    }
+    const phaseDir = sessionPath.replace(/\/\.god-review-session\.json$/, "");
+    if (!isGeneratedPhaseHumanStatePath(humanStatePath) || humanStatePath !== `${phaseDir}/.god-review-state.md`) {
+      issues.push({
+        field: "humanStatePath",
+        message: "Phase god-review human state must use the generated phase state path."
+      });
+    }
+    if (!isGeneratedPhaseReportPath(reportPath) || !reportPath.startsWith(`${phaseDir}/`)) {
+      issues.push({
+        field: "reportPath",
+        message: "Phase god-review reports must stay in the generated phase report path."
+      });
+    }
+    return issues;
+  }
+  const expected = buildGodReviewReportPaths({ runId: session.runId });
+  if (!isGeneratedReportSessionPath(sessionPath) || sessionPath !== expected.sessionPath) {
+    issues.push({
+      field: "sessionPath",
+      message: "Report-scoped god-review sessions must use the generated report session path."
+    });
+  }
+  if (!isGeneratedReportHumanStatePath(humanStatePath) || humanStatePath !== expected.humanStatePath) {
+    issues.push({
+      field: "humanStatePath",
+      message: "Report-scoped god-review human state must use the generated report state path."
+    });
+  }
+  if (!isGeneratedReportReportPath(reportPath) || reportPath !== expected.reportPath) {
+    issues.push({
+      field: "reportPath",
+      message: "Report-scoped god-review reports must use the generated report path."
+    });
+  }
+  return issues;
 }
 function buildInitialGodReviewGroups() {
   return GOD_REVIEW_GROUPS.map((group) => ({
@@ -74802,6 +74916,13 @@ function normalizeGodReviewSessionPath(rawPath) {
       reason: "God-review session path must point to a JSON file."
     };
   }
+  if (!isGeneratedPhaseSessionPath(normalizedPath) && !isGeneratedReportSessionPath(normalizedPath)) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review session path must be a generated hidden session JSON path."
+    };
+  }
   return { valid: true, path: normalizedPath };
 }
 function normalizeGodReviewReportPath(rawPath) {
@@ -75008,8 +75129,9 @@ async function fingerprintStoredFileSet(args) {
     baseSha: headSha,
     headSha,
     diffHash: args.session.scopeFingerprint.diffHash,
-    fileSetHash: hashGodReviewFileSet({
-      files: args.session.files,
+    fileSetHash: await hashGodReviewResolvedFileSet({
+      projectRoot: args.projectRoot,
+      files: resolvedFiles.files,
       skippedFiles: args.session.skippedFiles
     })
   };
@@ -75736,7 +75858,10 @@ async function resolvePhaseScope(args) {
       baseSha: headSha,
       headSha,
       diffHash: null,
-      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      fileSetHash: await hashGodReviewResolvedFileSet({
+        projectRoot: args.projectRoot,
+        files: resolvedFiles.files
+      }),
       prNumber: null
     },
     warnings: [...scoped.warnings, ...resolvedFiles.warnings]
@@ -75774,7 +75899,10 @@ async function resolveExplicitFilesScope(args) {
       baseSha: headSha,
       headSha,
       diffHash: null,
-      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      fileSetHash: await hashGodReviewResolvedFileSet({
+        projectRoot: args.projectRoot,
+        files: resolvedFiles.files
+      }),
       prNumber: null
     },
     warnings: resolvedFiles.warnings

@@ -40,18 +40,25 @@ async function readRelative(repoPath: string, relativePath: string): Promise<str
   return readFile(path.join(repoPath, relativePath), "utf8");
 }
 
-test("hidden code-review branch instructions wire start next and append without changing normal review flow", async () => {
+test("hidden code-review dispatcher defers start next and append orchestration to private skill", async () => {
   const manifest = await readRepoFile("commands/blu-code-review.toml");
-  const skill = await readRepoFile("skills/blueprint-review/SKILL.md");
+  const publicSkill = await readRepoFile("skills/blueprint-review/SKILL.md");
+  const privateSkill = await readRepoFile("skills/blueprint-god-review/SKILL.md");
 
-  for (const text of [manifest, skill]) {
-    assert.match(text, /mcp_blueprint_blueprint_god_review_start/);
-    assert.match(text, /mcp_blueprint_blueprint_god_review_next/);
-    assert.match(text, /mcp_blueprint_blueprint_god_review_append/);
-    assert.match(text, /exactly one returned pending group|one-group-at-a-time/);
-    assert.match(text, /terminal hidden review status|terminal hidden review status/);
+  assert.match(manifest, /Follow `skills\/blueprint-god-review\/SKILL\.md`/);
+  for (const privateTool of [
+    /mcp_blueprint_blueprint_god_review_start/,
+    /mcp_blueprint_blueprint_god_review_next/,
+    /mcp_blueprint_blueprint_god_review_append/
+  ]) {
+    assert.doesNotMatch(manifest, privateTool);
+    assert.doesNotMatch(publicSkill, privateTool);
+    assert.match(privateSkill, privateTool);
   }
 
+  assert.match(privateSkill, /one-group-at-a-time/);
+  assert.match(privateSkill, /Review exactly one returned pending group per invocation/);
+  assert.match(privateSkill, /terminal review status/);
   assert.match(manifest, /mcp_blueprint_blueprint_review_record/);
   assert.match(manifest, /XX-REVIEW\.md/);
 });
