@@ -1,6 +1,7 @@
 import type { ToolDefinition } from "./tool-types.js";
 import { artifactToolDefinitions } from "./tools/artifacts.js";
 import { configToolDefinitions } from "./tools/config.js";
+import { godReviewToolDefinitions } from "./tools/god-review.js";
 import { impactToolDefinitions } from "./tools/impact.js";
 import { phaseToolDefinitions } from "./tools/phase.js";
 import { projectToolDefinitions } from "./tools/project.js";
@@ -15,6 +16,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   ...stateToolDefinitions,
   ...phaseToolDefinitions,
   ...reviewToolDefinitions,
+  ...godReviewToolDefinitions,
   ...artifactToolDefinitions,
   ...impactToolDefinitions,
   ...updateToolDefinitions,
