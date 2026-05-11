@@ -1,7 +1,18 @@
-import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
+import { promises as fs } from "node:fs";
 import path from "node:path";
+import { promisify } from "node:util";
 
 import * as z from "zod/v4";
+
+import type { ToolDefinition } from "../tool-types.js";
+import {
+  ensureRepoRoot,
+  resolveBlueprintPath,
+  resolveRepoRelativePath
+} from "./artifacts.js";
+import { blueprintReviewScope } from "./review.js";
 
 /**
  * Private god-review substrate for hidden `--feels-like-god` review/fix modes.
@@ -18,6 +29,8 @@ import * as z from "zod/v4";
  * `.god-review-state.md` file is a god-mode progress aid only, while session
  * JSON owns continuation scope.
  */
+
+const execFileAsync = promisify(execFile);
 
 export const GOD_REVIEW_FLAG = "--feels-like-god" as const;
 export const GOD_REVIEW_REFUSAL = [
@@ -305,6 +318,51 @@ export type GodReviewParseResult = {
   warnings: string[];
 };
 
+type GodReviewScopeResolution = {
+  scopeKind: GodReviewScopeKind;
+  phase: string | number | null;
+  paths: GodReviewPhasePaths;
+  files: string[];
+  skippedFiles: string[];
+  fingerprint: GodReviewScopeFingerprint;
+  warnings: string[];
+};
+
+export type GodReviewStartResult = {
+  status: "started" | "reused" | "invalid" | "refused";
+  activated: boolean;
+  refusal?: string;
+  reason: string | null;
+  runId: string | null;
+  scopeKind: GodReviewScopeKind | null;
+  phase: string | number | null;
+  sessionPath: string | null;
+  humanStatePath: string | null;
+  reportPath: string | null;
+  files: string[];
+  skippedFiles: string[];
+  scopeFingerprint: GodReviewScopeFingerprint | null;
+  groups: GodReviewGroupState[];
+  nextGroupId: GodReviewGroupId | null;
+  nextCommand: string | null;
+  written: boolean;
+  createdPaths: string[];
+  warnings: string[];
+};
+
+const godReviewStartInputSchema = {
+  cwd: z.string().optional(),
+  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  rawInvocation: z.string(),
+  scopeKind: godReviewScopeKindSchema.optional(),
+  phase: z.union([z.string(), z.number()]).optional(),
+  prNumber: z.number().int().positive().optional(),
+  files: z.array(z.string()).optional(),
+  runId: z.string().optional()
+};
+const godReviewStartArgsSchema = z.object(godReviewStartInputSchema);
+type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
+
 function hasGodReviewFlag(rawInvocation: string): boolean {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
@@ -453,6 +511,609 @@ export function buildInitialGodReviewGroups(): GodReviewGroupState[] {
   }));
 }
 
+function stableHash(value: string): string {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function isValidRunId(value: string): boolean {
+  return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
+}
+
+function generateGodReviewRunId(args: {
+  scopeKind: GodReviewScopeKind;
+  files: string[];
+}): string {
+  const day = new Date().toISOString().slice(0, 10);
+  const scopeHash = createHash("sha256")
+    .update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files }))
+    .digest("hex")
+    .slice(0, 8);
+  const entropy = randomBytes(3).toString("hex");
+
+  return `god-${day}-${scopeHash}-${entropy}`;
+}
+
+async function pathExists(absolutePath: string): Promise<boolean> {
+  try {
+    await fs.access(absolutePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readTextIfPresent(absolutePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(absolutePath, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+async function runExternalCommand(
+  command: string,
+  args: string[],
+  cwd: string
+): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync(command, args, {
+      cwd,
+      encoding: "utf8",
+      maxBuffer: 20 * 1024 * 1024
+    });
+
+    return String(stdout).trim();
+  } catch (error) {
+    const stderr =
+      error instanceof Error && "stderr" in error
+        ? String((error as Error & { stderr?: unknown }).stderr ?? "").trim()
+        : "";
+    const details = stderr.length > 0 ? `: ${stderr}` : "";
+
+    throw new Error(`${command} ${args.join(" ")} failed${details}`);
+  }
+}
+
+async function currentGitHead(projectRoot: string): Promise<string | null> {
+  try {
+    const head = await runExternalCommand("git", ["rev-parse", "HEAD"], projectRoot);
+    return head.length > 0 ? head : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveExistingRepoFiles(args: {
+  projectRoot: string;
+  files: string[];
+  sourceLabel: string;
+}): Promise<{
+  valid: boolean;
+  files: string[];
+  skippedFiles: string[];
+  warnings: string[];
+  reason: string | null;
+}> {
+  const resolvedFiles = new Set<string>();
+  const warnings: string[] = [];
+  const skippedFiles: string[] = [];
+
+  for (const rawFile of args.files) {
+    const normalized = normalizeGodReviewRepoRelativeFilePath(rawFile);
+
+    if (!normalized.valid) {
+      skippedFiles.push(rawFile);
+      warnings.push(
+        `Invalid ${args.sourceLabel} path: ${rawFile} (${normalized.reason})`
+      );
+      continue;
+    }
+
+    let absolutePath: string;
+
+    try {
+      absolutePath = resolveRepoRelativePath(args.projectRoot, normalized.path);
+    } catch (error) {
+      skippedFiles.push(normalized.path);
+      warnings.push(
+        error instanceof Error
+          ? `Invalid ${args.sourceLabel} path: ${normalized.path} (${error.message})`
+          : `Invalid ${args.sourceLabel} path: ${normalized.path} (could not be resolved).`
+      );
+      continue;
+    }
+
+    let stats;
+
+    try {
+      stats = await fs.stat(absolutePath);
+    } catch {
+      skippedFiles.push(normalized.path);
+      warnings.push(
+        `Invalid ${args.sourceLabel} path: ${normalized.path} (file does not exist).`
+      );
+      continue;
+    }
+
+    if (!stats.isFile()) {
+      skippedFiles.push(normalized.path);
+      warnings.push(
+        `Invalid ${args.sourceLabel} path: ${normalized.path} (${stats.isDirectory() ? "directories" : "non-file entries"} are not allowed).`
+      );
+      continue;
+    }
+
+    resolvedFiles.add(normalized.path);
+  }
+
+  const files = [...resolvedFiles].sort((left, right) => left.localeCompare(right));
+  const valid = skippedFiles.length === 0 && files.length > 0;
+
+  return {
+    valid,
+    files,
+    skippedFiles,
+    warnings,
+    reason:
+      files.length === 0
+        ? `No valid repo files were resolved for ${args.sourceLabel}.`
+        : skippedFiles.length > 0
+          ? `One or more ${args.sourceLabel} paths were invalid.`
+          : null
+  };
+}
+
+async function hashCurrentDiff(projectRoot: string, files: string[]): Promise<string> {
+  const [diff, untrackedPayloads] = await Promise.all([
+    runExternalCommand("git", ["diff", "--binary", "HEAD", "--"], projectRoot),
+    Promise.all(
+      files.map(async (file) => {
+        const trackedStatus = await runExternalCommand(
+          "git",
+          ["ls-files", "--error-unmatch", file],
+          projectRoot
+        ).then(
+          () => "tracked",
+          () => "untracked"
+        );
+
+        if (trackedStatus === "tracked") {
+          return null;
+        }
+
+        const content = await fs.readFile(
+          resolveRepoRelativePath(projectRoot, file),
+          "utf8"
+        );
+
+        return `untracked:${file}\n${content}`;
+      })
+    )
+  ]);
+
+  return stableHash(`${diff}\n${untrackedPayloads.filter(Boolean).join("\n")}`);
+}
+
+function nextGodReviewCommand(args: {
+  activeCommand: GodReviewActiveCommand;
+  scopeKind: GodReviewScopeKind;
+  phase: string | number | null;
+  runId: string;
+}): string {
+  if (args.scopeKind === "phase" && args.phase !== null) {
+    return `${args.activeCommand} ${args.phase} ${GOD_REVIEW_FLAG} --continue`;
+  }
+
+  return `${args.activeCommand} ${GOD_REVIEW_FLAG} --run-id ${args.runId} --continue`;
+}
+
+async function writeGodReviewSessionArtifacts(args: {
+  projectRoot: string;
+  session: GodReviewSession;
+  reportHeader: string;
+  humanState: string;
+}): Promise<string[]> {
+  const createdPaths: string[] = [];
+
+  for (const [relativePath, content] of [
+    [args.session.sessionPath, `${JSON.stringify(args.session, null, 2)}\n`],
+    [args.session.reportPath, args.reportHeader],
+    [args.session.humanStatePath, args.humanState]
+  ] as const) {
+    const absolutePath = resolveBlueprintPath(args.projectRoot, relativePath);
+
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+
+    if (!(await pathExists(absolutePath))) {
+      createdPaths.push(relativePath);
+    }
+
+    await fs.writeFile(absolutePath, content, "utf8");
+  }
+
+  return createdPaths;
+}
+
+function startResultFromSession(args: {
+  status: "started" | "reused";
+  session: GodReviewSession;
+  nextCommand: string;
+  written: boolean;
+  createdPaths: string[];
+  warnings: string[];
+  reason: string | null;
+}): GodReviewStartResult {
+  return {
+    status: args.status,
+    activated: true,
+    reason: args.reason,
+    runId: args.session.runId,
+    scopeKind: args.session.scopeKind,
+    phase: args.session.phase ?? null,
+    sessionPath: args.session.sessionPath,
+    humanStatePath: args.session.humanStatePath,
+    reportPath: args.session.reportPath,
+    files: args.session.files,
+    skippedFiles: args.session.skippedFiles,
+    scopeFingerprint: args.session.scopeFingerprint,
+    groups: args.session.groups,
+    nextGroupId: args.session.nextGroupId,
+    nextCommand: args.nextCommand,
+    written: args.written,
+    createdPaths: args.createdPaths,
+    warnings: args.warnings
+  };
+}
+
+function invalidStartResult(args: {
+  activated?: boolean;
+  reason: string;
+  warnings?: string[];
+}): GodReviewStartResult {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    runId: null,
+    scopeKind: null,
+    phase: null,
+    sessionPath: null,
+    humanStatePath: null,
+    reportPath: null,
+    files: [],
+    skippedFiles: [],
+    scopeFingerprint: null,
+    groups: [],
+    nextGroupId: null,
+    nextCommand: null,
+    written: false,
+    createdPaths: [],
+    warnings: args.warnings ?? []
+  };
+}
+
+function determineScopeKind(args: GodReviewStartArgs): GodReviewScopeKind {
+  if (args.scopeKind) {
+    return args.scopeKind;
+  }
+
+  if (args.prNumber !== undefined) {
+    return "pr";
+  }
+
+  if ((args.files ?? []).length > 0) {
+    return "explicit-files";
+  }
+
+  if (/\s--current-diff(?=$|\s)/.test(args.rawInvocation)) {
+    return "current-diff";
+  }
+
+  return "phase";
+}
+
+function parsePhaseFromInvocation(rawInvocation: string): string | null {
+  const tokens = rawInvocation.trim().split(/\s+/).slice(1);
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+
+    if (token === GOD_REVIEW_FLAG || token === "--continue") {
+      continue;
+    }
+
+    if (token.startsWith("--")) {
+      if (["--run-id", "--pr", "--finding", "--severity"].includes(token)) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (/^\d+(?:\.\d+)?$/.test(token)) {
+      return token;
+    }
+  }
+
+  return null;
+}
+
+async function resolvePhaseScope(args: {
+  projectRoot: string;
+  phase: string | number | undefined;
+  rawInvocation: string;
+}): Promise<GodReviewScopeResolution | GodReviewStartResult> {
+  const phase = args.phase ?? parsePhaseFromInvocation(args.rawInvocation) ?? undefined;
+  const scoped = await blueprintReviewScope({
+    cwd: args.projectRoot,
+    phase
+  });
+
+  if (scoped.status !== "ready" || !scoped.phase) {
+    return invalidStartResult({
+      reason: scoped.reason ?? "Phase scope could not be resolved.",
+      warnings: scoped.warnings
+    });
+  }
+
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files: scoped.files,
+    sourceLabel: "phase god-review scope"
+  });
+
+  if (!resolvedFiles.valid) {
+    return invalidStartResult({
+      reason: resolvedFiles.reason ?? "Phase scope contained invalid files.",
+      warnings: [...scoped.warnings, ...resolvedFiles.warnings]
+    });
+  }
+
+  const headSha = await currentGitHead(args.projectRoot);
+  const paths = buildGodReviewPhasePaths({
+    phaseDir: scoped.phase.phaseDir,
+    phasePrefix: scoped.phase.phasePrefix
+  });
+
+  return {
+    scopeKind: "phase",
+    phase: scoped.phase.phaseNumber,
+    paths,
+    files: resolvedFiles.files,
+    skippedFiles: [],
+    fingerprint: {
+      baseSha: headSha,
+      headSha,
+      diffHash: null,
+      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      prNumber: null
+    },
+    warnings: [...scoped.warnings, ...resolvedFiles.warnings]
+  };
+}
+
+async function resolveExplicitFilesScope(args: {
+  projectRoot: string;
+  files: string[] | undefined;
+  runId: string | undefined;
+}): Promise<GodReviewScopeResolution | GodReviewStartResult> {
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files: args.files ?? [],
+    sourceLabel: "explicit god-review scope"
+  });
+
+  if (!resolvedFiles.valid) {
+    return invalidStartResult({
+      reason: resolvedFiles.reason ?? "Explicit file scope contained invalid files.",
+      warnings: resolvedFiles.warnings
+    });
+  }
+
+  if (args.runId !== undefined && !isValidRunId(args.runId)) {
+    return invalidStartResult({
+      reason: "runId may contain only letters, numbers, dots, underscores, and dashes."
+    });
+  }
+
+  const runId =
+    args.runId ??
+    generateGodReviewRunId({
+      scopeKind: "explicit-files",
+      files: resolvedFiles.files
+    });
+  const headSha = await currentGitHead(args.projectRoot);
+
+  return {
+    scopeKind: "explicit-files",
+    phase: null,
+    paths: buildGodReviewReportPaths({ runId }),
+    files: resolvedFiles.files,
+    skippedFiles: [],
+    fingerprint: {
+      baseSha: headSha,
+      headSha,
+      diffHash: null,
+      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      prNumber: null
+    },
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function resolveCurrentDiffScope(args: {
+  projectRoot: string;
+  runId: string | undefined;
+}): Promise<GodReviewScopeResolution | GodReviewStartResult> {
+  if (args.runId !== undefined && !isValidRunId(args.runId)) {
+    return invalidStartResult({
+      reason: "runId may contain only letters, numbers, dots, underscores, and dashes."
+    });
+  }
+
+  const [changed, untracked] = await Promise.all([
+    runExternalCommand("git", ["diff", "--name-only", "HEAD", "--"], args.projectRoot),
+    runExternalCommand(
+      "git",
+      ["ls-files", "--others", "--exclude-standard"],
+      args.projectRoot
+    )
+  ]);
+  const changedFiles = [...changed.split("\n"), ...untracked.split("\n")]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files: changedFiles,
+    sourceLabel: "current-diff god-review scope"
+  });
+
+  if (!resolvedFiles.valid) {
+    return invalidStartResult({
+      reason: resolvedFiles.reason ?? "Current diff scope contained invalid files.",
+      warnings: resolvedFiles.warnings
+    });
+  }
+
+  const runId =
+    args.runId ??
+    generateGodReviewRunId({
+      scopeKind: "current-diff",
+      files: resolvedFiles.files
+    });
+  const headSha = await currentGitHead(args.projectRoot);
+
+  return {
+    scopeKind: "current-diff",
+    phase: null,
+    paths: buildGodReviewReportPaths({ runId }),
+    files: resolvedFiles.files,
+    skippedFiles: [],
+    fingerprint: {
+      baseSha: headSha,
+      headSha,
+      diffHash: await hashCurrentDiff(args.projectRoot, resolvedFiles.files),
+      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      prNumber: null
+    },
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function resolvePrScope(args: {
+  projectRoot: string;
+  prNumber: number | undefined;
+  runId: string | undefined;
+}): Promise<GodReviewScopeResolution | GodReviewStartResult> {
+  if (args.prNumber === undefined) {
+    return invalidStartResult({ reason: "prNumber is required for PR god-review scope." });
+  }
+
+  if (args.runId !== undefined && !isValidRunId(args.runId)) {
+    return invalidStartResult({
+      reason: "runId may contain only letters, numbers, dots, underscores, and dashes."
+    });
+  }
+
+  const pr = String(args.prNumber);
+  const [nameOnly, diff, viewJson] = await Promise.all([
+    runExternalCommand("gh", ["pr", "diff", pr, "--name-only"], args.projectRoot),
+    runExternalCommand("gh", ["pr", "diff", pr], args.projectRoot),
+    runExternalCommand(
+      "gh",
+      ["pr", "view", pr, "--json", "baseRefOid,headRefOid"],
+      args.projectRoot
+    )
+  ]);
+  const files = nameOnly
+    .split("\n")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const resolvedFiles = await resolveExistingRepoFiles({
+    projectRoot: args.projectRoot,
+    files,
+    sourceLabel: "PR god-review scope"
+  });
+
+  if (!resolvedFiles.valid) {
+    return invalidStartResult({
+      reason: resolvedFiles.reason ?? "PR scope contained invalid files.",
+      warnings: resolvedFiles.warnings
+    });
+  }
+
+  let prView: { baseRefOid?: unknown; headRefOid?: unknown };
+
+  try {
+    prView = JSON.parse(viewJson) as { baseRefOid?: unknown; headRefOid?: unknown };
+  } catch {
+    return invalidStartResult({
+      reason: "gh pr view did not return valid JSON for PR god-review scope."
+    });
+  }
+
+  const runId =
+    args.runId ??
+    generateGodReviewRunId({
+      scopeKind: "pr",
+      files: resolvedFiles.files
+    });
+
+  return {
+    scopeKind: "pr",
+    phase: null,
+    paths: buildGodReviewReportPaths({ runId }),
+    files: resolvedFiles.files,
+    skippedFiles: [],
+    fingerprint: {
+      baseSha:
+        typeof prView.baseRefOid === "string" && prView.baseRefOid.length > 0
+          ? prView.baseRefOid
+          : null,
+      headSha:
+        typeof prView.headRefOid === "string" && prView.headRefOid.length > 0
+          ? prView.headRefOid
+          : null,
+      diffHash: stableHash(diff),
+      fileSetHash: hashGodReviewFileSet({ files: resolvedFiles.files }),
+      prNumber: args.prNumber
+    },
+    warnings: resolvedFiles.warnings
+  };
+}
+
+async function resolveGodReviewScope(
+  args: GodReviewStartArgs,
+  projectRoot: string
+): Promise<GodReviewScopeResolution | GodReviewStartResult> {
+  const scopeKind = determineScopeKind(args);
+
+  switch (scopeKind) {
+    case "phase":
+      return resolvePhaseScope({
+        projectRoot,
+        phase: args.phase,
+        rawInvocation: args.rawInvocation
+      });
+    case "explicit-files":
+      return resolveExplicitFilesScope({
+        projectRoot,
+        files: args.files,
+        runId: args.runId
+      });
+    case "current-diff":
+      return resolveCurrentDiffScope({
+        projectRoot,
+        runId: args.runId
+      });
+    case "pr":
+      return resolvePrScope({
+        projectRoot,
+        prNumber: args.prNumber,
+        runId: args.runId
+      });
+  }
+}
+
 export function renderGodReviewReportHeader(args: {
   runId: string;
   status: GodReviewSessionStatus;
@@ -495,6 +1156,171 @@ export function renderGodReviewHumanState(args: {
     `- Next hidden command: ${args.nextCommand}`,
     ""
   ].join("\n");
+}
+
+export async function blueprintGodReviewStart(
+  rawArgs: GodReviewStartArgs
+): Promise<GodReviewStartResult> {
+  const parsed = godReviewStartArgsSchema.safeParse(rawArgs);
+
+  if (!parsed.success) {
+    return invalidStartResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_start arguments.",
+      warnings: parsed.error.issues.map((issue) => issue.message)
+    });
+  }
+
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      runId: null,
+      scopeKind: null,
+      phase: null,
+      sessionPath: null,
+      humanStatePath: null,
+      reportPath: null,
+      files: [],
+      skippedFiles: [],
+      scopeFingerprint: null,
+      groups: [],
+      nextGroupId: null,
+      nextCommand: null,
+      written: false,
+      createdPaths: [],
+      warnings: []
+    };
+  }
+
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const resolvedScope = await resolveGodReviewScope(args, projectRoot);
+
+  if ("status" in resolvedScope) {
+    return resolvedScope;
+  }
+
+  const sessionPath = resolveBlueprintPath(projectRoot, resolvedScope.paths.sessionPath);
+  const existingSessionRaw = await readTextIfPresent(sessionPath);
+
+  if (existingSessionRaw !== null) {
+    let existingSessionJson: unknown;
+
+    try {
+      existingSessionJson = JSON.parse(existingSessionRaw);
+    } catch {
+      return invalidStartResult({
+        reason: `${resolvedScope.paths.sessionPath} is not valid JSON.`
+      });
+    }
+
+    const existingSession = godReviewSessionSchema.safeParse(existingSessionJson);
+
+    if (!existingSession.success) {
+      return invalidStartResult({
+        reason: `${resolvedScope.paths.sessionPath} is not a valid god-review session.`,
+        warnings: existingSession.error.issues.map((issue) => issue.message)
+      });
+    }
+
+    return startResultFromSession({
+      status: "reused",
+      session: existingSession.data,
+      nextCommand: nextGodReviewCommand({
+        activeCommand: existingSession.data.activeCommand,
+        scopeKind: existingSession.data.scopeKind,
+        phase: existingSession.data.phase ?? null,
+        runId: existingSession.data.runId
+      }),
+      written: false,
+      createdPaths: [],
+      warnings: resolvedScope.warnings,
+      reason: "Existing god-review session reused."
+    });
+  }
+
+  const now = new Date().toISOString();
+  const runId =
+    resolvedScope.scopeKind === "phase"
+      ? `god-${String(resolvedScope.phase)}`
+      : path
+          .basename(resolvedScope.paths.sessionPath)
+          .replace(/^\.god-review-/, "")
+          .replace(/\.json$/, "");
+  const groups = buildInitialGodReviewGroups();
+  const nextGroupId = groups[0]?.id ?? null;
+  const session: GodReviewSession = {
+    schemaVersion: 1,
+    runId,
+    parentRunId: null,
+    status: "in-progress",
+    createdAt: now,
+    updatedAt: now,
+    activeCommand: activation.activeCommand,
+    scopeKind: resolvedScope.scopeKind,
+    ...(resolvedScope.scopeKind === "phase" ? { phase: resolvedScope.phase ?? undefined } : {}),
+    sessionPath: resolvedScope.paths.sessionPath,
+    humanStatePath: resolvedScope.paths.humanStatePath,
+    reportPath: resolvedScope.paths.reportPath,
+    files: resolvedScope.files,
+    skippedFiles: resolvedScope.skippedFiles,
+    scopeFingerprint: resolvedScope.fingerprint,
+    groups,
+    nextGroupId,
+    cleanup: {
+      reviewTerminal: false,
+      godFixTerminal: false,
+      eligible: false
+    }
+  };
+  const nextCommand = nextGodReviewCommand({
+    activeCommand: activation.activeCommand,
+    scopeKind: session.scopeKind,
+    phase: session.phase ?? null,
+    runId: session.runId
+  });
+  const reportHeader = renderGodReviewReportHeader({
+    runId: session.runId,
+    status: session.status,
+    scopeKind: session.scopeKind,
+    sessionPath: session.sessionPath,
+    scopeFingerprintSummary: session.scopeFingerprint.fileSetHash
+  });
+  const humanState = renderGodReviewHumanState({
+    runId: session.runId,
+    scopeKind: session.scopeKind,
+    fileCount: session.files.length,
+    currentGroupId: null,
+    nextGroupId,
+    reviewTerminal: false,
+    godFixTerminal: false,
+    stale: false,
+    nextCommand
+  });
+  const createdPaths = await writeGodReviewSessionArtifacts({
+    projectRoot,
+    session,
+    reportHeader,
+    humanState
+  });
+
+  return startResultFromSession({
+    status: "started",
+    session,
+    nextCommand,
+    written: true,
+    createdPaths,
+    warnings: resolvedScope.warnings,
+    reason: null
+  });
 }
 
 function parseBulletValue(lines: string[], label: string): string | null {
@@ -624,3 +1450,14 @@ export function parseGodReviewReportShell(content: string): GodReviewParseResult
     warnings
   };
 }
+
+export const godReviewToolDefinitions: ToolDefinition[] = [
+  {
+    name: "blueprint_god_review_start",
+    description:
+      "Private hidden god-review start tool: validates hidden activation, freezes phase/PR/current-diff/explicit-file scope, and writes session/report/state metadata outside the normal review lifecycle.",
+    inputSchema: godReviewStartInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintGodReviewStart(args as GodReviewStartArgs)
+  }
+];

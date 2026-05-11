@@ -27,6 +27,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_mutate_index",
   "blueprint_artifact_report_write",
   "blueprint_review_record",
+  "blueprint_god_review_start",
   "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",

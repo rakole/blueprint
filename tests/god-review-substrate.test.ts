@@ -219,13 +219,19 @@ Scope: frozen session scope
   assert.equal(parsed.remediations[0].status, "fixed");
 });
 
-test("god-review substrate is not registered as callable MCP tools yet", () => {
+test("only implemented god-review private tools are registered as callable MCP tools", () => {
   for (const toolName of GOD_REVIEW_PRIVATE_TOOL_NAMES) {
     assert.equal(isGodReviewPrivateToolName(toolName), true);
-    assert.equal(blueprintToolNames.includes(toolName), false);
+    assert.equal(
+      blueprintToolNames.includes(toolName),
+      toolName === "blueprint_god_review_start"
+    );
   }
 
   for (const toolName of GOD_REVIEW_MUTATION_TOOL_NAMES) {
-    assert.equal(BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName), false);
+    assert.equal(
+      BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName),
+      toolName === "blueprint_god_review_start"
+    );
   }
 });

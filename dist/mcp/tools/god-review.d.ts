@@ -1,19 +1,5 @@
 import * as z from "zod/v4";
-/**
- * Private god-review substrate for hidden `--feels-like-god` review/fix modes.
- *
- * These helpers are intentionally not registered as MCP tools yet. They exist
- * so the hidden command branch can share deterministic path safety, session
- * shapes, report rendering shells, and finding parsing without overloading the
- * normal `review.code-review` / `XX-REVIEW.md` flow.
- *
- * MCP registration may make tools discoverable to clients; privacy here means
- * undocumented and hidden-branch-only, not invisible. Do not wire these results
- * into quality-gate routing, `STATE.md` next actions, public command catalog
- * output, or `blueprint_review_load_findings`. The temporary
- * `.god-review-state.md` file is a god-mode progress aid only, while session
- * JSON owns continuation scope.
- */
+import type { ToolDefinition } from "../tool-types.js";
 export declare const GOD_REVIEW_FLAG: "--feels-like-god";
 export declare const GOD_REVIEW_REFUSAL: string;
 export declare const GOD_REVIEW_PRIVATE_TOOL_NAMES: readonly ["blueprint_god_review_start", "blueprint_god_review_next", "blueprint_god_review_append", "blueprint_god_review_load_findings", "blueprint_god_review_record_fix", "blueprint_god_review_cleanup"];
@@ -295,6 +281,46 @@ export type GodReviewParseResult = {
     remediations: GodReviewParsedRemediation[];
     warnings: string[];
 };
+export type GodReviewStartResult = {
+    status: "started" | "reused" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    runId: string | null;
+    scopeKind: GodReviewScopeKind | null;
+    phase: string | number | null;
+    sessionPath: string | null;
+    humanStatePath: string | null;
+    reportPath: string | null;
+    files: string[];
+    skippedFiles: string[];
+    scopeFingerprint: GodReviewScopeFingerprint | null;
+    groups: GodReviewGroupState[];
+    nextGroupId: GodReviewGroupId | null;
+    nextCommand: string | null;
+    written: boolean;
+    createdPaths: string[];
+    warnings: string[];
+};
+declare const godReviewStartArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodEnum<{
+        "/blu-code-review": "/blu-code-review";
+        "/blu-code-review-fix": "/blu-code-review-fix";
+    }>;
+    rawInvocation: z.ZodString;
+    scopeKind: z.ZodOptional<z.ZodEnum<{
+        phase: "phase";
+        "explicit-files": "explicit-files";
+        pr: "pr";
+        "current-diff": "current-diff";
+    }>>;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    prNumber: z.ZodOptional<z.ZodNumber>;
+    files: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    runId: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+type GodReviewStartArgs = z.infer<typeof godReviewStartArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -331,5 +357,7 @@ export declare function renderGodReviewHumanState(args: {
     stale: boolean;
     nextCommand: string;
 }): string;
+export declare function blueprintGodReviewStart(rawArgs: GodReviewStartArgs): Promise<GodReviewStartResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
+export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};
