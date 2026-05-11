@@ -323,6 +323,37 @@ export type GodReviewNextResult = {
     written: false;
     warnings: string[];
 };
+export type GodReviewAppendedFinding = {
+    id: string;
+    title: string;
+    severity: GodReviewSeverity;
+    disposition: GodReviewDisposition;
+    confidence: "high" | "medium" | "low" | null;
+    files: string[];
+    evidence: string | null;
+    impact: string | null;
+    recommendation: string | null;
+    fixEligibility: GodReviewFixEligibility;
+};
+export type GodReviewAppendResult = {
+    status: "appended" | "stale" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    runId: string | null;
+    sessionPath: string | null;
+    humanStatePath: string | null;
+    reportPath: string | null;
+    groupId: GodReviewGroupId | null;
+    groupStatus: GodReviewGroupStatus | null;
+    findingIds: string[];
+    findings: GodReviewAppendedFinding[];
+    nextGroupId: GodReviewGroupId | null;
+    nextCommand: string | null;
+    written: boolean;
+    staleReasons: string[];
+    warnings: string[];
+};
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     activeCommand: z.ZodEnum<{
@@ -354,6 +385,44 @@ declare const godReviewNextArgsSchema: z.ZodObject<{
     sessionPath: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 type GodReviewNextArgs = z.infer<typeof godReviewNextArgsSchema>;
+declare const godReviewAppendArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodEnum<{
+        "/blu-code-review": "/blu-code-review";
+        "/blu-code-review-fix": "/blu-code-review-fix";
+    }>;
+    rawInvocation: z.ZodString;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    runId: z.ZodOptional<z.ZodString>;
+    sessionPath: z.ZodOptional<z.ZodString>;
+    groupId: z.ZodEnum<{
+        "correctness-contracts": "correctness-contracts";
+        "security-privacy-auth": "security-privacy-auth";
+        "data-state-consistency": "data-state-consistency";
+        "failure-reliability": "failure-reliability";
+        "tests-verification": "tests-verification";
+        "architecture-maintainability": "architecture-maintainability";
+        "performance-scalability": "performance-scalability";
+        "operations-portability-product": "operations-portability-product";
+    }>;
+    status: z.ZodEnum<{
+        blocked: "blocked";
+        completed: "completed";
+    }>;
+    findings: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        title: z.ZodString;
+        severity: z.ZodString;
+        disposition: z.ZodString;
+        confidence: z.ZodOptional<z.ZodString>;
+        files: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        evidence: z.ZodOptional<z.ZodString>;
+        impact: z.ZodOptional<z.ZodString>;
+        recommendation: z.ZodOptional<z.ZodString>;
+        fixEligibility: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>>;
+    groups: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
+}, z.core.$strip>;
+type GodReviewAppendArgs = z.infer<typeof godReviewAppendArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -392,6 +461,7 @@ export declare function renderGodReviewHumanState(args: {
 }): string;
 export declare function blueprintGodReviewStart(rawArgs: GodReviewStartArgs): Promise<GodReviewStartResult>;
 export declare function blueprintGodReviewNext(rawArgs: GodReviewNextArgs): Promise<GodReviewNextResult>;
+export declare function blueprintGodReviewAppend(rawArgs: GodReviewAppendArgs): Promise<GodReviewAppendResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
 export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};

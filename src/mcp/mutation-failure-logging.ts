@@ -28,6 +28,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_artifact_report_write",
   "blueprint_review_record",
   "blueprint_god_review_start",
+  "blueprint_god_review_append",
   "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",

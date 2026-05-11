@@ -74234,6 +74234,30 @@ var godReviewNextInputSchema = {
   sessionPath: string2().optional()
 };
 var godReviewNextArgsSchema = object2(godReviewNextInputSchema);
+var godReviewAppendFindingInputSchema = object2({
+  title: string2().min(1),
+  severity: string2().min(1),
+  disposition: string2().min(1),
+  confidence: string2().optional(),
+  files: array(string2()).optional(),
+  evidence: string2().optional(),
+  impact: string2().optional(),
+  recommendation: string2().optional(),
+  fixEligibility: string2().optional()
+});
+var godReviewAppendInputSchema = {
+  cwd: string2().optional(),
+  activeCommand: _enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  rawInvocation: string2(),
+  phase: union([string2(), number2()]).optional(),
+  runId: string2().optional(),
+  sessionPath: string2().optional(),
+  groupId: _enum(GOD_REVIEW_GROUP_ID_VALUES),
+  status: _enum(["completed", "blocked"]),
+  findings: array(godReviewAppendFindingInputSchema).optional(),
+  groups: array(unknown()).optional()
+};
+var godReviewAppendArgsSchema = object2(godReviewAppendInputSchema);
 function hasGodReviewFlag(rawInvocation) {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
@@ -74556,6 +74580,26 @@ function invalidNextResult(args) {
     warnings: args.warnings ?? []
   };
 }
+function invalidAppendResult(args) {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    runId: null,
+    sessionPath: null,
+    humanStatePath: null,
+    reportPath: null,
+    groupId: null,
+    groupStatus: null,
+    findingIds: [],
+    findings: [],
+    nextGroupId: null,
+    nextCommand: null,
+    written: false,
+    staleReasons: [],
+    warnings: args.warnings ?? []
+  };
+}
 function determineScopeKind(args) {
   if (args.scopeKind) {
     return args.scopeKind;
@@ -74858,6 +74902,129 @@ function nextPendingGodReviewGroup(session) {
   return session.groups.find(
     (group) => group.status === "pending" || group.status === "in-progress"
   ) ?? null;
+}
+function normalizeVocabularyValue(rawValue, values) {
+  if (rawValue === void 0) {
+    return null;
+  }
+  const normalized = rawValue.trim().toLowerCase().replace(/\s+/g, "-");
+  return values.includes(normalized) ? normalized : null;
+}
+function defaultFixEligibility(args) {
+  if (args.disposition === "follow-up" && ["critical", "high", "medium"].includes(args.severity)) {
+    return "eligible";
+  }
+  return "not-eligible";
+}
+function normalizeAppendFindings(args) {
+  const findings = [];
+  const warnings = [];
+  let nextNumber = args.existingFindingIds.filter(
+    (id) => id.startsWith(`GOD-${args.prefix}-`)
+  ).length + 1;
+  for (const finding of args.findings) {
+    const severity = normalizeVocabularyValue(
+      finding.severity,
+      GOD_REVIEW_SEVERITY_VALUES
+    );
+    const disposition = normalizeVocabularyValue(
+      finding.disposition,
+      GOD_REVIEW_DISPOSITION_VALUES
+    );
+    const confidence = normalizeVocabularyValue(finding.confidence, [
+      "high",
+      "medium",
+      "low"
+    ]);
+    if (severity === null) {
+      warnings.push(`Unsupported severity: ${finding.severity}`);
+    }
+    if (disposition === null) {
+      warnings.push(`Unsupported disposition: ${finding.disposition}`);
+    }
+    if (finding.confidence !== void 0 && confidence === null) {
+      warnings.push(`Unsupported confidence: ${finding.confidence}`);
+    }
+    if (severity === null || disposition === null) {
+      continue;
+    }
+    const fixEligibility = normalizeVocabularyValue(
+      finding.fixEligibility,
+      GOD_REVIEW_FIX_ELIGIBILITY_VALUES
+    ) ?? defaultFixEligibility({
+      disposition,
+      severity
+    });
+    if (finding.fixEligibility !== void 0 && normalizeVocabularyValue(
+      finding.fixEligibility,
+      GOD_REVIEW_FIX_ELIGIBILITY_VALUES
+    ) === null) {
+      warnings.push(`Unsupported fix eligibility: ${finding.fixEligibility}`);
+      continue;
+    }
+    const id = `GOD-${args.prefix}-${String(nextNumber).padStart(3, "0")}`;
+    nextNumber += 1;
+    findings.push({
+      id,
+      title: finding.title.trim(),
+      severity,
+      disposition,
+      confidence,
+      files: stableUniqueSorted(finding.files ?? []),
+      evidence: finding.evidence?.trim() || null,
+      impact: finding.impact?.trim() || null,
+      recommendation: finding.recommendation?.trim() || null,
+      fixEligibility
+    });
+  }
+  if (warnings.length > 0) {
+    return {
+      valid: false,
+      reason: "God-review append finding vocabulary validation failed.",
+      warnings
+    };
+  }
+  return { valid: true, findings };
+}
+function renderFindingFileList(files) {
+  return files.length === 0 ? "none" : files.map((file2) => `\`${file2}\``).join(", ");
+}
+function renderGodReviewGroupSection(args) {
+  const lines = [
+    "",
+    `## GOD-${args.group.prefix} ${args.group.title}`,
+    "",
+    `Status: ${args.status}`,
+    `Group ID: ${args.group.id}`,
+    "Scope: frozen session scope",
+    "",
+    "### Findings",
+    ""
+  ];
+  if (args.findings.length === 0) {
+    lines.push("- none", "");
+    return lines.join("\n");
+  }
+  for (const finding of args.findings) {
+    lines.push(
+      `#### ${finding.id}: ${finding.title}`,
+      `- Severity: ${finding.severity}`,
+      `- Disposition: ${finding.disposition}`,
+      `- Confidence: ${finding.confidence ?? "medium"}`,
+      `- Files: ${renderFindingFileList(finding.files)}`,
+      `- Evidence: ${finding.evidence ?? "none"}`,
+      `- Impact: ${finding.impact ?? "none"}`,
+      `- Recommendation: ${finding.recommendation ?? "none"}`,
+      `- Fix Eligibility: ${finding.fixEligibility}`,
+      ""
+    );
+  }
+  return lines.join("\n");
+}
+function nextGroupIdAfterAppend(groups) {
+  return groups.find(
+    (group) => group.status === "pending" || group.status === "in-progress"
+  )?.id ?? null;
 }
 async function resolvePhaseScope(args) {
   const phase = args.phase ?? parsePhaseFromInvocation(args.rawInvocation) ?? void 0;
@@ -75353,6 +75520,202 @@ async function blueprintGodReviewNext(rawArgs) {
     warnings: fingerprint.warnings
   };
 }
+async function blueprintGodReviewAppend(rawArgs) {
+  const parsed = godReviewAppendArgsSchema.safeParse(rawArgs);
+  if (!parsed.success) {
+    return invalidAppendResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_append arguments.",
+      warnings: parsed.error.issues.map((issue2) => issue2.message)
+    });
+  }
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      runId: null,
+      sessionPath: null,
+      humanStatePath: null,
+      reportPath: null,
+      groupId: null,
+      groupStatus: null,
+      findingIds: [],
+      findings: [],
+      nextGroupId: null,
+      nextCommand: null,
+      written: false,
+      staleReasons: [],
+      warnings: []
+    };
+  }
+  if ((args.groups ?? []).length > 0) {
+    return invalidAppendResult({
+      reason: "blueprint_god_review_append accepts exactly one group per call; use groupId, not groups."
+    });
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath.valid) {
+    return invalidAppendResult({
+      reason: sessionPath.reason
+    });
+  }
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+  if (!loaded.valid) {
+    return invalidAppendResult({
+      reason: loaded.reason,
+      warnings: loaded.warnings
+    });
+  }
+  const session = loaded.session;
+  const fingerprint = await computeCurrentFingerprintForSession({
+    projectRoot,
+    session
+  });
+  const nextCommand = nextGodReviewCommand({
+    activeCommand: session.activeCommand,
+    scopeKind: session.scopeKind,
+    phase: session.phase ?? null,
+    runId: session.runId
+  });
+  if (fingerprint.staleReasons.length > 0) {
+    return {
+      status: "stale",
+      activated: true,
+      reason: "God-review scope fingerprint changed. Start a new hidden review run instead of appending to this session.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      groupId: args.groupId,
+      groupStatus: null,
+      findingIds: [],
+      findings: [],
+      nextGroupId: session.nextGroupId,
+      nextCommand,
+      written: false,
+      staleReasons: fingerprint.staleReasons,
+      warnings: fingerprint.warnings
+    };
+  }
+  if (session.nextGroupId !== args.groupId) {
+    return invalidAppendResult({
+      reason: `God-review groups must be appended in session order. Next group is ${session.nextGroupId ?? "none"}, not ${args.groupId}.`
+    });
+  }
+  const sessionGroup = session.groups.find((group) => group.id === args.groupId);
+  const groupDefinition = GOD_REVIEW_GROUPS.find((group) => group.id === args.groupId);
+  if (!sessionGroup || !groupDefinition) {
+    return invalidAppendResult({
+      reason: `Unknown god-review group: ${args.groupId}.`
+    });
+  }
+  if (sessionGroup.status !== "pending" && sessionGroup.status !== "in-progress") {
+    return invalidAppendResult({
+      reason: `${args.groupId} has already been appended and will not be rewritten.`
+    });
+  }
+  const normalizedFindings = normalizeAppendFindings({
+    prefix: sessionGroup.prefix,
+    existingFindingIds: sessionGroup.findingIds,
+    findings: args.findings ?? []
+  });
+  if (!normalizedFindings.valid) {
+    return invalidAppendResult({
+      reason: normalizedFindings.reason,
+      warnings: normalizedFindings.warnings
+    });
+  }
+  const findingIds = normalizedFindings.findings.map((finding) => finding.id);
+  const nextGroups = session.groups.map(
+    (group) => group.id === args.groupId ? {
+      ...group,
+      status: args.status,
+      findingIds
+    } : group
+  );
+  const nextGroupId = args.status === "blocked" ? null : nextGroupIdAfterAppend(nextGroups);
+  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const nextStatus = args.status === "blocked" ? "blocked" : nextGroupId === null ? "completed" : "in-progress";
+  const updatedSession = {
+    ...session,
+    status: nextStatus,
+    updatedAt,
+    groups: nextGroups,
+    nextGroupId,
+    cleanup: {
+      ...session.cleanup,
+      reviewTerminal: nextStatus === "completed" || nextStatus === "blocked"
+    }
+  };
+  const updatedNextCommand = nextGodReviewCommand({
+    activeCommand: updatedSession.activeCommand,
+    scopeKind: updatedSession.scopeKind,
+    phase: updatedSession.phase ?? null,
+    runId: updatedSession.runId
+  });
+  const reportPath = resolveBlueprintPath(projectRoot, updatedSession.reportPath);
+  const sessionFilePath = resolveBlueprintPath(projectRoot, updatedSession.sessionPath);
+  const humanStatePath = resolveBlueprintPath(projectRoot, updatedSession.humanStatePath);
+  await fs12.appendFile(
+    reportPath,
+    renderGodReviewGroupSection({
+      group: groupDefinition,
+      status: args.status,
+      findings: normalizedFindings.findings
+    }),
+    "utf8"
+  );
+  await fs12.writeFile(
+    sessionFilePath,
+    `${JSON.stringify(updatedSession, null, 2)}
+`,
+    "utf8"
+  );
+  await fs12.writeFile(
+    humanStatePath,
+    renderGodReviewHumanState({
+      runId: updatedSession.runId,
+      scopeKind: updatedSession.scopeKind,
+      fileCount: updatedSession.files.length,
+      currentGroupId: args.groupId,
+      nextGroupId,
+      reviewTerminal: updatedSession.cleanup.reviewTerminal,
+      godFixTerminal: updatedSession.cleanup.godFixTerminal,
+      stale: false,
+      nextCommand: updatedNextCommand
+    }),
+    "utf8"
+  );
+  return {
+    status: "appended",
+    activated: true,
+    reason: null,
+    runId: updatedSession.runId,
+    sessionPath: updatedSession.sessionPath,
+    humanStatePath: updatedSession.humanStatePath,
+    reportPath: updatedSession.reportPath,
+    groupId: args.groupId,
+    groupStatus: args.status,
+    findingIds,
+    findings: normalizedFindings.findings,
+    nextGroupId,
+    nextCommand: updatedNextCommand,
+    written: true,
+    staleReasons: [],
+    warnings: fingerprint.warnings
+  };
+}
 var godReviewToolDefinitions = [
   {
     name: "blueprint_god_review_start",
@@ -75365,6 +75728,12 @@ var godReviewToolDefinitions = [
     description: "Private hidden god-review continuation tool: loads a saved session, checks the frozen scope fingerprint for staleness, and returns the next pending review group without rediscovering or rewriting scope.",
     inputSchema: godReviewNextInputSchema,
     handler: async (args) => blueprintGodReviewNext(args)
+  },
+  {
+    name: "blueprint_god_review_append",
+    description: "Private hidden god-review append tool: appends exactly one ordered review group section, assigns GOD finding IDs, and updates only the private session plus human state.",
+    inputSchema: godReviewAppendInputSchema,
+    handler: async (args) => blueprintGodReviewAppend(args)
   }
 ];
 
@@ -75572,6 +75941,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_artifact_report_write",
   "blueprint_review_record",
   "blueprint_god_review_start",
+  "blueprint_god_review_append",
   "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",
