@@ -1527,7 +1527,21 @@ async function createRoadmapPhaseMutationRepo(): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Phase Mutation Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Keep planning traceable. | Pending | Phase 2 coverage. |
+| RQ-03 | Add offline mode. | Pending | Reserved for appended phase. |
+| RQ-04 | Add research follow-up. | Pending | Reserved for inserted phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Phase Mutation Fixture
@@ -5813,6 +5827,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
     after: "2",
     description: "Research follow-up",
     goal: "Capture a focused research follow-up before release hardening.",
+    requirementIds: ["RQ-04"],
     successCriteria: [
       "Research follow-up scope is captured before planning.",
       "Later phase numbering remains unchanged."
@@ -5864,6 +5879,7 @@ test("public roadmap add and insert phase live MCP responses trim redundant slug
         after: "2",
         description: "Research follow-up",
         goal: "Capture a focused research follow-up before release hardening.",
+        requirementIds: ["RQ-04"],
         successCriteria: [
           "Research follow-up scope is captured before planning.",
           "Later phase numbering remains unchanged."

@@ -15012,10 +15012,12 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.",
         reads: [
-          "The current roadmap and milestone inventory through blueprint_roadmap_read."
+          "The current roadmap and milestone inventory through blueprint_roadmap_read.",
+          ".blueprint/REQUIREMENTS.md durable requirement ID declarations enforced by blueprint_roadmap_insert_phase."
         ],
         writes: [
           ".blueprint/ROADMAP.md",
+          ".blueprint/REQUIREMENTS.md",
           ".blueprint/phases/<phasePrefix>-<phaseSlug>/",
           ".blueprint/STATE.md"
         ]
@@ -15028,7 +15030,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: INSERT_PHASE_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -29648,6 +29650,81 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
     ] : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
   };
 }
+async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phaseNumber, phaseName) {
+  const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  if (!await pathExists(requirementsPath)) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
+    );
+  }
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header, body) => {
+      const nextBody = body.split("\n").map((line) => {
+        const row = parseRequirementTableRow(line);
+        if (!row || !remainingRequirementIds.has(row.id)) {
+          return line;
+        }
+        remainingRequirementIds.delete(row.id);
+        const notes = row.notes.trim();
+        const nextNotes = notes.includes(mappingNote) ? notes : notes.length > 0 ? `${notes} ${mappingNote}` : mappingNote;
+        if (nextNotes === row.notes) {
+          return line;
+        }
+        return renderRequirementTableRow({
+          ...row,
+          notes: nextNotes
+        });
+      }).join("\n");
+      return `${header}${nextBody}
+`;
+    }
+  );
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+  return {
+    content,
+    warnings: []
+  };
+}
+function requireUnassignedRoadmapRequirements(roadmap, requirementIds, phaseNumber) {
+  const existingMappings = /* @__PURE__ */ new Map();
+  for (const phase of roadmap.phases) {
+    for (const requirementId of phase.requirements) {
+      const phaseLabels = existingMappings.get(requirementId) ?? [];
+      phaseLabels.push(`Phase ${phase.phaseNumber}`);
+      existingMappings.set(requirementId, phaseLabels);
+    }
+  }
+  const reusedRequirementIds = requirementIds.filter(
+    (requirementId) => existingMappings.has(requirementId)
+  );
+  if (reusedRequirementIds.length === 0) {
+    return;
+  }
+  const reusedRequirementSummary = reusedRequirementIds.map((requirementId) => {
+    const mappedPhases = existingMappings.get(requirementId)?.join(", ");
+    return `${requirementId} (${mappedPhases})`;
+  }).join(", ");
+  throw new Error(
+    `Cannot insert Phase ${phaseNumber} because requirement IDs are already mapped in ${BLUEPRINT_DIR}/ROADMAP.md: ${reusedRequirementSummary}. Use requirement IDs not already assigned to another roadmap phase.`
+  );
+}
 function appendPhaseDetailsToRoadmap(raw, phaseNumber, phaseName, detailOptions = {}) {
   const detailHeadingPattern = new RegExp(`^### Phase ${escapeForRegex2(phaseNumber)}: `, "m");
   if (detailHeadingPattern.test(raw)) {
@@ -32191,6 +32268,11 @@ async function blueprintRoadmapInsertPhase(args) {
       `Phase ${afterPhaseNumber} cannot be used as an insertion target. Re-run /blu-insert-phase with an existing integer phase number such as ${basePhaseNumber(afterPhaseNumber)}.`
     );
   }
+  if (normalizedRequirementIds.length === 0) {
+    throw new Error(
+      "Requirement IDs required. Re-run /blu-insert-phase with at least one durable requirement ID from REQUIREMENTS.md in requirementIds."
+    );
+  }
   requireRoadmapPhaseMetadata({
     command: "/blu-insert-phase",
     goal: effectiveGoal,
@@ -32215,6 +32297,7 @@ async function blueprintRoadmapInsertPhase(args) {
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
+    requireUnassignedRoadmapRequirements(roadmap, normalizedRequirementIds, phaseNumber);
     if (existingDecimalDirectory.reason === "ambiguous" || existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir) {
       throw new Error(
         existingDecimalDirectory.reason === "ambiguous" ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.` : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
@@ -32257,13 +32340,33 @@ async function blueprintRoadmapInsertPhase(args) {
         successCriteria: effectiveSuccessCriteria.join("; ")
       }
     );
+    const requirementMapping = await mapRequirementsToInsertedPhase(
+      projectRoot,
+      normalizedRequirementIds,
+      phaseNumber,
+      normalizedDescription
+    );
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
     });
+    const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+    const requirementsAbsolutePath = resolveBlueprintPath(projectRoot, requirementsPath);
+    const preparedRequirements = prepareTextForPersistence(requirementMapping.content, {
+      label: requirementsPath
+    });
+    const originalRequirements = await fs4.readFile(requirementsAbsolutePath, "utf8");
     const warnings = [...preparedRoadmap.warnings];
+    warnings.push(...preparedRequirements.warnings);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
     warnings.push(...materializedPhaseDir.warnings);
     try {
+      warnings.push(...requirementMapping.warnings);
+      warnings.push(
+        ...await writeTextFile(requirementsAbsolutePath, preparedRequirements.content, {
+          label: requirementsPath,
+          enforcePromptBoundary: false
+        })
+      );
       warnings.push(
         ...await writeTextFile(roadmapPath, preparedRoadmap.content, {
           label: roadmap.path,
@@ -32271,6 +32374,10 @@ async function blueprintRoadmapInsertPhase(args) {
         })
       );
     } catch (error2) {
+      await writeTextFile(requirementsAbsolutePath, originalRequirements, {
+        label: requirementsPath,
+        enforcePromptBoundary: false
+      }).catch(() => void 0);
       if (materializedPhaseDir.created) {
         await fs4.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
@@ -35493,7 +35600,7 @@ var init_phase = __esm({
       after: union([string2(), number2()]),
       description: string2(),
       goal: string2().optional(),
-      requirementIds: array(string2()).optional(),
+      requirementIds: array(string2()).min(1),
       successCriteria: array(string2()).optional()
     };
     roadmapRemovePhaseInputSchema = {

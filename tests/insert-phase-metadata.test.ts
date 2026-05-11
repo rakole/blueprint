@@ -24,6 +24,8 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /roadmapEvolutionNotes/);
   assert.match(commandFile, /confirmed integer phase number/);
+  assert.match(commandFile, /confirmed durable IDs from `\.blueprint\/REQUIREMENTS\.md` in `requirementIds`/);
+  assert.match(commandFile, /Do not accept `none yet`, placeholder text, blank values, or undeclared requirement mappings/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /phase-insert-confirmation/);
   assert.match(commandFile, /invalid-insertion-anchor/);
@@ -42,6 +44,8 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   assert.match(skillFile, /\/blu-insert-phase/);
   assert.match(skillFile, /insert-phase-runtime-contract\.md/);
   assert.match(skillFile, /blueprint_roadmap_insert_phase/);
+  assert.match(skillFile, /confirmed durable `requirementIds` declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(skillFile, /Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /roadmap-driven/i);
   assert.match(skillFile, /conflicting decimal directory/i);
@@ -80,6 +84,9 @@ test("insert-phase runtime contract locks stage mapping, fallback, repair, and c
   assert.match(contract, /mcp_blueprint_blueprint_roadmap_insert_phase/);
   assert.match(contract, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(contract, /mcp_blueprint_blueprint_state_update/);
+  assert.match(contract, /at least one confirmed durable requirement ID declared in\s*`\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(contract, /Do not accept `none yet`, placeholder text, blank values, or IDs that are not\s*declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(contract, /passed as `requirementIds`; `none yet` requirement mappings were\s*not accepted/);
   assert.match(contract, /phase-insert-confirmation/);
   assert.match(contract, /invalid-insertion-anchor/);
   assert.match(contract, /conflicting-decimal-directory/);
@@ -103,11 +110,13 @@ test("insert-phase runtime-owned metadata uses numeric after anchors and phasePr
   assert.equal(contract.spec?.executionProfile, "interactive-read");
   assert.deepEqual(contract.spec?.requiredTools, [...metadata.requiredTools]);
   assert.deepEqual(contract.spec?.optionalSubagents, []);
+  assert.match(contract.spec?.reads.join("\n") ?? "", /\.blueprint\/REQUIREMENTS\.md durable requirement ID declarations/);
+  assert.match(contract.spec?.writes.join("\n") ?? "", /\.blueprint\/REQUIREMENTS\.md/);
   assert.equal(contract.runtimeReference?.path, metadata.sourceId);
   assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /insert-phase-runtime-contract\.md[\s\S]*confirmed integer anchor[\s\S]*phasePrefix[\s\S]*roadmapEvolutionNotes/
+    /insert-phase-runtime-contract\.md[\s\S]*confirmed integer anchor[\s\S]*durable requirementIds declared in \.blueprint\/REQUIREMENTS\.md[\s\S]*reject none yet[\s\S]*phasePrefix[\s\S]*roadmapEvolutionNotes/
   );
   assert.deepEqual(contract.skillInputs.effective, [
     "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"

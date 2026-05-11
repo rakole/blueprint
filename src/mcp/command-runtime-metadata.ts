@@ -825,10 +825,12 @@ export const INSERT_PHASE_RUNTIME_METADATA = {
     purpose:
       "`insert-phase` inserts urgent work as a decimal phase between existing phases, scaffolds the matching phase context starter, records roadmap evolution state, and routes back to discovery without renumbering later phases.",
     reads: [
-      "The current roadmap and milestone inventory through blueprint_roadmap_read."
+      "The current roadmap and milestone inventory through blueprint_roadmap_read.",
+      ".blueprint/REQUIREMENTS.md durable requirement ID declarations enforced by blueprint_roadmap_insert_phase."
     ],
     writes: [
       ".blueprint/ROADMAP.md",
+      ".blueprint/REQUIREMENTS.md",
       ".blueprint/phases/<phasePrefix>-<phaseSlug>/",
       ".blueprint/STATE.md"
     ]
@@ -842,7 +844,7 @@ export const INSERT_PHASE_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: ROADMAP_ADMIN_HOOKS,
     contractNotes:
-      "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
+      "Interactive-read profile for bounded roadmap insertion: use skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md as the rich behavior contract, require a confirmed integer anchor plus non-empty description plus concrete goal plus 2-5 successCriteria plus durable requirementIds declared in .blueprint/REQUIREMENTS.md, reject none yet or placeholder requirement mappings, pass the confirmed IDs as requirementIds, map the matching requirement rows to the inserted phase, keep decimal numbering roadmap-driven, scaffold only starter phase.context content from the returned phasePrefix, prefer ask_user for the insert confirmation gate, keep the waiting state explicit as phase-insert-confirmation, invalid-insertion-anchor, or conflicting-decimal-directory, preserve the no-subagent fallback and reject browser/web-search/shell-only or generic agents as substitutes, report partial MCP-write failures without hand-editing .blueprint/, record the inserted decimal in STATE.md through roadmapEvolutionNotes, and route to /blu-discuss-phase <decimal> without adopting long-running progress tools.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

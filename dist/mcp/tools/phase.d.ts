@@ -937,7 +937,7 @@ export declare const phaseToolDefinitions: ({
         after: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         description: z.ZodString;
         goal: z.ZodOptional<z.ZodString>;
-        requirementIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        requirementIds: z.ZodArray<z.ZodString>;
         successCriteria: z.ZodOptional<z.ZodArray<z.ZodString>>;
     };
     handler: (args: Record<string, unknown>) => Promise<RoadmapInsertPhaseResult>;

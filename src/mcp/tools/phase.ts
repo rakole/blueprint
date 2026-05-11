@@ -1196,7 +1196,7 @@ const roadmapInsertPhaseInputSchema = {
   after: z.union([z.string(), z.number()]),
   description: z.string(),
   goal: z.string().optional(),
-  requirementIds: z.array(z.string()).optional(),
+  requirementIds: z.array(z.string()).min(1),
   successCriteria: z.array(z.string()).optional()
 };
 const roadmapRemovePhaseInputSchema = {
@@ -2147,6 +2147,120 @@ async function repairRequirementsTraceability(
         ]
       : [`Requirements ${normalizedRequirementIds.join(", ")} already reflected the requested repair.`]
   };
+}
+
+async function mapRequirementsToInsertedPhase(
+  projectRoot: string,
+  requirementIds: string[],
+  phaseNumber: string,
+  phaseName: string
+): Promise<{
+  content: string;
+  warnings: string[];
+}> {
+  const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+
+  if (!(await pathExists(requirementsPath))) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
+    );
+  }
+
+  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
+  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
+  if (!requirementsSectionPattern.test(rawRequirements)) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
+    );
+  }
+
+  const remainingRequirementIds = new Set(normalizedRequirementIds);
+  const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+
+  const content = rawRequirements.replace(
+    requirementsSectionPattern,
+    (_full, header: string, body: string) => {
+      const nextBody = body
+        .split("\n")
+        .map((line) => {
+          const row = parseRequirementTableRow(line);
+
+          if (!row || !remainingRequirementIds.has(row.id)) {
+            return line;
+          }
+
+          remainingRequirementIds.delete(row.id);
+          const notes = row.notes.trim();
+          const nextNotes = notes.includes(mappingNote)
+            ? notes
+            : notes.length > 0
+              ? `${notes} ${mappingNote}`
+              : mappingNote;
+
+          if (nextNotes === row.notes) {
+            return line;
+          }
+
+          return renderRequirementTableRow({
+            ...row,
+            notes: nextNotes
+          });
+        })
+        .join("\n");
+
+      return `${header}${nextBody}\n`;
+    }
+  );
+
+  if (remainingRequirementIds.size > 0) {
+    throw new Error(
+      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${[
+        ...remainingRequirementIds
+      ].join(", ")}`
+    );
+  }
+
+  return {
+    content,
+    warnings: []
+  };
+}
+
+function requireUnassignedRoadmapRequirements(
+  roadmap: ParsedRoadmap,
+  requirementIds: string[],
+  phaseNumber: string
+): void {
+  const existingMappings = new Map<string, string[]>();
+
+  for (const phase of roadmap.phases) {
+    for (const requirementId of phase.requirements) {
+      const phaseLabels = existingMappings.get(requirementId) ?? [];
+      phaseLabels.push(`Phase ${phase.phaseNumber}`);
+      existingMappings.set(requirementId, phaseLabels);
+    }
+  }
+
+  const reusedRequirementIds = requirementIds.filter((requirementId) =>
+    existingMappings.has(requirementId)
+  );
+
+  if (reusedRequirementIds.length === 0) {
+    return;
+  }
+
+  const reusedRequirementSummary = reusedRequirementIds
+    .map((requirementId) => {
+      const mappedPhases = existingMappings.get(requirementId)?.join(", ");
+      return `${requirementId} (${mappedPhases})`;
+    })
+    .join(", ");
+
+  throw new Error(
+    `Cannot insert Phase ${phaseNumber} because requirement IDs are already mapped in ${BLUEPRINT_DIR}/ROADMAP.md: ${reusedRequirementSummary}. Use requirement IDs not already assigned to another roadmap phase.`
+  );
 }
 
 function appendPhaseDetailsToRoadmap(
@@ -5642,6 +5756,12 @@ export async function blueprintRoadmapInsertPhase(
     );
   }
 
+  if (normalizedRequirementIds.length === 0) {
+    throw new Error(
+      "Requirement IDs required. Re-run /blu-insert-phase with at least one durable requirement ID from REQUIREMENTS.md in requirementIds."
+    );
+  }
+
   requireRoadmapPhaseMetadata({
     command: "/blu-insert-phase",
     goal: effectiveGoal,
@@ -5673,6 +5793,8 @@ export async function blueprintRoadmapInsertPhase(
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
+
+    requireUnassignedRoadmapRequirements(roadmap, normalizedRequirementIds, phaseNumber);
 
     if (
       existingDecimalDirectory.reason === "ambiguous" ||
@@ -5724,15 +5846,35 @@ export async function blueprintRoadmapInsertPhase(
         successCriteria: effectiveSuccessCriteria.join("; ")
       }
     );
+    const requirementMapping = await mapRequirementsToInsertedPhase(
+      projectRoot,
+      normalizedRequirementIds,
+      phaseNumber,
+      normalizedDescription
+    );
     const preparedRoadmap = prepareTextForPersistence(updatedRoadmap, {
       label: roadmap.path
     });
+    const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
+    const requirementsAbsolutePath = resolveBlueprintPath(projectRoot, requirementsPath);
+    const preparedRequirements = prepareTextForPersistence(requirementMapping.content, {
+      label: requirementsPath
+    });
+    const originalRequirements = await fs.readFile(requirementsAbsolutePath, "utf8");
     const warnings: string[] = [...preparedRoadmap.warnings];
+    warnings.push(...preparedRequirements.warnings);
     const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
 
     warnings.push(...materializedPhaseDir.warnings);
 
     try {
+      warnings.push(...requirementMapping.warnings);
+      warnings.push(
+        ...await writeTextFile(requirementsAbsolutePath, preparedRequirements.content, {
+          label: requirementsPath,
+          enforcePromptBoundary: false
+        })
+      );
       warnings.push(
         ...await writeTextFile(roadmapPath, preparedRoadmap.content, {
           label: roadmap.path,
@@ -5740,6 +5882,11 @@ export async function blueprintRoadmapInsertPhase(
         })
       );
     } catch (error) {
+      await writeTextFile(requirementsAbsolutePath, originalRequirements, {
+        label: requirementsPath,
+        enforcePromptBoundary: false
+      }).catch(() => undefined);
+
       if (materializedPhaseDir.created) {
         await fs.rm(materializedPhaseDir.phaseDirPath, {
           recursive: true,
