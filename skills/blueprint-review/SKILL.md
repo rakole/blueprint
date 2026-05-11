@@ -100,9 +100,16 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
      staging changes, or quality-gate state.
   5. If `selection.status` is `ready`, re-read only the selected target files,
      make bounded source edits only for the returned target ids, and run focused
-     verification. Until the private remediation recorder exists, report the
-     selected ids and verification in the hidden response without writing a
-     remediation log entry.
+     verification.
+  6. After each selected finding attempt, call
+     `mcp_blueprint_blueprint_god_review_record_fix` exactly once for that
+     finding. Record the exact `findingId`, `status`, `selectedBy`, changed
+     files, verification, evidence, and follow-up. Use `fixed` only for real
+     code edits; use `stale`, `skipped`, `deferred`, or `blocked` for no-edit
+     outcomes with no changed files.
+  7. Set the record call's `terminal` flag only when the hidden fix pass has
+     reached a terminal result for the run. Do not call hidden cleanup until its
+     private tool exists.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
