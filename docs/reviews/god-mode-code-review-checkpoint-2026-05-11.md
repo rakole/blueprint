@@ -19,11 +19,18 @@ Agreed direction:
 - Run one focused review group per invocation, append that pass to one durable
   god-review report, then stop with the next exact continuation command.
 - Resolve scope once on the first run and persist it in session JSON. Later runs
-  reuse that saved scope unless the user explicitly refreshes or starts over.
+  reuse that saved scope; if the scope fingerprint changes, the run stops and
+  the user starts a new run.
 - Support phase, PR, current-diff, and explicit-files scopes.
+- Keep PR and current-diff runs report-scoped only; they do not bind to a phase
+  in the MVP.
 - Keep god mode private and non-interfering: no normal `XX-REVIEW.md`,
   `XX-REVIEW-FIX.md`, `STATE.md`, quality gates, public routing, commits,
   branches, PRs, or hook chaining by default.
+- Add a hard activation guard: if the god-mode skill is triggered without an
+  active `/blu-code-review` or `/blu-code-review-fix` invocation containing
+  `--feels-like-god`, it must stop immediately with a short witty refusal and
+  perform no MCP calls, repo reads, or writes.
 - Add a private MCP substrate for deterministic path safety, scope reuse, report
   append behavior, finding parsing, and fix evidence recording.
 - Normalize findings to Blueprint review vocabulary:
@@ -59,6 +66,15 @@ Private triggers:
 `--feels-like-god` is intentionally undocumented. Tests should prove it works
 without letting the flag appear in public docs, root routing, help, progress,
 next-step guidance, or command-catalog output.
+
+Activation guard: the god-mode skill must inspect active invocation context
+before any MCP call, repo read, or file write. It may continue only when the
+active command is `/blu-code-review` or `/blu-code-review-fix` and the hidden
+`--feels-like-god` flag is present. If triggered accidentally by model routing,
+it should stop with a brief human-facing refusal such as:
+
+> God mode only wakes for `/blu-code-review` or `/blu-code-review-fix` with
+> `--feels-like-god`. No thunderbolt today.
 
 Normal `/blu-code-review` continues to use the existing `review.code-review`
 model contract, `blueprint_review_scope`, `blueprint_review_validate_model`, and
@@ -96,11 +112,18 @@ God mode supports four scope kinds:
 - Current diff scope: resolve staged and working-tree changes.
 - Explicit files: use repo-relative paths supplied by the user.
 
+PR and current-diff runs do not bind to a phase in the MVP. They always use the
+report-local session/report paths below, even if the user mentions a phase for
+context. Phase-backed runs are only for the deterministic phase scope.
+
 The first run records resolved files and fingerprints in session JSON. Later
 continuations trust `files`, `scopeKind`, and `scopeFingerprint` from the
 session. If a PR, diff, or working tree changes after the first run, the command
-warns and requires explicit refresh or a new run instead of silently reviewing a
-different target.
+stops and asks the user to start a new run instead of silently reviewing a
+different target. Continuation must not mutate the stored scope. A future
+`--refresh-scope` can be considered only as convenience for creating a new
+linked run with a new `runId` and `parentRunId`; it must not rewrite the
+existing session or reinterpret completed review groups.
 
 ### Paths
 
@@ -311,11 +334,16 @@ Implementation-oriented coverage:
 - god mode writes only god-review session/report paths
 - god mode does not update `STATE.md`, next actions, quality-gate status, normal
   review artifacts, or normal review-fix artifacts
+- accidental god-mode skill activation without the hidden flag stops before MCP
+  calls, repo reads, or writes
 - phase, PR, current-diff, and explicit-files scope modes resolve and persist
   the expected session metadata
+- PR and current-diff sessions use `.blueprint/reports/` paths and do not bind
+  to phase directories
 - initial run records resolved scope and fingerprint in session JSON
 - continuation reuses stored scope and does not rediscover files
-- changed diff or PR fingerprint warns or blocks without explicit refresh
+- changed diff or PR fingerprint blocks continuation and preserves the existing
+  session; future refresh support creates a linked run instead of mutating scope
 - one invocation appends exactly one review group
 - report parser extracts `GOD-*` findings without requiring `XX-REVIEW.md`
 - severity and disposition validation accepts only Blueprint vocabularies
@@ -326,6 +354,119 @@ Implementation-oriented coverage:
 - fix mode does not create commits, branches, PRs, staging changes, or normal
   review-fix artifacts by default
 - tracked built outputs and runtime tests remain fresh after implementation
+
+## Codebase Mapping Notes
+
+These notes map the checkpoint design to current Blueprint code. They are
+read-only implementation reconnaissance, not an approved implementation plan.
+
+### Mapping: Command And Skill Activation
+
+- Entry points are the existing manifests, not a new command:
+  `commands/blu-code-review.toml:3-55` and
+  `commands/blu-code-review-fix.toml:3-56`. The hidden branch should be an
+  early guarded mode inside those prompts.
+- Reuse the per-command bundle pattern in
+  `skills/blueprint-review/SKILL.md:15-35,69-75,132-260`: keep
+  `input_bundles.shared` empty, attach any god-mode reference only to the
+  `/blu-code-review` and `/blu-code-review-fix` command-specific bundles, and
+  avoid sibling review-family commands.
+- Watch public projection seams. `src/mcp/skill-metadata.ts:264-353` and
+  `src/mcp/command-resources.ts:332-381` project skill bundles into runtime
+  contract resources, so a private reference path can become visible unless it
+  stays inside already-loaded files or is explicitly filtered.
+- Runtime-owned command metadata for these commands lives in
+  `src/mcp/command-runtime-metadata.ts:394-410,702-705,768-769,1751-1829`.
+  Extra required tools or input paths would affect implemented/repairing status
+  through `src/mcp/tools/project.ts:937-965`, so keep public metadata stable.
+- Preserve public surfaces: keep `docs/COMMAND-CATALOG.md:15-16` unchanged, add
+  no `god-review` row, and preserve implemented-only exposure through
+  `blueprintCommandCatalog()` and `blueprint://commands/{command}/runtime-contract`.
+- Existing tests already lock most of this contract:
+  `tests/code-review-metadata.test.ts`, `tests/code-review-fix-metadata.test.ts`,
+  `tests/skill-metadata.test.ts:305-333`,
+  `tests/review-runtime-contract-resource.test.ts:57-83`,
+  `tests/command-catalog.test.ts:1526-1669`, and
+  `tests/extension-runtime-contracts.test.ts:241-270`.
+- Activation guard risk: `STATE.md.activeCommand` is too stale for the hard
+  guard. `/blu-code-review` does not update state in its manifest, while
+  `/blu-code-review-fix` writes `activeCommand` only after remediation completes
+  (`commands/blu-code-review-fix.toml:36-40`; downstream routing override in
+  `src/mcp/tools/state.ts:2411-2480`). The guard likely needs host invocation
+  context or a private helper checked before any MCP write.
+- Recommended first slice: add the hidden guarded branch/refusal language in
+  the two manifests plus `skills/blueprint-review/SKILL.md`, prove normal public
+  inputs/catalog/resources stay stable, then add any private guard/tool metadata.
+
+### Mapping: Private MCP Substrate And Artifact Helpers
+
+- A private `src/mcp/tools/god-review.ts` module would sit beside `review.ts`
+  and register through `src/mcp/tool-definitions.ts:1-22`. The runtime auto-loads
+  `TOOL_DEFINITIONS` in `src/mcp/server-runtime.ts:10-35`.
+- If a god-review tool writes files, add it to `BLUEPRINT_MUTATION_TOOL_NAMES` in
+  `src/mcp/mutation-failure-logging.ts:8-37`. If it returns bulky session/report
+  payloads, mirror trimming patterns in `src/mcp/response-sanitizer.ts:834-1046`.
+- Reuse phase/review substrate first: phase resolution and artifact path helpers
+  live in `src/mcp/tools/phase.ts:6109-6220` and
+  `src/mcp/tools/phase-locations.ts:97-245`; deterministic review scope is in
+  `src/mcp/tools/review.ts:8361-9045`; finding/follow-up parsing and counting
+  patterns are around `src/mcp/tools/review.ts:3887` and `4569-4825`.
+- Shared safety/write seams are centralized in
+  `src/mcp/tools/artifacts.ts:2330-2463` (`ensureRepoRoot`,
+  `resolveBlueprintPath`, `writeTextFile`), with review/report validators in
+  `src/mcp/tools/artifacts.ts:5997-6238`.
+- Established persistence shape is validate -> render -> reuse/overwrite ->
+  write, as in `src/mcp/tools/review.ts:9593-9935` and
+  `src/mcp/tools/artifacts.ts:13178-13440`.
+- Pitfalls: review scope normalization rejects absolute paths, globs,
+  directories, missing files, and `.blueprint/**` explicit inputs
+  (`src/mcp/tools/review.ts:8361-8441`); write paths should reuse unchanged
+  content and reject overwrite unless explicitly confirmed.
+- Recommended first slice: keep v1 private and mostly substrate-focused. Build
+  session/scope/finding loaders around existing scope and parser helpers before
+  inventing a full persisted god-review report contract. If persistence follows,
+  phase-scoped output should resemble `blueprint_review_record`; non-phase
+  reports should copy the artifact-report authoring-context/validate/write split.
+- Initial regression coverage should cluster near
+  `tests/code-review-slice.test.ts:799-1031`,
+  `tests/code-review-fix-slice.test.ts:12-260`,
+  `tests/secure-phase-slice.test.ts:474-528`,
+  `tests/audit-milestone-tools.test.ts:963-1103`, and
+  `tests/built-assets-smoke.test.ts:282-313`.
+
+### Mapping: Tests, Runtime Metadata, And Dist Outputs
+
+- Extend existing review slices before adding broad new suites:
+  `tests/code-review-slice.test.ts` already covers phase-scoped review scope,
+  catalog/resource fallback, validation, persistence, and state follow-up;
+  `tests/code-review-fix-slice.test.ts` covers saved-finding parsing,
+  review-fix persistence, and routing.
+- Hidden behavior cases should cover activation guard, session/report-only
+  writes, frozen-scope continuation, fingerprint mismatch refusal, and proof
+  that normal `XX-REVIEW.md`, `XX-REVIEW-FIX.md`, `STATE.md`, and quality-gate
+  paths stay untouched.
+- Public-surface invisibility should extend `tests/code-review-metadata.test.ts`,
+  `tests/code-review-fix-metadata.test.ts`, `tests/help-metadata.test.ts`,
+  `tests/next.test.ts`, `tests/command-catalog.test.ts`, and
+  `tests/review-docs-safety-regression.test.ts`. Assert `--feels-like-god`,
+  god-review report paths, and private tool ids do not appear in public docs,
+  runtime-contract resources, help/next guidance, catalog output, or unrelated
+  review skill bundles.
+- Public runtime metadata source is `src/mcp/command-runtime-metadata.ts:1751-1828`;
+  hidden support should leave declared public write surfaces and notes unchanged.
+- MCP/runtime boundary checks should extend `tests/mcp-server-summary.test.ts`
+  and possibly `tests/built-assets-smoke.test.ts`: if private tools are
+  registered, assert response shaping is intentional while catalog/resources
+  remain public-only. If private tools stay out of the public registry, add
+  negative assertions at the registry/resource layer.
+- Build/dist freshness is enforced by `package.json:10-15`,
+  `tests/built-assets-smoke.test.ts:255-356`, and
+  `tests/extension-runtime-contracts.test.ts:185-239`.
+- Recommended verification order after implementation: focused `tsx --test` on
+  review slice plus metadata/router suites; then
+  `tsx --test tests/mcp-server-summary.test.ts tests/built-assets-smoke.test.ts tests/extension-runtime-contracts.test.ts`;
+  then `npm run typecheck`; then full `npm test` so built outputs and bundled
+  runtime stay in sync.
 
 ## Research-Backed Principles
 
@@ -627,8 +768,3 @@ findings, and fix-mode outcomes.
 
 - Should remediation evidence append to `XX-GOD-REVIEW.md`, write a separate
   god-review-fix report, or support both?
-- Should PR and current-diff god-review reports live only under
-  `.blueprint/reports/`, or should the user be able to bind them to a phase
-  explicitly?
-- Should `--refresh-scope` be allowed after partial completion, or should scope
-  refresh require a new run ID?
