@@ -183,7 +183,7 @@ test("review remediation contracts stay bounded to saved evidence and approved s
   );
   assert.match(
     auditFix,
-    /use Gemini CLI's `ask_user` for explicit confirmation when remediation is non-trivial/i
+    /use\s+`ask_user` for explicit confirmation when remediation is non-trivial/i
   );
   assert.match(
     auditFix,

@@ -28,7 +28,7 @@ test("check-todos manifest uses runtime skill and todo-status MCP identities", a
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-add-todo/);
   assert.match(commandFile, /\/blu-progress/);
-  assert.match(commandFile, /Prefer Gemini CLI's built-in `ask_user` tool for status-change confirmation/);
+  assert.match(commandFile, /Prefer\s+`ask_user` tool for status-change confirmation/);
 });
 
 test("blueprint-capture skill captures shipped check-todos behavior", async () => {

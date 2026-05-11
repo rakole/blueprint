@@ -30,7 +30,7 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /missing-milestone-summary/);
   assert.match(commandFile, /carry-forward-confirmation/);
   assert.match(commandFile, /starter-doc-overwrite-confirmation/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
   assert.ok(
     commandFile.indexOf("If the milestone summary report is missing") <
       commandFile.indexOf("Build carry-forward context through `mcp_blueprint_blueprint_artifact_summary_digest`")

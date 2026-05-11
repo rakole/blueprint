@@ -50,7 +50,7 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   ]);
 
   assert.match(fastToml, /Execution profile: `interactive-read`/);
-  assert.match(fastToml, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
+  assert.match(fastToml, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
   assert.match(fastToml, /Do not turn `\/blu-fast` into a long-running progress flow/i);
   assert.match(fastToml, /Do not create quick-run reports, phase artifacts, or other ad hoc persistence as side effects of `fast`\./);
   assert.match(fastToml, /Do not use subagents\./);

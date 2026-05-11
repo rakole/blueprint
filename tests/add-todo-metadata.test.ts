@@ -24,7 +24,7 @@ test("add-todo manifest uses runtime skill and capture MCP identities", async ()
   assert.match(commandFile, /target: "todo"/);
   assert.match(commandFile, /\/blu-new-project/);
   assert.match(commandFile, /status: "duplicate"/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /\/blu-progress/);
 });
 

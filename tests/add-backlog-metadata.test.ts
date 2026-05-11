@@ -26,7 +26,7 @@ test("add-backlog manifest uses runtime skill and capture MCP identities", async
   assert.match(commandFile, /status: "duplicate"/);
   assert.match(commandFile, /999\.x/);
   assert.match(commandFile, /\/blu-add-phase/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
 });
 
 test("blueprint-capture skill captures backlog parking-lot behavior", async () => {

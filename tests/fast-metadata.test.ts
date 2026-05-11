@@ -27,7 +27,7 @@ test("fast manifest references the execution skill and trivial inline MCP tools 
   assert.match(commandFile, /\/blu-health/);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
-  assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
+  assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
   assert.match(commandFile, /Do not turn `\/blu-fast` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching\./);
   assert.doesNotMatch(commandFile, /`update_topic` tool to keep the active stage visible/);
   assert.doesNotMatch(commandFile, /tracker-eligible/i);
