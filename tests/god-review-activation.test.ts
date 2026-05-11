@@ -44,10 +44,12 @@ test("code-review hidden activation branch runs before normal MCP-backed review 
   assert.match(manifest, /apply the `blueprint-review` skill's Hidden God-Review Activation Guard first/);
   assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, normal `STATE\.md`, quality-gate state/i);
   assert.match(manifest, /Do not fall through into normal review persistence/i);
-
-  for (const toolId of PRIVATE_TOOL_IDS) {
-    assert.doesNotMatch(manifest, new RegExp(toolId));
-  }
+  assert.match(manifest, /mcp_blueprint_blueprint_god_review_start/);
+  assert.match(manifest, /mcp_blueprint_blueprint_god_review_next/);
+  assert.match(manifest, /mcp_blueprint_blueprint_god_review_append/);
+  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_load_findings/);
+  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
+  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
 });
 
 test("code-review-fix hidden activation branch runs before normal MCP-backed remediation flow", async () => {
@@ -86,10 +88,9 @@ test("blueprint-review skill refuses accidental hidden activation before MCP or 
   assert.match(skill, /This is a mistaken skill invocation, reach out to blueprint admin for help\./);
   assert.match(skill, /No `thunderbolt` today\./);
   assert.match(skill, /Do not call MCP tools, inspect `\.blueprint\/`, read repo\s+files, use `STATE\.md\.activeCommand`, write files, spawn subagents/i);
-
-  for (const toolId of PRIVATE_TOOL_IDS) {
-    assert.doesNotMatch(skill, new RegExp(toolId));
-  }
+  assert.match(skill, /mcp_blueprint_blueprint_god_review_start/);
+  assert.match(skill, /mcp_blueprint_blueprint_god_review_next/);
+  assert.match(skill, /mcp_blueprint_blueprint_god_review_append/);
 });
 
 test("public runtime-contract resources still hide hidden branch text", async () => {

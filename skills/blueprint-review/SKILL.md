@@ -63,6 +63,24 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
   intent from ordinary Blueprint state before this guard passes. Normal
   review-family invocations that do not request hidden god-review work continue
   through the public command contracts below.
+- Hidden `/blu-code-review --feels-like-god` orchestration is private and
+  one-group-at-a-time:
+  1. Start fresh hidden review state with
+     `mcp_blueprint_blueprint_god_review_start`, or continue saved hidden state
+     with `mcp_blueprint_blueprint_god_review_next` when the invocation supplies
+     `--continue`, `--run-id`, or `--session`.
+  2. Treat the returned `files`, `scopeFingerprint`, `nextGroup`,
+     `nextGroupId`, and `nextCommand` as authoritative. Do not rediscover or
+     widen scope from normal review tools, git drift, chat memory, or
+     `.blueprint/STATE.md`.
+  3. Review exactly one returned pending group per invocation, then persist that
+     group with `mcp_blueprint_blueprint_god_review_append`. Pass one `groupId`,
+     one terminal group `status`, and that group's findings only.
+  4. End with the exact returned hidden continuation command when more groups
+     remain, or the terminal hidden review status when no pending group remains
+     or the session is blocked.
+  5. Do not call normal `blueprint_review_record`, do not write `XX-REVIEW.md`,
+     and do not update quality gates or normal `STATE.md`.
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
