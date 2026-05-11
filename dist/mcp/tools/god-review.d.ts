@@ -265,6 +265,9 @@ export type GodReviewParsedFinding = {
     impact: string | null;
     recommendation: string | null;
     fixEligibility: GodReviewFixEligibility | null;
+    remediationAttempts?: GodReviewParsedRemediation[];
+    remediated?: boolean;
+    stale?: boolean;
 };
 export type GodReviewParsedRemediation = {
     id: string;
@@ -354,6 +357,17 @@ export type GodReviewAppendResult = {
     staleReasons: string[];
     warnings: string[];
 };
+export type GodReviewLoadFindingsResult = {
+    status: "found" | "not_found" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    reportPath: string | null;
+    sessionPath: string | null;
+    findings: GodReviewParsedFinding[];
+    remediations: GodReviewParsedRemediation[];
+    warnings: string[];
+};
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     activeCommand: z.ZodEnum<{
@@ -423,6 +437,19 @@ declare const godReviewAppendArgsSchema: z.ZodObject<{
     groups: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
 }, z.core.$strip>;
 type GodReviewAppendArgs = z.infer<typeof godReviewAppendArgsSchema>;
+declare const godReviewLoadFindingsArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodEnum<{
+        "/blu-code-review": "/blu-code-review";
+        "/blu-code-review-fix": "/blu-code-review-fix";
+    }>;
+    rawInvocation: z.ZodString;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    runId: z.ZodOptional<z.ZodString>;
+    sessionPath: z.ZodOptional<z.ZodString>;
+    reportPath: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+type GodReviewLoadFindingsArgs = z.infer<typeof godReviewLoadFindingsArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -462,6 +489,7 @@ export declare function renderGodReviewHumanState(args: {
 export declare function blueprintGodReviewStart(rawArgs: GodReviewStartArgs): Promise<GodReviewStartResult>;
 export declare function blueprintGodReviewNext(rawArgs: GodReviewNextArgs): Promise<GodReviewNextResult>;
 export declare function blueprintGodReviewAppend(rawArgs: GodReviewAppendArgs): Promise<GodReviewAppendResult>;
+export declare function blueprintGodReviewLoadFindings(rawArgs: GodReviewLoadFindingsArgs): Promise<GodReviewLoadFindingsResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
 export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};

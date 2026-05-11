@@ -226,7 +226,8 @@ test("only implemented god-review private tools are registered as callable MCP t
       blueprintToolNames.includes(toolName),
       toolName === "blueprint_god_review_start" ||
         toolName === "blueprint_god_review_next" ||
-        toolName === "blueprint_god_review_append"
+        toolName === "blueprint_god_review_append" ||
+        toolName === "blueprint_god_review_load_findings"
     );
   }
 

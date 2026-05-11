@@ -10297,7 +10297,7 @@ async function collectValidAddTestsReviewPath(args: {
   const warnings: string[] = [];
 
   for (const artifactPath of args.phaseFiles
-    .filter((entry) => entry.endsWith("-REVIEW.md"))
+    .filter((entry) => isNormalReviewArtifactPath(entry))
     .sort((left, right) => left.localeCompare(right))) {
     const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = validateReviewArtifactContent(raw, "code-review");
@@ -10482,8 +10482,12 @@ async function resolveAuditFixReportPhase(
   return resolvePhaseBackedReportPhase(projectRoot, parseAuditFixReportPhase(reportName));
 }
 
+function isNormalReviewArtifactPath(artifactPath: string): boolean {
+  return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
+}
+
 function auditFixEvidenceKindFromPath(artifactPath: string): AuditFixEvidenceKind {
-  if (artifactPath.endsWith("-REVIEW.md")) {
+  if (isNormalReviewArtifactPath(artifactPath)) {
     return "review";
   }
   if (artifactPath.endsWith("-SECURITY.md")) {
@@ -10717,7 +10721,11 @@ async function collectValidAuditFixArtifactPath(args: {
   const warnings: string[] = [];
 
   for (const artifactPath of args.phaseFiles
-    .filter((entry) => entry.endsWith(args.suffix))
+    .filter((entry) =>
+      args.suffix === "-REVIEW.md"
+        ? isNormalReviewArtifactPath(entry)
+        : entry.endsWith(args.suffix)
+    )
     .sort((left, right) => left.localeCompare(right))) {
     const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation =

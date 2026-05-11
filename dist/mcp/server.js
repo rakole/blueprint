@@ -42388,7 +42388,7 @@ async function resolveAddTestsSummaryLinkedPlan(args) {
 }
 async function collectValidAddTestsReviewPath(args) {
   const warnings = [];
-  for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-REVIEW.md")).sort((left, right) => left.localeCompare(right))) {
+  for (const artifactPath of args.phaseFiles.filter((entry) => isNormalReviewArtifactPath(entry)).sort((left, right) => left.localeCompare(right))) {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = validateReviewArtifactContent(raw, "code-review");
     if (validation.valid) {
@@ -42523,8 +42523,11 @@ function canonicalAuditFixReportName(phaseNumber) {
 async function resolveAuditFixReportPhase(projectRoot, reportName2) {
   return resolvePhaseBackedReportPhase(projectRoot, parseAuditFixReportPhase(reportName2));
 }
+function isNormalReviewArtifactPath(artifactPath) {
+  return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
+}
 function auditFixEvidenceKindFromPath(artifactPath) {
-  if (artifactPath.endsWith("-REVIEW.md")) {
+  if (isNormalReviewArtifactPath(artifactPath)) {
     return "review";
   }
   if (artifactPath.endsWith("-SECURITY.md")) {
@@ -42685,7 +42688,9 @@ async function collectAuditFixSummaryInventory(args) {
 }
 async function collectValidAuditFixArtifactPath(args) {
   const warnings = [];
-  for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith(args.suffix)).sort((left, right) => left.localeCompare(right))) {
+  for (const artifactPath of args.phaseFiles.filter(
+    (entry) => args.suffix === "-REVIEW.md" ? isNormalReviewArtifactPath(entry) : entry.endsWith(args.suffix)
+  ).sort((left, right) => left.localeCompare(right))) {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
@@ -50946,7 +50951,13 @@ function parsePlanIdForSuffix2(pathValue, phasePrefix2, suffix) {
   }
   return match[1].padStart(2, "0");
 }
+function isNormalReviewArtifactPath2(artifactPath) {
+  return artifactPath.endsWith("-REVIEW.md") && !artifactPath.endsWith("-GOD-REVIEW.md");
+}
 function findPhaseArtifact(artifacts, suffix) {
+  if (suffix === "-REVIEW.md") {
+    return artifacts.find((artifact) => isNormalReviewArtifactPath2(artifact)) ?? null;
+  }
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
 }
 async function readRepoFileIfPresent(projectRoot, relativePath) {
@@ -52222,7 +52233,7 @@ async function blueprintReviewLoadFindings(args) {
       ]
     };
   }
-  const artifactPath = located.artifacts.find(
+  const artifactPath = artifact === "code-review" ? findPhaseArtifact(located.artifacts, REVIEW_ARTIFACT_SUFFIXES[artifact]) : located.artifacts.find(
     (candidate) => candidate.endsWith(REVIEW_ARTIFACT_SUFFIXES[artifact])
   ) ?? null;
   if (!artifactPath) {
@@ -74258,6 +74269,16 @@ var godReviewAppendInputSchema = {
   groups: array(unknown()).optional()
 };
 var godReviewAppendArgsSchema = object2(godReviewAppendInputSchema);
+var godReviewLoadFindingsInputSchema = {
+  cwd: string2().optional(),
+  activeCommand: _enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  rawInvocation: string2(),
+  phase: union([string2(), number2()]).optional(),
+  runId: string2().optional(),
+  sessionPath: string2().optional(),
+  reportPath: string2().optional()
+};
+var godReviewLoadFindingsArgsSchema = object2(godReviewLoadFindingsInputSchema);
 function hasGodReviewFlag(rawInvocation) {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
@@ -74600,6 +74621,18 @@ function invalidAppendResult(args) {
     warnings: args.warnings ?? []
   };
 }
+function invalidLoadFindingsResult(args) {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    reportPath: args.reportPath ?? null,
+    sessionPath: args.sessionPath ?? null,
+    findings: [],
+    remediations: [],
+    warnings: args.warnings ?? []
+  };
+}
 function determineScopeKind(args) {
   if (args.scopeKind) {
     return args.scopeKind;
@@ -74678,6 +74711,38 @@ function normalizeGodReviewSessionPath(rawPath) {
   }
   return { valid: true, path: normalizedPath };
 }
+function normalizeGodReviewReportPath(rawPath) {
+  const requestedPath = normalizePathSeparators(rawPath.trim());
+  if (requestedPath.length === 0) {
+    return { valid: false, path: null, reason: "Report path must not be empty." };
+  }
+  if (path15.isAbsolute(requestedPath)) {
+    return {
+      valid: false,
+      path: null,
+      reason: "Absolute filesystem paths are not allowed."
+    };
+  }
+  if (hasGlobPattern2(requestedPath)) {
+    return { valid: false, path: null, reason: "Globs are not allowed." };
+  }
+  const normalizedPath = path15.posix.normalize(requestedPath);
+  if (!normalizedPath.startsWith(".blueprint/")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review reports must stay inside .blueprint."
+    };
+  }
+  if (!normalizedPath.endsWith(".md")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review report path must point to a Markdown file."
+    };
+  }
+  return { valid: true, path: normalizedPath };
+}
 async function resolveGodReviewSessionPath(args, projectRoot) {
   const explicitSessionPath = args.sessionPath ?? parseFlagValue(args.rawInvocation, "--session");
   if (explicitSessionPath) {
@@ -74751,6 +74816,46 @@ async function loadGodReviewSession(args) {
     };
   }
   return { valid: true, session: session.data };
+}
+async function resolveGodReviewReportReference(args, projectRoot) {
+  if (args.reportPath) {
+    const normalized = normalizeGodReviewReportPath(args.reportPath);
+    return normalized.valid ? { valid: true, reportPath: normalized.path, sessionPath: null } : {
+      valid: false,
+      reason: normalized.reason,
+      reportPath: null,
+      sessionPath: null,
+      warnings: []
+    };
+  }
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath.valid) {
+    return {
+      valid: false,
+      reason: sessionPath.reason,
+      reportPath: null,
+      sessionPath: null,
+      warnings: []
+    };
+  }
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+  if (!loaded.valid) {
+    return {
+      valid: false,
+      reason: loaded.reason,
+      reportPath: null,
+      sessionPath: sessionPath.path,
+      warnings: loaded.warnings
+    };
+  }
+  return {
+    valid: true,
+    reportPath: loaded.session.reportPath,
+    sessionPath: loaded.session.sessionPath
+  };
 }
 function compareGodReviewFingerprints(args) {
   const staleReasons = [];
@@ -75025,6 +75130,33 @@ function nextGroupIdAfterAppend(groups) {
   return groups.find(
     (group) => group.status === "pending" || group.status === "in-progress"
   )?.id ?? null;
+}
+function collectDuplicateFindingIds(findings) {
+  const seen = /* @__PURE__ */ new Set();
+  const duplicates = /* @__PURE__ */ new Set();
+  for (const finding of findings) {
+    if (seen.has(finding.id)) {
+      duplicates.add(finding.id);
+    }
+    seen.add(finding.id);
+  }
+  return [...duplicates].sort((left, right) => left.localeCompare(right));
+}
+function attachRemediationState(args) {
+  return args.findings.map((finding) => {
+    const remediationAttempts = args.remediations.filter(
+      (remediation) => remediation.findingId === finding.id
+    );
+    const latestAttempt = remediationAttempts.at(-1) ?? null;
+    return {
+      ...finding,
+      remediationAttempts,
+      remediated: remediationAttempts.some(
+        (remediation) => remediation.status === "fixed"
+      ),
+      stale: latestAttempt?.status === "stale"
+    };
+  });
 }
 async function resolvePhaseScope(args) {
   const phase = args.phase ?? parsePhaseFromInvocation(args.rawInvocation) ?? void 0;
@@ -75716,6 +75848,180 @@ async function blueprintGodReviewAppend(rawArgs) {
     warnings: fingerprint.warnings
   };
 }
+async function blueprintGodReviewLoadFindings(rawArgs) {
+  const parsed = godReviewLoadFindingsArgsSchema.safeParse(rawArgs);
+  if (!parsed.success) {
+    return invalidLoadFindingsResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_load_findings arguments.",
+      warnings: parsed.error.issues.map((issue2) => issue2.message)
+    });
+  }
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      reportPath: null,
+      sessionPath: null,
+      findings: [],
+      remediations: [],
+      warnings: []
+    };
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const reference = await resolveGodReviewReportReference(args, projectRoot);
+  if (!reference.valid) {
+    return invalidLoadFindingsResult({
+      reason: reference.reason,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: reference.warnings
+    });
+  }
+  const reportAbsolutePath = resolveBlueprintPath(projectRoot, reference.reportPath);
+  const report = await readTextIfPresent(reportAbsolutePath);
+  if (report === null) {
+    return {
+      status: "not_found",
+      activated: true,
+      reason: `${reference.reportPath} does not exist.`,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      findings: [],
+      remediations: [],
+      warnings: []
+    };
+  }
+  const parsedReport = parseGodReviewReportShell(report);
+  const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
+  if (duplicateIds.length > 0) {
+    return invalidLoadFindingsResult({
+      reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: parsedReport.warnings
+    });
+  }
+  return {
+    status: "found",
+    activated: true,
+    reason: null,
+    reportPath: reference.reportPath,
+    sessionPath: reference.sessionPath,
+    findings: attachRemediationState(parsedReport),
+    remediations: parsedReport.remediations,
+    warnings: parsedReport.warnings
+  };
+}
+function parseBulletValue(lines, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
+  const match = lines.map((line) => line.trim()).find((line) => pattern.test(line));
+  return match?.match(pattern)?.[1]?.trim() ?? null;
+}
+function parseBacktickedList(value) {
+  if (!value) {
+    return [];
+  }
+  return [...value.matchAll(/`([^`]+)`/g)].map((match) => match[1].trim());
+}
+function normalizeEnumValue(rawValue, values) {
+  if (!rawValue) {
+    return null;
+  }
+  const normalized = rawValue.trim().toLowerCase();
+  return values.includes(normalized) ? normalized : null;
+}
+function parseGodReviewReportShell(content) {
+  const findings = [];
+  const remediations = [];
+  const warnings = [];
+  const lines = content.split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const findingMatch = lines[index].match(/^#### (GOD-[A-Z]{3}-\d{3}):\s*(.+)$/);
+    if (findingMatch) {
+      const bodyLines = [];
+      index += 1;
+      while (index < lines.length && !/^#### |^## |^### /.test(lines[index])) {
+        bodyLines.push(lines[index]);
+        index += 1;
+      }
+      index -= 1;
+      const severityRaw = parseBulletValue(bodyLines, "Severity");
+      const dispositionRaw = parseBulletValue(bodyLines, "Disposition");
+      const fixEligibilityRaw = parseBulletValue(bodyLines, "Fix Eligibility");
+      const severity = normalizeEnumValue(severityRaw, GOD_REVIEW_SEVERITY_VALUES);
+      const disposition = normalizeEnumValue(dispositionRaw, GOD_REVIEW_DISPOSITION_VALUES);
+      const fixEligibility = normalizeEnumValue(
+        fixEligibilityRaw,
+        GOD_REVIEW_FIX_ELIGIBILITY_VALUES
+      );
+      if (severityRaw && severity === null) {
+        warnings.push(`${findingMatch[1]} has unsupported severity: ${severityRaw}`);
+      }
+      if (dispositionRaw && disposition === null) {
+        warnings.push(`${findingMatch[1]} has unsupported disposition: ${dispositionRaw}`);
+      }
+      findings.push({
+        id: findingMatch[1],
+        title: findingMatch[2].trim(),
+        severity,
+        disposition,
+        confidence: normalizeEnumValue(parseBulletValue(bodyLines, "Confidence"), [
+          "high",
+          "medium",
+          "low"
+        ]),
+        files: parseBacktickedList(parseBulletValue(bodyLines, "Files")),
+        evidence: parseBulletValue(bodyLines, "Evidence"),
+        impact: parseBulletValue(bodyLines, "Impact"),
+        recommendation: parseBulletValue(bodyLines, "Recommendation"),
+        fixEligibility
+      });
+      continue;
+    }
+    const remediationMatch = lines[index].match(
+      /^### (GOD-FIX-\d{3}):\s*(GOD-[A-Z]{3}-\d{3})$/
+    );
+    if (remediationMatch) {
+      const bodyLines = [];
+      index += 1;
+      while (index < lines.length && !/^### |^## /.test(lines[index])) {
+        bodyLines.push(lines[index]);
+        index += 1;
+      }
+      index -= 1;
+      remediations.push({
+        id: remediationMatch[1],
+        findingId: remediationMatch[2],
+        status: normalizeEnumValue(
+          parseBulletValue(bodyLines, "Status"),
+          GOD_REVIEW_REMEDIATION_STATUS_VALUES
+        ),
+        selectedBy: normalizeEnumValue(
+          parseBulletValue(bodyLines, "Selected By"),
+          GOD_REVIEW_SELECTED_BY_VALUES
+        ),
+        filesChanged: parseBacktickedList(parseBulletValue(bodyLines, "Files Changed")),
+        verification: parseBulletValue(bodyLines, "Verification"),
+        evidence: parseBulletValue(bodyLines, "Evidence"),
+        followUp: parseBulletValue(bodyLines, "Follow-Up")
+      });
+    }
+  }
+  return {
+    findings,
+    remediations,
+    warnings
+  };
+}
 var godReviewToolDefinitions = [
   {
     name: "blueprint_god_review_start",
@@ -75734,6 +76040,12 @@ var godReviewToolDefinitions = [
     description: "Private hidden god-review append tool: appends exactly one ordered review group section, assigns GOD finding IDs, and updates only the private session plus human state.",
     inputSchema: godReviewAppendInputSchema,
     handler: async (args) => blueprintGodReviewAppend(args)
+  },
+  {
+    name: "blueprint_god_review_load_findings",
+    description: "Private hidden god-review finding loader: parses GOD findings and remediation attempts only from the durable god-review report.",
+    inputSchema: godReviewLoadFindingsInputSchema,
+    handler: async (args) => blueprintGodReviewLoadFindings(args)
   }
 ];
 

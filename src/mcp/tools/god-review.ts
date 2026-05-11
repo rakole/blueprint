@@ -300,6 +300,9 @@ export type GodReviewParsedFinding = {
   impact: string | null;
   recommendation: string | null;
   fixEligibility: GodReviewFixEligibility | null;
+  remediationAttempts?: GodReviewParsedRemediation[];
+  remediated?: boolean;
+  stale?: boolean;
 };
 
 export type GodReviewParsedRemediation = {
@@ -406,6 +409,18 @@ export type GodReviewAppendResult = {
   warnings: string[];
 };
 
+export type GodReviewLoadFindingsResult = {
+  status: "found" | "not_found" | "invalid" | "refused";
+  activated: boolean;
+  refusal?: string;
+  reason: string | null;
+  reportPath: string | null;
+  sessionPath: string | null;
+  findings: GodReviewParsedFinding[];
+  remediations: GodReviewParsedRemediation[];
+  warnings: string[];
+};
+
 const godReviewStartInputSchema = {
   cwd: z.string().optional(),
   activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
@@ -455,6 +470,18 @@ const godReviewAppendInputSchema = {
 };
 const godReviewAppendArgsSchema = z.object(godReviewAppendInputSchema);
 type GodReviewAppendArgs = z.infer<typeof godReviewAppendArgsSchema>;
+
+const godReviewLoadFindingsInputSchema = {
+  cwd: z.string().optional(),
+  activeCommand: z.enum(GOD_REVIEW_ACTIVE_COMMANDS),
+  rawInvocation: z.string(),
+  phase: z.union([z.string(), z.number()]).optional(),
+  runId: z.string().optional(),
+  sessionPath: z.string().optional(),
+  reportPath: z.string().optional()
+};
+const godReviewLoadFindingsArgsSchema = z.object(godReviewLoadFindingsInputSchema);
+type GodReviewLoadFindingsArgs = z.infer<typeof godReviewLoadFindingsArgsSchema>;
 
 function hasGodReviewFlag(rawInvocation: string): boolean {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
@@ -937,6 +964,25 @@ function invalidAppendResult(args: {
   };
 }
 
+function invalidLoadFindingsResult(args: {
+  activated?: boolean;
+  reason: string;
+  reportPath?: string | null;
+  sessionPath?: string | null;
+  warnings?: string[];
+}): GodReviewLoadFindingsResult {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    reportPath: args.reportPath ?? null,
+    sessionPath: args.sessionPath ?? null,
+    findings: [],
+    remediations: [],
+    warnings: args.warnings ?? []
+  };
+}
+
 function determineScopeKind(args: GodReviewStartArgs): GodReviewScopeKind {
   if (args.scopeKind) {
     return args.scopeKind;
@@ -1032,6 +1078,46 @@ function normalizeGodReviewSessionPath(rawPath: string): GodReviewRepoPathResult
       valid: false,
       path: null,
       reason: "God-review session path must point to a JSON file."
+    };
+  }
+
+  return { valid: true, path: normalizedPath };
+}
+
+function normalizeGodReviewReportPath(rawPath: string): GodReviewRepoPathResult {
+  const requestedPath = normalizePathSeparators(rawPath.trim());
+
+  if (requestedPath.length === 0) {
+    return { valid: false, path: null, reason: "Report path must not be empty." };
+  }
+
+  if (path.isAbsolute(requestedPath)) {
+    return {
+      valid: false,
+      path: null,
+      reason: "Absolute filesystem paths are not allowed."
+    };
+  }
+
+  if (hasGlobPattern(requestedPath)) {
+    return { valid: false, path: null, reason: "Globs are not allowed." };
+  }
+
+  const normalizedPath = path.posix.normalize(requestedPath);
+
+  if (!normalizedPath.startsWith(".blueprint/")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review reports must stay inside .blueprint."
+    };
+  }
+
+  if (!normalizedPath.endsWith(".md")) {
+    return {
+      valid: false,
+      path: null,
+      reason: "God-review report path must point to a Markdown file."
     };
   }
 
@@ -1144,6 +1230,61 @@ async function loadGodReviewSession(args: {
   }
 
   return { valid: true, session: session.data };
+}
+
+async function resolveGodReviewReportReference(
+  args: GodReviewLoadFindingsArgs,
+  projectRoot: string
+): Promise<
+  | { valid: true; reportPath: string; sessionPath: string | null }
+  | { valid: false; reason: string; reportPath: string | null; sessionPath: string | null; warnings: string[] }
+> {
+  if (args.reportPath) {
+    const normalized = normalizeGodReviewReportPath(args.reportPath);
+
+    return normalized.valid
+      ? { valid: true, reportPath: normalized.path, sessionPath: null }
+      : {
+          valid: false,
+          reason: normalized.reason,
+          reportPath: null,
+          sessionPath: null,
+          warnings: []
+        };
+  }
+
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+
+  if (!sessionPath.valid) {
+    return {
+      valid: false,
+      reason: sessionPath.reason,
+      reportPath: null,
+      sessionPath: null,
+      warnings: []
+    };
+  }
+
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+
+  if (!loaded.valid) {
+    return {
+      valid: false,
+      reason: loaded.reason,
+      reportPath: null,
+      sessionPath: sessionPath.path,
+      warnings: loaded.warnings
+    };
+  }
+
+  return {
+    valid: true,
+    reportPath: loaded.session.reportPath,
+    sessionPath: loaded.session.sessionPath
+  };
 }
 
 function compareGodReviewFingerprints(args: {
@@ -1534,6 +1675,42 @@ function nextGroupIdAfterAppend(groups: GodReviewGroupState[]): GodReviewGroupId
       (group) => group.status === "pending" || group.status === "in-progress"
     )?.id ?? null
   );
+}
+
+function collectDuplicateFindingIds(findings: GodReviewParsedFinding[]): string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const finding of findings) {
+    if (seen.has(finding.id)) {
+      duplicates.add(finding.id);
+    }
+
+    seen.add(finding.id);
+  }
+
+  return [...duplicates].sort((left, right) => left.localeCompare(right));
+}
+
+function attachRemediationState(args: {
+  findings: GodReviewParsedFinding[];
+  remediations: GodReviewParsedRemediation[];
+}): GodReviewParsedFinding[] {
+  return args.findings.map((finding) => {
+    const remediationAttempts = args.remediations.filter(
+      (remediation) => remediation.findingId === finding.id
+    );
+    const latestAttempt = remediationAttempts.at(-1) ?? null;
+
+    return {
+      ...finding,
+      remediationAttempts,
+      remediated: remediationAttempts.some(
+        (remediation) => remediation.status === "fixed"
+      ),
+      stale: latestAttempt?.status === "stale"
+    };
+  });
 }
 
 async function resolvePhaseScope(args: {
@@ -2372,6 +2549,91 @@ export async function blueprintGodReviewAppend(
   };
 }
 
+export async function blueprintGodReviewLoadFindings(
+  rawArgs: GodReviewLoadFindingsArgs
+): Promise<GodReviewLoadFindingsResult> {
+  const parsed = godReviewLoadFindingsArgsSchema.safeParse(rawArgs);
+
+  if (!parsed.success) {
+    return invalidLoadFindingsResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_load_findings arguments.",
+      warnings: parsed.error.issues.map((issue) => issue.message)
+    });
+  }
+
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      reportPath: null,
+      sessionPath: null,
+      findings: [],
+      remediations: [],
+      warnings: []
+    };
+  }
+
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const reference = await resolveGodReviewReportReference(args, projectRoot);
+
+  if (!reference.valid) {
+    return invalidLoadFindingsResult({
+      reason: reference.reason,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: reference.warnings
+    });
+  }
+
+  const reportAbsolutePath = resolveBlueprintPath(projectRoot, reference.reportPath);
+  const report = await readTextIfPresent(reportAbsolutePath);
+
+  if (report === null) {
+    return {
+      status: "not_found",
+      activated: true,
+      reason: `${reference.reportPath} does not exist.`,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      findings: [],
+      remediations: [],
+      warnings: []
+    };
+  }
+
+  const parsedReport = parseGodReviewReportShell(report);
+  const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
+
+  if (duplicateIds.length > 0) {
+    return invalidLoadFindingsResult({
+      reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
+      reportPath: reference.reportPath,
+      sessionPath: reference.sessionPath,
+      warnings: parsedReport.warnings
+    });
+  }
+
+  return {
+    status: "found",
+    activated: true,
+    reason: null,
+    reportPath: reference.reportPath,
+    sessionPath: reference.sessionPath,
+    findings: attachRemediationState(parsedReport),
+    remediations: parsedReport.remediations,
+    warnings: parsedReport.warnings
+  };
+}
+
 function parseBulletValue(lines: string[], label: string): string | null {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
@@ -2524,5 +2786,13 @@ export const godReviewToolDefinitions: ToolDefinition[] = [
     inputSchema: godReviewAppendInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintGodReviewAppend(args as GodReviewAppendArgs)
+  },
+  {
+    name: "blueprint_god_review_load_findings",
+    description:
+      "Private hidden god-review finding loader: parses GOD findings and remediation attempts only from the durable god-review report.",
+    inputSchema: godReviewLoadFindingsInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintGodReviewLoadFindings(args as GodReviewLoadFindingsArgs)
   }
 ];
