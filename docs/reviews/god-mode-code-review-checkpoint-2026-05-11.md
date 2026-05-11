@@ -82,8 +82,9 @@ active command is `/blu-code-review` or `/blu-code-review-fix` and the hidden
 `--feels-like-god` flag is present. If triggered accidentally by model routing,
 it should stop with a brief human-facing refusal such as:
 
-> God mode only wakes for `/blu-code-review` or `/blu-code-review-fix` with
-> `--feels-like-god`. No thunderbolt today.
+> God mode only wakes during special `occassions`. 
+> This is a mistaken skill invocation, reach out to blueprint admin for help.
+> No `thunderbolt` today.
 
 Normal `/blu-code-review` continues to use the existing `review.code-review`
 model contract, `blueprint_review_scope`, `blueprint_review_validate_model`, and
