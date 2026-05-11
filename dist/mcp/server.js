@@ -74282,6 +74282,24 @@ var godReviewLoadFindingsInputSchema = {
   all: boolean2().optional()
 };
 var godReviewLoadFindingsArgsSchema = object2(godReviewLoadFindingsInputSchema);
+var godReviewRecordFixInputSchema = {
+  cwd: string2().optional(),
+  activeCommand: literal("/blu-code-review-fix"),
+  rawInvocation: string2(),
+  phase: union([string2(), number2()]).optional(),
+  runId: string2().optional(),
+  sessionPath: string2().optional(),
+  reportPath: string2().optional(),
+  findingId: string2().min(1),
+  status: godReviewRemediationStatusSchema,
+  selectedBy: godReviewSelectedBySchema,
+  filesChanged: array(string2()).optional(),
+  verification: string2().optional(),
+  evidence: string2().optional(),
+  followUp: string2().optional(),
+  terminal: boolean2().optional()
+};
+var godReviewRecordFixArgsSchema = object2(godReviewRecordFixInputSchema);
 function hasGodReviewFlag(rawInvocation) {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
@@ -74634,6 +74652,27 @@ function invalidLoadFindingsResult(args) {
     findings: [],
     remediations: [],
     selection: null,
+    warnings: args.warnings ?? []
+  };
+}
+function invalidRecordFixResult(args) {
+  return {
+    status: "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    runId: args.runId ?? null,
+    sessionPath: args.sessionPath ?? null,
+    humanStatePath: args.humanStatePath ?? null,
+    reportPath: args.reportPath ?? null,
+    remediationId: null,
+    findingId: args.findingId ?? null,
+    selectedBy: args.selectedBy ?? null,
+    remediationStatus: args.remediationStatus ?? null,
+    filesChanged: args.filesChanged ?? [],
+    terminal: args.terminal ?? false,
+    cleanupEligible: args.cleanupEligible ?? false,
+    written: false,
+    staleReasons: args.staleReasons ?? [],
     warnings: args.warnings ?? []
   };
 }
@@ -75531,6 +75570,107 @@ async function resolveGodReviewFixSelection(args) {
     currentFingerprint: fingerprint.fingerprint
   };
 }
+function nextGodReviewRemediationId(remediations) {
+  const maxId = remediations.reduce((max, remediation) => {
+    const match = remediation.id.match(/^GOD-FIX-(\d{3})$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  return `GOD-FIX-${String(maxId + 1).padStart(3, "0")}`;
+}
+function formatOptionalRemediationValue(value) {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : "none";
+}
+function renderRemediationFilesChanged(filesChanged) {
+  return filesChanged.length === 0 ? "none" : filesChanged.map((file2) => `\`${file2}\``).join(", ");
+}
+function renderGodReviewRemediationEntry(args) {
+  return [
+    `### ${args.remediationId}: ${args.findingId}`,
+    `- Status: ${args.status}`,
+    `- Finding: ${args.findingId}`,
+    `- Selected By: ${args.selectedBy}`,
+    `- Files Changed: ${renderRemediationFilesChanged(args.filesChanged)}`,
+    `- Verification: ${formatOptionalRemediationValue(args.verification)}`,
+    `- Evidence: ${formatOptionalRemediationValue(args.evidence)}`,
+    `- Follow-Up: ${formatOptionalRemediationValue(args.followUp)}`,
+    ""
+  ].join("\n");
+}
+function appendRemediationLogPayload(args) {
+  const hasRemediationLog = /^## Remediation Log\s*$/m.test(args.report);
+  const beforeEntry = hasRemediationLog ? "\n" : "\n## Remediation Log\n\n";
+  return `${args.report.endsWith("\n") ? "" : "\n"}${beforeEntry}${args.entry}`;
+}
+async function normalizeRemediationChangedFiles(args) {
+  const requestedFiles = stableUniqueSorted(args.filesChanged ?? []);
+  if (args.status !== "fixed" && requestedFiles.length > 0) {
+    return {
+      valid: false,
+      reason: "Only fixed god-review remediation entries may claim changed files; stale, skipped, deferred, and blocked entries must be no-edit records.",
+      filesChanged: requestedFiles,
+      warnings: []
+    };
+  }
+  if (args.status === "fixed" && requestedFiles.length === 0) {
+    return {
+      valid: false,
+      reason: "Fixed god-review remediation entries must name at least one changed file.",
+      filesChanged: [],
+      warnings: []
+    };
+  }
+  if (requestedFiles.length === 0) {
+    return { valid: true, filesChanged: [] };
+  }
+  const resolvedFiles = await resolveExistingRepoFiles2({
+    projectRoot: args.projectRoot,
+    files: requestedFiles,
+    sourceLabel: "god-review remediation changed file"
+  });
+  if (!resolvedFiles.valid) {
+    return {
+      valid: false,
+      reason: resolvedFiles.reason ?? "One or more changed files were invalid.",
+      filesChanged: requestedFiles,
+      warnings: resolvedFiles.warnings
+    };
+  }
+  return {
+    valid: true,
+    filesChanged: resolvedFiles.files
+  };
+}
+function buildRecordFixSelectionArgs(args) {
+  const selectionArgs = {
+    cwd: args.recordArgs.cwd,
+    activeCommand: "/blu-code-review-fix",
+    rawInvocation: args.recordArgs.rawInvocation,
+    phase: args.recordArgs.phase,
+    runId: args.recordArgs.runId,
+    sessionPath: args.recordArgs.sessionPath ?? args.session.sessionPath,
+    reportPath: args.recordArgs.reportPath ?? args.session.reportPath
+  };
+  switch (args.recordArgs.selectedBy) {
+    case "explicit-id":
+      return {
+        ...selectionArgs,
+        findingIds: [args.recordArgs.findingId]
+      };
+    case "severity-filter":
+      return {
+        ...selectionArgs,
+        severity: args.finding.severity ?? void 0
+      };
+    case "all":
+      return {
+        ...selectionArgs,
+        all: true
+      };
+    case "default":
+      return selectionArgs;
+  }
+}
 async function resolvePhaseScope(args) {
   const phase = args.phase ?? parsePhaseFromInvocation(args.rawInvocation) ?? void 0;
   const scoped = await blueprintReviewScope({
@@ -76303,6 +76443,291 @@ async function blueprintGodReviewLoadFindings(rawArgs) {
     warnings: parsedReport.warnings
   };
 }
+async function blueprintGodReviewRecordFix(rawArgs) {
+  const parsed = godReviewRecordFixArgsSchema.safeParse(rawArgs);
+  if (!parsed.success) {
+    return invalidRecordFixResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_record_fix arguments.",
+      warnings: parsed.error.issues.map((issue2) => issue2.message)
+    });
+  }
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      runId: null,
+      sessionPath: null,
+      humanStatePath: null,
+      reportPath: null,
+      remediationId: null,
+      findingId: null,
+      selectedBy: null,
+      remediationStatus: null,
+      filesChanged: [],
+      terminal: false,
+      cleanupEligible: false,
+      written: false,
+      staleReasons: [],
+      warnings: []
+    };
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath.valid) {
+    return invalidRecordFixResult({
+      reason: sessionPath.reason,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status
+    });
+  }
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+  if (!loaded.valid) {
+    return invalidRecordFixResult({
+      reason: loaded.reason,
+      sessionPath: sessionPath.path,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      warnings: loaded.warnings
+    });
+  }
+  const session = loaded.session;
+  const reportPath = args.reportPath ?? session.reportPath;
+  const normalizedReportPath = normalizeGodReviewReportPath(reportPath);
+  if (!normalizedReportPath.valid) {
+    return invalidRecordFixResult({
+      reason: normalizedReportPath.reason,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status
+    });
+  }
+  if (normalizedReportPath.path !== session.reportPath) {
+    return invalidRecordFixResult({
+      reason: "blueprint_god_review_record_fix must append to the durable report recorded by the saved god-review session.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: normalizedReportPath.path,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status
+    });
+  }
+  const reportAbsolutePath = resolveBlueprintPath(projectRoot, session.reportPath);
+  const report = await readTextIfPresent(reportAbsolutePath);
+  if (report === null) {
+    return invalidRecordFixResult({
+      reason: `${session.reportPath} does not exist.`,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status
+    });
+  }
+  const parsedReport = parseGodReviewReportShell(report);
+  const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
+  if (duplicateIds.length > 0) {
+    return invalidRecordFixResult({
+      reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      warnings: parsedReport.warnings
+    });
+  }
+  const findings = attachRemediationState(parsedReport);
+  const finding = findings.find((candidate) => candidate.id === args.findingId);
+  if (!finding) {
+    return invalidRecordFixResult({
+      reason: `Selected god-review finding ID does not exist: ${args.findingId}.`,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      warnings: parsedReport.warnings
+    });
+  }
+  const selection = await resolveGodReviewFixSelection({
+    projectRoot,
+    loadArgs: buildRecordFixSelectionArgs({
+      recordArgs: args,
+      session,
+      finding
+    }),
+    sessionPath: session.sessionPath,
+    findings
+  });
+  const selectedTarget = selection?.targets.find((target) => target.id === args.findingId);
+  if (selection?.status === "stale" && args.status !== "stale") {
+    return {
+      status: "stale",
+      activated: true,
+      reason: "God-review selection is stale. Record a no-edit stale remediation entry or start a fresh hidden review.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      remediationId: null,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      filesChanged: args.filesChanged ?? [],
+      terminal: false,
+      cleanupEligible: session.cleanup.eligible,
+      written: false,
+      staleReasons: selection.staleReasons,
+      warnings: [...parsedReport.warnings, ...selection.staleReasons]
+    };
+  }
+  if (args.status === "fixed" && (selection === null || selection.status !== "ready" || !selectedTarget)) {
+    return invalidRecordFixResult({
+      reason: selection?.reason ?? "Fixed god-review remediation entries require an edit-ready private selection target.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      staleReasons: selection?.staleReasons ?? [],
+      warnings: parsedReport.warnings
+    });
+  }
+  if (args.status !== "fixed" && selection?.status === "invalid" && args.selectedBy !== "explicit-id") {
+    return invalidRecordFixResult({
+      reason: selection.reason ?? "God-review remediation selection was invalid.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      staleReasons: selection.staleReasons,
+      warnings: [...parsedReport.warnings, ...selection.staleReasons]
+    });
+  }
+  const changedFiles = await normalizeRemediationChangedFiles({
+    projectRoot,
+    status: args.status,
+    filesChanged: args.filesChanged
+  });
+  if (!changedFiles.valid) {
+    return invalidRecordFixResult({
+      reason: changedFiles.reason,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      findingId: args.findingId,
+      selectedBy: args.selectedBy,
+      remediationStatus: args.status,
+      filesChanged: changedFiles.filesChanged,
+      warnings: [...parsedReport.warnings, ...changedFiles.warnings]
+    });
+  }
+  const remediationId = nextGodReviewRemediationId(parsedReport.remediations);
+  const entry = renderGodReviewRemediationEntry({
+    remediationId,
+    findingId: args.findingId,
+    status: args.status,
+    selectedBy: args.selectedBy,
+    filesChanged: changedFiles.filesChanged,
+    verification: args.verification,
+    evidence: args.status === "stale" && (args.evidence === void 0 || args.evidence.trim() === "") ? selection?.staleReasons.join("; ") : args.evidence,
+    followUp: args.followUp
+  });
+  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const terminal = args.terminal === true;
+  const cleanup = {
+    ...session.cleanup,
+    godFixTerminal: session.cleanup.godFixTerminal || terminal
+  };
+  cleanup.eligible = cleanup.reviewTerminal && cleanup.godFixTerminal;
+  const updatedSession = {
+    ...session,
+    updatedAt,
+    cleanup
+  };
+  const nextCommand = terminal ? "hidden fix terminal" : nextGodReviewCommand({
+    activeCommand: "/blu-code-review-fix",
+    scopeKind: session.scopeKind,
+    phase: session.phase ?? null,
+    runId: session.runId
+  });
+  await fs12.appendFile(
+    reportAbsolutePath,
+    appendRemediationLogPayload({ report, entry }),
+    "utf8"
+  );
+  await fs12.writeFile(
+    resolveBlueprintPath(projectRoot, updatedSession.sessionPath),
+    `${JSON.stringify(updatedSession, null, 2)}
+`,
+    "utf8"
+  );
+  await fs12.writeFile(
+    resolveBlueprintPath(projectRoot, updatedSession.humanStatePath),
+    renderGodReviewHumanState({
+      runId: updatedSession.runId,
+      scopeKind: updatedSession.scopeKind,
+      fileCount: updatedSession.files.length,
+      currentGroupId: null,
+      nextGroupId: updatedSession.nextGroupId,
+      reviewTerminal: updatedSession.cleanup.reviewTerminal,
+      godFixTerminal: updatedSession.cleanup.godFixTerminal,
+      stale: args.status === "stale",
+      nextCommand
+    }),
+    "utf8"
+  );
+  return {
+    status: "recorded",
+    activated: true,
+    reason: null,
+    runId: updatedSession.runId,
+    sessionPath: updatedSession.sessionPath,
+    humanStatePath: updatedSession.humanStatePath,
+    reportPath: updatedSession.reportPath,
+    remediationId,
+    findingId: args.findingId,
+    selectedBy: args.selectedBy,
+    remediationStatus: args.status,
+    filesChanged: changedFiles.filesChanged,
+    terminal: updatedSession.cleanup.godFixTerminal,
+    cleanupEligible: updatedSession.cleanup.eligible,
+    written: true,
+    staleReasons: args.status === "stale" ? selection?.staleReasons ?? [] : [],
+    warnings: parsedReport.warnings
+  };
+}
 function parseBulletValue(lines, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
@@ -76429,6 +76854,12 @@ var godReviewToolDefinitions = [
     description: "Private hidden god-review finding loader: parses GOD findings/remediation attempts only from the durable god-review report and, in hidden fix mode, returns edit-ready selection after scope and evidence freshness checks.",
     inputSchema: godReviewLoadFindingsInputSchema,
     handler: async (args) => blueprintGodReviewLoadFindings(args)
+  },
+  {
+    name: "blueprint_god_review_record_fix",
+    description: "Private hidden god-review remediation recorder: appends exactly one GOD-FIX entry to the durable god-review report after activation, selection, and stale-evidence checks.",
+    inputSchema: godReviewRecordFixInputSchema,
+    handler: async (args) => blueprintGodReviewRecordFix(args)
   }
 ];
 
@@ -76637,6 +77068,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_review_record",
   "blueprint_god_review_start",
   "blueprint_god_review_append",
+  "blueprint_god_review_record_fix",
   "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",

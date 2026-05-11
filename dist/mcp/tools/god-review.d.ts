@@ -395,6 +395,26 @@ export type GodReviewLoadFindingsResult = {
     selection: GodReviewFixSelection | null;
     warnings: string[];
 };
+export type GodReviewRecordFixResult = {
+    status: "recorded" | "stale" | "invalid" | "refused";
+    activated: boolean;
+    refusal?: string;
+    reason: string | null;
+    runId: string | null;
+    sessionPath: string | null;
+    humanStatePath: string | null;
+    reportPath: string | null;
+    remediationId: string | null;
+    findingId: string | null;
+    selectedBy: GodReviewSelectedBy | null;
+    remediationStatus: GodReviewRemediationStatus | null;
+    filesChanged: string[];
+    terminal: boolean;
+    cleanupEligible: boolean;
+    written: boolean;
+    staleReasons: string[];
+    warnings: string[];
+};
 declare const godReviewStartArgsSchema: z.ZodObject<{
     cwd: z.ZodOptional<z.ZodString>;
     activeCommand: z.ZodEnum<{
@@ -480,6 +500,35 @@ declare const godReviewLoadFindingsArgsSchema: z.ZodObject<{
     all: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>;
 type GodReviewLoadFindingsArgs = z.infer<typeof godReviewLoadFindingsArgsSchema>;
+declare const godReviewRecordFixArgsSchema: z.ZodObject<{
+    cwd: z.ZodOptional<z.ZodString>;
+    activeCommand: z.ZodLiteral<"/blu-code-review-fix">;
+    rawInvocation: z.ZodString;
+    phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    runId: z.ZodOptional<z.ZodString>;
+    sessionPath: z.ZodOptional<z.ZodString>;
+    reportPath: z.ZodOptional<z.ZodString>;
+    findingId: z.ZodString;
+    status: z.ZodEnum<{
+        fixed: "fixed";
+        blocked: "blocked";
+        skipped: "skipped";
+        deferred: "deferred";
+        stale: "stale";
+    }>;
+    selectedBy: z.ZodEnum<{
+        default: "default";
+        all: "all";
+        "explicit-id": "explicit-id";
+        "severity-filter": "severity-filter";
+    }>;
+    filesChanged: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    verification: z.ZodOptional<z.ZodString>;
+    evidence: z.ZodOptional<z.ZodString>;
+    followUp: z.ZodOptional<z.ZodString>;
+    terminal: z.ZodOptional<z.ZodBoolean>;
+}, z.core.$strip>;
+type GodReviewRecordFixArgs = z.infer<typeof godReviewRecordFixArgsSchema>;
 export declare function isGodReviewPrivateToolName(toolName: string): toolName is GodReviewPrivateToolName;
 export declare function evaluateGodReviewActivation(args: {
     activeCommand: string;
@@ -520,6 +569,7 @@ export declare function blueprintGodReviewStart(rawArgs: GodReviewStartArgs): Pr
 export declare function blueprintGodReviewNext(rawArgs: GodReviewNextArgs): Promise<GodReviewNextResult>;
 export declare function blueprintGodReviewAppend(rawArgs: GodReviewAppendArgs): Promise<GodReviewAppendResult>;
 export declare function blueprintGodReviewLoadFindings(rawArgs: GodReviewLoadFindingsArgs): Promise<GodReviewLoadFindingsResult>;
+export declare function blueprintGodReviewRecordFix(rawArgs: GodReviewRecordFixArgs): Promise<GodReviewRecordFixResult>;
 export declare function parseGodReviewReportShell(content: string): GodReviewParseResult;
 export declare const godReviewToolDefinitions: ToolDefinition[];
 export {};
