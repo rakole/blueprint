@@ -12,7 +12,7 @@ Follow this flow exactly:
 4. Read `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "report.milestone-complete"` before drafting the closeout report. Use the returned `contract.authoringTemplate` as the baseline when shaping the completion text.
 5. Build the closeout digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit repo-relative `artifactPaths` that include `.blueprint/ROADMAP.md` and the matching milestone audit report. Treat the returned `inputsUsed` list as the authoritative digest scope and surface the audit readiness and evidence trail, not just a terse summary.
 6. If a milestone completion report already exists and the user has not clearly asked to replace it, require explicit overwrite confirmation with `ask_user` before any write.
-7. Persist the completion report through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `milestone-complete-<milestone>`. Do not pass a `.blueprint/reports/...` path; use the returned `path` as the authoritative saved report location.
+7. Persist the completion report through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `milestone-complete-<milestone>`. Use the exact `mcp_blueprint_blueprint_roadmap_read.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization. Do not pass a `.blueprint/reports/...` path; use the returned `path` as the authoritative saved report location.
 8. Call `mcp_blueprint_blueprint_state_update` with `base: "synced"` so `STATE.md` records `/blu-complete-milestone` as the active command, keeps the resolved milestone and current phase synchronized, and points the next safe implemented follow-up to `/blu-milestone-summary <milestone>`.
 9. Return a concise completion summary covering the milestone resolved, the audit readiness and evidence used, whether the completion report was created or replaced, any warnings, and the next safe Blueprint action. Do not loop back into `/blu-audit-milestone` when the saved audit already points at a safer follow-up.
 
@@ -24,7 +24,7 @@ Response requirements:
 - Treat overwrite as an explicit overwrite confirmation path, not the default.
 - Prefer `ask_user` for overwrite confirmation or any other high-risk confirmation gate.
 - Keep the waiting state explicit as `missing-milestone-audit`, `milestone-not-ready`, or `milestone-complete-overwrite-confirmation` when the command is blocked before writing.
-- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-complete-milestone`.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-complete-milestone`.
 - Do not turn `/blu-complete-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not rewrite `.blueprint/ROADMAP.md`, delete or rename phase directories, or invent a new milestone-closeout MCP tool path.
 - Keep the closeout flow report-driven and state-driven. If the next step is unavailable, fall back to `/blu-progress` instead of suggesting a blocked command.

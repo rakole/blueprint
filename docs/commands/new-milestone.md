@@ -32,7 +32,7 @@
 
 
 - A Blueprint project must already exist.
-- A matching `milestone-summary-<version>.md` report should already exist in `.blueprint/reports/`.
+- A matching `milestone-summary-<milestone>.md` report should already exist in `.blueprint/reports/`.
 - Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
 - Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
 - Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
@@ -143,7 +143,7 @@
 
 
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
-- Uses the saved `milestone-summary-<version>.md` report as the durable carry-forward input for the next milestone start.
+- Uses the saved `milestone-summary-<milestone>.md` report as the durable carry-forward input for the next milestone start.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
 - Scaffolds the first new phase context artifact so `/blu-discuss-phase <first phase>` has a valid phase directory to target.

@@ -13,7 +13,7 @@ Follow this flow exactly:
 5. Build the milestone evidence digest through `mcp_blueprint_blueprint_artifact_summary_digest` using explicit repo-relative `artifactPaths` such as `.blueprint/ROADMAP.md` and the relevant completed-phase `SUMMARY`, `VERIFICATION`, and `UAT` artifacts. Treat the returned `inputsUsed` list as the authoritative digest scope.
 6. If a milestone audit report already exists and the user has not clearly asked to replace it, require explicit overwrite confirmation with `ask_user` before any write.
 7. Compare the saved roadmap intent against the completed phase evidence and any existing milestone artifacts. Use the `blueprint-verifier` subagent for bounded analysis when the audit needs a second-pass read on gaps, stale assumptions, unarchived work, or traceability breaks that downstream gap planning will need to repair.
-8. Persist the audit content through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `milestone-audit-<milestone>`. Do not pass a `.blueprint/reports/...` path; use the returned `path` as the authoritative saved report location.
+8. Persist the audit content through `mcp_blueprint_blueprint_artifact_report_write` with the bare report name `milestone-audit-<milestone>`. Use the exact `mcp_blueprint_blueprint_roadmap_read.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization. Do not pass a `.blueprint/reports/...` path; use the returned `path` as the authoritative saved report location.
 9. Return a concise summary covering the milestone audited, whether the report was created or revised, the main intent/evidence gaps, grouped requirement, integration, flow, and optional gap sections when needed, and the next safe implemented action. If the audit surfaces actionable gaps, prefer `/blu-plan-milestone-gaps`; otherwise route the follow-up to `/blu-progress`.
 
 Response requirements:
@@ -23,7 +23,7 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Prefer `ask_user` for overwrite confirmation or any other high-risk confirmation gate.
 - Keep the waiting state explicit as `milestone-audit-overwrite-confirmation` while an existing report is waiting for replacement approval.
-- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-audit-milestone`.
+- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-audit-milestone`.
 - Do not turn `/blu-audit-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Keep the audit grounded in saved roadmap and phase evidence. Do not invent completion claims from chat memory.
 - Preserve grouped gap sections and traceability notes so `/blu-plan-milestone-gaps` can repair requirement coverage without re-auditing from scratch.

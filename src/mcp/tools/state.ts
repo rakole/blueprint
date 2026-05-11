@@ -1795,18 +1795,64 @@ function isNoneLikeReportSignal(line: string): boolean {
   );
 }
 
-function extractBlueprintCommand(line: string): string | null {
-  const match = line.match(/\/blu-[a-z0-9-]+(?:\s+[^\s`'").,;:!?]+)?/i);
+function extractBlueprintCommand(line: string, exactMilestoneArgument?: string | null): string | null {
+  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
 
-  return match?.[0]
-    ?.trim()
-    .replace(/[`'").,;:!?]+$/g, "") ?? null;
+  if (!match || match.index === undefined) {
+    return null;
+  }
+
+  const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
+  let argumentText = line.slice(match.index + match[0].length).trimStart();
+
+  if (
+    exactMilestoneArgument &&
+    (
+      command === "/blu-audit-milestone" ||
+      command === "/blu-complete-milestone" ||
+      command === "/blu-milestone-summary"
+    ) &&
+    argumentText.includes(exactMilestoneArgument)
+  ) {
+    return `${command} ${exactMilestoneArgument}`;
+  }
+
+  if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
+    return command;
+  }
+
+  const wrapperIndex = argumentText.search(/[`'"]/);
+
+  if (wrapperIndex >= 0) {
+    argumentText = argumentText.slice(0, wrapperIndex);
+  }
+
+  argumentText = argumentText
+    .replace(/\s+(?:to|then|so)\s+.+$/i, "")
+    .replace(/[.,;:!?]+$/g, "")
+    .trim();
+
+  if (argumentText.length === 0 || /^(?:to|then|so)\b/i.test(argumentText)) {
+    return command;
+  }
+
+  if (
+    command === "/blu-audit-milestone" ||
+    command === "/blu-complete-milestone" ||
+    command === "/blu-milestone-summary"
+  ) {
+    return `${command} ${argumentText}`;
+  }
+
+  const simpleArgument = argumentText.match(/^[^\s`'").,;:!?]+/)?.[0] ?? null;
+
+  return simpleArgument ? `${command} ${simpleArgument}` : command;
 }
 
 function extractNextSafeActionCommand(content: string): string | null {
   return (
     extractMarkdownSectionLines(content, "Next Safe Action")
-      .map(extractBlueprintCommand)
+      .map((line) => extractBlueprintCommand(line))
       .find((command): command is string => command !== null) ?? null
   );
 }
@@ -1920,7 +1966,9 @@ async function inspectMilestoneAuditReportStatus(args: {
       null;
     const verdictBlocksCompletion = verdict === "FOLLOW_UP" || verdict === "BLOCKED";
     const nextSafeAction =
-      nextSafeActionLines.map(extractBlueprintCommand).find((command) => command !== null) ?? null;
+      nextSafeActionLines
+        .map((line) => extractBlueprintCommand(line, args.currentMilestone))
+        .find((command) => command !== null) ?? null;
     const gapSections = {
       requirement: requirementGapRows,
       integration: integrationGapRows,

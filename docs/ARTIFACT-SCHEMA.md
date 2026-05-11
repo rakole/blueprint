@@ -983,7 +983,7 @@ Contract notes:
   paths.
 - Replacing an existing add-tests report requires explicit confirmation.
 
-### `reports/milestone-audit-<version>.md`
+### `reports/milestone-audit-<milestone>.md`
 
 Purpose:
 - durable audit report for `/blu-audit-milestone` before milestone archival
@@ -1003,7 +1003,7 @@ Contract notes:
 - The report should stay project-local in `.blueprint/reports/` and not spill into unrelated repo files.
 - The report should keep enough traceability detail for `/blu-plan-milestone-gaps` to convert grouped gaps into roadmap phases without re-running the audit.
 
-### `reports/milestone-complete-<version>.md`
+### `reports/milestone-complete-<milestone>.md`
 
 Purpose:
 - durable closeout report for `/blu-complete-milestone`
@@ -1020,7 +1020,7 @@ Contract notes:
 - Replacing an existing completion report requires explicit confirmation.
 - The report should stay project-local in `.blueprint/reports/`.
 
-### `reports/milestone-summary-<version>.md`
+### `reports/milestone-summary-<milestone>.md`
 
 Purpose:
 - durable summary report for `/blu-milestone-summary`

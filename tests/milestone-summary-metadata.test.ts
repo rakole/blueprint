@@ -18,6 +18,10 @@ test("milestone-summary manifest references saved report evidence and new-milest
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(
+    commandFile,
+    /Use the exact `mcp_blueprint_blueprint_roadmap_read\.milestone` value as `<milestone>` and let `mcp_blueprint_blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_list/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
@@ -44,6 +48,10 @@ test("roadmap-admin skill keeps milestone-summary skill-led and Wave 2 local", a
 
   assert.match(skillFile, /\/blu-milestone-summary/);
   assert.match(skillFile, /report\.milestone-summary/);
+  assert.match(
+    skillFile,
+    /Use the exact `blueprint_roadmap_read\.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization\./
+  );
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /contract\.authoringTemplate/);

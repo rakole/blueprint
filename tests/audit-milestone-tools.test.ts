@@ -8,13 +8,19 @@ import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
   blueprintArtifactSummaryDigest,
-  blueprintArtifactReportWrite
+  blueprintArtifactReportWrite,
+  normalizeReportSlug
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const FULL_DISPLAY_MILESTONE = "Phase 1 - Core Library Scaffold & Config Schema";
+const FULL_DISPLAY_MILESTONE_AUDIT_REPORT_NAME = `milestone-audit-${FULL_DISPLAY_MILESTONE}`;
+const FULL_DISPLAY_MILESTONE_AUDIT_REPORT_PATH = `.blueprint/reports/${normalizeReportSlug(
+  FULL_DISPLAY_MILESTONE_AUDIT_REPORT_NAME
+)}.md`;
 
 type MilestoneAuditReportArgs = {
   verdict: "READY_TO_CLOSE" | "FOLLOW_UP" | "BLOCKED";
@@ -193,10 +199,13 @@ ${blockers}
 `;
 }
 
-function milestoneAuditReportContent(additional = ""): string {
+function milestoneAuditReportContent(
+  additional = "",
+  nextSafeAction = "/blu-complete-milestone v2"
+): string {
   return `${renderMilestoneAuditReport({
     verdict: "READY_TO_CLOSE",
-    nextSafeAction: "/blu-complete-milestone v2"
+    nextSafeAction
   })}${additional}`;
 }
 
@@ -351,7 +360,10 @@ function milestoneSummaryReportContent(): string {
 `;
 }
 
-async function createMilestoneAuditRepo(): Promise<string> {
+async function createMilestoneAuditRepo(args?: {
+  activeMilestone?: string;
+}): Promise<string> {
+  const activeMilestone = args?.activeMilestone ?? "v2";
   const repoPath = await createGitRepo("blueprint-audit-milestone-");
   const priorPhaseDir = path.join(repoPath, ".blueprint/phases/03-execution");
   const phaseDir = path.join(repoPath, ".blueprint/phases/04-release-readiness");
@@ -366,7 +378,7 @@ async function createMilestoneAuditRepo(): Promise<string> {
 
 ## Milestone
 
-- Active milestone: v2
+- Active milestone: ${activeMilestone}
 
 ## Phases
 
@@ -386,7 +398,7 @@ async function createMilestoneAuditRepo(): Promise<string> {
     `# Blueprint State
 
 - Project status: initialized
-- Current milestone: v2
+- Current milestone: ${activeMilestone}
 - Current phase: 4
 - Active command: /blu-verify-work
 - Next action: Run /blu-verify-work 4
@@ -974,7 +986,7 @@ test("artifact report write is registered and persists milestone audit reports w
   });
   const updated = await blueprintArtifactReportWrite({
     cwd: repoPath,
-    reportName: "milestone audit v2",
+    reportName: "milestone-audit-v2",
     content: milestoneAuditReportContent("\n## Recommendations\n\n- Proceed carefully.\n"),
     overwrite: true
   });
@@ -985,6 +997,82 @@ test("artifact report write is registered and persists milestone audit reports w
   assert.ok(listed.reports.includes(".blueprint/reports/milestone-audit-v2.md"));
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
+});
+
+test("artifact report write rejects loose milestone closeout report names", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const cases = [
+    {
+      reportName: "milestone audit v2",
+      canonicalReportName: "milestone-audit-v2",
+      content: milestoneAuditReportContent()
+    },
+    {
+      reportName: "milestone complete v2",
+      canonicalReportName: "milestone-complete-v2",
+      content: milestoneCompleteReportContent()
+    },
+    {
+      reportName: "milestone summary v2",
+      canonicalReportName: "milestone-summary-v2",
+      content: milestoneSummaryReportContent()
+    }
+  ];
+
+  for (const testCase of cases) {
+    const invalid = await blueprintArtifactReportWrite({
+      cwd: repoPath,
+      reportName: testCase.reportName,
+      content: testCase.content
+    });
+
+    assert.equal(invalid.path, `.blueprint/reports/${testCase.canonicalReportName}.md`);
+    assert.equal(invalid.status, "invalid");
+    assert.equal(invalid.written, false);
+    assert.equal(invalid.created, false);
+    assert.equal(invalid.overwritten, false);
+    assert.match(invalid.issues.join("\n"), /exact raw prefix/);
+    await assert.rejects(() => readFile(path.join(repoPath, invalid.path), "utf8"), /ENOENT/);
+  }
+});
+
+test("artifact report write rejects semantically wrong milestone audit report names for full display milestones", async (t) => {
+  const repoPath = await createMilestoneAuditRepo({
+    activeMilestone: FULL_DISPLAY_MILESTONE
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-milestone-1",
+    content: milestoneAuditReportContent(
+      "",
+      `/blu-complete-milestone ${FULL_DISPLAY_MILESTONE}`
+    )
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.equal(invalid.written, false);
+  assert.equal(invalid.created, false);
+  assert.equal(invalid.overwritten, false);
+  assert.match(invalid.issues.join("\n"), /milestone-audit-milestone-1/);
+  assert.ok(
+    invalid.issues.join("\n").includes(FULL_DISPLAY_MILESTONE_AUDIT_REPORT_NAME)
+  );
+  await assert.rejects(
+    () =>
+      readFile(
+        path.join(repoPath, ".blueprint/reports/milestone-audit-milestone-1.md"),
+        "utf8"
+      ),
+    /ENOENT/
+  );
 });
 
 test("artifact report write rejects markdown fallback for audit-fix reports before persistence", async (t) => {
@@ -1269,6 +1357,93 @@ test("blueprint_state_load exposes milestone-audit readiness only for explicit R
   assert.equal(malformedState.derivedStatus.milestoneAudit.readyForCompletion, false);
   assert.match(malformedState.derivedStatus.nextAction, /\/blu-plan-milestone-gaps/);
   assert.doesNotMatch(malformedState.derivedStatus.nextAction, /\/blu-complete-milestone/);
+});
+
+test("full display milestone audits keep the exact milestone argument in saved next actions", async (t) => {
+  const repoPath = await createMilestoneAuditRepo({
+    activeMilestone: FULL_DISPLAY_MILESTONE
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: FULL_DISPLAY_MILESTONE_AUDIT_REPORT_NAME,
+    content: milestoneAuditReportContent(
+      "",
+      `Run \`/blu-complete-milestone ${FULL_DISPLAY_MILESTONE}\` to record milestone closeout after the audit.`
+    )
+  });
+  const createdBody = await readFile(path.join(repoPath, created.path), "utf8");
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const expectedNextAction = `Run /blu-complete-milestone ${FULL_DISPLAY_MILESTONE} to record milestone closeout after the audit`;
+
+  assert.equal(created.status, "created");
+  assert.equal(created.path, FULL_DISPLAY_MILESTONE_AUDIT_REPORT_PATH);
+  assert.match(createdBody, new RegExp(`/blu-complete-milestone ${FULL_DISPLAY_MILESTONE}`));
+  assert.equal(state.derivedStatus.milestoneAudit.found, true);
+  assert.equal(state.derivedStatus.milestoneAudit.verdict, "READY_TO_CLOSE");
+  assert.equal(state.derivedStatus.milestoneAudit.readyForCompletion, true);
+  assert.equal(
+    state.derivedStatus.milestoneAudit.nextSafeAction,
+    `/blu-complete-milestone ${FULL_DISPLAY_MILESTONE}`
+  );
+  assert.equal(state.derivedStatus.nextAction, expectedNextAction);
+  assert.equal(status.nextAction, expectedNextAction);
+});
+
+test("milestone audit next safe action extraction handles backtick-wrapped command-only lines", async (t) => {
+  const repoPath = await createMilestoneAuditRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: "milestone-audit-v2",
+    content: milestoneAuditReportContent("", "`/blu-complete-milestone v2`")
+  });
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(state.derivedStatus.milestoneAudit.nextSafeAction, "/blu-complete-milestone v2");
+  assert.equal(
+    state.derivedStatus.nextAction,
+    "Run /blu-complete-milestone v2 to record milestone closeout after the audit"
+  );
+});
+
+test("milestone audit next safe action extraction preserves parenthesized milestone arguments without trailing prose", async (t) => {
+  const parenthesizedMilestone = "Phase 1 (Core Library)";
+  const repoPath = await createMilestoneAuditRepo({
+    activeMilestone: parenthesizedMilestone
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactReportWrite({
+    cwd: repoPath,
+    reportName: `milestone-audit-${parenthesizedMilestone}`,
+    content: milestoneAuditReportContent(
+      "",
+      `Run /blu-complete-milestone ${parenthesizedMilestone} to record closeout.`
+    )
+  });
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(
+    state.derivedStatus.milestoneAudit.nextSafeAction,
+    `/blu-complete-milestone ${parenthesizedMilestone}`
+  );
+  assert.equal(
+    state.derivedStatus.nextAction,
+    `Run /blu-complete-milestone ${parenthesizedMilestone} to record milestone closeout after the audit`
+  );
 });
 
 test("project status keeps blocked milestone audit reports on gap planning instead of completion", async (t) => {

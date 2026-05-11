@@ -260,7 +260,7 @@ export declare const COMPLETE_MILESTONE_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.";
         readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_state_load -> derivedStatus.milestoneAudit readiness", "blueprint_artifact_contract_read -> report.milestone-complete contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
-        readonly writes: readonly [".blueprint/reports/milestone-complete-<version>.md", ".blueprint/STATE.md"];
+        readonly writes: readonly [".blueprint/reports/milestone-complete-<milestone>.md", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
@@ -270,7 +270,7 @@ export declare const COMPLETE_MILESTONE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<milestone>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -294,7 +294,7 @@ export declare const MILESTONE_SUMMARY_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.";
         readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-summary contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
-        readonly writes: readonly [".blueprint/reports/milestone-summary-<version>.md", ".blueprint/STATE.md"];
+        readonly writes: readonly [".blueprint/reports/milestone-summary-<milestone>.md", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
@@ -304,7 +304,7 @@ export declare const MILESTONE_SUMMARY_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
         readonly optionalAgents: readonly [];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -2053,7 +2053,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`complete-milestone` performs a report-driven closeout gated by saved milestone audit readiness, writes a durable completion report, and routes to milestone summary.";
             readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_state_load -> derivedStatus.milestoneAudit readiness", "blueprint_artifact_contract_read -> report.milestone-complete contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
-            readonly writes: readonly [".blueprint/reports/milestone-complete-<version>.md", ".blueprint/STATE.md"];
+            readonly writes: readonly [".blueprint/reports/milestone-complete-<milestone>.md", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
@@ -2063,7 +2063,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_state_load", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<version>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded milestone closeout: require the saved milestone audit and derivedStatus.milestoneAudit.readyForCompletion, read report.milestone-complete before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, milestone-not-ready, or milestone-complete-overwrite-confirmation, write milestone-complete-<milestone>.md, and route to /blu-milestone-summary <milestone> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };
@@ -2087,7 +2087,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.";
             readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_list -> {artifacts, reports, missing}", "blueprint_artifact_contract_read -> report.milestone-summary contract", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
-            readonly writes: readonly [".blueprint/reports/milestone-summary-<version>.md", ".blueprint/STATE.md"];
+            readonly writes: readonly [".blueprint/reports/milestone-summary-<milestone>.md", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;
@@ -2097,7 +2097,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_list", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_artifact_report_write", "blueprint_state_update"];
             readonly optionalAgents: readonly [];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<version>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

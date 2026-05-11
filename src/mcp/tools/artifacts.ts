@@ -2145,6 +2145,69 @@ export function buildBlueprintReportPath(reportName: string): string {
   return `${BLUEPRINT_REPORTS_PATH}/${normalizeReportSlug(reportName)}.md`;
 }
 
+const MILESTONE_REPORT_PREFIXES = [
+  "milestone-audit-",
+  "milestone-complete-",
+  "milestone-summary-"
+] as const;
+
+function milestoneReportLooseNameIssue(reportName: string): string | null {
+  const trimmedReportName = reportName.trim();
+  const canonicalReportName = normalizeReportSlug(reportName);
+  const canonicalMilestonePrefix = MILESTONE_REPORT_PREFIXES.find((prefix) =>
+    canonicalReportName.startsWith(prefix)
+  );
+
+  if (
+    canonicalMilestonePrefix &&
+    !MILESTONE_REPORT_PREFIXES.some((prefix) => trimmedReportName.startsWith(prefix))
+  ) {
+    return `Milestone closeout reportName must use the exact raw prefix "${canonicalMilestonePrefix}" followed by the active roadmap milestone; "${reportName}" is not a contract report name.`;
+  }
+
+  return null;
+}
+
+function milestoneReportPrefix(reportName: string): string | null {
+  const trimmedReportName = reportName.trim();
+  return MILESTONE_REPORT_PREFIXES.find((prefix) => trimmedReportName.startsWith(prefix)) ?? null;
+}
+
+async function readActiveMilestone(projectRoot: string): Promise<string | null> {
+  try {
+    const roadmap = await fs.readFile(resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`), "utf8");
+    return roadmap.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function milestoneReportRoadmapNameIssue(
+  projectRoot: string,
+  reportName: string
+): Promise<string | null> {
+  const reportPrefix = milestoneReportPrefix(reportName);
+
+  if (!reportPrefix) {
+    return null;
+  }
+
+  const activeMilestone = await readActiveMilestone(projectRoot);
+
+  if (!activeMilestone) {
+    return null;
+  }
+
+  const expectedReportName = `${reportPrefix}${activeMilestone}`;
+  const actualMilestone = reportName.trim().slice(reportPrefix.length);
+
+  if (actualMilestone !== activeMilestone) {
+    return `Milestone closeout reportName must match the active roadmap milestone: use "${expectedReportName}" instead of "${reportName}".`;
+  }
+
+  return null;
+}
+
 function slugToTitle(value: string): string {
   return value
     .split("-")
@@ -13135,6 +13198,33 @@ export async function blueprintArtifactReportWrite(
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const contractId = resolveReportContractId(args.reportName);
+  const looseMilestoneNameIssue = milestoneReportLooseNameIssue(args.reportName);
+
+  if (looseMilestoneNameIssue) {
+    return artifactReportWriteInvalidResult(pathValue, [looseMilestoneNameIssue], [], [
+      mcpWriteDiagnostic({
+        path: "args.reportName",
+        code: "report_name.non_contract_milestone",
+        message: looseMilestoneNameIssue,
+        repair: "Retry with the exact raw milestone report prefix plus the exact blueprint_roadmap_read.milestone value.",
+        retryable: true
+      })
+    ]);
+  }
+
+  const roadmapMilestoneNameIssue = await milestoneReportRoadmapNameIssue(projectRoot, args.reportName);
+
+  if (roadmapMilestoneNameIssue) {
+    return artifactReportWriteInvalidResult(pathValue, [roadmapMilestoneNameIssue], [], [
+      mcpWriteDiagnostic({
+        path: "args.reportName",
+        code: "report_name.milestone_mismatch",
+        message: roadmapMilestoneNameIssue,
+        repair: "Use the exact blueprint_roadmap_read.milestone value as the milestone token; blueprint_artifact_report_write owns normalization.",
+        retryable: true
+      })
+    ]);
+  }
 
   if (hasContent === hasModel) {
     return artifactReportWriteInvalidResult(pathValue, [
