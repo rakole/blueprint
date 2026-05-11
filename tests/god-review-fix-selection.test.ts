@@ -302,6 +302,6 @@ test("hidden code-review-fix branch instructions load private findings selection
   }
 
   assert.match(manifest, /mcp_blueprint_blueprint_god_review_record_fix/);
-  assert.doesNotMatch(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
+  assert.match(manifest, /mcp_blueprint_blueprint_god_review_cleanup/);
   assert.match(manifest, /do not write `XX-REVIEW\.md`, `XX-REVIEW-FIX\.md`, `XX-GOD-REVIEW-FIX\.md`/i);
 });

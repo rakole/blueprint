@@ -74300,6 +74300,16 @@ var godReviewRecordFixInputSchema = {
   terminal: boolean2().optional()
 };
 var godReviewRecordFixArgsSchema = object2(godReviewRecordFixInputSchema);
+var godReviewCleanupInputSchema = {
+  cwd: string2().optional(),
+  activeCommand: literal("/blu-code-review-fix"),
+  rawInvocation: string2(),
+  phase: union([string2(), number2()]).optional(),
+  runId: string2().optional(),
+  sessionPath: string2().optional(),
+  noEligibleFindingsTerminal: boolean2().optional()
+};
+var godReviewCleanupArgsSchema = object2(godReviewCleanupInputSchema);
 function hasGodReviewFlag(rawInvocation) {
   return new RegExp(`(^|\\s)${GOD_REVIEW_FLAG}(?=$|\\s)`).test(rawInvocation);
 }
@@ -74673,6 +74683,23 @@ function invalidRecordFixResult(args) {
     cleanupEligible: args.cleanupEligible ?? false,
     written: false,
     staleReasons: args.staleReasons ?? [],
+    warnings: args.warnings ?? []
+  };
+}
+function invalidCleanupResult(args) {
+  return {
+    status: args.status ?? "invalid",
+    activated: args.activated ?? true,
+    reason: args.reason,
+    runId: args.runId ?? null,
+    sessionPath: args.sessionPath ?? null,
+    humanStatePath: args.humanStatePath ?? null,
+    reportPath: args.reportPath ?? null,
+    deletedPaths: args.deletedPaths ?? [],
+    preservedPaths: args.preservedPaths ?? [],
+    cleanupEligible: args.cleanupEligible ?? false,
+    reviewTerminal: args.reviewTerminal ?? false,
+    godFixTerminal: args.godFixTerminal ?? false,
     warnings: args.warnings ?? []
   };
 }
@@ -76728,6 +76755,195 @@ async function blueprintGodReviewRecordFix(rawArgs) {
     warnings: parsedReport.warnings
   };
 }
+async function noEligibleHiddenFixTerminal(args) {
+  const parsedReport = parseGodReviewReportShell(args.report);
+  const duplicateIds = collectDuplicateFindingIds(parsedReport.findings);
+  if (duplicateIds.length > 0) {
+    return {
+      terminal: false,
+      reason: `Duplicate god-review finding IDs are not allowed: ${duplicateIds.join(", ")}.`,
+      warnings: parsedReport.warnings
+    };
+  }
+  const findings = attachRemediationState(parsedReport);
+  const selection = await resolveGodReviewFixSelection({
+    projectRoot: args.projectRoot,
+    loadArgs: {
+      cwd: args.cleanupArgs.cwd,
+      activeCommand: "/blu-code-review-fix",
+      rawInvocation: args.cleanupArgs.rawInvocation,
+      phase: args.cleanupArgs.phase,
+      runId: args.cleanupArgs.runId,
+      sessionPath: args.cleanupArgs.sessionPath ?? args.session.sessionPath,
+      reportPath: args.session.reportPath
+    },
+    sessionPath: args.session.sessionPath,
+    findings
+  });
+  if (selection?.status === "empty") {
+    return {
+      terminal: true,
+      warnings: parsedReport.warnings
+    };
+  }
+  return {
+    terminal: false,
+    reason: selection?.reason ?? "Hidden fix cleanup cannot treat this run as no-op terminal because eligible fix targets still exist or selection is not empty.",
+    warnings: [
+      ...parsedReport.warnings,
+      ...selection?.staleReasons ?? []
+    ]
+  };
+}
+async function blueprintGodReviewCleanup(rawArgs) {
+  const parsed = godReviewCleanupArgsSchema.safeParse(rawArgs);
+  if (!parsed.success) {
+    return invalidCleanupResult({
+      activated: false,
+      reason: "Invalid blueprint_god_review_cleanup arguments.",
+      warnings: parsed.error.issues.map((issue2) => issue2.message)
+    });
+  }
+  const args = parsed.data;
+  const activation = evaluateGodReviewActivation({
+    activeCommand: args.activeCommand,
+    rawInvocation: args.rawInvocation
+  });
+  if (activation.status === "refused") {
+    return {
+      status: "refused",
+      activated: false,
+      refusal: activation.refusal,
+      reason: activation.reason,
+      runId: null,
+      sessionPath: null,
+      humanStatePath: null,
+      reportPath: null,
+      deletedPaths: [],
+      preservedPaths: [],
+      cleanupEligible: false,
+      reviewTerminal: false,
+      godFixTerminal: false,
+      warnings: []
+    };
+  }
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const sessionPath = await resolveGodReviewSessionPath(args, projectRoot);
+  if (!sessionPath.valid) {
+    return invalidCleanupResult({
+      reason: sessionPath.reason
+    });
+  }
+  const loaded = await loadGodReviewSession({
+    projectRoot,
+    sessionPath: sessionPath.path
+  });
+  if (!loaded.valid) {
+    return invalidCleanupResult({
+      reason: loaded.reason,
+      sessionPath: sessionPath.path,
+      warnings: loaded.warnings
+    });
+  }
+  const session = loaded.session;
+  const reportPath = resolveBlueprintPath(projectRoot, session.reportPath);
+  const report = await readTextIfPresent(reportPath);
+  if (report === null) {
+    return invalidCleanupResult({
+      reason: `${session.reportPath} does not exist. Cleanup preserves the durable god-review report, so the report must exist before cleanup.`,
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      preservedPaths: [],
+      cleanupEligible: false,
+      reviewTerminal: session.cleanup.reviewTerminal,
+      godFixTerminal: session.cleanup.godFixTerminal
+    });
+  }
+  if (!session.cleanup.reviewTerminal) {
+    return invalidCleanupResult({
+      status: "blocked",
+      reason: "God-review cleanup is blocked until the hidden review is terminal.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      preservedPaths: [session.reportPath],
+      cleanupEligible: false,
+      reviewTerminal: false,
+      godFixTerminal: session.cleanup.godFixTerminal
+    });
+  }
+  let godFixTerminal = session.cleanup.godFixTerminal;
+  let warnings = [];
+  if (!godFixTerminal && args.noEligibleFindingsTerminal === true) {
+    const noEligible = await noEligibleHiddenFixTerminal({
+      projectRoot,
+      cleanupArgs: args,
+      session,
+      report
+    });
+    if (!noEligible.terminal) {
+      return invalidCleanupResult({
+        status: "blocked",
+        reason: noEligible.reason,
+        runId: session.runId,
+        sessionPath: session.sessionPath,
+        humanStatePath: session.humanStatePath,
+        reportPath: session.reportPath,
+        preservedPaths: [session.reportPath],
+        cleanupEligible: false,
+        reviewTerminal: true,
+        godFixTerminal: false,
+        warnings: noEligible.warnings
+      });
+    }
+    godFixTerminal = true;
+    warnings = noEligible.warnings;
+  }
+  if (!godFixTerminal) {
+    return invalidCleanupResult({
+      status: "blocked",
+      reason: "God-review cleanup is blocked until hidden fix mode reaches a terminal result.",
+      runId: session.runId,
+      sessionPath: session.sessionPath,
+      humanStatePath: session.humanStatePath,
+      reportPath: session.reportPath,
+      preservedPaths: [session.reportPath],
+      cleanupEligible: false,
+      reviewTerminal: true,
+      godFixTerminal: false
+    });
+  }
+  const sessionAbsolutePath = resolveBlueprintPath(projectRoot, session.sessionPath);
+  const humanStateAbsolutePath = resolveBlueprintPath(projectRoot, session.humanStatePath);
+  const deletedPaths = [];
+  for (const [relativePath, absolutePath] of [
+    [session.sessionPath, sessionAbsolutePath],
+    [session.humanStatePath, humanStateAbsolutePath]
+  ]) {
+    if (await pathExists8(absolutePath)) {
+      await fs12.rm(absolutePath, { force: true });
+      deletedPaths.push(relativePath);
+    }
+  }
+  return {
+    status: "cleaned",
+    activated: true,
+    reason: null,
+    runId: session.runId,
+    sessionPath: session.sessionPath,
+    humanStatePath: session.humanStatePath,
+    reportPath: session.reportPath,
+    deletedPaths,
+    preservedPaths: [session.reportPath],
+    cleanupEligible: true,
+    reviewTerminal: true,
+    godFixTerminal: true,
+    warnings
+  };
+}
 function parseBulletValue(lines, label) {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`^- ${escapedLabel}:\\s*(.+)$`, "i");
@@ -76860,6 +77076,12 @@ var godReviewToolDefinitions = [
     description: "Private hidden god-review remediation recorder: appends exactly one GOD-FIX entry to the durable god-review report after activation, selection, and stale-evidence checks.",
     inputSchema: godReviewRecordFixInputSchema,
     handler: async (args) => blueprintGodReviewRecordFix(args)
+  },
+  {
+    name: "blueprint_god_review_cleanup",
+    description: "Private hidden god-review cleanup tool: deletes only temporary hidden session/state files after hidden review and hidden fix are terminal, preserving the durable god-review report.",
+    inputSchema: godReviewCleanupInputSchema,
+    handler: async (args) => blueprintGodReviewCleanup(args)
   }
 ];
 
@@ -77069,6 +77291,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_god_review_start",
   "blueprint_god_review_append",
   "blueprint_god_review_record_fix",
+  "blueprint_god_review_cleanup",
   "blueprint_impact_report_write",
   "blueprint_update_plan",
   "blueprint_workspace_create",

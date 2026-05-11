@@ -228,7 +228,8 @@ test("only implemented god-review private tools are registered as callable MCP t
         toolName === "blueprint_god_review_next" ||
         toolName === "blueprint_god_review_append" ||
         toolName === "blueprint_god_review_load_findings" ||
-        toolName === "blueprint_god_review_record_fix"
+        toolName === "blueprint_god_review_record_fix" ||
+        toolName === "blueprint_god_review_cleanup"
     );
   }
 
@@ -237,7 +238,8 @@ test("only implemented god-review private tools are registered as callable MCP t
       BLUEPRINT_MUTATION_TOOL_NAMES.has(toolName),
       toolName === "blueprint_god_review_start" ||
         toolName === "blueprint_god_review_append" ||
-        toolName === "blueprint_god_review_record_fix"
+        toolName === "blueprint_god_review_record_fix" ||
+        toolName === "blueprint_god_review_cleanup"
     );
   }
 });
