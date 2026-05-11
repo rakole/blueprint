@@ -21,8 +21,8 @@ Response requirements:
 - Execution profile: `interactive-read`.
 - Keep writes inside `.blueprint/backlog/BACKLOG.md`, `.blueprint/ROADMAP.md`, `.blueprint/phases/<phase>/`, and `.blueprint/STATE.md`.
 - Keep backlog review deterministic and append-only: promote by status transition instead of deleting or rewriting history.
-- Prefer Gemini CLI's built-in `ask_user` tool for structured promote or remove decisions when available; otherwise keep those confirmation gates explicit in prose and leave keep as the default safe path.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-review-backlog`.
+- Prefer  `ask_user` tool for structured promote or remove decisions when available; otherwise keep those confirmation gates explicit in prose and leave keep as the default safe path.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-review-backlog`.
 - Do not turn `/blu-review-backlog` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not advertise planned-only capture commands as follow-up steps.
 - Prefer `/blu-discuss-phase <first promoted phase>` after a successful promotion batch; otherwise prefer `/blu-progress`.

@@ -39,7 +39,7 @@ This skill package is the runtime source of truth for `/blu-map-codebase`.
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Prefer Gemini CLI's built-in `ask_user` dialog for overwrite, reuse-versus-refresh, or any structured confirmation choice.
+- Prefer  `ask_user` dialog for overwrite, reuse-versus-refresh, or any structured confirmation choice.
 - Execution profile: `long-running-mutation`.
 - Keep the shared stage vocabulary explicit during non-trivial runs: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract legible throughout the mapping pass: resolved scope, active stage, pending gate, execution mode, and next safe action.

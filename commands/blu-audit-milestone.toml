@@ -23,7 +23,7 @@ Response requirements:
 - Treat overwrite as an explicit confirmation path, not the default.
 - Prefer `ask_user` for overwrite confirmation or any other high-risk confirmation gate.
 - Keep the waiting state explicit as `milestone-audit-overwrite-confirmation` while an existing report is waiting for replacement approval.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-audit-milestone`.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-audit-milestone`.
 - Do not turn `/blu-audit-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Keep the audit grounded in saved roadmap and phase evidence. Do not invent completion claims from chat memory.
 - Preserve grouped gap sections and traceability notes so `/blu-plan-milestone-gaps` can repair requirement coverage without re-auditing from scratch.

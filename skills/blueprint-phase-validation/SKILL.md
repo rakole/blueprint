@@ -51,7 +51,7 @@ Carry forward the useful validation intent while preserving Blueprint deltas:
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - For `add-tests`, keep the selected test scope, targeted test command or result, verification status, report status, and next safe action explicit while bounded repo mutation is in flight.
-- For structured interactive choices, confirmations, validation feedback, per-test UAT prompts, review/skip/stop branching, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- For structured interactive choices, confirmations, validation feedback, per-test UAT prompts, review/skip/stop branching, or short clarifications, prefer  `ask_user` tool over plain assistant prose.
 - When a validation-family run is non-trivial, keep those status fields visible with `update_topic`, `write_todos`, or an honest prose fallback rather than inventing persistence outside MCP.
 - Keep validation saved-summary-first: the `Execute` stage is bounded verifier analysis grounded in saved summaries and existing validation artifacts, not direct repo mutation or prompt-memory reconstruction. For `add-tests`, bounded repo mutation stays grounded in saved summaries plus validation evidence, and the resulting verification plus report status must come from MCP returns.
 

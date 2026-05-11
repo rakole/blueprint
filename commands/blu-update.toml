@@ -11,7 +11,7 @@ Follow this flow exactly:
 2. Keep extension-path handling read-only. Never write into the installed extension directory, never mutate the running extension bundle in-session, and never present `/blu-update` as a self-update command.
 3. `Resolve`: make the advisory scope explicit: active host, resolved extension path, installed version, install provenance, latest-version lookup status, and whether an update appears available.
 4. `Read`: summarize the current update posture from the check result. If latest-version lookup is unavailable, keep the manual fallback visible instead of bluffing a remote version.
-5. `Decide`: if the host supports Gemini CLI's structured `ask_user` dialog and the user has not already made the choice explicit, use one focused `ask_user` mode gate to choose between saving the full checklist and seeing the manual fallback only. Keep that waiting state explicit as `update-mode-gate`. When `ask_user` is unavailable, keep the same mode gate explicit in prose.
+5. `Decide`: if the host supports  `ask_user` dialog and the user has not already made the choice explicit, use one focused `ask_user` mode gate to choose between saving the full checklist and seeing the manual fallback only. Keep that waiting state explicit as `update-mode-gate`. When `ask_user` is unavailable, keep the same mode gate explicit in prose.
 6. If the user wants a saved checklist, call `mcp_blueprint_blueprint_update_plan`. Pass `mode = "ask_user"` when the structured gate was available and `mode = "manual"` otherwise. Treat its returned steps, notes, requiresRestart flag, savedPaths, and status as authoritative.
 7. `Execute`: explain only the out-of-band update steps. Those steps may include reinstalling Blueprint from GitHub or a local path, but they must remain manual user actions outside the current session.
 8. `Persist`: keep all Blueprint-owned persistence host-global only under `~/.<host>/blueprint/updates/`. Do not write project-local update artifacts, and do not invent extra persistence outside the saved paths returned by `mcp_blueprint_blueprint_update_plan`.
@@ -23,7 +23,7 @@ Response requirements:
 - Execution profile: `interactive-read`.
 - Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` only when those stages are actually reached during the run.
 - Keep the current resolved scope, active stage, pending gate, execution mode, and next safe action visible during non-trivial in-flight work.
-- Prefer Gemini CLI's built-in `ask_user` tool for the saved-checklist versus manual-fallback mode gate when a structured choice is helpful.
+- Prefer  `ask_user` tool for the saved-checklist versus manual-fallback mode gate when a structured choice is helpful.
 - Keep the manual fallback explicit whenever latest-version lookup is unavailable, the install provenance is ambiguous, or the user chooses not to persist a checklist.
 - Keep Blueprint-owned writes limited to the host-global `~/.<host>/blueprint/updates/` directory.
 - Never write into the installed extension directory.

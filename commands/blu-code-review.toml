@@ -7,10 +7,10 @@ Load `skills/blueprint-review/references/code-review-runtime-contract.md` as the
 
 Execution profile: `long-running-mutation`.
 Keep the runtime contract's shared review posture legible while the review is in flight.
-For non-trivial code-review runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for evidence review, scope resolution, scope confirmation, bounded findings analysis, artifact persistence, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
+For non-trivial code-review runs, use `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for evidence review, scope resolution, scope confirmation, bounded findings analysis, artifact persistence, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
 
 Interactive review UX rules:
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured scope confirmation for broad, multi-plan, or deep reviews.
+- Prefer `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured scope confirmation for broad, multi-plan, or deep reviews.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 

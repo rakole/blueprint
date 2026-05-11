@@ -6,10 +6,10 @@ Use the `blueprint-review` skill as the primary orchestration contract when that
 
 Execution profile: `long-running-mutation`. Use the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`, and keep the user oriented with the resolved scope, active stage, pending gate, execution mode, and next safe action when those facts change. Avoid ceremonial status narration when there is no decision or blocker.
 
-For non-trivial secure-phase runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact threat-review checklist legible. Treat those as session-local progress tools only; when the host lacks them, report the same progress in honest prose instead of inventing persistence outside MCP.
+For non-trivial secure-phase runs, use  `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact threat-review checklist legible. Treat those as session-local progress tools only; when the host lacks them, report the same progress in honest prose instead of inventing persistence outside MCP.
 
 Interactive security UX rules:
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured verify-versus-accept decision for open threats.
+- Prefer  `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured verify-versus-accept decision for open threats.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 

@@ -19,8 +19,8 @@ Response requirements:
 - Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/backlog/` and the optional `.blueprint/phases/999.x-*/` stub path.
 - Treat backlog capture as append-only unless the MCP tool reports a duplicate.
-- Prefer Gemini CLI's built-in `ask_user` tool for immediate stub-reservation confirmation when a structured choice helps; otherwise keep the same confirmation gate explicit in prose.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-add-backlog`.
+- Prefer `ask_user` tool for immediate stub-reservation confirmation when a structured choice helps; otherwise keep the same confirmation gate explicit in prose.
+- Do not use `update_topic`, `write_todos`, or task tracker tools for `/blu-add-backlog`.
 - Do not turn `/blu-add-backlog` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not advertise planned-only capture commands as runnable follow-ups.
 - If a next step is helpful, prefer implemented commands such as `/blu-add-phase` once the idea is ready to leave the parking lot.

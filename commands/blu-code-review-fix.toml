@@ -7,10 +7,10 @@ Load `skills/blueprint-review/references/code-review-fix-runtime-contract.md` th
 
 Execution profile: `long-running-mutation`.
 Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route` legible while review-fix work is in flight, along with the resolved scope, active stage, pending gate, execution mode, and next safe action.
-For non-trivial code-review-fix runs, use Gemini CLI's internal `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for saved-findings review, finding-selection confirmation, bounded remediation, artifact persistence, verification, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
+For non-trivial code-review-fix runs, use  `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact checklist for saved-findings review, finding-selection confirmation, bounded remediation, artifact persistence, verification, and routing. Treat both as session-local coordination only; when the host lacks them, preserve the same progress in prose rather than inventing persistence outside MCP.
 
 Interactive review-fix UX rules:
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured confirmation of which findings Blueprint is about to fix.
+- Prefer  `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured confirmation of which findings Blueprint is about to fix.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 

@@ -17,7 +17,7 @@ Map the UI-contract flow onto the shared stages like this:
 - `Route`: summarize whether the artifact was reused, created, or revised, surface any warnings or pending follow-up, and end on the next safe implemented action.
 
 Interactive UI-spec UX rules:
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured decision about contract versus skip rationale.
+- Prefer  `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured decision about contract versus skip rationale.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 

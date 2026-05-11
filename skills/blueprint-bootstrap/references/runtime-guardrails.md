@@ -23,7 +23,7 @@ about what Blueprint can and cannot do at runtime.
 
 ## Gemini-Native Coordination Helpers
 
-- Prefer Gemini CLI's built-in `ask_user` tool for structured clarification,
+- Prefer  `ask_user` tool for structured clarification,
   saved-default selection, workflow-preference capture, overwrite confirmation,
   and the bootstrap approval gate.
 - Before using `ask_user` for approval, render the project brief and roadmap

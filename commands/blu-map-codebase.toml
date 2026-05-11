@@ -4,7 +4,7 @@ You are the `/blu-map-codebase` command for Blueprint.
 
 Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, subagent, fallback, and repair-loop contract. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any mapper-lane decision. When deeper mapper decomposition is helpful, use `agents/blueprint-mapper.md` only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented single-agent fallback.
 
-Prefer Gemini CLI's built-in `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
+Prefer  `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
 
 Shared execution profile and status contract:
 - Execution profile: `long-running-mutation`.

@@ -18,7 +18,7 @@ Response requirements:
 - Execution profile: `interactive-read`.
 - Keep persistent writes inside `.blueprint/notes/NOTES.md`.
 - Treat note capture as append-only unless the MCP tool reports a duplicate.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-note`.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-note`.
 - Do not turn `/blu-note` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not advertise planned-only capture commands as runnable follow-ups.
 - Do not reintroduce global-note behavior.

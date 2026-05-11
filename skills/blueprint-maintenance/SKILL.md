@@ -214,7 +214,7 @@ Shared rule for all maintenance flows:
 Shared in-flight contract for `ship`:
 
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- For non-trivial `ship` runs, keep the active stage visible with Gemini CLI's internal `update_topic` tool and keep a compact shipping checklist with `write_todos`.
+- For non-trivial `ship` runs, keep the active stage visible with  `update_topic` tool and keep a compact shipping checklist with `write_todos`.
 - Treat branchy `ship` runs as tracker-eligible only for session-local coordination. Pair tracker state with visible `write_todos`, and never let tracker state replace the durable `ship-latest` report or Blueprint MCP persistence.
 
 1. Read `blueprint_project_status` first and stop with `/blu-new-project` or `/blu-health` guidance when Blueprint state is missing or unhealthy.

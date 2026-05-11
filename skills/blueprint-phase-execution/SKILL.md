@@ -58,7 +58,7 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 - Treat Blueprint skills as loaded guidance, not callable tools.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.
-- Prefer Gemini CLI's built-in `ask_user` tool for focused confirmations and
+- Prefer  `ask_user` tool for focused confirmations and
   branch choices. When the host does not expose `ask_user`, ask the same
   focused question in prose instead of inventing a replacement tool.
 - `/blu-execute-phase` and non-trivial `/blu-quick` runs use the shared

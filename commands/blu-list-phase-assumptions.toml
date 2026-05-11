@@ -27,7 +27,7 @@ Response requirements:
 - Do not mutate files, config, roadmap entries, or phase artifacts.
 - Do not guess a nearest replacement phase when the requested phase is missing; list valid roadmap phases instead.
 - If phase resolution is blocked or the requested phase is missing, name that waiting state plainly and give the next safe implemented follow-up instead of smoothing it away.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-list-phase-assumptions`.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-list-phase-assumptions`.
 - Do not turn `/blu-list-phase-assumptions` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not turn this command into hidden planning, context capture, or execution.
 - Keep the output conversational and scannable, but preserve the five assumption areas explicitly.

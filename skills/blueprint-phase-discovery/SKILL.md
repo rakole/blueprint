@@ -37,7 +37,7 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- For structured interactive choices, confirmations, or short clarifications, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose.
+- For structured interactive choices, confirmations, or short clarifications, prefer  `ask_user` tool over plain assistant prose.
 - Load only the active command's `input_bundles.commands[...]` inputs plus the shared inputs for that invocation. Do not preload sibling discovery command runtime references unless the active command contract explicitly calls for them.
 - Execution profile for `/blu-discuss-phase`: `long-running-mutation`; read `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for the shared stage, in-flight status, and session-local helper contract.
 - Execution profile for `/blu-research-phase`: `long-running-mutation`.

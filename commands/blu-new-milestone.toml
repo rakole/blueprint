@@ -27,7 +27,7 @@ Response requirements:
 - Carry-forward is the default safe path. Do not silently reset the milestone from scratch.
 - Prefer `ask_user` for reset-vs-carry-forward decisions and overwrite confirmation when a structured confirmation gate will help.
 - Keep the waiting state explicit as `missing-milestone-summary`, `carry-forward-confirmation`, or `starter-doc-overwrite-confirmation` when the command is blocked before writing.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-new-milestone`.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-new-milestone`.
 - Do not turn `/blu-new-milestone` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Preserve historical phase directories and numbering history. This command advances to the next whole-number phase; it does not clean up prior milestone artifacts.
 - Route the follow-up to `/blu-discuss-phase <first phase>` instead of later blocked commands.

@@ -14,7 +14,7 @@ Visible planning contract:
 - Use a structured `reuse`, `revise`, or `replace` gate only when the current write would revise or replace an existing saved plan id or plan set. Additive new plan ids may proceed without that gate when no saved body will be overwritten.
 
 Interactive planning UX rules:
-- Prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
+- Prefer  `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 

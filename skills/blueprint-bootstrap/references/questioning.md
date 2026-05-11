@@ -78,7 +78,7 @@ Useful prompts:
 Blueprint runs in host-native environments, so prefer normal conversation.
 
 If concise options would help the user react to a concrete tradeoff, present
-them through Gemini CLI's built-in `ask_user` dialog when possible. Do not turn
+them through  `ask_user` dialog when possible. Do not turn
 the whole conversation into a rigid multiple-choice form.
 
 Good option lists:
@@ -119,7 +119,7 @@ their freeform answer and a concrete tradeoff would help.
 ## Session Rhythm
 
 If bootstrap questioning turns into a long session, keep the stage visible with
-Gemini CLI's `update_topic` tool and maintain a short `write_todos` checklist
+`update_topic` tool and maintain a short `write_todos` checklist
 for the overall flow.
 
 Do not interrupt a useful freeform answer just to narrate status in prose. Let

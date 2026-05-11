@@ -203,7 +203,7 @@ artifacts, and optional review agents when the command contract allows them.
 5. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
    route back to `/blu-code-review <phase>` or `/blu-progress` instead of
    bluffing.
-6. Use Gemini CLI's `ask_user` tool for overwrite confirmation and for any
+6. Use `ask_user` tool for overwrite confirmation and for any
    structured confirmation of which findings Blueprint is about to fix.
 7. Treat `--auto` as bounded finding selection only. It may skip the manual
    selection step for a narrow, high-confidence saved finding set, but it does
@@ -326,7 +326,7 @@ artifacts, and optional review agents when the command contract allows them.
    artifact content, and follow-up hardening work explicitly inside the saved
    security artifact.
 15. Present the user with the choice to verify open threats or explicitly accept
-   them, use Gemini CLI's `ask_user` for that structured decision, and block
+   them, use `ask_user` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
 16. Use `blueprint-security-auditor` only for bounded mitigation verification

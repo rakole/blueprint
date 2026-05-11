@@ -23,7 +23,7 @@ Response requirements:
 - Do not hide renumbering behind implicit execution; always require explicit confirmation before the mutation step.
 - Prefer Gemini CLI `ask_user` for the destructive confirmation gate instead of a prose-only prompt.
 - Keep the waiting state explicit as `future-phase-guard` when the target is not safely removable, `remove-phase-confirmation` while the default deletion preview is waiting for approval, and `force-remove-confirmation` when execution evidence requires a second destructive gate.
-- Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-remove-phase`.
+- Do not use  `update_topic`, `write_todos`, or task tracker tools for `/blu-remove-phase`.
 - Do not turn `/blu-remove-phase` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not use `force: true` unless the user explicitly confirmed removal after execution evidence was shown in the preview.
 - Do not advertise unimplemented roadmap commands as follow-up steps.

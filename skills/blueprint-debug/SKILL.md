@@ -38,10 +38,10 @@ the right next step is a bounded fix, a saved plan, or more validation.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
-- For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer Gemini CLI's built-in `ask_user` tool over plain assistant prose when the host makes it available.
-- Use Gemini CLI's internal `update_topic` tool only for non-trivial
+- For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer  `ask_user` tool over plain assistant prose when the host makes it available.
+- Use  `update_topic` tool only for non-trivial
   investigations to keep the active stage visible.
-- Use Gemini CLI's internal `write_todos` tool only for non-trivial
+- Use  `write_todos` tool only for non-trivial
   investigations to maintain a compact visible checklist.
 - Treat `update_topic` and `write_todos` as session-local coordination only; they do not replace Blueprint MCP persistence, and they are not permission to capture persisted follow-up todos implicitly.
 
