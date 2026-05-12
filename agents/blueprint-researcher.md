@@ -57,6 +57,9 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
   Blueprint-internal rather than product-facing
 - parent-supplied official-doc or external evidence packets when the parent
   asks for comparisons, validation, or citation-backed deltas
+- parent-supplied package, registry, release-note, security-advisory, license,
+  provenance, dependency-review, audit, or update-policy evidence when a bounded
+  strand asks for dependency/tool selection
 - any host-behavior clarification the parent supplies when Gemini-specific or
   experimental tool semantics materially affect the recommendation
 
@@ -132,6 +135,20 @@ ctags, or Tree-sitter analysis unless the parent supplied that packet or the
 available tool output directly proves it. Treat remote code-search hits as
 discovery hints until repo-local evidence confirms them.
 
+For dependency/tool strands, answer the bounded need by comparing:
+
+1. no new dependency
+2. existing repo dependency
+3. standard library or platform API
+4. candidate package, CLI, service, framework, or code generator
+5. custom implementation
+
+Return version, maintenance, vulnerability, license, provenance/signature,
+transitive-footprint, install-scope, lockfile, update-posture, residual-risk,
+and verification signals only from repo evidence or parent-supplied evidence.
+Mark missing supply-chain data as `unchecked`; do not treat missing data as
+approval.
+
 ## Outputs
 
 - artifact-grade mode: a bounded findings packet for one research strand or
@@ -196,6 +213,18 @@ Use this contract for artifact-grade mode.
 - Include `Planning Handoff`: recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
   confidence.
+- Include `Dependency / Tool Evaluation` when the strand recommends adding,
+  adopting, replacing, upgrading, globally installing, locally installing,
+  vendoring, forking, code-generating, or hand-rolling a package, library, CLI,
+  framework, service, package-manager behavior, or tool.
+- In that evaluation, include no-new-dependency, existing dependency,
+  standard-library/platform, candidate package/tool, and custom options; exact
+  candidate identity and version evidence; maintenance, vulnerability, license,
+  provenance/signature, transitive-footprint, install-scope, lockfile,
+  update-posture, residual-risk, and verification signals.
+- If the parent did not supply live package, registry, audit, OSV, Scorecard,
+  SLSA, license, or provenance evidence, mark the relevant field as
+  `unchecked` instead of implying fresh supply-chain verification.
 - Preserve the canonical section names and ordering only when the parent
   explicitly requests section-draft or full-artifact-draft output and supplies
   the template.
@@ -242,6 +271,12 @@ Use this contract for artifact-grade mode.
 - Make `## Standard Stack`, `## Architecture Patterns`, `## Don't Hand-Roll`,
   `## Common Pitfalls`, `## Code Examples`, and `## Recommendations`
   prescriptive enough to become plan tasks or validation checks.
+- For tool/dependency recommendations, make the supply-chain decision
+  planner-usable: say why no-new-dependency, existing dependency,
+  standard-library/platform, candidate package/tool, or custom implementation
+  won, and name the tests, manifest/lockfile checks, release-note/changelog
+  review, audit/OSV/dependency-review posture, and update plan the parent should
+  carry into `/blu-plan-phase`.
 - Use source labels near claims or in `## Sources`: `Repo evidence`, `Official
   reference`, `Supplied reference`, or `Inference`. Never present inference or
   stale training knowledge as verified fact.

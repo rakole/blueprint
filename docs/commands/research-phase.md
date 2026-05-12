@@ -45,7 +45,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 1. `Resolve`: resolve the target phase and stop early on missing Blueprint prerequisites.
 2. `Read`: inspect phase context, the actual saved `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, effective config, and canonical research contract before drafting.
 3. `Decide`: keep valid-reuse versus `view`/`skip`/`update`, invalid-research repair, checkpoint resume posture, and `research.external_sources` policy explicit before branching.
-4. `Execute`: build an initial assessment, follow the repository evidence ladder, record per-strand search notes and navigation evidence, then research one topic strand at a time, grounding repo truth first and keeping external evidence distinct when policy allows it.
+4. `Execute`: build an initial assessment, follow the repository evidence ladder, record per-strand search notes and navigation evidence, then research one topic strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, and keeping external evidence distinct when policy allows it.
 5. `Persist`: draft directly from the canonical template, checkpoint only resumable or inconclusive work, and persist final research through MCP only.
 6. `Validate`: normalize the draft to the canonical `phase.research` template and block on placeholders, missing sections, missing evidence, or other MCP-owned structural issues.
 7. `Route`: sync `STATE.md`, reload refreshed state, and report only implemented follow-up commands.
@@ -90,6 +90,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Build an investigation trace for non-trivial research: saved artifacts inspected, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
 - Prefer the runtime contract's repository evidence ladder over broad crawls: saved context, existing research, saved codebase summaries, `rg --files` plus path filters, scoped content searches, optional parent-supplied navigation packets, then targeted file/test/contract/runtime reads. Treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them.
 - Close each non-trivial topic strand with a planning handoff: recommendation, affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
+- When a recommendation adds, adopts, replaces, upgrades, installs, vendors, forks, code-generates, or hand-rolls a package, library, CLI, framework, service, or tool, record a dependency/tool evaluation covering no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options; version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, verification, and supply-chain evidence; and mark unavailable live evidence as unchecked under the configured external-source policy.
 - `blueprint-researcher` is optional and capability-gated. Use it only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps; otherwise use the runtime contract's single-agent topic-strand fallback. Any official-doc, external evidence, or semantic/navigation packet must come from the parent command or user, not from the subagent fetching or inventing it on its own. The parent sends one bounded evidence question plus allowed source classes and expects bounded findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
 - After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
@@ -166,6 +167,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Records enough investigation trace for planning: saved artifacts, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
 - Keeps code search scoped by default, records stop/widen rationale for non-trivial strands, and treats remote code-search hits as hints until local repo evidence confirms them.
 - Closes non-trivial strands with planning handoffs that name affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
+- Dependency/tool recommendations are backed by a supply-chain-aware evaluation table or explicitly marked as unchecked/deferred when the configured external-source policy prevents live evidence.
 - Handles long-running or inconclusive research through checkpointed continuation rather than a single all-or-nothing pass.
 - Reports the next safe action from refreshed runtime state instead of assuming `blueprint_state_update` returned it.
 - Uses only documented MCP tools for persistent state changes.
@@ -184,3 +186,5 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - R2 repository evidence ladder fixture with search note fields, role/method source rows, and remote-code-search-as-hint language.
 - Bounded `blueprint-researcher` packet contract fixture.
 - Strand planning handoff fixture.
+- R3 dependency/tool evaluation fixture with no-new-dependency, existing dependency, standard-library/platform, candidate package/tool, custom implementation, setup/update posture, library-vs-custom decision, and supply-chain evidence.
+- Warning fixture for a dependency/tool recommendation that omits R3 evaluation rows.

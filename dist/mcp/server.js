@@ -15665,7 +15665,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18529,13 +18529,31 @@ function renderResearchTemplate(context) {
 
 - <runtime, library, or shared repo pattern>
 
+### Dependency / Tool Evaluation
+
+| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
+|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
+| DEP-001 | <capability needed> | <package, tool, repo helper, platform API, or custom> | already_in_repo|use_existing|add_candidate|defer|reject|custom | <repo path, official URL, supplied source, or unchecked> | <npm, stdlib, platform, repo-local, service, or none> | runtime|dev|global|none | <current/wanted/latest, observed version, or unchecked> | <release/maintainer/CI/security-policy signal or unchecked> | <audit/OSV/advisory result or unchecked> | <SPDX/license signal or unchecked> | <provenance/SLSA/signature/scope identity signal or unchecked> | <none, small, moderate, large, or unchecked> | <no-new-dependency, existing dependency, standard library, or platform API option> | <Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture> | <risk and mitigation> |
+
 ## Installation And Setup
 
 - <installation or setup guidance>
 
+### Setup And Update Posture
+
+| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
+|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
+| DEP-001 | <package.json/package-lock or none> | <repo-local command/path or none> | runtime|dev|global|none | <transitive deps, lifecycle scripts, native binaries, peers, engines, or none> | <test/build/check or manual verification> | <Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual> | yes|no - <reason> |
+
 ## Alternatives Considered
 
 - <alternative considered and tradeoff>
+
+### Dependency Alternatives
+
+| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
+|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
+| DEP-001 | <capability needed> | <viable/rejected and why> | <viable/rejected and why> | <viable/rejected and why> | <candidate and evidence> | <allowed/rejected and tests needed> | use_existing|add_candidate|defer|reject|custom | <actionable rationale> |
 
 ## Architecture Patterns
 
@@ -18544,6 +18562,12 @@ function renderResearchTemplate(context) {
 ## Don't Hand-Roll
 
 - <existing tool, helper, or platform feature>
+
+### Library Vs Custom Decision
+
+| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
+|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
+| DEP-001 | <capability> | security-sensitive|standardized|protocol|parser|package-resolution|low-risk-project-specific | <option or none> | yes|no | <why package/library/custom is safer> | <tests/checks required> | <owner or update path> |
 
 ## Anti-Patterns
 
@@ -18575,7 +18599,7 @@ function renderResearchTemplate(context) {
 
 ## Recommendations
 
-- <prescriptive recommendation with tradeoffs>
+- <prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>
 
 ## Sources
 
@@ -18585,7 +18609,11 @@ function renderResearchTemplate(context) {
 
 ### External References
 
-- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.`;
+- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+
+### Supply Chain Evidence
+
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
 }
 function renderUiSpecTemplate(context) {
   return `# ${phaseLabel(context)} - UI Spec
@@ -21868,10 +21896,37 @@ var init_artifact_contracts = __esm({
           "<phase decision preserved from context>",
           "<repo, product, or workflow constraint>",
           "<runtime, library, or shared repo pattern>",
+          "<capability needed>",
+          "<package, tool, repo helper, platform API, or custom>",
+          "<repo path, official URL, supplied source, or unchecked>",
+          "<npm, stdlib, platform, repo-local, service, or none>",
+          "<current/wanted/latest, observed version, or unchecked>",
+          "<release/maintainer/CI/security-policy signal or unchecked>",
+          "<audit/OSV/advisory result or unchecked>",
+          "<SPDX/license signal or unchecked>",
+          "<provenance/SLSA/signature/scope identity signal or unchecked>",
+          "<none, small, moderate, large, or unchecked>",
+          "<no-new-dependency, existing dependency, standard library, or platform API option>",
+          "<Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture>",
+          "<risk and mitigation>",
           "<installation or setup guidance>",
+          "<package.json/package-lock or none>",
+          "<repo-local command/path or none>",
+          "<transitive deps, lifecycle scripts, native binaries, peers, engines, or none>",
+          "<test/build/check or manual verification>",
+          "<Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual>",
           "<alternative considered and tradeoff>",
+          "<viable/rejected and why>",
+          "<candidate and evidence>",
+          "<allowed/rejected and tests needed>",
+          "<actionable rationale>",
           "<durable implementation pattern>",
           "<existing tool, helper, or platform feature>",
+          "<capability>",
+          "<option or none>",
+          "<why package/library/custom is safer>",
+          "<tests/checks required>",
+          "<owner or update path>",
           "<anti-pattern detail or implementation to avoid>",
           "<current ecosystem or repo update relevant to this phase>",
           "<failure mode or regression risk>",
@@ -21880,6 +21935,7 @@ var init_artifact_contracts = __esm({
           "<evidence-backed confidence explanation>",
           "<short code or pseudocode example>",
           "<prescriptive recommendation with tradeoffs>",
+          "<prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>",
           "<repo path:line>",
           "<symbol or heading>",
           "<definition|reference|test|config|contract|runtime|example|background>",
@@ -21887,14 +21943,19 @@ var init_artifact_contracts = __esm({
           "<claim or recommendation>",
           "<title>",
           "<URL>",
-          "<off|ask-approved|auto|supplied>"
+          "<source title or command>",
+          "<URL or repo path>",
+          "<version|maintenance|vulnerability|license|provenance|transitive|update>",
+          "<off|ask-approved|auto|supplied>",
+          "<off|ask-approved|auto|supplied|unchecked>"
         ],
         notes: [
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
           "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+          "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
@@ -37251,6 +37312,48 @@ function containsSourceEvidence(section) {
   const repoRootFileReference = /(?:^|[\s([`])(?:AGENTS\.md|MEMORY\.md|PROGRESS\.md|README\.md|gemini-extension\.json|package(?:-lock)?\.json|tabnine-extension\.json|tsconfig\.json)\b/m;
   return /\bhttps?:\/\/[^\s)]+/.test(section) || repoDirectoryReference.test(section) || repoRootFileReference.test(section);
 }
+function researchDependencyChoiceText(content) {
+  return [
+    extractMarkdownSection5(content, "Phase Requirements"),
+    extractMarkdownSection5(content, "Summary"),
+    extractMarkdownSection5(content, "Standard Stack"),
+    extractMarkdownSection5(content, "Installation And Setup"),
+    extractMarkdownSection5(content, "Alternatives Considered"),
+    extractMarkdownSection5(content, "Don't Hand-Roll"),
+    extractMarkdownSection5(content, "Recommendations")
+  ].join("\n");
+}
+function mentionsDependencyOrToolChoice(content) {
+  const candidateText = researchDependencyChoiceText(content);
+  return RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) || RESEARCH_INSTALL_COMMAND_PATTERN.test(candidateText);
+}
+function hasDependencyToolEvaluationTable(content) {
+  const standardStack = extractMarkdownSection5(content, "Standard Stack");
+  return /Dependency \/ Tool Evaluation/i.test(standardStack) && /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i.test(standardStack) && /Current \/ Wanted \/ Latest Evidence/i.test(standardStack) && /Maintenance Signal/i.test(standardStack) && /Vulnerability Signal/i.test(standardStack) && /\|\s*License\s*\|/i.test(standardStack) && /Provenance \/ Signature Signal/i.test(standardStack) && /Transitive Footprint/i.test(standardStack) && /Existing \/ Standard-Library Alternative/i.test(standardStack) && /Update Posture/i.test(standardStack) && /Residual Risk And Mitigation/i.test(standardStack) && /\bDEP-\d{3}\b/.test(standardStack);
+}
+function hasDependencyAlternativesCoverage(content) {
+  const alternatives = extractMarkdownSection5(content, "Alternatives Considered");
+  return /Dependency Alternatives/i.test(alternatives) && /No New Dependency/i.test(alternatives) && /Existing Dependency/i.test(alternatives) && /Standard Library \/ Platform API/i.test(alternatives) && /Candidate Package \/ Tool/i.test(alternatives) && /Custom Implementation/i.test(alternatives);
+}
+function hasDependencySetupAndUpdatePosture(content) {
+  const setup = extractMarkdownSection5(content, "Installation And Setup");
+  return /Setup And Update Posture/i.test(setup) && /Manifest \/ Lockfile Impact/i.test(setup) && /Install Scope/i.test(setup) && /Side Effects/i.test(setup) && /Verification Command/i.test(setup) && /Update \/ Monitoring Plan/i.test(setup) && /Manual Review Required/i.test(setup);
+}
+function hasLibraryVsCustomDecision(content) {
+  const dontHandRoll = extractMarkdownSection5(content, "Don't Hand-Roll");
+  return /Library Vs Custom Decision/i.test(dontHandRoll) && /Domain Risk/i.test(dontHandRoll) && /Proven Library \/ Existing Option/i.test(dontHandRoll) && /Custom Path Allowed\?/i.test(dontHandRoll) && /Required Tests \/ Validation/i.test(dontHandRoll);
+}
+function hasSupplyChainEvidenceSource(content) {
+  const sources = extractMarkdownSection5(content, "Sources");
+  return /Supply Chain Evidence/i.test(sources) && /signal=<version\|maintenance\|vulnerability\|license\|provenance\|transitive\|update>/.test(sources) === false && /\bsignal=(?:version|maintenance|vulnerability|license|provenance|transitive|update)\b/i.test(sources);
+}
+function mentionsUnsafeAutomaticDependencyRemediation(content) {
+  const candidateText = [
+    extractMarkdownSection5(content, "Installation And Setup"),
+    extractMarkdownSection5(content, "Recommendations")
+  ].join("\n");
+  return /\b(?:npm audit fix|OSV guided remediation|dependency-update PRs?)\b/i.test(candidateText) && !/\b(?:not automatically safe|manual review|review manifest and lockfile diffs|inspect release notes|inspect changelog|run tests)\b/i.test(candidateText);
+}
 function stripResearchPlaceholderSignals(section) {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -37336,6 +37439,38 @@ function validateResearchArtifactContent(content) {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+    );
+  }
+  if (mentionsDependencyOrToolChoice(content)) {
+    if (!hasDependencyToolEvaluationTable(content)) {
+      warnings.push(
+        "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
+      );
+    }
+    if (!hasDependencyAlternativesCoverage(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
+      );
+    }
+    if (!hasDependencySetupAndUpdatePosture(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
+      );
+    }
+    if (!hasLibraryVsCustomDecision(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
+      );
+    }
+    if (!hasSupplyChainEvidenceSource(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
+      );
+    }
+  }
+  if (mentionsUnsafeAutomaticDependencyRemediation(content)) {
+    warnings.push(
+      "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
     );
   }
   const codeExamples = extractMarkdownSection5(content, "Code Examples");
@@ -44992,7 +45127,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -45315,6 +45450,8 @@ var init_artifacts = __esm({
       "milestone-complete-",
       "milestone-summary-"
     ];
+    RESEARCH_DEPENDENCY_CHOICE_PATTERN = /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
+    RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
     PLAN_TASK_ABSOLUTE_PATH_ROOTS = /* @__PURE__ */ new Set([
       "Applications",
       "Library",

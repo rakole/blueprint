@@ -295,10 +295,16 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchCommand, /single-agent fallback/i);
   assert.match(researchCommand, /rg --files/i);
   assert.match(researchCommand, /remote code-search/i);
+  assert.match(researchCommand, /dependency\/tool evaluation/i);
+  assert.match(researchCommand, /no-new-dependency/i);
   assert.match(researchRuntimeContract, /strict mode[\s\S]*repair invalid results/i);
   assert.match(researchRuntimeContract, /per-strand search notes/i);
   assert.match(researchRuntimeContract, /remote code-search hits are discovery hints/i);
   assert.match(researchRuntimeContract, /role=definition\|reference\|test\|config\|contract\|runtime\|example\|background/i);
+  assert.match(researchRuntimeContract, /Tool And Dependency Selection/i);
+  assert.match(researchRuntimeContract, /Current \/ Wanted \/ Latest Evidence/i);
+  assert.match(researchRuntimeContract, /Supply Chain Evidence/i);
+  assert.match(researchRuntimeContract, /npm audit fix/i);
   assert.match(
     mcpToolsDoc,
     /Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative/i
@@ -308,6 +314,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchDoc, /artifactId: "phase\.research"/);
   assert.match(researchDoc, /deliberate placeholder/i);
   assert.match(researchDoc, /research-phase-runtime-contract\.md/);
+  assert.match(researchDoc, /supply-chain-aware/i);
+  assert.match(mcpToolsDoc, /dependency\/tool choices/i);
   assert.match(researchRuntimeContract, /validation repair before completion/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
