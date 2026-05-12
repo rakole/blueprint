@@ -122,6 +122,12 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /lockfile/i);
   assert.match(researcher, /unchecked/i);
   assert.match(researcher, /sidecar packet as final persisted research/i);
+  assert.match(researcher, /Research Sidecar Packet Semantics/i);
+  assert.match(researcher, /packetVersion: research-sidecar\.v1/i);
+  assert.match(researcher, /terminationReason/i);
+  assert.match(researcher, /failedSearches/i);
+  assert.match(researcher, /conversation transcript/i);
+  assert.match(researcher, /parent-owned strand/i);
   assert.match(researcher, /full-artifact\s+draft/i);
   assert.match(researcher, /## Revision Behavior/);
   assert.match(

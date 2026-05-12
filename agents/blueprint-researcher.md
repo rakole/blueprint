@@ -28,9 +28,12 @@ the selected Blueprint phase. The parent command must name the output mode:
 artifact-grade phase research for `/blu-research-phase`, or a lightweight
 gray-area options and tradeoffs memo for `/blu-discuss-phase`.
 Artifact-grade mode supports comparing repo evidence against parent-supplied official-doc or external evidence packets with clear provenance.
-For R4 provenance work, artifact-grade mode returns claim-addressable evidence
-rows that the parent can accept, reject, or synthesize; it does not decide final
-artifact confidence on its own.
+For claim-addressable evidence work, artifact-grade mode returns
+claim-addressable evidence rows that the parent can accept, reject, or
+synthesize; it does not decide final artifact confidence on its own. For
+strand-orchestration work, every artifact-grade handoff is a sidecar packet
+tied to one parent-owned strand; do not return a conversation transcript as the
+handoff.
 
 ## Parent-Owned Responsibilities
 
@@ -194,12 +197,44 @@ The parent prompt must say which mode is required.
 - Do not use gray-area memo mode as a replacement for `/blu-research-phase` or
   as a hidden persistence path.
 
+## Research Sidecar Packet Semantics
+
+Artifact-grade mode returns a compact packet, not final persistence ownership.
+Use this packet shape in Markdown or JSON-like text when the parent asks for a
+research sidecar:
+
+```text
+packetVersion: research-sidecar.v1
+strandId: <parent strand id>
+status: answered | partial | blocked | failed | needs-parent-evidence
+terminationReason: evidence-sufficient | no-authoritative-source-found | blocked-by-source-policy | budget-exhausted | timeout | tool-failure | contradictory-evidence | parent-escalation-required
+conciseAnswer: <direct answer to the bounded question>
+confidence: LOW | MEDIUM | HIGH
+claims: <claim rows with support class, source ids, confidence, and planner impact>
+repoSources: <repo paths with role, locator when available, and why they matter>
+externalSources: <parent-supplied external packet ids only; never self-fetched>
+failedSearches: <query/path, scope, no-hit/too-broad/unreadable/not-allowed, impact>
+warnings: <weak evidence, stale evidence, missing parent packet, scope limit, or conflict>
+followUps: <parent, user, or plan-phase action with reason>
+draftSections: <only when parent requested section-draft and named target headings>
+fullArtifactDraft: <only when parent explicitly requested full-artifact-draft>
+```
+
+The parent command decides whether to accept, reject, or retry from the packet.
+The packet must be compact enough to store as a checkpoint reference. Do not
+include full child conversation history, hidden chain of thought, raw broad
+search dumps, or a duplicate final `XX-RESEARCH.md` unless the parent explicitly
+requested `full-artifact-draft`.
+
 ## Required Output Contract
 
 Use this contract for artifact-grade mode.
 
 - Start with `Mode: artifact-grade` and `Strand:` or `Question:` so the parent
   can attach the packet to the active strand.
+- Include `packetVersion: research-sidecar.v1`, `strandId`, `status`, and
+  `terminationReason` so the parent can update the research strand ledger
+  without replaying a transcript.
 - Include `**Confidence:** LOW|MEDIUM|HIGH`.
 - Include a concise answer.
 - Include a `Findings` list. Each finding must name one R4 support class:
@@ -227,6 +262,9 @@ Use this contract for artifact-grade mode.
 - Include `Planning Handoff`: recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
   confidence.
+- Include `Warnings` and `Follow Ups` when evidence is blocked, incomplete,
+  stale, contradictory, failed, or requires a parent/user decision before final
+  synthesis.
 - Include `Dependency / Tool Evaluation` when the strand recommends adding,
   adopting, replacing, upgrading, globally installing, locally installing,
   vendoring, forking, code-generating, or hand-rolling a package, library, CLI,

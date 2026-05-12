@@ -37,6 +37,11 @@ For `/blu-discuss-phase`, useful pending gates include phase ambiguity,
 resume-versus-discard checkpoint choice, gray-area selection, overwrite
 confirmation, and validation blockers.
 
+For `/blu-research-phase`, useful pending gates include checkpoint
+resume-versus-discard, valid-research view/skip/update, external-source
+confirmation, sidecar availability, strand blocker, validation repair, and
+state-sync or route-refresh failure.
+
 ## Session-Local Visibility Helpers
 
 On Gemini hosts that expose `update_topic` and `write_todos`, use them only as
@@ -46,6 +51,14 @@ not replace MCP-backed artifacts, checkpoints, reports, or `STATE.md`.
 When those helpers are unavailable, keep the same stage and next-safe-action
 visibility in normal progress recaps plus MCP-backed checkpoints and `STATE.md`.
 Do not claim helper calls were made when the host did not expose them.
+
+For `/blu-research-phase`, the compact fallback recap should include the active
+strand and pending gate, for example:
+
+`Stage: Execute | Scope: Phase 3 Phase Discovery | Mode: parent-only |
+Completed: S1 context-lock, S2 repo-map | Active: S3 stack-and-dependencies |
+Pending gate: external-source confirmation | Next safe action: checkpoint or
+resume /blu-research-phase 3`
 
 Use host-supported structured choices for focused interactive decisions such as
 overwrite confirmation, resume-versus-discard, and next-area selection. Avoid

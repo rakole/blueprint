@@ -791,6 +791,115 @@ test("phase plan indexing and checkpoint persistence accept numeric inputs with 
   ]);
 });
 
+test("research checkpoints preserve nested strand ledger payloads", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPayload = {
+    ownerCommand: "/blu-research-phase",
+    completedAreas: ["S1 context-lock"],
+    remainingAreas: ["S2 repo-map"],
+    decisions: [],
+    deferredIdeas: [],
+    canonicalReferences: [],
+    resumeMeta: {
+      mode: "research",
+      pendingTopics: ["S2 repo-map"],
+      completedTopics: ["S1 context-lock"],
+      currentQuestion: "Which repo surfaces constrain this phase?",
+      notes: ["Resume at the repo-map strand."],
+      resumeHint: "Resume /blu-research-phase 3 at S2.",
+      updatedAt: "2026-05-12T00:00:00.000Z"
+    },
+    researchLedger: {
+      schemaVersion: "research-ledger/v1",
+      phase: {
+        number: "3",
+        prefix: "03",
+        name: "Phase Discovery",
+        dir: ".blueprint/phases/03-phase-discovery"
+      },
+      runtime: {
+        ownerCommand: "/blu-research-phase",
+        artifactId: "phase.research",
+        externalSources: {
+          effective: "ask",
+          decision: "pending",
+          reason: "Repo evidence cannot settle upstream behavior."
+        }
+      },
+      strands: [
+        {
+          id: "S1",
+          type: "context-lock",
+          question: "What saved context decisions constrain this research?",
+          requirementIds: ["REQ-001"],
+          repoAnchors: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"],
+          sourcePolicy: "repo-only",
+          dependencies: [],
+          expectedPacket: "parent-inline-evidence",
+          budget: { maxFiles: 3, maxSidecars: 0 },
+          status: "complete",
+          evidenceIds: ["SRC-001"],
+          acceptedClaims: ["Context requires MCP-owned persistence."],
+          rejectedOrLowQualitySources: [],
+          searchNotes: [],
+          uncertainty: "none",
+          stoppingReason: "evidence-sufficient",
+          nextAction: "feed planner-handoff"
+        }
+      ],
+      evidencePackets: [
+        {
+          id: "SRC-001",
+          class: "repo",
+          strandId: "S1",
+          source: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
+          claim: "Saved context constrains research scope.",
+          confidence: "high"
+        }
+      ],
+      sidecars: [],
+      draftState: {
+        hasDraft: false,
+        sectionsTouched: [],
+        validationAttempted: false,
+        validationIssues: [],
+        finalWriteAttempted: false,
+        lastKnownPath: null
+      },
+      nextAction: {
+        stage: "Execute",
+        pendingGate: "none",
+        safeCommand: "/blu-research-phase 3"
+      }
+    }
+  };
+
+  const written = await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: checkpointPayload
+  });
+  const read = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: 3,
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+
+  assert.equal(written.updated, true);
+  assert.equal(read.found, true);
+  assert.equal(read.ownerCommand, "/blu-research-phase");
+  assert.equal(read.resumeMode, "research");
+  assert.equal(read.safeToResume, true);
+  assert.deepEqual(read.checkpoint, checkpointPayload);
+  const readPayload = read.checkpoint as typeof checkpointPayload;
+  assert.deepEqual(readPayload.researchLedger.strands.map((strand) => strand.id), ["S1"]);
+});
+
 test("checkpoint persistence rejects legacy-style resumability fragments without the stronger shape", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -928,6 +1037,61 @@ test("checkpoint delete refuses to remove a foreign shared checkpoint when owner
   );
   assert.equal(checkpoint.found, true);
   assert.equal(checkpoint.ownerCommand, "/blu-research-phase");
+});
+
+test("checkpoint delete removes matching research-owned checkpoints after guarded success", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: 3,
+    checkpoint: {
+      ownerCommand: "/blu-research-phase",
+      completedAreas: ["S1 context-lock"],
+      remainingAreas: [],
+      decisions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      resumeMeta: {
+        mode: "research",
+        pendingTopics: [],
+        completedTopics: ["S1 context-lock"],
+        notes: [],
+        updatedAt: "2026-05-12T00:00:00.000Z"
+      },
+      researchLedger: {
+        schemaVersion: "research-ledger/v1",
+        strands: [
+          {
+            id: "S1",
+            type: "context-lock",
+            status: "complete",
+            stoppingReason: "evidence-sufficient",
+            nextAction: "route"
+          }
+        ],
+        nextAction: {
+          stage: "Route",
+          pendingGate: "none",
+          safeCommand: "/blu-plan-phase 3"
+        }
+      }
+    }
+  });
+
+  const deleted = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: 3,
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(deleted.deleted, true);
+  assert.equal(checkpoint.found, false);
 });
 
 test("checkpoint delete refuses unguarded deletion of a shared checkpoint", async (t) => {

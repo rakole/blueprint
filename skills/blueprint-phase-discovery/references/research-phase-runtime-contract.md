@@ -44,10 +44,20 @@ The retained behaviors that matter are:
 - final `## Sources` is split into `Repo Evidence`, `External Sources`, and
   `Inference Notes`; inference notes reference evidence IDs they combine instead
   of masquerading as citations
-- topic-strand research with checkpoints for pauses or inconclusive evidence
+- parent-owned research strand ledger for non-trivial runs, with each strand
+  tracked by id, type, question, requirement IDs, repo anchors, source policy,
+  dependencies, expected packet shape, budget, status, evidence IDs, accepted
+  claims, rejected or low-quality sources, search notes, uncertainty, stopping
+  reason, and next action
+- checkpointed resumability for pauses, inconclusive evidence, blocked source
+  policy, sidecar failures, budget or timeout limits, validation repair, and
+  post-write state-sync or route-refresh failures
 - per-strand planning handoff with recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
   confidence
+- parent-owned synthesis from accepted strand packets before final
+  `XX-RESEARCH.md` authoring; child transcripts are never copied into the final
+  artifact or checkpoint
 - dependency/tool decisions treated as first-class research when a phase may add, adopt, replace, or hand-roll a package, library, CLI, framework, service, code generator, package-manager behavior, or other tool
 - validation repair before completion
 - routing only to implemented commands after refreshed state is loaded
@@ -64,15 +74,21 @@ Use the shared long-running-mutation stages:
   repo-plus-external verification posture based on
   `research.external_sources`.
 - `Execute`: build the initial assessment, follow the repository evidence
-  ladder, record per-strand search notes and navigation evidence, research one
-  topic strand at a time, evaluate dependency/tool choices when they affect a
-  recommendation, close each strand with a planning handoff, and keep evidence
-  provenance visible, and construct the R4 claim/evidence packet before writing final recommendations.
-- `Persist`: scaffold only a missing file, write checkpoints for pauses, and
-  write final research through MCP only.
+  ladder, classify non-trivial work into the parent-owned research strand
+  ledger, record per-strand search notes and navigation evidence, research one
+  runnable strand at a time, evaluate dependency/tool choices when they affect
+  a recommendation, accept or reject sidecar packets before synthesis, close
+  each strand with a planning handoff, keep evidence provenance visible, and
+  construct the claim-addressable evidence packet before writing final
+  recommendations.
+- `Persist`: scaffold only a missing file, write checkpoints when there is
+  useful resumable strand state, checkpoint before blocked waits or repair
+  retries, and write final research through MCP only.
 - `Validate`: normalize to the live authoring template, self-check, write in
   strict mode, repair invalid results, and retry when safe.
-- `Route`: reload state and recommend only implemented next commands.
+- `Route`: reload state, refresh implemented-command routing, delete only the
+  research-owned checkpoint after write plus routing succeeds, and recommend
+  only implemented next commands.
 
 During non-trivial runs, keep resolved scope, active stage, pending gate,
 execution mode, and next safe action visible through Gemini-native progress
@@ -103,7 +119,9 @@ helpers when available, or concise progress recaps when they are not.
 - `blueprint_phase_checkpoint_get`: detects resumable in-progress research and
   controls resume-versus-discard branching. Pass
   `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`,
-  then honor `safeToResume` and `warnings` before using saved state.
+  then honor `safeToResume` and `warnings` before using saved state. A safe
+  research checkpoint resumes by default unless the user explicitly asks to
+  discard it.
 - `blueprint_state_load`: grounds workflow posture before and after writes.
 - `blueprint_command_catalog`: gates every next-command recommendation.
 - `blueprint_artifact_contract_read` with `artifactId: "phase.research"`:
@@ -113,16 +131,20 @@ helpers when available, or concise progress recaps when they are not.
   creation only. Default drafting should start from
   `contract.authoringTemplate`, and scaffold output is never completed
   research.
-- `blueprint_phase_checkpoint_put`: persists inconclusive or paused strand
-  state using the structured checkpoint shape with
-  `ownerCommand: "/blu-research-phase"` and `resumeMeta.mode: "research"`.
-  The MCP tool owns the shared checkpoint path; do not assume the filename is
-  research-specific.
+- `blueprint_phase_checkpoint_put`: persists useful continuation state using
+  the structured checkpoint shape with `ownerCommand: "/blu-research-phase"`
+  and `resumeMeta.mode: "research"`. For non-trivial research, include a nested
+  `researchLedger` payload with `schemaVersion: "research-ledger/v1"`, compact
+  strand state, accepted evidence packet references, sidecar status, draft
+  state, and next action. Store packets and source references, not child
+  transcripts. The MCP tool owns the shared checkpoint path; do not assume the
+  filename is research-specific.
 - `blueprint_phase_artifact_write`: persists final research with the resolved
   numeric `phase`, `artifact: "research"`, full markdown body, and strict
   validation unless the user explicitly accepts a warned save.
-- `blueprint_phase_checkpoint_delete`: removes stale continuation state after a
-  successful final research write. Pass
+- `blueprint_phase_checkpoint_delete`: removes stale continuation state only
+  after final research writes successfully, `STATE.md` sync succeeds, refreshed
+  state load succeeds, and implemented-command routing has been checked. Pass
   `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`
   so cleanup cannot delete another command's shared checkpoint.
 - `blueprint_state_update`: records completion or repair posture after
@@ -431,6 +453,337 @@ lower confidence and preserve the uncertainty in `## Open Questions`, the
 strand handoff, or the research checkpoint. Do not turn a weak strand into a
 confident recommendation.
 
+## Research Strand Ledger And Checkpoint Semantics
+
+Treat topic strands as a parent-owned ledger, not as ad hoc prose. A simple run
+may collapse strands, but every non-trivial, blocked, resumed, or sidecar-aided
+run should classify work into the smallest useful set from:
+
+1. `context-lock`: saved `XX-CONTEXT.md`, requirement mapping, user constraints,
+   prior phase artifacts, and current workflow gates.
+2. `repo-map`: saved `.blueprint/codebase/` summaries, relevant files, symbols,
+   tests, commands, and contract anchors.
+3. `stack-and-dependencies`: current repo stack, existing dependencies,
+   candidate libraries/tools, versions, setup, license/security/maintenance
+   cautions, and "do not hand-roll" calls.
+4. `architecture-integration`: implementation patterns, ownership boundaries,
+   state/data flow, MCP/tool contracts, and affected modules.
+5. `validation-and-tests`: expected verification surfaces, test harnesses,
+   fixtures, commands, and failure modes planning must cover.
+6. `risks-and-pitfalls`: anti-patterns, contradictory evidence, operational
+   hazards, migration concerns, and blocked assumptions.
+7. `external-delta`: official or supplied external sources only when
+   `research.external_sources` allows them and repo evidence cannot settle the
+   claim.
+8. `planner-handoff`: parent-owned synthesis across completed strands into
+   recommendations, open questions, confidence, and planning handoff notes.
+
+For each strand, track:
+
+- `id`
+- `type`
+- `question`
+- `requirementIds`
+- `repoAnchors`
+- `sourcePolicy`
+- `dependencies`
+- `expectedPacket`
+- `budget`
+- `status`
+- `evidenceIds`
+- `acceptedClaims`
+- `rejectedOrLowQualitySources`
+- `searchNotes`
+- `uncertainty`
+- `stoppingReason`
+- `nextAction`
+
+Valid strand statuses are:
+
+- `pending`
+- `active`
+- `complete`
+- `blocked`
+- `inconclusive`
+- `failed`
+- `deferred`
+
+Valid stopping reasons are:
+
+- `evidence-sufficient`
+- `no-authoritative-source-found`
+- `blocked-by-source-policy`
+- `budget-exhausted`
+- `timeout`
+- `tool-failure`
+- `contradictory-evidence`
+- `parent-escalation-required`
+- `waiting-for-user`
+- `validation-repair-required`
+- `state-sync-failed`
+- `route-refresh-failed`
+
+`Inconclusive with evidence and next search direction` is a valid terminal
+strand state. Endless research is not.
+
+Checkpoint research state with `blueprint_phase_checkpoint_put` only when there
+is useful continuation state. Update the checkpoint:
+
+- after `blueprint_phase_checkpoint_get` returns a safe resumable checkpoint and
+  the parent accepts or defaults to resume, if the parent changes the active
+  strand or next action;
+- before launching any sidecar wave, with strand ids, questions, budgets, and
+  expected packet shape already recorded;
+- after each parent-accepted or parent-rejected sidecar packet;
+- after each parent-completed inline strand when the remaining strands still
+  matter and the run is long enough to resume later;
+- before waiting on `research.external_sources=ask` when the run cannot continue
+  repo-only without losing context;
+- when a source-policy decline, tool failure, budget limit, timeout, or
+  contradictory evidence leaves a strand inconclusive;
+- before a final artifact write retry when validation diagnostics require
+  repair;
+- after a failed or identical validation repair attempt, preserving the draft
+  status and exact diagnostics;
+- before stopping due to state-sync or route-refresh failure after a final write
+  attempt.
+
+Do not checkpoint after a straightforward successful final write except as a
+temporary pre-delete state. Delete only after the final research write, state
+sync, refreshed state load, and implemented-command routing receipt are known.
+
+Recommended parent command loop:
+
+```ts
+const checkpoint = await blueprint_phase_checkpoint_get({
+  phase,
+  expectedOwnerCommand: "/blu-research-phase",
+  expectedMode: "research",
+});
+
+const ledger = decideResumeOrFreshLedger(checkpoint, userIntent);
+classifyStrands(ledger, context, researchStatus, config, contract);
+
+for (const strand of nextRunnableStrands(ledger)) {
+  setProgress("Execute", strand);
+
+  if (shouldUseSidecar(strand, config)) {
+    await putCheckpoint(ledger.markDispatching(strand));
+    const packet = await runResearcherSidecar(strand);
+    ledger.acceptOrRejectPacket(strand.id, packet);
+    await putCheckpoint(ledger);
+  } else {
+    const packet = await parentInlineResearch(strand);
+    ledger.acceptOrRejectPacket(strand.id, packet);
+    if (ledger.hasRemainingCriticalWork()) {
+      await putCheckpoint(ledger);
+    }
+  }
+
+  if (strand.isBlockedOrInconclusive()) {
+    await putCheckpoint(ledger);
+    stopWithCheckpointReceipt(ledger);
+  }
+}
+
+const draft = synthesizeResearchFromParentLedger(
+  ledger,
+  contract.authoringTemplate
+);
+const write = await blueprint_phase_artifact_write({
+  phase,
+  artifact: "research",
+  content: draft,
+});
+
+if (write.status === "invalid") {
+  await putCheckpoint(ledger.recordValidationAttempt(write.validation));
+  const repaired = repairSameDraft(draft, write.validation);
+  const retry = await blueprint_phase_artifact_write({
+    phase,
+    artifact: "research",
+    content: repaired,
+    overwrite: true,
+  });
+  if (retry.status === "invalid") {
+    await putCheckpoint(ledger.recordRepeatedValidationFailure(retry.validation));
+    stopWithCheckpointReceipt(ledger);
+  }
+}
+
+await blueprint_state_update({
+  base: "synced",
+  patch: { currentPhase: phase, activeCommand: "/blu-research-phase" },
+});
+await blueprint_state_load({ phase });
+await blueprint_command_catalog({});
+await blueprint_phase_checkpoint_delete({
+  phase,
+  expectedOwnerCommand: "/blu-research-phase",
+  expectedMode: "research",
+});
+```
+
+Keep the existing generic checkpoint fields for compatibility. Add
+`researchLedger` as a nested payload instead of replacing the generic schema:
+
+```json
+{
+  "ownerCommand": "/blu-research-phase",
+  "completedAreas": ["S1 context-lock"],
+  "remainingAreas": ["S2 repo-map"],
+  "decisions": [],
+  "deferredIdeas": [],
+  "canonicalReferences": [],
+  "resumeMeta": {
+    "mode": "research",
+    "pendingTopics": ["S2 repo-map"],
+    "completedTopics": ["S1 context-lock"],
+    "currentQuestion": "Which repo surfaces constrain this phase?",
+    "notes": [],
+    "resumeHint": "Resume at S2.",
+    "updatedAt": "2026-05-12T00:00:00.000Z"
+  },
+  "researchLedger": {
+    "schemaVersion": "research-ledger/v1",
+    "phase": {
+      "number": "3",
+      "prefix": "03",
+      "name": "Phase Discovery",
+      "dir": ".blueprint/phases/03-phase-discovery"
+    },
+    "runtime": {
+      "ownerCommand": "/blu-research-phase",
+      "artifactId": "phase.research",
+      "externalSources": {
+        "effective": "ask",
+        "decision": "pending",
+        "reason": "Repo evidence cannot settle upstream behavior."
+      }
+    },
+    "strands": [
+      {
+        "id": "S1",
+        "type": "context-lock",
+        "question": "What saved context decisions constrain this research?",
+        "requirementIds": ["REQ-001"],
+        "repoAnchors": [".blueprint/phases/03-example/03-CONTEXT.md"],
+        "sourcePolicy": "repo-only",
+        "dependencies": [],
+        "expectedPacket": "parent-inline-evidence",
+        "budget": {
+          "maxFiles": 3,
+          "maxSidecars": 0
+        },
+        "status": "complete",
+        "evidenceIds": ["SRC-001"],
+        "acceptedClaims": ["Context requires MCP-owned persistence."],
+        "rejectedOrLowQualitySources": [],
+        "searchNotes": [],
+        "uncertainty": "none",
+        "stoppingReason": "evidence-sufficient",
+        "nextAction": "feed planner-handoff"
+      }
+    ],
+    "evidencePackets": [
+      {
+        "id": "SRC-001",
+        "class": "repo",
+        "strandId": "S1",
+        "source": ".blueprint/phases/03-example/03-CONTEXT.md",
+        "claim": "Saved context constrains research scope.",
+        "confidence": "high"
+      }
+    ],
+    "sidecars": [],
+    "draftState": {
+      "hasDraft": false,
+      "sectionsTouched": [],
+      "validationAttempted": false,
+      "validationIssues": [],
+      "finalWriteAttempted": false,
+      "lastKnownPath": null
+    },
+    "nextAction": {
+      "stage": "Execute",
+      "pendingGate": "none",
+      "safeCommand": "/blu-research-phase 3"
+    }
+  }
+}
+```
+
+Initial implementation must not require every optional nested field for every
+simple run. Runtime/text tests should require only the generic MCP checkpoint
+fields plus references to `researchLedger.schemaVersion`,
+`researchLedger.strands`, and `researchLedger.nextAction`. Code should not add a
+strict `researchLedger` Zod schema in this slice.
+
+Checkpoint resume behavior:
+
+- If no checkpoint exists, start a fresh parent-owned strand ledger.
+- If a checkpoint exists and `safeToResume=true`, resume by default. Show a
+  compact recap of completed strands, blocked strands, pending gate, and next
+  action before doing more work.
+- If the user explicitly asks to discard a safe research checkpoint, call
+  `blueprint_phase_checkpoint_delete` with
+  `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`;
+  then start fresh only if deletion succeeds.
+- If a checkpoint exists but `safeToResume=false`, do not resume, overwrite, or
+  delete it by default. Report `ownerCommand`, `resumeMode`, warnings, and the
+  next safe implemented action.
+- If a legacy checkpoint is mode-compatible but missing `ownerCommand`, treat it
+  as resumable only when `safeToResume=true`, include the warning in the
+  progress recap, and refresh it into the richer research ledger before the next
+  pause.
+- If final research is successfully written but state sync, state load, or
+  command-catalog routing fails afterward, keep or refresh the checkpoint with
+  the exact failure and do not claim the run fully completed.
+
+When `update_topic` and `write_todos` are available, use them only as a
+session-local mirror of the strand ledger: topic is current stage plus active
+strand, and todos are strand ids and statuses. They are never persistence and
+never replace `blueprint_phase_checkpoint_put`.
+
+When those helpers are unavailable, emit compact progress recaps at stage
+boundaries and exceptional events:
+
+```text
+Stage: Execute | Scope: Phase 3 Phase Discovery | Mode: parent-only |
+Completed: S1 context-lock, S2 repo-map | Active: S3 stack-and-dependencies |
+Pending gate: external-source confirmation | Next safe action: checkpoint or
+resume /blu-research-phase 3
+```
+
+Do not narrate every file read. Recap after Read, after strand classification,
+after each completed or blocked strand, before checkpointing, before validation
+repair, and after Route.
+
+If `blueprint-researcher` is unavailable or disabled, the parent narrows to one
+runnable strand at a time, uses scoped repo searches, and checkpoints blocked
+strands instead of expanding silently.
+
+If a sidecar fails or times out, the parent records a sidecar packet with
+`status: "failed"`, retries inline only when the strand budget and source
+policy allow it, and otherwise checkpoints with `stoppingReason:
+"tool-failure"` or `"budget-exhausted"`.
+
+Before writing final research, the parent command must run a synthesis pass over
+the accepted strand ledger. The final `XX-RESEARCH.md` may cite child packets or
+repo/external evidence, but it must not paste a child transcript or let a sidecar
+decide final confidence, open questions, routing, checkpoint deletion, or state
+sync.
+
+Parent synthesis should build this internal matrix before drafting:
+
+| Strand id | Artifact sections affected | Accepted evidence ids | Recommendation | Test or validation implication | Unresolved blocker |
+|---|---|---|---|---|---|
+
+Only recommendations that map to accepted evidence or clearly labeled inference
+should enter `## Recommendations`. Any strand that remains blocked should appear
+in `## Open Questions` or cause a checkpointed no-final-write exit when it
+blocks planner-grade output.
+
 ## Tool And Dependency Selection
 
 Treat dependency/tool choice as a first-class research strand whenever the phase
@@ -597,14 +950,16 @@ and routing.
 ## No-Subagent Fallback
 
 If no suitable subagent is available, the parent command must still complete
-the workflow without lowering output quality:
+the workflow without lowering output quality. Use the same parent-owned research
+strand ledger; only the evidence gathering happens inline:
 
 1. Build a compact carry-forward packet: phase boundary, requirement mapping,
    saved context decisions, codebase bundle status, existing research posture,
    initial assessment, navigation evidence packet, and current open questions.
-2. Select one topic strand, such as stack, architecture, dependency/runtime
-   availability, validation/testing impact, risk/pitfalls, sources, or a
-   specific implementation question from the initial assessment.
+2. Select one runnable ledger strand from `context-lock`, `repo-map`,
+   `stack-and-dependencies`, `architecture-integration`,
+   `validation-and-tests`, `risks-and-pitfalls`, `external-delta`, or
+   `planner-handoff`.
 3. Follow the repository evidence ladder for that strand: saved context,
    existing research, saved codebase summaries, compact anchors, `rg --files`
    plus path filters, scoped content searches, optional parent-supplied
@@ -638,8 +993,17 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 - If existing research is invalid, do not allow skip, default reuse, or an
   unchanged invalid write result to count as successful completion. Surface the
   validation issues, repair the artifact, or stop with the blocker.
-- If a checkpoint exists, resume by default unless the user explicitly discards
-  it.
+- If a research checkpoint exists and `safeToResume=true`, resume by default
+  unless the user explicitly asks to discard it. Show a compact recap of
+  completed strands, blocked strands, pending gate, warnings, and next action
+  before doing more work.
+- If the user explicitly asks to discard a safe research checkpoint, delete it
+  only through `blueprint_phase_checkpoint_delete` with
+  `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`.
+  Start fresh only if deletion succeeds.
+- If a checkpoint exists but `safeToResume=false`, do not resume, overwrite, or
+  delete it by default. Report `ownerCommand`, `resumeMode`, warnings, and the
+  next safe implemented action.
 - If evidence conflicts or a critical claim cannot be verified, lower
   confidence, preserve the conflict in `## Open Questions`, and checkpoint when
   the uncertainty blocks a planner-grade recommendation.
@@ -652,7 +1016,10 @@ This fallback is the required single-agent path, not a degraded emergency mode.
   treating the command as complete.
 - If repair cannot be completed safely, leave or refresh the checkpoint and
   report the exact validation blocker plus the next safe continuation action.
-- Delete the checkpoint only after final research writes successfully.
+- Delete the checkpoint only after final research writes successfully, synced
+  `STATE.md` update succeeds, refreshed state load succeeds, and
+  implemented-command routing has been checked. If any post-write routing step
+  fails, keep or refresh the research checkpoint with the exact failure.
 - After a successful research write or a valid `view`/`skip`/`reuse` exit,
   sync `STATE.md` through `blueprint_state_update` with `base: "synced"` while
   preserving the already resolved selected phase in `patch.currentPhase`
@@ -672,6 +1039,13 @@ and planner-ready:
 - non-trivial strands include search notes with query or navigation method,
   scope filter, candidate files or symbols, files read, failed/noisy/no-hit
   searches when relevant, and stop or widen reason
+- non-trivial, resumed, blocked, or sidecar-assisted runs have a parent-owned
+  strand ledger with `researchLedger.schemaVersion`, strand ids/statuses,
+  evidence packet references, stopping reasons, and next action
+- checkpoints store accepted packets, source references, draft state, warnings,
+  and next action; they do not store child-agent transcripts
+- sidecar failures, timeouts, budget exhaustion, and source-policy blocks are
+  represented as strand stopping reasons rather than hidden in prose
 - repo evidence citations preserve role and method for planner-critical claims
 - planner-critical claims have claim IDs, evidence IDs, lane labels, support
   classes, source type, authority tier when applicable, support span, retrieval
@@ -721,7 +1095,9 @@ and planner-ready:
   authoring template
 - strict MCP write validation passed, or a validation blocker was checkpointed
   and reported
-- stale research-owned shared checkpoints were deleted after success
+- stale research-owned shared checkpoints were deleted only after final write,
+  synced state update, refreshed state load, and implemented-command routing
+  receipt succeeded
 - `STATE.md` was updated through MCP
 - refreshed state and command catalog were used for the next safe action
 - the effective `research.external_sources` policy was honored before any
