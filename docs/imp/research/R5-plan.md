@@ -156,7 +156,8 @@ with:
   runnable strand at a time, evaluate dependency/tool choices when they affect
   a recommendation, accept or reject sidecar packets before synthesis, close
   each strand with a planning handoff, keep evidence provenance visible, and
-  construct the R4 claim/evidence packet before writing final recommendations.
+  construct the claim-addressable evidence packet before writing final
+  recommendations.
 - `Persist`: scaffold only a missing file, write checkpoints when there is
   useful resumable strand state, checkpoint before blocked waits or repair
   retries, and write final research through MCP only.
@@ -781,11 +782,12 @@ artifact confidence on its own.
 with:
 
 ```md
-For R4 provenance work, artifact-grade mode returns claim-addressable evidence
-rows that the parent can accept, reject, or synthesize; it does not decide final
-artifact confidence on its own. For R5 orchestration work, every artifact-grade
-handoff is a sidecar packet tied to one parent-owned strand; do not return a
-conversation transcript as the handoff.
+For claim-addressable evidence work, artifact-grade mode returns
+claim-addressable evidence rows that the parent can accept, reject, or
+synthesize; it does not decide final artifact confidence on its own. For
+strand-orchestration work, every artifact-grade handoff is a sidecar packet
+tied to one parent-owned strand; do not return a conversation transcript as the
+handoff.
 ```
 
 #### 5.2 Insert sidecar packet section
@@ -794,7 +796,7 @@ Insert the following section immediately after `## Output Mode Selection` and
 before `## Required Output Contract`:
 
 ````md
-## R5 Sidecar Packet Semantics
+## Research Sidecar Packet Semantics
 
 Artifact-grade mode returns a compact packet, not final persistence ownership.
 Use this packet shape in Markdown or JSON-like text when the parent asks for a
@@ -930,7 +932,7 @@ After:
 insert:
 
 ```md
-- Stores R5 continuation state as compact strand ledger and packet references, not child-agent transcripts.
+- Stores research continuation state as compact strand ledger and packet references, not child-agent transcripts.
 - Resumes safe research checkpoints by default, uses guarded discard when asked, and preserves checkpoints on post-write state-sync or route-refresh failure.
 ```
 
@@ -939,10 +941,10 @@ insert:
 Append these bullets to `## Test Cases`:
 
 ```md
-- R5 research strand ledger fixture with `researchLedger.schemaVersion`, strand statuses, stopping reasons, draft state, and next action.
-- R5 checkpoint resume/discard fixture covering safe resume, guarded discard, foreign checkpoint refusal, and post-write route-refresh failure preservation.
-- R5 no-transcript checkpoint fixture proving child-agent transcripts are not checkpointed.
-- R5 sidecar failure fixture with `tool-failure` or `budget-exhausted` stopping reason and parent-owned retry/checkpoint behavior.
+- Research strand ledger fixture with `researchLedger.schemaVersion`, strand statuses, stopping reasons, draft state, and next action.
+- Checkpoint resume/discard fixture covering safe resume, guarded discard, foreign checkpoint refusal, and post-write route-refresh failure preservation.
+- No-transcript checkpoint fixture proving child-agent transcripts are not checkpointed.
+- Sidecar failure fixture with `tool-failure` or `budget-exhausted` stopping reason and parent-owned retry/checkpoint behavior.
 ```
 
 ### 7. `docs/MCP-TOOLS.md`
@@ -967,7 +969,7 @@ In `## Implemented Command Ownership Notes`, replace the entire `research-phase`
 bullet with:
 
 ```md
-- `research-phase` uses phase location/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate scaffolding, `blueprint_config_get`, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update` to keep topic-strand research resumable, honor `research.external_sources` as `off`/`ask`/`auto`, keep repo truth distinct from external verification, build R4 claim-addressable evidence for planner-critical claims, and route from refreshed runtime state instead of assuming the state-update response is the final next action. The command must load `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract, keep `contract.authoringTemplate` as schema authority, stop on missing `XX-CONTEXT.md` instead of drafting from status-only signals, force repair when existing research is invalid, preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work, checkpoint compact `researchLedger` state and packet references instead of child-agent transcripts, resume safe research checkpoints by default unless explicitly discarded through guarded delete, delete research-owned checkpoints only after final write plus synced state update plus refreshed state load plus implemented-command routing receipt succeed, support capability-gated `blueprint-researcher` use when a suitable Blueprint research or code-analysis agent is available, require bounded sidecar packets with strand id, source classes, paths or URLs, retrieval notes, confidence, failed or limited searches, termination reason, unanswered questions, and planning handoff fields, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve a single-agent strand-ledger fallback when it is not, reject browser/web-search/shell-only or generic agents as substitutes, and repair invalid research writes or validation failures before treating the workflow as complete.
+- `research-phase` uses phase location/context, research status, discovery artifact read and write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate scaffolding, `blueprint_config_get`, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update` to keep topic-strand research resumable, honor `research.external_sources` as `off`/`ask`/`auto`, keep repo truth distinct from external verification, build claim-addressable evidence for planner-critical claims, and route from refreshed runtime state instead of assuming the state-update response is the final next action. The command must load `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract, keep `contract.authoringTemplate` as schema authority, stop on missing `XX-CONTEXT.md` instead of drafting from status-only signals, force repair when existing research is invalid, preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work, checkpoint compact `researchLedger` state and packet references instead of child-agent transcripts, resume safe research checkpoints by default unless explicitly discarded through guarded delete, delete research-owned checkpoints only after final write plus synced state update plus refreshed state load plus implemented-command routing receipt succeed, support capability-gated `blueprint-researcher` use when a suitable Blueprint research or code-analysis agent is available, require bounded sidecar packets with strand id, source classes, paths or URLs, retrieval notes, confidence, failed or limited searches, termination reason, unanswered questions, and planning handoff fields, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, preserve a single-agent strand-ledger fallback when it is not, reject browser/web-search/shell-only or generic agents as substitutes, and repair invalid research writes or validation failures before treating the workflow as complete.
 ```
 
 ### 8. `src/mcp/command-runtime-metadata.ts`
@@ -979,7 +981,7 @@ Use this complete string:
 
 ```ts
     contractNotes:
-      "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research only as a session-local mirror of the parent-owned research strand ledger, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work; checkpoint compact researchLedger state with schemaVersion research-ledger/v1, strand statuses, accepted evidence packet references, sidecar status, draft state, stopping reasons, and next action; never checkpoint child-agent transcripts; resume safe research checkpoints by default unless explicitly discarded through guarded delete; and delete research-owned shared checkpoints only after final write, synced STATE.md update, refreshed state load, and implemented-command routing receipt succeed. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, build R4 claim-addressable provenance for planner-critical claims with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and split ## Sources sections, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar packets with strand id, source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, termination or blocking reason, warnings, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given. Preserve the single-agent strand-ledger fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, preserve checkpoints on post-write state-sync or route-refresh failure, synthesize final research from accepted strand packets instead of child transcripts, and keep routing limited to implemented commands only.",
+      "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research only as a session-local mirror of the parent-owned research strand ledger, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work; checkpoint compact researchLedger state with schemaVersion research-ledger/v1, strand statuses, accepted evidence packet references, sidecar status, draft state, stopping reasons, and next action; never checkpoint child-agent transcripts; resume safe research checkpoints by default unless explicitly discarded through guarded delete; and delete research-owned shared checkpoints only after final write, synced STATE.md update, refreshed state load, and implemented-command routing receipt succeed. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, build claim-addressable evidence for planner-critical claims with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and split ## Sources sections, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar packets with strand id, source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, termination or blocking reason, warnings, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given. Preserve the single-agent strand-ledger fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, preserve checkpoints on post-write state-sync or route-refresh failure, synthesize final research from accepted strand packets instead of child transcripts, and keep routing limited to implemented commands only.",
 ```
 
 After this change, `npm run build` must update tracked `dist/`.
@@ -1112,7 +1114,7 @@ After:
 insert:
 
 ```ts
-  assert.match(researcherAgent, /R5 Sidecar Packet Semantics/i);
+  assert.match(researcherAgent, /Research Sidecar Packet Semantics/i);
   assert.match(researcherAgent, /packetVersion: research-sidecar\.v1/i);
   assert.match(researcherAgent, /terminationReason/i);
   assert.match(researcherAgent, /failedSearches/i);
@@ -1345,7 +1347,7 @@ after:
 insert:
 
 ```ts
-  assert.match(researcher, /R5 Sidecar Packet Semantics/i);
+  assert.match(researcher, /Research Sidecar Packet Semantics/i);
   assert.match(researcher, /packetVersion: research-sidecar\.v1/i);
   assert.match(researcher, /terminationReason/i);
   assert.match(researcher, /failedSearches/i);
