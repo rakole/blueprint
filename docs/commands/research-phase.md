@@ -46,8 +46,8 @@ state paths.
 1. `Resolve`: resolve the target phase and stop early on missing Blueprint prerequisites.
 2. `Read`: inspect phase context, the actual saved `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, effective config, and canonical research contract before drafting.
 3. `Decide`: keep valid-reuse versus `view`/`skip`/`update`, invalid-research repair, checkpoint resume posture, and `research.external_sources` policy explicit before branching.
-4. `Execute`: build an initial assessment, follow the repository evidence ladder, record per-strand search notes and navigation evidence, then research one topic strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, and keeping external evidence distinct when policy allows it, then assigns evidence IDs, claim IDs, lane labels, support classes, and limitations before final synthesis.
-5. `Persist`: draft directly from the canonical template, checkpoint only resumable or inconclusive work, and persist final research through MCP only.
+4. `Execute`: build an initial assessment, follow the repository evidence ladder, classify non-trivial work into a parent-owned research strand ledger, record per-strand search notes and navigation evidence, research one runnable strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, accepting or rejecting sidecar packets before synthesis, keeping external evidence distinct when policy allows it, then assigning evidence IDs, claim IDs, lane labels, support classes, and limitations before final synthesis.
+5. `Persist`: draft directly from the canonical template, checkpoint only useful continuation state, preserve compact `researchLedger` state for paused, blocked, sidecar-failed, validation-repair, or post-write-routing-failed work, and persist final research through MCP only.
 6. `Validate`: normalize the draft to the canonical `phase.research` template and block on placeholders, missing sections, missing evidence, or other MCP-owned structural issues.
 7. `Route`: sync `STATE.md`, reload refreshed state, and report only implemented follow-up commands.
 
@@ -95,6 +95,10 @@ state paths.
 - When a recommendation adds, adopts, replaces, upgrades, installs, vendors, forks, code-generates, or hand-rolls a package, library, CLI, framework, service, or tool, record a dependency/tool evaluation covering no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options; version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, verification, and supply-chain evidence; and mark unavailable live evidence as unchecked under the configured external-source policy.
 - `blueprint-researcher` is optional and capability-gated. Use it only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps; otherwise use the runtime contract's single-agent topic-strand fallback. Any official-doc, external evidence, or semantic/navigation packet must come from the parent command or user, not from the subagent fetching or inventing it on its own. The parent sends one bounded evidence question plus allowed source classes and expects bounded findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
+- For non-trivial, resumed, blocked, or sidecar-assisted runs, maintain a parent-owned research strand ledger with strand ids, questions, dependencies, source policy, budgets, statuses, accepted evidence ids, rejected or low-quality sources, stopping reasons, draft state, and next action.
+- Checkpoint the compact strand ledger and packet references, not child-agent transcripts. A checkpoint can include a nested `researchLedger` payload under the existing generic checkpoint shape.
+- Safe research checkpoints resume by default. Explicit discard uses `blueprint_phase_checkpoint_delete` with `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`; do not start fresh unless deletion succeeds.
+- Delete a research-owned checkpoint only after final research write, synced `STATE.md` update, refreshed state load, and implemented-command routing receipt succeed.
 - After a successful research write or a valid non-writing reuse path, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, and then `blueprint_state_load`. Use `blueprint_command_catalog` before recommending `/blu-plan-phase`, `/blu-ui-phase`, or any other follow-up.
 
 ## Research Persistence Contract
@@ -143,6 +147,15 @@ state paths.
 - When `research.external_sources` is `ask`, stop for confirmation before any official-doc or other external verification.
 - Resume from a saved checkpoint by default when it is safe and the user has not explicitly asked to discard it.
 
+## Checkpoint, Resume, And Completion Receipt
+
+- If no checkpoint exists, start a fresh parent-owned strand ledger.
+- If a checkpoint exists and `safeToResume=true`, resume by default and show a compact recap of completed strands, blocked strands, pending gate, warnings, and next action.
+- If a checkpoint exists but `safeToResume=false`, do not resume, overwrite, or delete it by default. Report `ownerCommand`, `resumeMode`, warnings, and the next safe implemented action.
+- If the user explicitly discards a safe research checkpoint, use the guarded MCP delete path and start fresh only after it succeeds.
+- If final research writes successfully but state sync, refreshed state load, or command-catalog routing fails afterward, keep or refresh the checkpoint with the exact failure and report that completion is blocked.
+- The final response should name the phase, created/updated/reused/viewed/checkpointed outcome, artifact path when MCP returned one, checkpoint disposition, warnings or blockers, state sync/routing result, and next safe implemented action.
+
 ## Edge Cases
 
 - The target phase is omitted or ambiguous while multiple active phases exist.
@@ -172,6 +185,8 @@ state paths.
 - Closes non-trivial strands with planning handoffs that name affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
 - Dependency/tool recommendations are backed by a supply-chain-aware evaluation table or explicitly marked as unchecked/deferred when the configured external-source policy prevents live evidence.
 - Handles long-running or inconclusive research through checkpointed continuation rather than a single all-or-nothing pass.
+- Stores research continuation state as compact strand ledger and packet references, not child-agent transcripts.
+- Resumes safe research checkpoints by default, uses guarded discard when asked, and preserves checkpoints on post-write state-sync or route-refresh failure.
 - Reports the next safe action from refreshed runtime state instead of assuming `blueprint_state_update` returned it.
 - Uses only documented MCP tools for persistent state changes.
 
@@ -194,3 +209,7 @@ state paths.
 - R4 evidence provenance fixture with Repo Evidence, External Sources, Inference Notes, Evidence ID, Claim ID, support class, source type, authority tier, access date, support span, retrieval context, limitations, and downstream use.
 - Warning fixture for external URL evidence without `accessed YYYY-MM-DD`.
 - Warning fixture for `HIGH` confidence research that also contains `not_enough_evidence`, `contradicted`, `conflicting_sources`, `unchecked`, or `unverified`.
+- Research strand ledger fixture with `researchLedger.schemaVersion`, strand statuses, stopping reasons, draft state, and next action.
+- Checkpoint resume/discard fixture covering safe resume, guarded discard, foreign checkpoint refusal, and post-write route-refresh failure preservation.
+- No-transcript checkpoint fixture proving child-agent transcripts are not checkpointed.
+- Sidecar failure fixture with `tool-failure` or `budget-exhausted` stopping reason and parent-owned retry/checkpoint behavior.

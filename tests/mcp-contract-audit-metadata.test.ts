@@ -297,6 +297,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchCommand, /remote code-search/i);
   assert.match(researchCommand, /dependency\/tool evaluation/i);
   assert.match(researchCommand, /no-new-dependency/i);
+  assert.match(researchCommand, /parent-owned research strand ledger/i);
+  assert.match(researchCommand, /child-agent transcripts/i);
   assert.match(researchRuntimeContract, /strict mode[\s\S]*repair invalid results/i);
   assert.match(researchRuntimeContract, /per-strand search notes/i);
   assert.match(researchRuntimeContract, /remote code-search hits are discovery hints/i);
@@ -305,6 +307,11 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchRuntimeContract, /Current \/ Wanted \/ Latest Evidence/i);
   assert.match(researchRuntimeContract, /Supply Chain Evidence/i);
   assert.match(researchRuntimeContract, /npm audit fix/i);
+  assert.match(researchRuntimeContract, /Research Strand Ledger And Checkpoint Semantics/i);
+  assert.match(researchRuntimeContract, /researchLedger/i);
+  assert.match(researchRuntimeContract, /research-ledger\/v1/i);
+  assert.match(researchRuntimeContract, /safeToResume=true/i);
+  assert.match(researchRuntimeContract, /Parent synthesis should build this internal matrix/i);
   assert.match(
     mcpToolsDoc,
     /Treat returned `path`, `written`, `created`, `overwritten`, and `status` fields as authoritative/i
@@ -320,9 +327,14 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchDoc, /External Sources/);
   assert.match(researchDoc, /Inference Notes/);
   assert.match(researchDoc, /warning-level/i);
+  assert.match(researchDoc, /Checkpoint, Resume, And Completion Receipt/i);
+  assert.match(researchDoc, /researchLedger/i);
+  assert.match(researchDoc, /safe research checkpoints resume by default/i);
   assert.match(discussRuntimeReference, /claim-addressable provenance/i);
   assert.match(discussRuntimeReference, /support classes/i);
   assert.match(mcpToolsDoc, /dependency\/tool choices/i);
+  assert.match(mcpToolsDoc, /researchLedger/i);
+  assert.match(mcpToolsDoc, /guarded delete/i);
   assert.match(researchRuntimeContract, /validation repair before completion/i);
 
   assert.match(uiCommand, /resolved numeric `phase`, `artifact: "ui-spec"`/i);
@@ -357,6 +369,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /research-phase-runtime-contract\.md/);
   assert.match(discoverySkill, /single-agent fallback/i);
+  assert.match(discoverySkill, /research strand ledger/i);
+  assert.match(discoverySkill, /researchLedger/i);
   assert.match(discoverySkill, /repair the same normalized draft/i);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
   assert.match(discoverySkill, /artifactId: "phase\.ui-spec"/);
