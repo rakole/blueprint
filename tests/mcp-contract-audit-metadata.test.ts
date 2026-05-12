@@ -300,7 +300,7 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchRuntimeContract, /strict mode[\s\S]*repair invalid results/i);
   assert.match(researchRuntimeContract, /per-strand search notes/i);
   assert.match(researchRuntimeContract, /remote code-search hits are discovery hints/i);
-  assert.match(researchRuntimeContract, /role=definition\|reference\|test\|config\|contract\|runtime\|example\|background/i);
+  assert.match(researchRuntimeContract, /source type, authority tier, support span/i);
   assert.match(researchRuntimeContract, /Tool And Dependency Selection/i);
   assert.match(researchRuntimeContract, /Current \/ Wanted \/ Latest Evidence/i);
   assert.match(researchRuntimeContract, /Supply Chain Evidence/i);
@@ -315,6 +315,13 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchDoc, /deliberate placeholder/i);
   assert.match(researchDoc, /research-phase-runtime-contract\.md/);
   assert.match(researchDoc, /supply-chain-aware/i);
+  assert.match(researchDoc, /R4 provenance/i);
+  assert.match(researchDoc, /Repo Evidence/);
+  assert.match(researchDoc, /External Sources/);
+  assert.match(researchDoc, /Inference Notes/);
+  assert.match(researchDoc, /warning-level/i);
+  assert.match(discussRuntimeReference, /claim-addressable provenance/i);
+  assert.match(discussRuntimeReference, /support classes/i);
   assert.match(mcpToolsDoc, /dependency\/tool choices/i);
   assert.match(researchRuntimeContract, /validation repair before completion/i);
 

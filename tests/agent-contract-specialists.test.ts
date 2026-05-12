@@ -90,6 +90,16 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /## External Research And Self-Correction Rules/);
   assert.match(researcher, /Keep repo truth distinct from outside truth/i);
   assert.match(researcher, /## Required Output Contract/);
+  assert.match(researcher, /Evidence Packet Rows/i);
+  assert.match(researcher, /evidence ID/i);
+  assert.match(researcher, /claim ID/i);
+  assert.match(researcher, /authority tier/i);
+  assert.match(researcher, /support span/i);
+  assert.match(researcher, /directly_supported/i);
+  assert.match(researcher, /partially_supported/i);
+  assert.match(researcher, /inferred_from_supported/i);
+  assert.match(researcher, /not_enough_evidence/i);
+  assert.match(researcher, /Do not invent evidence IDs/i);
   assert.match(researcher, /## Investigation Trace Rules/);
   assert.match(researcher, /bounded evidence question/i);
   assert.match(researcher, /retrieval notes/i);
@@ -120,7 +130,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   );
   assert.match(
     researcher,
-    /official-doc or external evidence packets|official docs or supplied external references/i
+    /official-doc, external, supplied-reference, or R4 evidence\s+packets|official-doc or explicitly supplied external references/i
   );
   assert.match(researcher, /Replace every angle-bracket placeholder before returning any draft section/i);
   assert.match(

@@ -2803,6 +2803,62 @@ function hasSupplyChainEvidenceSource(content: string): boolean {
   );
 }
 
+function sourceLinesWithUrlsMissingAccessDate(sources: string): string[] {
+  return sources
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /https?:\/\/|doi\.org\//i.test(line))
+    .filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
+}
+
+function hasR4SourceSections(sources: string): boolean {
+  return (
+    /### Repo Evidence/i.test(sources) &&
+    /### External Sources/i.test(sources) &&
+    /### Inference Notes/i.test(sources)
+  );
+}
+
+function hasClaimAddressableR4Evidence(sources: string): boolean {
+  return (
+    /\b(?:Evidence ID|evidence_id)\b/i.test(sources) &&
+    /\b(?:Claim ID|claim_id)\b/i.test(sources) &&
+    /\b(?:directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope)\b/i.test(
+      sources
+    )
+  );
+}
+
+function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): boolean {
+  const claimText = [
+    extractMarkdownSection(content, "Summary"),
+    extractMarkdownSection(content, "State Of The Art"),
+    extractMarkdownSection(content, "Recommendations")
+  ].join("\n");
+
+  if (
+    !/\b(?:latest|current official|official docs confirm|upstream confirms|current upstream|live external verification)\b/i.test(
+      claimText
+    )
+  ) {
+    return false;
+  }
+
+  const sources = extractMarkdownSection(content, "Sources");
+  return !/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources);
+}
+
+function hasHighConfidenceWithUnsupportedR4Claims(content: string): boolean {
+  const highConfidence =
+    /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) ||
+    /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection(content, "Confidence Breakdown"));
+
+  return (
+    highConfidence &&
+    /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(content)
+  );
+}
+
 function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean {
   const candidateText = [
     extractMarkdownSection(content, "Installation And Setup"),
@@ -2942,6 +2998,38 @@ export function validateResearchArtifactContent(content: string): {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+    );
+  }
+
+  const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
+
+  if (externalSourceLinesMissingAccessDate.length > 0) {
+    warnings.push(
+      "Research artifact external source rows should include `accessed YYYY-MM-DD` for every URL or DOI used as current evidence."
+    );
+  }
+
+  if (!hasR4SourceSections(sources)) {
+    warnings.push(
+      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for R4 provenance."
+    );
+  }
+
+  if (!hasClaimAddressableR4Evidence(sources)) {
+    warnings.push(
+      "Research artifact should use R4 claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
+    );
+  }
+
+  if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
+    warnings.push(
+      "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
+    );
+  }
+
+  if (hasHighConfidenceWithUnsupportedR4Claims(content)) {
+    warnings.push(
+      "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );
   }
 

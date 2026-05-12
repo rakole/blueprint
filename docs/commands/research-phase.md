@@ -17,8 +17,9 @@
 
 `research-phase` is Blueprint's phase-scoped research command. It gathers
 planner-ready implementation guidance from saved Blueprint artifacts, repo
-evidence, and only-when-needed approved external references, then persists
-validated `XX-RESEARCH.md` content through MCP-owned state paths.
+evidence, claim-addressable provenance, and only-when-needed approved external
+references, then persists validated `XX-RESEARCH.md` content through MCP-owned
+state paths.
 
 ## Command Path And Examples
 
@@ -45,7 +46,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 1. `Resolve`: resolve the target phase and stop early on missing Blueprint prerequisites.
 2. `Read`: inspect phase context, the actual saved `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, effective config, and canonical research contract before drafting.
 3. `Decide`: keep valid-reuse versus `view`/`skip`/`update`, invalid-research repair, checkpoint resume posture, and `research.external_sources` policy explicit before branching.
-4. `Execute`: build an initial assessment, follow the repository evidence ladder, record per-strand search notes and navigation evidence, then research one topic strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, and keeping external evidence distinct when policy allows it.
+4. `Execute`: build an initial assessment, follow the repository evidence ladder, record per-strand search notes and navigation evidence, then research one topic strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, and keeping external evidence distinct when policy allows it, then assigns evidence IDs, claim IDs, lane labels, support classes, and limitations before final synthesis.
 5. `Persist`: draft directly from the canonical template, checkpoint only resumable or inconclusive work, and persist final research through MCP only.
 6. `Validate`: normalize the draft to the canonical `phase.research` template and block on placeholders, missing sections, missing evidence, or other MCP-owned structural issues.
 7. `Route`: sync `STATE.md`, reload refreshed state, and report only implemented follow-up commands.
@@ -87,6 +88,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - When saved research is already valid, prefer `ask_user` for an explicit `view`/`skip`/`update` choice. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `skip`, `view`, default reuse, or unchanged invalid writes are not successful exits.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
 - Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker.
+- For planner-critical claims, use R4 provenance: evidence IDs, claim IDs, repo/external/inference lanes, support class, source type, authority tier, support span, retrieval context, limitations, and downstream use. `## Sources` should split into `Repo Evidence`, `External Sources`, and `Inference Notes`; first-pass MCP validation is warning-level and warns rather than rejects older otherwise-valid artifacts that lack this richer shape.
 - Build an investigation trace for non-trivial research: saved artifacts inspected, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
 - Prefer the runtime contract's repository evidence ladder over broad crawls: saved context, existing research, saved codebase summaries, `rg --files` plus path filters, scoped content searches, optional parent-supplied navigation packets, then targeted file/test/contract/runtime reads. Treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them.
 - Close each non-trivial topic strand with a planning handoff: recommendation, affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
@@ -164,6 +166,7 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Uses `contract.authoringTemplate` as the direct drafting seed and reserves scaffold for deliberate placeholder creation only.
 - Honors the effective `research.external_sources` policy before any external verification step.
 - Keeps repo truth explicit and distinct from official-doc or user-supplied external evidence.
+- Planner-critical claims are traceable through R4 evidence IDs or claim IDs when new research is authored, with repo truth dominating Blueprint runtime claims and inference explicitly labeled.
 - Records enough investigation trace for planning: saved artifacts, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
 - Keeps code search scoped by default, records stop/widen rationale for non-trivial strands, and treats remote code-search hits as hints until local repo evidence confirms them.
 - Closes non-trivial strands with planning handoffs that name affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
@@ -188,3 +191,6 @@ validated `XX-RESEARCH.md` content through MCP-owned state paths.
 - Strand planning handoff fixture.
 - R3 dependency/tool evaluation fixture with no-new-dependency, existing dependency, standard-library/platform, candidate package/tool, custom implementation, setup/update posture, library-vs-custom decision, and supply-chain evidence.
 - Warning fixture for a dependency/tool recommendation that omits R3 evaluation rows.
+- R4 evidence provenance fixture with Repo Evidence, External Sources, Inference Notes, Evidence ID, Claim ID, support class, source type, authority tier, access date, support span, retrieval context, limitations, and downstream use.
+- Warning fixture for external URL evidence without `accessed YYYY-MM-DD`.
+- Warning fixture for `HIGH` confidence research that also contains `not_enough_evidence`, `contradicted`, `conflicting_sources`, `unchecked`, or `unverified`.

@@ -37,6 +37,13 @@ The retained behaviors that matter are:
   and confidence breakdown
 - clear distinction between repo evidence, official or supplied external
   references, and inference
+- R4 claim-addressable provenance: planner-critical claims get evidence IDs,
+  claim IDs, lane labels (`repo`, `external`, or `inference`), source type,
+  authority tier, support class, support span, retrieval context, provenance,
+  limitations, and downstream-use notes before final prose synthesis
+- final `## Sources` is split into `Repo Evidence`, `External Sources`, and
+  `Inference Notes`; inference notes reference evidence IDs they combine instead
+  of masquerading as citations
 - topic-strand research with checkpoints for pauses or inconclusive evidence
 - per-strand planning handoff with recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
@@ -60,7 +67,7 @@ Use the shared long-running-mutation stages:
   ladder, record per-strand search notes and navigation evidence, research one
   topic strand at a time, evaluate dependency/tool choices when they affect a
   recommendation, close each strand with a planning handoff, and keep evidence
-  provenance visible.
+  provenance visible, and construct the R4 claim/evidence packet before writing final recommendations.
 - `Persist`: scaffold only a missing file, write checkpoints for pauses, and
   write final research through MCP only.
 - `Validate`: normalize to the live authoring template, self-check, write in
@@ -178,18 +185,143 @@ Quality rules for `XX-RESEARCH.md`:
 - Each planner-critical recommendation should be traceable to a strand handoff
   that names affected files or modules, validation or test implications,
   unresolved blockers, evidence basis, and confidence.
-- `## Sources` separates repo evidence, official or supplied external
-  references, and inference. Do not blend these source classes. For
-  planner-critical repo evidence, prefer this concise shape:
-  `Repo evidence: path/to/file.ts:123, symbol/heading=<name>, role=definition|reference|test|config|contract|runtime|example|background, method=repo-map|rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter, supports=<claim or recommendation>`.
-  External references should keep URL/title and access date separately from repo
-  evidence. Inference should name the evidence it derives from rather than
-  masquerading as a source.
+- `## Sources` separates repo evidence, external sources, and inference notes.
+  Do not blend these source classes. Repo evidence rows cite local files,
+  commands, tests, manifests, contracts, saved Blueprint artifacts, or built
+  runtime entrypoints. External source rows cite official docs, standards,
+  papers, supplied references, package docs, or web pages only when allowed by
+  `research.external_sources`. Inference notes cite the evidence IDs they
+  combine and never masquerade as direct source citations.
+- Each planner-critical claim should be traceable through a stable evidence ID
+  and claim ID. Use support classes:
+  `directly_supported`, `partially_supported`, `inferred_from_supported`,
+  `contradicted`, `conflicting_sources`, `not_enough_evidence`, and
+  `out_of_scope`.
+- Repo-runtime claims should cite repo evidence first. External sources may
+  inform practice or dependency/tool choices, but they must not override observed
+  Blueprint runtime behavior without an explicit conflict note.
+- External evidence should include title, URL or DOI when available, access date,
+  source type, authority tier, support span or excerpt/summary, retrieval
+  context, limitations, and the downstream claim or recommendation it supports.
 
 Every non-repo factual claim should carry provenance in nearby prose or the
 source list. Use labels such as `Repo evidence`, `Official reference`,
 `Supplied reference`, or `Inference` rather than implying external verification
 that did not happen.
+
+## R4 Evidence Quality, Citations, And Provenance
+
+Treat evidence as a parent-owned claim graph, not as a bibliography assembled
+after writing prose. Build the evidence packet before final synthesis, then cite
+evidence IDs or claim IDs from the packet while drafting `XX-RESEARCH.md`.
+
+Use this packet shape in prose, tables, or parent-side working notes:
+
+```text
+evidence_id: E-R4-001
+lane: repo | external | inference
+claim_id: C-R4-001
+claim_text: concise atomic claim
+claim_class: directly_supported | partially_supported | inferred_from_supported | contradicted | conflicting_sources | not_enough_evidence | out_of_scope
+source_type: repo_file | command_output | test_output | official_standard | official_product_doc | peer_reviewed_paper | preprint | supplied_reference | web_page | inference
+authority_tier: repo_runtime | official_standard | official_vendor_doc | peer_reviewed | maintained_project_doc | preprint | secondary | unknown
+source_ref: path:line, command, URL, DOI, or source packet IDs
+source_title: exact title when external
+accessed: YYYY-MM-DD for external sources, or observed YYYY-MM-DD for repo-local evidence when helpful
+support_span: quoted span, line range, page/section, command output summary, or extracted fact
+retrieval_context: search query, tool/API used, local command, targeted file read, or user-supplied source
+provenance: collected_by, collected_at, activity, and derivation/attribution notes
+limitations: missing lines, inaccessible full text, stale version risk, partial support, ambiguity, conflict, or none
+downstream_use: planner-safe conclusion, recommendation id, or "do not use as support"
+```
+
+Evidence lanes:
+
+- `repo`: local files, commands, tests, manifests, runtime contracts, artifact
+  contracts, MCP handlers, saved Blueprint artifacts, and git-visible state.
+- `external`: official docs, standards, papers, supplied URLs, package docs,
+  release notes, registry pages, or web pages gathered under the configured
+  external-source policy.
+- `inference`: bounded synthesis derived from specific repo or external evidence
+  IDs. Inference cannot be the only support for a current external factual claim
+  written as fact.
+
+Source types:
+
+- `repo_file`
+- `command_output`
+- `test_output`
+- `official_standard`
+- `official_product_doc`
+- `peer_reviewed_paper`
+- `preprint`
+- `supplied_reference`
+- `web_page`
+- `inference`
+
+Authority tiers:
+
+- `repo_runtime`
+- `official_standard`
+- `official_vendor_doc`
+- `peer_reviewed`
+- `maintained_project_doc`
+- `preprint`
+- `secondary`
+- `unknown`
+
+Support classes:
+
+- `directly_supported`: the cited span directly says or proves the claim.
+- `partially_supported`: the source supports part of the claim, but limits remain.
+- `inferred_from_supported`: the claim is a bounded synthesis from cited evidence.
+- `contradicted`: a cited source contradicts the claim.
+- `conflicting_sources`: credible sources disagree or local repo truth conflicts
+  with external guidance.
+- `not_enough_evidence`: available evidence cannot safely support the claim.
+- `out_of_scope`: the claim belongs outside the selected phase or outside
+  `/blu-research-phase`.
+
+Final sources should use this structure:
+
+```md
+## Sources
+
+### Repo Evidence
+
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| E-R4-001 | C-R4-001 | src/example.ts:42 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
+
+### External Sources
+
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| E-R4-002 | C-R4-002 | official_product_doc | official_vendor_doc | <title> | https://example.com/docs | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| E-R4-003 | C-R4-003 | E-R4-001, E-R4-002 | inferred_from_supported | Repo behavior plus official guidance suggest this planner-safe improvement. | verify during planning | REC-001 |
+
+### Supply Chain Evidence
+
+- Supply-chain evidence remains allowed when R3 dependency/tool rows need it, but
+  it should reference the relevant R4 evidence IDs or dependency decision IDs.
+```
+
+Rules:
+
+- Final paragraphs should cite existing evidence IDs, source IDs, or claim IDs;
+  do not invent citations during final prose writing.
+- Repo evidence dominates Blueprint runtime claims.
+- External sources are allowed only under the effective `research.external_sources`
+  policy and should include access dates.
+- Inference must be explicit, bounded, and traceable to evidence IDs.
+- Conflicts, stale evidence, missing evidence, inaccessible sources, or private
+  artifacts must be recorded as limitations or open questions instead of being
+  smoothed into confident recommendations.
 
 ## Investigation Trace And Navigation Evidence
 
@@ -420,8 +552,10 @@ When used, pass the agent:
   parent-supplied navigation packet such as candidate files, symbol hits,
   definitions, references, SCIP/ctags entries, Tree-sitter captures,
   dependency edges, or remote code-search hints
-- any external evidence packet the parent already gathered or the user already
-  supplied, with source title, date, URL, excerpt, claim, and evidence class
+- any parent-gathered or user-supplied R4 evidence packet, including evidence ID,
+  lane, claim ID, claim text, support class, source type, authority tier,
+  source reference, source title, access date when external, support span,
+  retrieval context, provenance, limitations, and downstream use
 - existing research content when revising
 - `contract.authoringTemplate`, required headings, locked markers,
   placeholder signals, and freehand policy
@@ -439,7 +573,8 @@ and update-posture evidence under the current external-source policy.
 
 Ask the agent for bounded findings by default, not broad plans or final
 persistence ownership. The response should include the strand/question, concise
-answer, source classes, paths or URLs, source roles, search notes, confidence,
+answer, R4 evidence packet rows for any planner-critical claims, source classes,
+paths or URLs, source roles, search notes, support classes, confidence,
 failed/noisy/no-hit or limited searches, unanswered questions, and a planning
 handoff.
 Ask for a bounded section draft only when the parent names target headings from
@@ -508,6 +643,10 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 - If evidence conflicts or a critical claim cannot be verified, lower
   confidence, preserve the conflict in `## Open Questions`, and checkpoint when
   the uncertainty blocks a planner-grade recommendation.
+- If R4 provenance is missing for planner-critical claims, prefer a warning,
+  lower confidence, or an explicit `not_enough_evidence` row before hard-failing
+  older valid artifacts. Do not convert R4 source-register omissions into strict
+  MCP validation blockers in the first implementation slice.
 - If `blueprint_phase_artifact_write` returns `status: "invalid"`, repair the
   same normalized draft using the returned validation issues and retry before
   treating the command as complete.
@@ -534,6 +673,16 @@ and planner-ready:
   scope filter, candidate files or symbols, files read, failed/noisy/no-hit
   searches when relevant, and stop or widen reason
 - repo evidence citations preserve role and method for planner-critical claims
+- planner-critical claims have claim IDs, evidence IDs, lane labels, support
+  classes, source type, authority tier when applicable, support span, retrieval
+  context, provenance, limitations, and downstream-use notes
+- `## Sources` includes `Repo Evidence`, `External Sources`, and `Inference Notes`
+  when the artifact contains planner-critical claims that depend on those lanes
+- inference notes name the evidence IDs they derive from and do not appear as
+  direct source citations
+- conflicts, missing evidence, stale source risk, inaccessible evidence, and
+  external-source policy blocks are represented as limitations, open questions,
+  or lower confidence instead of hidden inside confident prose
 - planner-critical recommendations have strand handoffs naming affected files
   or modules, validation or test implications, unresolved blockers, evidence
   basis, and confidence
