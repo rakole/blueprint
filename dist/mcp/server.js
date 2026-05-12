@@ -15665,7 +15665,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, build R4 claim-addressable provenance for planner-critical claims with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and split ## Sources sections, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18605,15 +18605,25 @@ function renderResearchTemplate(context) {
 
 ### Repo Evidence
 
-- Repo evidence: \`<repo path:line>\`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| E-R4-001 | C-R4-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
 
-### External References
+### External Sources
 
-- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| E-R4-002 | C-R4-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| E-R4-003 | C-R4-003 | <E-R4-001, E-R4-002> | inferred_from_supported|conflicting_sources|not_enough_evidence|out_of_scope | <bounded inference that follows from cited evidence IDs> | <limits or none> | <claim, recommendation, or do not use as support> |
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or E-R4-002; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
 }
 function renderUiSpecTemplate(context) {
   return `# ${phaseLabel(context)} - UI Spec
@@ -21936,6 +21946,21 @@ var init_artifact_contracts = __esm({
           "<short code or pseudocode example>",
           "<prescriptive recommendation with tradeoffs>",
           "<prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>",
+          "<repo path:line, command, test output, manifest, contract, or saved Blueprint artifact>",
+          "<definition, reference, test, config, contract, runtime, example, or background>",
+          "<repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command>",
+          "<quoted line, line range, command summary, or extracted fact>",
+          "<claim, recommendation, or do not use as support>",
+          "<official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page>",
+          "<official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown>",
+          "<exact title>",
+          "<URL, DOI, or supplied source label>",
+          "<YYYY-MM-DD or supplied-unchecked>",
+          "<section, page, excerpt, or extracted fact>",
+          "<parent-approved external check or user-supplied source>",
+          "<stale risk, inaccessible text, supplied-only, conflict, or none>",
+          "<E-R4-001, E-R4-002>",
+          "<bounded inference that follows from cited evidence IDs>",
           "<repo path:line>",
           "<symbol or heading>",
           "<definition|reference|test|config|contract|runtime|example|background>",
@@ -21955,6 +21980,7 @@ var init_artifact_contracts = __esm({
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
           "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
           "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+          "Planner-critical claims should use R4 claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; first-pass validation warns instead of rejecting older valid artifacts that lack this richer source register.",
           "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
@@ -37347,6 +37373,35 @@ function hasSupplyChainEvidenceSource(content) {
   const sources = extractMarkdownSection5(content, "Sources");
   return /Supply Chain Evidence/i.test(sources) && /signal=<version\|maintenance\|vulnerability\|license\|provenance\|transitive\|update>/.test(sources) === false && /\bsignal=(?:version|maintenance|vulnerability|license|provenance|transitive|update)\b/i.test(sources);
 }
+function sourceLinesWithUrlsMissingAccessDate(sources) {
+  return sources.split("\n").map((line) => line.trim()).filter((line) => /https?:\/\/|doi\.org\//i.test(line)).filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
+}
+function hasR4SourceSections(sources) {
+  return /### Repo Evidence/i.test(sources) && /### External Sources/i.test(sources) && /### Inference Notes/i.test(sources);
+}
+function hasClaimAddressableR4Evidence(sources) {
+  return /\b(?:Evidence ID|evidence_id)\b/i.test(sources) && /\b(?:Claim ID|claim_id)\b/i.test(sources) && /\b(?:directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope)\b/i.test(
+    sources
+  );
+}
+function usesLiveVerificationLanguageWithoutExternalEvidence(content) {
+  const claimText = [
+    extractMarkdownSection5(content, "Summary"),
+    extractMarkdownSection5(content, "State Of The Art"),
+    extractMarkdownSection5(content, "Recommendations")
+  ].join("\n");
+  if (!/\b(?:latest|current official|official docs confirm|upstream confirms|current upstream|live external verification)\b/i.test(
+    claimText
+  )) {
+    return false;
+  }
+  const sources = extractMarkdownSection5(content, "Sources");
+  return !/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources);
+}
+function hasHighConfidenceWithUnsupportedR4Claims(content) {
+  const highConfidence = /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) || /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection5(content, "Confidence Breakdown"));
+  return highConfidence && /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(content);
+}
 function mentionsUnsafeAutomaticDependencyRemediation(content) {
   const candidateText = [
     extractMarkdownSection5(content, "Installation And Setup"),
@@ -37439,6 +37494,32 @@ function validateResearchArtifactContent(content) {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+    );
+  }
+  const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
+  if (externalSourceLinesMissingAccessDate.length > 0) {
+    warnings.push(
+      "Research artifact external source rows should include `accessed YYYY-MM-DD` for every URL or DOI used as current evidence."
+    );
+  }
+  if (!hasR4SourceSections(sources)) {
+    warnings.push(
+      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for R4 provenance."
+    );
+  }
+  if (!hasClaimAddressableR4Evidence(sources)) {
+    warnings.push(
+      "Research artifact should use R4 claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
+    );
+  }
+  if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
+    warnings.push(
+      "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
+    );
+  }
+  if (hasHighConfidenceWithUnsupportedR4Claims(content)) {
+    warnings.push(
+      "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );
   }
   if (mentionsDependencyOrToolChoice(content)) {

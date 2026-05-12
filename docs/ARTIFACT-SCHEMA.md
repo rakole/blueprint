@@ -381,7 +381,7 @@ Canonical template structure:
 - `## Confidence Breakdown`
 - `## Code Examples`
 - `## Recommendations`
-- `## Sources` with optional supply-chain evidence rows
+- `## Sources` split into `Repo Evidence`, `External Sources`, and `Inference Notes`, with optional supply-chain evidence rows
 
 Validation expectations:
 - recommendations should be prescriptive rather than descriptive
@@ -393,6 +393,8 @@ Validation expectations:
 - the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
 - current validation keys off the canonical heading set and also requires the `## Phase Requirements` table to include at least one populated requirement row
 - `## Investigation Trace` is optional and planner-facing; when present, it should record initial assessment, navigation evidence, and strand handoffs, but older valid research artifacts are not invalid solely because they lack it
+- new planner-critical claims should use R4 provenance where available: evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes
+- first-pass R4 provenance checks are warning-level so older otherwise-valid research artifacts do not fail solely because they lack the richer source register
 
 Exact persistence template:
 
@@ -526,15 +528,25 @@ Exact persistence template:
 
 ### Repo Evidence
 
-- Repo evidence: `<repo path:line>`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| E-R4-001 | C-R4-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
 
-### External References
+### External Sources
 
-- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| E-R4-002 | C-R4-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| E-R4-003 | C-R4-003 | <E-R4-001, E-R4-002> | inferred_from_supported|conflicting_sources|not_enough_evidence|out_of_scope | <bounded inference that follows from cited evidence IDs> | <limits or none> | <claim, recommendation, or do not use as support> |
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or E-R4-002; source policy=<off|ask-approved|auto|supplied|unchecked>.
 ````
 
 Contract notes:

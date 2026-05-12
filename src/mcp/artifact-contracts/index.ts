@@ -1054,15 +1054,25 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ### Repo Evidence
 
-- Repo evidence: \`<repo path:line>\`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| E-R4-001 | C-R4-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
 
-### External References
+### External Sources
 
-- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| E-R4-002 | C-R4-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| E-R4-003 | C-R4-003 | <E-R4-001, E-R4-002> | inferred_from_supported|conflicting_sources|not_enough_evidence|out_of_scope | <bounded inference that follows from cited evidence IDs> | <limits or none> | <claim, recommendation, or do not use as support> |
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or E-R4-002; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
 }
 
 function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
@@ -4151,6 +4161,21 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<short code or pseudocode example>",
       "<prescriptive recommendation with tradeoffs>",
       "<prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>",
+      "<repo path:line, command, test output, manifest, contract, or saved Blueprint artifact>",
+      "<definition, reference, test, config, contract, runtime, example, or background>",
+      "<repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command>",
+      "<quoted line, line range, command summary, or extracted fact>",
+      "<claim, recommendation, or do not use as support>",
+      "<official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page>",
+      "<official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown>",
+      "<exact title>",
+      "<URL, DOI, or supplied source label>",
+      "<YYYY-MM-DD or supplied-unchecked>",
+      "<section, page, excerpt, or extracted fact>",
+      "<parent-approved external check or user-supplied source>",
+      "<stale risk, inaccessible text, supplied-only, conflict, or none>",
+      "<E-R4-001, E-R4-002>",
+      "<bounded inference that follows from cited evidence IDs>",
       "<repo path:line>",
       "<symbol or heading>",
       "<definition|reference|test|config|contract|runtime|example|background>",
@@ -4170,6 +4195,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
       "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
       "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+      "Planner-critical claims should use R4 claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; first-pass validation warns instead of rejecting older valid artifacts that lack this richer source register.",
       "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),

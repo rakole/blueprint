@@ -280,8 +280,25 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 ## Sources
 
-- [Gemini CLI hooks reference](https://geminicli.com/docs/hooks/reference/) - confirms advisory hook event payloads.
-- \`src/mcp/tools/phase.ts\` - existing phase resolution and recovery substrate.
+### Repo Evidence
+
+- Repo evidence: \`src/mcp/tools/phase.ts:1\`, symbol/heading=blueprintPhaseArtifactWrite, role=runtime, method=manual-read, supports=C-R4-001.
+
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| E-R4-001 | C-R4-001 | src/mcp/tools/phase.ts:1 | runtime | manual-read | phase artifact writes route through MCP-owned tooling | directly_supported | Persist validated research content. | local checkout only |
+
+### External Sources
+
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| E-R4-002 | C-R4-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| E-R4-003 | C-R4-003 | E-R4-001 | inferred_from_supported | MCP-owned write path implies command should not hand-write research files. | verify in focused tests | Persist through blueprint_phase_artifact_write. |
 
 ### Supply Chain Evidence
 
@@ -365,6 +382,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /official docs or explicitly supplied external references/i);
   assert.match(commandFile, /Keep repo-derived evidence distinct/i);
   assert.match(commandFile, /avoid implying live external verification happened/i);
+  assert.match(commandFile, /R4 provenance packet/i);
   assert.match(commandFile, /investigation trace/i);
   assert.match(commandFile, /navigation evidence packet/i);
   assert.match(commandFile, /retrieval boundaries|query or navigation method/i);
@@ -475,8 +493,9 @@ test("research-phase command references only registered tool names and safe rout
   );
   assert.match(skillFile, /Repository docs are not active runtime inputs/i);
   assert.match(skillFile, /active command's\s+skill-local runtime reference/i);
-  assert.match(skillFile, /source title, date, URL, excerpt, claim/i);
-  assert.match(skillFile, /avoid implying live verification happened/i);
+  assert.match(skillFile, /R4 provenance/i);
+  assert.match(skillFile, /evidence ID, lane, claim ID, claim text/i);
+  assert.match(skillFile, /avoid\s+implying live verification happened/i);
   assert.match(skillFile, /investigation trace/i);
   assert.match(skillFile, /repository evidence ladder/i);
   assert.match(skillFile, /search-note fields/i);
@@ -536,8 +555,10 @@ test("research-phase command references only registered tool names and safe rout
     /comparison\s+notes when official-doc or external evidence packets are part of the evidence\s+set/i
   );
   assert.match(researcherAgent, /does not fetch official docs itself/i);
-  assert.match(researcherAgent, /return the claim as unverified/i);
-  assert.match(researcherAgent, /source title, date, URL,[\s\S]*excerpt, and claim/i);
+  assert.match(researcherAgent, /return the\s+claim as `not_enough_evidence`/i);
+  assert.match(researcherAgent, /Evidence Packet Rows/i);
+  assert.match(researcherAgent, /authority tier/i);
+  assert.match(researcherAgent, /source title, date or access date,[\s\S]*URL or source ref/i);
   assert.match(researcherAgent, /avoid implying that current upstream guidance was confirmed/i);
   assert.match(researcherAgent, /Investigation Trace Rules/);
   assert.match(researcherAgent, /bounded evidence question/i);
@@ -554,8 +575,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /parent to copy into `## Sources`/i);
   assert.match(researcherAgent, /Output Quality Expectations/);
   assert.match(researcherAgent, /what does `\/blu-plan-phase` need to know/i);
-  assert.match(researcherAgent, /Repo evidence/);
-  assert.match(researcherAgent, /Official\s+reference/);
+  assert.match(researcherAgent, /repo evidence/i);
+  assert.match(researcherAgent, /official-doc|External Sources/i);
   assert.match(researcherAgent, /Inference/);
   assert.match(researcherAgent, /Do not substitute browser-only, web-search-only, shell-only, or generic-agent/i);
   assert.match(runtimeContract, /Shared Stage Mapping/);
@@ -566,13 +587,16 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Retry And Repair Behavior/);
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
+  assert.match(runtimeContract, /R4 Evidence Quality, Citations, And Provenance/i);
+  assert.match(runtimeContract, /directly_supported/);
+  assert.match(runtimeContract, /not_enough_evidence/);
   assert.match(runtimeContract, /Investigation Trace And Navigation Evidence/);
   assert.match(runtimeContract, /repository evidence ladder/i);
   assert.match(runtimeContract, /Navigation Evidence Packet/i);
   assert.match(runtimeContract, /per-strand search notes/i);
   assert.match(runtimeContract, /rg --files/i);
   assert.match(runtimeContract, /remote code-search hits are discovery hints/i);
-  assert.match(runtimeContract, /role=definition\|reference\|test\|config\|contract\|runtime\|example\|background/i);
+  assert.match(runtimeContract, /source type, authority tier, support span/i);
   assert.match(runtimeContract, /Strand Planning Handoff/i);
   assert.match(runtimeContract, /targeted full-file, test, manifest, command, skill, runtime-contract,[\s\S]*artifact-contract,[\s\S]*MCP-handler,[\s\S]*built-entrypoint reads/i);
   assert.match(runtimeContract, /Load it\s+on demand for research runs/i);
@@ -682,11 +706,17 @@ test("research scaffold seeds the exact research template shape", async (t) => {
   assert.match(scaffold, /## Confidence Breakdown/);
   assert.match(scaffold, /## Recommendations/);
   assert.match(scaffold, /### Repo Evidence/);
-  assert.match(scaffold, /role=<definition\|reference\|test\|config\|contract\|runtime\|example\|background>/);
-  assert.match(scaffold, /method=<repo-map\|rg-files\|scoped-rg\|manual-read\|parent-navigation-packet\|LSP\|SCIP\|ctags\|tree-sitter>/);
-  assert.match(scaffold, /### External References/);
-  assert.match(scaffold, /Repo evidence: `<repo path:line>`/);
-  assert.match(scaffold, /External reference: <title>, <URL>, accessed <YYYY-MM-DD>/);
+  assert.match(scaffold, /### External Sources/);
+  assert.match(scaffold, /### Inference Notes/);
+  assert.match(scaffold, /Evidence ID/);
+  assert.match(scaffold, /Claim ID/);
+  assert.match(scaffold, /Claim Class/);
+  assert.match(scaffold, /Source Type/);
+  assert.match(scaffold, /Authority Tier/);
+  assert.match(scaffold, /Support Span/);
+  assert.match(scaffold, /Retrieval Context/);
+  assert.match(scaffold, /Downstream Use/);
+  assert.match(scaffold, /directly_supported\|partially_supported\|inferred_from_supported/);
   assert.match(scaffold, /\*Generated by `blueprint_artifact_scaffold`\*/);
 });
 
@@ -756,6 +786,101 @@ test("research template accepts R2 search notes and role-method repo evidence", 
 
   assert.equal(written.status, "created");
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+});
+
+test("research template accepts R4 claim-addressable provenance", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Create research with R4 claim-addressable provenance and split source lanes."
+    ),
+    overwrite: true
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.doesNotMatch(
+    written.validation.warnings.join("\n"),
+    /split ## Sources|claim-addressable evidence|External Sources row with an access date/i
+  );
+});
+
+test("research validation warns when external URL evidence lacks an access date", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research whose external source row omits an access date."
+  ).replace(
+    "| E-R4-002 | C-R4-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
+    "| E-R4-002 | C-R4-002 | official_product_doc | official_vendor_doc | Example docs | https://example.com/docs | unchecked | current behavior | directly_supported | parent-approved external check | may drift | REC-001 |"
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.match(
+    written.validation.warnings.join("\n"),
+    /external source rows should include `accessed YYYY-MM-DD`/i
+  );
+});
+
+test("research validation warns on HIGH confidence with unsupported R4 claims", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research that keeps unsupported R4 evidence visible for validation warnings."
+  ).replace(
+    "| E-R4-002 | C-R4-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
+    "| E-R4-002 | C-R4-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | not_enough_evidence | source policy off | repo-only fixture | do not use as external support |"
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.match(
+    written.validation.warnings.join("\n"),
+    /should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence/i
+  );
 });
 
 test("research template warns when dependency recommendations omit R3 evaluation", async (t) => {
@@ -863,7 +988,11 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(contract.contract.authoringTemplate, /Scope Filter/);
   assert.match(contract.contract.authoringTemplate, /Candidate Files Or Symbols/);
   assert.match(contract.contract.authoringTemplate, /Files Read/);
-  assert.match(contract.contract.authoringTemplate, /Repo evidence: `<repo path:line>`/);
+  assert.match(contract.contract.authoringTemplate, /### Repo Evidence/);
+  assert.match(contract.contract.authoringTemplate, /### External Sources/);
+  assert.match(contract.contract.authoringTemplate, /### Inference Notes/);
+  assert.match(contract.contract.authoringTemplate, /Evidence ID/);
+  assert.match(contract.contract.authoringTemplate, /Claim ID/);
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
   assert.match(contract.contract.notes.join("\n"), /Investigation Trace/i);
   assert.match(contract.contract.notes.join("\n"), /planner-grade evidence density/i);

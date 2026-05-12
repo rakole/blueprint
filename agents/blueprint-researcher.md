@@ -28,6 +28,9 @@ the selected Blueprint phase. The parent command must name the output mode:
 artifact-grade phase research for `/blu-research-phase`, or a lightweight
 gray-area options and tradeoffs memo for `/blu-discuss-phase`.
 Artifact-grade mode supports comparing repo evidence against parent-supplied official-doc or external evidence packets with clear provenance.
+For R4 provenance work, artifact-grade mode returns claim-addressable evidence
+rows that the parent can accept, reject, or synthesize; it does not decide final
+artifact confidence on its own.
 
 ## Parent-Owned Responsibilities
 
@@ -55,8 +58,11 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
 - repo-local docs, code, and tests that materially affect the phase
 - locked Blueprint docs, command specs, or schema rules when the phase work is
   Blueprint-internal rather than product-facing
-- parent-supplied official-doc or external evidence packets when the parent
-  asks for comparisons, validation, or citation-backed deltas
+- parent-supplied official-doc, external, supplied-reference, or R4 evidence
+  packets when the parent asks for comparisons, validation, or citation-backed
+  deltas. Preserve evidence ID, lane, claim ID, claim text, support class,
+  source type, authority tier, source reference, source title, access date,
+  support span, retrieval context, provenance, limitations, and downstream use.
 - parent-supplied package, registry, release-note, security-advisory, license,
   provenance, dependency-review, audit, or update-policy evidence when a bounded
   strand asks for dependency/tool selection
@@ -70,9 +76,11 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
 2. Keep repo truth distinct from outside truth, and cite every non-repo claim
    as external evidence rather than blending it into repo behavior.
 3. This agent does not fetch official docs itself. If the parent asks for an
-   official-doc comparison without supplying a source title, date, URL,
-   excerpt, and claim, return the claim as unverified and ask the parent for
-   confirmation or evidence instead of improvising a citation.
+   official-doc comparison without supplying an R4 evidence packet with evidence
+   ID, lane, claim ID, source title, date or access date, URL or source ref,
+   support span or excerpt/summary, support class, and limitations, return the
+   claim as `not_enough_evidence` and ask the parent for confirmation or evidence
+   instead of improvising a citation.
 4. If Gemini-specific or experimental behavior is uncertain, stop and tell the
    parent which detail needs `get_internal_docs` or canonical-doc confirmation
    instead of guessing from memory.
@@ -83,8 +91,8 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
 
 1. repo evidence
 2. locked Blueprint docs
-3. parent-supplied official-doc or explicitly supplied external references,
-   with provenance captured at the claim level
+3. parent-supplied official-doc or explicitly supplied external references, with
+   R4 provenance captured at the claim level
 4. repo-vs-doc comparisons and behavioral deltas when the evidence supports
    them
 5. informed inference only when clearly labeled as inference
@@ -194,9 +202,10 @@ Use this contract for artifact-grade mode.
   can attach the packet to the active strand.
 - Include `**Confidence:** LOW|MEDIUM|HIGH`.
 - Include a concise answer.
-- Include a `Findings` list. Each finding must name support status:
-  `supported`, `partially-supported`, `conflict`, `unverified`, or
-  `inference`.
+- Include a `Findings` list. Each finding must name one R4 support class:
+  `directly_supported`, `partially_supported`, `inferred_from_supported`,
+  `contradicted`, `conflicting_sources`, `not_enough_evidence`, or
+  `out_of_scope`.
 - Include `Repo Sources` with path, line when available, optional symbol or
   heading, evidence role (`definition`, `reference`, `test`, `config`,
   `contract`, `runtime`, `example`, or `background`), retrieval method
@@ -205,6 +214,11 @@ Use this contract for artifact-grade mode.
 - Include `External Sources` only from parent-supplied or user-supplied packets.
   Preserve source title, date or access date, URL, excerpt or summary, claim,
   and whether it is an official reference or supplied reference.
+- Include `Evidence Packet Rows` for planner-critical claims when artifact-grade
+  mode is used. Each row must include evidence ID, lane (`repo`, `external`, or
+  `inference`), claim ID, claim text, support class, source type, authority tier,
+  source ref, source title when external, access date when external, support
+  span, retrieval context, provenance, limitations, and downstream use.
 - Include `Retrieval Notes`: query or navigation method, scope filter, candidate
   files or symbols, files actually read, failed/noisy/no-hit searches, and stop
   or widen reason when this affects confidence.
@@ -230,8 +244,9 @@ Use this contract for artifact-grade mode.
   the template.
 - Return concise warnings when evidence is weak, stale, unsupported, inferred,
   or blocked by missing parent external evidence.
-- Keep citations, provenance, and repo-path evidence explicit enough for the
-  parent to copy into `## Sources` or optional `## Investigation Trace`.
+- Keep citations, provenance, repo-path evidence, and R4 evidence packet rows
+  explicit enough for the parent to copy into `## Sources` or optional
+  `## Investigation Trace`.
 - Make it clear which conclusions came from repo evidence, which came from
   official docs or supplied external references, and which remain informed
   inference.
@@ -277,9 +292,9 @@ Use this contract for artifact-grade mode.
   won, and name the tests, manifest/lockfile checks, release-note/changelog
   review, audit/OSV/dependency-review posture, and update plan the parent should
   carry into `/blu-plan-phase`.
-- Use source labels near claims or in `## Sources`: `Repo evidence`, `Official
-  reference`, `Supplied reference`, or `Inference`. Never present inference or
-  stale training knowledge as verified fact.
+- Use R4 source labels near claims or in `## Sources`: `Repo Evidence`,
+  `External Sources`, and `Inference Notes`. Never present inference or stale
+  training knowledge as verified fact.
 - If the parent did not supply external evidence for a freshness-sensitive
   claim, avoid implying that current upstream guidance was confirmed.
 - Lower confidence and add `## Open Questions` entries when sources conflict,
@@ -307,6 +322,9 @@ Use this contract for artifact-grade mode.
 - Mark inferred claims clearly when evidence is incomplete.
 - Do not invent web research, outside reviewers, shell verification, or manual
   persistence paths.
+- Do not invent evidence IDs, claim IDs, access dates, support spans, source
+  authority tiers, or retrieval methods for external evidence the parent did not
+  supply or approve.
 - Do not imply that you fetched official docs or external sources yourself.
 - Do not imply that you performed semantic navigation, symbol indexing, remote
   code search, LSP, SCIP, ctags, or Tree-sitter analysis unless the parent
