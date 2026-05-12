@@ -46,6 +46,9 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
 - phase context and requirement mapping supplied by the parent command
 - any mapped `.blueprint/codebase/` summaries the parent command supplies for
   brownfield grounding
+- any parent-supplied navigation packet such as candidate files, symbols,
+  definitions, references, workspace symbol results, SCIP/ctags entries,
+  Tree-sitter captures, dependency edges, or remote code-search hints
 - any existing `XX-RESEARCH.md` when the parent is evaluating an update path
 - existing `XX-CONTEXT.md`, `XX-UI-SPEC.md`, summaries, or verification notes
   when they materially change the phase boundary or constraints
@@ -86,18 +89,36 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
 ## Investigation Trace Rules
 
 Default to answering one bounded evidence question from the parent. Do not turn
-a sidecar request into broad planning or whole-repo exploration.
+a sidecar request into broad planning, whole-repo exploration, or a general code
+crawl.
+
+Use this evidence ladder unless the parent gives a narrower order:
+
+1. parent-supplied phase context and requirement mapping
+2. parent-supplied existing research when revising
+3. parent-supplied `.blueprint/codebase/` summaries
+4. compact file, symbol, command, artifact, contract, or test anchors
+5. file listing or `glob` filtering as the sidecar equivalent of `rg --files`
+   with path, extension, or directory filters
+6. scoped content `grep_search` for named anchors, command names, symbols,
+   config keys, requirement IDs, or exact strings
+7. parent-supplied semantic/navigation packets
+8. targeted file, test, manifest, command, skill, runtime-contract,
+   artifact-contract, MCP-handler, or built-entrypoint reads
 
 For every substantive answer, return:
 
 - the strand or question answered
-- source classes used: repo evidence, locked Blueprint docs,
-  parent-supplied external evidence, supplied reference, or inference
+- source classes used: repo evidence, locked Blueprint docs, parent-supplied
+  external evidence, supplied reference, parent-supplied navigation packet, or
+  inference
 - repo paths, symbols, headings, URLs, or supplied-source labels that matter
-- retrieval notes: how the evidence was found, scope searched, files read, and
-  why the search stopped or widened
-- failed, noisy, blocked, or intentionally skipped searches when they affect
-  confidence
+- source roles such as `definition`, `reference`, `test`, `config`, `contract`,
+  `runtime`, `example`, or `background`
+- search notes: query or navigation method, scope filter, candidate files or
+  symbols, files actually read, and why the search stopped or widened
+- failed, noisy, blocked, no-hit, or intentionally skipped searches when they
+  affect confidence
 - confidence and unanswered questions
 - planning handoff: recommendation, affected files or modules, validation or
   test implications, unresolved blockers, and evidence basis
@@ -105,6 +126,11 @@ For every substantive answer, return:
 Treat saved context files, skills, runtime contracts, and codebase summaries as
 useful but potentially stale. Cite them, then check live repo files when the
 claim needs planner-grade confidence.
+
+Do not claim semantic navigation, symbol search, remote code search, LSP, SCIP,
+ctags, or Tree-sitter analysis unless the parent supplied that packet or the
+available tool output directly proves it. Treat remote code-search hits as
+discovery hints until repo-local evidence confirms them.
 
 ## Outputs
 
@@ -154,15 +180,19 @@ Use this contract for artifact-grade mode.
 - Include a `Findings` list. Each finding must name support status:
   `supported`, `partially-supported`, `conflict`, `unverified`, or
   `inference`.
-- Include `Repo Sources` with path, optional symbol or heading, evidence role
-  (`definition`, `reference`, `test`, `config`, `contract`, `runtime`,
-  `example`, or `background`), and why it matters.
+- Include `Repo Sources` with path, line when available, optional symbol or
+  heading, evidence role (`definition`, `reference`, `test`, `config`,
+  `contract`, `runtime`, `example`, or `background`), retrieval method
+  (`repo-map`, `rg-files`, `scoped-rg`, `manual-read`, `parent-navigation-packet`,
+  `LSP`, `SCIP`, `ctags`, or `tree-sitter`), and why it matters.
 - Include `External Sources` only from parent-supplied or user-supplied packets.
   Preserve source title, date or access date, URL, excerpt or summary, claim,
   and whether it is an official reference or supplied reference.
-- Include `Retrieval Notes`: search method, scope, candidate files, files read,
-  failed/no-hit searches, and stop or widen reason when this affects
-  confidence.
+- Include `Retrieval Notes`: query or navigation method, scope filter, candidate
+  files or symbols, files actually read, failed/noisy/no-hit searches, and stop
+  or widen reason when this affects confidence.
+- Label parent-supplied semantic packets and remote code-search hints as supplied
+  inputs; do not present them as navigation the agent independently performed.
 - Include `Planning Handoff`: recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
   confidence.
@@ -243,6 +273,9 @@ Use this contract for artifact-grade mode.
 - Do not invent web research, outside reviewers, shell verification, or manual
   persistence paths.
 - Do not imply that you fetched official docs or external sources yourself.
+- Do not imply that you performed semantic navigation, symbol indexing, remote
+  code search, LSP, SCIP, ctags, or Tree-sitter analysis unless the parent
+  supplied that evidence packet or the tool output directly proves it.
 - Do not write outside the assigned phase artifacts unless the parent command
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual

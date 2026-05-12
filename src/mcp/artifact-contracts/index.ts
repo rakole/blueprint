@@ -956,9 +956,9 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ### Navigation Evidence Packet
 
-| Evidence ID | Strand | Retrieval Mode | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
-|-------------|--------|----------------|--------------|---------------------|------|---------|--------|----------------------|
-| NAV-001 | <strand id or topic> | <retrieval mode> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
+| Evidence ID | Strand | Query Or Navigation Method | Scope Filter | Retrieval Mode | Candidate Files Or Symbols | Files Read | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
+|-------------|--------|----------------------------|--------------|----------------|----------------------------|------------|--------------|---------------------|------|---------|--------|----------------------|
+| NAV-001 | <strand id or topic> | <query or navigation method> | <path, language, file type, or none> | <saved-context, codebase-summary, rg-files, scoped-rg, targeted-read, parent-navigation-packet, remote-code-search-hint, external-packet, or inference> | <candidate files or symbols> | <files actually read> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
 
 ### Strand Planning Handoff
 
@@ -1028,7 +1028,13 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ## Sources
 
-- <repo path, URL, or cited file reference> - why it matters`;
+### Repo Evidence
+
+- Repo evidence: \`<repo path:line>\`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+
+### External References
+
+- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.`;
 }
 
 function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
@@ -4057,7 +4063,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<implementation question for planning>",
       "<confidence reason>",
       "<strand id or topic>",
-      "<retrieval mode>",
+      "<query or navigation method>",
+      "<path, language, file type, or none>",
+      "<saved-context, codebase-summary, rg-files, scoped-rg, targeted-read, parent-navigation-packet, remote-code-search-hint, external-packet, or inference>",
+      "<candidate files or symbols>",
+      "<files actually read>",
       "<source class>",
       "<path, symbol, URL, or supplied label>",
       "<definition, reference, test, config, contract, runtime, example, background, or inference>",
@@ -4085,14 +4095,21 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<evidence-backed confidence explanation>",
       "<short code or pseudocode example>",
       "<prescriptive recommendation with tradeoffs>",
-      "<repo path, URL, or cited file reference>"
+      "<repo path:line>",
+      "<symbol or heading>",
+      "<definition|reference|test|config|contract|runtime|example|background>",
+      "<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>",
+      "<claim or recommendation>",
+      "<title>",
+      "<URL>",
+      "<off|ask-approved|auto|supplied>"
     ],
     notes: [
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-      "Optional Investigation Trace content should record initial assessment, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+      "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
+      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate
