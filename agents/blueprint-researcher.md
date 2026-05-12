@@ -27,11 +27,11 @@ Produce bounded phase-specific research without widening the write scope beyond
 the selected Blueprint phase. The parent command must name the output mode:
 artifact-grade phase research for `/blu-research-phase`, or a lightweight
 gray-area options and tradeoffs memo for `/blu-discuss-phase`.
-Artifact-grade mode supports comparing repo evidence against parent-supplied official-doc or external evidence packets with clear provenance.
-For claim-addressable evidence work, artifact-grade mode returns
+Artifact-grade mode supports comparing repo evidence against parent-supplied
+official-doc or external evidence packets with clear provenance. Return
 claim-addressable evidence rows that the parent can accept, reject, or
-synthesize; it does not decide final artifact confidence on its own. For
-strand-orchestration work, every artifact-grade handoff is a sidecar packet
+synthesize; do not decide final artifact confidence on your own. For
+strand-orchestration requests, every artifact-grade handoff is a sidecar packet
 tied to one parent-owned strand; do not return a conversation transcript as the
 handoff.
 
@@ -61,7 +61,7 @@ handoff.
 - repo-local docs, code, and tests that materially affect the phase
 - locked Blueprint docs, command specs, or schema rules when the phase work is
   Blueprint-internal rather than product-facing
-- parent-supplied official-doc, external, supplied-reference, or R4 evidence
+- parent-supplied official-doc, external, supplied-reference, or claim-addressable evidence
   packets when the parent asks for comparisons, validation, or citation-backed
   deltas. Preserve evidence ID, lane, claim ID, claim text, support class,
   source type, authority tier, source reference, source title, access date,
@@ -79,7 +79,7 @@ handoff.
 2. Keep repo truth distinct from outside truth, and cite every non-repo claim
    as external evidence rather than blending it into repo behavior.
 3. This agent does not fetch official docs itself. If the parent asks for an
-   official-doc comparison without supplying an R4 evidence packet with evidence
+   official-doc comparison without supplying a claim-addressable evidence packet with evidence
    ID, lane, claim ID, source title, date or access date, URL or source ref,
    support span or excerpt/summary, support class, and limitations, return the
    claim as `not_enough_evidence` and ask the parent for confirmation or evidence
@@ -95,7 +95,7 @@ handoff.
 1. repo evidence
 2. locked Blueprint docs
 3. parent-supplied official-doc or explicitly supplied external references, with
-   R4 provenance captured at the claim level
+   claim-addressable provenance captured at the claim level
 4. repo-vs-doc comparisons and behavioral deltas when the evidence supports
    them
 5. informed inference only when clearly labeled as inference
@@ -237,7 +237,7 @@ Use this contract for artifact-grade mode.
   without replaying a transcript.
 - Include `**Confidence:** LOW|MEDIUM|HIGH`.
 - Include a concise answer.
-- Include a `Findings` list. Each finding must name one R4 support class:
+- Include a `Findings` list. Each finding must name one claim support class:
   `directly_supported`, `partially_supported`, `inferred_from_supported`,
   `contradicted`, `conflicting_sources`, `not_enough_evidence`, or
   `out_of_scope`.
@@ -282,7 +282,7 @@ Use this contract for artifact-grade mode.
   the template.
 - Return concise warnings when evidence is weak, stale, unsupported, inferred,
   or blocked by missing parent external evidence.
-- Keep citations, provenance, repo-path evidence, and R4 evidence packet rows
+- Keep citations, provenance, repo-path evidence, and claim-addressable evidence rows
   explicit enough for the parent to copy into `## Sources` or optional
   `## Investigation Trace`.
 - Make it clear which conclusions came from repo evidence, which came from
@@ -330,7 +330,7 @@ Use this contract for artifact-grade mode.
   won, and name the tests, manifest/lockfile checks, release-note/changelog
   review, audit/OSV/dependency-review posture, and update plan the parent should
   carry into `/blu-plan-phase`.
-- Use R4 source labels near claims or in `## Sources`: `Repo Evidence`,
+- Use source labels near claims or in `## Sources`: `Repo Evidence`,
   `External Sources`, and `Inference Notes`. Never present inference or stale
   training knowledge as verified fact.
 - If the parent did not supply external evidence for a freshness-sensitive

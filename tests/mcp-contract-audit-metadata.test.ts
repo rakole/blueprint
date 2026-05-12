@@ -322,11 +322,11 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchDoc, /deliberate placeholder/i);
   assert.match(researchDoc, /research-phase-runtime-contract\.md/);
   assert.match(researchDoc, /supply-chain-aware/i);
-  assert.match(researchDoc, /R4 provenance/i);
+  assert.match(researchDoc, /claim-addressable provenance/i);
   assert.match(researchDoc, /Repo Evidence/);
   assert.match(researchDoc, /External Sources/);
   assert.match(researchDoc, /Inference Notes/);
-  assert.match(researchDoc, /warning-level/i);
+  assert.match(researchDoc, /warns rather than rejects|validation warning/i);
   assert.match(researchDoc, /Checkpoint, Resume, And Completion Receipt/i);
   assert.match(researchDoc, /researchLedger/i);
   assert.match(researchDoc, /safe research checkpoints resume by default/i);

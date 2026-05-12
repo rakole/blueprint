@@ -18607,23 +18607,23 @@ function renderResearchTemplate(context) {
 
 | Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
 |-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| E-R4-001 | C-R4-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
+| EVID-001 | CLM-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
 
 ### External Sources
 
 | Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
 |-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| E-R4-002 | C-R4-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
+| EVID-002 | CLM-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
 
 ### Inference Notes
 
 | Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
 |-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
-| E-R4-003 | C-R4-003 | <E-R4-001, E-R4-002> | inferred_from_supported|conflicting_sources|not_enough_evidence|out_of_scope | <bounded inference that follows from cited evidence IDs> | <limits or none> | <claim, recommendation, or do not use as support> |
+| EVID-003 | CLM-003 | <EVID-001, EVID-002> | inferred_from_supported|conflicting_sources|not_enough_evidence|out_of_scope | <bounded inference that follows from cited evidence IDs> | <limits or none> | <claim, recommendation, or do not use as support> |
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or E-R4-002; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or EVID-002; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
 }
 function renderUiSpecTemplate(context) {
   return `# ${phaseLabel(context)} - UI Spec
@@ -21959,7 +21959,7 @@ var init_artifact_contracts = __esm({
           "<section, page, excerpt, or extracted fact>",
           "<parent-approved external check or user-supplied source>",
           "<stale risk, inaccessible text, supplied-only, conflict, or none>",
-          "<E-R4-001, E-R4-002>",
+          "<EVID-001, EVID-002>",
           "<bounded inference that follows from cited evidence IDs>",
           "<repo path:line>",
           "<symbol or heading>",
@@ -21980,7 +21980,7 @@ var init_artifact_contracts = __esm({
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
           "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
           "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
-          "Planner-critical claims should use R4 claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; first-pass validation warns instead of rejecting older valid artifacts that lack this richer source register.",
+          "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
           "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
@@ -37376,10 +37376,10 @@ function hasSupplyChainEvidenceSource(content) {
 function sourceLinesWithUrlsMissingAccessDate(sources) {
   return sources.split("\n").map((line) => line.trim()).filter((line) => /https?:\/\/|doi\.org\//i.test(line)).filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
 }
-function hasR4SourceSections(sources) {
+function hasClaimAddressableSourceSections(sources) {
   return /### Repo Evidence/i.test(sources) && /### External Sources/i.test(sources) && /### Inference Notes/i.test(sources);
 }
-function hasClaimAddressableR4Evidence(sources) {
+function hasClaimAddressableEvidence(sources) {
   return /\b(?:Evidence ID|evidence_id)\b/i.test(sources) && /\b(?:Claim ID|claim_id)\b/i.test(sources) && /\b(?:directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope)\b/i.test(
     sources
   );
@@ -37398,7 +37398,7 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content) {
   const sources = extractMarkdownSection5(content, "Sources");
   return !/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources);
 }
-function hasHighConfidenceWithUnsupportedR4Claims(content) {
+function hasHighConfidenceWithUnsupportedEvidenceClaims(content) {
   const highConfidence = /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) || /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection5(content, "Confidence Breakdown"));
   return highConfidence && /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(content);
 }
@@ -37502,14 +37502,14 @@ function validateResearchArtifactContent(content) {
       "Research artifact external source rows should include `accessed YYYY-MM-DD` for every URL or DOI used as current evidence."
     );
   }
-  if (!hasR4SourceSections(sources)) {
+  if (!hasClaimAddressableSourceSections(sources)) {
     warnings.push(
-      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for R4 provenance."
+      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for claim-addressable provenance."
     );
   }
-  if (!hasClaimAddressableR4Evidence(sources)) {
+  if (!hasClaimAddressableEvidence(sources)) {
     warnings.push(
-      "Research artifact should use R4 claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
+      "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
     );
   }
   if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
@@ -37517,7 +37517,7 @@ function validateResearchArtifactContent(content) {
       "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
     );
   }
-  if (hasHighConfidenceWithUnsupportedR4Claims(content)) {
+  if (hasHighConfidenceWithUnsupportedEvidenceClaims(content)) {
     warnings.push(
       "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );

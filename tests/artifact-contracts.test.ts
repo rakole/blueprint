@@ -1263,7 +1263,7 @@ test("research contract allows intentional placeholder token prose", () => {
   assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
 });
 
-test("research contract emits R3 dependency/tool warnings without invalidating the artifact", () => {
+test("research contract emits dependency/tool warnings without invalidating the artifact", () => {
   const research = canonicalResearchContent(
     "Add a package dependency for artifact validation without enough supply-chain detail.",
     "| LIFE-01 | Keep endpoint research grounded. | Add a package dependency for validation. |"

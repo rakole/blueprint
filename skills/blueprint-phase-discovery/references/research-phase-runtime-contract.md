@@ -37,7 +37,7 @@ The retained behaviors that matter are:
   and confidence breakdown
 - clear distinction between repo evidence, official or supplied external
   references, and inference
-- R4 claim-addressable provenance: planner-critical claims get evidence IDs,
+- claim-addressable provenance: planner-critical claims get evidence IDs,
   claim IDs, lane labels (`repo`, `external`, or `inference`), source type,
   authority tier, support class, support span, retrieval context, provenance,
   limitations, and downstream-use notes before final prose synthesis
@@ -231,7 +231,7 @@ source list. Use labels such as `Repo evidence`, `Official reference`,
 `Supplied reference`, or `Inference` rather than implying external verification
 that did not happen.
 
-## R4 Evidence Quality, Citations, And Provenance
+## Evidence Quality, Citations, And Provenance
 
 Treat evidence as a parent-owned claim graph, not as a bibliography assembled
 after writing prose. Build the evidence packet before final synthesis, then cite
@@ -240,9 +240,9 @@ evidence IDs or claim IDs from the packet while drafting `XX-RESEARCH.md`.
 Use this packet shape in prose, tables, or parent-side working notes:
 
 ```text
-evidence_id: E-R4-001
+evidence_id: EVID-001
 lane: repo | external | inference
-claim_id: C-R4-001
+claim_id: CLM-001
 claim_text: concise atomic claim
 claim_class: directly_supported | partially_supported | inferred_from_supported | contradicted | conflicting_sources | not_enough_evidence | out_of_scope
 source_type: repo_file | command_output | test_output | official_standard | official_product_doc | peer_reviewed_paper | preprint | supplied_reference | web_page | inference
@@ -313,24 +313,24 @@ Final sources should use this structure:
 
 | Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
 |-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| E-R4-001 | C-R4-001 | src/example.ts:42 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
+| EVID-001 | CLM-001 | src/example.ts:42 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
 
 ### External Sources
 
 | Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
 |-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| E-R4-002 | C-R4-002 | official_product_doc | official_vendor_doc | <title> | https://example.com/docs | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
+| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | <title> | https://example.com/docs | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
 
 ### Inference Notes
 
 | Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
 |-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
-| E-R4-003 | C-R4-003 | E-R4-001, E-R4-002 | inferred_from_supported | Repo behavior plus official guidance suggest this planner-safe improvement. | verify during planning | REC-001 |
+| EVID-003 | CLM-003 | EVID-001, EVID-002 | inferred_from_supported | Repo behavior plus official guidance suggest this planner-safe improvement. | verify during planning | REC-001 |
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence remains allowed when R3 dependency/tool rows need it, but
-  it should reference the relevant R4 evidence IDs or dependency decision IDs.
+- Supply-chain evidence remains allowed when dependency/tool rows need it, but
+  it should reference the relevant claim-addressable evidence IDs or dependency decision IDs.
 ```
 
 Rules:
@@ -905,7 +905,7 @@ When used, pass the agent:
   parent-supplied navigation packet such as candidate files, symbol hits,
   definitions, references, SCIP/ctags entries, Tree-sitter captures,
   dependency edges, or remote code-search hints
-- any parent-gathered or user-supplied R4 evidence packet, including evidence ID,
+- any parent-gathered or user-supplied claim-addressable evidence packet, including evidence ID,
   lane, claim ID, claim text, support class, source type, authority tier,
   source reference, source title, access date when external, support span,
   retrieval context, provenance, limitations, and downstream use
@@ -926,7 +926,7 @@ and update-posture evidence under the current external-source policy.
 
 Ask the agent for bounded findings by default, not broad plans or final
 persistence ownership. The response should include the strand/question, concise
-answer, R4 evidence packet rows for any planner-critical claims, source classes,
+answer, claim-addressable evidence rows for any planner-critical claims, source classes,
 paths or URLs, source roles, search notes, support classes, confidence,
 failed/noisy/no-hit or limited searches, unanswered questions, and a planning
 handoff.
@@ -1007,10 +1007,10 @@ This fallback is the required single-agent path, not a degraded emergency mode.
 - If evidence conflicts or a critical claim cannot be verified, lower
   confidence, preserve the conflict in `## Open Questions`, and checkpoint when
   the uncertainty blocks a planner-grade recommendation.
-- If R4 provenance is missing for planner-critical claims, prefer a warning,
+- If claim-addressable provenance is missing for planner-critical claims, prefer a warning,
   lower confidence, or an explicit `not_enough_evidence` row before hard-failing
-  older valid artifacts. Do not convert R4 source-register omissions into strict
-  MCP validation blockers in the first implementation slice.
+  older valid artifacts. Do not convert source-register omissions into strict
+  MCP validation blockers unless the validator already enforces them.
 - If `blueprint_phase_artifact_write` returns `status: "invalid"`, repair the
   same normalized draft using the returned validation issues and retry before
   treating the command as complete.

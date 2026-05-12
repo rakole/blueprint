@@ -2811,7 +2811,7 @@ function sourceLinesWithUrlsMissingAccessDate(sources: string): string[] {
     .filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
 }
 
-function hasR4SourceSections(sources: string): boolean {
+function hasClaimAddressableSourceSections(sources: string): boolean {
   return (
     /### Repo Evidence/i.test(sources) &&
     /### External Sources/i.test(sources) &&
@@ -2819,7 +2819,7 @@ function hasR4SourceSections(sources: string): boolean {
   );
 }
 
-function hasClaimAddressableR4Evidence(sources: string): boolean {
+function hasClaimAddressableEvidence(sources: string): boolean {
   return (
     /\b(?:Evidence ID|evidence_id)\b/i.test(sources) &&
     /\b(?:Claim ID|claim_id)\b/i.test(sources) &&
@@ -2848,7 +2848,7 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): b
   return !/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources);
 }
 
-function hasHighConfidenceWithUnsupportedR4Claims(content: string): boolean {
+function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolean {
   const highConfidence =
     /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) ||
     /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection(content, "Confidence Breakdown"));
@@ -3009,15 +3009,15 @@ export function validateResearchArtifactContent(content: string): {
     );
   }
 
-  if (!hasR4SourceSections(sources)) {
+  if (!hasClaimAddressableSourceSections(sources)) {
     warnings.push(
-      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for R4 provenance."
+      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for claim-addressable provenance."
     );
   }
 
-  if (!hasClaimAddressableR4Evidence(sources)) {
+  if (!hasClaimAddressableEvidence(sources)) {
     warnings.push(
-      "Research artifact should use R4 claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
+      "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
     );
   }
 
@@ -3027,7 +3027,7 @@ export function validateResearchArtifactContent(content: string): {
     );
   }
 
-  if (hasHighConfidenceWithUnsupportedR4Claims(content)) {
+  if (hasHighConfidenceWithUnsupportedEvidenceClaims(content)) {
     warnings.push(
       "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );

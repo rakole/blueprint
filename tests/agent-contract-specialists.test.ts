@@ -136,7 +136,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   );
   assert.match(
     researcher,
-    /official-doc, external, supplied-reference, or R4 evidence\s+packets|official-doc or explicitly supplied external references/i
+    /official-doc, external, supplied-reference, or claim-addressable evidence\s+packets|official-doc or explicitly supplied external references/i
   );
   assert.match(researcher, /Replace every angle-bracket placeholder before returning any draft section/i);
   assert.match(
