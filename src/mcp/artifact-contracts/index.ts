@@ -978,13 +978,31 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 - <runtime, library, or shared repo pattern>
 
+### Dependency / Tool Evaluation
+
+| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
+|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
+| DEP-001 | <capability needed> | <package, tool, repo helper, platform API, or custom> | already_in_repo|use_existing|add_candidate|defer|reject|custom | <repo path, official URL, supplied source, or unchecked> | <npm, stdlib, platform, repo-local, service, or none> | runtime|dev|global|none | <current/wanted/latest, observed version, or unchecked> | <release/maintainer/CI/security-policy signal or unchecked> | <audit/OSV/advisory result or unchecked> | <SPDX/license signal or unchecked> | <provenance/SLSA/signature/scope identity signal or unchecked> | <none, small, moderate, large, or unchecked> | <no-new-dependency, existing dependency, standard library, or platform API option> | <Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture> | <risk and mitigation> |
+
 ## Installation And Setup
 
 - <installation or setup guidance>
 
+### Setup And Update Posture
+
+| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
+|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
+| DEP-001 | <package.json/package-lock or none> | <repo-local command/path or none> | runtime|dev|global|none | <transitive deps, lifecycle scripts, native binaries, peers, engines, or none> | <test/build/check or manual verification> | <Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual> | yes|no - <reason> |
+
 ## Alternatives Considered
 
 - <alternative considered and tradeoff>
+
+### Dependency Alternatives
+
+| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
+|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
+| DEP-001 | <capability needed> | <viable/rejected and why> | <viable/rejected and why> | <viable/rejected and why> | <candidate and evidence> | <allowed/rejected and tests needed> | use_existing|add_candidate|defer|reject|custom | <actionable rationale> |
 
 ## Architecture Patterns
 
@@ -993,6 +1011,12 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 ## Don't Hand-Roll
 
 - <existing tool, helper, or platform feature>
+
+### Library Vs Custom Decision
+
+| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
+|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
+| DEP-001 | <capability> | security-sensitive|standardized|protocol|parser|package-resolution|low-risk-project-specific | <option or none> | yes|no | <why package/library/custom is safer> | <tests/checks required> | <owner or update path> |
 
 ## Anti-Patterns
 
@@ -1024,7 +1048,7 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ## Recommendations
 
-- <prescriptive recommendation with tradeoffs>
+- <prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>
 
 ## Sources
 
@@ -1034,7 +1058,11 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ### External References
 
-- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.`;
+- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+
+### Supply Chain Evidence
+
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.`;
 }
 
 function renderUiSpecTemplate(context?: ArtifactTemplateContext): string {
@@ -4083,10 +4111,37 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<phase decision preserved from context>",
       "<repo, product, or workflow constraint>",
       "<runtime, library, or shared repo pattern>",
+      "<capability needed>",
+      "<package, tool, repo helper, platform API, or custom>",
+      "<repo path, official URL, supplied source, or unchecked>",
+      "<npm, stdlib, platform, repo-local, service, or none>",
+      "<current/wanted/latest, observed version, or unchecked>",
+      "<release/maintainer/CI/security-policy signal or unchecked>",
+      "<audit/OSV/advisory result or unchecked>",
+      "<SPDX/license signal or unchecked>",
+      "<provenance/SLSA/signature/scope identity signal or unchecked>",
+      "<none, small, moderate, large, or unchecked>",
+      "<no-new-dependency, existing dependency, standard library, or platform API option>",
+      "<Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture>",
+      "<risk and mitigation>",
       "<installation or setup guidance>",
+      "<package.json/package-lock or none>",
+      "<repo-local command/path or none>",
+      "<transitive deps, lifecycle scripts, native binaries, peers, engines, or none>",
+      "<test/build/check or manual verification>",
+      "<Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual>",
       "<alternative considered and tradeoff>",
+      "<viable/rejected and why>",
+      "<candidate and evidence>",
+      "<allowed/rejected and tests needed>",
+      "<actionable rationale>",
       "<durable implementation pattern>",
       "<existing tool, helper, or platform feature>",
+      "<capability>",
+      "<option or none>",
+      "<why package/library/custom is safer>",
+      "<tests/checks required>",
+      "<owner or update path>",
       "<anti-pattern detail or implementation to avoid>",
       "<current ecosystem or repo update relevant to this phase>",
       "<failure mode or regression risk>",
@@ -4095,6 +4150,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<evidence-backed confidence explanation>",
       "<short code or pseudocode example>",
       "<prescriptive recommendation with tradeoffs>",
+      "<prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>",
       "<repo path:line>",
       "<symbol or heading>",
       "<definition|reference|test|config|contract|runtime|example|background>",
@@ -4102,14 +4158,19 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<claim or recommendation>",
       "<title>",
       "<URL>",
-      "<off|ask-approved|auto|supplied>"
+      "<source title or command>",
+      "<URL or repo path>",
+      "<version|maintenance|vulnerability|license|provenance|transitive|update>",
+      "<off|ask-approved|auto|supplied>",
+      "<off|ask-approved|auto|supplied|unchecked>"
     ],
     notes: [
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
       "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+      "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
+      "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate

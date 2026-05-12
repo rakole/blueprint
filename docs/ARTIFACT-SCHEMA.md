@@ -369,11 +369,11 @@ Canonical template structure:
 - optional `## Investigation Trace` with initial assessment, navigation evidence packet, and strand planning handoff tables
 - `## Locked Decisions From Context`
 - `## User Constraints`
-- `## Standard Stack`
-- `## Installation And Setup`
-- `## Alternatives Considered`
+- `## Standard Stack` with optional dependency/tool evaluation table
+- `## Installation And Setup` with optional setup and update posture table
+- `## Alternatives Considered` with optional dependency alternatives table
 - `## Architecture Patterns`
-- `## Don't Hand-Roll`
+- `## Don't Hand-Roll` with optional library-vs-custom decision table
 - `## Anti-Patterns`
 - `## State Of The Art`
 - `## Common Pitfalls`
@@ -381,11 +381,13 @@ Canonical template structure:
 - `## Confidence Breakdown`
 - `## Code Examples`
 - `## Recommendations`
-- `## Sources`
+- `## Sources` with optional supply-chain evidence rows
 
 Validation expectations:
 - recommendations should be prescriptive rather than descriptive
 - sources must include a URL, repo path, or cited file reference
+- dependency/tool recommendations should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation before recommending a new package or custom code
+- supply-chain evidence should record version, maintenance, vulnerability, license, provenance/signature, transitive footprint, install scope, lockfile impact, update posture, residual risk, and verification signals where available; missing live upstream evidence should be labeled unchecked, not treated as approval
 - scaffold-only placeholders are not considered valid completed research
 - scaffold starters, when used, are first-write seed material only and must not survive verbatim into the final saved artifact
 - the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
@@ -448,13 +450,31 @@ Exact persistence template:
 
 - <runtime, library, or shared repo pattern>
 
+### Dependency / Tool Evaluation
+
+| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
+|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
+| DEP-001 | <capability needed> | <package, tool, repo helper, platform API, or custom> | already_in_repo|use_existing|add_candidate|defer|reject|custom | <repo path, official URL, supplied source, or unchecked> | <npm, stdlib, platform, repo-local, service, or none> | runtime|dev|global|none | <current/wanted/latest, observed version, or unchecked> | <release/maintainer/CI/security-policy signal or unchecked> | <audit/OSV/advisory result or unchecked> | <SPDX/license signal or unchecked> | <provenance/SLSA/signature/scope identity signal or unchecked> | <none, small, moderate, large, or unchecked> | <no-new-dependency, existing dependency, standard library, or platform API option> | <Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture> | <risk and mitigation> |
+
 ## Installation And Setup
 
 - <installation or setup guidance>
 
+### Setup And Update Posture
+
+| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
+|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
+| DEP-001 | <package.json/package-lock or none> | <repo-local command/path or none> | runtime|dev|global|none | <transitive deps, lifecycle scripts, native binaries, peers, engines, or none> | <test/build/check or manual verification> | <Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual> | yes|no - <reason> |
+
 ## Alternatives Considered
 
 - <alternative considered and tradeoff>
+
+### Dependency Alternatives
+
+| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
+|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
+| DEP-001 | <capability needed> | <viable/rejected and why> | <viable/rejected and why> | <viable/rejected and why> | <candidate and evidence> | <allowed/rejected and tests needed> | use_existing|add_candidate|defer|reject|custom | <actionable rationale> |
 
 ## Architecture Patterns
 
@@ -463,6 +483,12 @@ Exact persistence template:
 ## Don't Hand-Roll
 
 - <existing tool, helper, or platform feature>
+
+### Library Vs Custom Decision
+
+| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
+|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
+| DEP-001 | <capability> | security-sensitive|standardized|protocol|parser|package-resolution|low-risk-project-specific | <option or none> | yes|no | <why package/library/custom is safer> | <tests/checks required> | <owner or update path> |
 
 ## Anti-Patterns
 
@@ -494,11 +520,21 @@ Exact persistence template:
 
 ## Recommendations
 
-- <prescriptive recommendation with tradeoffs>
+- <prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>
 
 ## Sources
 
-- <repo path, URL, or cited file reference> - why it matters
+### Repo Evidence
+
+- Repo evidence: `<repo path:line>`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+
+### External References
+
+- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.
+
+### Supply Chain Evidence
+
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001; source policy=<off|ask-approved|auto|supplied|unchecked>.
 ````
 
 Contract notes:

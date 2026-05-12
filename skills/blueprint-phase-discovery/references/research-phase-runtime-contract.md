@@ -41,6 +41,7 @@ The retained behaviors that matter are:
 - per-strand planning handoff with recommendation, affected files or modules,
   validation or test implications, unresolved blockers, evidence basis, and
   confidence
+- dependency/tool decisions treated as first-class research when a phase may add, adopt, replace, or hand-roll a package, library, CLI, framework, service, code generator, package-manager behavior, or other tool
 - validation repair before completion
 - routing only to implemented commands after refreshed state is loaded
 
@@ -57,8 +58,9 @@ Use the shared long-running-mutation stages:
   `research.external_sources`.
 - `Execute`: build the initial assessment, follow the repository evidence
   ladder, record per-strand search notes and navigation evidence, research one
-  topic strand at a time, close each strand with a planning handoff, and keep
-  evidence provenance visible.
+  topic strand at a time, evaluate dependency/tool choices when they affect a
+  recommendation, close each strand with a planning handoff, and keep evidence
+  provenance visible.
 - `Persist`: scaffold only a missing file, write checkpoints for pauses, and
   write final research through MCP only.
 - `Validate`: normalize to the live authoring template, self-check, write in
@@ -140,12 +142,25 @@ Quality rules for `XX-RESEARCH.md`:
   saved context decisions that constrain implementation.
 - `## Standard Stack` names concrete runtime, library, tool, or repo patterns
   and versions when version knowledge matters.
+- `## Standard Stack` includes a `Dependency / Tool Evaluation` table when the
+  research recommends adding, adopting, replacing, upgrading, globally
+  installing, locally installing, vendoring, forking, code-generating, or
+  hand-rolling a package, library, CLI, framework, service, or tool.
 - `## Installation And Setup` says whether setup is needed, already present, or
   intentionally not applicable.
+- `## Installation And Setup` names manifest and lockfile impact, install scope,
+  side effects, verification commands, and update posture when a dependency/tool
+  decision affects setup.
 - `## Alternatives Considered` records real tradeoffs, including why the
   recommendation is preferred.
+- `## Alternatives Considered` compares no-new-dependency, existing dependency,
+  standard-library/platform API, candidate package/tool, and custom
+  implementation before recommending a new dependency/tool.
 - `## Architecture Patterns`, `## Don't Hand-Roll`, and `## Anti-Patterns`
   give planner-usable implementation structure and verification risks.
+- `## Don't Hand-Roll` explains library-versus-custom reasoning for standardized,
+  security-sensitive, adversarial, parser, protocol, package/version,
+  vulnerability/license/provenance, AST/indexing, or edge-case-heavy behavior.
 - `## State Of The Art` identifies current guidance or repo-local context. As
   advisory provenance guidance, prefer explicit source dates near
   freshness-sensitive external evidence, or say when live external checking did
@@ -284,6 +299,112 @@ lower confidence and preserve the uncertainty in `## Open Questions`, the
 strand handoff, or the research checkpoint. Do not turn a weak strand into a
 confident recommendation.
 
+## Tool And Dependency Selection
+
+Treat dependency/tool choice as a first-class research strand whenever the phase
+may add, adopt, replace, upgrade, globally install, locally install, vendor,
+fork, code-generate, or hand-roll any package, library, CLI, framework, service,
+package-manager behavior, parser, protocol client, security-sensitive helper,
+or other implementation tool.
+
+The default answer is not "add a package." First evaluate:
+
+1. no new dependency
+2. existing repo dependency
+3. standard library or platform API
+4. candidate package, CLI, service, framework, or code generator
+5. custom implementation
+
+Record the result in the existing research artifact headings instead of adding a
+new top-level required heading:
+
+- `## Standard Stack`: dependency/tool evaluation table for current and
+  candidate stack choices.
+- `## Installation And Setup`: reproducible setup, manifest and lockfile
+  impact, install scope, side effects, verification, and update posture.
+- `## Alternatives Considered`: no-new-dependency, existing dependency,
+  standard-library/platform, candidate, and custom alternatives.
+- `## Don't Hand-Roll`: library-versus-custom decision rule for standardized,
+  security-sensitive, adversarial, protocol, parser, package/version,
+  vulnerability/license/provenance, AST/indexing, or edge-case-heavy behavior.
+- `## Recommendations`: cite the dependency/tool evaluation row when a
+  recommendation adds, adopts, rejects, defers, upgrades, or hand-rolls a tool.
+- `## Sources`: cite repo, official, supplied, or unchecked `Supply Chain Evidence`
+  rows for each planner-critical dependency/tool claim.
+
+Use this `## Standard Stack` table shape when a dependency/tool decision exists:
+
+```md
+### Dependency / Tool Evaluation
+
+| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
+|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
+| DEP-001 | <capability needed> | <package, tool, repo helper, platform API, or custom> | already_in_repo|use_existing|add_candidate|defer|reject|custom | <repo path, official URL, supplied source, or unchecked> | <npm, stdlib, platform, repo-local, service, or none> | runtime|dev|global|none | <current/wanted/latest, observed version, or unchecked> | <release/maintainer/CI/security-policy signal or unchecked> | <audit/OSV/advisory result or unchecked> | <SPDX/license signal or unchecked> | <provenance/SLSA/signature/scope identity signal or unchecked> | <none, small, moderate, large, or unchecked> | <no-new-dependency, existing dependency, standard library, or platform API option> | <Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture> | <risk and mitigation> |
+```
+
+Use this `## Installation And Setup` table shape when setup changes:
+
+```md
+### Setup And Update Posture
+
+| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
+|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
+| DEP-001 | <package.json/package-lock or none> | <repo-local command/path or none> | runtime|dev|global|none | <transitive deps, lifecycle scripts, native binaries, peers, engines, or none> | <test/build/check or manual verification> | <Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual> | yes|no - <reason> |
+```
+
+Use this `## Alternatives Considered` table shape when a dependency/tool decision
+exists:
+
+```md
+### Dependency Alternatives
+
+| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
+|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
+| DEP-001 | <capability needed> | <viable/rejected and why> | <viable/rejected and why> | <viable/rejected and why> | <candidate and evidence> | <allowed/rejected and tests needed> | use_existing|add_candidate|defer|reject|custom | <actionable rationale> |
+```
+
+Use this `## Don't Hand-Roll` table shape when custom code is recommended or a
+library should be preferred:
+
+```md
+### Library Vs Custom Decision
+
+| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
+|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
+| DEP-001 | <capability> | security-sensitive|standardized|protocol|parser|package-resolution|low-risk-project-specific | <option or none> | yes|no | <why package/library/custom is safer> | <tests/checks required> | <owner or update path> |
+```
+
+Selection rules:
+
+- A new package/tool recommendation should not be `HIGH` confidence unless the
+  research artifact records version, maintenance, vulnerability, license,
+  provenance/signature, transitive-footprint, install-scope, update-posture, and
+  residual-risk evidence or explicitly explains which signals are unavailable.
+- `latest` is not the same as `wanted` for npm-style package managers. When
+  version freshness matters, record observed `current`, `wanted`, and `latest`
+  evidence when available, and mark the nuance as unchecked when external
+  package metadata was not gathered.
+- Treat package identity as evidence: project website, registry package,
+  repository, namespace/scope, official docs, and package provenance should
+  point to the same artifact lineage before the package is recommended.
+- Missing maintenance, vulnerability, license, provenance, or transitive data is
+  uncertainty, not approval.
+- Do not present `npm audit fix`, OSV guided remediation, dependency-update PRs,
+  or package-manager install side effects as automatically safe. Recommend
+  manifest and lockfile review, release-note or changelog review, focused tests,
+  and human review for risky major updates or remediation.
+- Avoid global installs for project runtime dependencies when a repo-local
+  runtime or dev dependency works. If a global install is recommended, justify it
+  from official or supplied evidence and record the install/update risk.
+- Avoid vendoring, copying snippets, or forking as a casual compromise. If
+  unavoidable, record source/version provenance, license retention,
+  vulnerability-monitoring ownership, and an update plan.
+
+Hand-rolling is allowed only when the capability is narrow, project-specific,
+easy to test exhaustively, not security-sensitive, not a standards
+implementation, and smaller than the dependency risk it avoids. The artifact
+must name the tests or validation that make the custom path safe.
+
 ## Capability-Gated Subagent Path
 
 Use `blueprint-researcher` only when the host exposes a suitable Blueprint
@@ -308,6 +429,13 @@ When used, pass the agent:
 - one bounded evidence question, expected source classes, retrieval boundaries,
   search-note fields, and the strand handoff fields the parent needs back
 - source and confidence expectations
+
+For dependency/tool strands, pass the exact bounded need and ask for a
+dependency/tool evidence packet, not a broad package recommendation. The packet
+must compare no-new-dependency, existing dependency, standard-library/platform,
+candidate package/tool, and custom options, and must label unavailable version,
+maintenance, vulnerability, license, provenance, transitive, install, lockfile,
+and update-posture evidence under the current external-source policy.
 
 Ask the agent for bounded findings by default, not broad plans or final
 persistence ownership. The response should include the strand/question, concise
@@ -409,6 +537,16 @@ and planner-ready:
 - planner-critical recommendations have strand handoffs naming affected files
   or modules, validation or test implications, unresolved blockers, evidence
   basis, and confidence
+- dependency/tool recommendations include a decision row that compares
+  no-new-dependency, existing dependency, standard-library/platform, candidate,
+  and custom options
+- supply-chain evidence for accepted package/tool choices records version,
+  maintenance, vulnerability, license, provenance/signature, transitive
+  footprint, install scope, lockfile impact, update posture, residual risk, and
+  verification signals, or explicitly marks unavailable signals as unchecked
+- custom-code recommendations in areas with mature packages include a
+  library-versus-custom rationale and named tests/validation that make the custom
+  path safe
 - recommendations cite evidence roles appropriate to the claim: definitions or
   references for API usage, tests or validation paths for regression risk, and
   manifests, MCP handlers, contracts, tests, or built/runtime entrypoints for

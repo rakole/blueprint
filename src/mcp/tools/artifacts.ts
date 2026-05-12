@@ -2709,6 +2709,112 @@ function containsSourceEvidence(section: string): boolean {
   );
 }
 
+const RESEARCH_DEPENDENCY_CHOICE_PATTERN =
+  /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
+const RESEARCH_INSTALL_COMMAND_PATTERN =
+  /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
+
+function researchDependencyChoiceText(content: string): string {
+  return [
+    extractMarkdownSection(content, "Phase Requirements"),
+    extractMarkdownSection(content, "Summary"),
+    extractMarkdownSection(content, "Standard Stack"),
+    extractMarkdownSection(content, "Installation And Setup"),
+    extractMarkdownSection(content, "Alternatives Considered"),
+    extractMarkdownSection(content, "Don't Hand-Roll"),
+    extractMarkdownSection(content, "Recommendations")
+  ].join("\n");
+}
+
+function mentionsDependencyOrToolChoice(content: string): boolean {
+  const candidateText = researchDependencyChoiceText(content);
+
+  return (
+    RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) ||
+    RESEARCH_INSTALL_COMMAND_PATTERN.test(candidateText)
+  );
+}
+
+function hasDependencyToolEvaluationTable(content: string): boolean {
+  const standardStack = extractMarkdownSection(content, "Standard Stack");
+
+  return (
+    /Dependency \/ Tool Evaluation/i.test(standardStack) &&
+    /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i.test(standardStack) &&
+    /Current \/ Wanted \/ Latest Evidence/i.test(standardStack) &&
+    /Maintenance Signal/i.test(standardStack) &&
+    /Vulnerability Signal/i.test(standardStack) &&
+    /\|\s*License\s*\|/i.test(standardStack) &&
+    /Provenance \/ Signature Signal/i.test(standardStack) &&
+    /Transitive Footprint/i.test(standardStack) &&
+    /Existing \/ Standard-Library Alternative/i.test(standardStack) &&
+    /Update Posture/i.test(standardStack) &&
+    /Residual Risk And Mitigation/i.test(standardStack) &&
+    /\bDEP-\d{3}\b/.test(standardStack)
+  );
+}
+
+function hasDependencyAlternativesCoverage(content: string): boolean {
+  const alternatives = extractMarkdownSection(content, "Alternatives Considered");
+
+  return (
+    /Dependency Alternatives/i.test(alternatives) &&
+    /No New Dependency/i.test(alternatives) &&
+    /Existing Dependency/i.test(alternatives) &&
+    /Standard Library \/ Platform API/i.test(alternatives) &&
+    /Candidate Package \/ Tool/i.test(alternatives) &&
+    /Custom Implementation/i.test(alternatives)
+  );
+}
+
+function hasDependencySetupAndUpdatePosture(content: string): boolean {
+  const setup = extractMarkdownSection(content, "Installation And Setup");
+
+  return (
+    /Setup And Update Posture/i.test(setup) &&
+    /Manifest \/ Lockfile Impact/i.test(setup) &&
+    /Install Scope/i.test(setup) &&
+    /Side Effects/i.test(setup) &&
+    /Verification Command/i.test(setup) &&
+    /Update \/ Monitoring Plan/i.test(setup) &&
+    /Manual Review Required/i.test(setup)
+  );
+}
+
+function hasLibraryVsCustomDecision(content: string): boolean {
+  const dontHandRoll = extractMarkdownSection(content, "Don't Hand-Roll");
+
+  return (
+    /Library Vs Custom Decision/i.test(dontHandRoll) &&
+    /Domain Risk/i.test(dontHandRoll) &&
+    /Proven Library \/ Existing Option/i.test(dontHandRoll) &&
+    /Custom Path Allowed\?/i.test(dontHandRoll) &&
+    /Required Tests \/ Validation/i.test(dontHandRoll)
+  );
+}
+
+function hasSupplyChainEvidenceSource(content: string): boolean {
+  const sources = extractMarkdownSection(content, "Sources");
+
+  return (
+    /Supply Chain Evidence/i.test(sources) &&
+    /signal=<version\|maintenance\|vulnerability\|license\|provenance\|transitive\|update>/.test(sources) === false &&
+    /\bsignal=(?:version|maintenance|vulnerability|license|provenance|transitive|update)\b/i.test(sources)
+  );
+}
+
+function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean {
+  const candidateText = [
+    extractMarkdownSection(content, "Installation And Setup"),
+    extractMarkdownSection(content, "Recommendations")
+  ].join("\n");
+
+  return (
+    /\b(?:npm audit fix|OSV guided remediation|dependency-update PRs?)\b/i.test(candidateText) &&
+    !/\b(?:not automatically safe|manual review|review manifest and lockfile diffs|inspect release notes|inspect changelog|run tests)\b/i.test(candidateText)
+  );
+}
+
 function stripResearchPlaceholderSignals(section: string): string {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -2836,6 +2942,44 @@ export function validateResearchArtifactContent(content: string): {
   if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+    );
+  }
+
+  if (mentionsDependencyOrToolChoice(content)) {
+    if (!hasDependencyToolEvaluationTable(content)) {
+      warnings.push(
+        "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
+      );
+    }
+
+    if (!hasDependencyAlternativesCoverage(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
+      );
+    }
+
+    if (!hasDependencySetupAndUpdatePosture(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
+      );
+    }
+
+    if (!hasLibraryVsCustomDecision(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
+      );
+    }
+
+    if (!hasSupplyChainEvidenceSource(content)) {
+      warnings.push(
+        "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
+      );
+    }
+  }
+
+  if (mentionsUnsafeAutomaticDependencyRemediation(content)) {
+    warnings.push(
+      "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
     );
   }
 

@@ -206,13 +206,31 @@ function validResearchContent(summary: string): string {
 - TypeScript
 - node:test via tsx --test
 
+### Dependency / Tool Evaluation
+
+| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
+|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
+| DEP-001 | Research artifact validation | Existing MCP artifact validator | use_existing | src/mcp/tools/artifacts.ts | repo-local | none | local source observed | maintained in repo tests | unchecked - repo-only fixture | repository license context | unchecked - repo-only fixture | none | existing dependency and repo validator | focused tests plus normal build | Low risk; keep validation fixture coverage. |
+
 ## Installation And Setup
 
 - Run the repo build and focused tests before accepting a research-contract change.
 
+### Setup And Update Posture
+
+| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
+|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
+| DEP-001 | none | none | none | none | npx tsx --test tests/phase-discovery-research.test.ts | normal repo dependency maintenance | no - existing repo validator only |
+
 ## Alternatives Considered
 
 - A prompt-local research outline was rejected because it drifts from the canonical MCP template.
+
+### Dependency Alternatives
+
+| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
+|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
+| DEP-001 | Research artifact validation | viable - keep existing validator | viable - current MCP validator exists | insufficient alone - markdown semantics are project-specific | rejected - no new package needed | rejected - duplicate validation logic would drift | use_existing | Existing validator already owns the phase.research contract. |
 
 ## Architecture Patterns
 
@@ -221,6 +239,12 @@ function validResearchContent(summary: string): string {
 ## Don't Hand-Roll
 
 - Reuse phase resolution and artifact validation helpers instead of writing raw files directly.
+
+### Library Vs Custom Decision
+
+| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
+|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
+| DEP-001 | Research artifact validation | low-risk-project-specific | Existing MCP validator | no | A second custom path would drift from MCP-owned validation. | phase discovery research tests | Blueprint runtime maintainers |
 
 ## Anti-Patterns
 
@@ -258,6 +282,10 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 - [Gemini CLI hooks reference](https://geminicli.com/docs/hooks/reference/) - confirms advisory hook event payloads.
 - \`src/mcp/tools/phase.ts\` - existing phase resolution and recovery substrate.
+
+### Supply Chain Evidence
+
+- Supply-chain evidence: repo-local validator, \`src/mcp/tools/artifacts.ts\`, accessed/observed 2026-04-11, signal=version, supports=DEP-001; source policy=off.
 `;
 }
 
@@ -341,6 +369,11 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /navigation evidence packet/i);
   assert.match(commandFile, /retrieval boundaries|query or navigation method/i);
   assert.match(commandFile, /planning handoff/i);
+  assert.match(commandFile, /dependency\/tool evaluation/i);
+  assert.match(commandFile, /no-new-dependency/i);
+  assert.match(commandFile, /standard-library\/platform/i);
+  assert.match(commandFile, /transitive-footprint/i);
+  assert.match(commandFile, /external-source policy/i);
   assert.match(commandFile, /bounded evidence question/i);
   assert.match(commandFile, /failed\/noisy\/no-hit searches|failed or limited searches/i);
   assert.match(commandFile, /rg --files/i);
@@ -371,6 +404,9 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(docFile, /per-strand search notes/i);
   assert.match(docFile, /remote code-search results as discovery hints/i);
   assert.match(docFile, /planning handoff/i);
+  assert.match(docFile, /dependency\/tool evaluation/i);
+  assert.match(docFile, /supply-chain-aware/i);
+  assert.match(docFile, /unchecked\/deferred|unchecked/i);
   assert.match(docFile, /failed\/noisy\/no-hit or limited searches|failed or limited searches/i);
   assert.match(docFile, /If the context read returns `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
   assert.match(docFile, /Invalid existing research must go through repair/i);
@@ -398,6 +434,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /targeted file\/test\/contract\/runtime reads/i);
   assert.match(runtimeReference, /remote code-search results as discovery hints/i);
   assert.match(runtimeReference, /planning handoff/i);
+  assert.match(runtimeReference, /dependency\/tool strands/i);
+  assert.match(runtimeReference, /version, maintenance, vulnerability, license, provenance/i);
   assert.match(runtimeReference, /bounded sidecar findings/i);
   assert.match(runtimeReference, /stop on missing `XX-CONTEXT\.md`/i);
   assert.match(runtimeReference, /reserve `blueprint_artifact_scaffold` for deliberate placeholder creation only/i);
@@ -414,6 +452,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(mcpToolsDoc, /initial assessment/i);
   assert.match(mcpToolsDoc, /navigation evidence packet/i);
   assert.match(mcpToolsDoc, /planning handoffs/i);
+  assert.match(mcpToolsDoc, /dependency\/tool choices/i);
+  assert.match(mcpToolsDoc, /supply-chain evidence/i);
   assert.match(mcpToolsDoc, /repository search discipline/i);
   assert.match(mcpToolsDoc, /bounded `blueprint-researcher` findings/i);
   assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
@@ -440,6 +480,8 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /investigation trace/i);
   assert.match(skillFile, /repository evidence ladder/i);
   assert.match(skillFile, /search-note fields/i);
+  assert.match(skillFile, /dependency\/tool evaluation lane/i);
+  assert.match(skillFile, /lockfile/i);
   assert.match(skillFile, /semantic navigation it was not given/i);
   assert.match(skillFile, /planning handoff/i);
   assert.match(skillFile, /bounded evidence question/i);
@@ -504,6 +546,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /Retrieval Notes/i);
   assert.match(researcherAgent, /failed or limited search/i);
   assert.match(researcherAgent, /Planning Handoff/i);
+  assert.match(researcherAgent, /Dependency \/ Tool Evaluation/i);
+  assert.match(researcherAgent, /no-new-dependency/i);
+  assert.match(researcherAgent, /provenance\/signature/i);
+  assert.match(researcherAgent, /unchecked/i);
   assert.match(researcherAgent, /Do not present a sidecar packet as final persisted research/i);
   assert.match(researcherAgent, /parent to copy into `## Sources`/i);
   assert.match(researcherAgent, /Output Quality Expectations/);
@@ -611,6 +657,21 @@ test("research scaffold seeds the exact research template shape", async (t) => {
   assert.match(scaffold, /## Locked Decisions From Context/);
   assert.match(scaffold, /## Installation And Setup/);
   assert.match(scaffold, /## Alternatives Considered/);
+  assert.match(scaffold, /### Dependency \/ Tool Evaluation/);
+  assert.match(scaffold, /Current \/ Wanted \/ Latest Evidence/);
+  assert.match(scaffold, /Maintenance Signal/);
+  assert.match(scaffold, /Vulnerability Signal/);
+  assert.match(scaffold, /Provenance \/ Signature Signal/);
+  assert.match(scaffold, /Transitive Footprint/);
+  assert.match(scaffold, /Existing \/ Standard-Library Alternative/);
+  assert.match(scaffold, /### Setup And Update Posture/);
+  assert.match(scaffold, /Manifest \/ Lockfile Impact/);
+  assert.match(scaffold, /Update \/ Monitoring Plan/);
+  assert.match(scaffold, /### Dependency Alternatives/);
+  assert.match(scaffold, /No New Dependency/);
+  assert.match(scaffold, /Standard Library \/ Platform API/);
+  assert.match(scaffold, /### Library Vs Custom Decision/);
+  assert.match(scaffold, /### Supply Chain Evidence/);
   assert.match(scaffold, /## Anti-Patterns/);
   assert.match(scaffold, /## State Of The Art/);
   assert.match(
@@ -695,6 +756,47 @@ test("research template accepts R2 search notes and role-method repo evidence", 
 
   assert.equal(written.status, "created");
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+});
+
+test("research template warns when dependency recommendations omit R3 evaluation", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research with a dependency recommendation that lacks R3 evaluation."
+  )
+    .replace(/### Dependency \/ Tool Evaluation[\s\S]*?\n## Installation And Setup/, "## Installation And Setup")
+    .replace(/### Setup And Update Posture[\s\S]*?\n## Alternatives Considered/, "## Alternatives Considered")
+    .replace(/### Dependency Alternatives[\s\S]*?\n## Architecture Patterns/, "## Architecture Patterns")
+    .replace(/### Library Vs Custom Decision[\s\S]*?\n## Anti-Patterns/, "## Anti-Patterns")
+    .replace(/### Supply Chain Evidence[\s\S]*$/, "")
+    .replace(
+      "- Persist only validated research content through `blueprint_phase_artifact_write`.",
+      "- Add a package dependency to perform research artifact validation."
+    );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.match(written.validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
+  assert.match(written.validation.warnings.join("\n"), /no-new-dependency/i);
+  assert.match(written.validation.warnings.join("\n"), /Setup And Update Posture/i);
+  assert.match(written.validation.warnings.join("\n"), /Library Vs Custom Decision/i);
+  assert.match(written.validation.warnings.join("\n"), /Supply Chain Evidence/i);
 });
 
 test("phase artifact write creates, reuses, updates, and validates research content", async (t) => {

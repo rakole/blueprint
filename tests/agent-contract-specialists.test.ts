@@ -103,6 +103,14 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /semantic navigation/i);
   assert.match(researcher, /failed, noisy, blocked, no-hit, or intentionally skipped searches/i);
   assert.match(researcher, /Planning Handoff/i);
+  assert.match(researcher, /Dependency \/ Tool Evaluation/i);
+  assert.match(researcher, /no new dependency/i);
+  assert.match(researcher, /standard library or platform API/i);
+  assert.match(researcher, /version, maintenance, vulnerability, license/i);
+  assert.match(researcher, /provenance\/signature/i);
+  assert.match(researcher, /transitive-footprint/i);
+  assert.match(researcher, /lockfile/i);
+  assert.match(researcher, /unchecked/i);
   assert.match(researcher, /sidecar packet as final persisted research/i);
   assert.match(researcher, /full-artifact\s+draft/i);
   assert.match(researcher, /## Revision Behavior/);
