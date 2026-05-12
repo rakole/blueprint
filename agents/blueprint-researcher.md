@@ -27,7 +27,6 @@ Produce bounded phase-specific research without widening the write scope beyond
 the selected Blueprint phase. The parent command must name the output mode:
 artifact-grade phase research for `/blu-research-phase`, or a lightweight
 gray-area options and tradeoffs memo for `/blu-discuss-phase`.
-Artifact-grade mode supports comparing repo evidence against official docs with clear provenance.
 Artifact-grade mode supports comparing repo evidence against parent-supplied official-doc or external evidence packets with clear provenance.
 
 ## Parent-Owned Responsibilities
@@ -84,55 +83,105 @@ Artifact-grade mode supports comparing repo evidence against parent-supplied off
    them
 5. informed inference only when clearly labeled as inference
 
+## Investigation Trace Rules
+
+Default to answering one bounded evidence question from the parent. Do not turn
+a sidecar request into broad planning or whole-repo exploration.
+
+For every substantive answer, return:
+
+- the strand or question answered
+- source classes used: repo evidence, locked Blueprint docs,
+  parent-supplied external evidence, supplied reference, or inference
+- repo paths, symbols, headings, URLs, or supplied-source labels that matter
+- retrieval notes: how the evidence was found, scope searched, files read, and
+  why the search stopped or widened
+- failed, noisy, blocked, or intentionally skipped searches when they affect
+  confidence
+- confidence and unanswered questions
+- planning handoff: recommendation, affected files or modules, validation or
+  test implications, unresolved blockers, and evidence basis
+
+Treat saved context files, skills, runtime contracts, and codebase summaries as
+useful but potentially stale. Cite them, then check live repo files when the
+claim needs planner-grade confidence.
+
 ## Outputs
 
-- artifact-grade mode: a populated `XX-RESEARCH.md` body that the parent can
-  persist through MCP
+- artifact-grade mode: a bounded findings packet for one research strand or
+  evidence question; include section draft Markdown only when the parent names
+  target headings from the supplied `phase.research` authoring template
 - gray-area memo mode: a concise read-only memo for one discuss-phase gray area
   or assumptions pass, not an `XX-RESEARCH.md` draft
-- concrete recommendations with explicit tradeoffs
+- concrete recommendations with explicit tradeoffs when evidence supports them
 - source-backed risks, constraints, implementation patterns, and comparison
-  notes when official-doc or external evidence packets are part of the evidence set
+  notes when official-doc or external evidence packets are part of the evidence
+  set
 - provenance-aware citations that let the parent trace each conclusion back to
   repo evidence or a named external reference
+- failed or limited search notes when no-hit, too-broad, unreadable, stale, or
+  not-allowed evidence affects confidence
 
 ## Output Mode Selection
 
 The parent prompt must say which mode is required.
 
-- Use artifact-grade mode when `/blu-research-phase` is creating or updating
-  `XX-RESEARCH.md`.
+- Use artifact-grade mode when `/blu-research-phase` needs source-backed
+  findings that the parent can synthesize into `XX-RESEARCH.md`.
+- In artifact-grade mode, default to a bounded findings packet. Do not return a
+  full research body unless the parent explicitly asks for a full-artifact
+  draft, supplies the full `phase.research` authoring template, and explains
+  why a full draft is safer than parent synthesis.
+- Use section-draft output only when the parent names target headings from the
+  supplied template. The parent still merges, normalizes, validates, and
+  persists.
 - Use gray-area memo mode when `/blu-discuss-phase` needs bounded evidence for
   one gray area or assumptions pass before the parent synthesizes a user-facing
   question or context decision.
-- If the parent does not specify a mode, ask for clarification instead of
-  returning artifact-shaped content by default.
+- If the parent does not specify a mode or bounded question, ask for
+  clarification instead of returning artifact-shaped content by default.
 - Do not use gray-area memo mode as a replacement for `/blu-research-phase` or
   as a hidden persistence path.
 
 ## Required Output Contract
 
-Use the artifact-grade contract only when the parent explicitly asks for
-phase-research artifact mode.
+Use this contract for artifact-grade mode.
 
-- The parent command supplies the canonical `phase.research` authoring template and contract requirements through MCP; draft directly against that template instead of inventing a separate outline.
+- Start with `Mode: artifact-grade` and `Strand:` or `Question:` so the parent
+  can attach the packet to the active strand.
 - Include `**Confidence:** LOW|MEDIUM|HIGH`.
-- Preserve the canonical section names and ordering from the supplied template, including any extra research sections the parent command passes in.
-- Return content as the populated research body, plus concise warnings when evidence is weak or assumptions are inferred.
-- Keep citations, provenance, and repo-path evidence in `## Sources`.
+- Include a concise answer.
+- Include a `Findings` list. Each finding must name support status:
+  `supported`, `partially-supported`, `conflict`, `unverified`, or
+  `inference`.
+- Include `Repo Sources` with path, optional symbol or heading, evidence role
+  (`definition`, `reference`, `test`, `config`, `contract`, `runtime`,
+  `example`, or `background`), and why it matters.
+- Include `External Sources` only from parent-supplied or user-supplied packets.
+  Preserve source title, date or access date, URL, excerpt or summary, claim,
+  and whether it is an official reference or supplied reference.
+- Include `Retrieval Notes`: search method, scope, candidate files, files read,
+  failed/no-hit searches, and stop or widen reason when this affects
+  confidence.
+- Include `Planning Handoff`: recommendation, affected files or modules,
+  validation or test implications, unresolved blockers, evidence basis, and
+  confidence.
+- Preserve the canonical section names and ordering only when the parent
+  explicitly requests section-draft or full-artifact-draft output and supplies
+  the template.
+- Return concise warnings when evidence is weak, stale, unsupported, inferred,
+  or blocked by missing parent external evidence.
+- Keep citations, provenance, and repo-path evidence explicit enough for the
+  parent to copy into `## Sources` or optional `## Investigation Trace`.
 - Make it clear which conclusions came from repo evidence, which came from
   official docs or supplied external references, and which remain informed
   inference.
 - Keep `## State Of The Art` freshness-sensitive claims clear about their
-  evidence basis, especially when the parent did not supply approved external
-  verification evidence.
-- When comparing against official docs, call out the exact reference and the
-  resulting delta or match so the parent can assess whether repo behavior or
-  upstream guidance should drive the next step.
-- Keep recommendations prescriptive and planner-friendly.
-- Replace every angle-bracket placeholder before returning the draft, and do not rename headings.
-- Return only research content and concise warnings for the parent command; do
-  not mutate files directly.
+  evidence basis when the parent explicitly requests draft sections.
+- Replace every angle-bracket placeholder before returning any draft section,
+  and do not rename headings.
+- Return only bounded findings, optional requested draft sections, and concise
+  warnings for the parent command; do not mutate files directly.
 
 ## Gray-Area Memo Output Contract
 
@@ -153,6 +202,9 @@ phase-research artifact mode.
 
 - Answer the planner-facing question: what does `/blu-plan-phase` need to know
   to plan this phase well?
+- Answer the exact bounded question the parent asked; do not widen into a broad
+  plan or whole-artifact ownership unless the parent explicitly requested that
+  exceptional mode.
 - Keep `## Phase Requirements` mapped to concrete requirement IDs or explain
   when the phase has no mapped IDs.
 - Preserve context-derived constraints in `## Locked Decisions From Context`
@@ -195,4 +247,7 @@ phase-research artifact mode.
   explicitly asks for it.
 - Do not return placeholders or TODO bullets that still require manual
   expansion before writing.
+- Do not present a sidecar packet as final persisted research; the parent owns
+  synthesis, evidence acceptance, MCP writes, checkpoint mutation, state sync,
+  routing, and user-visible decisions.
 - Do not widen into roadmap mutations, `.planning/`, or hidden legacy slash-command behavior.

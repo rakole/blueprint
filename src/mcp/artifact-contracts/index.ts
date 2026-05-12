@@ -941,6 +941,31 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 - <key conclusion>
 
+## Investigation Trace
+
+### Initial Assessment
+
+| Field | Notes |
+|-------|-------|
+| Saved artifacts inspected | <saved artifacts inspected> |
+| Relevant repo files or symbols | <repo files or symbols inspected> |
+| Retrieval modes used | <saved-context, codebase-summary, scoped-rg, targeted-read, parent-navigation-packet, external-packet, or inference> |
+| Key findings | <initial finding for planning> |
+| Implementation questions | <implementation question for planning> |
+| Confidence | LOW|MEDIUM|HIGH - <confidence reason> |
+
+### Navigation Evidence Packet
+
+| Evidence ID | Strand | Retrieval Mode | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
+|-------------|--------|----------------|--------------|---------------------|------|---------|--------|----------------------|
+| NAV-001 | <strand id or topic> | <retrieval mode> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
+
+### Strand Planning Handoff
+
+| Strand | Recommendation | Affected Files Or Modules | Validation Or Test Implications | Unresolved Blockers | Evidence Basis | Confidence |
+|--------|----------------|---------------------------|---------------------------------|---------------------|----------------|------------|
+| <strand id or topic> | <planner-ready direction> | <repo paths, command surfaces, contracts, tests, or none> | <specific tests/checks or not yet known> | <none or exact blocker> | <NAV/source ids or concise citations> | LOW|MEDIUM|HIGH - <reason> |
+
 ## Locked Decisions From Context
 
 - <phase decision preserved from context>
@@ -4025,6 +4050,26 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<phase requirement>",
       "<evidence-backed guidance>",
       "<key conclusion>",
+      "<saved artifacts inspected>",
+      "<repo files or symbols inspected>",
+      "<saved-context, codebase-summary, scoped-rg, targeted-read, parent-navigation-packet, external-packet, or inference>",
+      "<initial finding for planning>",
+      "<implementation question for planning>",
+      "<confidence reason>",
+      "<strand id or topic>",
+      "<retrieval mode>",
+      "<source class>",
+      "<path, symbol, URL, or supplied label>",
+      "<definition, reference, test, config, contract, runtime, example, background, or inference>",
+      "<what this proves for planning>",
+      "<limits or none>",
+      "<why enough or why widened>",
+      "<planner-ready direction>",
+      "<repo paths, command surfaces, contracts, tests, or none>",
+      "<specific tests/checks or not yet known>",
+      "<none or exact blocker>",
+      "<NAV/source ids or concise citations>",
+      "<reason>",
       "<phase decision preserved from context>",
       "<repo, product, or workflow constraint>",
       "<runtime, library, or shared repo pattern>",
@@ -4046,6 +4091,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
+      "Optional Investigation Trace content should record initial assessment, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
       "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),

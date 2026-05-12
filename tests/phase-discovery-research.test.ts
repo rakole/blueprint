@@ -337,6 +337,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /official docs or explicitly supplied external references/i);
   assert.match(commandFile, /Keep repo-derived evidence distinct/i);
   assert.match(commandFile, /avoid implying live external verification happened/i);
+  assert.match(commandFile, /investigation trace/i);
+  assert.match(commandFile, /navigation evidence packet/i);
+  assert.match(commandFile, /retrieval mode/i);
+  assert.match(commandFile, /planning handoff/i);
+  assert.match(commandFile, /bounded evidence question/i);
+  assert.match(commandFile, /failed or limited searches/i);
   assert.match(commandFile, /single-agent fallback/i);
   assert.match(commandFile, /validation-failing research content/i);
   assert.match(commandFile, /STATE\.md/);
@@ -355,6 +361,11 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(docFile, /Choosing `update` is the overwrite gate/i);
   assert.match(docFile, /MCP validation does not require either marker/i);
   assert.match(docFile, /official docs or explicitly supplied external references/i);
+  assert.match(docFile, /investigation trace/i);
+  assert.match(docFile, /navigation evidence packet/i);
+  assert.match(docFile, /repository evidence ladder/i);
+  assert.match(docFile, /planning handoff/i);
+  assert.match(docFile, /failed or limited searches/i);
   assert.match(docFile, /If the context read returns `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
   assert.match(docFile, /Invalid existing research must go through repair/i);
   assert.match(docFile, /use the runtime contract's single-agent topic-strand fallback/i);
@@ -374,6 +385,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /runtime-contract guidance rather than an MCP validation gate/i);
   assert.match(runtimeReference, /repo truth/i);
   assert.match(runtimeReference, /external truth/i);
+  assert.match(runtimeReference, /initial assessment/i);
+  assert.match(runtimeReference, /navigation evidence packet/i);
+  assert.match(runtimeReference, /scoped repo searches/i);
+  assert.match(runtimeReference, /targeted file\/test\/contract reads/i);
+  assert.match(runtimeReference, /planning handoff/i);
+  assert.match(runtimeReference, /bounded sidecar findings/i);
   assert.match(runtimeReference, /stop on missing `XX-CONTEXT\.md`/i);
   assert.match(runtimeReference, /reserve `blueprint_artifact_scaffold` for deliberate placeholder creation only/i);
   assert.match(runtimeReference, /force repair when existing research is invalid/i);
@@ -386,6 +403,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(mcpToolsDoc, /workflowPosture\.research\.externalSources/);
   assert.match(mcpToolsDoc, /off`\/`ask`\/`auto`/i);
   assert.match(mcpToolsDoc, /runtime-contract guidance rather than an MCP validation gate/i);
+  assert.match(mcpToolsDoc, /initial assessment/i);
+  assert.match(mcpToolsDoc, /navigation evidence packet/i);
+  assert.match(mcpToolsDoc, /planning handoffs/i);
+  assert.match(mcpToolsDoc, /bounded `blueprint-researcher` findings/i);
   assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
   assert.match(mcpToolsDoc, /reject browser\/web-search\/shell-only or generic agents/i);
   assert.match(mcpToolsDoc, /stop on missing `XX-CONTEXT\.md`/i);
@@ -407,6 +428,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /active command's\s+skill-local runtime reference/i);
   assert.match(skillFile, /source title, date, URL, excerpt, claim/i);
   assert.match(skillFile, /avoid implying live verification happened/i);
+  assert.match(skillFile, /investigation trace/i);
+  assert.match(skillFile, /repository evidence ladder/i);
+  assert.match(skillFile, /planning handoff/i);
+  assert.match(skillFile, /bounded evidence question/i);
   assert.match(skillFile, /single-agent fallback/i);
   assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
   assert.match(skillFile, /repair the same normalized draft/i);
@@ -446,7 +471,6 @@ test("research-phase command references only registered tool names and safe rout
     false
   );
 
-  assert.match(researcherAgent, /comparing repo evidence against official docs with clear provenance/i);
   assert.match(researcherAgent, /parent-supplied official-doc evidence/i);
   assert.match(researcherAgent, /repo-root `AGENTS\.md`/i);
   assert.match(
@@ -456,13 +480,19 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /provenance\s+captured at the claim level/i);
   assert.match(
     researcherAgent,
-    /comparison\s+notes when official-doc or external evidence packets are part of the evidence set/i
+    /comparison\s+notes when official-doc or external evidence packets are part of the evidence\s+set/i
   );
   assert.match(researcherAgent, /does not fetch official docs itself/i);
   assert.match(researcherAgent, /return the claim as unverified/i);
   assert.match(researcherAgent, /source title, date, URL,[\s\S]*excerpt, and claim/i);
   assert.match(researcherAgent, /avoid implying that current upstream guidance was confirmed/i);
-  assert.match(researcherAgent, /Keep citations, provenance, and repo-path evidence in `## Sources`/i);
+  assert.match(researcherAgent, /Investigation Trace Rules/);
+  assert.match(researcherAgent, /bounded evidence question/i);
+  assert.match(researcherAgent, /Retrieval Notes/i);
+  assert.match(researcherAgent, /failed or limited search/i);
+  assert.match(researcherAgent, /Planning Handoff/i);
+  assert.match(researcherAgent, /Do not present a sidecar packet as final persisted research/i);
+  assert.match(researcherAgent, /parent to copy into `## Sources`/i);
   assert.match(researcherAgent, /Output Quality Expectations/);
   assert.match(researcherAgent, /what does `\/blu-plan-phase` need to know/i);
   assert.match(researcherAgent, /Repo evidence/);
@@ -477,6 +507,11 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Retry And Repair Behavior/);
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
+  assert.match(runtimeContract, /Investigation Trace And Navigation Evidence/);
+  assert.match(runtimeContract, /repository evidence ladder/i);
+  assert.match(runtimeContract, /Navigation Evidence Packet/i);
+  assert.match(runtimeContract, /Strand Planning Handoff/i);
+  assert.match(runtimeContract, /targeted full-file, test, manifest, command, skill, runtime-contract, or\s+built-entrypoint reads/i);
   assert.match(runtimeContract, /Load it\s+on demand for research runs/i);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
   assert.match(runtimeContract, /blueprint_config_get/);
@@ -543,6 +578,14 @@ test("research scaffold seeds the exact research template shape", async (t) => {
   assert.match(scaffold, /^\*\*Researched:\*\*\s+<YYYY-MM-DD>$/m);
   assert.match(scaffold, /^\*\*Confidence:\*\*\s+LOW\|MEDIUM\|HIGH$/m);
   assert.match(scaffold, /^\| <requirement-id> \| <phase requirement> \| <evidence-backed guidance> \|$/m);
+  assert.match(scaffold, /## Investigation Trace/);
+  assert.match(scaffold, /### Initial Assessment/);
+  assert.match(scaffold, /### Navigation Evidence Packet/);
+  assert.match(scaffold, /### Strand Planning Handoff/);
+  assert.match(scaffold, /Saved artifacts inspected/);
+  assert.match(scaffold, /Retrieval Mode/);
+  assert.match(scaffold, /Stop Or Widen Reason/);
+  assert.match(scaffold, /Validation Or Test Implications/);
   assert.match(scaffold, /## Locked Decisions From Context/);
   assert.match(scaffold, /## Installation And Setup/);
   assert.match(scaffold, /## Alternatives Considered/);
@@ -617,7 +660,10 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.equal(createdArtifact.found, true);
   assert.equal(contract.artifactId, "phase.research");
   assert.match(contract.contract.authoringTemplate, /# Phase XX: <Phase Name> - Research/);
+  assert.match(contract.contract.authoringTemplate, /## Investigation Trace/);
+  assert.match(contract.contract.authoringTemplate, /Navigation Evidence Packet/);
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
+  assert.match(contract.contract.notes.join("\n"), /Investigation Trace/i);
   assert.match(contract.contract.notes.join("\n"), /planner-grade evidence density/i);
   assert.match(contract.contract.notes.join("\n"), /repo-versus-external provenance/i);
   assert.equal(reused.status, "reused");

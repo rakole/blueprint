@@ -90,7 +90,13 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /## External Research And Self-Correction Rules/);
   assert.match(researcher, /Keep repo truth distinct from outside truth/i);
   assert.match(researcher, /## Required Output Contract/);
-  assert.match(researcher, /Return content as the populated research body/i);
+  assert.match(researcher, /## Investigation Trace Rules/);
+  assert.match(researcher, /bounded evidence question/i);
+  assert.match(researcher, /retrieval notes/i);
+  assert.match(researcher, /failed, noisy, blocked, or intentionally skipped searches/i);
+  assert.match(researcher, /Planning Handoff/i);
+  assert.match(researcher, /sidecar packet as final persisted research/i);
+  assert.match(researcher, /full-artifact\s+draft/i);
   assert.match(researcher, /## Revision Behavior/);
   assert.match(
     researcher,
@@ -100,7 +106,7 @@ test("mapping and discovery specialist agents encode concrete output modes and r
     researcher,
     /official-doc or external evidence packets|official docs or supplied external references/i
   );
-  assert.match(researcher, /Replace every angle-bracket placeholder before returning the draft/i);
+  assert.match(researcher, /Replace every angle-bracket placeholder before returning any draft section/i);
   assert.match(
     researcher,
     /Do not invent web research, outside reviewers, shell verification, or manual\s+persistence paths/i
