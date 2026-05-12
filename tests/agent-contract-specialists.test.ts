@@ -93,7 +93,15 @@ test("mapping and discovery specialist agents encode concrete output modes and r
   assert.match(researcher, /## Investigation Trace Rules/);
   assert.match(researcher, /bounded evidence question/i);
   assert.match(researcher, /retrieval notes/i);
-  assert.match(researcher, /failed, noisy, blocked, or intentionally skipped searches/i);
+  assert.match(researcher, /parent-supplied navigation packet/i);
+  assert.match(researcher, /sidecar equivalent of `rg --files`/i);
+  assert.match(researcher, /scope filter/i);
+  assert.match(researcher, /candidate files or\s+symbols/i);
+  assert.match(researcher, /Files actually read|files actually read/i);
+  assert.match(researcher, /source roles/i);
+  assert.match(researcher, /remote code-search hits as\s+discovery hints/i);
+  assert.match(researcher, /semantic navigation/i);
+  assert.match(researcher, /failed, noisy, blocked, no-hit, or intentionally skipped searches/i);
   assert.match(researcher, /Planning Handoff/i);
   assert.match(researcher, /sidecar packet as final persisted research/i);
   assert.match(researcher, /full-artifact\s+draft/i);

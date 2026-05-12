@@ -15665,7 +15665,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer scoped repo searches, optional parent-supplied navigation packets, and targeted file/test/contract reads over broad crawls, and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, paths or URLs, retrieval notes, confidence, failed or limited searches, unanswered questions, and planning handoff fields, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research without turning them into persistence, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given, preserve the single-agent topic-strand fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, delete only research-owned shared checkpoints, and keep routing limited to implemented commands only.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18507,9 +18507,9 @@ function renderResearchTemplate(context) {
 
 ### Navigation Evidence Packet
 
-| Evidence ID | Strand | Retrieval Mode | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
-|-------------|--------|----------------|--------------|---------------------|------|---------|--------|----------------------|
-| NAV-001 | <strand id or topic> | <retrieval mode> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
+| Evidence ID | Strand | Query Or Navigation Method | Scope Filter | Retrieval Mode | Candidate Files Or Symbols | Files Read | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
+|-------------|--------|----------------------------|--------------|----------------|----------------------------|------------|--------------|---------------------|------|---------|--------|----------------------|
+| NAV-001 | <strand id or topic> | <query or navigation method> | <path, language, file type, or none> | <saved-context, codebase-summary, rg-files, scoped-rg, targeted-read, parent-navigation-packet, remote-code-search-hint, external-packet, or inference> | <candidate files or symbols> | <files actually read> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
 
 ### Strand Planning Handoff
 
@@ -18579,7 +18579,13 @@ function renderResearchTemplate(context) {
 
 ## Sources
 
-- <repo path, URL, or cited file reference> - why it matters`;
+### Repo Evidence
+
+- Repo evidence: \`<repo path:line>\`, symbol/heading=<symbol or heading>, role=<definition|reference|test|config|contract|runtime|example|background>, method=<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>, supports=<claim or recommendation>.
+
+### External References
+
+- External reference: <title>, <URL>, accessed <YYYY-MM-DD>, supports=<claim>; source policy=<off|ask-approved|auto|supplied>.`;
 }
 function renderUiSpecTemplate(context) {
   return `# ${phaseLabel(context)} - UI Spec
@@ -21842,7 +21848,11 @@ var init_artifact_contracts = __esm({
           "<implementation question for planning>",
           "<confidence reason>",
           "<strand id or topic>",
-          "<retrieval mode>",
+          "<query or navigation method>",
+          "<path, language, file type, or none>",
+          "<saved-context, codebase-summary, rg-files, scoped-rg, targeted-read, parent-navigation-packet, remote-code-search-hint, external-packet, or inference>",
+          "<candidate files or symbols>",
+          "<files actually read>",
           "<source class>",
           "<path, symbol, URL, or supplied label>",
           "<definition, reference, test, config, contract, runtime, example, background, or inference>",
@@ -21870,14 +21880,21 @@ var init_artifact_contracts = __esm({
           "<evidence-backed confidence explanation>",
           "<short code or pseudocode example>",
           "<prescriptive recommendation with tradeoffs>",
-          "<repo path, URL, or cited file reference>"
+          "<repo path:line>",
+          "<symbol or heading>",
+          "<definition|reference|test|config|contract|runtime|example|background>",
+          "<repo-map|rg-files|scoped-rg|manual-read|parent-navigation-packet|LSP|SCIP|ctags|tree-sitter>",
+          "<claim or recommendation>",
+          "<title>",
+          "<URL>",
+          "<off|ask-approved|auto|supplied>"
         ],
         notes: [
           "Research writes validate in strict mode by default.",
           "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
           "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
-          "Optional Investigation Trace content should record initial assessment, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
-          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
+          "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
+          "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete."
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
