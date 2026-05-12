@@ -366,6 +366,7 @@ Canonical template structure:
 - `**Confidence:** LOW|MEDIUM|HIGH`
 - `## Phase Requirements`
 - `## Summary`
+- optional `## Investigation Trace` with initial assessment, navigation evidence packet, and strand planning handoff tables
 - `## Locked Decisions From Context`
 - `## User Constraints`
 - `## Standard Stack`
@@ -389,6 +390,7 @@ Validation expectations:
 - scaffold starters, when used, are first-write seed material only and must not survive verbatim into the final saved artifact
 - the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
 - current validation keys off the canonical heading set and also requires the `## Phase Requirements` table to include at least one populated requirement row
+- `## Investigation Trace` is optional and planner-facing; when present, it should record initial assessment, navigation evidence, and strand handoffs, but older valid research artifacts are not invalid solely because they lack it
 
 Exact persistence template:
 
@@ -408,6 +410,31 @@ Exact persistence template:
 ## Summary
 
 - <key conclusion>
+
+## Investigation Trace
+
+### Initial Assessment
+
+| Field | Notes |
+|-------|-------|
+| Saved artifacts inspected | <saved artifacts inspected> |
+| Relevant repo files or symbols | <repo files or symbols inspected> |
+| Retrieval modes used | <saved-context, codebase-summary, scoped-rg, targeted-read, parent-navigation-packet, external-packet, or inference> |
+| Key findings | <initial finding for planning> |
+| Implementation questions | <implementation question for planning> |
+| Confidence | LOW|MEDIUM|HIGH - <confidence reason> |
+
+### Navigation Evidence Packet
+
+| Evidence ID | Strand | Retrieval Mode | Source Class | Path / Symbol / URL | Role | Finding | Limits | Stop Or Widen Reason |
+|-------------|--------|----------------|--------------|---------------------|------|---------|--------|----------------------|
+| NAV-001 | <strand id or topic> | <retrieval mode> | <source class> | <path, symbol, URL, or supplied label> | <definition, reference, test, config, contract, runtime, example, background, or inference> | <what this proves for planning> | <limits or none> | <why enough or why widened> |
+
+### Strand Planning Handoff
+
+| Strand | Recommendation | Affected Files Or Modules | Validation Or Test Implications | Unresolved Blockers | Evidence Basis | Confidence |
+|--------|----------------|---------------------------|---------------------------------|---------------------|----------------|------------|
+| <strand id or topic> | <planner-ready direction> | <repo paths, command surfaces, contracts, tests, or none> | <specific tests/checks or not yet known> | <none or exact blocker> | <NAV/source ids or concise citations> | LOW|MEDIUM|HIGH - <reason> |
 
 ## Locked Decisions From Context
 
@@ -478,6 +505,7 @@ Contract notes:
 - Keep the `**Confidence:**` marker exactly as written.
 - Keep all required section names unchanged so `blueprint_phase_artifact_write` passes current research validation.
 - Replace every angle-bracket placeholder before persisting the artifact through MCP.
+- Populate optional `## Investigation Trace` for non-trivial research so `/blu-plan-phase` can see how evidence was found and why each strand is ready, partial, or blocked.
 
 ### `XX-VERIFICATION.md`
 
