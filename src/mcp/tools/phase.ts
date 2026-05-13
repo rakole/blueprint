@@ -16,6 +16,7 @@ import {
   BLUEPRINT_PHASES_PATH,
   DURABLE_REQUIREMENT_ID_PATTERN,
   type PhaseArtifactValidationDiagnostic,
+  blueprintArtifactScaffold,
   ensureParentDirectory,
   ensureRepoRoot,
   inspectBlueprintArtifacts,
@@ -277,6 +278,11 @@ type PlanIndexArgs = PhaseLookupArgs;
 
 type PhaseArtifactReadArgs = PhaseLookupArgs & {
   artifact: PhaseArtifactKind;
+};
+
+type PhaseArtifactScaffoldArgs = PhaseLookupArgs & {
+  artifact: PhaseArtifactKind;
+  overwrite?: boolean;
 };
 
 type PhaseArtifactWriteArgs = PhaseLookupArgs & {
@@ -714,6 +720,18 @@ type PhaseArtifactWriteResult = {
   diagnostics?: PhaseArtifactValidationDiagnostic[];
   suggestedRepairs?: string[];
   retryPlan?: PhaseArtifactRetryPlan | null;
+  warnings: string[];
+};
+
+type PhaseArtifactScaffoldResult = {
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseName: string;
+  phaseDir: string;
+  artifact: PhaseArtifactKind;
+  path: string;
+  createdFiles: string[];
+  reusedFiles: string[];
   warnings: string[];
 };
 
@@ -1221,6 +1239,10 @@ const phaseArtifactInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
+};
+const phaseArtifactScaffoldInputSchema = {
+  ...phaseArtifactInputSchema,
+  overwrite: z.boolean().optional()
 };
 const phaseValidationArtifactInputSchema = {
   cwd: z.string().optional(),
@@ -6825,6 +6847,30 @@ export async function blueprintPhaseArtifactRead(
   };
 }
 
+export async function blueprintPhaseArtifactScaffold(
+  args: PhaseArtifactScaffoldArgs
+): Promise<PhaseArtifactScaffoldResult> {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const artifactPath = artifactPathFor(resolved, args.artifact);
+  const scaffoldResult = await blueprintArtifactScaffold({
+    cwd: projectRoot,
+    artifacts: [artifactPath],
+    overwrite: args.overwrite
+  });
+
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    createdFiles: scaffoldResult.createdFiles,
+    reusedFiles: scaffoldResult.reusedFiles,
+    warnings: scaffoldResult.warnings
+  };
+}
+
 function phaseArtifactSuggestedRepairs(
   artifact: PhaseArtifactKind,
   diagnostics: readonly PhaseArtifactValidationDiagnostic[]
@@ -9765,6 +9811,14 @@ export const phaseToolDefinitions = [
     inputSchema: phaseArtifactInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactRead(args as PhaseArtifactReadArgs)
+  },
+  {
+    name: "blueprint_phase_artifact_scaffold",
+    description:
+      "Seed a phase-scoped discovery artifact placeholder from the resolved numeric phase and artifact enum.",
+    inputSchema: phaseArtifactScaffoldInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseArtifactScaffold(args as PhaseArtifactScaffoldArgs)
   },
   {
     name: "blueprint_phase_artifact_write",

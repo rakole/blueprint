@@ -178,6 +178,8 @@ type ArtifactScaffoldArgs = {
   overwrite?: boolean;
   projectName?: string;
   bootstrapSeed?: BootstrapSeed;
+  phase?: unknown;
+  artifact?: unknown;
 };
 
 type ArtifactListArgs = {
@@ -8695,6 +8697,12 @@ function inferProjectName(projectRoot: string, requestedName?: string): string {
 export async function blueprintArtifactScaffold(
   args: ArtifactScaffoldArgs = {}
 ): Promise<ArtifactScaffoldResult> {
+  if (args.phase !== undefined || args.artifact !== undefined) {
+    throw new Error(
+      "blueprint_artifact_scaffold accepts repo-relative artifact paths only. Use blueprint_phase_artifact_scaffold with numeric phase and artifact enum for phase-scoped scaffolding."
+    );
+  }
+
   const projectRoot = await ensureRepoRoot(args.cwd);
   const projectName = inferProjectName(projectRoot, args.projectName);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);

@@ -17,6 +17,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
 
   assert.match(mcpToolsDoc, /## Model-Facing Call Contracts/);
   assert.match(mcpToolsDoc, /`blueprint_artifact_scaffold` accepts only supported repo-relative Blueprint artifact paths/i);
+  assert.match(mcpToolsDoc, /`blueprint_phase_artifact_scaffold` accepts numeric `phase`, artifact enum, and optional `overwrite`/i);
   assert.match(mcpToolsDoc, /`blueprint_artifact_contract_read` returns the runtime-owned canonical authoring contract/i);
   assert.match(
     mcpToolsDoc,

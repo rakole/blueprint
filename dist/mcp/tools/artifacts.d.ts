@@ -86,6 +86,8 @@ type ArtifactScaffoldArgs = {
     overwrite?: boolean;
     projectName?: string;
     bootstrapSeed?: BootstrapSeed;
+    phase?: unknown;
+    artifact?: unknown;
 };
 type ArtifactListArgs = {
     cwd?: string;

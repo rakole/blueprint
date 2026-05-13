@@ -14527,12 +14527,12 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_context",
       "blueprint_phase_research_status",
       "blueprint_phase_artifact_read",
+      "blueprint_phase_artifact_scaffold",
       "blueprint_phase_artifact_write",
       "blueprint_phase_checkpoint_get",
       "blueprint_phase_checkpoint_put",
       "blueprint_phase_checkpoint_delete",
       "blueprint_artifact_contract_read",
-      "blueprint_artifact_scaffold",
       "blueprint_config_get",
       "blueprint_state_load",
       "blueprint_command_catalog",
@@ -15665,7 +15665,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research only as a session-local mirror of the parent-owned research strand ledger, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work; checkpoint compact researchLedger state with schemaVersion research-ledger/v1, strand statuses, accepted evidence packet references, sidecar status, draft state, stopping reasons, and next action; never checkpoint child-agent transcripts; resume safe research checkpoints by default unless explicitly discarded through guarded delete; and delete research-owned shared checkpoints only after final write, synced STATE.md update, refreshed state load, and implemented-command routing receipt succeed. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, build claim-addressable evidence for planner-critical claims with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and split ## Sources sections, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar packets with strand id, source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, termination or blocking reason, warnings, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given. Preserve the single-agent strand-ledger fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, preserve checkpoints on post-write state-sync or route-refresh failure, synthesize final research from accepted strand packets instead of child transcripts, and keep routing limited to implemented commands only.",
+        contractNotes: "Long-running-mutation profile for topic-strand phase research: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial multi-strand research only as a session-local mirror of the parent-owned research strand ledger, and when those helpers are unavailable fall back to short progress recaps plus MCP-backed checkpoints and STATE.md. Ground repo truth first in phase context, actual saved context content, existing research, saved codebase summaries, a concise initial assessment, and a navigation evidence packet before broad reads; stop on missing XX-CONTEXT.md instead of drafting from status-only signals. Prefer rg --files plus path filters, scoped content searches, optional parent-supplied navigation packets, and targeted file/test/contract/runtime reads over broad crawls; record per-strand search notes with query or navigation method, scope filter, candidate files or symbols, files read, failed/noisy/no-hit searches when relevant, and stop or widen reason; treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them; and close each non-trivial strand with a planning handoff naming recommendation, affected files or modules, validation or test implications, blockers, evidence basis, and confidence. Preserve a parent-owned research strand ledger for non-trivial, resumed, blocked, sidecar-assisted, validation-repair, or post-write-routing-failed work; checkpoint compact researchLedger state with schemaVersion research-ledger/v1, strand statuses, accepted evidence packet references, sidecar status, draft state, stopping reasons, and next action; never checkpoint child-agent transcripts; resume safe research checkpoints by default unless explicitly discarded through guarded delete; and delete research-owned shared checkpoints only after final write, synced STATE.md update, refreshed state load, and implemented-command routing receipt succeed. Treat dependency/tool selection as a first-class strand when recommendations add, adopt, replace, upgrade, install, vendor, fork, code-generate, or hand-roll a package, library, CLI, framework, service, or tool: compare no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options, record version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, and verification evidence, and mark unavailable live supply-chain data as unchecked under the current research.external_sources policy. Read blueprint_config_get before any official-doc or external verification, honor research.external_sources as off/ask/auto, use official docs or explicitly supplied external references only when the repo cannot settle a claim, keep repo-derived evidence distinct from external truth in the finished research, build claim-addressable evidence for planner-critical claims with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and split ## Sources sections, treat State Of The Art freshness wording as runtime-contract guidance rather than an MCP validation gate, use skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the rich behavior contract, keep contract.authoringTemplate as schema authority, reserve blueprint_phase_artifact_scaffold for deliberate placeholder creation only, use capability-gated blueprint-researcher only when suitable Blueprint research or code-analysis agents are available, require the parent to supply any official-doc or external evidence packet instead of asking the subagent to fetch it, require bounded sidecar packets with strand id, source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, termination or blocking reason, warnings, unanswered questions, and planning handoff fields, and forbid sidecars from claiming semantic navigation they were not given. Preserve the single-agent strand-ledger fallback when subagents are unavailable, reject browser/web-search/shell-only or generic agents as substitutes, force repair when existing research is invalid, sync STATE.md even on valid non-writing reuse paths, repair invalid writes or validation failures before completion, checkpoint inconclusive strands instead of bluffing a final artifact, preserve checkpoints on post-write state-sync or route-refresh failure, synthesize final research from accepted strand packets instead of child transcripts, and keep routing limited to implemented commands only.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -29397,6 +29397,7 @@ var init_phase_plan_diagnostics = __esm({
 var phase_exports = {};
 __export(phase_exports, {
   blueprintPhaseArtifactRead: () => blueprintPhaseArtifactRead,
+  blueprintPhaseArtifactScaffold: () => blueprintPhaseArtifactScaffold,
   blueprintPhaseArtifactWrite: () => blueprintPhaseArtifactWrite,
   blueprintPhaseCheckpointDelete: () => blueprintPhaseCheckpointDelete,
   blueprintPhaseCheckpointGet: () => blueprintPhaseCheckpointGet,
@@ -33379,6 +33380,26 @@ async function blueprintPhaseArtifactRead(args) {
     reason: null
   };
 }
+async function blueprintPhaseArtifactScaffold(args) {
+  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const artifactPath = artifactPathFor(resolved, args.artifact);
+  const scaffoldResult = await blueprintArtifactScaffold({
+    cwd: projectRoot,
+    artifacts: [artifactPath],
+    overwrite: args.overwrite
+  });
+  return {
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    artifact: args.artifact,
+    path: artifactPath,
+    createdFiles: scaffoldResult.createdFiles,
+    reusedFiles: scaffoldResult.reusedFiles,
+    warnings: scaffoldResult.warnings
+  };
+}
 function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
   const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
   if (errorDiagnostics.length > 0) {
@@ -35779,7 +35800,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -35869,6 +35890,10 @@ var init_phase = __esm({
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
       artifact: _enum(["context", "discussion-log", "research", "ui-spec"])
+    };
+    phaseArtifactScaffoldInputSchema = {
+      ...phaseArtifactInputSchema,
+      overwrite: boolean2().optional()
     };
     phaseValidationArtifactInputSchema = {
       cwd: string2().optional(),
@@ -36132,6 +36157,12 @@ var init_phase = __esm({
         description: "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
         inputSchema: phaseArtifactInputSchema,
         handler: async (args) => blueprintPhaseArtifactRead(args)
+      },
+      {
+        name: "blueprint_phase_artifact_scaffold",
+        description: "Seed a phase-scoped discovery artifact placeholder from the resolved numeric phase and artifact enum.",
+        inputSchema: phaseArtifactScaffoldInputSchema,
+        handler: async (args) => blueprintPhaseArtifactScaffold(args)
       },
       {
         name: "blueprint_phase_artifact_write",
@@ -41512,6 +41543,11 @@ function inferProjectName(projectRoot, requestedName) {
   return path8.basename(projectRoot);
 }
 async function blueprintArtifactScaffold(args = {}) {
+  if (args.phase !== void 0 || args.artifact !== void 0) {
+    throw new Error(
+      "blueprint_artifact_scaffold accepts repo-relative artifact paths only. Use blueprint_phase_artifact_scaffold with numeric phase and artifact enum for phase-scoped scaffolding."
+    );
+  }
   const projectRoot = await ensureRepoRoot(args.cwd);
   const projectName = inferProjectName(projectRoot, args.projectName);
   const bootstrapDiagnostics = await inspectBootstrapArtifacts(projectRoot);
@@ -74808,7 +74844,7 @@ function sanitizeToolResultForPublicResponse(toolName, result) {
     }
     return result;
   }
-  if (toolName === "blueprint_artifact_scaffold") {
+  if (toolName === "blueprint_artifact_scaffold" || toolName === "blueprint_phase_artifact_scaffold") {
     return trimEmptyTopLevelWarnings(result);
   }
   if (toolName === "blueprint_patch_record") {
@@ -78253,6 +78289,7 @@ var BLUEPRINT_MUTATION_TOOL_NAMES = /* @__PURE__ */ new Set([
   "blueprint_roadmap_insert_phase",
   "blueprint_roadmap_remove_phase",
   "blueprint_roadmap_promote_backlog",
+  "blueprint_phase_artifact_scaffold",
   "blueprint_phase_artifact_write",
   "blueprint_phase_plan_write",
   "blueprint_phase_summary_write",

@@ -1124,7 +1124,7 @@ export function sanitizeToolResultForPublicResponse(
     return result;
   }
 
-  if (toolName === "blueprint_artifact_scaffold") {
+  if (toolName === "blueprint_artifact_scaffold" || toolName === "blueprint_phase_artifact_scaffold") {
     return trimEmptyTopLevelWarnings(result);
   }
 
