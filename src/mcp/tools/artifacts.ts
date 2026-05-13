@@ -28,6 +28,7 @@ import {
   safeJsonParseObject
 } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
+import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
 import {
   blueprintPhaseExecutionTargets,
   blueprintPhasePlanIndex,
@@ -4036,6 +4037,10 @@ function extractTaskPathReferenceCandidates(section: string): string[] {
         .replace(/[)`"'\])>.,;:!?]+$/, "");
 
       if (normalizedToken.length === 0 || /^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedToken)) {
+        continue;
+      }
+
+      if (isObviouslyNonPathMarkupToken(token, normalizedToken)) {
         continue;
       }
 

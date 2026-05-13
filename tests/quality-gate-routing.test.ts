@@ -828,6 +828,96 @@ test("summary-derived source evidence is unioned with non-reviewable plan eviden
   assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone|\/blu-discuss-phase 2/);
 });
 
+test("quality gates ignore XML and template snippets in summary-derived reviewable files", async (t) => {
+  const phase = implementedPhase({
+    planModifiedFiles: ["README.md"],
+    summaryChangedFiles: ["src/summary-source.ts"]
+  });
+  const repoPath = await createQualityGateRepo({
+    phases: [phase]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeRepoFile(repoPath, "README.md", "# Fixture\n");
+  await writeRepoFile(
+    repoPath,
+    "src/summary-source.ts",
+    "export const summarySource = true;\n"
+  );
+  await writeFile(
+    path.join(
+      repoPath,
+      ".blueprint/phases",
+      phaseDirectoryName(phase),
+      `${phasePrefix(phase.phase)}-01-SUMMARY.md`
+    ),
+    `# ${phaseTitle(phase)} - Summary 01
+
+**Plan:** \`${phasePrefix(phase.phase)}-01-PLAN.md\`
+**Status:** COMPLETED
+**Readiness:** ready-for-validation
+**Completion State:** complete
+**Next Safe Action:** /blu-validate-phase ${phase.phase}
+
+## Outcome
+
+- Execution completed and produced source changes.
+
+## Changes Made
+
+- Updated \`src/summary-source.ts\`.
+- Preserved the placeholder \`<release>\${java.version}</release>\` in the Maven example.
+- Documented the closing tag \`</dependencyManagement>\` for the XML guidance.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| tests/quality-gate-routing.test.ts exits 0 | npx tsx --test tests/quality-gate-routing.test.ts | pass | Saved summary fixture. | The selected acceptance criterion passed. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| none | none | none | NONE |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| none | none | none | NONE |
+
+## Follow-Ups
+
+- none
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${phaseArtifactPath(phase, "-01-SUMMARY.md")} | Saved summary artifact. |
+`,
+    "utf8"
+  );
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: String(phase.phase),
+    phasePrefix: phasePrefix(phase.phase),
+    phaseDir: phaseDirectoryName(phase)
+  });
+
+  assert.deepEqual(evaluation.reviewableFiles, ["src/summary-source.ts"]);
+  assert.doesNotMatch(evaluation.warnings.join("\n"), /java\.version|dependencyManagement/);
+});
+
 test("doc-only plan does not force review from prose outside summary Changes Made", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [

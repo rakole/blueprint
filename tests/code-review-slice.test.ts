@@ -913,6 +913,46 @@ test("blueprint_review_scope reports phase-summaries when summary evidence alone
   assert.equal(scoped.reviewMode.source, "phase-summaries");
 });
 
+test("blueprint_review_scope ignores XML and template snippets in summary Changes Made", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    withPlan: false,
+    summaryChangedFiles: ["src/summary.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-review-scope/05-01-SUMMARY.md"),
+    `# Phase 05: Code Review Scope - Summary 01
+
+## Result
+
+- Completed the review-ready feature slice.
+
+## Changes Made
+
+- Updated \`src/summary.ts\`.
+- Preserved the placeholder \`<release>\${java.version}</release>\` in the Maven guidance.
+- Documented the closing tag \`</dependencyManagement>\` for the XML explanation.
+
+## Evidence
+
+- Summary evidence captured for this phase.
+`,
+    "utf8"
+  );
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5"
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.deepEqual(scoped.files, ["src/summary.ts"]);
+  assert.doesNotMatch(scoped.warnings.join("\n"), /java\.version|dependencyManagement/);
+});
+
 test("blueprint_review_scope keeps explicit files scoped exactly to the explicit list", async (t) => {
   const repoPath = await createCodeReviewRepo({
     summaryChangedFiles: ["src/summary.ts"],

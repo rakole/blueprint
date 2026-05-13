@@ -23992,6 +23992,30 @@ var init_config = __esm({
   }
 });
 
+// src/mcp/tools/path-token-heuristics.ts
+function looksLikeXmlTagBoundary(value) {
+  return /^<\/?[A-Za-z][A-Za-z0-9:_-]*(?:\s[^>]*)?>/.test(value) || /<\/[A-Za-z][A-Za-z0-9:_-]*>/.test(value);
+}
+function isObviouslyNonPathMarkupToken(rawToken, normalizedToken) {
+  const raw = rawToken.trim();
+  const normalized = (normalizedToken ?? rawToken).trim();
+  if (raw.length === 0 && normalized.length === 0) {
+    return false;
+  }
+  if (/\$\{[^}]+\}/.test(raw) || /\$\{[^}]+\}/.test(normalized)) {
+    return true;
+  }
+  if (looksLikeXmlTagBoundary(raw)) {
+    return true;
+  }
+  return /^<\/?[A-Za-z][A-Za-z0-9:_-]*>/.test(normalized) || /^[A-Za-z][A-Za-z0-9:_-]*>/.test(normalized) && /<\/[A-Za-z][A-Za-z0-9:_-]*>/.test(normalized);
+}
+var init_path_token_heuristics = __esm({
+  "src/mcp/tools/path-token-heuristics.ts"() {
+    "use strict";
+  }
+});
+
 // src/mcp/tools/quality-gates.ts
 import fs from "node:fs/promises";
 import path4 from "node:path";
@@ -24114,8 +24138,11 @@ async function resolveExistingRepoFiles(args) {
   const files = /* @__PURE__ */ new Set();
   const warnings = [];
   for (const rawCandidate of args.candidates) {
+    if (isObviouslyNonPathMarkupToken(rawCandidate)) {
+      continue;
+    }
     const candidate = normalizeRepoPathCandidate(rawCandidate);
-    if (candidate.length === 0 || /^https?:\/\//i.test(candidate)) {
+    if (candidate.length === 0 || /^https?:\/\//i.test(candidate) || isObviouslyNonPathMarkupToken(rawCandidate, candidate)) {
       continue;
     }
     if (candidate.includes("*")) {
@@ -24165,12 +24192,15 @@ function extractPathCandidatesFromSection(section) {
   const candidates = /* @__PURE__ */ new Set();
   for (const match of section.matchAll(/`([^`]+)`/g)) {
     const value = match[1]?.trim();
-    if (value) {
+    if (value && !isObviouslyNonPathMarkupToken(value)) {
       candidates.add(value);
     }
   }
   for (const match of section.matchAll(PATH_TOKEN_PATTERN)) {
-    candidates.add(match[0]);
+    const candidate = match[0];
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
   return [...candidates];
 }
@@ -24585,6 +24615,7 @@ var init_quality_gates = __esm({
     init_artifacts();
     init_config();
     init_security();
+    init_path_token_heuristics();
     REVIEWABLE_EXTENSIONS = /* @__PURE__ */ new Set([
       ".ts",
       ".tsx",
@@ -38323,6 +38354,9 @@ function extractTaskPathReferenceCandidates(section) {
       if (normalizedToken.length === 0 || /^[a-z][a-z0-9+.-]*:\/\//i.test(normalizedToken)) {
         continue;
       }
+      if (isObviouslyNonPathMarkupToken(token, normalizedToken)) {
+        continue;
+      }
       const normalizedPath = normalizedToken.replace(/\\/g, "/");
       if (isBlueprintCommandReference(normalizedPath)) {
         continue;
@@ -45843,6 +45877,7 @@ var init_artifacts = __esm({
     init_command_paths();
     init_security();
     init_config();
+    init_path_token_heuristics();
     init_phase();
     execFileAsync = promisify(execFile);
     BLUEPRINT_DIR = ".blueprint";
@@ -52010,12 +52045,18 @@ async function normalizeReviewFiles(projectRoot, files, warnings, sourceLabel) {
 function extractPathCandidates(text) {
   const candidates = /* @__PURE__ */ new Set();
   for (const match of text.matchAll(/`([^`]+)`/g)) {
-    candidates.add(match[1].trim());
+    const candidate = match[1].trim();
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
   for (const match of text.matchAll(
     /(?:^|[\s("'`])((?:\.{1,2}\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)(?=$|[\s"'`),.;:!?])/g
   )) {
-    candidates.add(match[1].trim());
+    const candidate = match[1].trim();
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
   return [...candidates].filter((candidate) => candidate.length > 0);
 }
@@ -53262,6 +53303,7 @@ var init_review = __esm({
     init_security();
     init_artifact_contracts();
     init_command_paths();
+    init_path_token_heuristics();
     init_artifacts();
     init_config();
     init_phase();

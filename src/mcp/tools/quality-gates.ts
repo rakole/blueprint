@@ -15,6 +15,7 @@ import {
   formatBlueprintPhasePrefix,
   normalizeBlueprintPhaseRef
 } from "../../shared/security.js";
+import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
 
 export type PhaseQualityGateMissingGate = "review" | "security" | null;
 
@@ -373,9 +374,17 @@ async function resolveExistingRepoFiles(args: {
   const warnings: string[] = [];
 
   for (const rawCandidate of args.candidates) {
+    if (isObviouslyNonPathMarkupToken(rawCandidate)) {
+      continue;
+    }
+
     const candidate = normalizeRepoPathCandidate(rawCandidate);
 
-    if (candidate.length === 0 || /^https?:\/\//i.test(candidate)) {
+    if (
+      candidate.length === 0 ||
+      /^https?:\/\//i.test(candidate) ||
+      isObviouslyNonPathMarkupToken(rawCandidate, candidate)
+    ) {
       continue;
     }
 
@@ -442,13 +451,17 @@ function extractPathCandidatesFromSection(section: string): string[] {
   for (const match of section.matchAll(/`([^`]+)`/g)) {
     const value = match[1]?.trim();
 
-    if (value) {
+    if (value && !isObviouslyNonPathMarkupToken(value)) {
       candidates.add(value);
     }
   }
 
   for (const match of section.matchAll(PATH_TOKEN_PATTERN)) {
-    candidates.add(match[0]);
+    const candidate = match[0];
+
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
 
   return [...candidates];
