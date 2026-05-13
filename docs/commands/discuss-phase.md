@@ -15,7 +15,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. It preserves the thinking-partner discovery loop while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps, answer validation and retry, assumptions-mode analysis, capability-gated sidecar research for one gray area, single-agent fallback, deferred-idea capture, checkpoint-per-area resumability, and validation/repair before completion. The detailed behavior lives in the runtime contract reference instead of being repeated here.
+`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. It preserves the thinking-partner discovery loop while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps, answer validation and retry, assumptions-mode analysis, capability-gated sidecar research for one gray area, single-agent fallback, deferred-idea capture, checkpoint-per-area resumability, and validation/repair before completion. It uses taxonomy-driven gray-area discovery and evidence-graded assumptions so the saved context stays decision-relevant without over-questioning. The detailed behavior lives in the runtime contract reference instead of being repeated here.
 
 
 ## Command Path And Examples
@@ -45,9 +45,9 @@
 ## Behavior Stages
 
 1. `Resolve`: resolve the target phase and stop early when the phase is ambiguous or Blueprint prerequisites are missing.
-2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory before asking for fresh detail.
-3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching.
-4. `Execute`: run one-question `ask_user` branching, optionally use capability-gated sidecar research for one gray area, capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
+2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail.
+3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching, and select from the `grayAreaQueue` by decision value.
+4. `Execute`: run one-question `ask_user` branching, use the one-question format with decision-value ranking and stop criteria, optionally use capability-gated sidecar research for one gray area, and capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
 5. `Persist`: scaffold only missing discovery artifacts, treat scaffold text as disposable starter seed, persist substantive context as a structured `phase.context` model, persist optional discussion content as Markdown, refresh checkpoints per area, and update `STATE.md` through MCP only.
 6. `Validate`: validate context through the structured model schema and MCP renderer, normalize discussion drafts to the canonical `authoringTemplate`, strip scaffold literals and other placeholders from final discussion content, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
 7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action loaded from refreshed state, without inferring a direct `/blu-plan-phase` handoff while research or UI gates still route elsewhere.
@@ -143,7 +143,9 @@
 - Confirm overwrite when a context artifact already exists.
 - Resume from a saved checkpoint by default when one exists and the user has not explicitly asked to discard it.
 - When structured discovery choices help, use host-supported structured choices one focused question at a time instead of a plain-text questionnaire.
+- Questions follow the decision-value ranking: ask only when the answer changes phase boundary, implementation approach, acceptance criteria, safety posture, or routing.
 - Identify gray areas from repo evidence first, let the user choose which area to discuss next, and support iterative `next area` or `more questions` loops.
+- Assumptions mode uses defined confidence labels (`Confident`, `Likely`, `Unclear`) and the ask-versus-assume threshold.
 - Use `blueprint-researcher` only as a capability-gated, bounded, read-only sidecar for a single gray area or assumptions pass when the host exposes it and extra evidence would materially improve the choices. Ask for gray-area memo output with options, tradeoffs, complexity or impact surface, recommendation rationale, confidence, and evidence; do not ask for `phase.research` or `XX-RESEARCH.md` content from `/blu-discuss-phase`. If no suitable subagent is available, the main agent must continue one area at a time, compress carry-forward context, checkpoint, and preserve the same artifact depth.
 - Follow the shared long-running phase-discovery profile for stage visibility, next-safe-action visibility, and session-local helper fallback behavior.
 - Inspect the saved plan inventory before rewriting context and warn that refreshed context does not rewrite existing plans unless the user re-runs `/blu-plan-phase`.
@@ -157,6 +159,7 @@
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
 - `workflow.discuss_mode` may switch the command into an evidence-first assumptions flow rather than an interview-style loop.
 - `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
+- `workflow.skip_discuss=true` must still produce evidence-backed context and stop when high-impact assumptions are unresolved.
 - Earlier phase context artifacts may contain canonical references or deferred ideas that should be reused instead of re-elicited.
 - When answers are vague, incomplete, or inconsistent with saved context, retry the question with a narrower prompt instead of accepting them as final.
 - Use structured gray-area lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology so the discussion stays grounded in Blueprint-friendly decisions.
@@ -183,10 +186,12 @@
 - Warns clearly when refreshed discovery leaves existing saved plans unchanged until `/blu-plan-phase` is run again.
 - Captures canonical references plus deferred or scope-creep ideas when they surface during gray-area discussion.
 - Captures prior-context sweep findings, deferred ideas, codebase scout notes, and per-area checkpoint progress when they surface during gray-area discussion.
+- Derives and folds the downstream handoff packet (`researchBrief`, `uiBrief`, `planBrief`, `planInventory`, `routingGates`) into the saved context model.
 - Blocks save-time drift when the normalized body still contains placeholder text, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas, and repairs any returned write validation issues before completion.
 - Supports capability-gated subagents for bounded one-area evidence work and an explicit single-agent fallback with carry-forward compression, checkpointing, and equally rich saved context.
 - Uses checkpoint persistence only as a resumability aid and deletes the checkpoint after successful completion.
 - Uses only documented MCP tools for persistent state changes.
+- Final routing copies `derivedStatus.nextAction` exactly and does not include secondary runnable routes.
 - Leaves unrelated repo files untouched.
 
 

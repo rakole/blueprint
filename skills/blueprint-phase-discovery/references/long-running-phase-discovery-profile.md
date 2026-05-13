@@ -64,3 +64,18 @@ Use host-supported structured choices for focused interactive decisions such as
 overwrite confirmation, resume-versus-discard, and next-area selection. Avoid
 hardcoding host tool schemas in command prompts unless a source schema is
 discoverable in the repository.
+
+## Fallback Progress Format
+
+When `update_topic` and `write_todos` are unavailable, use this fixed
+one-line status format for progress recaps:
+
+```
+Progress: phase=<resolved phase> stage=<Resolve|Read|Decide|Execute|Persist|Validate|Route>
+gate=<pending gate or none> mode=<discuss|assumptions|skip-discuss>/<fresh|resumed>
+areas=<decided>/<total> active=<areaId or none> next=<next safe action or next question>
+```
+
+Helper state mirrors the MCP checkpoint. If helper state and checkpoint
+state disagree, report the checkpoint state and refresh the helper display.
+The MCP checkpoint remains authoritative.
