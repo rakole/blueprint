@@ -37471,7 +37471,7 @@ function hasSupplyChainEvidenceSource(content) {
   return /Supply Chain Evidence/i.test(sources) && /signal=<version\|maintenance\|vulnerability\|license\|provenance\|transitive\|update>/.test(sources) === false && /\bsignal=(?:version|maintenance|vulnerability|license|provenance|transitive|update)\b/i.test(sources);
 }
 function sourceLinesWithUrlsMissingAccessDate(sources) {
-  return sources.split("\n").map((line) => line.trim()).filter((line) => /https?:\/\/|doi\.org\//i.test(line)).filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
+  return sources.split("\n").map((line) => line.trim()).filter((line) => /https?:\/\/|doi\.org\//i.test(line)).filter((line) => !RESEARCH_ACCESS_DATE_SIGNAL_PATTERN.test(line));
 }
 function hasClaimAddressableSourceSections(sources) {
   return /### Repo Evidence/i.test(sources) && /### External Sources/i.test(sources) && /### Inference Notes/i.test(sources);
@@ -37479,6 +37479,25 @@ function hasClaimAddressableSourceSections(sources) {
 function hasClaimAddressableEvidence(sources) {
   return /\b(?:Evidence ID|evidence_id)\b/i.test(sources) && /\b(?:Claim ID|claim_id)\b/i.test(sources) && /\b(?:directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope)\b/i.test(
     sources
+  );
+}
+function hasPlannerRelevantDownstreamUse(value) {
+  const normalized = value.trim();
+  return normalized.length > 0 && !isBackgroundSourceUse(normalized) && !/\b(?:do not use|not used)\b[\s\S]{0,60}\bsupport\b/i.test(normalized);
+}
+function externalSourceRowHasCurrentAccessEvidence(row) {
+  return RESEARCH_ISO_DATE_PATTERN.test(row.accessed || "") && RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN.test(row.source_ref || "") && /\b(?:directly_supported|partially_supported|inferred_from_supported)\b/i.test(row.claim_class || "") && hasPlannerRelevantDownstreamUse(row.downstream_use || "");
+}
+function hasLiveExternalAccessDateEvidence(sources) {
+  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
+  if (/### External Sources/i.test(sources) && /\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) {
+    return true;
+  }
+  if (/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister)) {
+    return true;
+  }
+  return parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")).some(
+    externalSourceRowHasCurrentAccessEvidence
   );
 }
 function usesLiveVerificationLanguageWithoutExternalEvidence(content) {
@@ -37492,8 +37511,7 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content) {
     return false;
   }
   const sources = extractMarkdownSection5(content, "Sources");
-  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
-  return (!/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) && !/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister);
+  return !hasLiveExternalAccessDateEvidence(sources);
 }
 function hasHighConfidenceWithUnsupportedEvidenceClaims(content) {
   const highConfidence = /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) || /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection5(content, "Confidence Breakdown"));
@@ -45752,7 +45770,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -46077,6 +46095,9 @@ var init_artifacts = __esm({
     ];
     RESEARCH_DEPENDENCY_CHOICE_PATTERN = /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
     RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
+    RESEARCH_ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
+    RESEARCH_ACCESS_DATE_SIGNAL_PATTERN = /(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i;
+    RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN = /https?:\/\/|doi\.org\/|\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;
     RESEARCH_STRUCTURED_DOI_PATTERN = /\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i;
     RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN = /\b(?:npm|npx|pnpm|yarn|bun)\s+(?:run\s+)?[A-Za-z0-9:_./@-]+(?:\s+[-A-Za-z0-9:_./=@]+)*/i;
     PLAN_TASK_ABSOLUTE_PATH_ROOTS = /* @__PURE__ */ new Set([

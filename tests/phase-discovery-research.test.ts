@@ -927,10 +927,10 @@ test("research validation warns when external URL evidence lacks an access date"
   });
 
   const content = validResearchContent(
-    "Create research whose external source row omits an access date."
+    "Current official docs confirm the external source row omits an access date."
   ).replace(
     "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-002 | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
-    "| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | Example docs | https://example.com/docs | unchecked | current behavior | directly_supported | parent-approved external check | may drift | REC-001 |"
+    "| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | Example docs | SRC-002; https://example.com/docs | unchecked | current behavior | directly_supported | parent-approved external check | may drift | REC-001 |"
   );
 
   const written = await blueprintPhaseArtifactWrite({
@@ -949,6 +949,15 @@ test("research validation warns when external URL evidence lacks an access date"
   assert.ok(
     written.validation?.diagnostics?.some(
       (diagnostic) => diagnostic.code === "research.external_source_missing_access_date" && diagnostic.severity === "warning"
+    )
+  );
+  assert.match(
+    written.validation.warnings.join("\n"),
+    /uses current external verification wording without an External Sources or Source Register row with an access date/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.live_external_claim_without_evidence" && diagnostic.severity === "warning"
     )
   );
 });
@@ -1181,6 +1190,46 @@ test("research validation warns when repo-only output claims current official do
     written.validation?.diagnostics?.some(
       (diagnostic) => diagnostic.code === "research.live_external_claim_without_evidence" && diagnostic.severity === "warning"
     )
+  );
+});
+
+test("research validation accepts External Sources Accessed date as live external evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Current official docs confirm that research artifact validation should stay MCP-owned."
+  ).replace(
+    "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-002 | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
+    "| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | Example docs | SRC-002; https://example.com/docs | 2026-05-13 | current behavior | directly_supported | parent-approved external check | may drift | REC-001 |"
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  const warnings = written.validation?.warnings.join("\n") ?? "";
+  const diagnostics = written.validation?.diagnostics ?? [];
+
+  assert.equal(written.validation?.valid, true, written.validation?.issues.join("\n"));
+  assert.doesNotMatch(
+    warnings,
+    /uses current external verification wording without an External Sources or Source Register row with an access date/i
+  );
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === "research.live_external_claim_without_evidence"),
+    false
   );
 });
 
