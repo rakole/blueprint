@@ -25212,6 +25212,41 @@ async function uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings) {
     return true;
   }
 }
+function emptyUiSpecReadiness() {
+  return {
+    valid: null,
+    usable: false,
+    requiresUiReview: false,
+    warnings: []
+  };
+}
+async function inspectUiSpecReadiness(projectRoot, uiSpecPath) {
+  if (!uiSpecPath) {
+    return emptyUiSpecReadiness();
+  }
+  try {
+    const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const validation = validatePhaseArtifactContent(raw, "ui-spec");
+    const warnings = [
+      ...validation.issues.map((issue2) => `${uiSpecPath}: ${issue2}`),
+      ...validation.warnings.map((warning) => `${uiSpecPath}: ${warning}`)
+    ];
+    return {
+      valid: validation.valid,
+      usable: validation.valid,
+      requiresUiReview: validation.valid && !isExplicitUiSkipRationale(raw),
+      warnings
+    };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      valid: false,
+      usable: false,
+      requiresUiReview: false,
+      warnings: [`${uiSpecPath}: ${message}`]
+    };
+  }
+}
 async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, currentPhase2) {
   const warnings = [];
   const blockers = [];
@@ -25238,6 +25273,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -25292,6 +25329,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -25332,6 +25371,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -25360,7 +25401,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   let contextNeedsAuthoring = false;
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
-  let hasReviewableUiSpec = hasUiSpec;
+  let uiSpecValid = null;
+  let hasUsableUiSpec = false;
+  let hasReviewableUiSpec = false;
   const hasUiReview = phaseArtifacts.includes(uiReviewPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
@@ -25421,7 +25464,11 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     }
   }
   if (hasUiSpec) {
+    const uiSpecReadiness = await inspectUiSpecReadiness(projectRoot, uiSpecPath);
+    uiSpecValid = uiSpecReadiness.valid;
+    hasUsableUiSpec = uiSpecReadiness.usable;
     hasReviewableUiSpec = await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
+    warnings.push(...uiSpecReadiness.warnings);
   }
   if (!hasContext && hasLaterArtifacts) {
     warnings.push(
@@ -25497,6 +25544,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasContext,
     hasResearch,
     hasUiSpec,
+    uiSpecValid,
+    hasUsableUiSpec,
     hasUiReview,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
@@ -25862,8 +25911,11 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasResearch && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
+  if (args.workflow.uiPhaseEnabled && args.phaseArtifacts.hasUiSpec && !args.phaseArtifacts.hasUsableUiSpec && !args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasSummaries && !args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(uiPhaseCommand)) {
+    return `Run ${uiPhaseCommand} ${args.currentPhase} to repair the phase UI contract`;
+  }
   const researchReady = !args.workflow.researchEnabled || args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false;
-  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUiSpec;
+  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUsableUiSpec;
   if (args.phaseArtifacts.hasContext && researchReady && uiReady && !args.phaseArtifacts.hasPlans && implementedCommands.has(planPhaseCommand)) {
     return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
   }

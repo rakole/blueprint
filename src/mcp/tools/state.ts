@@ -18,6 +18,7 @@ import {
   readUatArtifactState,
   resolveBlueprintPath,
   toRepoRelativePath,
+  validatePhaseArtifactContent,
   validatePlanArtifactContent,
   validateResearchArtifactContent,
   validateUatArtifactContent,
@@ -206,6 +207,8 @@ type CurrentPhaseArtifactStatus = {
   hasContext: boolean;
   hasResearch: boolean;
   hasUiSpec: boolean;
+  uiSpecValid: boolean | null;
+  hasUsableUiSpec: boolean;
   hasUiReview: boolean;
   hasReview: boolean;
   hasSecurity: boolean;
@@ -1187,6 +1190,56 @@ async function uiSpecRequiresUiReview(
   }
 }
 
+type UiSpecReadiness = {
+  valid: boolean | null;
+  usable: boolean;
+  requiresUiReview: boolean;
+  warnings: string[];
+};
+
+function emptyUiSpecReadiness(): UiSpecReadiness {
+  return {
+    valid: null,
+    usable: false,
+    requiresUiReview: false,
+    warnings: []
+  };
+}
+
+async function inspectUiSpecReadiness(
+  projectRoot: string,
+  uiSpecPath: string | null
+): Promise<UiSpecReadiness> {
+  if (!uiSpecPath) {
+    return emptyUiSpecReadiness();
+  }
+
+  try {
+    const raw = await fs.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
+    const validation = validatePhaseArtifactContent(raw, "ui-spec");
+    const warnings = [
+      ...validation.issues.map((issue) => `${uiSpecPath}: ${issue}`),
+      ...validation.warnings.map((warning) => `${uiSpecPath}: ${warning}`)
+    ];
+
+    return {
+      valid: validation.valid,
+      usable: validation.valid,
+      requiresUiReview: validation.valid && !isExplicitUiSkipRationale(raw),
+      warnings
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      valid: false,
+      usable: false,
+      requiresUiReview: false,
+      warnings: [`${uiSpecPath}: ${message}`]
+    };
+  }
+}
+
 async function inspectCurrentPhaseArtifacts(
   projectRoot: string,
   inspectionPhases: string[],
@@ -1219,6 +1272,8 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1277,6 +1332,8 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1321,6 +1378,8 @@ async function inspectCurrentPhaseArtifacts(
       hasContext: false,
       hasResearch: false,
       hasUiSpec: false,
+      uiSpecValid: null,
+      hasUsableUiSpec: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1350,7 +1409,9 @@ async function inspectCurrentPhaseArtifacts(
   let contextNeedsAuthoring = false;
   const hasResearch = phaseArtifacts.includes(researchPath);
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
-  let hasReviewableUiSpec = hasUiSpec;
+  let uiSpecValid: boolean | null = null;
+  let hasUsableUiSpec = false;
+  let hasReviewableUiSpec = false;
   const hasUiReview = phaseArtifacts.includes(uiReviewPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
@@ -1426,7 +1487,11 @@ async function inspectCurrentPhaseArtifacts(
   }
 
   if (hasUiSpec) {
+    const uiSpecReadiness = await inspectUiSpecReadiness(projectRoot, uiSpecPath);
+    uiSpecValid = uiSpecReadiness.valid;
+    hasUsableUiSpec = uiSpecReadiness.usable;
     hasReviewableUiSpec = await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
+    warnings.push(...uiSpecReadiness.warnings);
   }
 
   if (!hasContext && hasLaterArtifacts) {
@@ -1510,6 +1575,8 @@ async function inspectCurrentPhaseArtifacts(
     hasContext,
     hasResearch,
     hasUiSpec,
+    uiSpecValid,
+    hasUsableUiSpec,
     hasUiReview,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
@@ -2113,10 +2180,23 @@ async function deriveNextAction(args: {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
 
+  if (
+    args.workflow.uiPhaseEnabled &&
+    args.phaseArtifacts.hasUiSpec &&
+    !args.phaseArtifacts.hasUsableUiSpec &&
+    !args.phaseArtifacts.hasPlans &&
+    !args.phaseArtifacts.hasSummaries &&
+    !args.phaseArtifacts.hasVerification &&
+    !args.phaseArtifacts.hasUat &&
+    implementedCommands.has(uiPhaseCommand)
+  ) {
+    return `Run ${uiPhaseCommand} ${args.currentPhase} to repair the phase UI contract`;
+  }
+
   const researchReady =
     !args.workflow.researchEnabled ||
     (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false);
-  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUiSpec;
+  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUsableUiSpec;
 
   if (
     args.phaseArtifacts.hasContext &&

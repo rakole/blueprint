@@ -152,6 +152,10 @@ async function createPhaseRepo(): Promise<string> {
 
 - Explicit skip rationale
 
+## Rationale
+
+- No user-facing UI changes are in scope for this phase.
+
 ## User Experience Goals
 
 - No user-facing UI changes are in scope for this phase.
