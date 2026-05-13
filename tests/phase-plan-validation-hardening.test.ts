@@ -974,6 +974,92 @@ Harden plan validation without blocking route examples.
 `;
 }
 
+function planWithMarkupExamples(): string {
+  return `---
+phase: 3
+plan_id: "10"
+title: "Markup Examples In Task Prose"
+wave: 2
+status: planned
+objective: "Allow legitimate XML and template placeholders in task prose."
+depends_on: []
+requirements:
+  - LIFE-01
+files_modified:
+  - pom.xml
+  - src/mcp/tools/artifacts.ts
+read_first:
+  - pom.xml
+  - src/mcp/tools/artifacts.ts
+acceptance_criteria:
+  - tests/phase-plan-validation-hardening.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan 10
+
+## Goal
+
+Allow legitimate XML and template placeholders in task prose.
+
+## Scope
+
+- Keep repo path lists concrete while allowing XML snippets in action guidance.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By | Evidence |
+|-------------|--------|------------|----------|
+| LIFE-01 | covered | Task 1 | src/mcp/tools/artifacts.ts |
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| .blueprint/phases/03-phase-discovery/03-CONTEXT.md | used | Captures the validation hardening decision. |
+| .blueprint/phases/03-phase-discovery/03-RESEARCH.md | used | Supplies the validation hardening evidence. |
+
+## File / Surface Coverage
+
+| File / Surface | Covered By | Verification |
+|----------------|------------|--------------|
+| src/mcp/tools/artifacts.ts | Task 1 | tests/phase-plan-validation-hardening.test.ts exits 0 |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Follow-up |
+|------|-------------|-----------|
+| none | none | none |
+
+## Tasks
+
+### Task 1: Preserve markup examples in action text
+
+#### Read First
+
+- pom.xml
+- src/mcp/tools/artifacts.ts
+
+#### Action
+
+- Preserve the placeholder \`<release>\${java.version}</release>\` in the task prose without treating it as a repo path.
+- Keep \`<pluginManagement>...</pluginManagement>\` examples available for Maven guidance.
+- Document the closing tag \`</dependencyManagement>\` in the explanation for the XML change.
+
+#### Acceptance Criteria
+
+- tests/phase-plan-validation-hardening.test.ts exits 0
+
+## Verification
+
+- tests/phase-plan-validation-hardening.test.ts exits 0
+
+## Must Haves
+
+- Markup examples must not be misclassified as repo-relative paths.
+`;
+}
+
 test("strict plan writes reject absolute and traversing repo paths", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1170,6 +1256,31 @@ test("strict plan writes allow route examples, code snippets, command globs, and
   assert.equal(result.validation?.valid, true);
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-08-PLAN.md")),
+    true
+  );
+});
+
+test("strict plan writes allow XML and template placeholders in task prose", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(path.join(repoPath, "pom.xml"), "<project />\n", "utf8");
+
+  const result = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "10",
+    content: planWithMarkupExamples(),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created", JSON.stringify(result, null, 2));
+  assert.equal(result.written, true);
+  assert.equal(result.validation?.valid, true, JSON.stringify(result.validation, null, 2));
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-10-PLAN.md")),
     true
   );
 });

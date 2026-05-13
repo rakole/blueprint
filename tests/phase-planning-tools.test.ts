@@ -751,6 +751,41 @@ test("phase plan writes persist structured models as canonical plan markdown", a
   assert.deepEqual(read.metadata?.requirements, ["LIFE-01"]);
 });
 
+test("phase plan model validation allows XML and template placeholders in action prose", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  const [firstTask] = model.tasks as Array<Record<string, unknown>>;
+  firstTask.action = [
+    "Update the Maven placeholder `<release>${java.version}</release>` without treating it as a repo path.",
+    "Keep `<pluginManagement>...</pluginManagement>` examples available in the plan notes.",
+    "Document the closing tag `</dependencyManagement>` for the XML change guidance."
+  ];
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(savedContent, /<release>\$\{java\.version\}<\/release>/);
+  assert.match(savedContent, /<pluginManagement>\.\.\.<\/pluginManagement>/);
+  assert.match(savedContent, /<\/dependencyManagement>/);
+});
+
 test("phase plan authoring context exposes a complete runtime-narrowed task schema", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

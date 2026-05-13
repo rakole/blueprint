@@ -8,6 +8,7 @@ import * as z from "zod/v4";
 import { prepareTextForPersistence } from "../../shared/security.js";
 import { readArtifactContract } from "../artifact-contracts/index.js";
 import { blueprintDirectCommand } from "../command-paths.js";
+import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
 import {
   ensureRepoRoot,
   resolveBlueprintPath,
@@ -8453,13 +8454,21 @@ function extractPathCandidates(text: string): string[] {
   const candidates = new Set<string>();
 
   for (const match of text.matchAll(/`([^`]+)`/g)) {
-    candidates.add(match[1].trim());
+    const candidate = match[1].trim();
+
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
 
   for (const match of text.matchAll(
     /(?:^|[\s("'`])((?:\.{1,2}\/)?(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)(?=$|[\s"'`),.;:!?])/g
   )) {
-    candidates.add(match[1].trim());
+    const candidate = match[1].trim();
+
+    if (!isObviouslyNonPathMarkupToken(candidate)) {
+      candidates.add(candidate);
+    }
   }
 
   return [...candidates].filter((candidate) => candidate.length > 0);
