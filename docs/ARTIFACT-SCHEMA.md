@@ -366,6 +366,7 @@ Canonical template structure:
 - `**Confidence:** LOW|MEDIUM|HIGH`
 - `## Phase Requirements`
 - `## Summary`
+- optional `## Claim Support Ledger`
 - optional `## Investigation Trace` with initial assessment, navigation evidence packet, and strand planning handoff tables
 - `## Locked Decisions From Context`
 - `## User Constraints`
@@ -380,8 +381,8 @@ Canonical template structure:
 - `## Open Questions`
 - `## Confidence Breakdown`
 - `## Code Examples`
-- `## Recommendations`
-- `## Sources` split into `Repo Evidence`, `External Sources`, and `Inference Notes`, with optional supply-chain evidence rows
+- `## Recommendations` with optional `Recommendation Handoff`
+- `## Sources` split into `Source Register`, `Repo Evidence`, `External Sources`, and `Inference Notes`, with optional supply-chain evidence rows
 
 Validation expectations:
 - recommendations should be prescriptive rather than descriptive
@@ -395,6 +396,7 @@ Validation expectations:
 - `## Investigation Trace` is optional and planner-facing; when present, it should record initial assessment, navigation evidence, and strand handoffs, but older valid research artifacts are not invalid solely because they lack it
 - new planner-critical claims should use claim-addressable provenance where available: evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes
 - claim-addressable provenance checks warn so older otherwise-valid research artifacts do not fail solely because they lack the richer source register
+- Research validation remains backward-compatible for structurally valid older artifacts. The richer evidence shape is warning-grade first: missing Source Register rows, missing claim/source IDs, repo-runtime claims without repo evidence, Recommendation Handoff gaps, missing external access dates, and unsupported high confidence return research evidence warning diagnostics unless a future contract makes them strict.
 
 Exact persistence template:
 
@@ -414,6 +416,16 @@ Exact persistence template:
 ## Summary
 
 - <key conclusion>
+
+## Claim Support Ledger
+
+| Claim ID | Claim | Claim Type | Evidence IDs | Support Status | Confidence | Plan Impact |
+|----------|-------|------------|--------------|----------------|------------|-------------|
+| CLM-001 | <planner-critical claim> | <claim type> | EVID-001 or SRC-001 | <support status> | <LOW, MEDIUM, or HIGH> | REC-001, open question, or blocked |
+
+Allowed claim types: `repo_runtime`, `external_practice`, `dependency_tool`, `inference`, `open_question`.
+Allowed support statuses: `directly_supported`, `partially_supported`, `inferred_from_supported`, `contradicted`, `conflicting_sources`, `not_enough_evidence`, `out_of_scope`.
+Use `EVID-*` when a claim is supported by evidence rows under `Repo Evidence`, `External Sources`, or `Inference Notes`; use `SRC-*` only for direct Source Register support.
 
 ## Investigation Trace
 
@@ -522,21 +534,36 @@ Exact persistence template:
 
 ## Recommendations
 
-- <prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>
+### Recommendation Handoff
+
+| Recommendation ID | Recommendation | Supporting Claim IDs | Evidence IDs | Affected Surfaces | Tests / Checks | Status |
+|-------------------|----------------|----------------------|--------------|-------------------|----------------|--------|
+| REC-001 | <prescriptive recommendation with tradeoffs> | CLM-001 | EVID-001 or SRC-001 | <files, commands, contracts, docs, or none> | <tests/checks or named validation> | <ready or blocked with open question> |
 
 ## Sources
+
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | <repo path, command, test output, manifest, contract, or saved Blueprint artifact> | observed <YYYY-MM-DD> | <line, symbol, heading, or n/a> | <repo source type> | CLM-001 | <limits or none> |
+| SRC-002 | external | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | n/a | <external source type> | CLM-002 or background | <stale risk, inaccessible text, supplied-only, conflict, or none> |
+
+Allowed lanes: `repo`, `external`, `supplied`, `inference`. Use `supplied` when the user supplied a source but live external verification did not happen.
+Repo source types include `repo_file`, `command_output`, and `test_output`.
+External or supplied source types include `official_standard`, `official_product_doc`, `peer_reviewed_paper`, `preprint`, `supplied_reference`, and `web_page`.
 
 ### Repo Evidence
 
 | Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
 |-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| EVID-001 | CLM-001 | <repo path:line, command, test output, manifest, contract, or saved Blueprint artifact> | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
+| EVID-001 | CLM-001 | SRC-001 | <definition, reference, test, config, contract, runtime, example, or background> | <repo-map, rg-files, scoped-rg, manual-read, parent-navigation-packet, LSP, SCIP, ctags, tree-sitter, or command> | <quoted line, line range, command summary, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <claim, recommendation, or do not use as support> | <limits or none> |
 
 ### External Sources
 
 | Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
 |-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| EVID-002 | CLM-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
+| EVID-002 | CLM-002 | <official_standard, official_product_doc, peer_reviewed_paper, preprint, supplied_reference, or web_page> | <official_standard, official_vendor_doc, peer_reviewed, maintained_project_doc, preprint, secondary, or unknown> | <exact title> | SRC-002 | <YYYY-MM-DD or supplied-unchecked> | <section, page, excerpt, or extracted fact> | directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope | <parent-approved external check or user-supplied source> | <stale risk, inaccessible text, supplied-only, conflict, or none> | <claim, recommendation, or do not use as support> |
 
 ### Inference Notes
 
@@ -546,7 +573,7 @@ Exact persistence template:
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001 or EVID-002; source policy=<off|ask-approved|auto|supplied|unchecked>.
+- Supply-chain evidence: <source title or command>, <URL or repo path>, accessed/observed <YYYY-MM-DD>, signal=<version|maintenance|vulnerability|license|provenance|transitive|update>, supports=DEP-001, SRC-002, or EVID-002; source policy=<off|ask-approved|auto|supplied|unchecked>.
 ````
 
 Contract notes:

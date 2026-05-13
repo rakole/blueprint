@@ -66,7 +66,7 @@ plan_id: "01"
 title: "${phase.title} Plan 01"
 wave: 1
 status: done
-objective: "Deliver the quality-gated implementation slice."
+objective: "Deliver the quality-gated delivery increment."
 depends_on: []
 requirements:
   - QG-01
@@ -83,7 +83,7 @@ autonomous: true
 
 ## Goal
 
-Deliver the quality-gated implementation slice.
+Deliver the quality-gated delivery increment.
 
 ## Scope
 

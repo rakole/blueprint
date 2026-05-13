@@ -193,6 +193,13 @@ function validResearchContent(summary: string): string {
 
 - ${summary}
 
+## Claim Support Ledger
+
+| Claim ID | Claim | Claim Type | Evidence IDs | Support Status | Confidence | Plan Impact |
+|----------|-------|------------|--------------|----------------|------------|-------------|
+| CLM-001 | Research persistence is MCP-owned and validated before write completion. | repo_runtime | EVID-001 | directly_supported | HIGH | REC-001 |
+| CLM-002 | No live external lookup is required for this repo-only fixture. | open_question | EVID-002 | out_of_scope | LOW | do not use as support |
+
 ## Locked Decisions From Context
 
 - Keep Blueprint state writes inside MCP tools and preserve implemented-only routing.
@@ -278,7 +285,20 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 - Persist only validated research content through \`blueprint_phase_artifact_write\`.
 
+### Recommendation Handoff
+
+| Recommendation ID | Recommendation | Supporting Claim IDs | Evidence IDs | Affected Surfaces | Tests / Checks | Status |
+|-------------------|----------------|----------------------|--------------|-------------------|----------------|--------|
+| REC-001 | Persist only validated research content through \`blueprint_phase_artifact_write\`. | CLM-001 | EVID-001 | src/mcp/tools/phase.ts, src/mcp/tools/artifacts.ts, tests/phase-discovery-research.test.ts | npx tsx --test tests/phase-discovery-research.test.ts | ready |
+
 ## Sources
+
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | src/mcp/tools/phase.ts | observed 2026-04-11 | blueprintPhaseArtifactWrite | repo_file | CLM-001 | local fixture evidence |
+| SRC-002 | external | supplied-none | supplied-unchecked | n/a | supplied_reference | background | no live external lookup used |
 
 ### Repo Evidence
 
@@ -286,13 +306,13 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 
 | Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
 |-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| EVID-001 | CLM-001 | src/mcp/tools/phase.ts:1 | runtime | manual-read | phase artifact writes route through MCP-owned tooling | directly_supported | Persist validated research content. | local checkout only |
+| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | directly_supported | REC-001 | local checkout only |
 
 ### External Sources
 
 | Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
 |-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |
+| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-002 | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |
 
 ### Inference Notes
 
@@ -383,6 +403,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(commandFile, /Keep repo-derived evidence distinct/i);
   assert.match(commandFile, /avoid implying live external verification happened/i);
   assert.match(commandFile, /claim-addressable provenance packet/i);
+  assert.match(commandFile, /Source-Support Self-Check/i);
+  assert.match(commandFile, /Claim Support Ledger/i);
+  assert.match(commandFile, /Source Register/i);
+  assert.match(commandFile, /Recommendation Handoff/i);
+  assert.match(commandFile, /repo-runtime claims cite local repo evidence/i);
+  assert.match(commandFile, /\*\*Confidence:\*\*\s+HIGH/i);
   assert.match(commandFile, /investigation trace/i);
   assert.match(commandFile, /navigation evidence packet/i);
   assert.match(commandFile, /retrieval boundaries|query or navigation method/i);
@@ -517,6 +543,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(skillFile, /Repository docs are not active runtime inputs/i);
   assert.match(skillFile, /active command's\s+skill-local runtime reference/i);
   assert.match(skillFile, /claim-addressable provenance/i);
+  assert.match(skillFile, /Source-Support Self-Check/i);
+  assert.match(skillFile, /Source Register/i);
+  assert.match(skillFile, /Recommendation Handoff/i);
+  assert.match(skillFile, /research evidence warning diagnostic/i);
   assert.match(skillFile, /evidence ID, lane, claim ID, claim text/i);
   assert.match(skillFile, /avoid\s+implying live verification happened/i);
   assert.match(skillFile, /investigation trace/i);
@@ -584,6 +614,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /does not fetch official docs itself/i);
   assert.match(researcherAgent, /return the\s+claim as `not_enough_evidence`/i);
   assert.match(researcherAgent, /Evidence Packet Rows/i);
+  assert.match(researcherAgent, /Claim Support Ledger Rows/i);
+  assert.match(researcherAgent, /Source Register Rows/i);
+  assert.match(researcherAgent, /Recommendation Handoff Rows/i);
+  assert.match(researcherAgent, /Do not invent Source Register rows/i);
   assert.match(researcherAgent, /authority tier/i);
   assert.match(researcherAgent, /source title, date or access date,[\s\S]*URL or source ref/i);
   assert.match(researcherAgent, /avoid implying that current upstream guidance was confirmed/i);
@@ -620,6 +654,12 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Output Quality Criteria/);
   assert.match(runtimeContract, /Completion Criteria/);
   assert.match(runtimeContract, /Evidence Quality, Citations, And Provenance/i);
+  assert.match(runtimeContract, /Source-Support Self-Check/i);
+  assert.match(runtimeContract, /Claim Support Ledger/i);
+  assert.match(runtimeContract, /Source Register/i);
+  assert.match(runtimeContract, /Recommendation Handoff/i);
+  assert.match(runtimeContract, /repo_runtime/i);
+  assert.match(runtimeContract, /research evidence warning diagnostics/i);
   assert.match(runtimeContract, /directly_supported/);
   assert.match(runtimeContract, /not_enough_evidence/);
   assert.match(runtimeContract, /Investigation Trace And Navigation Evidence/);
@@ -750,6 +790,19 @@ test("research scaffold seeds the exact research template shape", async (t) => {
   assert.match(scaffold, /## Open Questions/);
   assert.match(scaffold, /## Confidence Breakdown/);
   assert.match(scaffold, /## Recommendations/);
+  assert.match(scaffold, /## Claim Support Ledger/);
+  assert.match(scaffold, /Claim Type/);
+  assert.match(scaffold, /Support Status/);
+  assert.match(scaffold, /Plan Impact/);
+  assert.match(scaffold, /### Recommendation Handoff/);
+  assert.match(scaffold, /Supporting Claim IDs/);
+  assert.match(scaffold, /Affected Surfaces/);
+  assert.match(scaffold, /Tests \/ Checks/);
+  assert.match(scaffold, /### Source Register/);
+  assert.match(scaffold, /Source ID/);
+  assert.match(scaffold, /Path Or URL/);
+  assert.match(scaffold, /Repo Line Or Symbol/);
+  assert.match(scaffold, /Used For Claims/);
   assert.match(scaffold, /### Repo Evidence/);
   assert.match(scaffold, /### External Sources/);
   assert.match(scaffold, /### Inference Notes/);
@@ -858,7 +911,7 @@ test("research template accepts claim-addressable provenance", async (t) => {
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
   assert.doesNotMatch(
     written.validation.warnings.join("\n"),
-    /split ## Sources|claim-addressable evidence|External Sources row with an access date/i
+    /split ## Sources|claim-addressable evidence|External Sources row with an access date|Source Register rows should include|Recommendation Handoff rows should cite|repo_runtime claims should cite|HIGH confidence/i
   );
 });
 
@@ -876,7 +929,7 @@ test("research validation warns when external URL evidence lacks an access date"
   const content = validResearchContent(
     "Create research whose external source row omits an access date."
   ).replace(
-    "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
+    "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-002 | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
     "| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | Example docs | https://example.com/docs | unchecked | current behavior | directly_supported | parent-approved external check | may drift | REC-001 |"
   );
 
@@ -892,6 +945,11 @@ test("research validation warns when external URL evidence lacks an access date"
   assert.match(
     written.validation.warnings.join("\n"),
     /external source rows should include `accessed YYYY-MM-DD`/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.external_source_missing_access_date" && diagnostic.severity === "warning"
+    )
   );
 });
 
@@ -909,8 +967,8 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
   const content = validResearchContent(
     "Create research that keeps unsupported claim-addressable evidence visible for validation warnings."
   ).replace(
-    "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |",
-    "| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | supplied-none | supplied-unchecked | no external lookup used | not_enough_evidence | source policy off | repo-only fixture | do not use as external support |"
+    "| CLM-001 | Research persistence is MCP-owned and validated before write completion. | repo_runtime | EVID-001 | directly_supported | HIGH | REC-001 |",
+    "| CLM-001 | Research persistence is MCP-owned and validated before write completion. | repo_runtime | EVID-001 | not_enough_evidence | HIGH | REC-001 |"
   );
 
   const written = await blueprintPhaseArtifactWrite({
@@ -926,6 +984,233 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
     written.validation.warnings.join("\n"),
     /should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence/i
   );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.high_confidence_unsupported" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation returns warning diagnostics for missing source register ids", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research with a claim that cites a missing Source Register row."
+  ).replace("| EVID-001 | CLM-001 | SRC-001 | mcp-handler |", "| EVID-001 | CLM-001 | SRC-404 | mcp-handler |");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation?.valid, true);
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /evidence row EVID-001 does not resolve to any Source Register row/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.evidence_missing_source_register_link" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation returns warning diagnostics for repo-runtime claims without repo evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research with a repo-runtime claim supported only by external evidence."
+  )
+    .replace("EVID-001 | directly_supported", "EVID-002 | directly_supported")
+    .replace("| SRC-002 | external | supplied-none | supplied-unchecked | n/a | supplied_reference | background | no live external lookup used |", "| SRC-002 | external | https://example.com/docs | 2026-04-11 | n/a | official_product_doc | CLM-001 | fixture only |")
+    .replace("| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-002 | supplied-unchecked | no external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as external support |", "| EVID-002 | CLM-001 | official_product_doc | official_vendor_doc | Example docs | SRC-002 | 2026-04-11 | docs describe an adjacent practice | directly_supported | parent-approved external check | fixture only | REC-001 |");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation?.valid, true);
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /repo_runtime claims should cite at least one repo-lane Source Register row/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.repo_runtime_claim_missing_repo_evidence" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation returns warning diagnostics for partial repo-runtime retrieval", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research with repo evidence that is not runtime-adequate for a repo-runtime claim."
+  )
+    .replace("| SRC-001 | repo | src/mcp/tools/phase.ts | observed 2026-04-11 | blueprintPhaseArtifactWrite | repo_file | CLM-001 | local fixture evidence |", "| SRC-001 | repo | .blueprint/codebase/STACK.md | observed 2026-04-11 | n/a | repo_file | CLM-001 | summary-only evidence |")
+    .replace("| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | directly_supported | REC-001 | local checkout only |", "| EVID-001 | CLM-001 | SRC-001 | background | codebase-summary | summary says validation exists | partially_supported | REC-001 | summary-only fixture |");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation?.valid, true);
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /repo_runtime claims should cite runtime-adequate evidence/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.repo_runtime_claim_retrieval_partial" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation returns warning diagnostics for weak recommendation handoff rows", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research with a recommendation that lacks planner-ready support."
+  ).replace(
+    "| REC-001 | Persist only validated research content through `blueprint_phase_artifact_write`. | CLM-001 | EVID-001 | src/mcp/tools/phase.ts, src/mcp/tools/artifacts.ts, tests/phase-discovery-research.test.ts | npx tsx --test tests/phase-discovery-research.test.ts | ready |",
+    "| REC-001 | Persist only validated research content through `blueprint_phase_artifact_write`. |  |  |  |  | ready |"
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation?.valid, true);
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /Recommendation Handoff rows should cite supporting claim IDs or evidence IDs/i
+  );
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /Recommendation Handoff rows should name tests\/checks or validation signals/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.recommendation_missing_evidence" && diagnostic.severity === "warning"
+    )
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.recommendation_missing_validation_signal" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation warns when repo-only output claims current official docs confirmed", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Current official docs confirm that research artifact validation should stay MCP-owned."
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation?.valid, true);
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /uses current external verification wording without an External Sources or Source Register row with an access date/i
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.live_external_claim_without_evidence" && diagnostic.severity === "warning"
+    )
+  );
+});
+
+test("research validation keeps legacy structurally valid research warning-only", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent("Create legacy-shaped research that remains structurally valid.")
+    .replace(/## Claim Support Ledger[\s\S]*?\n## Locked Decisions From Context/, "## Locked Decisions From Context")
+    .replace(/### Recommendation Handoff[\s\S]*?\n## Sources/, "- Persist only validated research content through `blueprint_phase_artifact_write`.\n\n## Sources")
+    .replace(/### Source Register[\s\S]*?\n### Repo Evidence/, "### Repo Evidence");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation?.valid, true, written.validation?.issues.join("\n"));
+  assert.match(written.validation?.warnings.join("\n") ?? "", /Recommendation Handoff|Source Register/i);
 });
 
 test("research template warns when dependency recommendations omit dependency/tool evaluation", async (t) => {
@@ -1036,6 +1321,9 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(contract.contract.authoringTemplate, /### Repo Evidence/);
   assert.match(contract.contract.authoringTemplate, /### External Sources/);
   assert.match(contract.contract.authoringTemplate, /### Inference Notes/);
+  assert.match(contract.contract.authoringTemplate, /## Claim Support Ledger/);
+  assert.match(contract.contract.authoringTemplate, /### Recommendation Handoff/);
+  assert.match(contract.contract.authoringTemplate, /### Source Register/);
   assert.match(contract.contract.authoringTemplate, /Evidence ID/);
   assert.match(contract.contract.authoringTemplate, /Claim ID/);
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
@@ -1044,6 +1332,7 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(contract.contract.notes.join("\n"), /search notes/i);
   assert.match(contract.contract.notes.join("\n"), /retrieval methods/i);
   assert.match(contract.contract.notes.join("\n"), /repo-versus-external provenance/i);
+  assert.match(contract.contract.notes.join("\n"), /warning-grade evidence diagnostics/i);
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");

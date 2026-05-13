@@ -204,6 +204,9 @@ Quality rules for `XX-RESEARCH.md`:
   or says why examples would be misleading for this phase.
 - `## Recommendations` is prescriptive enough for `/blu-plan-phase` to turn
   into tasks.
+- `## Claim Support Ledger`, when present, is the planner-critical claim ledger. Use columns `Claim ID`, `Claim`, `Claim Type`, `Evidence IDs`, `Support Status`, `Confidence`, and `Plan Impact`. Valid claim types are `repo_runtime`, `external_practice`, `dependency_tool`, `inference`, and `open_question`. Valid support statuses are `directly_supported`, `partially_supported`, `inferred_from_supported`, `contradicted`, `conflicting_sources`, `not_enough_evidence`, and `out_of_scope`.
+- `## Recommendations` should include a `Recommendation Handoff` table for planner-critical recommendations. Use columns `Recommendation ID`, `Recommendation`, `Supporting Claim IDs`, `Evidence IDs`, `Affected Surfaces`, `Tests / Checks`, and `Status`. A recommendation is planner-ready only when it cites supporting claim IDs or evidence IDs, names affected repo or contract surfaces, and names tests/checks, or when `Status` says `blocked` and points to a named open question.
+- Legacy non-table claim-addressable provenance remains valid when the artifact otherwise satisfies the current contract. It is good enough when planner-critical claims still include stable claim/evidence/source IDs, support status, source lane, and downstream use in nearby prose or the existing `Repo Evidence`, `External Sources`, and `Inference Notes` tables. It should receive warning diagnostics when those IDs cannot be connected, when recommendations lack affected surfaces or tests/checks, or when repo-runtime and external-source policy claims cannot be traced.
 - Each planner-critical recommendation should be traceable to a strand handoff
   that names affected files or modules, validation or test implications,
   unresolved blockers, evidence basis, and confidence.
@@ -309,17 +312,24 @@ Final sources should use this structure:
 ```md
 ## Sources
 
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | src/example.ts | observed 2026-05-12 | exampleFunction | repo_file | CLM-001 | local checkout only |
+| SRC-002 | external | https://example.com/docs | 2026-05-12 | n/a | official_product_doc | CLM-002 | may drift |
+
 ### Repo Evidence
 
 | Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
 |-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| EVID-001 | CLM-001 | src/example.ts:42 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
+| EVID-001 | CLM-001 | SRC-001 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
 
 ### External Sources
 
 | Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
 |-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | <title> | https://example.com/docs | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
+| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | <title> | SRC-002 | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
 
 ### Inference Notes
 
@@ -329,8 +339,7 @@ Final sources should use this structure:
 
 ### Supply Chain Evidence
 
-- Supply-chain evidence remains allowed when dependency/tool rows need it, but
-  it should reference the relevant claim-addressable evidence IDs or dependency decision IDs.
+- Supply-chain evidence remains allowed when dependency/tool rows need it, but it should reference the relevant Source Register, claim-addressable evidence IDs, or dependency decision IDs.
 ```
 
 Rules:
@@ -978,6 +987,41 @@ strand ledger; only the evidence gathering happens inline:
    inconclusive before the artifact is ready.
 
 This fallback is the required single-agent path, not a degraded emergency mode.
+
+## Source-Support Self-Check
+
+Before calling `blueprint_phase_artifact_write`, run this deterministic self-check over the final normalized draft:
+
+1. Every planner-critical claim in the Claim Support Ledger cites at least one `EVID-*` row that resolves to an existing `SRC-*` Source Register row, directly cites an existing `SRC-*` row, or is explicitly marked `not_enough_evidence` or `out_of_scope`.
+2. Every Source Register row is used by at least one claim or is clearly labeled as background or `do not use as support`.
+3. Every external Source Register row with a URL or DOI has an `Accessed` value in `YYYY-MM-DD` form unless it is a supplied unchecked source that is not used as current evidence.
+4. Every `repo_runtime` claim cites at least one repo-lane source before using external practice evidence.
+5. Every `repo_runtime` claim cites a runtime-adequate source role when the claim is about command behavior or persistence: command manifest, skill contract, runtime contract, artifact contract, MCP handler, test, built entrypoint, or saved Blueprint artifact. Search hits, summaries, and external docs alone are partial retrieval.
+6. Every Recommendation Handoff row cites supporting claim IDs or evidence IDs, affected surfaces, and tests/checks, or is marked `blocked` by a named open question.
+7. `**Confidence:** HIGH` is allowed only when planner-critical claims are directly supported or bounded inferred support, no high-impact recommendation has unresolved blockers, and the artifact does not contain unsupported, contradicted, conflicting, unchecked, or unverified planner-critical claims.
+
+These checks prove traceability shape and planner handoff completeness. They do not prove semantic citation precision; if semantic support is uncertain, lower confidence, add an open question, or use a later optional advisory review.
+
+Warning diagnostic codes introduced by this slice:
+
+- `research.external_source_missing_access_date`
+- `research.source_id_missing`
+- `research.source_id_missing_from_register`
+- `research.evidence_id_missing_from_sources`
+- `research.evidence_missing_source_register_link`
+- `research.claim_missing_evidence`
+- `research.repo_runtime_claim_missing_repo_evidence`
+- `research.repo_runtime_claim_retrieval_partial`
+- `research.source_id_orphaned`
+- `research.recommendation_missing_evidence`
+- `research.recommendation_claim_id_missing_from_ledger`
+- `research.recommendation_missing_affected_surfaces`
+- `research.recommendation_missing_validation_signal`
+- `research.recommendation_handoff_missing`
+- `research.live_external_claim_without_evidence`
+- `research.high_confidence_unsupported`
+
+If the self-check fails but the legacy artifact structure is otherwise valid, lower confidence, add or update `## Open Questions`, and expect MCP validation to return research evidence warning diagnostics rather than a strict invalid result.
 
 ## Retry And Repair Behavior
 

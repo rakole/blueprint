@@ -182,6 +182,7 @@ export type PhaseArtifactValidationDiagnostic = {
     path: string;
     code: string;
     message: string;
+    severity?: "error" | "warning";
     heading?: string;
     missing?: string[];
     repair: string;

@@ -291,6 +291,7 @@ export type PhaseArtifactValidationDiagnostic = {
   path: string;
   code: string;
   message: string;
+  severity?: "error" | "warning";
   heading?: string;
   missing?: string[];
   repair: string;
@@ -1643,7 +1644,7 @@ export function buildDefaultBootstrapSeed(
             phase: "2",
             title: "Plan First Brownfield Delivery Slice",
             objective:
-              "Shape the first implementation slice from mapped repo constraints and durable requirements.",
+              "Shape the first delivery pass from mapped repo constraints and durable requirements.",
             requirementIds: ["RQ-03"],
             successCriteria: [
               "ROADMAP.md names the first delivery slice from the mapped repo constraints.",
@@ -2836,16 +2837,20 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): b
     extractMarkdownSection(content, "Recommendations")
   ].join("\n");
 
-  if (
-    !/\b(?:latest|current official|official docs confirm|upstream confirms|current upstream|live external verification)\b/i.test(
-      claimText
-    )
-  ) {
+  const currentExternalClaimPattern =
+    /\b(?:latest|current official|official docs confirm|upstream confirms|current upstream|live external verification|current vendor docs|official documentation currently)\b/i;
+
+  if (!currentExternalClaimPattern.test(claimText)) {
     return false;
   }
 
   const sources = extractMarkdownSection(content, "Sources");
-  return !/### External Sources/i.test(sources) || !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources);
+  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
+
+  return (
+    !/### External Sources/i.test(sources) ||
+    !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)
+  ) && !/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister);
 }
 
 function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolean {
@@ -2853,10 +2858,488 @@ function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolea
     /^\*\*Confidence:\*\*\s*HIGH\s*$/m.test(content) ||
     /\|\s*[^|\n]+\s*\|\s*HIGH\s*\|/i.test(extractMarkdownSection(content, "Confidence Breakdown"));
 
-  return (
-    highConfidence &&
-    /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(content)
+  if (!highConfidence) {
+    return false;
+  }
+
+  const claimRows = collectResearchClaimRows(content);
+
+  if (claimRows.length > 0) {
+    return claimRows.some((row) =>
+      /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
+        [row.support_status, row.claim_class, row.confidence, row.claim, row.plan_impact].join(" ")
+      )
+    );
+  }
+
+  return /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
+    content.replace(/\bsupplied-unchecked\b/gi, "supplied")
   );
+}
+
+type ResearchMarkdownRow = Record<string, string>;
+
+function normalizeResearchTableHeader(value: string): string {
+  return value
+    .trim()
+    .replace(/`/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function splitResearchTableLine(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function parseResearchMarkdownTable(section: string): ResearchMarkdownRow[] {
+  const lines = section.split("\n");
+
+  for (let index = 0; index < lines.length - 1; index += 1) {
+    const headerLine = lines[index]?.trim() ?? "";
+    const dividerLine = lines[index + 1]?.trim() ?? "";
+
+    if (!headerLine.startsWith("|") || !dividerLine.startsWith("|")) {
+      continue;
+    }
+
+    if (!/^\|?[\s:-]+\|[\s|:-]*$/.test(dividerLine)) {
+      continue;
+    }
+
+    const headers = splitResearchTableLine(headerLine).map(normalizeResearchTableHeader);
+    const rows: ResearchMarkdownRow[] = [];
+
+    for (const rowLine of lines.slice(index + 2)) {
+      const trimmed = rowLine.trim();
+
+      if (!trimmed.startsWith("|")) {
+        break;
+      }
+
+      const cells = splitResearchTableLine(trimmed);
+      const row: ResearchMarkdownRow = {};
+
+      headers.forEach((header, cellIndex) => {
+        row[header] = cells[cellIndex] ?? "";
+      });
+
+      rows.push(row);
+    }
+
+    return rows;
+  }
+
+  return [];
+}
+
+function extractMarkdownSubsection(section: string, subheading: string): string {
+  const escaped = subheading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = section.match(new RegExp(`(?:^|\\n)### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |\\n## |$)`));
+  return match?.[1] ?? "";
+}
+
+function splitResearchReferenceIds(value: string): string[] {
+  return uniqueStrings(value.match(/\b(?:SRC|EVID|CLM|REC)-\d{3}\b/g) ?? []);
+}
+
+function isBackgroundSourceUse(value: string): boolean {
+  return /\b(?:background|do not use as support|out_of_scope)\b/i.test(value);
+}
+
+function collectResearchClaimRows(content: string): ResearchMarkdownRow[] {
+  return parseResearchMarkdownTable(extractMarkdownSection(content, "Claim Support Ledger"));
+}
+
+function collectResearchRecommendationRows(content: string): ResearchMarkdownRow[] {
+  return parseResearchMarkdownTable(extractMarkdownSection(content, "Recommendations"));
+}
+
+function collectResearchSourceRegisterRows(content: string): ResearchMarkdownRow[] {
+  return parseResearchMarkdownTable(
+    extractMarkdownSubsection(extractMarkdownSection(content, "Sources"), "Source Register")
+  );
+}
+
+function sourceRegisterRowId(row: ResearchMarkdownRow): string {
+  return row.source_id || row.evidence_id || "";
+}
+
+function collectResearchEvidenceRows(content: string): ResearchMarkdownRow[] {
+  const sources = extractMarkdownSection(content, "Sources");
+  return [
+    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Repo Evidence")),
+    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")),
+    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Inference Notes"))
+  ];
+}
+
+function evidenceRowId(row: ResearchMarkdownRow): string {
+  return row.evidence_id || "";
+}
+
+function evidenceRowReferences(row: ResearchMarkdownRow): string[] {
+  return splitResearchReferenceIds(
+    [
+      row.source_ref,
+      row.derived_from,
+      row.downstream_use,
+      row.support_span,
+      row.retrieval_context
+    ].join(" ")
+  );
+}
+
+function resolveEvidenceSourceIds(
+  evidenceId: string,
+  evidenceRowsById: Map<string, ResearchMarkdownRow>,
+  visited = new Set<string>()
+): string[] {
+  if (visited.has(evidenceId)) {
+    return [];
+  }
+
+  visited.add(evidenceId);
+  const row = evidenceRowsById.get(evidenceId);
+  if (!row) {
+    return [];
+  }
+
+  const refs = evidenceRowReferences(row);
+  const directSourceIds = refs.filter((id) => id.startsWith("SRC-"));
+  const nestedSourceIds = refs
+    .filter((id) => id.startsWith("EVID-"))
+    .flatMap((id) => resolveEvidenceSourceIds(id, evidenceRowsById, visited));
+
+  return uniqueStrings([...directSourceIds, ...nestedSourceIds]);
+}
+
+function sourceRowIsRepoLane(row: ResearchMarkdownRow): boolean {
+  return /\brepo\b/i.test(row.lane || "");
+}
+
+function hasRuntimeAdequateEvidence(
+  evidenceIds: string[],
+  sourceIds: string[],
+  evidenceRowsById: Map<string, ResearchMarkdownRow>,
+  sourceRowsById: Map<string, ResearchMarkdownRow>
+): boolean {
+  const evidenceText = evidenceIds
+    .map((id) => evidenceRowsById.get(id))
+    .filter((row): row is ResearchMarkdownRow => Boolean(row))
+    .map((row) =>
+      [
+        row.role,
+        row.retrieval_context,
+        row.source_ref,
+        row.source_type,
+        row.source_class,
+        row.path_symbol_url,
+        row.path_or_url
+      ].join(" ")
+    )
+    .join(" ");
+  const sourceText = sourceIds
+    .map((id) => sourceRowsById.get(id))
+    .filter((row): row is ResearchMarkdownRow => Boolean(row))
+    .map((row) => [row.source_type, row.path_or_url, row.repo_line_or_symbol].join(" "))
+    .join(" ");
+  const combined = `${evidenceText}\n${sourceText}`;
+
+  return /\b(command-manifest|skill-contract|runtime-contract|artifact-contract|mcp-handler|test|built-entrypoint|command manifest|skill\/reference doc|MCP handler|artifact contract|built entrypoint)\b/i.test(
+    combined
+  ) || /\b(?:commands|skills|src\/mcp|tests|dist)\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+/i.test(combined);
+}
+
+function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValidationDiagnostic[] {
+  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
+  const sources = extractMarkdownSection(content, "Sources");
+  const sourceRows = collectResearchSourceRegisterRows(content);
+  const sourceRowsById = new Map(
+    sourceRows
+      .map((row) => [sourceRegisterRowId(row), row] as const)
+      .filter(([id]) => id.length > 0)
+  );
+  const evidenceRows = collectResearchEvidenceRows(content);
+  const evidenceRowsById = new Map(
+    evidenceRows
+      .map((row) => [evidenceRowId(row), row] as const)
+      .filter(([id]) => id.length > 0)
+  );
+  const claimRows = collectResearchClaimRows(content);
+  const recommendationRows = collectResearchRecommendationRows(content);
+  const sourceIds = new Set(sourceRowsById.keys());
+  const evidenceIds = new Set(evidenceRowsById.keys());
+  const claimIds = new Set(claimRows.map((row) => row.claim_id).filter((id) => id.length > 0));
+  const usedSourceIds = new Set<string>();
+
+  for (const line of sourceLinesWithUrlsMissingAccessDate(sources)) {
+    diagnostics.push(
+      researchEvidenceWarningDiagnostic({
+        code: "research.external_source_missing_access_date",
+        heading: "Sources",
+        message: `Research artifact external source row is missing an access date: ${line}`,
+        repair: "Add an Accessed value in YYYY-MM-DD form, or mark the source supplied-unchecked and do not use it as current evidence."
+      })
+    );
+  }
+
+  for (const row of sourceRows) {
+    const sourceId = sourceRegisterRowId(row);
+    if (!sourceId) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.source_id_missing",
+          heading: "Sources",
+          message: "Research artifact Source Register rows should include a stable Source ID.",
+          repair: "Add a Source ID such as SRC-001 to every Source Register row used by claims or recommendations."
+        })
+      );
+    }
+  }
+
+  for (const row of claimRows) {
+    const supportStatus = row.support_status || row.claim_class || "";
+    const citedIds = splitResearchReferenceIds(row.evidence_ids || row.source_ids || row.evidence || "");
+    const directSourceIds = citedIds.filter((id) => id.startsWith("SRC-"));
+    const citedEvidenceIds = citedIds.filter((id) => id.startsWith("EVID-"));
+    const resolvedSourceIds = uniqueStrings([
+      ...directSourceIds,
+      ...citedEvidenceIds.flatMap((id) => resolveEvidenceSourceIds(id, evidenceRowsById))
+    ]);
+    const existingResolvedSourceIds = resolvedSourceIds.filter((id) => sourceIds.has(id));
+
+    for (const id of existingResolvedSourceIds) {
+      usedSourceIds.add(id);
+    }
+
+    if (
+      existingResolvedSourceIds.length === 0 &&
+      !/\b(?:not_enough_evidence|out_of_scope)\b/i.test(supportStatus)
+    ) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.claim_missing_evidence",
+          heading: "Claim Support Ledger",
+          message: "Research artifact planner-critical claim rows should cite at least one evidence ID that resolves to a Source Register row, or explicitly mark missing evidence.",
+          repair: "Add EVID-* rows that resolve to Source Register rows, add direct SRC-* support, or set Support Status to not_enough_evidence or out_of_scope."
+        })
+      );
+    }
+
+    for (const id of directSourceIds) {
+      if (!sourceIds.has(id)) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.source_id_missing_from_register",
+            heading: "Claim Support Ledger",
+            message: `Research artifact claim cites ${id}, but ${id} is not present in the Source Register.`,
+            repair: "Add the cited source to the Source Register or change the claim evidence IDs to existing sources."
+          })
+        );
+      }
+    }
+
+    for (const id of citedEvidenceIds) {
+      if (!evidenceIds.has(id)) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.evidence_id_missing_from_sources",
+            heading: "Claim Support Ledger",
+            message: `Research artifact claim cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
+            repair: "Add the cited evidence row or change the claim evidence IDs to existing evidence."
+          })
+        );
+      } else if (resolveEvidenceSourceIds(id, evidenceRowsById).filter((sourceId) => sourceIds.has(sourceId)).length === 0) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.evidence_missing_source_register_link",
+            heading: "Sources",
+            message: `Research artifact evidence row ${id} does not resolve to any Source Register row.`,
+            repair: "Set Source Ref or Derived From to an existing SRC-* row, or mark the evidence as unsupported."
+          })
+        );
+      }
+    }
+
+    if ((row.claim_type || "").trim() === "repo_runtime") {
+      const repoSourceIds = existingResolvedSourceIds.filter((id) => {
+        const source = sourceRowsById.get(id);
+        return source && sourceRowIsRepoLane(source);
+      });
+
+      if (
+        repoSourceIds.length === 0 &&
+        !/\b(?:not_enough_evidence|out_of_scope)\b/i.test(supportStatus)
+      ) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.repo_runtime_claim_missing_repo_evidence",
+            heading: "Claim Support Ledger",
+            message: "Research artifact repo_runtime claims should cite at least one repo-lane Source Register row before relying on external evidence.",
+            repair: "Add repo evidence for the runtime claim, lower confidence, or change the claim to an inference or open question."
+          })
+        );
+      }
+
+      if (
+        repoSourceIds.length > 0 &&
+        !hasRuntimeAdequateEvidence(citedEvidenceIds, repoSourceIds, evidenceRowsById, sourceRowsById)
+      ) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.repo_runtime_claim_retrieval_partial",
+            heading: "Claim Support Ledger",
+            message: "Research artifact repo_runtime claims should cite runtime-adequate evidence such as command manifests, skills, runtime contracts, artifact contracts, MCP handlers, tests, or built entrypoints.",
+            repair: "Add runtime-adequate repo evidence, or lower confidence and mark the claim as partially supported."
+          })
+        );
+      }
+    }
+  }
+
+  for (const row of sourceRows) {
+    const sourceId = sourceRegisterRowId(row);
+
+    if (
+      sourceId &&
+      !usedSourceIds.has(sourceId) &&
+      !isBackgroundSourceUse(row.used_for_claims || row.downstream_use || row.limitations || "")
+    ) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.source_id_orphaned",
+          heading: "Sources",
+          message: `Research artifact Source Register row ${sourceId} is not used by a claim and is not labeled background.`,
+          repair: "Use the source from a claim row, remove it, or label it background or do not use as support."
+        })
+      );
+    }
+  }
+
+  for (const row of recommendationRows) {
+    if (!row.recommendation_id && !row.recommendation) {
+      continue;
+    }
+
+    const supportingClaims = splitResearchReferenceIds(row.supporting_claim_ids || row.claim_ids || "");
+    const recommendationEvidenceIds = splitResearchReferenceIds(row.evidence_ids || row.evidence || "");
+    const status = row.status || "";
+
+    if (
+      supportingClaims.filter((id) => id.startsWith("CLM-")).length === 0 &&
+      recommendationEvidenceIds.length === 0 &&
+      !/\bblocked\b/i.test(status)
+    ) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.recommendation_missing_evidence",
+          heading: "Recommendations",
+          message: "Research artifact Recommendation Handoff rows should cite supporting claim IDs or evidence IDs unless blocked by a named open question.",
+          repair: "Add Supporting Claim IDs or Evidence IDs, or mark the recommendation blocked with the open question that prevents planner-ready action."
+        })
+      );
+    }
+
+    for (const id of recommendationEvidenceIds) {
+      if (id.startsWith("SRC-") && !sourceIds.has(id)) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.source_id_missing_from_register",
+            heading: "Recommendations",
+            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Source Register.`,
+            repair: "Add the cited source to the Source Register or change the recommendation evidence IDs to existing sources."
+          })
+        );
+      }
+
+      if (id.startsWith("EVID-") && !evidenceIds.has(id)) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.evidence_id_missing_from_sources",
+            heading: "Recommendations",
+            message: `Research artifact recommendation cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
+            repair: "Add the cited evidence row or change the recommendation evidence IDs to existing evidence."
+          })
+        );
+      }
+    }
+
+    for (const id of supportingClaims.filter((candidate) => candidate.startsWith("CLM-"))) {
+      if (claimIds.size > 0 && !claimIds.has(id)) {
+        diagnostics.push(
+          researchEvidenceWarningDiagnostic({
+            code: "research.recommendation_claim_id_missing_from_ledger",
+            heading: "Recommendations",
+            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Claim Support Ledger.`,
+            repair: "Add the claim to the Claim Support Ledger or change the recommendation to cite an existing claim."
+          })
+        );
+      }
+    }
+
+    if (!row.affected_surfaces?.trim() && !/\bblocked\b/i.test(status)) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.recommendation_missing_affected_surfaces",
+          heading: "Recommendations",
+          message: "Research artifact Recommendation Handoff rows should name affected files, commands, contracts, docs, or modules.",
+          repair: "Add affected surfaces, or mark the recommendation blocked if no planner-ready surface can be named."
+        })
+      );
+    }
+
+    if (!row.tests_checks?.trim() && !/\bblocked\b/i.test(status)) {
+      diagnostics.push(
+        researchEvidenceWarningDiagnostic({
+          code: "research.recommendation_missing_validation_signal",
+          heading: "Recommendations",
+          message: "Research artifact Recommendation Handoff rows should name tests/checks or validation signals.",
+          repair: "Add tests/checks, or mark the recommendation blocked if validation cannot yet be named."
+        })
+      );
+    }
+  }
+
+  if (!/### Recommendation Handoff/i.test(extractMarkdownSection(content, "Recommendations"))) {
+    diagnostics.push(
+      researchEvidenceWarningDiagnostic({
+        code: "research.recommendation_handoff_missing",
+        heading: "Recommendations",
+        message: "Research artifact should include a Recommendation Handoff table for planner-critical recommendations.",
+        repair: "Add a Recommendation Handoff table with recommendation IDs, supporting claims/evidence, affected surfaces, tests/checks, and status."
+      })
+    );
+  }
+
+  if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
+    diagnostics.push(
+      researchEvidenceWarningDiagnostic({
+        code: "research.live_external_claim_without_evidence",
+        heading: "Sources",
+        message: "Research artifact uses current external verification wording without an External Sources or Source Register row with an access date.",
+        repair: "Add allowed external evidence with an access date, lower confidence, or mark the claim unchecked."
+      })
+    );
+  }
+
+  if (hasHighConfidenceWithUnsupportedEvidenceClaims(content)) {
+    diagnostics.push(
+      researchEvidenceWarningDiagnostic({
+        code: "research.high_confidence_unsupported",
+        heading: "Confidence Breakdown",
+        message: "Research artifact uses HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence.",
+        repair: "Lower confidence, move the issue to Open Questions, or add direct support for the planner-critical claim."
+      })
+    );
+  }
+
+  return diagnostics;
 }
 
 function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean {
@@ -2936,6 +3419,7 @@ export function validateResearchArtifactContent(content: string): {
 } {
   const issues: string[] = [];
   const warnings: string[] = [];
+  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
   if (!/^# .+ - Research\s*$/m.test(content)) {
     issues.push("Research artifact must start with a '# ... - Research' heading.");
   }
@@ -2989,13 +3473,16 @@ export function validateResearchArtifactContent(content: string): {
 
   const recommendations = extractMarkdownSection(content, "Recommendations");
 
-  if (!/^- /m.test(recommendations)) {
-    issues.push("Research artifact must include at least one bullet under Recommendations.");
+  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(content).length === 0) {
+    issues.push("Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.");
   }
 
   const sources = extractMarkdownSection(content, "Sources");
+  const hasStructuredSourceEvidence =
+    collectResearchSourceRegisterRows(content).length > 0 ||
+    collectResearchEvidenceRows(content).length > 0;
 
-  if (!/^- /m.test(sources) || !containsSourceEvidence(sources)) {
+  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence) {
     issues.push(
       "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
     );
@@ -3077,18 +3564,29 @@ export function validateResearchArtifactContent(content: string): {
     warnings.push("Research artifact should include a fenced code or pseudocode example when examples add value.");
   }
 
+  const issueDiagnostics = issues.map((issue) =>
+    phaseArtifactDiagnostic({
+      artifact: "research",
+      path: "content",
+      code: "research.invalid",
+      message: issue
+    })
+  );
+  const warningDiagnostics = researchEvidenceWarningDiagnostics(content);
+
+  for (const diagnostic of warningDiagnostics) {
+    if (!warnings.includes(diagnostic.message)) {
+      warnings.push(diagnostic.message);
+    }
+  }
+
+  diagnostics.push(...issueDiagnostics, ...warningDiagnostics);
+
   return {
     valid: issues.length === 0,
     issues,
     warnings,
-    diagnostics: issues.map((issue) =>
-      phaseArtifactDiagnostic({
-        artifact: "research",
-        path: "content",
-        code: "research.invalid",
-        message: issue
-      })
-    )
+    diagnostics
   };
 }
 
@@ -4922,6 +5420,7 @@ function phaseArtifactDiagnostic(args: {
     path: args.path,
     code: args.code,
     message: args.message,
+    severity: "error",
     heading: args.heading,
     missing: args.missing,
     repair:
@@ -4930,6 +5429,24 @@ function phaseArtifactDiagnostic(args: {
         artifact: args.artifact,
         heading: args.heading
       }),
+    retryable: true,
+    nextTool: "blueprint_phase_artifact_write"
+  };
+}
+
+function researchEvidenceWarningDiagnostic(args: {
+  code: string;
+  message: string;
+  heading?: string;
+  repair: string;
+}): PhaseArtifactValidationDiagnostic {
+  return {
+    path: "content",
+    code: args.code,
+    message: args.message,
+    severity: "warning",
+    heading: args.heading,
+    repair: args.repair,
     retryable: true,
     nextTool: "blueprint_phase_artifact_write"
   };
