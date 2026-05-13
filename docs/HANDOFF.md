@@ -40,7 +40,7 @@ Wave 2 milestone closeout plus the shipped capture, review, and docs slices are 
 
 ## First Replanned Slice
 
-The next implementation slice should be freshly planned after Wave 2 closeout:
+The next delivery increment should be freshly planned after Wave 2 closeout:
 
 - preserve `insert-phase` as a shipped Wave 2 command instead of letting it drift back into docs-only status
 - otherwise the next post-Wave-2 rollout should start from a newly locked Wave 3 or later slice instead of pretending the closeout trio is still pending

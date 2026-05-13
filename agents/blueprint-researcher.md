@@ -254,6 +254,9 @@ Use this contract for artifact-grade mode.
   `inference`), claim ID, claim text, support class, source type, authority tier,
   source ref, source title when external, access date when external, support
   span, retrieval context, provenance, limitations, and downstream use.
+- Include `Claim Support Ledger Rows` for planner-critical artifact-grade claims when the parent asks for evidence validation. Each row must include claim ID, claim, claim type, evidence IDs, support status, confidence, and plan impact.
+- Include `Source Register Rows` for sources the parent can copy into `## Sources`. Each row must include source ID, lane, path or URL, access date when external, repo line or symbol when available, source type, used-for-claims, and limitations.
+- Include `Recommendation Handoff Rows` when the bounded question supports a recommendation. Each row must include recommendation ID, recommendation, supporting claim IDs, evidence IDs, affected surfaces, tests/checks, and status.
 - Include `Retrieval Notes`: query or navigation method, scope filter, candidate
   files or symbols, files actually read, failed/noisy/no-hit searches, and stop
   or widen reason when this affects confidence.
@@ -363,6 +366,7 @@ Use this contract for artifact-grade mode.
 - Do not invent evidence IDs, claim IDs, access dates, support spans, source
   authority tiers, or retrieval methods for external evidence the parent did not
   supply or approve.
+- Do not invent Source Register rows, source IDs, or Recommendation Handoff rows for evidence the parent did not supply, approve, or let you confirm from repo-local reads.
 - Do not imply that you fetched official docs or external sources yourself.
 - Do not imply that you performed semantic navigation, symbol indexing, remote
   code search, LSP, SCIP, ctags, or Tree-sitter analysis unless the parent

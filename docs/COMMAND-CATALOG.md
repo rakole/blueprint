@@ -1,6 +1,6 @@
 # Blueprint Command Catalog
 
-This file is a one-page index for the retained Blueprint command surface. It complements the per-command specs in `docs/commands/` and helps future sessions choose the next implementation slice quickly. The `Status` column captures declared runtime intent; the live `blueprint_command_catalog` result remains the source of truth for actual availability.
+This file is a one-page index for the retained Blueprint command surface. It complements the per-command specs in `docs/commands/` and helps future sessions choose the next delivery increment quickly. The `Status` column captures declared runtime intent; the live `blueprint_command_catalog` result remains the source of truth for actual availability.
 
 | Command | Wave | Family | Primary Skill | Status | Key Writes | Risk |
 |---|---:|---|---|---|---|---|

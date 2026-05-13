@@ -77,7 +77,7 @@
           },
           ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
             "status": "used",
-            "rationale": "Summary evidence confirmed the completed implementation slice."
+            "rationale": "Summary evidence confirmed the completed delivery increment."
           }
         }
       ]

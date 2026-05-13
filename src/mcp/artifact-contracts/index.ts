@@ -941,6 +941,16 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 - <key conclusion>
 
+## Claim Support Ledger
+
+| Claim ID | Claim | Claim Type | Evidence IDs | Support Status | Confidence | Plan Impact |
+|----------|-------|------------|--------------|----------------|------------|-------------|
+| CLM-001 | <planner-critical claim> | <claim type> | EVID-001 or SRC-001 | <support status> | <LOW, MEDIUM, or HIGH> | REC-001, open question, or blocked |
+
+Allowed claim types: \`repo_runtime\`, \`external_practice\`, \`dependency_tool\`, \`inference\`, \`open_question\`.
+Allowed support statuses: \`directly_supported\`, \`partially_supported\`, \`inferred_from_supported\`, \`contradicted\`, \`conflicting_sources\`, \`not_enough_evidence\`, \`out_of_scope\`.
+Use \`EVID-*\` when a claim is supported by evidence rows under \`Repo Evidence\`, \`External Sources\`, or \`Inference Notes\`; use \`SRC-*\` only for direct Source Register support.
+
 ## Investigation Trace
 
 ### Initial Assessment
@@ -1048,9 +1058,24 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 
 ## Recommendations
 
-- <prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>
+### Recommendation Handoff
+
+| Recommendation ID | Recommendation | Supporting Claim IDs | Evidence IDs | Affected Surfaces | Tests / Checks | Status |
+|-------------------|----------------|----------------------|--------------|-------------------|----------------|--------|
+| REC-001 | <prescriptive recommendation with tradeoffs> | CLM-001 | EVID-001 or SRC-001 | <files, commands, contracts, docs, or none> | <tests/checks or named validation> | <ready or blocked with open question> |
 
 ## Sources
+
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | <repo path, command, test output, manifest, contract, or saved Blueprint artifact> | observed <YYYY-MM-DD> | <line, symbol, heading, or n/a> | <repo source type> | CLM-001 | <limits or none> |
+| SRC-002 | external | <URL, DOI, or supplied source label> | <YYYY-MM-DD or supplied-unchecked> | n/a | <external source type> | CLM-002 or background | <stale risk, inaccessible text, supplied-only, conflict, or none> |
+
+Allowed lanes: \`repo\`, \`external\`, \`supplied\`, \`inference\`. Use \`supplied\` when the user supplied a source but live external verification did not happen.
+Repo source types include \`repo_file\`, \`command_output\`, and \`test_output\`.
+External or supplied source types include \`official_standard\`, \`official_product_doc\`, \`peer_reviewed_paper\`, \`preprint\`, \`supplied_reference\`, and \`web_page\`.
 
 ### Repo Evidence
 
@@ -1613,7 +1638,7 @@ const CODE_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
       },
       ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
         status: "used",
-        rationale: "Summary evidence confirmed the completed implementation slice."
+        rationale: "Summary evidence confirmed the completed delivery increment."
       }
     },
     followUps: ["Add the negative-input guard and rerun focused verification."],
@@ -4159,7 +4184,19 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<topic>",
       "<evidence-backed confidence explanation>",
       "<short code or pseudocode example>",
+      "<planner-critical claim>",
+      "<claim type>",
+      "<support status>",
       "<prescriptive recommendation with tradeoffs>",
+      "<files, commands, contracts, docs, or none>",
+      "<tests/checks or named validation>",
+      "<ready or blocked with open question>",
+      "<open question>",
+      "<repo path, command, test output, manifest, contract, or saved Blueprint artifact>",
+      "<line, symbol, heading, or n/a>",
+      "<repo source type>",
+      "<external source type>",
+      "<URL, DOI, or supplied source label>",
       "<prescriptive recommendation with tradeoffs; cite DEP-001 when this adds, adopts, rejects, defers, upgrades, or hand-rolls a dependency/tool>",
       "<repo path:line, command, test output, manifest, contract, or saved Blueprint artifact>",
       "<definition, reference, test, config, contract, runtime, example, or background>",
@@ -4196,6 +4233,10 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
       "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
       "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",
+      "Claim Support Ledger rows are preferred for planner-critical claims and should connect claim IDs to source or evidence IDs, support status, confidence, and plan impact.",
+      "Source Register rows are preferred under ## Sources and should connect source IDs to lanes, paths or URLs, access dates, repo line or symbol anchors, source types, used claims, and limitations.",
+      "Recommendation Handoff rows are preferred for planner-critical recommendations and should connect recommendation IDs to supporting claims, evidence, affected surfaces, tests/checks, and ready or blocked status.",
+      "Research validation returns warning-grade evidence diagnostics for missing or weak claim/source/recommendation support before making the richer evidence contract strict.",
       "When a phase recommendation depends on adding, adopting, replacing, upgrading, installing, vendoring, forking, code-generating, or hand-rolling a dependency/tool, research should include the dependency/tool evaluation, setup/update posture, alternatives, library-vs-custom decision, and supply-chain evidence rows in the existing required headings."
     ],
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),

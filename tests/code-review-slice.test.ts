@@ -380,7 +380,7 @@ function createStructuredCodeReviewModel(
       },
       ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
         status: "used",
-        rationale: "Summary evidence confirmed the completed implementation slice."
+        rationale: "Summary evidence confirmed the completed delivery increment."
       },
       ".blueprint/phases/05-review-scope/05-VERIFICATION.md": {
         status: "used",
@@ -732,7 +732,7 @@ Exercise code-review follow-up routing.
         },
         ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
           status: "used",
-          rationale: "Summary evidence confirmed the completed implementation slice."
+          rationale: "Summary evidence confirmed the completed delivery increment."
         },
         ".blueprint/phases/05-review-scope/05-VERIFICATION.md": {
           status: "used",
@@ -1808,7 +1808,7 @@ test("blueprint_review_record rejects invalid structured code-review models befo
         },
         ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
           status: "used",
-          rationale: "Summary evidence confirmed the completed implementation slice."
+          rationale: "Summary evidence confirmed the completed delivery increment."
         }
       }
     }),

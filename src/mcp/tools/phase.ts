@@ -6829,8 +6829,10 @@ function phaseArtifactSuggestedRepairs(
   artifact: PhaseArtifactKind,
   diagnostics: readonly PhaseArtifactValidationDiagnostic[]
 ): string[] {
-  if (diagnostics.length > 0) {
-    return [...new Set(diagnostics.map((diagnostic) => diagnostic.repair))];
+  const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
+
+  if (errorDiagnostics.length > 0) {
+    return [...new Set(errorDiagnostics.map((diagnostic) => diagnostic.repair))];
   }
 
   if (artifact === "research") {
@@ -6858,7 +6860,8 @@ function phaseArtifactRetryPlan(
   artifact: PhaseArtifactKind,
   diagnostics: readonly PhaseArtifactValidationDiagnostic[]
 ): PhaseArtifactRetryPlan {
-  const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, diagnostics);
+  const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
+  const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, errorDiagnostics);
   const command =
     artifact === "context" || artifact === "discussion-log"
       ? "/blu-discuss-phase"
@@ -6867,7 +6870,7 @@ function phaseArtifactRetryPlan(
         : "/blu-ui-phase";
 
   return {
-    retryable: diagnostics.length === 0 || diagnostics.every((diagnostic) => diagnostic.retryable),
+    retryable: errorDiagnostics.length === 0 || errorDiagnostics.every((diagnostic) => diagnostic.retryable),
     nextTool: "blueprint_phase_artifact_write",
     steps: [
       `Read blueprint_artifact_contract_read for phase.${artifact === "discussion-log" ? "discussion-log" : artifact}.`,
@@ -7056,7 +7059,8 @@ export async function blueprintPhaseArtifactWrite(
           valid: validation.valid,
           issues: validation.issues,
           warnings: validation.warnings,
-          suggestedRepairs: []
+          suggestedRepairs: [],
+          diagnostics: validation.diagnostics
         },
         warnings: [...warnings, ...validation.warnings]
       };
@@ -7112,7 +7116,8 @@ export async function blueprintPhaseArtifactWrite(
       valid: validation.valid,
       issues: validation.issues,
       warnings: validation.warnings,
-      suggestedRepairs: []
+      suggestedRepairs: [],
+      diagnostics: validation.diagnostics
     },
     warnings: [...warnings, ...validation.warnings]
   };
