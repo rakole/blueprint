@@ -1,10 +1,138 @@
 # `/blu-discuss-phase` Frontier Research And Improvement Plan
 
-Date: 2026-05-12
+Date: 2026-05-14
 
 ## Scope
 
-This document researches how Blueprint's `/blu-discuss-phase` workflow can become a stronger requirements-discovery, gray-area-analysis, and phase-context-authoring skill without changing runtime code yet. The work is documentation-only: it proposes future edits to the command/skill/runtime-contract text, but it does not modify those files.
+This document researches how Blueprint's `/blu-discuss-phase` workflow can become a stronger requirements-discovery, gray-area-analysis, and phase-context-authoring skill without changing runtime code yet. It is grounded in `/blu-new-project` because project bootstrap quality determines the initial project brief, requirements, roadmap, workflow preferences, and map-first brownfield posture that discuss-phase later consumes. The work is documentation-only: it proposes future edits to the command/skill/runtime-contract text, but it does not modify those files.
+
+## 2026-05-14 Agent Research Inbox
+
+The subsections below preserve current-run research, source links, and narrow Blueprint analysis. Reconciled conclusions are folded into the May 14 summary and synthesis below, so the inbox now emphasizes deltas over the older R1-R6 research rather than repeating every implementation implication.
+
+### N1: Bootstrap-To-Discuss Workflow Baseline
+
+#### Current Flow
+
+- `/blu-new-project` is intentionally a thin manifest that delegates runtime behavior to `blueprint-bootstrap` and its three local references, then requires project status checks, effective config reads, approval-gated seeding, MCP-owned persistence, `.blueprint/config.json` reporting, and an authoritative next safe action (`commands/blu-new-project.toml:5`, `commands/blu-new-project.toml:25`, `commands/blu-new-project.toml:34`).
+- The bootstrap skill makes `mcp_blueprint_blueprint_project_init` the first persistent write and requires `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_config_set`, `mcp_blueprint_blueprint_state_update`, `mcp_blueprint_blueprint_artifact_contract_read`, and `mcp_blueprint_blueprint_artifact_validate` around that write (`skills/blueprint-bootstrap/SKILL.md:67`).
+- Before the write, bootstrap must classify repo shape and enforce map-first brownfield routing: unmapped or interrupted mapping routes to `/blu-map-codebase`, while `mapped-only` allows project bootstrap without treating `.blueprint/codebase/*.md` as overwrite conflict (`skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md:50`, `src/mcp/tools/project.ts:720`).
+- The durable seed is not just a project name. `bootstrapSeed` carries vision, audience, constraints, milestone, non-goals, requirements with durable IDs and scope, roadmap phases with objectives, requirement IDs, success criteria, notes, brownfield mode, and assumptions (`src/mcp/tools/project.ts:183`, `src/mcp/tools/project.ts:214`).
+- Runtime preflight rejects thin or untraceable seeds before writing: interactive mode needs vision, milestone, requirements, and roadmap phases; roadmap phases need explicit requirement IDs and success criteria; committed requirements must map to exactly one roadmap phase (`src/mcp/tools/project.ts:445`, `src/mcp/tools/project.ts:502`, `src/mcp/tools/project.ts:667`, `src/mcp/tools/project.ts:1200`).
+- On success, `blueprintProjectInit` scaffolds `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/phases/`, and the initial phase `XX-CONTEXT.md`; then it seeds `.blueprint/config.json`, updates `.blueprint/STATE.md` with milestone, current phase, active command, and next action, and returns `createdPaths`, `configPath`, provenance, diagnostics, warnings, and `nextAction` (`src/mcp/tools/project.ts:1273`, `src/mcp/tools/project.ts:1299`, `src/mcp/tools/project.ts:1312`, `src/mcp/tools/project.ts:1334`).
+- The seeded initial `XX-CONTEXT.md` is explicitly starter material. Its text points back to `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, and `.blueprint/ROADMAP.md`, says `/blu-discuss-phase <phase>` must replace it before planning, and includes the bootstrap starter marker (`src/mcp/tools/project.ts:269`).
+- `/blu-discuss-phase` then resolves the selected phase, reads the bootstrap-derived context packet, and replaces starter context with authored phase decisions. Its manifest and runtime contract require reads of `blueprint_phase_context`, `blueprint_roadmap_read`, artifact inventory, effective config, existing context/logs, checkpoint state, plan inventory, and live artifact contracts before fresh questioning (`commands/blu-discuss-phase.toml:5`, `commands/blu-discuss-phase.toml:22`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:36`).
+- `blueprint_phase_context` is the main handoff adapter. It reads `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/STATE.md`, and effective config, then returns `projectBrief`, `requirementsGrounding`, `workflowPosture`, mapped-codebase digest, selected roadmap phase details, artifact paths, missing artifacts, and warnings (`src/mcp/tools/phase.ts:563`, `src/mcp/tools/phase.ts:2778`, `src/mcp/tools/phase.ts:6586`).
+- State routing already treats bootstrap starter context as not plan-ready: `STATE.md` warnings say the current phase still has starter `CONTEXT`, and `deriveNextAction` routes to `Run /blu-discuss-phase <phase> to author the current phase context` before research/UI/plan gates (`src/mcp/tools/state.ts:1457`, `src/mcp/tools/state.ts:2133`).
+
+#### Handoff Inputs Consumed By Discuss-Phase
+
+- Project intent: `PROJECT.md` contributes title, vision, audience, constraints, current milestone, non-goals, assumptions, and bootstrap shape; discuss-phase sees these through `projectBrief` and should not re-ask generic project-purpose questions unless the brief is missing or thin (`src/mcp/tools/artifacts.ts:1721`, `src/mcp/tools/phase.ts:2802`).
+- Requirement baseline: `REQUIREMENTS.md` contributes durable requirement IDs, traceability notes, acceptance notes, deferred items, and warnings; `ROADMAP.md` contributes the selected phase's linked requirement IDs, objective/goal, and success criteria (`src/mcp/tools/artifacts.ts:1802`, `src/mcp/tools/artifacts.ts:1887`, `src/mcp/tools/phase.ts:2824`, `src/mcp/tools/phase.ts:6623`).
+- Workflow preferences: `.blueprint/config.json` and `.blueprint/STATE.md` contribute `workflow.research`, `workflow.plan_check`, `workflow.verifier`, `workflow.nyquist_validation`, `workflow.ui_phase`, `workflow.ui_safety_gate`, `workflow.code_review`, `workflow.auto_advance`, `workflow.research_before_questions`, `workflow.discuss_mode`, `workflow.skip_discuss`, `workflow.use_worktrees`, and `research.external_sources` (`src/mcp/tools/phase.ts:2884`, `src/mcp/tools/phase.ts:2941`).
+- Brownfield evidence: a valid `.blueprint/codebase/` bundle is preserved by new-project and summarized by phase context; discuss-phase is told to reuse mapped summaries before rereading broad repo surfaces, while warning if the bundle is missing, incomplete, or invalid (`commands/blu-new-project.toml:27`, `skills/blueprint-phase-discovery/SKILL.md:167`, `src/mcp/tools/phase.ts:2964`).
+- Starter context: the initial context gives the first phase a locatable phase artifact, but it is a routing and discovery seed only; discuss-phase must replace it with a structured `phase.context` model and must not preserve scaffold markers, placeholder text, or generic bootstrap prose (`commands/blu-discuss-phase.toml:14`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:164`, `src/mcp/tools/phase.ts:3069`).
+
+#### Risks And Future Edit Surfaces
+
+- Risk: current docs say bootstrap creates `.blueprint/phases/`, but runtime creates the root phases directory plus only the initial phase context path during project init. Because `blueprint_phase_locate` fails when a roadmap phase has no matching directory, later roadmap phases may need a clearer directory-materialization story before docs imply `/blu-discuss-phase <later-phase>` always works immediately after bootstrap (`docs/commands/new-project.md:80`, `src/mcp/tools/project.ts:1299`, `src/mcp/tools/phase.ts:6542`).
+- Risk: the bootstrap approval packet includes project brief, requirement groups, roadmap table, assumptions, deferred/out-of-scope items, and defaults provenance, but the discuss contract does not name this as a reusable "bootstrap handoff packet"; agents may read the right artifacts while still asking broad first-principles questions (`commands/blu-new-project.toml:34`, `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md:131`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:36`).
+- Risk: workflow preference capture is central to bootstrap, but discuss-phase only sees normalized config/state fields. Future docs should spell out how `workflow.discuss_mode`, `workflow.skip_discuss`, `workflow.research_before_questions`, UI/research gates, worktree preference, and external-source posture change the question loop and final routing (`skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md:114`, `docs/commands/discuss-phase.md:56`, `src/mcp/tools/phase.ts:2941`).
+- Risk: starter context has enough headings to look substantial to a human, while runtime marks it unusable through `context.bootstrap_starter`. Future docs should keep saying "starter-only" near every bootstrap-to-discuss handoff so agents do not treat the seeded `XX-CONTEXT.md` as an authored phase baseline (`src/mcp/tools/project.ts:285`, `src/mcp/tools/state.ts:1460`, `src/mcp/tools/phase.ts:3076`).
+- Likely doc edits: `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md` should add an explicit "Discuss handoff" subsection under Persist/Route listing the exact artifacts and fields discuss-phase should inherit, plus the fact that only authored discuss output makes context plan-ready.
+- Likely doc edits: `commands/blu-new-project.toml` and `docs/commands/new-project.md` should mirror the handoff packet and clarify initial-phase starter context versus later-phase directory availability without bloating the thin manifest.
+- Likely doc edits: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` should add a bootstrap-prior-context read checklist that maps `projectBrief`, `requirementsGrounding`, `workflowPosture`, codebase digest, and starter-context status to concrete question-selection rules.
+- Likely doc edits: `skills/blueprint-phase-discovery/SKILL.md` and `docs/commands/discuss-phase.md` should make the bootstrap-to-discuss contract visible at the command boundary: target phase must be in `ROADMAP.md` and resolvable to a phase directory, starter context must be replaced, and final routing must come from refreshed state rather than assuming `/blu-plan-phase`.
+
+### R7: Modern Requirements Elicitation And Clarifying Questions Refresh
+
+- Treat `/blu-discuss-phase` as requirements development, not only interview capture: ISO/IEC/IEEE 29148 defines lifecycle requirements-engineering processes, required information items, and content expectations for systems/software requirements, and ISO notes the 2018 edition was confirmed in 2024 while a revision is underway ([ISO 29148](https://www.iso.org/cms/%20render/live/en/sites/isoorg/contents/data/standard/07/20/72089.html)). Blueprint should preserve process evidence: source, rationale, constraint, verification/validation angle, and traceability into later requirements and roadmap work.
+- SWEBOK V4 frames software requirements work as elicitation, analysis, specification, validation, and management, with topics for sources, elicitation techniques, ambiguity/conflict analysis, acceptance-criteria-based specification, reviews/prototyping, prioritization, tracing, and volatility ([IEEE Computer Society SWEBOK topics](https://www.computer.org/education/bodies-of-knowledge/software-engineering/topics)). So R7 should not propose a bigger questionnaire; it should propose a gray-area loop that moves each unclear item through source -> question/assumption -> decision -> validation cue.
+- `/blu-new-project` already creates the initial `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, first phase context, state, and config seed; `/blu-discuss-phase` should interrogate that seed instead of restarting discovery. Use new-project artifacts as the initial hypothesis set, then ask only where phase scope, stakeholder outcome, requirement grounding, acceptance signal, or roadmap sequencing is thin or contradictory.
+- Use quality-attribute lenses for nonfunctional gaps. ISO/IEC 25010:2023 says its product quality model supports eliciting/defining requirements, validating comprehensiveness, identifying test objectives, acceptance criteria, and measures ([ISO 25010](https://www.iso.org/standard/78176.html)). For Blueprint, the gray-area queue should include performance, reliability, security, compatibility, interaction/usability, maintainability, portability/flexibility, safety, and data-quality hooks when relevant, not just functional scope.
+- Clarifying-question research is a warning as much as an opportunity: HumanEvalComm found code LLMs need explicit pressure to ask questions when specs are incomplete, ambiguous, or inconsistent, and the paper is published in ACM TOSEM ([Wu and Fard, 2025](https://arxiv.org/abs/2406.00215)). `/blu-discuss-phase` should therefore have explicit "must ask or label assumption" triggers instead of relying on the model to notice underspecified phase context on its own.
+- Requirements-specific LLM research is now directly relevant: Shen, Singhal, and Breaux report GPT-4o-generated follow-up questions were no worse than human-authored ones for clarity, relevance, and informativeness, and improved when guided by interviewer mistake types; the paper is accepted at IEEE RE 2025 ([Requirements Elicitation Follow-Up Question Generation](https://arxiv.org/abs/2507.02858)). Blueprint can borrow this as a mistake taxonomy: missing stakeholder, vague objective, design leap, missing acceptance criterion, conflicting answer, missing exception case, missing quality constraint, or ungrounded requirement ID.
+- Ambiguity benchmarks show prompting alone is not enough. CLAMBER reports current LLMs have limited practical utility in identifying and clarifying ambiguous information needs, with few-shot/CoT producing only marginal gains and sometimes overconfidence ([CLAMBER, ACL 2024](https://arxiv.org/abs/2405.12063)). Discuss-phase should use deterministic ambiguity lenses and saved-context checks before question selection, then store uncertainty explicitly when an answer is unavailable.
+- Task-dialog benchmarks suggest the right target is efficient information gathering, not endless curiosity. ClarQ-LLM evaluates whether agents ask enough, not too many, clarification questions to complete task-oriented dialogs, across 31 task types and explicit success/verbosity metrics ([ClarQ-LLM](https://arxiv.org/abs/2409.06097)). Blueprint should rank gray areas by downstream planning risk and ask one focused question per turn unless a structured choice materially lowers user effort.
+- Clarifying-question generation can be useful internally if it is filtered. AGENT-CQ shows LLM-generated clarifying questions can improve query understanding/retrieval when paired with quality evaluation ([AGENT-CQ](https://arxiv.org/abs/2410.19692)); STaR-GATE shows preference-eliciting questions can improve personalized outputs after training/rewarding useful questions ([STaR-GATE](https://arxiv.org/abs/2403.19154)). Blueprint should generate candidate questions behind the scenes but surface only high-value, answerable, non-leading questions tied to a concrete artifact field.
+- Save the elicitation trail, not only the final answer. For each gray area, the future implementation should persist: question asked or assumption made, answer/source, affected requirement IDs or roadmap phase, decision and rejected alternatives, confidence, risk if wrong, validation/acceptance cue, and deferred follow-up. This matches Blueprint's current `phase.context` depth requirement and avoids losing why a phase plan is shaped a certain way.
+
+Reconciliation note: R7 confirms and updates R1 rather than replacing it. The delta is that `/blu-new-project` artifacts become the initial hypothesis set, newer clarification/ambiguity work strengthens the "must ask or label assumption" trigger, and every gray-area trail should preserve affected requirement IDs or roadmap phase, confidence, validation cue, and deferred follow-up.
+
+### R8: Human-AI Mixed-Initiative Discovery Refresh
+
+- Treat mixed initiative as a negotiated control handoff, not "the bot asks questions." Horvitz's CHI mixed-initiative framing couples automation with direct manipulation, so `/blu-discuss-phase` should keep the human able to steer, skip, correct, or ask the agent to infer while the agent contributes evidence-backed structure ([Horvitz, CHI 1999](https://erichorvitz.com/uiact.htm)).
+- Open with a working frame before interrogation: what artifact will be produced, what current repo/context evidence has been read, what the AI can infer, and where it may be wrong. This maps to HAX guidelines for communicating capability, reliability, rationale, and correction paths ([Microsoft HAX Design Library](https://www.microsoft.com/en-us/haxtoolkit/library/), [Amershi et al., CHI 2019](https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/)).
+- Rank clarifying questions by decision value minus interruption cost. Search-clarification studies show clarifying questions can reveal intent, but low-quality ones can harm satisfaction; Blueprint should ask only when the answer changes scope, constraints, acceptance tests, routing, or `phase.context` content ([Microsoft Research SIGIR 2020](https://www.microsoft.com/en-us/research/publication/analyzing-and-learning-from-user-interactions-for-search-clarification/), [Zou et al., ACM TOIS 2022](https://piret.info/pubs/2022/TOIS22-CQ)).
+- Keep turns small and controllable. Use one high-leverage question at a time, paired with explicit controls such as `answer`, `infer with assumptions`, `skip/defer`, `revise prior answer`, `ask deeper`, and `summarize now`; this follows PAIR patterns for supervising automation and recovering control when automation is weak ([Google PAIR Patterns](https://pair.withgoogle.com/guidebook-v2/patterns)).
+- Reduce cognitive load by showing the current gray area, why it matters, the options under consideration, and the remaining queue. PAIR's graceful-failure guidance calls out mental load when users must reconcile conflicting signals, while IBM conversation guidance emphasizes topic/state relevance and repair ([Google PAIR Errors + Graceful Failure](https://pair.withgoogle.com/guidebook-v2/chapter/errors-failing/), [IBM Conversation Overview](https://www.ibm.com/design/ai/conversation/)).
+- Make rationale reviewable but compact. IBM's explainability guidance says users should be able to ask why an AI is doing something; for Blueprint, each question or assumption should carry a short "because this affects..." line, not hidden chain-of-thought or long justification ([IBM Explainability](https://www.ibm.com/design/ai/ethics/explainability/)).
+- Build correction loops into the artifact contract. HAX emphasizes efficient correction and granular feedback, while PAIR recommends acknowledging feedback and explaining its effect; `/blu-discuss-phase` should let users revise any accepted decision/assumption and persist the revision trail in checkpoint/context rather than bury it in chat ([Microsoft HAX Design Library](https://www.microsoft.com/en-us/haxtoolkit/library/), [Google PAIR Patterns](https://pair.withgoogle.com/guidebook-v2/patterns)).
+- Guard against overreliance with lightweight friction, not a debate club. Cognitive-forcing research found that forcing users to engage analytically can reduce overreliance but may feel more complex, so use a short pre-final challenge pass: contradictions, risky assumptions, plausible alternatives, and "what would change this decision?" ([Buçinca et al., PACM HCI 2021](https://doi.org/10.1145/3449287)).
+- Treat failure and uncertainty as normal workflow states. PAIR recommends explaining limits, giving paths forward, and returning control; discuss-phase should turn low confidence into `openQuestion`, `researchBrief`, or user choice, instead of forcing premature context certainty ([Google PAIR Errors + Graceful Failure](https://pair.withgoogle.com/guidebook-v2/chapter/errors-failing/)).
+- Preserve mixed-initiative memory as durable state. HAX's recent-interaction and correction guidelines plus current agent approval patterns point toward resumable decisions: checkpoint selected phase, area id, asked question, user answer, inferred assumption, evidence, confidence, correction status, and pending next action ([Microsoft HAX Design Library](https://www.microsoft.com/en-us/haxtoolkit/library/), [OpenAI Agents SDK: human-in-the-loop](https://openai.github.io/openai-agents-js/guides/human-in-the-loop/)).
+- Keep accountability visible. IBM accountability guidance favors records of design/decision process; Blueprint's `XX-CONTEXT.md` should distinguish `user-stated`, `repo-observed`, `ai-inferred`, `externally-sourced`, `contradicted`, and `unresolved` items so downstream agents know what they may rely on ([IBM Accountability](https://www.ibm.com/design/ai/ethics/accountability/)).
+
+Reconciliation note: R8 folds into R2's mixed-initiative argument. The new emphasis is an opening working frame, explicit user controls (`answer`, `infer`, `skip`, `revise`, `ask deeper`, `summarize now`), per-area correction state, and a compact pre-write review that makes accepted decisions, assumptions, contradictions, and refreshed routing visible before context persistence.
+
+### R9: Agent Memory, Checkpointing, And Handoff Refresh
+
+- Treat the checkpoint object, not the transcript, as the resume primitive. LangGraph persists graph state as thread-scoped checkpoints at step boundaries, while OpenAI Agents SDK sessions preserve conversation history across runs; `/blu-discuss-phase` should checkpoint each gray area with `phaseId`, `areaId`, status, current question, decision, assumptions, evidence refs, confidence, and next action ([LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence), [OpenAI Agents SDK sessions](https://openai.github.io/openai-agents-python/sessions/)).
+- Keep three distinct memory surfaces: append-only `XX-DISCUSSION-LOG.md`, compact `XX-DISCUSS-CHECKPOINT.json`, and final `XX-CONTEXT.md`. Anthropic's managed-agent design separates a durable session log from the model context window, and OpenHands condenses older context while keeping recent exchanges and key facts; Blueprint should summarize from the log into the checkpoint, not replace the log with a lossy summary ([Anthropic Managed Agents](https://www.anthropic.com/engineering/managed-agents), [OpenHands Context Condenser](https://docs.openhands.dev/sdk/guides/context-condenser)).
+- Use tiered memory, not one growing blob: stable project constraints, phase-local decisions, episodic discussion history, and downstream handoff facts have different lifetimes. MemGPT's virtual-context design is a useful mental model for explicit movement between short-term context and longer-term recall, which maps well to Blueprint's `.blueprint/` artifacts ([MemGPT](https://arxiv.org/abs/2310.08560)).
+- Resume from a small gray-area state machine: `unseen`, `questioning`, `assumed`, `decided`, `blocked`, `needs-revisit`, `handed-off`. LangGraph state history, replay, and update-state patterns make the important point practical: resumption should continue from structured state and explain any fork/revisit, instead of inferring progress from prose ([LangGraph time travel](https://docs.langchain.com/oss/python/langgraph/use-time-travel)).
+- Compact at semantic boundaries, not only token pressure. OpenAI compaction sessions can be run manually between turns, OpenHands preserves goals/progress/todos during condensation, and SWE-agent history processors show that trimming history changes model input and caching behavior; Blueprint should compact after each gray area is resolved/blocked and before downstream handoff ([OpenAI Agents SDK sessions](https://openai.github.io/openai-agents-python/sessions/), [OpenHands Context Condenser](https://docs.openhands.dev/sdk/guides/context-condenser), [SWE-agent history processors](https://swe-agent.com/1.0/reference/history_processor_config/)).
+- Make handoff typed and filtered. OpenAI handoffs support `input_type` metadata and `input_filter`, while LangChain frames multi-agent quality as context engineering; `/blu-discuss-phase` should send `researchBrief`, `uiBrief`, and `planBrief` packets with explicit include/exclude fields rather than forwarding the whole discussion ([OpenAI Agents SDK handoffs](https://openai.github.io/openai-agents-python/handoffs/), [LangChain multi-agent patterns](https://docs.langchain.com/oss/python/langchain/multi-agent)).
+- Prefer artifact references over copied conversation chunks. Anthropic's multi-agent research system uses specialized subagents and stored context to avoid context overflow, and the OpenHands SDK paper treats production agents as needing lifecycle control and memory management; Blueprint handoffs should carry stable artifact paths, checkpoint IDs, and concise conclusions ([Anthropic multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system), [OpenHands SDK paper](https://arxiv.org/abs/2511.03690)).
+- Leave a clear next-agent runway. Anthropic's long-running-agent harness improved continuity with progress files, feature lists, and start-of-session orientation steps; `/blu-discuss-phase` should end with a handoff receipt naming what was decided, what remains open, which gray area to revisit, and which downstream command is safe next ([Anthropic long-running harnesses](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)).
+- Treat checkpoint schema as part of the agent interface. SWE-agent showed interface design changes agent behavior, so Blueprint should make checkpoint fields deterministic, named, and mechanically validated enough that future research/UI/plan agents can consume them without reinterpreting the discussion ([SWE-agent](https://arxiv.org/abs/2405.15793)).
+- Test the hard cases in the future implementation: interrupt after a user answer, resume after compaction, revise a prior assumption, run assumptions mode, and hand off to research/UI/plan from the same checkpoint. LangGraph's checkpoint/fault-tolerance model and OpenAI session correction APIs both point toward fixtures that assert exact state transitions rather than just final Markdown shape ([LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence), [OpenAI Agents SDK sessions](https://openai.github.io/openai-agents-python/sessions/)).
+
+Reconciliation note: R9 tightens R3's checkpoint/memory lane. The delta is to treat `XX-DISCUSSION-LOG.md`, `XX-DISCUSS-CHECKPOINT.json`, and `XX-CONTEXT.md` as distinct memory surfaces, resume from gray-area state rather than prose, and make downstream `researchBrief`/`uiBrief`/`planBrief` handoffs reference stable artifacts and checkpoint facts instead of copied conversation chunks.
+
+### R10: Evidence, Provenance, And Source Quality Refresh
+
+Live-checked 2026-05-14.
+
+- Treat requirements evidence as an authored information item, not a source dump: [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html) is still the current requirements-engineering standard after 2024 confirmation, and it frames requirements work around required processes, required information items, required contents, and guidance for information-item format. `/blu-discuss-phase` should therefore require each major `phase.context` claim to have a source basis, not only a final prose summary.
+- Use NASA-style traceability for any plan-driving requirement: the [NASA Systems Engineering Handbook appendix](https://www.nasa.gov/reference/system-engineering-handbook-appendix/) says verification matrices should identify each requirement by unique identifier and definitive source, and validation plans should draw from ConOps, stakeholder needs, rationale, lessons learned, models, and V&V plans. Blueprint should map assumptions and requirements to source, validation method, and downstream consumer before context write.
+- Make requirement quality testable before saving: the [INCOSE Guide to Writing Requirements excerpt](https://www.incose.org/docs/default-source/working-groups/requirements-wg/shared_gtwr/gtwr_characteristics_section_4_050423.pdf?sfvrsn=9a7548c7_2) emphasizes necessary, unambiguous, complete, singular, correct, feasible, verifiable, and conforming requirement statements; related INCOSE checklist material also asks whether requirements trace to parents/sources and whether assumptions were recorded and validated. Assumptions mode should not promote a default into context unless it passes those checks or is labeled unresolved.
+- Model provenance as a relationship, not just a URL: [W3C PROV-O](https://www.w3.org/TR/prov-o/) distinguishes derived-from, quoted-from, revision-of, and primary-source relationships. Blueprint canonical references should record why a source is present, which claim it supports, whether it is primary/current, and whether the saved context is derived from it or merely informed by it.
+- Keep source authority local for Blueprint facts: [SEI MBSE guidance](https://www.sei.cmu.edu/blog/requirements-in-model-based-systems-engineering-mbse/) stresses traceability to sources, engineering steps, architecture elements, and verification cases. For `/blu-discuss-phase`, repo source, MCP reads, saved `.blueprint/` artifacts, and direct user answers outrank external best-practice material when asserting current Blueprint behavior.
+- Use NIST's GenAI risk framing for assumptions mode: [NIST AI 600-1](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf) calls for documenting assumptions, limitations, context of use, upstream data/source provenance, fact-checking methods, citation/source verification, and unmeasured risks. Blueprint should label each assumption as `confirmed`, `likely`, `assumption`, `unverified`, `contradicted`, or `needs-user-decision`, with the next verification step.
+- Citations must be claim support, not decoration: [Anthropic's citations docs](https://platform.claude.com/docs/en/build-with-claude/citations) describe response citations as claim-linked pointers to exact document locations and warn that title/context metadata is not citable source content. Blueprint should avoid disconnected `canonicalReferences`; every high-impact reference should support a requirement, decision, risk, open question, or routing handoff.
+- Reward abstention and clarification over fluent guessing: [OpenAI's hallucination analysis](https://openai.com/index/why-language-models-hallucinate/) and the 2026 Nature paper [Evaluating large language models for accuracy incentivizes hallucinations](https://www.nature.com/articles/s41586-026-10549-w) both argue that accuracy-only evaluation rewards guessing instead of admitting uncertainty. `/blu-discuss-phase` should treat "ask one focused question" or "route to research" as success when evidence is insufficient.
+- Do not trust citation presence without verification: [ALCE](https://arxiv.org/abs/2305.14627) shows cited long-form answers often lack complete citation support, [GopherCite](https://arxiv.org/abs/2203.11147) still notes source trust is a separate problem from quote support, and recent deep-research-agent work [Cited but Not Verified](https://arxiv.org/abs/2605.06635) evaluates whether citations actually support claims. Blueprint should require pre-write spot checks for source validity, relevance, and claim support.
+- Use inconsistency as a warning signal, not a resolver: [SelfCheckGPT](https://arxiv.org/abs/2303.08896) uses response divergence to flag likely hallucination, which is useful for detecting unstable assumptions but not enough to prove truth. If assumptions mode gets conflicting model, repo, user, or web evidence, it should preserve the contradiction and route to `/blu-research-phase` or a user decision.
+
+Reconciliation note: R10 updates R4 and A3 with a stronger provenance model. The delta is a pre-write readiness ledger that ties each important `phase.context` claim to source basis, evidence grade, confidence, unresolved risk, downstream consumer, and contradiction status, while keeping repo/MCP/user evidence authoritative for Blueprint behavior.
+
+### R11: Prompt/Skill Design For Tool-Using Agents Refresh
+
+- Treat `/blu-discuss-phase` as a stage-bounded workflow prompt, not a single dense instruction wall. OpenAI's current reasoning guidance favors simple direct prompts, clear delimiters, explicit success criteria, and avoiding forced chain-of-thought wording, while Anthropic says prompt work should start from success criteria and evals rather than vibes ([OpenAI reasoning best practices](https://platform.openai.com/docs/guides/reasoning-best-practices), [Anthropic prompt engineering overview](https://docs.anthropic.com/en/docs/prompt-engineering)). Future edit: in `skills/blueprint-phase-discovery/SKILL.md` under `### discuss-phase`, replace the long numbered flow with named blocks `Objective`, `Stage Order`, `Question Policy`, `Assumptions Mode`, `Persistence`, `Validation`, and `Final Routing`; move lower-level sequencing to `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+- Make MCP tool use a first-class agent-computer interface. Anthropic argues tool definitions need the same prompt-engineering attention as the main prompt, and SWE-agent's NeurIPS paper shows custom agent-computer interfaces materially improve repository navigation, editing, and test execution ([Anthropic: Building effective agents](https://www.anthropic.com/engineering/building-effective-agents), [SWE-agent](https://proceedings.neurips.cc/paper_files/paper/2024/hash/5a7c947568c1b1328ccc5230172e1e7c-Abstract-Conference.html)). Future edit: add a `MCP Tool Contract Table` to the discuss runtime contract with columns `tool`, `stage`, `call trigger`, `must-read fields`, `side effects`, `do-not-infer fields`, and `next step`.
+- Separate "structured final artifact" from "tool action". OpenAI function calling and Google structured-output docs both use schemas, but Google explicitly distinguishes final response formatting from action-taking and warns that schema-valid output still needs semantic validation ([OpenAI function calling](https://help.openai.com/en/articles/8555517-function-calling-in-the-openai-api), [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output)). Future edit: in `Artifact Authoring`, state that `phase.context` model construction is structured artifact authoring, while `blueprint_phase_artifact_write` is the only persistence action; require semantic checks before the write and one repair pass after MCP diagnostics.
+- Add an explicit gray-area state machine instead of relying on prose memory. LangGraph documents checkpoints as graph-state snapshots with next nodes, metadata, and replay/update semantics, which maps cleanly to discuss-phase's per-area resumability ([LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence)). Future edit: add `Gray Area State Machine` to the runtime contract with statuses `unseen`, `reading`, `questioning`, `answered`, `assumed`, `blocked`, `decided`, `needs-revisit`, and `written`; require checkpoint payloads to store status, evidence refs, pending question, confidence, and allowed transitions.
+- Put guardrails at stage and tool boundaries, not only in the final self-check. OpenAI Agents SDK guardrails distinguishes input, output, and per-tool guardrails, and notes that tool guardrails are needed when manager/handoff workflows still perform function calls ([OpenAI Agents SDK guardrails](https://openai.github.io/openai-agents-python/guardrails/)). Future edit: in `Validation And Repair`, add stage gates before first question, before checkpoint write, before artifact write, and before final route: selected phase unchanged, allowed MCP tool only, no raw filename writes, no unconfirmed overwrite, no unsupported mode claims, no planned-only next command.
+- Use progressive disclosure for skill text. OpenHands distinguishes always-loaded repo context from on-demand skills and notes that loaded skills consume context; its skill docs also warn that multiple triggered skills concatenate without smart conflict merging ([OpenHands skills overview](https://docs.openhands.dev/openhands/usage/prompting/microagents-overview), [OpenHands Agent Skills and Context](https://docs.openhands.dev/sdk/guides/skill)). Future edit: keep `SKILL.md` as the lean command boundary and store examples, state-machine details, tool tables, and anti-patterns in the discuss runtime contract or sibling reference so agents read the heavy material only for `/blu-discuss-phase`.
+- Standardize subagent handoff contracts as SOP-like outputs. MetaGPT attributes better multi-agent software work to role-specific SOPs and intermediate verification, while OpenAI's Agents SDK frames agents as instructions plus tools, handoffs, guardrails, structured outputs, and resumable state ([MetaGPT](https://proceedings.iclr.cc/paper_files/paper/2024/hash/6507b115562bb0a305f1958ccc87355a-Abstract-Conference.html), [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/agents/)). Future edit: in `Capability-Gated Agent Use`, replace freeform `gray-area memo mode` with a required memo schema: `areaId`, `question`, `sourcesRead`, `options`, `tradeoffs`, `recommendation`, `confidence`, `unresolved`, and `parentMustDecide`.
+- Make ReAct-style observation updates visible as compact state records, not hidden reasoning. ReAct supports interleaving reasoning and actions to update plans after observations, but current OpenAI guidance says reasoning models do not need prompts to expose chain-of-thought ([ReAct](https://arxiv.org/abs/2210.03629), [OpenAI reasoning best practices](https://platform.openai.com/docs/guides/reasoning-best-practices)). Future edit: after each MCP read, user answer, subagent memo, and validation result, require a visible one-line `Observation -> queue update -> next action` record in checkpoints or progress recaps, without asking the model to reveal private reasoning.
+- Add eval scenarios for prompt noncompliance, not only artifact validity. Anthropic's agent-evals post recommends transcript/trace-based evals with graders, OpenAI agent evals recommend traces, graders, datasets, and eval runs, and OctoBench/SOPBench show coding and tool-using agents can solve tasks while violating scaffold instructions or SOP constraints ([Anthropic agent evals](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents), [OpenAI agent evals](https://platform.openai.com/docs/guides/agent-evals), [OctoBench](https://arxiv.org/abs/2601.10343), [SOPBench](https://openreview.net/forum?id=67uxRy2tRR)). Future edit: add planned tests or manual eval fixtures for "asks generic checklist question", "uses raw filename instead of MCP path", "skips checkpoint on resume", "writes despite validation blocker", and "routes directly to plan despite research/UI gate".
+- Treat instruction-following as a measurable risk under context pressure. Recent instruction-following work reports failures even on simple or scaffold-persistent constraints, and Apple's 2025 instruction-following study found adherence varies by instruction phrasing/type rather than only task difficulty ([Apple ML instruction following](https://machinelearning.apple.com/research/do-llms-know-internally), [OctoBench](https://arxiv.org/abs/2601.10343)). Future edit: convert soft prohibitions in `Questioning Rules` and `Validation And Repair` into positive action thresholds: `ask one question`, `checkpoint after each area`, `stop after identical diagnostics`, `reload state before routing`, and `report blockers instead of smoothing them`.
+
+Reconciliation note: R11 refreshes R6's prompt/skill-design lane. The delta is stage-bounded prompt structure, a first-class MCP tool contract table, explicit stage gates, observation records that update state without exposing hidden reasoning, and eval fixtures for prompt noncompliance separate from `XX-CONTEXT.md` schema validity.
+
+## 2026-05-14 Reconciliation Summary
+
+The May 14 inbox does not create a separate implementation track. It updates the older R1-R6 plan with a stronger upstream bootstrap handoff and fresher tool-agent evidence. The current plan should be read as one pipeline: `/blu-new-project` creates the hypothesis packet (`PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, starter context, config, state, mapped-codebase posture); `/blu-discuss-phase` reads that packet, replaces starter context with authored `phase.context`, and leaves research/UI/plan routing to refreshed state.
+
+- **Bootstrap handoff:** discuss-phase should not re-ask project-purpose basics. It should classify the new-project seed as evidence, thinness, contradiction, or starter-only context, then ask only where phase scope, requirements traceability, workflow posture, codebase digest, or route gates are not plan-ready.
+- **Gray-area loop:** R1/R7 and R2/R8 collapse into one policy: build a visible `grayAreaQueue`, rank by downstream decision value and interruption cost, ask one grounded question at a time, and keep user controls for answering, inferring, skipping, revising, or asking deeper.
+- **Evidence and assumptions:** R4/R10 and A3 collapse into a claim-level readiness ledger: repo/MCP/user evidence first, external research as method support, every assumption labeled with evidence grade, confidence, contradiction status, consequence if wrong, and downstream status.
+- **Persistence and handoff:** R3/R9 and R5 collapse into checkpoint/state-machine and typed downstream packet work: persist after each user answer or area boundary, carry a compact correction-aware summary, and emit `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, and `routingGates` inside existing artifacts rather than creating a new persistence surface.
+- **Prompt design:** R6/R11 confirms the first future implementation should remain prompt/contract/test work: lean `SKILL.md`, richer discuss runtime contract, stage/tool gates, examples/anti-examples, and fixture tests for instruction noncompliance as well as artifact validity.
+
+For later plan-editing agents: update the detailed plan only after this reconciliation by deliberately adding upstream `/blu-new-project` bootstrap surfaces where needed. Keep this current run documentation-only and future-implementation focused.
 
 ## Current Blueprint Workflow Snapshot
 
@@ -132,23 +260,25 @@ Sources: [OpenAI Model Spec](https://model-spec.openai.com/2025-10-27.html), [Op
 
 ## Reconciled Research Synthesis
 
-The six research lanes converge on eight improvements for `/blu-discuss-phase`: make discovery more systematic, ask fewer but higher-value questions, keep assumptions visibly provisional, grade evidence at claim level, persist resumable decisions instead of relying on chat memory, author the model-backed context as a planning baseline, hand downstream commands typed briefs, and make the command/skill prompt easier for tool-using agents to execute reliably.
+The original R1-R6 research and the May 14 N1/R7-R11 inbox now converge on nine improvements for `/blu-discuss-phase`: inherit `/blu-new-project` bootstrap as the upstream hypothesis packet, make discovery more systematic, ask fewer but higher-value questions, keep assumptions visibly provisional, grade evidence at claim level, persist resumable decisions instead of relying on chat memory, preserve correction-aware context compression, author the model-backed context as a planning baseline, and hand downstream commands typed briefs while preserving implemented-only routing.
 
-1. **Gray-area discovery needs a taxonomy, not vibes.** The current workflow already requires phase-specific gray-area discovery, but the research suggests making the inventory explicit before questioning. A good inventory should classify each gap by the requirement slot it affects: actor, action/task, object/domain concept, attribute, goal, event, constraint, exception, external interface, quality attribute, or acceptance/verification hook. This follows requirements-engineering guidance in [SWEBOK V4.0a](https://ieeecs-media.computer.org/media/education/swebok/swebok-v4.pdf), [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html), and QUARE's actor-action-concept framing ([QUARE](https://link.springer.com/article/10.1007/s10515-023-00386-w)). For Blueprint, the behavior change is concrete: after reading state, roadmap, prior context, and the `phase.context` contract, the agent should produce a compact gray-area queue whose entries say what is ambiguous, incomplete, inconsistent, or unverifiable; why it matters to `research`, `ui`, or `plan`; and what would make the area resolved. Newer ambiguity/clarification benchmarks such as [HumanEvalComm](https://arxiv.org/abs/2406.00215), [ClarifyCoder](https://arxiv.org/abs/2504.16331), and the 2026 Orchid/Ask-or-Assume notes are useful supporting signals, but should be treated as lower-confidence method evidence where they are preprints.
+1. **Bootstrap-to-discuss needs an explicit handoff contract.** N1 adds the missing upstream frame: `/blu-new-project` already gathers project intent, requirements, roadmap phases, workflow preferences, brownfield posture, assumptions, and starter context. `/blu-discuss-phase` should treat those as the first evidence packet, not as background prose. The future contract should name the reusable bootstrap handoff fields (`projectBrief`, `requirementsGrounding`, `workflowPosture`, mapped-codebase digest, starter-context status, and selected roadmap phase details), classify the initial `XX-CONTEXT.md` as starter-only until replaced, and avoid generic project-purpose questions when the bootstrap seed is already substantive.
 
-2. **The question loop should optimize for decision value.** R1, R2, and R6 all reject generic interviews. Clarifying questions are valuable when they change the solution set, acceptance criteria, safety posture, routing gate, or final context model; otherwise they become interruption cost. That is consistent with mixed-initiative principles from [Horvitz](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/chi99horvitz.pdf), the [OpenAI Model Spec](https://model-spec.openai.com/2025-04-11.html), [Active Task Disambiguation with LLMs](https://openreview.net/pdf/df400bd5925a005b64bcb82f4aa4ecd4d4be2002.pdf), and conversation-design guidance to avoid bundled interrogations ([Google Conversation Design](https://developers.google.com/assistant/conversation-design/learn-about-conversation)). Blueprint should therefore keep the current one-question loop but make the ranking rule explicit: ask the highest-leverage unresolved question, explain the artifact/routing decision it will unblock, accept bundled answers when the user volunteers them, then update the queue before asking again. Stop when remaining unknowns can be safely captured as assumptions, open questions, or research tasks without changing the next safe action.
+2. **Gray-area discovery needs a taxonomy, not vibes.** The current workflow already requires phase-specific gray-area discovery, but the research suggests making the inventory explicit before questioning. A good inventory should classify each gap by the requirement slot it affects: actor, action/task, object/domain concept, attribute, goal, event, constraint, exception, external interface, quality attribute, or acceptance/verification hook. This follows requirements-engineering guidance in [SWEBOK V4.0a](https://ieeecs-media.computer.org/media/education/swebok/swebok-v4.pdf), [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html), and QUARE's actor-action-concept framing ([QUARE](https://link.springer.com/article/10.1007/s10515-023-00386-w)). For Blueprint, the behavior change is concrete: after reading the bootstrap handoff, state, roadmap, prior context, codebase digest, and the `phase.context` contract, the agent should produce a compact gray-area queue whose entries say what is ambiguous, incomplete, inconsistent, unverifiable, or quality-attribute-thin; why it matters to `research`, `ui`, `plan`, validation, or routing; and what would make the area resolved.
 
-3. **Assumptions mode should be a controlled fallback, not a silent planning shortcut.** The research agrees that `/blu-discuss-phase` may infer when user input is absent, but only with visible confidence, provenance, and blast-radius limits. Human-AI guidance emphasizes user control and correction ([Google PAIR](https://pair.withgoogle.com/guidebook-v2/chapters/feedback-controls/), [Microsoft HAX](https://www.microsoft.com/en-us/research/wp-content/uploads/2019/01/Guidelines-for-Human-AI-Interaction-camera-ready.pdf)); requirements and citation research warn that fluent generated statements can be unsupported ([NIST AI 600-1](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence), [ALCE](https://arxiv.org/abs/2305.14627), [FActScore](https://ai.meta.com/research/publications/factscore-fine-grained-atomic-evaluation-of-factual-precision-in-long-form-text-generation/)). In Blueprint terms, assumptions mode should only resolve gray areas when evidence is high grade and the downstream risk is low or explicitly accepted. Each assumption should state source, confidence, competing interpretations, contradiction status, owner if known, and whether it is safe for `plan-phase` or must be reopened by `research-phase`, `ui-phase`, or the user.
+3. **The question loop should optimize for decision value and user control.** R1/R7, R2/R8, and R6/R11 all reject generic interviews. Clarifying questions are valuable when they change the solution set, acceptance criteria, safety posture, routing gate, or final context model; otherwise they become interruption cost. That is consistent with mixed-initiative principles from [Horvitz](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/chi99horvitz.pdf), [Active Task Disambiguation with LLMs](https://openreview.net/pdf/df400bd5925a005b64bcb82f4aa4ecd4d4be2002.pdf), and conversation-design guidance to avoid bundled interrogations ([Google Conversation Design](https://developers.google.com/assistant/conversation-design/learn-about-conversation)). Blueprint should keep the current one-question loop, add an opening working frame, expose controls to answer/infer/skip/revise/go deeper/summarize, explain which artifact or route decision each question unblocks, accept bundled answers, and stop when remaining unknowns can be safely captured as assumptions, open questions, or research tasks.
 
-4. **Evidence grading should be claim-level and repo-first.** The synthesis from R4 is especially important: external research can improve method, but current Blueprint behavior must be grounded in the worktree, MCP results, runtime contracts, tests, command manifests, and direct user answers. The evidence ladder should be canonical repo source/runtime output first, MCP-produced state/artifacts next, user answers next, then official standards/upstream docs, peer-reviewed or lab research, frontier preprints, and finally secondary summaries. This avoids letting a best-practice paper override what the extension actually does. The final `phase.context` model should split important claims into atomic facts tagged as `repo-observed`, `repo-inferred`, `user-stated`, `external-primary`, `external-secondary`, `assumption`, `contradicted`, or `unknown`, with citation anchors where available. Contradictions should be preserved rather than smoothed: prefer runtime/source for Blueprint behavior, cite both sides, and route the conflict into a user question, research brief, or bug/decision record.
+4. **Assumptions mode should be a controlled fallback, not a silent planning shortcut.** The research agrees that `/blu-discuss-phase` may infer when user input is absent, but only with visible confidence, provenance, contradiction checks, and blast-radius limits. Human-AI guidance emphasizes user control and correction ([Google PAIR](https://pair.withgoogle.com/guidebook-v2/chapters/feedback-controls/), [Microsoft HAX](https://www.microsoft.com/en-us/research/wp-content/uploads/2019/01/Guidelines-for-Human-AI-Interaction-camera-ready.pdf)); requirements and citation research warn that fluent generated statements can be unsupported ([NIST AI 600-1](https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence), [ALCE](https://arxiv.org/abs/2305.14627), [FActScore](https://ai.meta.com/research/publications/factscore-fine-grained-atomic-evaluation-of-factual-precision-in-long-form-text-generation/)). In Blueprint terms, assumptions mode should only resolve gray areas when evidence is high grade and the downstream risk is low or explicitly accepted. Each assumption should state source, confidence, competing interpretations, contradiction status, consequence if wrong, and whether it is safe for `plan-phase` or must be reopened by `research-phase`, `ui-phase`, or the user.
 
-5. **Checkpointing and resume should be state-machine based.** R3 makes the strongest case that chat transcript memory is the wrong resume primitive. Systems such as [LangGraph persistence](https://langchain-5e9cc07a.mintlify.app/oss/python/langgraph/persistence) and [OpenAI Agents SDK sessions](https://openai.github.io/openai-agents-python/sessions/) treat snapshots/session records as durable memory; agent handoff systems recommend typed metadata and filters rather than full-history passing ([OpenAI handoffs](https://openai.github.io/openai-agents-python/handoffs/), [LangChain handoffs](https://docs.langchain.com/oss/python/langchain/multi-agent/handoffs)). Blueprint already has command-owned checkpoints, so the future improvement is to make each gray area a small state machine: `unseen`, `questioning`, `assumed`, `decided`, `blocked`, or `needs-revisit`. Persist after every user answer and area boundary, recording `phaseId`, `areaId`, decision, evidence refs, confidence, pending question, downstream consumers, and why an earlier question or assumption failed. Resume should load that structure, avoid re-asking known facts, and continue deterministically.
+5. **Evidence grading should be claim-level and repo-first.** External research can improve method, but current Blueprint behavior must be grounded in the worktree, MCP results, runtime contracts, tests, command manifests, saved artifacts, and direct user answers. The evidence ladder should be canonical repo source/runtime output first, MCP-produced state/artifacts next, user answers next, then official standards/upstream docs, peer-reviewed or lab research, frontier preprints, and finally secondary summaries. This avoids letting a best-practice paper override what the extension actually does. The final `phase.context` model should split important claims into atomic facts tagged as `repo-observed`, `repo-inferred`, `user-stated`, `external-primary`, `external-secondary`, `assumption`, `contradicted`, or `unknown`, with citation anchors where available. Contradictions should be preserved rather than smoothed and routed into a user question, research brief, or bug/decision record.
 
-6. **Context compression must preserve provenance and correction paths.** R2 and R3 both warn that users may provide extra information out of order, while long-running agents may compact or lose earlier context. The safe Blueprint pattern is tiered memory: stable project/contract rules, active turn context, per-phase decision memory, and archival `DISCUSSION-LOG.md`. The raw log can stay append-only, but the checkpoint summary should be structured and source-anchored: decisions, omitted details, contradictions, unresolved risks, and "do not infer beyond this" notes. Research on context management, including [MemGPT](https://arxiv.org/abs/2310.08560), OpenHands context condensation, and lower-confidence frontier work on active/context-as-a-tool compression, supports the method direction. For Blueprint, summarization should happen at semantic milestones such as resolving or blocking a gray area and before downstream handoff, not merely when tokens run low.
+6. **Checkpointing and resume should be state-machine based.** R3/R9 make the strongest case that chat transcript memory is the wrong resume primitive. Systems such as [LangGraph persistence](https://langchain-5e9cc07a.mintlify.app/oss/python/langgraph/persistence) and [OpenAI Agents SDK sessions](https://openai.github.io/openai-agents-python/sessions/) treat snapshots/session records as durable memory; agent handoff systems recommend typed metadata and filters rather than full-history passing ([OpenAI handoffs](https://openai.github.io/openai-agents-python/handoffs/), [LangChain handoffs](https://docs.langchain.com/oss/python/langchain/multi-agent/handoffs)). Blueprint already has command-owned checkpoints, so the future improvement is to make each gray area a small state machine: `unseen`, `questioning`, `assumed`, `decided`, `blocked`, `needs-revisit`, or `handed-off`. Persist after every user answer and area boundary, recording `phaseId`, `areaId`, decision, evidence refs, confidence, pending question, downstream consumers, and correction status. Resume should load that structure, avoid re-asking known facts, and continue deterministically.
 
-7. **Model-backed `phase.context` authoring should produce a requirements baseline.** R5 is the key bridge from conversation to artifact. `XX-CONTEXT.md` should not be a transcript recap; it should be a baseline that downstream commands can consume without re-eliciting basics. That means stable requirement IDs where useful, stakeholder/goal/scope boundaries, functional requirements, quality-attribute scenarios, constraints, assumptions, risks, accepted decisions versus candidate decisions, acceptance/verification hooks, and open measurement gaps. The evidence base here comes from requirements standards and practice sources such as [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html), the [NASA Systems Engineering Handbook](https://science.nasa.gov/wp-content/uploads/2023/04/nasa_systems_engineering_handbook_0.pdf), [INCOSE requirements guidance](https://www.incose.org/docs/default-source/working-groups/requirements-wg/shared_gtwr/gtwr_characteristics_section_4_050423.pdf?sfvrsn=9a7548c7_2), [Volere](https://www.volere.org/templates/volere-requirements-specification-template/), and SEI quality-attribute scenarios. Because Blueprint's context artifact is model-backed, the skill should provide semantic validation criteria as well as schema compliance: no scaffold filler, no ungrounded certainty, unresolved questions represented intentionally, and each required field backed by user input, repo evidence, or a labeled assumption.
+7. **Context compression must preserve provenance and correction paths.** R2/R8 and R3/R9 warn that users may provide information out of order, while long-running agents may compact or lose earlier context. The safe Blueprint pattern is tiered memory: stable project/contract rules, active turn context, per-phase decision memory, append-only `XX-DISCUSSION-LOG.md`, compact `XX-DISCUSS-CHECKPOINT.json`, and final `XX-CONTEXT.md`. The checkpoint summary should be structured and source-anchored: decisions, old/new corrections, omitted details, contradictions, unresolved risks, and "do not infer beyond this" notes. Research on context management, including [MemGPT](https://arxiv.org/abs/2310.08560), OpenHands context condensation, and lower-confidence frontier work on active/context-as-a-tool compression, supports the method direction. For Blueprint, summarization should happen at semantic milestones such as resolving or blocking a gray area and before downstream handoff, not merely when tokens run low.
 
-8. **Downstream handoff should be typed, filtered, and routing-aware.** The final discuss-phase output should hand each later command the subset it needs: `researchBrief` with known unknowns, candidate source classes, decision it unblocks, and stop conditions; `uiBrief` with users, critical journeys, interaction surfaces, accessibility/privacy/safety constraints, or an explicit no-UI rationale; and `planBrief` with initial state, desired end state, dependencies, forbidden moves, validation oracle, non-goals, and repo constraints. Planning research such as [PlanBench](https://openreview.net/forum?id=wUU-7XTL5XO) and [LLM-Modulo](https://arxiv.org/abs/2402.01817) supports making planning problems explicit and externally verifiable, while multi-agent/handoff guidance from [OpenAI](https://openai.github.io/openai-agents-js/guides/handoffs/), [Anthropic](https://resources.anthropic.com/building-effective-ai-agents), [MetaGPT](https://proceedings.iclr.cc/paper_files/paper/2024/hash/6507b115562bb0a305f1958ccc87355a-Abstract-Conference.html), and [SWE-agent](https://papers.nips.cc/paper_files/paper/2024/hash/5a7c947568c1b1328ccc5230172e1e7c-Abstract-Conference.html) supports standardized role-specific outputs. For Blueprint, the critical behavior is preserving implemented-only routing: after writing context, reload state and report the refreshed next safe action instead of assuming an automatic `plan-phase` handoff.
+8. **Model-backed `phase.context` authoring should produce a requirements baseline.** R5/R10 bridge conversation to artifact. `XX-CONTEXT.md` should not be a transcript recap; it should be a baseline that downstream commands can consume without re-eliciting basics. That means stable requirement IDs where useful, stakeholder/goal/scope boundaries, functional requirements, quality-attribute scenarios, constraints, assumptions, risks, accepted decisions versus candidate decisions, acceptance/verification hooks, source basis, and open measurement gaps. The evidence base here comes from requirements standards and practice sources such as [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html), the [NASA Systems Engineering Handbook](https://science.nasa.gov/wp-content/uploads/2023/04/nasa_systems_engineering_handbook_0.pdf), [INCOSE requirements guidance](https://www.incose.org/docs/default-source/working-groups/requirements-wg/shared_gtwr/gtwr_characteristics_section_4_050423.pdf?sfvrsn=9a7548c7_2), [Volere](https://www.volere.org/templates/volere-requirements-specification-template/), and SEI quality-attribute scenarios. Because Blueprint's context artifact is model-backed, the skill should provide semantic validation criteria as well as schema compliance: no scaffold filler, no ungrounded certainty, unresolved questions represented intentionally, and each required field backed by user input, repo evidence, or a labeled assumption.
+
+9. **Downstream handoff should be typed, filtered, routing-aware, and prompt-testable.** The final discuss-phase output should hand each later command the subset it needs: `researchBrief` with known unknowns, candidate source classes, decision it unblocks, and stop conditions; `uiBrief` with users, critical journeys, interaction surfaces, accessibility/privacy/safety constraints, or an explicit no-UI candidate; `planBrief` with initial state, desired end state, dependencies, forbidden moves, validation oracle, non-goals, and repo constraints; plus `planInventory` and `routingGates`. Planning research such as [PlanBench](https://openreview.net/forum?id=wUU-7XTL5XO) and [LLM-Modulo](https://arxiv.org/abs/2402.01817) supports explicit planning problems, while multi-agent/handoff guidance from [OpenAI](https://openai.github.io/openai-agents-js/guides/handoffs/), [Anthropic](https://resources.anthropic.com/building-effective-ai-agents), [MetaGPT](https://proceedings.iclr.cc/paper_files/paper/2024/hash/6507b115562bb0a305f1958ccc87355a-Abstract-Conference.html), and [SWE-agent](https://papers.nips.cc/paper_files/paper/2024/hash/5a7c947568c1b1328ccc5230172e1e7c-Abstract-Conference.html) supports standardized role-specific outputs. R11/R6 add the implementation discipline: make `SKILL.md` lean, move heavy details into the runtime contract, add tool/stage gates and examples, and test instruction compliance separately from whether `XX-CONTEXT.md` eventually validates. The critical Blueprint behavior remains implemented-only routing: after writing context, reload state and report the refreshed next safe action instead of assuming an automatic `plan-phase` handoff.
 
 ## Blueprint-Specific Improvement Analyses
 
@@ -898,7 +1028,7 @@ Before claiming success, answer yes/no:
 - The command manifest delegates detailed end-of-run behavior to the runtime contract and requires the final response to include the phase, artifact reuse/replacement, checkpoint behavior, plan-inventory warning, deferred ideas, progress recap, and the next safe action copied from refreshed `blueprint_state_load.derivedStatus.nextAction`; it explicitly forbids inferring a direct `/blu-plan-phase` handoff after successful context capture (`commands/blu-discuss-phase.toml:10`, `commands/blu-discuss-phase.toml:19-20`).
 - The skill and command spec both require `blueprint_phase_plan_index` before context refresh, warn that existing plans are not automatically rewritten, and route from refreshed state instead of prompt-local judgment (`skills/blueprint-phase-discovery/SKILL.md:185`, `skills/blueprint-phase-discovery/SKILL.md:198`, `docs/commands/discuss-phase.md:47-53`, `docs/commands/discuss-phase.md:149-150`).
 - The runtime contract's finalization sequence is: write the structured `phase.context` model, optionally write the discussion log, call `blueprint_state_update` with `base: "synced"` while preserving `patch.currentPhase` and `patch.activeCommand`, call `blueprint_state_load`, report the refreshed next safe action, and delete the discuss checkpoint only after all of those steps succeed (`skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:220-237`).
-- State routing is already implemented-only by indirection: `src/mcp/tools/state.ts` loads implemented command names from `blueprintCommandCatalog()`, and `deriveNextAction` only emits discuss, research, UI, plan, execution, validation, review, and milestone routes when the corresponding command is implemented (`src/mcp/tools/state.ts:1065-1078`, `src/mcp/tools/state.ts:2047-2128`). The catalog marks a command implemented only when manifest, skill, runtime inputs, and required MCP tools are satisfied (`src/mcp/tools/project.ts:893-987`).
+- State routing is already implemented-only by indirection: `src/mcp/tools/state.ts` loads implemented command names from `blueprintCommandCatalog()`, and `deriveNextAction` only emits discuss, research, UI, plan, execution, validation, review, and milestone routes when the corresponding command is implemented (`src/mcp/tools/state.ts:1068-1088`, `src/mcp/tools/state.ts:2074-2290`). The catalog marks a command implemented only when manifest, skill, runtime inputs, and required MCP tools are satisfied (`src/mcp/tools/project.ts:893-987`).
 - Regression coverage pins the current route safety contract: docs/skill/manifest must mention `derivedStatus.nextAction` and avoid direct plan handoff, successful discuss context capture routes to `/blu-research-phase` when research is enabled, an explicitly selected earlier phase survives synced refresh and routes to `/blu-ui-phase` instead of a later `/blu-plan-phase`, and checkpoints survive final state-sync failure (`tests/phase-discovery-discuss.test.ts:199-315`, `tests/phase-discovery-discuss.test.ts:584-649`, `tests/phase-discovery-discuss.test.ts:652-776`).
 
 **Gaps and risks**
@@ -907,7 +1037,7 @@ Before claiming success, answer yes/no:
 - The plan-inventory warning is required but underspecified. `blueprint_phase_plan_index` returns saved plan records, waves, missing dependency plans, gap-closure plans, warnings, and the missing first-plan path when no plans exist (`src/mcp/tools/phase.ts:7560-7647`), yet the contract does not say exactly which of those fields must be preserved in the final context and final response when refreshed discovery makes existing plans stale until `/blu-plan-phase` is rerun.
 - Implemented-only routing currently depends on copying refreshed `derivedStatus.nextAction` exactly. Because `/blu-discuss-phase` deliberately does not include `blueprint_command_catalog` in its command-scoped allowlist (`tests/phase-discovery-discuss.test.ts:294-304`), any extra "you could also run..." prose risks bypassing the catalog unless the contract bans alternate route suggestions or explicitly falls back to `/blu-progress`.
 - The refreshed-state rule is present, but the handoff text can still become stale if an agent treats the `blueprint_state_update` response as the routing decision, omits `patch.currentPhase` on a selected earlier phase, or deletes the checkpoint before a successful follow-up `blueprint_state_load`.
-- Research and UI gates are preserved in state routing, but the final context does not have a required explanation of what the next command needs. For example, when research is enabled and absent, state correctly routes to `/blu-research-phase`; when UI is enabled and no UI spec exists, it routes to `/blu-ui-phase` (`src/mcp/tools/state.ts:2075-2114`). The handoff should say which unknowns, source policies, users, journeys, or no-UI rationale candidates the downstream command must resolve.
+- Research and UI gates are preserved in state routing, but the final context does not have a required explanation of what the next command needs. For example, when research is enabled and absent, state correctly routes to `/blu-research-phase`; when UI is enabled and no UI spec exists, it routes to `/blu-ui-phase` (`src/mcp/tools/state.ts:2142-2180`). The handoff should say which unknowns, source policies, users, journeys, or no-UI rationale candidates the downstream command must resolve.
 - UI work has a later quality-gate distinction that should not be blurred during discuss handoff: a real `UI-SPEC` can later route to `/blu-ui-review`, while an explicit skip rationale must not (`tests/quality-gate-routing.test.ts:996-1080`). Discuss-phase should hand off "UI applicability to decide" rather than claiming a skip rationale is complete.
 - Existing tests mostly assert regex-level contract wording and state routes; they do not yet assert a concrete downstream packet shape, required packet fields, plan-inventory preservation, or final-response no-alternate-routes behavior.
 
@@ -1001,6 +1131,8 @@ Final response shape:
 
 ## Detailed Improvement Plan
 
+May 14 reconciliation note: this detailed plan is intentionally preserved for later plan-editing agents. Treat the 2026-05-14 summary and synthesis above as the current integration layer, especially for upstream `/blu-new-project` bootstrap handoff and the refreshed R7-R11 evidence, before narrowing or rewriting the implementation plan.
+
 ### Plan Goals And Non-Goals
 
 Goals:
@@ -1062,6 +1194,767 @@ Non-goals:
   - `src/mcp/artifact-contracts/index.ts` for schema contract registration and examples.
   - `docs/MCP-TOOLS.md` only if MCP tool behavior or schema expectations change.
   - `dist/` outputs if runtime-affecting TypeScript or bundled runtime assets change.
+
+### Wave-Based Implementation Plan
+
+This section is the implementation-ready plan for a future agent. It intentionally separates prompt/contract/test work from optional runtime/schema hardening. Waves 1-7 can be implemented without changing TypeScript runtime behavior or `dist/`; Wave 8 is only for optional schema/runtime enforcement after prompt behavior is proven useful.
+
+#### Wave 0: Preflight And Scope Lock
+
+Goal: establish the worktree, install dependencies, and prove the slice is prompt/docs/test oriented before edits begin.
+
+Sequential tasks:
+
+1. Create or reuse a fresh worktree and branch.
+   - Command shape: `git worktree add -b codex/<short-slice-name> <new-worktree-path> origin/main`.
+   - Required before any edit, even one-line docs edits.
+   - Do not use GSD or Blueprint workflows.
+
+2. Run dependency install before tests.
+   - Command: `npm ci`.
+   - Required before any `npm test`, `npm run typecheck`, or `npm run build`.
+
+3. Capture current file state.
+   - Read `commands/blu-new-project.toml`.
+   - Read `skills/blueprint-bootstrap/SKILL.md`.
+   - Read `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`.
+   - Read `commands/blu-discuss-phase.toml`.
+   - Read `skills/blueprint-phase-discovery/SKILL.md`.
+   - Read `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+   - Read `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`.
+   - Read `docs/commands/new-project.md`.
+   - Read `docs/commands/discuss-phase.md`.
+   - Read `tests/phase-discovery-discuss.test.ts`.
+
+4. Confirm scope boundary.
+   - Prompt/docs/test wave: do not edit `src/`, schemas, `dist/`, or `docs/MCP-TOOLS.md`.
+   - Runtime/schema wave: only start if explicitly approved after Waves 1-7.
+
+Parallelization: none. This wave is a sequential gate for all later work.
+
+#### Wave 1: Static Test Anchors First
+
+Goal: make future prompt-contract edits mechanically checkable before rewriting large prompt text.
+
+Sequential tasks:
+
+1. Edit `tests/phase-discovery-discuss.test.ts`.
+   - Add or extend a contract test for bootstrap handoff wording.
+   - Assert `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md` contains:
+     - `bootstrap handoff packet`
+     - `starter-context`
+     - `starterContextPath`
+     - `createdPaths`
+     - `configPath`
+     - `nextAction`
+   - Assert `commands/blu-new-project.toml` or `docs/commands/new-project.md` names starter context as not authored discuss-phase context after the later Wave 2 docs edits.
+
+2. Add selected-phase/read-packet assertions.
+   - Assert `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` contains:
+     - `Selected Phase Read Packet`
+     - `selectedPhase`
+     - `stateCurrentPhase`
+     - `selectedPhaseResolvedFrom`
+     - `starter-context`
+     - `Read order`
+     - `Earlier phase context is materially relevant`
+   - Assert `commands/blu-discuss-phase.toml` contains the short selected-phase guard from Wave 3.
+
+3. Add gray-area/question-policy assertions.
+   - Assert the runtime contract contains:
+     - `Gray Area Queue`
+     - `areaId`
+     - `slot`
+     - `defect`
+     - `decisionValue`
+     - `resolutionCriterion`
+     - `candidateQuestion`
+     - `Question:`
+     - `Why it matters:`
+     - `Known evidence:`
+     - `Resolved when:`
+     - anti-generic wording for `Any other requirements?`
+
+4. Add assumptions/evidence assertions.
+   - Assert the runtime contract contains:
+     - `Assumption Readiness Ledger`
+     - `source tier`
+     - `Confidence labels`
+     - `Consequence if wrong`
+     - `Ask instead of assuming`
+     - `Route to /blu-research-phase`
+     - `workflow.skip_discuss=true`
+     - `Contradiction handling`
+
+5. Add checkpoint/progress assertions.
+   - Assert the runtime contract contains:
+     - `schemaVersion`
+     - `areaQueue`
+     - `carryForward`
+     - `readSet`
+     - `Persist after every user answer`
+     - `questioning`, `blocked`, `needs-revisit`, `unseen`
+   - Assert `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` contains the fixed `Progress: phase=<resolved phase>` fallback line after Wave 6.
+
+6. Add context/handoff/routing assertions.
+   - Assert the runtime contract contains:
+     - `Context Model Readiness`
+     - `readiness ledger`
+     - `Downstream Handoff Packet`
+     - `researchBrief`
+     - `uiBrief`
+     - `planBrief`
+     - `planInventory`
+     - `routingGates`
+     - `Route only from the post-write blueprint_state_load result`
+     - `Do not include secondary runnable routes`
+   - Assert `blueprint_command_catalog` remains absent from the discuss command scoped allowlist unless a later approved wave adds it everywhere.
+
+Verification for Wave 1:
+
+```sh
+npm test -- tests/phase-discovery-discuss.test.ts
+```
+
+Expected result before Waves 2-7: new assertions fail. That is acceptable only before the corresponding prompt edits land.
+
+Parallelization: one worker can own Wave 1. Do not run prompt-edit workers against the same files until the initial failing anchors are committed or at least stable, because all later waves depend on these test names.
+
+#### Wave 2: Bootstrap Handoff Contract
+
+Goal: make `/blu-new-project` explicitly hand discuss-phase a starter packet without changing runtime writes.
+
+Task 2A: update `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`.
+
+Exact location: after the `Persist` subsection that says `mcp_blueprint_blueprint_project_init` is the first persistent bootstrap write and returned paths are authoritative.
+
+Exact change: add a `### Discuss-Phase Handoff` subsection:
+
+```md
+### Discuss-Phase Handoff
+
+After `mcp_blueprint_blueprint_project_init` succeeds, summarize a bootstrap
+handoff packet for the first phase:
+- `bootstrapHandoff.initialPhase`
+- `bootstrapHandoff.phasePrefix`
+- `bootstrapHandoff.phaseDir`
+- `bootstrapHandoff.starterContextPath`
+- `bootstrapHandoff.bootstrapSources`
+- `bootstrapHandoff.statePath`
+- `bootstrapHandoff.configPath`
+- `bootstrapHandoff.nextAction`
+
+Build this packet only from the MCP result, refreshed project status, and the
+approved bootstrap seed. Treat returned `createdPaths`, `configPath`, and
+`nextAction` as authoritative; do not reconstruct paths or infer a different
+follow-up. Mark the seeded `XX-CONTEXT.md` as `starter-context`, not authored
+discuss-phase context. `/blu-discuss-phase <phase>` owns replacing that starter
+with model-rendered phase decisions before downstream planning can treat the
+phase context as usable.
+```
+
+Task 2B: update `skills/blueprint-bootstrap/SKILL.md`.
+
+Exact location: in `## Shared Bootstrap Posture`, after the bullet that says `mcp_blueprint_blueprint_project_init` remains the first persistent bootstrap write.
+
+Exact change:
+
+```md
+- After bootstrap initialization, report the discuss-phase handoff packet from
+  the bootstrap runtime contract. The first phase `XX-CONTEXT.md` is
+  `starter-context` only; it makes the phase locatable and grounded, but it is
+  not authored discuss-phase context and must be replaced by `/blu-discuss-phase`
+  before planning.
+```
+
+Task 2C: update `commands/blu-new-project.toml`.
+
+Exact location: in the prompt near the response requirements that already say to summarize created `.blueprint/` paths and next safe action.
+
+Exact change:
+
+```text
+- When initialization creates a first phase starter `XX-CONTEXT.md`, describe it
+  as the `/blu-discuss-phase` starter handoff, not as completed phase context.
+  Report the MCP-returned context path and the next safe action that will replace
+  it.
+```
+
+Task 2D: update `docs/commands/new-project.md`.
+
+Exact location: under `## Outputs` and/or `## Bootstrap Contract`.
+
+Exact change:
+
+```md
+- The initial phase `XX-CONTEXT.md`, when created, is starter context only. It
+  carries bootstrap grounding and canonical references so the phase is locatable,
+  but `/blu-discuss-phase <phase>` must replace it with authored phase decisions
+  before research, UI, or planning commands treat context as complete.
+```
+
+Dependencies: Wave 1 test anchors should exist first.
+
+Parallelization: Task 2A and 2B can be done by one worker; Task 2C and 2D can be done in parallel by another worker after reading 2A's final wording. Do not edit discuss-phase files in this wave.
+
+#### Wave 3: Selected-Phase Read Packet And Artifact Status
+
+Goal: make phase resolution and pre-question reads deterministic and bootstrap-aware.
+
+Task 3A: update `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+
+Exact location: replace or expand the current `## Resolve And Read` section.
+
+Exact change: add these subsections in this order:
+
+```md
+## Selected Phase Read Packet
+
+After `blueprint_phase_locate` succeeds, create a run-local selected-phase register:
+- `selectedPhase`: `String(result.phaseNumber)`
+- `selectedPhasePrefix`: `result.phasePrefix`
+- `selectedPhaseDir`: `result.phaseDir`
+- `selectedPhaseResolvedFrom`: `result.resolvedFrom`
+
+Use `selectedPhase` for every phase-scoped read, checkpoint read/write/delete,
+scaffold path, artifact write, and final `patch.currentPhase`. Treat any
+state-derived current phase returned by later reads as `stateCurrentPhase`, an
+ambient routing signal, not a replacement for `selectedPhase`.
+
+If `blueprint_phase_locate.found` is false, stop before artifact reads or writes
+and report `reason` plus `recovery`.
+
+Minimum read order:
+1. Call `blueprint_phase_locate`.
+2. In parallel, call `blueprint_phase_context`, `blueprint_roadmap_read`,
+   `blueprint_artifact_list`, and `blueprint_config_get`.
+3. Using `selectedPhase`, read current `context`, current `discussion-log`, the
+   discuss checkpoint with owner/mode guards, plan inventory, and the
+   `phase.context` artifact contract.
+4. Read the `phase.discussion-log` contract only when a durable discussion log
+   is likely.
+5. Read earlier phase context only when the relevance rule below matches.
+```
+
+Then add:
+
+```md
+## Bootstrap Handoff Read Rule
+
+If the selected phase has a bootstrap starter `XX-CONTEXT.md`, treat it as the
+`/blu-new-project` handoff packet: read it together with `.blueprint/PROJECT.md`,
+`.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, config, and state routing.
+Reuse its objective, requirement ids, success criteria, and canonical references
+as grounding, but classify the context status as `starter-context` and replace
+it with authored discuss-phase decisions before downstream planning.
+```
+
+Then add:
+
+```md
+## Artifact Status Classification
+
+Classify current artifacts before questioning:
+- `missing`
+- `starter-context`
+- `scaffold-starter`
+- `authored-substantive`
+- `validation-suspect`
+- `unreadable`
+- `safe-checkpoint`
+- `foreign-checkpoint`
+- `stale-plan-inventory`
+
+The classification controls the next gate: resume/discard, overwrite
+confirmation, repair, or fresh discovery.
+```
+
+Task 3B: add bounded prior-context rule in the same runtime contract.
+
+Exact location: after the current sentence about reading earlier phase context artifacts.
+
+Exact change:
+
+```md
+Earlier phase context is materially relevant when it shares roadmap requirement
+ids, canonical references, deferred ideas, codebase surfaces, MCP tool families,
+command lifecycle gates, or explicit dependency language with the selected
+phase. Prefer the nearest prior matching phase plus any phase explicitly
+referenced by ROADMAP or saved context. If no rule matches, say no earlier
+context was reused instead of doing a broad sweep.
+```
+
+Task 3C: update `commands/blu-discuss-phase.toml`.
+
+Exact location: in the prompt before optional sidecar decision language.
+
+Exact change:
+
+```text
+Before any user question or sidecar decision, resolve the phase and build the
+selected-phase read packet from the discuss runtime contract. Keep the selected
+phase distinct from ambient state phase when they differ.
+```
+
+Task 3D: update `skills/blueprint-phase-discovery/SKILL.md`.
+
+Exact location: under `### discuss-phase`, before the numbered flow starts.
+
+Exact change:
+
+```md
+Before any question, sidecar request, checkpoint operation, scaffold path, or
+artifact write, derive all phase-scoped reads and writes from the
+`blueprint_phase_locate` selected-phase register. Later state-derived phase
+signals are ambient routing context unless the runtime contract explicitly says
+to update the selected phase.
+```
+
+Dependencies: Wave 2 should land first so the starter-context vocabulary is consistent.
+
+Parallelization: Task 3A/3B should be owned by one worker because both edit the same runtime contract section. Task 3C/3D can run in parallel after 3A's wording is stable.
+
+#### Wave 4: Gray-Area Queue And Question Controls
+
+Goal: convert "gray areas" from a concept into a testable working queue with high-value questions and stop criteria.
+
+Task 4A: update `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+
+Exact location: replace or expand `## Gray Area Identification` and `## Questioning Rules`.
+
+Exact change: add the `## Gray Area Queue` block from A2, including fields:
+
+- `areaId`
+- `slot`
+- `defect`
+- `lens`
+- `evidence`
+- `downstreamImpact`
+- `decisionValue`
+- `resolutionCriterion`
+- `candidateQuestion`
+
+Task 4B: add question controls in the same runtime contract.
+
+Exact location: inside `## Questioning Rules`.
+
+Exact change:
+
+```md
+For each interactive gray-area turn, offer controls the user can choose from:
+- answer now
+- infer with assumptions
+- skip/defer
+- revise a prior answer
+- ask deeper
+- summarize/write now
+
+Use controls only when they reduce ambiguity or cognitive load. Do not turn the
+whole run into a survey; keep one decision-bearing question active at a time.
+```
+
+Task 4C: add the question format and stop criteria.
+
+Exact change: paste the format from A2:
+
+```md
+Question: <one concrete phase-specific decision>
+Why it matters: <which context field, downstream command, or routing gate this unblocks>
+Known evidence: <repo path/MCP result/user source>
+Recommended option: <safe default, only when evidence supports one>
+Other options: <2-3 concrete alternatives plus freeform escape>
+Resolved when: <exact criterion that lets the agent checkpoint or move on>
+```
+
+Then add the four resolution outcomes:
+
+1. Implementation decision.
+2. Open question.
+3. Research/UI/planning handoff.
+4. Deferred idea.
+
+Task 4D: add positive and negative examples.
+
+Exact location: after stop criteria.
+
+Exact change: include one positive example using `auth-error-contract` or another existing Blueprint-like command surface, and one negative example warning that `Any other requirements?` is generic unless tied to a named queue entry.
+
+Task 4E: update `skills/blueprint-phase-discovery/SKILL.md`.
+
+Exact location: in `### discuss-phase`, near the sentence that says to identify gray areas first.
+
+Exact change:
+
+```md
+Build the runtime contract's `grayAreaQueue` before the first fresh question,
+rank unresolved areas by `decisionValue`, and checkpoint the queue after each
+accepted answer, assumption, deferral, or handoff.
+```
+
+Dependencies: Wave 3 read packet should exist because queue entries cite evidence from that packet.
+
+Parallelization: Task 4A-4D should be one worker because they touch one runtime-contract section. Task 4E can run in parallel once the field names are final.
+
+#### Wave 5: Assumptions, Evidence, And Skip-Discuss Safety
+
+Goal: make assumptions mode plan-safe only when evidence, confidence, and consequence are explicit.
+
+Task 5A: update `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+
+Exact location: replace or expand `## Assumptions Mode`.
+
+Exact change: add `## Assumption Readiness Ledger` with fields:
+
+- `areaId`
+- `claim`
+- `default`
+- `source tier`
+- `evidence refs`
+- `confidence`
+- `contradiction status`
+- `consequence if wrong`
+- `disposition`
+- `context destination`
+
+Task 5B: add source tiers and confidence labels.
+
+Exact source tiers:
+
+- `live-mcp`
+- `repo-source`
+- `saved-blueprint-artifact`
+- `current-user`
+- `supplied-official-external`
+- `secondary-external`
+- `repo-inferred`
+- `model-inferred`
+- `contradicted`
+- `unknown`
+
+Exact confidence labels:
+
+- `Confident`
+- `Likely`
+- `Unclear`
+
+Task 5C: add ask/assume/research/UI/keep-open threshold.
+
+Exact change: paste the threshold text from A3:
+
+```md
+Ask instead of assuming when the answer changes phase scope, user-visible
+behavior, data/API/document contracts, security or privacy posture, migration
+or deletion behavior, acceptance criteria, command routing, overwrite/reuse
+posture, or whether research/UI/plan gates are required.
+```
+
+Also include:
+
+- Assume only when evidence is repo-grounded or user-confirmed and consequence is low or moderate.
+- Route to `/blu-research-phase` for external correctness, source freshness, dependency/tool choice, ecosystem behavior, technical feasibility, or conflicting repo interpretations.
+- Route to `/blu-ui-phase` for visual hierarchy, interaction behavior, accessibility, user journey shape, or no-UI rationale.
+- Keep open when high-impact, contradicted, owner-dependent, or later-phase.
+
+Task 5D: add contradiction handling and skip-discuss inheritance.
+
+Exact change:
+
+```md
+`workflow.skip_discuss=true` may reduce or skip interview turns, but it does
+not waive assumption safety. The command must still build the readiness ledger,
+label defaults, preserve source tiers and consequences, ask or stop on
+high-impact unresolved items, and route research/UI-owned unknowns instead of
+silently writing them as plan-safe context.
+```
+
+Task 5E: update `docs/commands/discuss-phase.md`.
+
+Exact location: under `User Prompts And Confirmation Gates` and/or `Edge Cases`.
+
+Exact change: mirror the user-visible version:
+
+```md
+- In assumptions or skip-discuss mode, Blueprint may infer low-risk defaults
+  from repo, MCP, saved artifact, or current user evidence, but high-impact,
+  contradicted, external-correctness, research-owned, or UI-owned unknowns must
+  be asked, left open, or routed instead of silently saved as decisions.
+```
+
+Dependencies: Wave 4 should land first because assumptions attach to `grayAreaQueue`.
+
+Parallelization: Task 5A-5D should be one worker. Task 5E can run in parallel after the final public wording is chosen.
+
+#### Wave 6: Checkpoint State Machine And Progress Visibility
+
+Goal: preserve discussion progress after every answer and make resume deterministic without requiring immediate runtime schema changes.
+
+Task 6A: update `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+
+Exact location: expand `## Single-Agent Fallback` and `## Validation And Repair` checkpoint paragraphs into a dedicated `## Checkpointing And Resume` section.
+
+Exact change: add the v2 prompt-compatible checkpoint rules:
+
+- `Persist after every user answer and after every gray-area boundary`.
+- `schemaVersion: 2`.
+- `areaQueue` is semantic source of truth.
+- Compatibility lists `completedAreas`, `remainingAreas`, `resumeMeta.pendingTopics`, and `resumeMeta.completedTopics` are derived summaries.
+- Area states: `unseen`, `questioning`, `assumed`, `decided`, `blocked`, `needs-revisit`, `handed-off`.
+- Resume order: `questioning`, `blocked`, `needs-revisit`, `unseen`.
+- Do not reconstruct queue from prose.
+
+Task 6B: add the sample checkpoint JSON.
+
+Exact location: in the new `## Checkpointing And Resume` section.
+
+Exact change: paste the JSON sample from A4, including `progress`, `areaQueue`, `carryForward`, and `readSet`. Keep it explicitly labeled as prompt-compatible metadata first, not a new required runtime schema.
+
+Task 6C: update `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`.
+
+Exact location: under `## Session-Local Visibility Helpers`.
+
+Exact change:
+
+```text
+Progress: phase=<resolved phase> stage=<Resolve|Read|Decide|Execute|Persist|Validate|Route>
+gate=<pending gate or none> mode=<discuss|assumptions|skip-discuss>/<fresh|resumed>
+areas=<decided>/<total> active=<areaId or none> next=<next safe action or next question>
+```
+
+Then add:
+
+```md
+Helper state mirrors the MCP checkpoint. It never owns persistence. If helper
+state and checkpoint state disagree, report the checkpoint state and refresh the
+helper display.
+```
+
+Task 6D: add tests.
+
+Exact location: `tests/phase-discovery-discuss.test.ts`.
+
+Add:
+
+- Text assertions for after-every-answer checkpointing, state names, resume order, and `areaQueue`.
+- A checkpoint round-trip fixture proving extra v2 fields are preserved by current catchall behavior.
+
+Dependencies: Wave 4 queue and Wave 5 assumptions should land first so checkpoint fields can reference final terms.
+
+Parallelization: Task 6A/6B should be one worker. Task 6C can run in parallel. Task 6D should run after 6A-6C.
+
+#### Wave 7: Context Readiness, Handoff Packet, Final Routing
+
+Goal: make the saved `phase.context` useful to research/UI/plan while preserving implemented-only routing.
+
+Task 7A: update `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+
+Exact location: expand `## Artifact Authoring` or add a new `## Context Model Readiness` section before artifact write instructions.
+
+Exact change: add:
+
+```md
+## Context Model Readiness
+
+Before writing `phase.context`, build a readiness ledger:
+
+field | source basis | confidence | unresolved risk | downstream consumer
+
+Every required field must be evidence-backed, user-confirmed, or explicitly
+assumption-backed. Do not write the model while any field is scaffold-derived,
+source-free, or contradicted without an `openQuestions`, `dependencies`, or
+`deferredIdeas` entry.
+
+Every resolved high-value gray area must appear in the final `phase.context`
+model as an `implementationDecisions` row, a `dependencies` item, an
+`openQuestions` item, a `deferredIdeas` item, or a `canonicalReferences`
+source. If none of those fields receives the area, the discussion is not ready
+to write.
+```
+
+Task 7B: add field-by-field drafting rubric.
+
+Exact location: same section.
+
+Exact change: paste the A5 rubric for:
+
+- `phaseBoundary`
+- `discoveryGrounding`
+- `implementationDecisions`
+- `specificIdeas`
+- `existingCodeInsights`
+- `dependencies`
+- `openQuestions`
+- `deferredIdeas`
+- `canonicalReferences`
+
+Task 7C: add discussion-log triggers.
+
+Exact location: near current `Write XX-DISCUSSION-LOG.md when it adds durable value` wording.
+
+Exact change: replace soft language with trigger list:
+
+- more than one gray area was discussed or resumed
+- assumptions mode presented defaults that were accepted, corrected, or rejected
+- user changed direction, rejected an option, or supplied rationale not fully represented in `phase.context`
+- contradiction, plan-inventory warning, compliance/audit concern, or deferred follow-up needs reconstruction later
+- skip only when one straightforward area was resolved and context preserves all decisions, sources, and follow-ups
+
+Task 7D: add `## Downstream Handoff Packet`.
+
+Exact location: before `## Validation And Repair`.
+
+Exact change: add packet fields:
+
+- `researchBrief`
+- `uiBrief`
+- `planBrief`
+- `planInventory`
+- `routingGates`
+
+Include exact constraints:
+
+- Persist packet substance inside existing `phase.context`, optional `phase.discussion-log`, and checkpoints.
+- Do not create a new artifact.
+- A `uiBrief` no-UI candidate is not a completed `XX-UI-SPEC.md` skip rationale.
+- Existing saved plans were not rewritten; rerun `/blu-plan-phase <selectedPhase>` before trusting plan content that depends on refreshed context.
+
+Task 7E: tighten final routing.
+
+Exact location: in `## Validation And Repair` finalization sequence and final response guidance.
+
+Exact change:
+
+```md
+## Final Routing
+
+Route only from the post-write `blueprint_state_load` result:
+1. Call `blueprint_state_update({ base: "synced", patch: { currentPhase,
+   activeCommand: "/blu-discuss-phase" } })`.
+2. Call `blueprint_state_load`.
+3. Copy `derivedStatus.nextAction` exactly as the next safe action.
+4. If the loaded action is missing, blocked, or not a Blueprint command, say:
+   `Run /blu-progress to review the next safe Blueprint action`.
+5. Do not list alternate runnable commands unless a future contract explicitly
+   adds `blueprint_command_catalog` to this command's allowlist and tests.
+```
+
+Task 7F: update `docs/commands/discuss-phase.md`.
+
+Exact change: mirror user-visible behavior only:
+
+- context readiness before write
+- optional log trigger examples
+- stale-plan warning
+- downstream handoff summary
+- final route from refreshed state only
+
+Task 7G: update `tests/phase-discovery-discuss.test.ts`.
+
+Add assertions for:
+
+- `Context Model Readiness`
+- field-by-field rubric
+- discussion-log triggers
+- `Downstream Handoff Packet`
+- `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, `routingGates`
+- no secondary runnable routes
+- stale-plan warning text
+
+Dependencies: Waves 3-6 should land first because readiness and handoff consume their vocabulary.
+
+Parallelization: Task 7A/7B should be one worker. Task 7C/7D/7E should be one worker after 7A's section names are stable. Task 7F can run in parallel after final public wording is known. Task 7G should run last.
+
+#### Wave 8: Optional Runtime Or Schema Hardening
+
+Goal: only after prompt behavior is accepted, decide whether to make new metadata machine-readable.
+
+Do not start this wave unless explicitly approved. It changes runtime/schema surfaces and may require `dist/`.
+
+Possible task 8A: typed checkpoint validation.
+
+Files:
+
+- `src/mcp/tools/phase-checkpoint-records.ts`
+- `tests/phase-discovery-discuss.test.ts`
+
+Exact changes:
+
+- Add typed optional `schemaVersion`, `progress`, `areaQueue`, `carryForward`, and `readSet`.
+- Validate duplicate `areaId` values.
+- Validate legal states.
+- Require `currentQuestion` for `questioning`.
+- Require `evidenceRefs` for `decided` and `assumed`.
+- Preserve owner/mode guards and backwards compatibility for older checkpoints.
+
+Possible task 8B: context model provenance fields.
+
+Files:
+
+- `src/mcp/artifact-contracts/schemas/phase.context.model.schema.json`
+- `src/mcp/tools/phase-context-model.ts`
+- `src/mcp/artifact-contracts/index.ts`
+- `tests/context-contract-parity.test.ts`
+- `tests/phase-discovery-discuss.test.ts`
+
+Exact changes:
+
+- Add versioned fields only if downstream commands need machine-readable evidence.
+- Candidate fields: `evidenceClaims`, richer `implementationDecisions`, structured `openQuestions`, or structured downstream handoff fields.
+- Keep exact `openQuestions: ["none"]` compatibility.
+- Update minimal valid examples and example leakage signals.
+
+Possible task 8C: model-backed discussion log.
+
+Files:
+
+- `src/mcp/artifact-contracts/index.ts`
+- optional new schema file
+- `src/mcp/tools/phase-context-model.ts` or new renderer helper if needed
+- tests
+
+Exact changes:
+
+- Only consider if prompt-level trigger rules prove logs are consistently valuable.
+- Candidate fields: `sessionSummary`, `turnNotes`, `optionsConsidered`, `userCorrections`, `assumptionsPresented`, `deferredFollowUps`, `sourceRefs`.
+
+Verification for Wave 8:
+
+```sh
+npm ci
+npm run build
+npm run typecheck
+npm test -- tests/phase-discovery-discuss.test.ts
+npm test -- tests/context-contract-parity.test.ts
+npm test -- tests/built-assets-smoke.test.ts
+git diff --check
+```
+
+Parallelization: 8A and 8B must not run in parallel if both touch checkpoint/context tests heavily. 8C should wait until 8B is either merged or rejected. Any runtime-affecting source change must update tracked `dist/` through the build.
+
+#### Suggested Parallel Work Slices
+
+Safe parallel slices after Wave 1:
+
+- Worker P1: Wave 2 bootstrap handoff files (`commands/blu-new-project.toml`, `skills/blueprint-bootstrap/*`, `docs/commands/new-project.md`).
+- Worker P2: Wave 3 selected-phase/read-packet files (`commands/blu-discuss-phase.toml`, discuss runtime contract, shared skill).
+- Worker P3: Wave 4 gray-area queue and question policy in discuss runtime contract plus shared skill.
+- Worker P4: Wave 5 assumptions/evidence text in discuss runtime contract plus public command docs.
+
+Do not parallelize:
+
+- Two workers editing the same large region of `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
+- Test assertion edits that rename anchors while prompt-edit workers are still choosing final headings.
+- Optional Wave 8 runtime/schema work with prompt-only waves unless the write sets are explicitly split and the tests are coordinated.
+
+Recommended merge order:
+
+1. Wave 1 test anchors.
+2. Wave 2 bootstrap handoff.
+3. Wave 3 read packet.
+4. Wave 4 gray-area queue.
+5. Wave 5 assumptions/evidence.
+6. Wave 6 checkpoint/progress.
+7. Wave 7 context/handoff/routing.
+8. Optional Wave 8 only after review.
 
 ### Implementation Order
 
