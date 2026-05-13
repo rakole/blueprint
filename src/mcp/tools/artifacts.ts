@@ -2804,12 +2804,18 @@ function hasSupplyChainEvidenceSource(content: string): boolean {
   );
 }
 
+const RESEARCH_ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
+const RESEARCH_ACCESS_DATE_SIGNAL_PATTERN =
+  /(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i;
+const RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN =
+  /https?:\/\/|doi\.org\/|\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;
+
 function sourceLinesWithUrlsMissingAccessDate(sources: string): string[] {
   return sources
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => /https?:\/\/|doi\.org\//i.test(line))
-    .filter((line) => !/(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i.test(line));
+    .filter((line) => !RESEARCH_ACCESS_DATE_SIGNAL_PATTERN.test(line));
 }
 
 function hasClaimAddressableSourceSections(sources: string): boolean {
@@ -2830,6 +2836,41 @@ function hasClaimAddressableEvidence(sources: string): boolean {
   );
 }
 
+function hasPlannerRelevantDownstreamUse(value: string): boolean {
+  const normalized = value.trim();
+
+  return (
+    normalized.length > 0 &&
+    !isBackgroundSourceUse(normalized) &&
+    !/\b(?:do not use|not used)\b[\s\S]{0,60}\bsupport\b/i.test(normalized)
+  );
+}
+
+function externalSourceRowHasCurrentAccessEvidence(row: ResearchMarkdownRow): boolean {
+  return (
+    RESEARCH_ISO_DATE_PATTERN.test(row.accessed || "") &&
+    RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN.test(row.source_ref || "") &&
+    /\b(?:directly_supported|partially_supported|inferred_from_supported)\b/i.test(row.claim_class || "") &&
+    hasPlannerRelevantDownstreamUse(row.downstream_use || "")
+  );
+}
+
+function hasLiveExternalAccessDateEvidence(sources: string): boolean {
+  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
+
+  if (/### External Sources/i.test(sources) && /\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) {
+    return true;
+  }
+
+  if (/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister)) {
+    return true;
+  }
+
+  return parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")).some(
+    externalSourceRowHasCurrentAccessEvidence
+  );
+}
+
 function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): boolean {
   const claimText = [
     extractMarkdownSection(content, "Summary"),
@@ -2845,12 +2886,7 @@ function usesLiveVerificationLanguageWithoutExternalEvidence(content: string): b
   }
 
   const sources = extractMarkdownSection(content, "Sources");
-  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
-
-  return (
-    !/### External Sources/i.test(sources) ||
-    !/\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)
-  ) && !/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister);
+  return !hasLiveExternalAccessDateEvidence(sources);
 }
 
 function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolean {
