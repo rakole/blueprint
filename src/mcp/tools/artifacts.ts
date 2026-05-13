@@ -2979,6 +2979,33 @@ function collectResearchEvidenceRows(content: string): ResearchMarkdownRow[] {
   ];
 }
 
+const RESEARCH_STRUCTURED_DOI_PATTERN =
+  /\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i;
+const RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN =
+  /\b(?:npm|npx|pnpm|yarn|bun)\s+(?:run\s+)?[A-Za-z0-9:_./@-]+(?:\s+[-A-Za-z0-9:_./=@]+)*/i;
+
+function hasConcreteStructuredSourceReference(text: string): boolean {
+  const normalized = text.trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    containsSourceEvidence(normalized) ||
+    RESEARCH_STRUCTURED_DOI_PATTERN.test(normalized) ||
+    RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN.test(normalized)
+  );
+}
+
+function sourceRegisterRowReferenceText(row: ResearchMarkdownRow): string {
+  return [row.path_or_url].filter(Boolean).join("\n");
+}
+
+function sourceRegisterRowHasConcreteEvidence(row: ResearchMarkdownRow): boolean {
+  return hasConcreteStructuredSourceReference(sourceRegisterRowReferenceText(row));
+}
+
 function evidenceRowId(row: ResearchMarkdownRow): string {
   return row.evidence_id || "";
 }
@@ -2992,6 +3019,76 @@ function evidenceRowReferences(row: ResearchMarkdownRow): string[] {
       row.support_span,
       row.retrieval_context
     ].join(" ")
+  );
+}
+
+function evidenceRowHasConcreteEvidence(
+  row: ResearchMarkdownRow,
+  sourceRowsById: Map<string, ResearchMarkdownRow>,
+  evidenceRowsById: Map<string, ResearchMarkdownRow>,
+  visitedEvidenceIds = new Set<string>()
+): boolean {
+  if (
+    hasConcreteStructuredSourceReference(
+      [row.source_ref, row.derived_from].filter(Boolean).join("\n")
+    )
+  ) {
+    return true;
+  }
+
+  const rowId = evidenceRowId(row);
+  if (rowId) {
+    if (visitedEvidenceIds.has(rowId)) {
+      return false;
+    }
+
+    visitedEvidenceIds.add(rowId);
+  }
+
+  const refs = evidenceRowReferences(row);
+  if (
+    refs
+      .filter((id) => id.startsWith("SRC-"))
+      .some((id) => {
+        const sourceRow = sourceRowsById.get(id);
+        return sourceRow ? sourceRegisterRowHasConcreteEvidence(sourceRow) : false;
+      })
+  ) {
+    return true;
+  }
+
+  return refs
+    .filter((id) => id.startsWith("EVID-"))
+    .some((id) => {
+      const linkedRow = evidenceRowsById.get(id);
+      return linkedRow
+        ? evidenceRowHasConcreteEvidence(
+            linkedRow,
+            sourceRowsById,
+            evidenceRowsById,
+            visitedEvidenceIds
+          )
+        : false;
+    });
+}
+
+function hasStructuredSourceEvidence(content: string): boolean {
+  const sourceRows = collectResearchSourceRegisterRows(content);
+  const evidenceRows = collectResearchEvidenceRows(content);
+  const sourceRowsById = new Map(
+    sourceRows
+      .map((row) => [sourceRegisterRowId(row), row] as const)
+      .filter(([id]) => id.length > 0)
+  );
+  const evidenceRowsById = new Map(
+    evidenceRows
+      .map((row) => [evidenceRowId(row), row] as const)
+      .filter(([id]) => id.length > 0)
+  );
+
+  return (
+    sourceRows.some((row) => sourceRegisterRowHasConcreteEvidence(row)) ||
+    evidenceRows.some((row) => evidenceRowHasConcreteEvidence(row, sourceRowsById, evidenceRowsById))
   );
 }
 
@@ -3478,13 +3575,10 @@ export function validateResearchArtifactContent(content: string): {
   }
 
   const sources = extractMarkdownSection(content, "Sources");
-  const hasStructuredSourceEvidence =
-    collectResearchSourceRegisterRows(content).length > 0 ||
-    collectResearchEvidenceRows(content).length > 0;
 
-  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence) {
+  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(content)) {
     issues.push(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence."
     );
   }
 

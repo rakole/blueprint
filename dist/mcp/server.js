@@ -37580,6 +37580,19 @@ function collectResearchEvidenceRows(content) {
     ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Inference Notes"))
   ];
 }
+function hasConcreteStructuredSourceReference(text) {
+  const normalized = text.trim();
+  if (!normalized) {
+    return false;
+  }
+  return containsSourceEvidence(normalized) || RESEARCH_STRUCTURED_DOI_PATTERN.test(normalized) || RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN.test(normalized);
+}
+function sourceRegisterRowReferenceText(row) {
+  return [row.path_or_url].filter(Boolean).join("\n");
+}
+function sourceRegisterRowHasConcreteEvidence(row) {
+  return hasConcreteStructuredSourceReference(sourceRegisterRowReferenceText(row));
+}
 function evidenceRowId(row) {
   return row.evidence_id || "";
 }
@@ -37593,6 +37606,47 @@ function evidenceRowReferences(row) {
       row.retrieval_context
     ].join(" ")
   );
+}
+function evidenceRowHasConcreteEvidence(row, sourceRowsById, evidenceRowsById, visitedEvidenceIds = /* @__PURE__ */ new Set()) {
+  if (hasConcreteStructuredSourceReference(
+    [row.source_ref, row.derived_from].filter(Boolean).join("\n")
+  )) {
+    return true;
+  }
+  const rowId = evidenceRowId(row);
+  if (rowId) {
+    if (visitedEvidenceIds.has(rowId)) {
+      return false;
+    }
+    visitedEvidenceIds.add(rowId);
+  }
+  const refs = evidenceRowReferences(row);
+  if (refs.filter((id) => id.startsWith("SRC-")).some((id) => {
+    const sourceRow = sourceRowsById.get(id);
+    return sourceRow ? sourceRegisterRowHasConcreteEvidence(sourceRow) : false;
+  })) {
+    return true;
+  }
+  return refs.filter((id) => id.startsWith("EVID-")).some((id) => {
+    const linkedRow = evidenceRowsById.get(id);
+    return linkedRow ? evidenceRowHasConcreteEvidence(
+      linkedRow,
+      sourceRowsById,
+      evidenceRowsById,
+      visitedEvidenceIds
+    ) : false;
+  });
+}
+function hasStructuredSourceEvidence(content) {
+  const sourceRows = collectResearchSourceRegisterRows(content);
+  const evidenceRows = collectResearchEvidenceRows(content);
+  const sourceRowsById = new Map(
+    sourceRows.map((row) => [sourceRegisterRowId(row), row]).filter(([id]) => id.length > 0)
+  );
+  const evidenceRowsById = new Map(
+    evidenceRows.map((row) => [evidenceRowId(row), row]).filter(([id]) => id.length > 0)
+  );
+  return sourceRows.some((row) => sourceRegisterRowHasConcreteEvidence(row)) || evidenceRows.some((row) => evidenceRowHasConcreteEvidence(row, sourceRowsById, evidenceRowsById));
 }
 function resolveEvidenceSourceIds(evidenceId, evidenceRowsById, visited = /* @__PURE__ */ new Set()) {
   if (visited.has(evidenceId)) {
@@ -37960,10 +38014,9 @@ function validateResearchArtifactContent(content) {
     issues.push("Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.");
   }
   const sources = extractMarkdownSection5(content, "Sources");
-  const hasStructuredSourceEvidence = collectResearchSourceRegisterRows(content).length > 0 || collectResearchEvidenceRows(content).length > 0;
-  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence) {
+  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(content)) {
     issues.push(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file."
+      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence."
     );
   }
   const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
@@ -45699,7 +45752,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -46024,6 +46077,8 @@ var init_artifacts = __esm({
     ];
     RESEARCH_DEPENDENCY_CHOICE_PATTERN = /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
     RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
+    RESEARCH_STRUCTURED_DOI_PATTERN = /\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i;
+    RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN = /\b(?:npm|npx|pnpm|yarn|bun)\s+(?:run\s+)?[A-Za-z0-9:_./@-]+(?:\s+[-A-Za-z0-9:_./=@]+)*/i;
     PLAN_TASK_ABSOLUTE_PATH_ROOTS = /* @__PURE__ */ new Set([
       "Applications",
       "Library",
