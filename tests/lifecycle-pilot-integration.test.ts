@@ -124,6 +124,10 @@ async function createLifecyclePilotRepo(): Promise<string> {
 
 - Explicit skip rationale
 
+## Rationale
+
+- No frontend surface changes are in scope for this lifecycle pilot.
+
 ## User Experience Goals
 
 - No user-facing UI changes are in scope for this lifecycle pilot.

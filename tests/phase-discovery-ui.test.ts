@@ -8,6 +8,7 @@ import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintRuntimeToolFqn } from "../src/mcp/runtime-vocabulary.js";
+import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
@@ -569,6 +570,76 @@ test("ui-phase final next action comes from refreshed synced state", async (t) =
   assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 3/);
   assert.match(stateBody, /Run \/blu-plan-phase 3/);
   assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 3/);
+});
+
+test("state routing repairs an existing invalid UI spec before plan-phase", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision:
+        "Keep plan routing blocked until the saved UI contract is usable.",
+      openQuestions: ["Which UI details still need clarification before planning?"]
+    }),
+    overwrite: true
+  });
+  const researchWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Keep planning blocked when an existing UI spec is scaffold-only or invalid."
+    ),
+    overwrite: true
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"),
+    `# Phase 03 UI Spec
+
+## Outcome Mode
+- Choose one: UI contract or explicit skip rationale.
+`,
+    "utf8"
+  );
+
+  const researchStatus = await blueprintPhaseResearchStatus({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "3",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const projectStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(contextWrite.status, "created");
+  assert.equal(researchWrite.status, "created");
+  assert.equal(researchStatus.hasUiSpec, true);
+  assert.equal(researchStatus.uiSpecValid, false);
+  assert.equal(researchStatus.hasUsableUiSpec, false);
+  assert.match(researchStatus.planningReadiness.nextSafeAction, /\/blu-ui-phase 3/);
+  assert.doesNotMatch(researchStatus.planningReadiness.nextSafeAction, /\/blu-plan-phase 3/);
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 3/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.match(projectStatus.nextAction, /\/blu-ui-phase 3/);
+  assert.doesNotMatch(projectStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.match(stateBody, /Run \/blu-ui-phase 3/);
+  assert.doesNotMatch(stateBody, /Run \/blu-plan-phase 3/);
 });
 
 test("phase artifact writes reject context Markdown fallback and validate freehand artifacts", async (t) => {
