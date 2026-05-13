@@ -68,6 +68,10 @@ type PlanIndexArgs = PhaseLookupArgs;
 type PhaseArtifactReadArgs = PhaseLookupArgs & {
     artifact: PhaseArtifactKind;
 };
+type PhaseArtifactScaffoldArgs = PhaseLookupArgs & {
+    artifact: PhaseArtifactKind;
+    overwrite?: boolean;
+};
 type PhaseArtifactWriteArgs = PhaseLookupArgs & {
     artifact: PhaseArtifactKind;
     content?: string;
@@ -465,6 +469,17 @@ type PhaseArtifactWriteResult = {
     diagnostics?: PhaseArtifactValidationDiagnostic[];
     suggestedRepairs?: string[];
     retryPlan?: PhaseArtifactRetryPlan | null;
+    warnings: string[];
+};
+type PhaseArtifactScaffoldResult = {
+    phaseNumber: string;
+    phasePrefix: string;
+    phaseName: string;
+    phaseDir: string;
+    artifact: PhaseArtifactKind;
+    path: string;
+    createdFiles: string[];
+    reusedFiles: string[];
     warnings: string[];
 };
 type PhaseArtifactRetryPlan = {
@@ -872,6 +887,7 @@ export declare function blueprintPhaseLocate(args?: PhaseLookupArgs): Promise<Ph
 export declare function blueprintPhaseContext(args?: PhaseLookupArgs): Promise<PhaseContextResult>;
 export declare function blueprintPhaseResearchStatus(args?: PhaseLookupArgs): Promise<PhaseResearchStatusResult>;
 export declare function blueprintPhaseArtifactRead(args: PhaseArtifactReadArgs): Promise<PhaseArtifactReadResult>;
+export declare function blueprintPhaseArtifactScaffold(args: PhaseArtifactScaffoldArgs): Promise<PhaseArtifactScaffoldResult>;
 export declare function blueprintPhaseArtifactWrite(args: PhaseArtifactWriteArgs): Promise<PhaseArtifactWriteResult>;
 export declare function blueprintPhaseValidationRead(args: PhaseValidationReadArgs): Promise<PhaseValidationReadResult>;
 export declare function blueprintPhaseValidationWrite(args: PhaseValidationWriteArgs): Promise<PhaseValidationWriteResult>;
@@ -1016,6 +1032,21 @@ export declare const phaseToolDefinitions: ({
         }>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseArtifactReadResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        overwrite: z.ZodOptional<z.ZodBoolean>;
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        artifact: z.ZodEnum<{
+            context: "context";
+            "discussion-log": "discussion-log";
+            research: "research";
+            "ui-spec": "ui-spec";
+        }>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseArtifactScaffoldResult>;
 } | {
     name: string;
     description: string;

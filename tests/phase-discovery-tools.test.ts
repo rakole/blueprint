@@ -333,7 +333,8 @@ test("phase discovery MCP tools are registered in the Blueprint server", () => {
     "blueprint_roadmap_read",
     "blueprint_phase_locate",
     "blueprint_phase_context",
-    "blueprint_phase_research_status"
+    "blueprint_phase_research_status",
+    "blueprint_phase_artifact_scaffold"
   ]) {
     assert.ok(blueprintToolNames.includes(toolName), `${toolName} should be registered`);
   }
@@ -347,6 +348,7 @@ test("phase lifecycle tool schemas accept numeric JSON phase refs and plan ids",
     "blueprint_phase_execution_targets",
     "blueprint_phase_plan_validate",
     "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_scaffold",
     "blueprint_phase_artifact_write",
     "blueprint_phase_validation_read",
     "blueprint_phase_validation_write",

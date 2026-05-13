@@ -5940,6 +5940,29 @@ test("public artifact scaffold response omits empty top-level warnings while pre
       reusedFiles: [".blueprint/phases/"]
     }
   );
+  assert.deepEqual(
+    sanitizeToolResultForPublicResponse("blueprint_phase_artifact_scaffold", {
+      phaseNumber: "3",
+      phasePrefix: "03",
+      phaseName: "Phase Discovery",
+      phaseDir: ".blueprint/phases/03-phase-discovery",
+      artifact: "research",
+      path: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+      createdFiles: [".blueprint/phases/03-phase-discovery/03-RESEARCH.md"],
+      reusedFiles: [],
+      warnings: []
+    }),
+    {
+      phaseNumber: "3",
+      phasePrefix: "03",
+      phaseName: "Phase Discovery",
+      phaseDir: ".blueprint/phases/03-phase-discovery",
+      artifact: "research",
+      path: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+      createdFiles: [".blueprint/phases/03-phase-discovery/03-RESEARCH.md"],
+      reusedFiles: []
+    }
+  );
   assert.ok(!("warnings" in emptyWarningsParsed));
   assert.deepEqual(emptyWarningsParsed.createdFiles, emptyWarningsResult.createdFiles);
   assert.deepEqual(emptyWarningsParsed.reusedFiles, emptyWarningsResult.reusedFiles);

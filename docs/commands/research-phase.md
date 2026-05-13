@@ -74,7 +74,7 @@ state paths.
 - `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
 - `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
+- `blueprint_phase_artifact_scaffold` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, createdFiles, reusedFiles, warnings}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 - `blueprint_command_catalog` -> `{commands, waves, aliases}`
@@ -86,7 +86,7 @@ state paths.
 - Read the actual current `XX-CONTEXT.md` content before drafting. If the context read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
 - Treat invalid or unusable context the same as missing context: stop and route to `/blu-discuss-phase <phase>` with the precise diagnostics. `/blu-research-phase` owns `XX-RESEARCH.md` only and must not rewrite `XX-CONTEXT.md`.
 - When saved research is already valid, prefer `ask_user` for an explicit `view`/`skip`/`update` choice. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `skip`, `view`, default reuse, or unchanged invalid writes are not successful exits.
-- Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
+- Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_phase_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
 - Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker.
 - For planner-critical claims, use claim-addressable provenance: evidence IDs, claim IDs, repo/external/inference lanes, support class, source type, authority tier, support span, retrieval context, limitations, and downstream use. `## Sources` should split into `Repo Evidence`, `External Sources`, and `Inference Notes`; MCP validation warns rather than rejects older otherwise-valid artifacts that lack this richer shape. The preferred saved shape includes a Claim Support Ledger for planner-critical claims, a Source Register under `## Sources`, a Recommendation Handoff table under `## Recommendations`, and a Source-Support Self-Check before persistence.
 - Build an investigation trace for non-trivial research: saved artifacts inspected, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
@@ -105,7 +105,7 @@ state paths.
 
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` and draft from `contract.authoringTemplate` before persistence.
 - Persist final research through `blueprint_phase_artifact_write` with the resolved numeric `phase`, `artifact: "research"`, and full markdown body.
-- Bare names such as `RESEARCH` and absolute paths are invalid tool inputs; the tool owns the final repo-relative path.
+- Bare names such as `RESEARCH`, phase directories, filenames, and absolute paths are invalid tool inputs; the phase-scoped tools own the final repo-relative path.
 - Use the returned `path` as authoritative after writes.
 - Failed validation requires validation repair/retry before the command can treat research as complete.
 - Retry research validation repair at most once for the same draft. If the retry returns identical diagnostics, stop, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as the repair strategy.
