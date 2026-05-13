@@ -37446,25 +37446,31 @@ function researchDependencyChoiceText(content) {
     extractMarkdownSection5(content, "Recommendations")
   ].join("\n");
 }
+function hasResearchTableCoverage(content, descriptor) {
+  const section = extractMarkdownSection5(content, descriptor.sectionHeading);
+  return descriptor.requiredPatterns.every((pattern) => pattern.test(section));
+}
 function mentionsDependencyOrToolChoice(content) {
   const candidateText = researchDependencyChoiceText(content);
-  return RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) || RESEARCH_INSTALL_COMMAND_PATTERN.test(candidateText);
+  const installArguments = Array.from(
+    candidateText.matchAll(new RegExp(RESEARCH_INSTALL_COMMAND_PATTERN.source, "gi")),
+    (match) => match[1]?.trim().toLowerCase() ?? ""
+  );
+  return RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) || installArguments.some(
+    (installArgument) => installArgument.length > 0 && !RESEARCH_GENERIC_INSTALL_ARGUMENTS.has(installArgument)
+  );
 }
 function hasDependencyToolEvaluationTable(content) {
-  const standardStack = extractMarkdownSection5(content, "Standard Stack");
-  return /Dependency \/ Tool Evaluation/i.test(standardStack) && /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i.test(standardStack) && /Current \/ Wanted \/ Latest Evidence/i.test(standardStack) && /Maintenance Signal/i.test(standardStack) && /Vulnerability Signal/i.test(standardStack) && /\|\s*License\s*\|/i.test(standardStack) && /Provenance \/ Signature Signal/i.test(standardStack) && /Transitive Footprint/i.test(standardStack) && /Existing \/ Standard-Library Alternative/i.test(standardStack) && /Update Posture/i.test(standardStack) && /Residual Risk And Mitigation/i.test(standardStack) && /\bDEP-\d{3}\b/.test(standardStack);
+  return hasResearchTableCoverage(content, DEPENDENCY_TOOL_EVALUATION_COVERAGE);
 }
 function hasDependencyAlternativesCoverage(content) {
-  const alternatives = extractMarkdownSection5(content, "Alternatives Considered");
-  return /Dependency Alternatives/i.test(alternatives) && /No New Dependency/i.test(alternatives) && /Existing Dependency/i.test(alternatives) && /Standard Library \/ Platform API/i.test(alternatives) && /Candidate Package \/ Tool/i.test(alternatives) && /Custom Implementation/i.test(alternatives);
+  return hasResearchTableCoverage(content, DEPENDENCY_ALTERNATIVES_COVERAGE);
 }
 function hasDependencySetupAndUpdatePosture(content) {
-  const setup = extractMarkdownSection5(content, "Installation And Setup");
-  return /Setup And Update Posture/i.test(setup) && /Manifest \/ Lockfile Impact/i.test(setup) && /Install Scope/i.test(setup) && /Side Effects/i.test(setup) && /Verification Command/i.test(setup) && /Update \/ Monitoring Plan/i.test(setup) && /Manual Review Required/i.test(setup);
+  return hasResearchTableCoverage(content, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE);
 }
 function hasLibraryVsCustomDecision(content) {
-  const dontHandRoll = extractMarkdownSection5(content, "Don't Hand-Roll");
-  return /Library Vs Custom Decision/i.test(dontHandRoll) && /Domain Risk/i.test(dontHandRoll) && /Proven Library \/ Existing Option/i.test(dontHandRoll) && /Custom Path Allowed\?/i.test(dontHandRoll) && /Required Tests \/ Validation/i.test(dontHandRoll);
+  return hasResearchTableCoverage(content, LIBRARY_VS_CUSTOM_DECISION_COVERAGE);
 }
 function hasSupplyChainEvidenceSource(content) {
   const sources = extractMarkdownSection5(content, "Sources");
@@ -37519,15 +37525,12 @@ function hasHighConfidenceWithUnsupportedEvidenceClaims(content) {
     return false;
   }
   const claimRows = collectResearchClaimRows(content);
-  if (claimRows.length > 0) {
-    return claimRows.some(
-      (row) => /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
-        [row.support_status, row.claim_class, row.confidence, row.claim, row.plan_impact].join(" ")
-      )
-    );
-  }
-  return /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
-    content.replace(/\bsupplied-unchecked\b/gi, "supplied")
+  const evidenceRows = collectResearchEvidenceRows(content);
+  const unsupportedStatusPattern = /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i;
+  return claimRows.some(
+    (row) => hasPlannerRelevantDownstreamUse(row.plan_impact || row.downstream_use || "") && unsupportedStatusPattern.test([row.support_status, row.claim_class].join(" "))
+  ) || evidenceRows.some(
+    (row) => hasPlannerRelevantDownstreamUse(row.downstream_use || row.used_for_claims || "") && unsupportedStatusPattern.test([row.claim_class, row.support_status].join(" "))
   );
 }
 function normalizeResearchTableHeader(value) {
@@ -37949,6 +37952,29 @@ function mentionsUnsafeAutomaticDependencyRemediation(content) {
   ].join("\n");
   return /\b(?:npm audit fix|OSV guided remediation|dependency-update PRs?)\b/i.test(candidateText) && !/\b(?:not automatically safe|manual review|review manifest and lockfile diffs|inspect release notes|inspect changelog|run tests)\b/i.test(candidateText);
 }
+function stripTripleFencedCodeBlocks(content) {
+  const strippedLines = [];
+  let activeFence = null;
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+    const trimmedLine = line.trimStart();
+    if (activeFence) {
+      if (trimmedLine.startsWith(activeFence)) {
+        activeFence = null;
+      }
+      continue;
+    }
+    if (trimmedLine.startsWith("```")) {
+      activeFence = "```";
+      continue;
+    }
+    if (trimmedLine.startsWith("~~~")) {
+      activeFence = "~~~";
+      continue;
+    }
+    strippedLines.push(line);
+  }
+  return strippedLines.join("\n");
+}
 function stripResearchPlaceholderSignals(section) {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -37989,10 +38015,11 @@ function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
   const diagnostics = [];
+  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(content);
   if (!/^# .+ - Research\s*$/m.test(content)) {
     issues.push("Research artifact must start with a '# ... - Research' heading.");
   }
-  if (matchedScaffoldPlaceholderSignals(content, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
+  if (matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
     singleSignalPatterns: [/^Phase XX:$/i]
   }).length > 0) {
     issues.push(
@@ -45770,7 +45797,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -46094,7 +46121,70 @@ var init_artifacts = __esm({
       "milestone-summary-"
     ];
     RESEARCH_DEPENDENCY_CHOICE_PATTERN = /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
-    RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
+    RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\s+([^\s`"'|]+)\b/i;
+    RESEARCH_GENERIC_INSTALL_ARGUMENTS = /* @__PURE__ */ new Set([
+      "after",
+      "before",
+      "during",
+      "first",
+      "for",
+      "if",
+      "local",
+      "locally",
+      "then",
+      "to",
+      "verification"
+    ]);
+    DEPENDENCY_TOOL_EVALUATION_COVERAGE = {
+      sectionHeading: "Standard Stack",
+      requiredPatterns: [
+        /Dependency \/ Tool Evaluation/i,
+        /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i,
+        /Current \/ Wanted \/ Latest Evidence/i,
+        /Maintenance Signal/i,
+        /Vulnerability Signal/i,
+        /\|\s*License\s*\|/i,
+        /Provenance \/ Signature Signal/i,
+        /Transitive Footprint/i,
+        /Existing \/ Standard-Library Alternative/i,
+        /Update Posture/i,
+        /Residual Risk And Mitigation/i,
+        /\bDEP-\d{3}\b/
+      ]
+    };
+    DEPENDENCY_ALTERNATIVES_COVERAGE = {
+      sectionHeading: "Alternatives Considered",
+      requiredPatterns: [
+        /Dependency Alternatives/i,
+        /No New Dependency/i,
+        /Existing Dependency/i,
+        /Standard Library \/ Platform API/i,
+        /Candidate Package \/ Tool/i,
+        /Custom Implementation/i
+      ]
+    };
+    DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE = {
+      sectionHeading: "Installation And Setup",
+      requiredPatterns: [
+        /Setup And Update Posture/i,
+        /Manifest \/ Lockfile Impact/i,
+        /Install Scope/i,
+        /Side Effects/i,
+        /Verification Command/i,
+        /Update \/ Monitoring Plan/i,
+        /Manual Review Required/i
+      ]
+    };
+    LIBRARY_VS_CUSTOM_DECISION_COVERAGE = {
+      sectionHeading: "Don't Hand-Roll",
+      requiredPatterns: [
+        /Library Vs Custom Decision/i,
+        /Domain Risk/i,
+        /Proven Library \/ Existing Option/i,
+        /Custom Path Allowed\?/i,
+        /Required Tests \/ Validation/i
+      ]
+    };
     RESEARCH_ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
     RESEARCH_ACCESS_DATE_SIGNAL_PATTERN = /(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i;
     RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN = /https?:\/\/|doi\.org\/|\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;

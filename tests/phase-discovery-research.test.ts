@@ -1000,6 +1000,83 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
   );
 });
 
+test("research validation ignores unsupported rows marked do not use as support", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research that keeps unsupported background rows out of planner-facing HIGH-confidence warnings."
+  ).replace(
+    "| CLM-002 | No live external lookup is required for this repo-only fixture. | open_question | EVID-002 | out_of_scope | LOW | do not use as support |",
+    "| CLM-002 | No live external lookup is required for this repo-only fixture. | open_question | EVID-002 | not_enough_evidence | LOW | do not use as support |"
+  );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.ok(
+    !written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.high_confidence_unsupported"
+    )
+  );
+});
+
+test("research validation warns on HIGH confidence with planner-relevant unsupported evidence rows", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research that warns when planner-relevant evidence remains unsupported even without claim ledger rows."
+  )
+    .replace(
+      /## Claim Support Ledger[\s\S]*?\n## Locked Decisions From Context/,
+      `## Claim Support Ledger
+
+- Claim support ledger deferred; rely on evidence rows for this validation fixture.
+
+## Locked Decisions From Context`
+    )
+    .replace(
+      "| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | directly_supported | REC-001 | local checkout only |",
+      "| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | phase artifact writes route through MCP-owned tooling | not_enough_evidence | REC-001 | local checkout only |"
+    );
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.high_confidence_unsupported" && diagnostic.severity === "warning"
+    )
+  );
+});
+
 test("research validation returns warning diagnostics for missing source register ids", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
