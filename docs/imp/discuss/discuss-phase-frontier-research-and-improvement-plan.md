@@ -156,25 +156,56 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 
 #### Current Behavior
 
-- The command manifest delegates most behavior to `blueprint-phase-discovery` and the discuss-phase runtime contract, but it does pin several phase-resolution rules locally: read effective config before optional sidecar decisions, keep writes inside the selected phase directory, pass only a numeric resolved phase to phase-write tools, and preserve `patch.currentPhase` plus `patch.activeCommand` during the final synced state update (`commands/blu-discuss-phase.toml`).
-- The shared skill says `/blu-discuss-phase` must resolve through MCP before write decisions, ground itself in `blueprint_phase_context`, read current `XX-CONTEXT.md` and `XX-DISCUSSION-LOG.md`, read materially relevant earlier phase context, read plan inventory, read canonical artifact contracts, and keep the selected phase explicit as part of the resolved scope (`skills/blueprint-phase-discovery/SKILL.md`).
-- The command-specific runtime contract defines the prior-context packet as `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_config_get`, `blueprint_phase_artifact_read`, `blueprint_phase_checkpoint_get`, `blueprint_phase_plan_index`, and `blueprint_artifact_contract_read`; it also tells the agent to read saved `.blueprint/codebase/` summaries before broad repo rereads (`skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`).
-- MCP phase resolution is deterministic: `blueprintPhaseLocate` resolves from the request, state, or roadmap, checks `.blueprint/ROADMAP.md`, requires a matching unique phase directory, and returns the authoritative `phaseNumber`, `phasePrefix`, `phaseDir`, artifact list, `resolvedFrom`, failure `reason`, and recovery hints (`src/mcp/tools/phase.ts`).
+- `/blu-new-project` delegates orchestration to `blueprint-bootstrap`, reads bootstrap artifact contracts before authoring, and treats `mcp_blueprint_blueprint_project_init` as the first persistent bootstrap write. Its runtime contract says returned `createdPaths`, `configPath`, `nextAction`, validation diagnostics, and project status routing are authoritative, not paths reconstructed by the agent (`commands/blu-new-project.toml`, `skills/blueprint-bootstrap/SKILL.md`, `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`).
+- `blueprintProjectInit` seeds `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/phases/`, `.blueprint/config.json`, `.blueprint/STATE.md`, and the first phase `XX-CONTEXT.md`. That context is explicitly starter-only: it says it was seeded during `/blu-new-project`, cites project/requirements/roadmap as canonical references, instructs `/blu-discuss-phase <phase>` to replace it, and carries both scaffold and bootstrap-starter markers (`src/mcp/tools/project.ts`).
+- Bootstrap state sets `currentPhase` to the first roadmap phase, `activeCommand` to `/blu-new-project`, and `nextAction` to `/blu-discuss-phase <phase>` unless brownfield evidence is provisional, in which case it routes to `/blu-map-codebase` before treating the roadmap as durable (`src/mcp/tools/project.ts`).
+- The `/blu-discuss-phase` manifest delegates detailed behavior to `blueprint-phase-discovery` and the discuss-phase runtime contract, while locally requiring effective config before sidecar decisions, phase-scoped writes only, numeric phase references for write tools, overwrite confirmation, model-backed `phase.context` writes, and final synced state refresh with the selected phase preserved (`commands/blu-discuss-phase.toml`).
+- The shared phase-discovery skill requires `/blu-discuss-phase` to resolve the phase through MCP before write decisions, ground itself in `blueprint_phase_context`, read current context and discussion log, read materially relevant earlier phase contexts, read plan inventory, read canonical artifact contracts, checkpoint per area, and route from refreshed `blueprint_state_load.derivedStatus.nextAction` (`skills/blueprint-phase-discovery/SKILL.md`).
+- The command-specific runtime contract defines the pre-question evidence packet as `blueprint_phase_context`, `blueprint_roadmap_read`, `blueprint_artifact_list`, `blueprint_config_get`, `blueprint_phase_artifact_read`, `blueprint_phase_checkpoint_get`, `blueprint_phase_plan_index`, and `blueprint_artifact_contract_read`; it also says saved `.blueprint/codebase/` summaries should be read before broad repo rereads (`skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`).
+- MCP phase resolution is deterministic: `blueprintPhaseLocate` resolves from explicit request, state, or roadmap; verifies `.blueprint/ROADMAP.md`; requires one matching phase directory; and returns `phaseNumber`, `phasePrefix`, `phaseDir`, artifact list, `resolvedFrom`, failure `reason`, and recovery hints (`src/mcp/tools/phase.ts`).
+- `blueprintPhaseContext` returns selected phase details and artifact signals, but its `workflowPosture.currentPhase` is sourced from `blueprintStateLoad` when available. That means it can expose ambient routing state that differs from the selected phase resolved by `blueprintPhaseLocate` (`src/mcp/tools/phase.ts`, `src/mcp/tools/state.ts`).
 - Runtime state can intentionally diverge from the roadmap when the user selected an earlier phase: `buildSyncedState` accepts `patch.currentPhase`, warns when it preserved the requested phase over the roadmap current phase, and tests assert that a discuss-phase run for Phase 2 does not route to Phase 3 planning (`src/mcp/tools/state.ts`, `tests/phase-discovery-discuss.test.ts`).
+- Starter context is detectable in runtime: state sync warns when current context still has the bootstrap starter marker, and phase artifact usability treats bootstrap starter context as present but unusable for downstream planning. However, `blueprint_phase_artifact_read` itself returns raw content or missing status without classifying starter versus authored content (`src/mcp/tools/state.ts`, `src/mcp/tools/phase.ts`).
 
 #### Gaps / Risks
 
+- The bootstrap handoff to discuss-phase is implicit rather than packetized. Agents can infer it from `createdPaths`, seeded state, `nextAction`, and starter `XX-CONTEXT.md`, but no contract requires `/blu-new-project` to name a compact handoff packet or `/blu-discuss-phase` to read that packet before replacing the starter.
+- The starter context is intentionally not final context, but the discuss-phase read contract does not require a `starter-context` status. A run can treat a marker-bearing starter as ordinary prior context unless the agent notices the marker text itself.
 - The read contract lists the right tools but does not fully specify a stable read order, which fields become the canonical selected-phase register, or which reads may safely run in parallel after `blueprint_phase_locate` succeeds. That leaves room for agents to mix `phase_context.workflowPosture.currentPhase` with the explicitly selected phase.
 - `blueprint_phase_context` combines selected-phase data with ambient project workflow state from `blueprintStateLoad`; when those disagree, the prompt contract does not force the agent to label them separately as `selectedPhase` and `stateCurrentPhase`.
 - "Materially relevant earlier phase context artifacts" is underspecified. Agents could overread every prior context file, miss reusable prior decisions, or recency-bias toward the current file without checking roadmap requirement overlap, canonical references, deferred ideas, or shared codebase surfaces.
 - Existing context and discussion reads return raw content or absence; the prompt contract does not require an explicit status classification such as missing, scaffold/starter-only, authored substantive, unreadable, invalid, or conflicts-with-checkpoint before choosing reuse, repair, or overwrite posture.
 - Checkpoint reads are owner/mode guarded at the MCP layer, but the A1 read phase does not state precedence when a safe checkpoint, an existing context artifact, and a discussion log disagree. That ambiguity can produce duplicate questions or accidental overwrite pressure.
 - The plan-inventory warning exists, but the read phase does not say how to present it before questioning: saved plans should be treated as stale downstream consumers, not evidence that refreshed context will automatically update planning.
-- Tests currently cover registered tool allowlists, selected earlier phase state preservation, checkpoint ownership, scaffold replacement, and validation behavior, but they mostly assert text and MCP primitives rather than an explicit "resolved read packet" contract (`tests/phase-discovery-discuss.test.ts`).
+- Tests currently cover registered tool allowlists, selected earlier phase state preservation, checkpoint ownership, scaffold replacement, state-update failure checkpoint retention, and validation behavior, but they mostly assert text and MCP primitives rather than an explicit bootstrap-handoff or resolved-read-packet contract (`tests/phase-discovery-discuss.test.ts`).
 
 #### Specific Improvements
 
-- Add a selected-phase register to the runtime contract immediately after `blueprint_phase_locate`. Future text snippet for `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`:
+- Add an explicit bootstrap handoff packet to the new-project contract. Future text snippet for `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`:
+
+  ```md
+  After `mcp_blueprint_blueprint_project_init` succeeds, summarize a bootstrap handoff packet:
+  `bootstrapHandoff.initialPhase`, `bootstrapHandoff.phasePrefix`,
+  `bootstrapHandoff.phaseDir`, `bootstrapHandoff.starterContextPath`,
+  `bootstrapHandoff.bootstrapSources`, `bootstrapHandoff.statePath`,
+  `bootstrapHandoff.configPath`, and `bootstrapHandoff.nextAction`.
+  Build it only from the MCP result plus the approved bootstrap seed. Do not
+  reconstruct paths that the MCP result already returned. Mark the seeded
+  `XX-CONTEXT.md` as `starter-context`, not as authored discuss-phase context.
+  ```
+
+- Add a matching handoff-read rule to the discuss runtime contract. Future text snippet for `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`:
+
+  ```md
+  If the selected phase has a bootstrap starter `XX-CONTEXT.md`, treat it as the
+  `/blu-new-project` handoff packet: read it together with `.blueprint/PROJECT.md`,
+  `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, config, and state routing.
+  Reuse its objective, requirement ids, success criteria, and canonical
+  references as grounding, but classify the context status as `starter-context`
+  and replace it with authored discuss-phase decisions before downstream planning.
+  ```
+
+- Add a selected-phase register to the discuss runtime contract immediately after `blueprint_phase_locate`. Future text snippet for `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`:
 
   ```md
   After `blueprint_phase_locate` succeeds, create a run-local selected-phase register:
@@ -207,7 +238,7 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   context. If no rule matches, say no earlier context was reused instead of doing a broad sweep.
   ```
 
-- Require a compact read-packet summary before the first fresh user question. The packet should include selected phase, phase resolution source, state current phase if different, config mode (`discuss`, `assumptions`, or `skip_discuss`), context status, discussion-log status, checkpoint status, prior context reused/skipped, codebase-summary status, and plan-inventory warning.
+- Require a compact read-packet summary before the first fresh user question. The packet should include selected phase, phase resolution source, state current phase if different, bootstrap handoff status, config mode (`discuss`, `assumptions`, or `skip_discuss`), context status, discussion-log status, checkpoint status, prior context reused/skipped, codebase-summary status, and plan-inventory warning.
 - Add artifact status classification to the contract and skill. Suggested statuses: `missing`, `scaffold-starter`, `authored-substantive`, `validation-suspect`, `unreadable`, `safe-checkpoint`, `foreign-checkpoint`, and `stale-plan-inventory`. The classification should drive the next gate: resume/discard, overwrite confirmation, repair, or fresh discovery.
 - Clarify checkpoint precedence. If `blueprint_phase_checkpoint_get` returns `safeToResume: true`, ask resume-versus-discard before using current artifact content as the live thread. If the checkpoint is foreign or unsafe, summarize it as non-resumable evidence only and do not overwrite it from discuss-phase.
 - Add an explicit warning rule for saved plans. Future text snippet:
@@ -219,12 +250,14 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   ```
 
 - Update `commands/blu-discuss-phase.toml` with one short local guard rather than duplicating the full workflow: "Before any user question or sidecar decision, resolve the phase and build the selected-phase read packet from the runtime contract. Keep selected phase distinct from ambient state phase when they differ."
-- Update `skills/blueprint-phase-discovery/SKILL.md` to say the selected-phase register applies to reads as well as writes. Today the strongest wording is around write tools; phase-scoped reads and checkpoint calls should be equally pinned to the `blueprint_phase_locate` result.
+- Update `skills/blueprint-phase-discovery/SKILL.md` to say the selected-phase register applies to reads as well as writes. Today the strongest wording is around write tools; phase-scoped artifact reads, prior-context reads, checkpoint calls, plan inventory, scaffold paths, and final state patch should be equally pinned to the `blueprint_phase_locate` result.
 
 #### Verification Ideas For Later Implementation
 
+- Add contract tests that `/blu-new-project` names the bootstrap handoff packet and marks seeded `XX-CONTEXT.md` as `starter-context`, while preserving MCP-returned `createdPaths`, `configPath`, `statePath`, and `nextAction` as authoritative.
 - Add regex-oriented contract tests in `tests/phase-discovery-discuss.test.ts` for the selected-phase register, the explicit found-false stop rule, the read order, and the prior-context relevance rule.
-- Add a fixture with state on Phase 3 and an explicit `/blu-discuss-phase 2` target, then assert the relevant MCP primitives still expose Phase 2 as selected while ambient state remains separately visible.
+- Add a fixture with state on Phase 3 and an explicit `/blu-discuss-phase 2` target, then assert the resolved read packet exposes Phase 2 as selected while `stateCurrentPhase` remains separately visible and never replaces selected phase for reads or writes.
+- Add a starter-context fixture from `blueprintProjectInit`, then assert the discuss contract requires `starter-context` classification, bootstrap source reads, and replacement through model-backed `phase.context` before downstream planning.
 - Add a checkpoint conflict fixture where a safe discuss checkpoint and an existing discussion log disagree; verify the documented prompt contract requires resume-versus-discard before fresh questioning.
 - Add a plan-inventory fixture with an existing `XX-PLAN.md` and assert the command/skill/runtime text preserves the stale-plan warning before context rewrite.
 - After implementation, run `npm test -- tests/phase-discovery-discuss.test.ts` plus `npm run typecheck`; if only prompt/contracts/docs change, the narrow test file should still be the primary regression signal.
@@ -238,6 +271,7 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 - The runtime contract says to generate gray areas from the selected phase rather than generic categories; each area should name a decision that would change implementation, with current lenses covering scope, user-visible behavior, interface contracts, reuse, dependencies, risk/failure handling, and methodology (`skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:61`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:66`).
 - The single-agent fallback already models the loop as one selected area at a time: compress carry-forward context, ask one focused question, validate vague or conflicting answers, record options/rationale/evidence/consequences, checkpoint, and then continue or ask whether more questions are needed (`skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:105`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:110`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:114`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:117`, `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:120`).
 - The saved `phase.context` schema requires implementation decisions, open questions, dependencies, and canonical references, but it does not require typed gray-area metadata; the current tests assert broad contract text and checkpoint behavior, not semantic quality of selected questions (`src/mcp/artifact-contracts/schemas/phase.context.model.schema.json:28`, `src/mcp/artifact-contracts/schemas/phase.context.model.schema.json:56`, `src/mcp/artifact-contracts/schemas/phase.context.model.schema.json:162`, `tests/phase-discovery-discuss.test.ts:368`, `tests/phase-discovery-discuss.test.ts:464`).
+- The checkpoint schema is compatible with richer gray-area state but does not require it today: it requires `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`, while `.catchall(z.unknown())` permits future metadata; tests exercise per-area refresh, current-question resume, retained checkpoints after failures, and foreign/legacy checkpoint rejection (`src/mcp/tools/phase-checkpoint-records.ts:39`, `src/mcp/tools/phase-checkpoint-records.ts:90`, `src/mcp/tools/phase-checkpoint-records.ts:102`, `tests/phase-discovery-discuss.test.ts:484`, `tests/phase-discovery-discuss.test.ts:697`, `tests/phase-discovery-discuss.test.ts:908`).
 
 #### Gaps And Risks
 
@@ -246,6 +280,8 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 - Question selection is under-specified. The user can choose an area, but when the user defers or the agent must recommend the next area, there is no explicit ranking rule based on whether the answer would change phase boundary, implementation approach, acceptance tests, safety posture, routing, or final context fields.
 - Stop criteria are too soft. "Current area is clear" and "more questions" loops do not say when an area is resolved, when an unknown should become an open question, or when it should be handed to `/blu-research-phase`, `/blu-ui-phase`, or `/blu-plan-phase` rather than keeping the interview alive.
 - Answer validation focuses on vague, incomplete, or conflicting answers, but the prompt does not explicitly label ambiguity, incompleteness, inconsistency, unverifiability, or competing interpretations. Without labels, downstream context can flatten uncertainty into overconfident implementation decisions.
+- One-question control is present as a principle, but not yet as a user-facing control contract. The reconciled R8/R9 research above asks for explicit `answer`, `infer with assumptions`, `skip/defer`, `revise`, `ask deeper`, and `summarize/write now` controls so the human can steer the queue without the agent turning every gray area into another interview turn.
+- The queue can disappear between turns because current checkpoint fields are parallel lists and generic decision records. Until a typed checkpoint schema lands, prompt text should name the area fields that must survive in `decisions[*]`, `remainingAreas[*]`, or `resumeMeta` instead of trusting prose memory.
 - The schema can render `openQuestions` and supports the exact `none` sentinel, but it cannot by itself distinguish a high-value unresolved decision from generic leftovers. Prompt text must carry that burden until a future checkpoint or context schema grows typed question metadata (`src/mcp/artifact-contracts/schemas/phase.context.model.schema.json:56`, `tests/phase-discovery-discuss.test.ts:387`, `tests/phase-discovery-discuss.test.ts:405`).
 - Regression coverage currently protects tool allowlists, routing, checkpoint persistence, validation repair, and sentinel behavior, but it does not detect generic questions like "What should we consider?" or missing taxonomy coverage (`tests/phase-discovery-discuss.test.ts:199`, `tests/phase-discovery-discuss.test.ts:368`, `tests/phase-discovery-discuss.test.ts:557`).
 
@@ -256,13 +292,17 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   ```md
   Before asking the user anything, build a compact `grayAreaQueue` from the evidence packet. This queue is working state/checkpoint context, not a competing artifact schema. Each entry must include:
   - `areaId`: stable kebab-case label
+  - `lens`: scope-boundary | user-visible-behavior | interface-contract | reuse | dependency | risk-failure | methodology
   - `slot`: actor | action-task | object-concept | attribute | goal | event | constraint | exception | external-interface | quality-attribute | acceptance-verification
   - `defect`: ambiguous | incomplete | inconsistent | unverifiable | tradeoff
   - `evidence`: repo paths, saved artifacts, MCP results, or user-provided source that exposed the gap
   - `downstreamImpact`: research | ui | plan | validation | routing
   - `decisionValue`: high | medium | low
+  - `interruptionCost`: low | medium | high
+  - `rankingReason`: why this should be asked, assumed, deferred, or handed off now
   - `resolutionCriterion`: what answer, assumption, or handoff makes the area resolved
   - `candidateQuestion`: the single next question that would resolve or shrink the area
+  - `checkpointState`: unseen | questioning | assumed | decided | blocked | needs-revisit | handed-off
   ```
 
 - Replace the current broad "Useful lenses" wording with a taxonomy plus examples while preserving the existing Blueprint-friendly lenses:
@@ -275,6 +315,7 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 
   ```md
   Ask the highest-decision-value unresolved question next. A question is high value only when the answer can change phase boundary, implementation approach, acceptance/verification hooks, safety/security posture, artifact routing, or required `phase.context` fields. If the answer would only add color, record it as a deferred idea or optional note instead of interrupting.
+  Rank ties by downstream blocker first, then evidence conflict, then lower interruption cost. Do not ask a medium- or low-value question while a high-value area is still `questioning`, `blocked`, or `needs-revisit` unless the user explicitly chooses another area.
   ```
 
 - Add a required one-question format for interactive `ask_user` calls:
@@ -286,6 +327,18 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   Recommended option: <safe default, only when evidence supports one>
   Other options: <2-3 concrete alternatives plus freeform escape>
   Resolved when: <exact criterion that lets the agent checkpoint or move on>
+  ```
+
+- Add a required control set for each surfaced gray-area question:
+
+  ```md
+  Controls for this question:
+  - Answer now: use my answer as the decision source.
+  - Infer with assumptions: choose a repo-grounded default, label confidence and consequence if wrong, then checkpoint it as `assumed`.
+  - Skip/defer: move the area to `openQuestions`, `deferredIdeas`, or the downstream handoff named in `resolutionCriterion`.
+  - Revise prior answer: reopen the referenced `areaId`, preserve the old decision as superseded, and checkpoint the correction.
+  - Ask deeper: ask one narrower follow-up for this same `areaId`; do not branch into a new area.
+  - Summarize/write now: stop asking if all high-value areas are resolved or intentionally carried forward.
   ```
 
 - Add explicit anti-generic-question text:
@@ -311,16 +364,47 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   When checkpointing an area, preserve the taxonomy fields in `decisions[*]`, `remainingAreas[*]`, or `resumeMeta.notes` until a typed checkpoint schema exists. Resume must not re-ask an area whose `resolutionCriterion` was already met unless new evidence contradicts the saved decision.
   ```
 
+- Add prompt-compatible checkpoint fields that fit the current `.catchall` parser before any schema hardening:
+
+  ```json
+  {
+    "schemaVersion": "discuss-gray-area/v1",
+    "activeAreaId": "auth-error-contract",
+    "areaQueue": [
+      {
+        "areaId": "auth-error-contract",
+        "lens": "interface-contract",
+        "slot": "exception",
+        "defect": "incomplete",
+        "decisionValue": "high",
+        "interruptionCost": "low",
+        "checkpointState": "questioning",
+        "candidateQuestion": "Should auth failures use the existing generic failure shape or define a machine-readable error code now?",
+        "resolutionCriterion": "Chosen error-shape policy is saved in implementationDecisions with validation expectation.",
+        "downstreamImpact": ["plan", "validation"],
+        "evidenceRefs": [".blueprint/ROADMAP.md", "src/api/errors.ts"]
+      }
+    ],
+    "progress": {
+      "decided": 0,
+      "assumed": 0,
+      "blocked": 0,
+      "total": 1,
+      "nextAction": "ask auth-error-contract"
+    }
+  }
+  ```
+
 - Add a model-authoring bridge so the inventory does not remain hidden prompt state:
 
   ```md
   Every resolved high-value area must appear in the final `phase.context` model as either an `implementationDecisions` row, a `dependencies.requiredFollowUpReads` item, an `openQuestions` item, a `deferredIdeas` item, or a `canonicalReferences` source. If none of those fields receives the area, the discussion is not ready to write.
   ```
 
-- Add one compact few-shot example to the runtime contract or skill reference:
+- Add compact few-shot examples to the runtime contract or skill reference:
 
   ```md
-  Gray area example:
+  Positive gray area example:
   - `areaId`: auth-error-contract
   - `slot`: exception
   - `defect`: incomplete
@@ -329,6 +413,12 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
   - `decisionValue`: high
   - `candidateQuestion`: "For auth failures, should this phase standardize a machine-readable error code now, reuse the existing generic failure shape, or defer payload shape to a later API-contract phase?"
   - `resolved`: selected generic failure shape; record rationale and validation expectation in `implementationDecisions`.
+
+  Negative gray area example:
+  - Bad question: "Any other error-handling requirements?"
+  - Why it fails: no `areaId`, no evidence gap, no downstream decision, and no resolution criterion.
+  - Better question: "For `areaId=auth-error-contract`, should the implementation reuse the existing generic failure shape or define a machine-readable auth error code in this phase?"
+  - Controls: answer now, infer with assumptions, skip/defer to API-contract phase, revise prior auth decision, ask deeper about client behavior, or summarize/write now if this is no longer high value.
   ```
 
 #### Verification Ideas For Later Implementation
@@ -344,92 +434,237 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 
 #### Current Behavior
 
-- `/blu-discuss-phase` is command-thin: `commands/blu-discuss-phase.toml` tells the agent to use `mcp_blueprint_blueprint_config_get` with `scope: "effective"`, then treat `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the detailed source of truth for assumptions mode, sidecar fallback, checkpointing, validation, and routing.
-- The runtime contract already has a dedicated `Assumptions Mode` block: when `workflow.discuss_mode="assumptions"`, the agent should prefer evidence-first assumptions, cite repo paths, saved artifacts, or official supplied references, state the consequence if wrong, label confidence as `Confident`, `Likely`, or `Unclear`, and ask the user only to correct uncertain or high-impact assumptions.
-- The shared skill repeats the behavior at a higher level: `skills/blueprint-phase-discovery/SKILL.md` requires an explicit execution mode, allows a bounded `blueprint-researcher` assumptions pass when configured and useful, and requires the final context self-check to catch contradictions, missing canonical references, unsupported mode claims, and dropped deferred ideas before saving.
-- The command spec in `docs/commands/discuss-phase.md` describes assumptions mode as an evidence-first alternative to interview-style discovery, and requires rich context authoring to preserve selected assumptions, rationale, repo paths or saved artifacts, consequences if wrong, canonical refs, and deferred ideas.
-- Runtime support in `src/mcp/tools/phase.ts` currently surfaces workflow posture such as `discussMode`, `skipDiscuss`, and `researchBeforeQuestions` through `blueprint_phase_context`, while artifact validation and write paths enforce model-only `phase.context`, placeholder removal, and validation repair. The confidence labels and ask-versus-assume policy are prompt-contract behavior, not runtime-enforced semantics.
+- `/blu-discuss-phase` stays command-thin: `commands/blu-discuss-phase.toml` reads effective config, then delegates detailed behavior to `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`. The command file names assumptions mode, sidecar fallback, checkpointing, validation repair, and final routing, but does not define assumption safety itself.
+- The current runtime contract has an `Assumptions Mode` block. It tells agents to prefer evidence-first assumptions when `workflow.discuss_mode="assumptions"`, cite repo paths, saved artifacts, or official supplied references, state the consequence if wrong, label confidence as `Confident`, `Likely`, or `Unclear`, and ask the user only to correct uncertain or high-impact assumptions.
+- The shared skill repeats the boundary at a higher level: keep execution mode explicit, allow one bounded `blueprint-researcher` assumptions pass when configured and useful, preserve canonical references behind decisions, and run a blocking pre-save check for placeholders, contradictions, missing canonical references, unsupported mode claims, and dropped deferred ideas.
+- `docs/commands/discuss-phase.md` describes assumptions mode as an evidence-first alternative to interview-style discovery and requires rich context authoring: selected assumptions, rationale, repo paths or saved artifacts, consequences if wrong, canonical references, and deferred ideas.
+- Canonical references are currently context-level evidence pointers, not claim-linked records. The `phase.context` model requires `canonicalReferences`, and validation requires at least one named source, saved artifact, repo path, or URL, but the schema does not yet prove which assumption, decision, or open question each reference supports.
+- Current tests in `tests/phase-discovery-discuss.test.ts` pin the command/skill/runtime contract wiring, the existence of `Assumptions Mode`, the phrase `consequence if the assumption is wrong`, model-only context writes, the exact `Open Questions` `none` sentinel, checkpoint owner/mode safety, and discussion-log validation for dropped follow-ups and unsupported mode claims. They do not yet pin source tiers, confidence criteria, contradiction handling, readiness ledger content, or ask-versus-assume-versus-research thresholds.
 
 #### Gaps And Risks
 
-- Confidence labels are named but not defined. `Confident`, `Likely`, and `Unclear` have no evidence thresholds, source-quality expectations, contradiction rules, or downstream-use limits in `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
-- The current rule says to ask only for uncertain or high-impact assumptions, but it does not define "high-impact." Agents may assume through decisions that affect user-visible behavior, data shape, security posture, routing, validation gates, or irreversible planning scope.
-- Contradiction handling is only generic. The skill and docs mention contradiction checks before save, but assumptions mode does not say what to do when roadmap text, saved context, code evidence, and current user intent disagree.
-- Evidence is not graded at claim level. The contract allows repo paths, saved artifacts, and official supplied references, but does not distinguish live runtime/source truth from stale saved artifacts, inferred repo patterns, user-stated desired behavior, official external references, secondary summaries, or uncited model intuition.
-- Assumptions can become implementation decisions too quickly. The runtime contract says confirmed or corrected assumptions become final context decisions, but does not preserve a middle state for `provisional`, `plan-safe`, `research-needed`, `ui-needed`, or `user-confirmation-needed`.
-- There is no required competing-interpretations field. An agent can present a single plausible default without showing other viable readings, which weakens correction and makes later `/blu-plan-phase` consumers over-trust the default.
-- `workflow.skip_discuss=true` is described as repo-evidence-driven shortening, but not bounded by the same assumption safety rules. A skipped discussion path could silently convert thin evidence into saved context unless the future text explicitly shares the assumptions-mode gates.
-- Current tests in `tests/phase-discovery-discuss.test.ts` assert that the assumptions-mode section exists and mentions consequences if wrong, but they do not pin confidence criteria, contradiction behavior, evidence grades, or ask-versus-assume thresholds.
+- There is no assumption readiness ledger before `blueprint_phase_artifact_write`. Agents can jump from plausible default to `Implementation Decisions` without proving source basis, confidence, contradiction status, consequence if wrong, and downstream disposition for each gray area.
+- Confidence labels are named but under-specified. `Confident`, `Likely`, and `Unclear` need source-tier thresholds, contradiction gates, consequence-if-wrong limits, and downstream-use rules.
+- "High-impact" is undefined. Without a hard ask threshold, an agent may assume through phase scope, public behavior, data or API contracts, security/privacy posture, migration/deletion behavior, acceptance criteria, command routing, or downstream research/UI gates.
+- Contradiction handling is too generic. Current text says to detect contradictions before saving, but not how to resolve conflicts among live MCP output, repo source/tests, saved Blueprint artifacts, current user intent, and external references.
+- Evidence grading is not claim-level. `canonicalReferences` can list useful sources, but they do not force an assumption to name whether it is `repo-observed`, `repo-inferred`, `saved-artifact`, `user-stated`, `official-external`, `research-secondary`, `assumption`, `contradicted`, or `unknown`.
+- There is no explicit route-to-research threshold. Technical feasibility, dependency choice, external correctness, source freshness, and third-party behavior can be neither safe to assume nor efficient to ask the user about; those should become a `/blu-research-phase` handoff item instead of a hidden plan premise.
+- `workflow.skip_discuss=true` can shorten the interview, but the contract does not yet say it inherits every assumptions-mode safety rule. That leaves room for skipped discussion to save thin defaults as if they were confirmed.
+- Pre-write checks do not yet distinguish "valid markdown shape" from "safe assumptions." The existing validator can reject missing canonical references, placeholder content, unsupported mode claims, and dropped follow-ups, but prompt text still needs to block unsafe assumption promotion before persistence.
 
 #### Specific Improvements
 
-- Add a concrete assumption record shape to the runtime contract so each default is reviewable before it enters `XX-CONTEXT.md`:
+- Add an assumption readiness ledger before context write. This is prompt/runtime-contract behavior first; do not require a schema change in the initial implementation. The ledger can live in checkpoint notes, discussion-log prose, or compact internal working state, but it must be complete before a default is promoted into the `phase.context` model.
 
   ```md
-  Assumption record:
-  - Area:
-  - Decision default:
-  - Evidence:
-  - Evidence grade:
-  - Confidence: Confident | Likely | Unclear
-  - Competing interpretations:
-  - Contradictions checked:
-  - Consequence if wrong:
-  - Ask/reopen rule:
-  - Downstream status: plan-safe | research-needed | ui-needed | user-confirmation-needed
+  ## Assumption Readiness Ledger
+
+  Before writing `phase.context` in assumptions mode or skip-discuss mode, build
+  a compact ledger for every high-value gray area:
+
+  | areaId | default or question | source tier | evidence refs | confidence | consequence if wrong | contradiction status | disposition | context destination |
+  | --- | --- | --- | --- | --- | --- | --- | --- |
+  | <stable area id> | <default, question, or handoff item> | <tier label> | <repo paths, saved artifacts, MCP results, user answer, or source ids> | Confident|Likely|Unclear | low|moderate|high - <specific downstream damage> | none|stale-artifact|repo-vs-doc|user-vs-artifact|external-vs-repo|unresolved | plan-safe-assumption|ask-user|route-research|route-ui|keep-open|rejected | Implementation Decisions|Open Questions|Dependencies|Deferred Ideas|discussion-log only |
+
+  Do not write `phase.context` until every high-decision-value area has a
+  disposition. Do not place `Unclear`, `contradicted`, or `unknown` defaults in
+  `Implementation Decisions` except as rejected/contradicted options with a
+  safe follow-up destination.
   ```
 
-- Define confidence labels in `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`:
+- Add source tiers and require every durable assumption to carry one. This gives future skill and runtime-contract edits a stable vocabulary without changing the current `phase.context` schema:
+
+  ```md
+  Source tiers for assumptions:
+  - `live-mcp`: direct output from Blueprint MCP tools for the current repo and selected phase.
+  - `repo-source`: current repo source, tests, manifests, command files, runtime contracts, or docs read directly from the checkout.
+  - `saved-blueprint-artifact`: current `.blueprint/` artifacts such as PROJECT, REQUIREMENTS, ROADMAP, prior CONTEXT, DISCUSSION-LOG, RESEARCH, UI-SPEC, PLAN, SUMMARY, validation, or checkpoints.
+  - `current-user`: the user's current answer, correction, preference, or explicit approval in this session.
+  - `supplied-official-external`: official external reference supplied or allowed for this run, with source identity and access date when applicable.
+  - `secondary-external`: non-official or summarized external material; useful for research queues, not plan-safe defaults by itself.
+  - `repo-inferred`: pattern inferred from multiple repo observations but not directly stated.
+  - `model-inferred`: plausible model default with no concrete source; never plan-safe.
+  - `contradicted`: two or more source tiers conflict materially.
+  - `unknown`: no adequate source found.
+
+  Prefer `live-mcp`, `repo-source`, and `current-user` for current behavior.
+  Use `saved-blueprint-artifact` as prior-decision evidence unless it conflicts
+  with live MCP output, repo source, or the current user's answer.
+  ```
+
+- Define confidence labels with downstream limits:
 
   ```md
   Confidence labels:
-  - Confident: Direct repo/runtime or saved Blueprint evidence supports the default, no material contradictory evidence was found, and the consequence if wrong is low or easily corrected.
-  - Likely: The default follows from a consistent repo pattern or prior artifact but lacks direct confirmation, or the consequence if wrong is moderate and must be visible to downstream planning.
-  - Unclear: Evidence is thin, conflicting, stale, externally inferred, or the consequence if wrong is high. Do not lock as plan-safe; ask the user or route to research/UI/user confirmation.
+  - Confident: `live-mcp`, `repo-source`, `current-user`, or directly applicable
+    `saved-blueprint-artifact` evidence supports the default; no material
+    contradiction was found; and the consequence if wrong is low or easily
+    reversible. May become `plan-safe-assumption`.
+  - Likely: The default follows from a consistent repo pattern, prior artifact,
+    or user preference but lacks direct confirmation, or the consequence if
+    wrong is moderate. May be used only when the consequence is named and the
+    final context makes the assumption visible to downstream planning.
+  - Unclear: Evidence is thin, stale, conflicting, external-only,
+    model-inferred, or the consequence if wrong is high. Must not become a
+    plan-safe decision; ask the user, route to research/UI, or keep it open.
   ```
 
-- Add an ask-versus-assume threshold to both the runtime contract and the shared skill:
+- Add one shared ask-versus-assume-versus-research threshold to the runtime contract and the shared skill:
 
   ```md
-  Ask instead of assuming when the answer changes phase scope, public behavior, data/contracts, security/privacy, migration or deletion behavior, acceptance criteria, command routing, or whether a downstream research/UI gate is required.
-  Assume only when the evidence is repo-grounded, internally consistent, low blast-radius, and the final context can label the default as reversible.
+  Ask instead of assuming when the answer changes phase scope, user-visible
+  behavior, data/API/document contracts, security or privacy posture, migration
+  or deletion behavior, acceptance criteria, command routing, overwrite/reuse
+  posture, or whether research/UI/plan gates are required.
+
+  Assume only when the default is backed by `live-mcp`, `repo-source`,
+  `current-user`, or non-conflicting `saved-blueprint-artifact` evidence; the
+  consequence if wrong is low or moderate and named; and the final context can
+  label the default as reversible or provisional.
+
+  Route to `/blu-research-phase` when the missing answer depends on external
+  correctness, source freshness, dependency/tool choice, ecosystem behavior,
+  technical feasibility beyond the current read packet, or multiple plausible
+  repo interpretations that need evidence gathering rather than user preference.
+
+  Route to `/blu-ui-phase` when the missing answer is visual hierarchy,
+  interaction behavior, accessibility, user journey shape, or an explicit
+  no-UI rationale that the UI contract owns.
+
+  Keep open instead of assuming when the issue is high-impact, contradicted,
+  owner-dependent, or not needed until a later phase.
   ```
 
-- Add a contradiction ladder for assumptions mode:
+- Add contradiction handling that preserves conflicts instead of smoothing them:
 
   ```md
-  When evidence conflicts, preserve the conflict instead of smoothing it. For current Blueprint runtime behavior, prefer live MCP output and repo source over saved docs. For desired product intent, prefer the user's current answer over older artifacts. If the conflict changes implementation shape, ask the user; if it changes technical feasibility or external correctness, route to a research-needed assumption.
+  Contradiction handling:
+  - Mark `contradiction status` in the readiness ledger whenever two source
+    tiers materially disagree.
+  - For current Blueprint runtime behavior, prefer `live-mcp` and `repo-source`
+    over saved docs, stale context, or inferred patterns.
+  - For desired product intent, prefer the current user's explicit answer over
+    older artifacts unless the user asks to preserve the older decision.
+  - For external correctness, prefer supplied or allowed official external
+    references over secondary summaries; if external checking is not allowed,
+    route the item to research or mark it `unknown`.
+  - If the conflict changes implementation shape, ask the user.
+  - If the conflict changes technical feasibility, dependency choice, source
+    freshness, or ecosystem behavior, route to `/blu-research-phase`.
+  - If the conflict only affects later-phase scope, preserve it in `Deferred
+    Ideas` or `Open Questions` rather than forcing closure.
   ```
 
-- Add a repo-first evidence ladder for claim labels, aligned with the research synthesis: `repo-observed`, `repo-inferred`, `saved-artifact`, `user-stated`, `official-external`, `research-secondary`, `assumption`, `contradicted`, and `unknown`. Require every nontrivial assumption to carry one of these labels in the checkpoint/discussion-log prose even before runtime schemas grow dedicated fields.
+- Make `consequence if wrong` mandatory and specific:
+
+  ```md
+  Consequence if wrong:
+  - `low`: reversible wording, naming, ordering, or local implementation detail
+    that does not change public behavior, data contracts, routing, or validation.
+  - `moderate`: affects implementation order, test strategy, reuse choice, or a
+    visible behavior detail, but can be corrected before execution without data
+    loss or contract breakage.
+  - `high`: affects phase scope, public contract, persisted data, security,
+    privacy, destructive behavior, compliance, command routing, or whether a
+    downstream research/UI gate is required.
+
+  The ledger entry must name the concrete downstream damage, not just the label.
+  ```
+
+- Add pre-write checks for assumptions mode and skip-discuss mode:
+
+  ```md
+  Assumptions pre-write check:
+  1. Every high-value gray area has a readiness-ledger row.
+  2. Every row has source tier, evidence refs, confidence, contradiction status,
+     consequence if wrong, disposition, and context destination.
+  3. No `Unclear`, `contradicted`, `model-inferred`, `secondary-external`,
+     or `unknown` default is promoted to `Implementation Decisions` as plan-safe.
+  4. Every `Implementation Decisions` assumption is either `Confident` or a
+     visible `Likely` assumption with named consequence and reversible scope.
+  5. Every unresolved high-impact item appears in `Open Questions`,
+     `Dependencies`, a downstream research/UI handoff, or `Deferred Ideas`.
+  6. `Canonical References` contains the exact source refs used by the ledger
+     and each reference note says what it supports or controls.
+  7. `Open Questions` uses the exact `none` value only when the ledger has no
+     `ask-user`, `route-research`, `route-ui`, `keep-open`, or unresolved
+     high-impact rows.
+  8. Write `XX-DISCUSSION-LOG.md` when assumptions were presented, corrected,
+     rejected, contradicted, or routed to research/UI in a way future agents
+     must reconstruct.
+  ```
+
 - Extend the `blueprint-researcher` sidecar prompt guidance for assumptions mode:
 
   ```md
-  Ask the sidecar for one assumptions pass only. It must return defaults grouped by gray area, direct repo paths or supplied official references, confidence label using the discuss contract definitions, contradictions or missing evidence, and the smallest question that would change each default. It must not draft phase.context or mark Unclear defaults as decisions.
+  Ask `blueprint-researcher` for one assumptions pass only when configured and
+  useful. It must return:
+  - defaults grouped by gray area
+  - source tier and direct repo paths, saved artifacts, MCP result names, user
+    supplied facts, or supplied official references
+  - confidence label using the discuss contract definitions
+  - contradictions or missing evidence
+  - consequence if wrong
+  - recommended disposition: plan-safe-assumption, ask-user, route-research,
+    route-ui, keep-open, or rejected
+  - the smallest question or research item that would change each default
+
+  It must not draft `phase.context`, author `XX-RESEARCH.md`, decide final
+  routing, or mark `Unclear` defaults as implementation decisions.
   ```
 
-- Update final context guidance so `Implementation Decisions` distinguishes `confirmed`, `assumed-plan-safe`, `assumed-provisional`, and `rejected/contradicted` entries. `Unclear` defaults should appear under `Open Questions`, `Dependencies`, or a downstream brief, not as locked implementation decisions.
-- Make `workflow.skip_discuss=true` use the same safety language: it may reduce interview turns, but it should still write an evidence-backed context, label defaults, and ask or stop when high-impact assumptions remain unresolved.
-- Add a compact discussion-log block for corrections:
+- Add final context placement rules that fit the current schema:
+
+  ```md
+  Context placement for assumptions:
+  - Put confirmed user answers and plan-safe assumptions in `Implementation
+    Decisions`, with inline evidence and confidence wording when helpful.
+  - Put provisional assumptions that planning may use carefully in
+    `Implementation Decisions` only when they are `Likely`, reversible, and
+    carry a named consequence if wrong.
+  - Put research-needed assumptions in `Dependencies` or `Open Questions`, and
+    mention that `/blu-research-phase` owns the evidence pass.
+  - Put UI-needed assumptions in `Dependencies` or `Open Questions`, and mention
+    that `/blu-ui-phase` owns the design/no-UI decision.
+  - Put rejected or contradicted defaults in `Deferred Ideas`,
+    `Open Questions`, or the discussion log, not as active decisions.
+  - Keep `canonicalReferences` claim-supportive by noting what each source
+    supports or controls; do not use source lists as decoration.
+  ```
+
+- Make `workflow.skip_discuss=true` explicitly inherit the same assumptions safety rules:
+
+  ```md
+  `workflow.skip_discuss=true` may reduce or skip interview turns, but it does
+  not waive assumption safety. The command must still build the readiness ledger,
+  label defaults, preserve source tiers and consequences, ask or stop on
+  high-impact unresolved items, and route research/UI-owned unknowns instead of
+  silently writing them as plan-safe context.
+  ```
+
+- Add a compact discussion-log block for corrections and routed assumptions:
 
   ```md
   ## Assumptions Reviewed
   - Presented:
   - User correction:
   - Evidence changed:
+  - Contradiction status:
+  - Consequence if wrong:
   - Final disposition:
   - Downstream impact:
   ```
 
-- Add one positive and one negative few-shot example. The positive example should show a repo-backed low-risk default becoming `assumed-plan-safe`; the negative example should show contradictory roadmap/code evidence becoming a focused user question instead of a hidden assumption.
+- Add one positive and one negative few-shot example. The positive example should show a low-risk `live-mcp` or `repo-source` default becoming `plan-safe-assumption`. The negative example should show contradictory roadmap/context/source evidence becoming `ask-user` or `route-research`, not a hidden assumption.
 
 #### Verification Ideas For Later Implementation
 
-- Add contract-text assertions in `tests/phase-discovery-discuss.test.ts` for `Assumption record`, the three confidence definitions, `Ask instead of assuming`, `Contradictions checked`, and the downstream statuses.
-- Add command-doc parity assertions that `docs/commands/discuss-phase.md` preserves the same ask-versus-assume threshold and skip-discuss safety rule.
-- Add a prompt-contract fixture that feeds contradictory roadmap/context/code evidence into a simulated assumptions pass and verifies the expected output is a user question or `research-needed`, not a plan-safe decision.
-- Add a fixture for `workflow.skip_discuss=true` that verifies saved context still contains evidence labels and unresolved high-impact defaults are not silently locked.
-- Extend future model/schema validation only after the prose contract stabilizes; first pin the behavior in runtime-contract tests, then consider structured `assumptionRecords` if downstream commands need machine-readable confidence.
+- Add contract-text assertions in `tests/phase-discovery-discuss.test.ts` for `Assumption Readiness Ledger`, `source tier`, `consequence if wrong`, `contradiction status`, `plan-safe-assumption`, `ask-user`, `route-research`, `route-ui`, `keep-open`, `Assumptions pre-write check`, and the skip-discuss inheritance rule.
+- Add command-doc parity assertions that `docs/commands/discuss-phase.md` preserves the ask-versus-assume-versus-research threshold and does not describe skip-discuss as a validation bypass.
+- Add a prompt-contract fixture that feeds contradictory roadmap/context/source evidence into an assumptions pass and verifies the expected output is `ask-user` or `route-research`, not `plan-safe-assumption`.
+- Add a fixture for `workflow.skip_discuss=true` that verifies the saved context still includes evidence-backed decisions, canonical references with support notes, and open/routed high-impact unknowns instead of silent defaults.
+- Add a fixture where an `Unclear` assumption attempts to enter `Implementation Decisions`; the expected future behavior is to block in the pre-write check first, then later consider schema or validator support if prompt-only enforcement is insufficient.
+- Extend future model/schema validation only after the prose contract stabilizes; first pin the behavior in runtime-contract tests, then consider structured `assumptionRecords`, `sourceTier`, `confidence`, `consequenceIfWrong`, and `disposition` fields if downstream commands need machine-readable confidence.
 
 ### A4: Checkpointing, Resumption, And Progress Visibility
 
@@ -491,6 +726,19 @@ The six research lanes converge on eight improvements for `/blu-discuss-phase`: 
 ```
 
 - Add this future text to `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` under the single-agent fallback: `Persist after every user answer and after every gray-area boundary. A checkpoint is resume-ready only when the active area has a stable areaId, state, currentQuestion or blocking reason, evidence refs, and the last accepted user answer or assumption. Do not infer these from the chat transcript.`
+- Define state invariants for the gray-area machine so the checkpoint is more than a loose progress blob:
+
+```text
+area.state allowed values:
+- unseen: discovered but not started; must have title, risk, downstreamConsumers.
+- questioning: active user question; must have currentQuestion, questionWhyItMatters, evidenceRefs.
+- assumed: resolved by explicit assumption; must have assumption, confidence, consequenceIfWrong.
+- decided: resolved by user answer or strong evidence; must have decisionIds and sourceRefs.
+- blocked: cannot advance now; must have blocker, resumeHint, nextSafeAction.
+- needs-revisit: prior answer or readSet is stale, contradicted, or corrected; must name why.
+- handed-off: intentionally left for research/ui/plan; must name target command and packet field.
+```
+
 - Add deterministic resume rules before the questioning loop: `On resume, read with expectedOwnerCommand "/blu-discuss-phase" and expectedMode "discuss". If safeToResume is false, ask resume-versus-discard using the warnings. If safeToResume is true, pick the first area with state "questioning", then "blocked", then "needs-revisit", then the first "unseen" area; never reconstruct the queue from completedAreas prose alone.`
 - Replace parallel string-list language in the skill with a compatibility rule: `Keep completedAreas, remainingAreas, and resumeMeta.pendingTopics/completedTopics for current runtime compatibility, but derive them from areaQueue when areaQueue exists. The areaQueue is the semantic source of truth; the lists are public compatibility summaries.`
 - Add a carry-forward packet requirement to the runtime contract:
@@ -513,6 +761,7 @@ areas=<decided>/<total> active=<areaId or none> next=<next safe action or next q
 ```
 
 - Clarify that progress visibility is not persistence: `Use update_topic/write_todos only to mirror the checkpoint's current progress fields. The MCP checkpoint remains authoritative; if helper state and checkpoint state disagree, report the checkpoint state and refresh the helper display.`
+- Make semantic compaction event-based rather than token-pressure-based: refresh `carryForward` after each accepted answer, assumption, correction, sidecar memo, validation blocker, and state-sync or route-refresh failure. The compact packet should keep source anchors, contradictions, omitted details, and "do not infer beyond this" boundaries, while leaving raw conversational turns in the optional discussion log only when they explain a decision.
 - Add stale-input markers so deterministic resume can detect changed context: `readSet` should list the roadmap/context/config/plan-index artifacts used to form the queue, with path plus lightweight fingerprint or `updatedAt` where available. On resume, warn when the read set changed and route the affected area to `needs-revisit` instead of silently continuing.
 - Preserve final checkpoint value before deletion: when `blueprint_phase_checkpoint_delete` succeeds after finalization, the final response and optional discussion log should say which areas were decided, which were assumed, which remain open, and where those facts landed in `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md`.
 
@@ -554,6 +803,21 @@ Before writing phase.context, build a readiness ledger:
 field | source basis | confidence | unresolved risk | downstream consumer
 Every required field must be either evidence-backed, user-confirmed, or explicitly assumption-backed.
 Do not write the model while any field is scaffold-derived, source-free, or contradicted without an Open Questions or Deferred Ideas entry.
+```
+
+- Add a field-by-field drafting rubric that maps the current schema to semantic quality, without adding schema fields in the first implementation:
+
+```md
+Context model drafting rubric:
+- `phaseBoundary`: goal, in/out scope, and success criteria come from ROADMAP, REQUIREMENTS, user answers, or an explicit assumption; no generic "build the feature" wording.
+- `discoveryGrounding`: project brief, requirement IDs, workflow posture, and confirmed decisions are inherited from `blueprint_phase_context`, state/config, prior artifacts, and user corrections.
+- `implementationDecisions`: every row is an accepted decision with its tradeoff, constraint, rationale, or consequence; candidate options belong in the discussion log or open questions.
+- `specificIdeas`: concrete examples, desired behavior, rejected options worth remembering, or user-provided examples; no transcript recap.
+- `existingCodeInsights`: repo-observed modules, saved codebase summaries confirmed against live code when planner-critical, or explicit unknowns.
+- `dependencies`: prior artifacts, external constraints, required follow-up reads, and gate dependencies such as research/UI/plan inventory.
+- `openQuestions`: only unresolved blockers or useful handoff questions; exactly `none` when empty so the renderer emits `- none`.
+- `deferredIdeas`: later-phase, scope-creep, or follow-up items with the reason they are not in scope now.
+- `canonicalReferences`: source anchors with relevance; avoid source lists disconnected from the claims they support.
 ```
 
 - Strengthen `Artifact Authoring` text with claim-level provenance guidance that works inside the current schema by prefixing or suffixing values with compact source anchors when useful:
@@ -640,7 +904,7 @@ Before claiming success, answer yes/no:
 **Gaps and risks**
 
 - The end state is routing-aware but not yet handoff-packet-aware. Current guidance says to write rich context that downstream commands can consume, but it does not require a compact typed packet with separate `researchBrief`, `uiBrief`, `planBrief`, and `routingGates`; later commands may still mine a broad narrative artifact and miss why a gate was active.
-- The plan-inventory warning is required but underspecified. `blueprint_phase_plan_index` returns saved plan records, waves, missing dependency plans, warnings, and missing first-plan paths (`src/mcp/tools/phase.ts:7509-7596`), yet the contract does not say exactly which of those fields must be preserved in the final context and final response when refreshed discovery makes existing plans stale until `/blu-plan-phase` is rerun.
+- The plan-inventory warning is required but underspecified. `blueprint_phase_plan_index` returns saved plan records, waves, missing dependency plans, gap-closure plans, warnings, and the missing first-plan path when no plans exist (`src/mcp/tools/phase.ts:7560-7647`), yet the contract does not say exactly which of those fields must be preserved in the final context and final response when refreshed discovery makes existing plans stale until `/blu-plan-phase` is rerun.
 - Implemented-only routing currently depends on copying refreshed `derivedStatus.nextAction` exactly. Because `/blu-discuss-phase` deliberately does not include `blueprint_command_catalog` in its command-scoped allowlist (`tests/phase-discovery-discuss.test.ts:294-304`), any extra "you could also run..." prose risks bypassing the catalog unless the contract bans alternate route suggestions or explicitly falls back to `/blu-progress`.
 - The refreshed-state rule is present, but the handoff text can still become stale if an agent treats the `blueprint_state_update` response as the routing decision, omits `patch.currentPhase` on a selected earlier phase, or deletes the checkpoint before a successful follow-up `blueprint_state_load`.
 - Research and UI gates are preserved in state routing, but the final context does not have a required explanation of what the next command needs. For example, when research is enabled and absent, state correctly routes to `/blu-research-phase`; when UI is enabled and no UI spec exists, it routes to `/blu-ui-phase` (`src/mcp/tools/state.ts:2075-2114`). The handoff should say which unknowns, source policies, users, journeys, or no-UI rationale candidates the downstream command must resolve.
@@ -718,6 +982,7 @@ Final response shape:
 ```
 
 - Require `planInventory` to be explicit whenever `blueprint_phase_plan_index.plans.length > 0`, even if state routes to research or UI first. The packet should include plan IDs/paths, dependency gaps from `missingPlans`, warnings, and a fixed warning such as: `Existing saved plans were not rewritten by this refreshed discussion; rerun /blu-plan-phase <phase> before trusting plan content that depends on the new context.`
+- Give every handoff packet a typed readiness value so downstream commands can filter without parsing narrative: `researchBrief.status = "needed" | "not-needed" | "blocked-by-discuss"`, `uiBrief.applicability = "needs-ui-contract" | "skip-rationale-candidate" | "unknown"`, `planBrief.readiness = "ready-after-gates" | "needs-replan" | "blocked"`, `planInventory.staleness = "none" | "existing-plans-current" | "existing-plans-stale"`, and `routingGates.nextActionSource = "blueprint_state_load.derivedStatus.nextAction" | "progress-fallback"`.
 - Give research handoff a concrete stop condition. Example: `researchBrief.stopCondition = "enough evidence to choose between the listed options or confirm that repo evidence is insufficient and an assumption must remain open"`. This keeps `/blu-discuss-phase` from drafting `XX-RESEARCH.md` while still handing `/blu-research-phase` a useful queue.
 - Give UI handoff a mode-safe shape: `uiBrief.applicability = "needs-ui-contract" | "skip-rationale-candidate" | "unknown"`, plus supporting users/journeys/surfaces/constraints. If `workflow.ui_phase` is enabled and no saved UI spec exists, the handoff should still route through `/blu-ui-phase`; discuss-phase may document a skip candidate but must not treat it as the completed skip rationale.
 - Keep `planBrief` planning-oriented rather than transcript-oriented: include acceptance/verification hooks, dependencies, non-goals, constraints, rejected options, and assumptions safe for planning. Any unresolved high-impact ambiguity should stay in `openQuestions` or `researchBrief`, not silently become a plan premise.
