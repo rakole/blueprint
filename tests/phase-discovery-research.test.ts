@@ -1213,6 +1213,93 @@ test("research validation keeps legacy structurally valid research warning-only"
   assert.match(written.validation?.warnings.join("\n") ?? "", /Recommendation Handoff|Source Register/i);
 });
 
+test("research validation accepts table-only structured source evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research whose source evidence is carried entirely by populated claim-addressable tables."
+  )
+    .replace(/\n- Repo evidence:[^\n]+\n\n\| Evidence ID \|/m, "\n\n| Evidence ID |")
+    .replace(/\n### Supply Chain Evidence[\s\S]*$/, "");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation?.valid, true, written.validation?.issues.join("\n"));
+});
+
+test("research validation rejects structured source tables without concrete evidence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const content = validResearchContent(
+    "Create research whose structured source tables contain only placeholders and generic non-source rows."
+  ).replace(
+    /## Sources[\s\S]*$/,
+    `## Sources
+
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | placeholder | none | n/a | command_output | CLM-001 | placeholder only |
+
+### Repo Evidence
+
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| EVID-001 | CLM-001 | SRC-001 | mcp-handler | observed behavior | command output only | directly_supported | REC-001 | placeholder only |
+
+### External Sources
+
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| EVID-002 | CLM-002 | note | unknown | Placeholder row | SRC-001 | none | generic note | out_of_scope | background only | placeholder only | do not use as support |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| EVID-003 | CLM-003 | EVID-001 | inferred_from_supported | generic inference note | placeholder only | REC-001 |
+`
+  );
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content,
+    overwrite: true
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.match(
+    invalid.validation.issues.join("\n"),
+    /source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence/i
+  );
+});
+
 test("research template warns when dependency recommendations omit dependency/tool evaluation", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

@@ -1263,6 +1263,46 @@ test("research contract allows intentional placeholder token prose", () => {
   assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
 });
 
+test("research contract accepts table-only claim-addressable source evidence", () => {
+  const research = canonicalResearchContent(
+    "Keep table-only claim-addressable source evidence valid when the rows cite concrete repo material.",
+    "| LIFE-01 | Keep endpoint research grounded. | Structured source tables capture concrete evidence. |"
+  ).replace(
+    /## Sources[\s\S]*?\n## Additional Context/,
+    `## Sources
+
+### Source Register
+
+| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
+|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
+| SRC-001 | repo | src/mcp/tools/artifacts.ts | observed 2026-04-18 | validateResearchArtifactContent | repo_file | CLM-001 | local fixture evidence |
+
+### Repo Evidence
+
+| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
+|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
+| EVID-001 | CLM-001 | SRC-001 | mcp-handler | manual-read; MCP handler | validateResearchArtifactContent enforces the research source gate | directly_supported | REC-001 | local checkout only |
+
+### External Sources
+
+| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
+|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
+| EVID-002 | CLM-002 | supplied_reference | unknown | Repo-only fixture | SRC-001 | supplied-unchecked | no live external lookup used | out_of_scope | source policy off | repo-only fixture | do not use as support |
+
+### Inference Notes
+
+| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
+|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
+| EVID-003 | CLM-003 | EVID-001 | inferred_from_supported | The validator can accept table-only structured source evidence. | verify in focused tests | REC-001 |
+
+## Additional Context`
+  );
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+});
+
 test("research contract emits dependency/tool warnings without invalidating the artifact", () => {
   const research = canonicalResearchContent(
     "Add a package dependency for artifact validation without enough supply-chain detail.",
