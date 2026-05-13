@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -25,6 +26,36 @@ import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const discussRuntimeContractPath =
+  "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
+const discussCommandPath = "commands/blu-discuss-phase.toml";
+const longRunningProfilePath =
+  "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md";
+
+function readRepoText(relativePath: string): string {
+  return readFileSync(path.join(repoRoot, relativePath), "utf8");
+}
+
+function assertIncludesAll(content: string, expectedParts: readonly string[]) {
+  for (const part of expectedParts) {
+    assert.ok(content.includes(part), `expected content to include "${part}"`);
+  }
+}
+
+function assertOrdered(content: string, orderedParts: readonly string[]) {
+  let previousIndex = -1;
+
+  for (const part of orderedParts) {
+    const currentIndex = content.indexOf(part);
+
+    assert.ok(currentIndex >= 0, `expected content to include "${part}"`);
+    assert.ok(
+      currentIndex > previousIndex,
+      `expected "${part}" to appear after "${orderedParts[Math.max(0, orderedParts.indexOf(part) - 1)]}"`
+    );
+    previousIndex = currentIndex;
+  }
+}
 
 async function createPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-discuss-phase-");
@@ -382,6 +413,200 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(researcherAgent, /Output Mode Selection/);
   assert.match(researcherAgent, /gray-area memo mode/);
   assert.match(researcherAgent, /not a populated `phase\.research` or\s+`XX-RESEARCH\.md` body/i);
+});
+
+test("discuss runtime contract defines selected phase read packet", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Selected Phase Read Packet",
+    "selectedPhase",
+    "stateCurrentPhase",
+    "selectedPhaseResolvedFrom",
+    "found: false"
+  ]);
+  assert.match(contract, /found:\s*false[\s\S]*stop/i);
+});
+
+test("discuss runtime contract requires artifact status classification", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "missing",
+    "scaffold-starter",
+    "authored-substantive",
+    "validation-suspect",
+    "safe-checkpoint",
+    "foreign-checkpoint",
+    "stale-plan-inventory"
+  ]);
+});
+
+test("discuss runtime contract defines gray area queue", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "grayAreaQueue",
+    "areaId",
+    "decisionValue",
+    "resolutionCriterion",
+    "candidateQuestion",
+    "downstreamImpact",
+    "actor",
+    "action-task",
+    "object-concept",
+    "attribute",
+    "goal",
+    "event",
+    "constraint",
+    "exception",
+    "external-interface",
+    "quality-attribute",
+    "acceptance-verification",
+    "ambiguous",
+    "incomplete",
+    "inconsistent",
+    "unverifiable",
+    "tradeoff"
+  ]);
+});
+
+test("discuss runtime contract has anti-generic-question rule", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /(anti-example|warning)[\s\S]*Any other requirements\?/i);
+  assert.match(contract, /(anti-example|warning)[\s\S]*What should we consider\?/i);
+});
+
+test("questioning rules require decision value and resolved-when format", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Question:",
+    "Why it matters:",
+    "Known evidence:",
+    "Recommended option:",
+    "Other options:",
+    "Resolved when:"
+  ]);
+});
+
+test("assumptions mode defines confidence labels and ask threshold", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Assumption record",
+    "Evidence grade",
+    "Competing interpretations",
+    "Contradictions checked",
+    "Consequence if wrong",
+    "Downstream status",
+    "Confident",
+    "Likely",
+    "Unclear",
+    "Ask instead of assuming",
+    "scope",
+    "public behavior",
+    "data/contracts",
+    "security/privacy"
+  ]);
+  assert.match(contract, /Confident[\s\S]*evidence[\s\S]*consequence/i);
+  assert.match(contract, /Likely[\s\S]*evidence[\s\S]*consequence/i);
+  assert.match(contract, /Unclear[\s\S]*evidence[\s\S]*consequence/i);
+});
+
+test("skip discuss uses assumptions safety rules", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /workflow\.skip_discuss\s*=\s*true/i);
+  assert.match(contract, /workflow\.skip_discuss[\s\S]*evidence-backed context/i);
+  assert.match(contract, /workflow\.skip_discuss[\s\S]*(high-impact|stop\/ask|stop and ask)/i);
+});
+
+test("checkpoint contract preserves area queue as semantic source", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Persist after every user answer",
+    "areaQueue",
+    "schemaVersion",
+    "carryForward",
+    "readSet",
+    "unseen",
+    "questioning",
+    "assumed",
+    "decided",
+    "blocked",
+    "needs-revisit"
+  ]);
+});
+
+test("resume ordering is deterministic", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertOrdered(contract, ["questioning", "blocked", "needs-revisit", "unseen"]);
+  assertIncludesAll(contract, [
+    'expectedOwnerCommand: "/blu-discuss-phase"',
+    'expectedMode: "discuss"'
+  ]);
+});
+
+test("context readiness ledger and discussion log triggers are present", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Context Model Readiness",
+    "readiness ledger",
+    "source basis",
+    "confidence",
+    "unresolved risk",
+    "downstream consumer",
+    "multi-area",
+    "assumptions corrections",
+    "user direction changes",
+    "contradictions"
+  ]);
+});
+
+test("downstream handoff packet is required", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Downstream Handoff Packet",
+    "researchBrief",
+    "uiBrief",
+    "planBrief",
+    "planInventory",
+    "routingGates"
+  ]);
+});
+
+test("final routing copies refreshed state and forbids alternate routes", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /Route only from the post-write/i);
+  assertIncludesAll(contract, [
+    "derivedStatus.nextAction",
+    "Do not include secondary runnable routes",
+    "/blu-progress"
+  ]);
+  assert.match(contract, /(missing|blocked)[\s\S]*\/blu-progress/i);
+});
+
+test("allowlist remains stable", () => {
+  const commandFile = readRepoText(discussCommandPath);
+
+  assert.doesNotMatch(commandFile, /blueprint_command_catalog/);
+  assert.match(
+    commandFile,
+    /Before any user question or sidecar decision, resolve the phase and build the selected-phase read packet/i
+  );
+});
+
+test("long running profile has fallback progress line", () => {
+  const profile = readRepoText(longRunningProfilePath);
+
+  assert.match(profile, /Progress:\s*phase=/i);
 });
 
 test("discuss-phase context validation accepts the exact Open Questions none sentinel", () => {
