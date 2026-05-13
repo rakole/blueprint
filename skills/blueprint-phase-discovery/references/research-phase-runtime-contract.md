@@ -91,8 +91,48 @@ Use the shared long-running-mutation stages:
   only implemented next commands.
 
 During non-trivial runs, keep resolved scope, active stage, pending gate,
-execution mode, and next safe action visible through Gemini-native progress
-helpers when available, or concise progress recaps when they are not.
+execution mode, and next safe action visible through short progress updates.
+
+## Visible Research Progress
+
+For non-trivial runs, keep progress visible through short stage-boundary
+updates. Use Gemini-native progress helpers when available. When they are not
+available, emit concise text updates at stage boundaries and exceptional events.
+
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the tool allowlist, authorize persistence, external access, user
+decisions, checkpointing, state sync, or routing, and they never replace MCP
+checkpoint, state, or command-catalog authority.
+
+Visible research stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve phase | Resolve | selected phase or blocker |
+| 2 | load saved context and state | Read | context path/status and state source |
+| 3 | inspect existing research/checkpoint | Read | reuse/update/checkpoint posture |
+| 4 | classify research strands | Decide | active strand set and execution mode |
+| 5 | confirm external-source policy | Decide | source mode, pending gate, or repo-only constraint |
+| 6 | collect repo evidence | Execute | evidence lane and stop/widen reason when relevant |
+| 7 | collect approved external evidence | Execute | source envelope and decision outcome |
+| 8 | synthesize recommendations | Execute | accepted evidence basis and unresolved blockers |
+| 9 | write/validate artifact | Persist/Validate | write path, validation status, repair attempt, or checkpoint |
+| 10 | sync state and summarize result | Route | state sync result, routing source, next safe action |
+
+Progress updates must be short boundary updates. Do not narrate every file read.
+Emit exceptional updates for external-source waits, sidecar unavailable or
+failed, external sources declined, external source unavailable, validation
+repair, checkpoint writes, post-write state-sync failure, and completion.
+
+Example progress line:
+
+```text
+Research stage 5/10: external sources are set to ask; requesting confirmation before network-backed verification.
+```
+
+Future host progress integration may map progress values and messages to the
+same stage script, but deterministic text stage lines remain the compatibility
+baseline.
 
 ## Required MCP Calls
 
@@ -103,10 +143,13 @@ helpers when available, or concise progress recaps when they are not.
   bundle signals. This controls research scope and surfaces the mirrored
   `workflowPosture.research.externalSources` policy view.
 - `blueprint_config_get` with `scope: "effective"`: provides the source-of-truth
-  `research.external_sources` policy before any official-doc or other external
-  verification step. `off` means no live external lookup, `ask` means confirm
-  first, and `auto` allows official-doc or external verification when the repo
-  cannot settle the claim.
+  `research.external_sources` policy before any official-doc, package-registry,
+  security-advisory, release-note, remote-code-search, or other external
+  verification step. `off` means no live external lookup. `ask` means confirm
+  first through an external-source confirmation gate with `accept`, `decline`,
+  and `cancel` outcomes. `auto` allows bounded external verification only when
+  repo evidence cannot settle a planner-critical claim. `workflowPosture.research.externalSources`
+  remains a mirrored convenience view, not the authority.
 - `blueprint_phase_research_status`: detects existing context, research,
   UI-spec, validity, stale paths, and suggested repair posture.
 - `blueprint_phase_artifact_read` with `artifact: "context"`: loads the actual
@@ -354,6 +397,49 @@ Rules:
   artifacts must be recorded as limitations or open questions instead of being
   smoothed into confident recommendations.
 
+## External Source Decision Gate
+
+Treat `research.external_sources=ask` as a first-class user gate, not a final
+prose caveat. Ask at the point of need, before any live external verification.
+
+The gate prompt must include:
+
+- why external access is needed
+- which source classes will be used
+- known URLs or domains when already known
+- what will not happen: no source-file mutation, installed-extension changes,
+  host-global Blueprint state mutation, credential use, package installation,
+  external service mutation, or source-code fixing
+
+Use this outcome model:
+
+- `accept`: gather only the named source classes and record the decision.
+- `decline`: continue repo-only or supplied-only, mark affected claims
+  unchecked or lower-confidence, and avoid "official docs confirm", "latest",
+  "current upstream", or equivalent live-verification wording.
+- `cancel`: stop safely, preserve or refresh the research-owned checkpoint, and
+  do not write final `XX-RESEARCH.md` unless the artifact is already complete
+  without the blocked external claim.
+
+Persist `external_sources_mode`, `user_decision`, and the source envelope in the
+research checkpoint before waiting, cancelling, or stopping. On safe resume, do
+not re-ask the same envelope; ask only for a materially different source class
+or known URL/domain set.
+
+Do not repeatedly ask for the same source envelope inside one run. Ask again
+only when the run needs a materially different source class, such as moving
+from official docs to package registry metadata, security advisories, release
+notes, issue trackers, or user-supplied URLs.
+
+In `auto` mode, narrate the source envelope before fetching:
+
+```text
+External sources are auto-enabled; using official docs for standards and current product behavior.
+```
+
+In `off` mode, narrate the repo-only constraint once and keep freshness-sensitive
+external claims unchecked, lower-confidence, or in `## Open Questions`.
+
 ## Investigation Trace And Navigation Evidence
 
 Before deep strand work, create a concise parent-owned investigation trace. The
@@ -461,6 +547,31 @@ When evidence is partial, inconclusive, stale, or blocked by source policy,
 lower confidence and preserve the uncertainty in `## Open Questions`, the
 strand handoff, or the research checkpoint. Do not turn a weak strand into a
 confident recommendation.
+
+## Research Run Metadata
+
+Record run-level UX metadata when final research is created or updated. Do not
+change `phase.research.requiredHeadings`, authoring templates, scaffold
+templates, placeholder signals, or validators in this UX slice. Include this
+metadata only when creating or updating final research; do not modify an
+existing artifact solely for a viewed, skipped, or reused no-write path.
+
+Place the metadata inside existing artifact structure, preferably under
+`## Summary`, using these keys:
+
+| Key | Value |
+|-----|-------|
+| `external_sources_mode` | off\|ask\|auto |
+| `user_decision` | not_required\|accept\|decline\|cancel\|not_applicable |
+| `source_classes_allowed` | <classes or none> |
+| `source_classes_declined_or_unavailable` | <classes or none> |
+| `execution_mode` | parent-only\|sidecar-assisted |
+| `completion_receipt` | <artifact path or none; state sync result; next safe action> |
+
+When external evidence was declined, cancelled, unavailable, or disabled by
+config, also reflect the resulting uncertainty in `## Confidence Breakdown` and
+`## Open Questions` when it affects planner readiness. Do not hide the
+uncertainty only in chat.
 
 ## Research Strand Ledger And Checkpoint Semantics
 
@@ -777,6 +888,11 @@ If a sidecar fails or times out, the parent records a sidecar packet with
 policy allow it, and otherwise checkpoints with `stoppingReason:
 "tool-failure"` or `"budget-exhausted"`.
 
+Do not dwell on sidecar absence in the final response unless it changed output
+quality. Preserve detailed uncertainty in the artifact and checkpoint. Mention
+fallback in the completion receipt only when it lowered confidence, left
+blockers, or caused checkpointing.
+
 Before writing final research, the parent command must run a synthesis pass over
 the accepted strand ledger. The final `XX-RESEARCH.md` may cite child packets or
 repo/external evidence, but it must not paste a child transcript or let a sidecar
@@ -958,6 +1074,12 @@ and routing.
 
 ## No-Subagent Fallback
 
+Make parent-only fallback visible before dispatch. The parent should say once
+whether `workflow.subagents` is disabled, no suitable `blueprint-researcher` is
+available, the strand does not justify sidecar work, or a sidecar failed or
+timed out. The fallback remains the required complete path, not a degraded
+emergency path.
+
 If no suitable subagent is available, the parent command must still complete
 the workflow without lowering output quality. Use the same parent-owned research
 strand ledger; only the evidence gathering happens inline:
@@ -1031,9 +1153,13 @@ If the self-check fails but the legacy artifact structure is otherwise valid, lo
   explicit `update` selection as the overwrite gate; do not default overwrite
   or ask for a second confirmation unless the user's intent remains ambiguous.
 - If `research.external_sources` is `off`, do not perform live external lookup.
-  Keep the run repo-only and avoid implying that upstream guidance was checked.
-- If `research.external_sources` is `ask`, stop for confirmation before any
-  official-doc or external verification.
+  Keep the run repo-only, narrate the repo-only constraint once, and avoid
+  implying that upstream guidance was checked.
+- If `research.external_sources` is `ask`, use the external-source confirmation
+  gate before any official-doc or external verification. `accept` gathers the
+  named evidence, `decline` continues with explicit unchecked uncertainty, and
+  `cancel` stops with a research-owned checkpoint when the blocked evidence
+  matters.
 - If existing research is invalid, do not allow skip, default reuse, or an
   unchanged invalid write result to count as successful completion. Surface the
   validation issues, repair the artifact, or stop with the blocker.
@@ -1128,6 +1254,32 @@ and planner-ready:
 - confidence is honest and scoped by topic
 - unresolved questions are visible instead of hidden by confident language
 
+## Research Completion Receipt
+
+The final response is a compact receipt, not a duplicate of `XX-RESEARCH.md`.
+Detailed citations, alternatives, evidence packets, confidence analysis, and
+open questions belong in the artifact.
+
+Use this text shape:
+
+```text
+Research result: <created|updated|reused|viewed|checkpointed|blocked>
+Phase: <phase number and name>
+Artifact: <MCP-returned research path or none>
+External sources: external_sources_mode=<off|ask|auto>, user_decision=<not_required|accept|decline|cancel|not_applicable>
+Coverage: strands=<count or unknown>, recommendations=<count or unknown>
+Blockers: <none or concise blocker>
+Checkpoint: <deleted|preserved|refreshed|none>
+State and routing: <synced and refreshed|not synced: reason|blocked: reason>
+Next safe action: <implemented command or /blu-progress>
+```
+
+Use explicit incomplete states:
+
+- `Research checkpointed; no final artifact written.`
+- `Research saved with external sources declined; see Confidence Breakdown for unchecked claims.`
+- `Research blocked before write; checkpoint preserved for continuation.`
+
 ## Completion Criteria
 
 `/blu-research-phase` is complete when:
@@ -1146,6 +1298,8 @@ and planner-ready:
 - refreshed state and command catalog were used for the next safe action
 - the effective `research.external_sources` policy was honored before any
   external verification step
+- the final response used the completion receipt shape and did not duplicate
+  the saved research artifact
 
 ## Phase Context Ownership And Repair Loop
 
