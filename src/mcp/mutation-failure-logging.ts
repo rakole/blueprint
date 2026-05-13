@@ -16,6 +16,7 @@ export const BLUEPRINT_MUTATION_TOOL_NAMES = new Set([
   "blueprint_roadmap_insert_phase",
   "blueprint_roadmap_remove_phase",
   "blueprint_roadmap_promote_backlog",
+  "blueprint_phase_artifact_scaffold",
   "blueprint_phase_artifact_write",
   "blueprint_phase_plan_write",
   "blueprint_phase_summary_write",

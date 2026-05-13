@@ -104,9 +104,9 @@ does not grant broader tool scope to a command.
 - `blueprint_phase_context`
 - `blueprint_phase_research_status`
 - `blueprint_phase_artifact_read`
+- `blueprint_phase_artifact_scaffold`
 - `blueprint_phase_artifact_write`
 - `blueprint_artifact_contract_read`
-- `blueprint_artifact_scaffold`
 - `blueprint_phase_checkpoint_get`
 - `blueprint_phase_checkpoint_put`
 - `blueprint_phase_checkpoint_delete`
@@ -145,8 +145,9 @@ does not grant broader tool scope to a command.
 
 - `blueprint_phase_locate`: pass only a numeric phase reference when the command provides one, or omit `phase` to let the runtime infer it from state or the roadmap. Never pass phase directories, slugs, or filenames.
 - `blueprint_phase_artifact_write`: pass numeric `phase`, the correct artifact enum, and exactly one input. For `artifact: "context"`, pass a structured `phase.context` model and let MCP render canonical Markdown; Markdown `content` fallback is rejected. For `discussion-log`, `research`, and `ui-spec`, pass full artifact content. The tool owns the final artifact `path`; use the returned `path` as authoritative and do not write raw filenames directly.
+- `blueprint_phase_artifact_scaffold`: pass numeric `phase`, the correct artifact enum, and optional `overwrite` only when a phase command deliberately seeds a placeholder file before final authoring. The tool owns the canonical phase artifact path.
 - `blueprint_artifact_contract_read`: read canonical authoring templates and validation metadata by contract id such as `phase.research` or `phase.uat` instead of relying on copied prompt-local templates. If runtime contracts later expose a separate scaffold template, keep `authoringTemplate` as the saved-artifact authority and treat the scaffold shape as starter-only.
-- `blueprint_artifact_scaffold`: use it only to seed a missing discovery artifact file. Do not treat scaffold text as completed context, research, or UI-spec content, and do not preserve literal scaffold placeholders, example bullets, or fill-in cues in the final write.
+- `blueprint_artifact_scaffold`: use it only with supported repo-relative artifact paths when a command contract explicitly allows path-based scaffolding. Do not treat scaffold text as completed context, research, or UI-spec content, and do not preserve literal scaffold placeholders, example bullets, or fill-in cues in the final write.
 - `blueprint_phase_checkpoint_get`: pass the command's expected owner and mode when resuming saved state, then honor `safeToResume` and `warnings` before using the checkpoint.
 - `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the structured checkpoint shape, with `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`. `ownerCommand` must match `resumeMeta.mode` (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`). `resumeMeta` carries the resumability fields such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`. The tool owns the shared checkpoint filename and location, rejects foreign-owner overwrites, and pairs with `blueprint_phase_checkpoint_delete` owner/mode guards when commands clean up checkpoint state. For `/blu-research-phase`, non-trivial continuation checkpoints should also carry the runtime contract's optional nested `researchLedger` payload with `schemaVersion: "research-ledger/v1"`, compact strand state, accepted packet references, draft state, and next action; do not store child-agent transcripts.
 - `blueprint_config_get`: use `scope: "effective"` when command behavior depends on normalized config such as `research.external_sources`. Treat it as the source of truth even when another MCP result mirrors the same setting for convenience.
@@ -204,7 +205,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 1. Confirm phase readiness with `blueprint_phase_context`, `blueprint_phase_research_status`, and `blueprint_config_get`.
 2. Read the actual current `XX-CONTEXT.md` content through `blueprint_phase_artifact_read` before drafting research so the output stays grounded in saved discovery context, not only status metadata. If that read reports `found: false`, stop and route back to `/blu-discuss-phase <phase>`. If that read reports invalid or unusable context, stop and route back to `/blu-discuss-phase <phase>` without repairing, overwriting, synthesizing, or substituting repo-root `CONTEXT.md`.
 3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement. Force repair when saved research is invalid. When saved research is already valid, prefer a one-question `ask_user` dialog for `view`/`skip`/`update`; choosing `update` is the overwrite gate.
-4. Draft directly from `contract.authoringTemplate`. Use `blueprint_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
+4. Draft directly from `contract.authoringTemplate`. Use `blueprint_phase_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
 5. Honor `research.external_sources` before any external verification step:
    `off` stays repo-only, `ask` uses the runtime contract's external-source confirmation gate with `accept`, `decline`, and `cancel` outcomes, and `auto` allows
    bounded official-doc or external verification only when repo evidence cannot settle
