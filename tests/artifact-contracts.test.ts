@@ -1263,6 +1263,29 @@ test("research contract allows intentional placeholder token prose", () => {
   assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
 });
 
+test("research contract ignores scaffold placeholder tokens inside fenced code examples", () => {
+  const research = canonicalResearchContent(
+    "Keep scaffold placeholder markers allowed inside fenced code examples when surrounding prose is fully authored.",
+    "| LIFE-01 | Keep endpoint research grounded. | Fenced snippets remain valid examples even when they quote scaffold-shaped tokens. |"
+  ).replace(
+    /## Code Examples[\s\S]*?\n## Recommendations/,
+    `## Code Examples
+
+\`\`\`md
+- title: <title>
+- reason: <reason>
+- source: <URL>
+\`\`\`
+
+## Recommendations`
+  );
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
+});
+
 test("research contract accepts table-only claim-addressable source evidence", () => {
   const research = canonicalResearchContent(
     "Keep table-only claim-addressable source evidence valid when the rows cite concrete repo material.",
@@ -1312,6 +1335,99 @@ test("research contract emits dependency/tool warnings without invalidating the 
     .replace(/### Setup And Update Posture[\s\S]*?\n## Alternatives Considered/, "## Alternatives Considered")
     .replace(/### Dependency Alternatives[\s\S]*?\n## Architecture Patterns/, "## Architecture Patterns")
     .replace(/### Library Vs Custom Decision[\s\S]*?\n## Anti-Patterns/, "## Anti-Patterns")
+    .replace(/### Supply Chain Evidence[\s\S]*?\n## Additional Context/, "## Additional Context");
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.match(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
+  assert.match(validation.warnings.join("\n"), /no-new-dependency/i);
+});
+
+test("research contract does not treat generic npm install setup text as a dependency choice", () => {
+  const research = canonicalResearchContent(
+    "Run npm install before local verification so the usual repo tooling is available.",
+    "| LIFE-01 | Keep endpoint research grounded. | Local verification should use the standard repo setup flow. |"
+  )
+    .replace(
+      /## Standard Stack[\s\S]*?\n## Installation And Setup/,
+      `## Standard Stack
+
+- TypeScript, MCP tools, markdown artifacts.
+
+## Installation And Setup`
+    )
+    .replace(
+      /## Installation And Setup[\s\S]*?\n## Alternatives Considered/,
+      `## Installation And Setup
+
+- Run npm install before local verification.
+
+## Alternatives Considered`
+    )
+    .replace(
+      /## Alternatives Considered[\s\S]*?\n## Architecture Patterns/,
+      `## Alternatives Considered
+
+- Prompt-local templates were rejected because they drift from the MCP contract.
+
+## Architecture Patterns`
+    )
+    .replace(
+      /## Don't Hand-Roll[\s\S]*?\n## Anti-Patterns/,
+      `## Don't Hand-Roll
+
+- Avoid copying templates into command prompts.
+
+## Anti-Patterns`
+    )
+    .replace(/### Supply Chain Evidence[\s\S]*?\n## Additional Context/, "## Additional Context");
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+  assert.doesNotMatch(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
+  assert.doesNotMatch(validation.warnings.join("\n"), /no-new-dependency/i);
+});
+
+test("research contract warns when a later real install command follows generic setup text", () => {
+  const research = canonicalResearchContent(
+    "Run npm install before local verification. If DOM parsing is needed later, npm install jsdom.",
+    "| LIFE-01 | Keep endpoint research grounded. | Repo-default setup stays first, but later DOM parsing may need jsdom. |"
+  )
+    .replace(
+      /## Standard Stack[\s\S]*?\n## Installation And Setup/,
+      `## Standard Stack
+
+- TypeScript, MCP tools, markdown artifacts.
+
+## Installation And Setup`
+    )
+    .replace(
+      /## Installation And Setup[\s\S]*?\n## Alternatives Considered/,
+      `## Installation And Setup
+
+- Run npm install before local verification.
+- If DOM parsing is needed later, npm install jsdom.
+
+## Alternatives Considered`
+    )
+    .replace(
+      /## Alternatives Considered[\s\S]*?\n## Architecture Patterns/,
+      `## Alternatives Considered
+
+- Prompt-local templates were rejected because they drift from the MCP contract.
+
+## Architecture Patterns`
+    )
+    .replace(
+      /## Don't Hand-Roll[\s\S]*?\n## Anti-Patterns/,
+      `## Don't Hand-Roll
+
+- Avoid copying templates into command prompts.
+
+## Anti-Patterns`
+    )
     .replace(/### Supply Chain Evidence[\s\S]*?\n## Additional Context/, "## Additional Context");
 
   const validation = validateResearchArtifactContent(research);

@@ -2715,7 +2715,20 @@ function containsSourceEvidence(section: string): boolean {
 const RESEARCH_DEPENDENCY_CHOICE_PATTERN =
   /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
 const RESEARCH_INSTALL_COMMAND_PATTERN =
-  /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\b/i;
+  /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\s+([^\s`"'|]+)\b/i;
+const RESEARCH_GENERIC_INSTALL_ARGUMENTS = new Set([
+  "after",
+  "before",
+  "during",
+  "first",
+  "for",
+  "if",
+  "local",
+  "locally",
+  "then",
+  "to",
+  "verification"
+]);
 
 function researchDependencyChoiceText(content: string): string {
   return [
@@ -2729,71 +2742,104 @@ function researchDependencyChoiceText(content: string): string {
   ].join("\n");
 }
 
+type ResearchTableCoverageDescriptor = {
+  sectionHeading: string;
+  requiredPatterns: RegExp[];
+};
+
+const DEPENDENCY_TOOL_EVALUATION_COVERAGE: ResearchTableCoverageDescriptor = {
+  sectionHeading: "Standard Stack",
+  requiredPatterns: [
+    /Dependency \/ Tool Evaluation/i,
+    /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i,
+    /Current \/ Wanted \/ Latest Evidence/i,
+    /Maintenance Signal/i,
+    /Vulnerability Signal/i,
+    /\|\s*License\s*\|/i,
+    /Provenance \/ Signature Signal/i,
+    /Transitive Footprint/i,
+    /Existing \/ Standard-Library Alternative/i,
+    /Update Posture/i,
+    /Residual Risk And Mitigation/i,
+    /\bDEP-\d{3}\b/
+  ]
+};
+
+const DEPENDENCY_ALTERNATIVES_COVERAGE: ResearchTableCoverageDescriptor = {
+  sectionHeading: "Alternatives Considered",
+  requiredPatterns: [
+    /Dependency Alternatives/i,
+    /No New Dependency/i,
+    /Existing Dependency/i,
+    /Standard Library \/ Platform API/i,
+    /Candidate Package \/ Tool/i,
+    /Custom Implementation/i
+  ]
+};
+
+const DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE: ResearchTableCoverageDescriptor = {
+  sectionHeading: "Installation And Setup",
+  requiredPatterns: [
+    /Setup And Update Posture/i,
+    /Manifest \/ Lockfile Impact/i,
+    /Install Scope/i,
+    /Side Effects/i,
+    /Verification Command/i,
+    /Update \/ Monitoring Plan/i,
+    /Manual Review Required/i
+  ]
+};
+
+const LIBRARY_VS_CUSTOM_DECISION_COVERAGE: ResearchTableCoverageDescriptor = {
+  sectionHeading: "Don't Hand-Roll",
+  requiredPatterns: [
+    /Library Vs Custom Decision/i,
+    /Domain Risk/i,
+    /Proven Library \/ Existing Option/i,
+    /Custom Path Allowed\?/i,
+    /Required Tests \/ Validation/i
+  ]
+};
+
+function hasResearchTableCoverage(
+  content: string,
+  descriptor: ResearchTableCoverageDescriptor
+): boolean {
+  const section = extractMarkdownSection(content, descriptor.sectionHeading);
+
+  return descriptor.requiredPatterns.every((pattern) => pattern.test(section));
+}
+
 function mentionsDependencyOrToolChoice(content: string): boolean {
   const candidateText = researchDependencyChoiceText(content);
+  const installArguments = Array.from(
+    candidateText.matchAll(new RegExp(RESEARCH_INSTALL_COMMAND_PATTERN.source, "gi")),
+    (match) => match[1]?.trim().toLowerCase() ?? ""
+  );
 
   return (
     RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) ||
-    RESEARCH_INSTALL_COMMAND_PATTERN.test(candidateText)
+    installArguments.some(
+      (installArgument) =>
+        installArgument.length > 0 && !RESEARCH_GENERIC_INSTALL_ARGUMENTS.has(installArgument)
+    )
   );
 }
 
 function hasDependencyToolEvaluationTable(content: string): boolean {
-  const standardStack = extractMarkdownSection(content, "Standard Stack");
-
-  return (
-    /Dependency \/ Tool Evaluation/i.test(standardStack) &&
-    /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i.test(standardStack) &&
-    /Current \/ Wanted \/ Latest Evidence/i.test(standardStack) &&
-    /Maintenance Signal/i.test(standardStack) &&
-    /Vulnerability Signal/i.test(standardStack) &&
-    /\|\s*License\s*\|/i.test(standardStack) &&
-    /Provenance \/ Signature Signal/i.test(standardStack) &&
-    /Transitive Footprint/i.test(standardStack) &&
-    /Existing \/ Standard-Library Alternative/i.test(standardStack) &&
-    /Update Posture/i.test(standardStack) &&
-    /Residual Risk And Mitigation/i.test(standardStack) &&
-    /\bDEP-\d{3}\b/.test(standardStack)
-  );
+  return hasResearchTableCoverage(content, DEPENDENCY_TOOL_EVALUATION_COVERAGE);
 }
 
 function hasDependencyAlternativesCoverage(content: string): boolean {
-  const alternatives = extractMarkdownSection(content, "Alternatives Considered");
-
-  return (
-    /Dependency Alternatives/i.test(alternatives) &&
-    /No New Dependency/i.test(alternatives) &&
-    /Existing Dependency/i.test(alternatives) &&
-    /Standard Library \/ Platform API/i.test(alternatives) &&
-    /Candidate Package \/ Tool/i.test(alternatives) &&
-    /Custom Implementation/i.test(alternatives)
-  );
+  return hasResearchTableCoverage(content, DEPENDENCY_ALTERNATIVES_COVERAGE);
 }
 
 function hasDependencySetupAndUpdatePosture(content: string): boolean {
-  const setup = extractMarkdownSection(content, "Installation And Setup");
-
-  return (
-    /Setup And Update Posture/i.test(setup) &&
-    /Manifest \/ Lockfile Impact/i.test(setup) &&
-    /Install Scope/i.test(setup) &&
-    /Side Effects/i.test(setup) &&
-    /Verification Command/i.test(setup) &&
-    /Update \/ Monitoring Plan/i.test(setup) &&
-    /Manual Review Required/i.test(setup)
-  );
+  return hasResearchTableCoverage(content, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE);
 }
 
 function hasLibraryVsCustomDecision(content: string): boolean {
-  const dontHandRoll = extractMarkdownSection(content, "Don't Hand-Roll");
-
-  return (
-    /Library Vs Custom Decision/i.test(dontHandRoll) &&
-    /Domain Risk/i.test(dontHandRoll) &&
-    /Proven Library \/ Existing Option/i.test(dontHandRoll) &&
-    /Custom Path Allowed\?/i.test(dontHandRoll) &&
-    /Required Tests \/ Validation/i.test(dontHandRoll)
-  );
+  return hasResearchTableCoverage(content, LIBRARY_VS_CUSTOM_DECISION_COVERAGE);
 }
 
 function hasSupplyChainEvidenceSource(content: string): boolean {
@@ -2901,17 +2947,21 @@ function hasHighConfidenceWithUnsupportedEvidenceClaims(content: string): boolea
   }
 
   const claimRows = collectResearchClaimRows(content);
+  const evidenceRows = collectResearchEvidenceRows(content);
+  const unsupportedStatusPattern =
+    /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i;
 
-  if (claimRows.length > 0) {
-    return claimRows.some((row) =>
-      /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
-        [row.support_status, row.claim_class, row.confidence, row.claim, row.plan_impact].join(" ")
-      )
-    );
-  }
-
-  return /\b(?:not_enough_evidence|contradicted|conflicting_sources|unchecked|unverified)\b/i.test(
-    content.replace(/\bsupplied-unchecked\b/gi, "supplied")
+  return (
+    claimRows.some(
+      (row) =>
+        hasPlannerRelevantDownstreamUse(row.plan_impact || row.downstream_use || "") &&
+        unsupportedStatusPattern.test([row.support_status, row.claim_class].join(" "))
+    ) ||
+    evidenceRows.some(
+      (row) =>
+        hasPlannerRelevantDownstreamUse(row.downstream_use || row.used_for_claims || "") &&
+        unsupportedStatusPattern.test([row.claim_class, row.support_status].join(" "))
+    )
   );
 }
 
@@ -3489,6 +3539,36 @@ function mentionsUnsafeAutomaticDependencyRemediation(content: string): boolean 
   );
 }
 
+function stripTripleFencedCodeBlocks(content: string): string {
+  const strippedLines: string[] = [];
+  let activeFence: "```" | "~~~" | null = null;
+
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+    const trimmedLine = line.trimStart();
+
+    if (activeFence) {
+      if (trimmedLine.startsWith(activeFence)) {
+        activeFence = null;
+      }
+      continue;
+    }
+
+    if (trimmedLine.startsWith("```")) {
+      activeFence = "```";
+      continue;
+    }
+
+    if (trimmedLine.startsWith("~~~")) {
+      activeFence = "~~~";
+      continue;
+    }
+
+    strippedLines.push(line);
+  }
+
+  return strippedLines.join("\n");
+}
+
 function stripResearchPlaceholderSignals(section: string): string {
   return RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS.reduce(
     (acc, signal) => acc.split(signal).join(""),
@@ -3555,12 +3635,13 @@ export function validateResearchArtifactContent(content: string): {
   const issues: string[] = [];
   const warnings: string[] = [];
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
+  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(content);
   if (!/^# .+ - Research\s*$/m.test(content)) {
     issues.push("Research artifact must start with a '# ... - Research' heading.");
   }
 
   if (
-    matchedScaffoldPlaceholderSignals(content, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
+    matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
       singleSignalPatterns: [/^Phase XX:$/i]
     }).length > 0
   ) {
