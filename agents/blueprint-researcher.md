@@ -220,6 +220,12 @@ draftSections: <only when parent requested section-draft and named target headin
 fullArtifactDraft: <only when parent explicitly requested full-artifact-draft>
 ```
 
+Do not write progress copy or final receipt copy for the parent. The parent
+derives user-visible receipt impact from existing packet fields such as
+`status`, `terminationReason`, `confidence`, `warnings`, and `followUps`, then
+decides whether sidecar results changed confidence, left blockers, or required
+checkpointing.
+
 The parent command decides whether to accept, reject, or retry from the packet.
 The packet must be compact enough to store as a checkpoint reference. Do not
 include full child conversation history, hidden chain of thought, raw broad
@@ -268,6 +274,9 @@ Use this contract for artifact-grade mode.
 - Include `Warnings` and `Follow Ups` when evidence is blocked, incomplete,
   stale, contradictory, failed, or requires a parent/user decision before final
   synthesis.
+- Do not author final progress narration or a final completion receipt. Return
+  bounded findings, warnings, and follow-ups so the parent can decide what, if
+  anything, belongs in the user-visible progress or receipt.
 - Include `Dependency / Tool Evaluation` when the strand recommends adding,
   adopting, replacing, upgrading, globally installing, locally installing,
   vendoring, forking, code-generating, or hand-rolling a package, library, CLI,
