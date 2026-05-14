@@ -1768,72 +1768,182 @@ If `src/mcp/command-runtime-metadata.ts`, `src/mcp/command-resources.ts`, or MCP
 
 ## Detailed Improvement Plan
 
-Status: complete future implementation plan.
+Status: complete future implementation plan for `/blu-new-milestone`, `/blu-add-phase`, and `/blu-insert-phase`.
 
-This section is still documentation-only. It describes a future implementation sequence for `/blu-new-milestone`; it does not authorize this research run to edit production source, tests, command manifests, skills, agents, `.blueprint/`, or built assets.
+This section is still documentation-only. It describes a future implementation sequence for the three phase-admin phase-start workflows; it does not authorize this research run to edit production source, tests, command manifests, skills, agents, `.blueprint/`, host-global state, installed extension directories, or built assets.
+
+### Plan Thesis
+
+The research points to one coherent phase-admin improvement family, not three unrelated fixes. `/blu-new-milestone`, `/blu-add-phase`, and `/blu-insert-phase` all start or extend phase work, then route the repo back to `/blu-discuss-phase <phase>`. They should share the same quality spine: source-grounded intent, exact preview, explicit confirmation, MCP-owned mutation, returned metadata as authority, starter-only context scaffold, compact receipt, and implemented-only next route.
+
+The commands must still keep distinct jobs:
+
+- `/blu-new-milestone` starts a new milestone from reviewed carry-forward evidence, can optionally use `blueprint-roadmapper`, scaffolds starter top-level docs plus the first whole-number phase, and must preserve prior milestone history.
+- `/blu-add-phase` appends one new whole-number phase to the current milestone, has no optional subagent path, and should reject undeclared or weak requirement grounding before ROADMAP mutation.
+- `/blu-insert-phase` inserts one urgent decimal phase after an existing integer anchor, has no optional subagent path, maps declared `.blueprint/REQUIREMENTS.md` rows, preserves later phases without renumbering, and records a durable roadmap-evolution note.
 
 ### Goals
 
-- Keep `/blu-new-milestone` a bounded milestone-transition command: read reviewed milestone evidence, decide carry-forward versus explicit reset, scaffold starter artifacts, update state, and route to `/blu-discuss-phase <first phase>`.
-- Make carry-forward source-scoped and auditable through a compact `New Milestone Transition Packet` built from `blueprint_artifact_summary_digest.digest` and `inputsUsed`.
-- Make human gates concrete through a `New Milestone Confirmation Packet` with named choices, safe defaults, evidence scope, approved paths, and an approval receipt.
-- Preserve historical phase directories, reports, phase numbers, and prior evidence. The command must never clean, renumber, delete, or reinterpret prior milestone artifacts.
-- Make optional `blueprint-roadmapper` use a typed packet/result contract and keep an equal-quality inline fallback when subagents are disabled, unavailable, or unnecessary.
-- Improve starter scaffold quality for `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, and the first `NN-CONTEXT.md` without treating scaffold text as final authored milestone or phase content.
-- Give `/blu-discuss-phase <first phase>` a compact starter-only handoff packet with source refs, open questions, risks, and deferred-not-now material.
-- Add runtime/docs/test parity for every future behavior change, starting with the known `blueprint_config_get` parity gap.
-- Add path, numbering, precondition, receipt, and recovery semantics where prompt-only guidance is not enough.
+- Keep all three commands bounded and host-native: read, preview, confirm, mutate through MCP, scaffold starter context, update state, and route to `/blu-discuss-phase <phase>`.
+- Make requirement and carry-forward evidence explicit enough that later phase context does not inherit vague or stale claims.
+- Standardize preview, confirmation, completion receipt, and route-handoff vocabulary across the three commands while preserving command-specific semantics.
+- Bring `/blu-new-milestone` up to the returned-metadata-first standard already present in add/insert: exact first phase target, path guard, scaffold receipt, state-after-scaffold ordering, and no historical cleanup.
+- Tighten `/blu-add-phase` so plain appends use durable requirement IDs declared in `.blueprint/REQUIREMENTS.md`, unless a separately documented audit-backed repair path supplies its own traceability details.
+- Preserve `/blu-insert-phase` strictness around declared requirement IDs, unassigned requirement rows, integer anchors, decimal directory conflicts, and no automatic downstream renumbering.
+- Keep optional roadmapper behavior limited to `/blu-new-milestone`; add/insert remain parent-command workflows with no subagent substitute.
+- Land each future implementation wave as a parity set across command manifest, command docs, roadmap-admin skill/reference, runtime metadata, MCP docs, tests, and `dist/` when source changes require it.
+- Prefer response receipts and live file/state verification before adding any durable receipt store.
 
 ### Non-Goals
 
-- Do not use GSD internals, legacy slash-command behavior, `.planning/`, or tracker-style commands to implement this work.
-- Do not make `/blu-new-milestone` a retrospective workshop, backlog manager, plan-phase replacement, progress monitor, or long-running visible tracker.
-- Do not mutate `.blueprint/` directly from prompts. Future persistent state changes must stay inside MCP tools, except test fixtures in temporary repos.
-- Do not add planned-only commands to `/blu`, `/blu-help`, `/blu-progress`, or `/blu-next` routing. Keep implemented-only routing semantics unchanged.
-- Do not change `blueprint_artifact_summary_digest` output shape in the first slice. Treat `{digest, inputsUsed}` as the generic MCP return and build command-specific packets above it unless a later source slice explicitly expands the tool contract.
-- Do not add host-global state or mutate installed extension directories.
-- Do not add a new durable receipt directory under `.blueprint/` unless a later implementation slice explicitly updates artifact/schema/docs/tests for that write surface.
+- Do not use GSD internals, legacy slash-command behavior, `.planning/`, task trackers, `update_topic`, `write_todos`, or long-running progress posture for these workflows.
+- Do not collapse the three commands into one generic phase mutation command. Their numbering, evidence, write sets, and route semantics are different.
+- Do not make `/blu-new-milestone` a retrospective workshop, backlog manager, phase planner, or progress monitor.
+- Do not add `blueprint-roadmapper` or any generic subagent path to `/blu-add-phase` or `/blu-insert-phase`.
+- Do not let prompts hand-edit `.blueprint/ROADMAP.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/STATE.md`, `.blueprint/phases/`, starter docs, or installed extension directories. Persistent writes stay on MCP tools, except isolated test fixtures.
+- Do not change root routing, catalog status semantics, or implemented-only recommendations in `/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`.
+- Do not change generic `blueprint_artifact_summary_digest` from `{digest, inputsUsed}` in the first slice. Build command-specific packets above it unless a later source slice deliberately expands the tool contract.
+- Do not add `.blueprint/receipts/`, `.blueprint/runs/`, or host-global receipt state in the first recovery wave.
 
 ### Implementation Rules For Future Work
 
 - Start future implementation in a fresh worktree and run `npm ci` before any `npm run build`, `npm run typecheck`, or test command.
-- Land changes as small waves. Do not bundle prompt, runtime source, renderer, schema, tests, and recovery semantics into one giant patch.
-- For every wave that touches `src/`, run `npm run typecheck`, `npm run build`, focused `tsx --test ...`, and `git diff --check`. Include tracked `dist/` changes when the repository build produces them.
-- Keep line numbers below as current anchors from this worktree. If they drift, anchor by the named symbol, section heading, or test name rather than guessing.
-- Prefer stable field names and behavior-class tests over brittle full-sentence prose regexes.
-- If a future implementor finds that a planned source change would require broad architecture work, stop after the contract/test wave and write a smaller follow-up plan instead of improvising.
+- Implement one wave at a time. If a wave still feels large, split it into docs/static tests first, then runtime source, then built assets.
+- Keep command status and routing semantics unchanged unless the user explicitly asks for a routing/status change.
+- For every source wave, update matching docs/tests/runtime metadata and run `npm run typecheck`, `npm run build`, focused `tsx --test ...`, and `git diff --check`.
+- Include tracked `dist/` output whenever source changes affect the extension runtime bundle.
+- Use stable field names and behavior-class tests. Avoid brittle full-sentence regexes unless the exact user-visible wording is the behavior under test.
+- Treat line numbers below as current anchors. If they drift, anchor by section heading, exported symbol, command name, or test name instead of guessing.
+- Stop and re-plan if implementation would require a new MCP state owner, a durable receipt store, broad artifact schema expansion, or changed root-router availability.
 
 ### Target Files And Anchors
 
-| Surface | Current anchors | Future purpose |
-|---|---:|---|
-| `commands/blu-new-milestone.toml` | lines 5-21, 23-33 | Active model-facing flow, packets, gates, scaffold/state order, final route, no tracker posture. |
-| `docs/commands/new-milestone.md` | lines 20, 31-38, 49-74, 76-82, 117-123, 125-162 | Human command spec, stale route wording, tool inventory, carry-forward, gates, edge cases, tests. |
-| `skills/blueprint-roadmap-admin/SKILL.md` | lines 17-35, 79-118, 100-109, 219-232, 240-263 | Runtime input bundle, required tools, digest/config parity, no-subagent fallback, command checklist, output/self-check. |
-| `agents/blueprint-roadmapper.md` | lines 26-35, 60-80, 91-116 | Parent ownership, roadmapper proposal rules, `/blu-new-milestone` packet/result contract. |
-| `src/mcp/command-runtime-metadata.ts` | lines 354-361, 1077-1123 | Required tools, `spec.reads`, write path text, contract notes, runtime resource projection. |
-| `docs/RUNTIME-REFERENCE.md` | line 109 | Control-plane row for `new-milestone`, exact MCP destination, optional agent gate, contract summary. |
-| `docs/MCP-TOOLS.md` | lines 83-94, 180-193, 220-250 | Generic scaffold/digest docs, roadmap-admin command summary, numeric/path/scaffold rules. |
-| `docs/ARTIFACT-SCHEMA.md` | lines 72-125, 270-309 | Top-level starter sections, ROADMAP numbering note, phase context starter-vs-final rule. |
-| `docs/COMMAND-CATALOG.md` | line 32 | Declared writes/risk only if future write surface changes; do not encode packet internals here. |
-| `src/mcp/tools/artifacts.ts` | lines 130-143, 176-182, 1960-2020, 2223-2277, 8783-8868 | Seed type/schema, phase path parsing/rendering, scaffold path guard, richer receipt. |
-| `src/mcp/tools/phase-numbering.ts` | lines 19-50, 89-97 | Shared phase normalization, base phase, prefix, slug helpers; add next-whole-number helper here. |
-| `src/mcp/tools/phase.ts` | lines 1471-1483, 5544-5741 | Existing add-phase next-integer logic; refactor to shared helper and keep stale-number behavior consistent. |
-| `src/mcp/tools/state.ts` | lines 847-857, 2480-2533, 2901-2980 | Phase-directory existence checks, ignored phase warning, state update consistency guard. |
-| `commands/blu-discuss-phase.toml` | lines 12-30 | Receiver-side handoff rules and final route discipline. |
-| `skills/blueprint-phase-discovery/SKILL.md` | lines 179-199 | Discuss-phase receiving behavior, anti-placeholder and deferred-idea preservation. |
-| `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` | lines 105-127, 164-235 | Single-agent fallback, artifact authoring, validation/repair, next-action refresh. |
-| `src/mcp/artifact-contracts/schemas/phase.context.model.schema.json` | lines 5-18, 56-79, 130-178 | Existing `phase.context` fields; prefer mapping handoff data into these fields before schema expansion. |
-| `tests/new-milestone-metadata.test.ts` | lines 11-85 | Manifest, skill, runtime metadata/resource contract assertions. |
-| `tests/command-catalog.test.ts` | lines 993-1005, 1954-1975 | Optional-agent config invariant, required tools, optional agents, implemented status. |
-| `tests/command-contract-docs.test.ts` | lines 1327-1339, 1355-1411 | Command doc behavior assertions and docs-facing optional-subagent tool inventory parity. |
-| `tests/roadmap-admin-runtime-contract-resource.test.ts` | lines 11-87 | Docless runtime-contract resource guarantee for roadmap-admin commands. |
-| `tests/extension-runtime-contracts.test.ts` | lines 273-340 | Manifest runtime FQN and optional-agent name coverage. |
-| `tests/agent-contract-specialists.test.ts` | lines 42-68 | Roadmapper agent output/boundary assertions. |
+| Surface | Workflow(s) | Current anchors | Future purpose |
+|---|---|---:|---|
+| `commands/blu-new-milestone.toml` | new-milestone | lines 5-33 | Active flow, `blueprint_config_get`, transition packet, gates, first phase target, scaffold/state order, final route. |
+| `commands/blu-add-phase.toml` | add-phase | lines 10-39 | Active flow, requirement grounding, confirmation preview, `expectedPhaseNumber`, scaffold/state order, final route. |
+| `commands/blu-insert-phase.toml` | insert-phase | lines 10-42 | Active flow, integer anchor, durable requirement IDs, decimal insert, no renumbering, roadmap evolution note, route. |
+| `docs/commands/new-milestone.md` | new-milestone | lines 20, 49-82, 117-162 | Stale route wording, tool inventory, carry-forward, gates, edge cases, tests. |
+| `docs/commands/add-phase.md` | add-phase | lines 37-40, 69-78, 118-145 | Requirement source, preview/confirmation, stale-number behavior, scaffold-only route. |
+| `docs/commands/insert-phase.md` | insert-phase | lines 35-48, 72-82, 122-152 | Declared requirement IDs, no `none yet`, no renumbering, requirement write surface, route. |
+| `skills/blueprint-roadmap-admin/SKILL.md` | all three | lines 17-35, 79-118, 111-151, 219-263 | Runtime inputs, required tools, no-subagent rules, command checklists, output style, completion self-check. |
+| `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` | add-phase | lines 18-176 | Rich add-phase stage mapping, requirement grounding, retry/repair, completion criteria. |
+| `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md` | insert-phase | lines 12-221 | Rich insert-phase stage mapping, declared requirement mapping, no-subagent fallback, repair, completion. |
+| `agents/blueprint-roadmapper.md` | new-milestone only | lines 26-35, 60-116 | Typed new-milestone roadmapper packet/result and forbidden actions. |
+| `commands/blu-discuss-phase.toml` | all three receiver | lines 12-30 | Starter handoff receiver rules and final context ownership. |
+| `skills/blueprint-phase-discovery/SKILL.md` | all three receiver | lines 179-199 | Preserve source refs, deferred risks, open questions, and remove scaffold placeholders in final context. |
+| `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` | all three receiver | lines 105-127, 164-235 | Single-agent fallback and mapping of starter handoff into final `phase.context` fields. |
+| `src/mcp/command-runtime-metadata.ts` | all three | add lines 138-186, insert lines 806-849, new lines 354-361 and 1077-1123 | Required tools, runtime notes, write sets, waiting states, runtime-contract resources. |
+| `src/mcp/tools/phase.ts` | add/insert | schema near 1181, helpers near 2074-2284, add near 5544-5741, insert near 5744-5938 | Requirement validation, numbering, directory conflict checks, roadmap writes, result fields. |
+| `src/mcp/tools/artifacts.ts` | new-milestone plus scaffold | seed types near 130-182, path guard near 2223-2277, scaffold near 8783-8868 | New-milestone starter seed, first context path guard, scaffold receipt. |
+| `src/mcp/tools/state.ts` | all three | lines 847-857, 2480-2533, 2901-2980 | State-after-scaffold consistency and route target safety. |
+| `src/mcp/tools/phase-numbering.ts` | new/add shared | lines 19-50, 89-97 | Shared phase number normalization, base number, prefix, slug, and future next-whole helper. |
+| `docs/MCP-TOOLS.md` | all three | lines 83-94, 180-193, 220-258 | Generic tool docs, phase metadata authority, command-specific receipt notes. |
+| `docs/RUNTIME-REFERENCE.md` | all three | Wave 2 roadmap-admin row | Exact MCP destinations and optional-agent/config parity. |
+| `docs/COMMAND-CATALOG.md` | all three | Wave 2 rows | Declared write/risk summaries only; do not encode packet internals here. |
+| `docs/ARTIFACT-SCHEMA.md` | new-milestone/handoff | lines 72-125, 270-309 | Starter docs, ROADMAP numbering note, phase context starter-vs-final rule. |
+| `tests/add-phase-metadata.test.ts` | add-phase | lines 12-196 | Manifest, runtime-owned metadata, skill input, docless resource coverage. |
+| `tests/insert-phase-metadata.test.ts` | insert-phase | lines 11-130 | Manifest, skill, runtime reference, metadata, agent-boundary assertions. |
+| `tests/new-milestone-metadata.test.ts` | new-milestone | lines 11-85 | Manifest, skill, runtime metadata/resource assertions. |
+| `tests/roadmap-tools.test.ts` | add/insert source | add near 572-725, insert near 974-1238 and 1591 | Behavior tests for requirement guards, numbering, conflicts, no mutation on blockers. |
+| `tests/command-contract-docs.test.ts` | all three | add near 1181, insert/new near 1327-1411 | Command doc behavior assertions and docs parity. |
+| `tests/command-catalog.test.ts` | all three | add near 662, insert near 679, new near 993 and 1954 | Implemented status, required tools, optional agents, config-gate invariant. |
+| `tests/roadmap-admin-runtime-contract-resource.test.ts` | all three | lines 11-87 | Docless runtime-contract resource guarantee. |
+| `tests/extension-runtime-contracts.test.ts` | all three | lines 273-340 | Manifest runtime FQN and optional-agent coverage. |
+| `tests/agent-contract-specialists.test.ts` | new-milestone roadmapper | lines 42-68 | Roadmapper output/boundary assertions. |
 
 ### Shared Future Vocabulary
 
-Use these names consistently across the command manifest, command docs, skill text, runtime metadata, MCP docs, agent contract, and tests. If a field is only prompt-built in an early wave, describe it as prompt-built. If a field is returned by an MCP tool, update source, docs, tests, and built assets together.
+Use these names consistently. If a field is model-built from tool output, say so. If a field is returned by a tool, update source, docs, tests, and built assets together.
+
+```ts
+type PhaseAdminCommand =
+  | "/blu-new-milestone"
+  | "/blu-add-phase"
+  | "/blu-insert-phase";
+
+type PhaseAdminMutationKind =
+  | "milestone-transition"
+  | "whole-phase-append"
+  | "decimal-phase-insert";
+
+type PhaseAdminPreviewPacket = {
+  command: PhaseAdminCommand;
+  mutationKind: PhaseAdminMutationKind;
+  activeMilestone: string;
+  sourceScope: {
+    roadmapPath: ".blueprint/ROADMAP.md";
+    requirementsPath?: ".blueprint/REQUIREMENTS.md";
+    milestoneSummaryPath?: string;
+    inputsUsed?: string[];
+    warnings: string[];
+  };
+  target: {
+    phaseNumberPreview: string;
+    phasePrefixPreview: string;
+    phaseTitle: string;
+    phaseDirPreview?: string;
+    contextPathPreview?: string;
+    insertionAnchor?: string;
+  };
+  grounding: {
+    requirementIds: string[];
+    objective: string;
+    successCriteria: string[];
+    uncertainty: string[];
+  };
+  historyPolicy: {
+    preservesHistoricalPhaseDirectories: true;
+    renumbersLaterPhases: false;
+    deletesPriorPhaseArtifacts: false;
+  };
+  nextRoute: "/blu-discuss-phase <phase>";
+};
+```
+
+```ts
+type PhaseAdminConfirmationReceipt = {
+  gateId:
+    | "carry-forward-confirmation"
+    | "starter-doc-overwrite-confirmation"
+    | "phase-number-confirmation"
+    | "phase-insert-confirmation";
+  command: PhaseAdminCommand;
+  selectedChoice: "approved" | "declined" | "revise";
+  approvedPhaseNumber?: string;
+  approvedInsertionAnchor?: string;
+  approvedRequirementIds: string[];
+  approvedObjective?: string;
+  approvedSuccessCriteria?: string[];
+  approvedMode?: "carry-forward" | "fresh-reset";
+  approvedOverwritePaths?: string[];
+  safeDefault: "stop-without-writing";
+  routeOnDecline: "/blu-progress";
+};
+```
+
+```ts
+type PhaseAdminCompletionReceipt = {
+  command: PhaseAdminCommand;
+  status: "written" | "blocked" | "partial" | "reused";
+  phaseNumber: string;
+  phasePrefix: string;
+  phaseDir: string;
+  contextPath: string;
+  roadmapPath?: ".blueprint/ROADMAP.md";
+  requirementsPath?: ".blueprint/REQUIREMENTS.md";
+  stateUpdated: boolean;
+  createdFiles: string[];
+  reusedFiles: string[];
+  overwrittenFiles: string[];
+  blockedFiles: string[];
+  deletedPhaseDirectories: [];
+  renamedPhaseDirectories: [];
+  safeRetry: boolean;
+  nextAction: "/blu-discuss-phase <phase>" | "/blu-progress";
+  warnings: string[];
+};
+```
 
 ```ts
 type NewMilestoneTransitionPacket = {
@@ -1856,6 +1966,14 @@ type NewMilestoneTransitionPacket = {
     nonCarryForwardItems: string[];
     staleOrAmbiguousClaims: string[];
   };
+  requirementTransitions: Array<{
+    priorRequirementId?: string;
+    newRequirementId?: string;
+    decision: "carry" | "modify" | "defer" | "retire" | "new" | "self-derived" | "uncertain";
+    sourceRefs: string[];
+    rationale: string;
+    uncertainty: "low" | "medium" | "high";
+  }>;
   evidenceLedger: Array<{
     claimId: string;
     category: string;
@@ -1867,754 +1985,580 @@ type NewMilestoneTransitionPacket = {
     usedBy: Array<"PROJECT" | "REQUIREMENTS" | "ROADMAP" | "phase.context" | "confirmation-preview">;
     uncertainty: string;
   }>;
-  starterAuthoringImplications: string[];
 };
 ```
 
 ```ts
-type NewMilestoneConfirmationPacket = {
-  gateId:
-    | "missing-milestone-summary"
-    | "carry-forward-confirmation"
-    | "starter-doc-overwrite-confirmation";
-  fromMilestone: string;
-  proposedToMilestone: string;
-  milestoneNameSource: "user-supplied" | "derived-from-summary" | "needs-user-input";
-  mode: "carry-forward" | "fresh-reset";
-  modeSource: "defaulted" | "user-explicit" | "ambiguous-user-intent";
-  summarySource: string;
-  inputsUsed: string[];
-  inputsMissingOrSkipped: string[];
-  carryForwardPreview: string[];
-  resetConsequence: string;
-  firstPhasePreview: {
-    firstPhaseNumber: string;
-    firstPhasePrefix: string;
-    firstPhaseDir: string;
-    firstContextPath: string;
-    routeTarget: string;
-  };
-  scaffoldPlan: Array<{
-    path: string;
-    artifactKind: "project" | "requirements" | "roadmap" | "phase-directory" | "phase-context";
-    currentState: "missing" | "exists-empty" | "exists-nonempty" | "exists-conflict" | "unknown";
-    intendedOperation: "create" | "reuse" | "overwrite" | "mkdir" | "skip" | "block";
-    requiresConfirmation: boolean;
-    confirmationReason: string;
-  }>;
-  safeDefault: "stop-without-writing";
-  allowedChoices: string[];
-  approvalReceipt?: {
-    gateId: NewMilestoneConfirmationPacket["gateId"];
-    selectedChoice: string;
-    approvedMode: "carry-forward" | "fresh-reset";
-    approvedMilestoneName: string;
-    approvedOverwritePaths: string[];
-    inputsUsed: string[];
-    scaffoldPlanVersion: string;
-    routeTarget: string;
-  };
+type AddPhaseAppendPacket = PhaseAdminPreviewPacket & {
+  command: "/blu-add-phase";
+  mutationKind: "whole-phase-append";
+  expectedPhaseNumber: string;
+  requirementSource: ".blueprint/REQUIREMENTS.md" | "auditBackedDetails";
+  auditBackedDetailsUsed: boolean;
+};
+
+type InsertPhasePacket = PhaseAdminPreviewPacket & {
+  command: "/blu-insert-phase";
+  mutationKind: "decimal-phase-insert";
+  insertionAnchor: string;
+  nextDecimalCandidate: string;
+  requirementSource: ".blueprint/REQUIREMENTS.md";
+  laterPhaseRenumberingAcknowledged: true;
+  roadmapEvolutionNote: string;
 };
 ```
 
 ```ts
-type NewMilestoneStarterSeed = {
-  schemaVersion: "new-milestone-starter-seed/v1";
-  mode: "carry-forward" | "fresh-reset";
+type PhaseAdminDiscussHandoff = {
+  command: PhaseAdminCommand;
   starterOnly: true;
-  previousMilestone: string;
-  targetMilestone: string;
-  firstPhaseNumber: string;
-  firstPhaseTitle: string;
-  firstPhasePath: string;
-  sourceScope: NewMilestoneTransitionPacket["sourceScope"];
-  outcomeFrame: {
-    targetOutcome: string;
-    measurableSignals: string[];
-    valueGaps: string[];
-    deliveryConstraints: string[];
-    doNotCarryForwardItems: string[];
-  };
-  requirementTransitions: Array<{
-    priorRequirementId?: string;
-    newRequirementId?: string;
-    decision: "carry" | "modify" | "defer" | "retire" | "new" | "self-derived" | "uncertain";
-    sourceRefs: string[];
-    rationale: string;
-    uncertainty: "low" | "medium" | "high";
-  }>;
-  roadmapSlice: {
-    whyFirst: string;
-    requirementIds: string[];
-    objective: string;
-    successCriteria: string[];
-    inspectableProgress: string;
-    deferredNotDoingNow: string[];
-  };
-  firstContextHandoff: NewMilestoneFirstPhaseHandoffPacket;
-};
-```
-
-```ts
-type NewMilestoneFirstPhaseHandoffPacket = {
-  packetVersion: "new-milestone-first-phase-handoff/v1";
-  mode: "carry-forward" | "fresh-reset";
-  fromMilestone: string;
-  toMilestone: string;
-  firstPhase: {
-    phaseNumber: string;
-    title: string;
-    objective: string;
-    requirementIds: string[];
-    successCriteria: string[];
-    whyFirst: string;
-    inspectableProgress: string;
-  };
-  digestInputsUsed: string[];
-  retainedDecisions: string[];
-  activeRequirementTransitions: string[];
+  phaseNumber: string;
+  phaseTitle: string;
+  requirementIds: string[];
+  objective: string;
+  successCriteria: string[];
+  sourceRefs: string[];
   openForDiscuss: string[];
   riskWatchlist: string[];
   deferredNotDoingNow: string[];
-  canonicalReferences: Array<{ path: string; relevance: string }>;
-  routeReceipt: string;
+  routeReceipt: "/blu-discuss-phase <phase>";
 };
 ```
 
-```ts
-type NewMilestoneCompletionReceipt = {
-  status: "written" | "blocked" | "partial" | "reused";
-  mode: "carry-forward" | "fresh-reset";
-  roadmapperMode: "used" | "skipped-disabled" | "skipped-unnecessary" | "unavailable-fallback";
-  firstPhaseNumber: string;
-  firstPhasePrefix: string;
-  firstPhaseDir: string;
-  firstContextPath: string;
-  inputsUsed: string[];
-  createdFiles: string[];
-  reusedFiles: string[];
-  overwrittenFiles: string[];
-  blockedFiles: string[];
-  deletedPhaseDirectories: [];
-  renamedPhaseDirectories: [];
-  stateUpdated: boolean;
-  safeRetry: boolean;
-  nextAction: string;
-  warnings: string[];
-};
-```
+### Command-Specific Boundaries
+
+- **`/blu-new-milestone`:** owns milestone transition, carry-forward or explicit reset, starter top-level docs, first whole-number phase scaffold, optional bounded roadmapper, and first-phase handoff. It must not add arbitrary phases, insert decimal work, clean old phase directories, or finalize phase context.
+- **`/blu-add-phase`:** owns one whole-number roadmap append in the current milestone. It should use the same next-whole-number semantics as new-milestone but writes only the new ROADMAP entry, phase directory/context scaffold, and state route. It must not use roadmapper or rewrite starter top-level docs.
+- **`/blu-insert-phase`:** owns one decimal insertion after an existing integer anchor. It writes ROADMAP, `.blueprint/REQUIREMENTS.md` traceability notes, phase directory/context scaffold, and state route. It must not renumber later phases, choose a different anchor, or use roadmapper.
 
 ### Wave 0 - Future Implementation Preflight
 
-Objective: make the future implementation run safe before any production edit.
+Objective: make the future implementation branch safe before any production edit.
 
 Tasks:
 
-1. **Sequential - create the isolated worktree and install dependencies.**
-   - Dependency: none.
-   - Use the repository rule: create a fresh worktree/branch for implementation work, then run `npm ci` before build, typecheck, or tests.
-   - Read current versions of the target files above, because this plan's line numbers may drift.
-   - Do not edit `.blueprint/`, installed extension directories, host-global state, or runtime-generated reports.
+1. **Sequential - create the isolated implementation worktree and install dependencies.**
+   - Dependencies: none.
+   - Create a fresh worktree/branch.
+   - Run `npm ci` before any build, typecheck, or tests.
+   - Confirm the active branch and worktree path.
 
-2. **Sequential - classify the first slice before editing.**
-   - Dependency: task 1.
-   - If the requested slice is docs/prompt/static tests only, keep source behavior unchanged and do not broaden into runtime receipts.
-   - If the requested slice touches `src/`, plan the required `dist/` update and behavior tests in the same branch.
+2. **Sequential - classify the first slice.**
+   - Dependencies: task 1.
+   - Decide whether the slice is docs/static-contract only, command/skill prompt only, or runtime source.
+   - Do not start source behavior if the approved slice only asks for contracts/tests.
+   - If source behavior is needed, identify the exact `dist/` outputs before editing.
 
 3. **Parallel-safe - run search preflight.**
-   - Dependency: task 1.
+   - Dependencies: task 1.
    - Commands:
 
 ```bash
-rg -n "new-milestone|blueprint_config_get|route to requirements|<NN-CONTEXT|New Milestone" commands docs skills agents src tests
-rg -n "new-milestone" docs/RUNTIME-REFERENCE.md docs/MCP-TOOLS.md docs/COMMAND-CATALOG.md src/mcp/command-runtime-metadata.ts
+rg -n "new-milestone|add-phase|insert-phase|blueprint_config_get|route to requirements|<NN-CONTEXT|phase-number-confirmation|phase-insert-confirmation" commands docs skills agents src tests
+rg -n "blueprint_roadmap_add_phase|blueprint_roadmap_insert_phase|blueprint_artifact_scaffold|blueprint_state_update" src/mcp tests docs skills commands
+rg -n "update_topic|write_todos|task tracker|tracker-backed|long-running progress" commands docs skills agents src tests
 git status --short --branch
 ```
 
 Exit criteria:
 
-- Future implementor knows whether the slice is prompt/docs/test only or runtime behavior.
-- No production file is edited before the scope is explicit.
+- The future implementor knows the exact first slice.
+- No unrelated file has changed.
+- The worktree has dependencies installed before verification commands.
 
-### Wave 1 - Required-Tool Parity And Static Hygiene
+### Wave 1 - Shared Phase-Admin Contract Reconciliation
 
-Objective: repair the known `blueprint_config_get` parity gap and remove stale route/path wording before adding richer contracts.
+Objective: align static contracts and inventories for all three workflows before runtime behavior changes.
 
 Tasks:
 
-1. **Sequential - fix `blueprint_config_get` parity first.**
-   - Dependencies: Wave 0 complete.
-   - Files and exact changes:
-     - `src/mcp/command-runtime-metadata.ts:1098-1102`: add `blueprint_config_get -> effective config for optional roadmapper gating` to `NEW_MILESTONE_RUNTIME_METADATA.spec.reads`. Keep `NEW_MILESTONE_REQUIRED_TOOLS` at lines 354-361 unchanged unless a later wave adds a new MCP tool.
-     - `docs/commands/new-milestone.md:49-74`: add `blueprint_config_get -> effective config` to reads and required MCP tools.
-     - `docs/RUNTIME-REFERENCE.md:109`: add `blueprint_config_get` to the exact MCP destination for `new-milestone`.
-     - `docs/MCP-TOOLS.md:193`: add `blueprint_config_get` to the `new-milestone` roadmap-admin summary.
-     - `skills/blueprint-roadmap-admin/SKILL.md:79-94`: add `blueprint_config_get` to the required MCP tool inventory because `new-milestone` exposes an optional subagent.
-   - Tests:
-     - `tests/new-milestone-metadata.test.ts:63-85`: assert `contract.spec?.reads` includes `blueprint_config_get`.
-     - `tests/command-contract-docs.test.ts:1355-1411`: add `newMilestoneDoc` to the optional-subagent docs parity test and assert docs/runtime/MCP surfaces include `blueprint_config_get`.
-     - `tests/command-catalog.test.ts:993-1005` already guards runtime metadata; keep it passing.
+1. **Sequential - create one phase-admin contract map.**
+   - Files:
+     - `docs/commands/new-milestone.md`
+     - `docs/commands/add-phase.md`
+     - `docs/commands/insert-phase.md`
+     - `skills/blueprint-roadmap-admin/SKILL.md`
+     - `docs/MCP-TOOLS.md`
+     - `docs/RUNTIME-REFERENCE.md`
+     - `docs/COMMAND-CATALOG.md` only for write/risk summaries.
+   - Add or normalize language for the shared spine: roadmap read first, exact preview, confirmation gate, MCP mutation only, scaffold starter context only, state update after scaffold, `/blu-discuss-phase <phase>` route, no tracker tools.
+   - Keep command-specific differences explicit instead of using one vague template.
 
-2. **Parallel-safe after task 1 - fix stale route wording.**
-   - Dependencies: task 1 can land first; this task can be reviewed with task 3.
-   - Files and exact changes:
-     - `docs/commands/new-milestone.md:20`: replace "route to requirements" with "seed starter milestone docs and route to `/blu-discuss-phase <first phase>`".
-     - `commands/blu-new-milestone.toml:20,33`, `skills/blueprint-roadmap-admin/SKILL.md:231,249`, and `src/mcp/command-runtime-metadata.ts:1120`: keep placeholder route text only in runtime-facing templates; user-visible completion copy later should use resolved phase number.
-   - Tests:
-     - `tests/command-contract-docs.test.ts:1327-1339`: assert docs do not contain `route to requirements` and do contain `/blu-discuss-phase <first phase>`.
+2. **Sequential - fix known parity drift.**
+   - New-milestone: add `blueprint_config_get` wherever the docs/spec inventory lists required reads/tools for optional roadmapper gating, because the manifest and runtime metadata already require it.
+   - New-milestone: replace stale `route to requirements` language with starter docs plus `/blu-discuss-phase <first phase>` routing.
+   - Insert-phase: ensure docs/catalog write summaries include `.blueprint/REQUIREMENTS.md` when describing requirement traceability writes.
+   - Add-phase: make docs and runtime reference say whether plain add requirement IDs come from `.blueprint/REQUIREMENTS.md`, and reserve roadmap-derived IDs only for already declared roadmap mappings or audit-backed repair details.
 
-3. **Parallel-safe after task 1 - fix malformed path placeholders.**
-   - Dependencies: task 1 can land first.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:19`: replace `.blueprint/phases/<NN>-<slug>/<NN-CONTEXT.md>` with `.blueprint/phases/<NN>-<slug>/<NN>-CONTEXT.md`.
-     - `docs/commands/new-milestone.md:63`: replace `.blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>` with `.blueprint/phases/<NN>-<slug>/<NN>-CONTEXT.md`.
-     - `src/mcp/command-runtime-metadata.ts:1107`: replace the same malformed placeholder.
-     - `docs/COMMAND-CATALOG.md:32`: update the write surface only if this docs row is still intentionally tracking write paths.
-   - Tests:
-     - `tests/new-milestone-metadata.test.ts:40`: update the regex to `.blueprint/phases/<NN>-<slug>/<NN>-CONTEXT.md`.
-     - `tests/command-contract-docs.test.ts:1327-1339`: assert canonical path wording.
+3. **Parallel-safe - strengthen static tests.**
+   - Files:
+     - `tests/new-milestone-metadata.test.ts`
+     - `tests/add-phase-metadata.test.ts`
+     - `tests/insert-phase-metadata.test.ts`
+     - `tests/command-contract-docs.test.ts`
+     - `tests/command-catalog.test.ts`
+     - `tests/roadmap-admin-runtime-contract-resource.test.ts`
+   - Assert stable identifiers, not broad prose:
+     - `blueprint_config_get` for new-milestone optional roadmapper gating.
+     - `.blueprint/REQUIREMENTS.md` write surface for insert-phase.
+     - declared requirement source for add-phase.
+     - no optional subagents for add/insert.
+     - no docs paths in runtime `skillInputs.effective` for roadmap-admin runtime contracts.
 
-4. **Sequential - verify Wave 1 as a parity patch.**
-   - Dependencies: tasks 1-3.
-   - Commands:
+4. **Sequential - verify Wave 1.**
+   - If no `src/` file changes:
 
 ```bash
-npx tsx --test tests/new-milestone-metadata.test.ts tests/command-catalog.test.ts tests/command-contract-docs.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts
+npx tsx --test tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts
+git diff --check
+```
+
+   - If `src/mcp/command-runtime-metadata.ts` changes:
+
+```bash
 npm run typecheck
 npm run build
+npx tsx --test tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- `blueprint_config_get` appears everywhere `new-milestone` tool inventories are documented or projected.
-- The stale route and malformed path placeholders are gone.
-- Runtime-contract resource remains docless for roadmap-admin commands.
+- The three commands describe the same phase-admin spine.
+- Their differences are explicit and tested.
+- Root routing and implemented status are unchanged.
 
-### Wave 2 - Transition Packet And Confirmation Gates
+### Wave 2 - Requirement Provenance And Transition Decisions
 
-Objective: add prompt/docs/metadata/test contract for evidence-scoped carry-forward and typed user gates without changing generic MCP tool outputs yet.
+Objective: make requirement grounding explicit for all three workflows without creating a heavy traceability system.
 
 Tasks:
 
-1. **Sequential - add the `New Milestone Transition Packet` to active command flow.**
-   - Dependencies: Wave 1.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:12-14`: after `blueprint_artifact_summary_digest`, require building `New Milestone Transition Packet` with `sourceScope`, `carryForwardDigest`, `evidenceLedger`, and `starterAuthoringImplications`.
-     - `commands/blu-new-milestone.toml:19`: say the scaffold seed is derived from the confirmed transition packet, not unstructured digest prose.
-     - `docs/commands/new-milestone.md:76-82`: add packet fields and the rule that every starter-doc claim cites a `sourcePath` from `inputsUsed` or is omitted/flagged.
-     - `skills/blueprint-roadmap-admin/SKILL.md:111-118`: update the digest bullet to say commands may wrap `{digest, inputsUsed}` into command-specific packets while `inputsUsed` remains the evidence boundary.
-     - `skills/blueprint-roadmap-admin/SKILL.md:219-232`: add a new step after the digest read requiring the transition packet.
-     - `src/mcp/command-runtime-metadata.ts:1098-1102,1119-1120`: mention prompt-built transition packet derived from digest and `inputsUsed`.
-     - `docs/MCP-TOOLS.md:83-94,193`: keep `blueprint_artifact_summary_digest` generic and note that `new-milestone` builds a command-specific transition packet from its output.
-     - `docs/ARTIFACT-SCHEMA.md:122-125`: add that `milestone-summary` carry-forward context should include source pointers, uncertainty, and do-not-carry-forward items.
-   - Paste-ready command text:
+1. **Sequential - define the requirement decision model in contracts first.**
+   - Files:
+     - `docs/commands/new-milestone.md`
+     - `docs/commands/add-phase.md`
+     - `docs/commands/insert-phase.md`
+     - `skills/blueprint-roadmap-admin/SKILL.md`
+     - add/insert runtime reference files.
+   - New-milestone: introduce `requirementTransitions` inside `NewMilestoneTransitionPacket` as starter-seed evidence, not as final inserted-phase traceability notes.
+   - Add-phase: require plain append requirement IDs to be declared in `.blueprint/REQUIREMENTS.md` before mutation, unless the request is an audit-backed repair path that supplies explicit `auditBackedDetails.repairRequirementIds`.
+   - Insert-phase: preserve existing strictness: IDs must be declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet`, must not be placeholders, and must not already be mapped to another roadmap phase.
 
-```md
-Build a `New Milestone Transition Packet` immediately after `blueprint_artifact_summary_digest` and before any confirmation or scaffold write. `inputsUsed` remains the authoritative source boundary. Every packet claim used in starter docs must cite a `sourcePath` from `inputsUsed`; claims outside that boundary must be marked `outside-digest-scope` and omitted from starter writes unless the digest is rerun with that source included. Keep the packet compact and include `nonCarryForwardItems` so stale assumptions, closed risks, and discarded milestone details do not silently steer the next milestone.
-```
+2. **Sequential after task 1 - add the add-phase MCP guard.**
+   - Files:
+     - `src/mcp/tools/phase.ts`
+     - `tests/roadmap-tools.test.ts`
+   - Reuse or extract the existing insert-phase helpers near requirement table parsing and declared-ID validation.
+   - Add a non-mutating helper for plain add-phase that validates `requirementIds` against `.blueprint/REQUIREMENTS.md` before `materializePhaseDirectory` or ROADMAP writes.
+   - Preserve the audit-backed repair path behavior separately and document why it can update requirement rows.
+   - On undeclared IDs, return an error before ROADMAP, REQUIREMENTS, phase directory, or state changes.
 
-2. **Sequential after task 1 - add `New Milestone Confirmation Packet` and gate semantics.**
-   - Dependencies: task 1 because gates show transition packet evidence.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:13-18`: replace loose reset/name/overwrite guidance with the confirmation packet trigger list and path-specific `scaffoldPlan`.
-     - `commands/blu-new-milestone.toml:23-33`: require final response or blocked response to include `gateId`, selected choice or safe default, approved mode, approved milestone name, approved paths, `inputsUsed`, first phase preview, and route target.
-     - `docs/commands/new-milestone.md:31-38`: clarify that fresh reset omits carry-forward seed text while preserving historical phase directories, reports, and numbering.
-     - `docs/commands/new-milestone.md:117-123`: replace the short prompt section with a gate table: `gateId`, `trigger`, `safeDefault`, `mustShowEvidence`, `allowedChoices`, `postConfirmationReceipt`.
-     - `skills/blueprint-roadmap-admin/SKILL.md:223,230,259-260`: add explicit reset friction, path-specific overwrite approval, and the self-check that blockers are not bypassed by direct file edits.
-     - `src/mcp/command-runtime-metadata.ts:1119-1120`: name the three gate IDs and no generic fourth A2 gate.
-   - Paste-ready `ask_user` choice labels:
-
-```text
-Carry-forward gate options:
-1. Carry forward as proposed
-2. Start fresh milestone reset
-3. Stop without writing
-
-Overwrite gate options:
-1. Overwrite listed starter docs
-2. Create or reuse only
-3. Stop without writing
-```
-
-3. **Parallel-safe after task 2 - strengthen static tests.**
-   - Dependencies: task 2.
-   - Files and exact changes:
-     - `tests/new-milestone-metadata.test.ts:11-42`: assert `New Milestone Transition Packet`, `sourceScope`, `carryForwardDigest`, `evidenceLedger`, `nonCarryForwardItems`, `staleOrAmbiguousClaims`, `starterAuthoringImplications`, `New Milestone Confirmation Packet`, `approvalReceipt`, and the named choice labels.
-     - `tests/new-milestone-metadata.test.ts:44-61`: assert the skill names `milestoneNameSource`, `modeSource`, path-specific overwrite approval, and same packet shape for fallback.
-     - `tests/new-milestone-metadata.test.ts:63-85`: assert runtime contract notes include packet and gate IDs while `skillInputs.effective` remains `["commands/blu-new-milestone.toml"]`.
-     - `tests/command-contract-docs.test.ts:1327-1339`: assert docs include packet and gate table fields.
-   - Add a negative assertion that these gate surfaces do not rely only on generic labels such as `OK`, `Cancel`, or `Are you sure?`.
+3. **Parallel-safe after task 2 - add behavior tests.**
+   - Add tests beside existing roadmap tool tests:
+     - add-phase rejects IDs absent from `.blueprint/REQUIREMENTS.md` before mutation.
+     - add-phase accepts declared IDs and writes the confirmed ROADMAP entry.
+     - add-phase keeps audit-backed repair behavior intact.
+     - insert-phase still rejects undeclared IDs and already-mapped IDs.
+     - new-milestone contract tests mention requirement transitions as starter seed only.
 
 4. **Sequential - verify Wave 2.**
-   - Dependencies: tasks 1-3.
-   - Commands:
 
 ```bash
-npx tsx --test tests/new-milestone-metadata.test.ts tests/command-contract-docs.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts
 npm run typecheck
 npm run build
+npx tsx --test tests/roadmap-tools.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/new-milestone-metadata.test.ts tests/command-contract-docs.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- The packet and gate vocabulary is consistent across manifest, docs, skill, runtime metadata, and tests.
-- Generic MCP docs still do not overpromise a wider `blueprint_artifact_summary_digest` return shape.
+- Plain add-phase cannot persist arbitrary undeclared requirement IDs.
+- Insert-phase strictness is unchanged.
+- New-milestone requirement transitions remain source-scoped starter evidence, not a competing REQUIREMENTS write path.
 
-### Wave 3 - Roadmapper Packet And Same-Shape Inline Fallback
+### Wave 3 - Preview And Confirmation Receipts
 
-Objective: make optional `blueprint-roadmapper` use bounded manager/worker semantics, and make disabled/no-subagent mode produce the same result shape inline.
+Objective: make approval gates specific enough to audit and retry safely.
 
 Tasks:
 
-1. **Sequential - add roadmapper trigger, packet, result, and parent acceptance rules.**
-   - Dependencies: Wave 2 transition packet.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:5,9,17`: add the allowed invocation triggers: `multiple-candidate-themes`, `dependency-order-unclear`, `orphaned-solutions-present`, `learning-actions-need-separation`, `first-phase-choice-unclear`.
-     - `commands/blu-new-milestone.toml:17`: require `NewMilestoneRoadmapperPacket` and `NewMilestoneRoadmapperResult`; forbid raw transcript or unrestricted file dumps.
-     - `skills/blueprint-roadmap-admin/SKILL.md:100-109`: make no-subagent parity mean filling the same result shape inline, not a weaker prose summary.
-     - `skills/blueprint-roadmap-admin/SKILL.md:224-225`: replace current broad roadmapper/fallback bullets with packet/result/fallback wording.
-     - `src/mcp/command-runtime-metadata.ts:1119-1120`: mention `roadmapperMode` values: `used`, `skipped-disabled`, `skipped-unnecessary`, `unavailable-fallback`.
-     - `docs/RUNTIME-REFERENCE.md:109`: summarize typed packet/result and same-shape inline fallback.
-   - Paste-ready command/skill text:
+1. **Sequential - define command-specific preview packets.**
+   - Files:
+     - `commands/blu-new-milestone.toml`
+     - `commands/blu-add-phase.toml`
+     - `commands/blu-insert-phase.toml`
+     - command docs and roadmap-admin skill/reference files.
+   - New-milestone preview includes: source summary path, `inputsUsed`, carry-forward/reset mode, proposed milestone name, first phase preview, affected starter paths, overwrite risk, and safe default.
+   - Add-phase preview includes: `expectedPhaseNumber`, description, declared requirement IDs, objective, 2-5 success criteria, source warnings, scaffold target, and safe default.
+   - Insert-phase preview includes: integer anchor, next decimal candidate, declared requirement IDs, objective, 2-5 success criteria, no-renumbering acknowledgment, dependency-review note, scaffold target, and safe default.
 
-```md
-Before using `blueprint-roadmapper`, build a `NewMilestoneRoadmapperPacket` from the confirmed roadmap read, effective config, milestone-summary digest, `inputsUsed`, carry-forward facts, requirement transition hints, next whole-number phase preview, and parent-owned boundaries. Use the roadmapper only when grouped carry-forward synthesis materially improves the next milestone frame. The roadmapper returns `NewMilestoneRoadmapperResult` only: provisional ordered proposals, coverage notes, blockers, warnings, assumptions, confidence, and a first-phase recommendation by relative order. It must not assign final phase numbers, write files, call MCP mutation tools, decide user gates, browse for replacement truth, or invent evidence outside `inputsUsed`. If no roadmapper is used, fill the same result shape inline and mark `roadmapperMode` as `skipped-disabled`, `skipped-unnecessary`, or `unavailable-fallback`.
-```
+2. **Sequential after task 1 - standardize confirmation receipts.**
+   - Gate IDs stay command-specific and current:
+     - `carry-forward-confirmation`
+     - `starter-doc-overwrite-confirmation`
+     - `phase-number-confirmation`
+     - `phase-insert-confirmation`
+     - existing blocker names such as `stale-phase-number`, `invalid-insertion-anchor`, `conflicting-decimal-directory`, `stale-first-phase-number`.
+   - Decline path stops without mutation and routes to `/blu-progress` only when a safe command route is needed.
+   - Receipt must bind the approved preview to the later MCP arguments.
 
-2. **Parallel-safe after task 1 - add roadmapper agent subsection.**
-   - Dependencies: task 1.
-   - Files and exact changes:
-     - `agents/blueprint-roadmapper.md:91-106`: add `### /blu-new-milestone Result Contract`.
-     - Preserve existing parent ownership and read-only boundaries at lines 26-35 and 107-116.
-   - Paste-ready agent text:
-
-```md
-### `/blu-new-milestone` Result Contract
-
-When the parent sends `NewMilestoneRoadmapperPacket`, return `NewMilestoneRoadmapperResult`. Use only the supplied digest scope and parent-approved reads. Return provisional ordered proposals without permanent phase numbers, plus objective, covered requirement or gap set, carry-forward items, learning actions, dependency notes, 2-5 observable success criteria, evidence refs, blockers, warnings, unresolved assumptions, confidence, and a relative first-phase recommendation. Do not write files, call MCP mutation tools, decide confirmation gates, browse for replacement truth, or invent evidence outside `inputsUsed`.
-```
-
-3. **Parallel-safe after task 1 - add tests.**
-   - Dependencies: task 1.
-   - Files and exact changes:
-     - `tests/new-milestone-metadata.test.ts:11-85`: assert roadmapper packet/result names, trigger list, `roadmapperMode`, no final phase numbers, no writes/MCP mutations, no user-gate decisions, and same-shape fallback.
-     - `tests/agent-contract-specialists.test.ts:42-68`: assert the agent names `NewMilestoneRoadmapperResult`, forbids final phase numbers/writes/user gates, and requires evidence bounded to `inputsUsed`.
-     - `tests/command-contract-docs.test.ts:1355-1411`: keep docs/runtime reference config parity with `blueprint_config_get`.
-   - Do not change catalog status semantics.
+3. **Parallel-safe after task 2 - test bypass resistance.**
+   - Files:
+     - metadata tests for all three commands.
+     - `tests/roadmap-tools.test.ts` for source-level stale/bad-input behavior.
+   - Assert no command calls mutation tools before the approval language in command contracts.
+   - Assert add-phase passes `expectedPhaseNumber`.
+   - Assert insert-phase does not accept decimal anchors.
+   - Assert new-milestone blockers make no scaffold/state writes when summary, mode, preview, or overwrite approval is missing.
 
 4. **Sequential - verify Wave 3.**
-   - Dependencies: tasks 1-3.
-   - Commands:
 
 ```bash
-npx tsx --test tests/new-milestone-metadata.test.ts tests/agent-contract-specialists.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts tests/extension-runtime-contracts.test.ts
 npm run typecheck
 npm run build
+npx tsx --test tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/roadmap-tools.test.ts tests/command-contract-docs.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- Roadmapper is a bounded proposal pass, not a control handoff.
-- No-subagent fallback has equal field shape and evidence boundary.
+- Every mutating command has an exact preview and named approval gate.
+- Tests prove stale or invalid confirmations do not silently mutate.
+- The command prompts do not rely on generic prose-only consent.
 
-### Wave 4 - Starter Seed And Scaffold Content Quality
+### Wave 4 - Numbering, Path Authority, And Historical Preservation
 
-Objective: make starter artifacts transition-shaped and useful while preserving scaffold-only posture.
-
-Preferred implementation choice: add an optional sibling `newMilestoneSeed` to `blueprint_artifact_scaffold` rather than widening the generic `bootstrapSeed` shape indefinitely. Keep backward compatibility for `bootstrapSeed` callers.
+Objective: put safety-critical phase number and path decisions on shared helpers or MCP receipts instead of prompt-only reasoning.
 
 Tasks:
 
-1. **Sequential - add TypeScript and Zod seed shape.**
-   - Dependencies: Waves 1-3.
-   - Files and exact changes:
-     - `src/mcp/tools/artifacts.ts:130-143`: add `NewMilestoneStarterSeed`, `NewMilestoneRequirementTransition`, `NewMilestoneFirstPhaseHandoffPacket`, and related types near `BootstrapSeed`.
-     - `src/mcp/tools/artifacts.ts:176-182`: add `newMilestoneSeed?: NewMilestoneStarterSeed` to `ArtifactScaffoldArgs`.
-     - `src/mcp/tools/artifacts.ts:1960-2020`: add Zod validation for `newMilestoneSeed`, including:
-       - `schemaVersion: "new-milestone-starter-seed/v1"`
-       - `starterOnly: true`
-       - non-empty `sourceScope.inputsUsed` for carry-forward mode
-       - `mode: "fresh-reset"` allows empty `inputsUsed` only with explicit reset rationale
-       - `roadmapSlice.successCriteria` length 2-5
-       - active roadmap requirement IDs must be present in `requirementTransitions` or existing generated requirements
-       - source refs outside `inputsUsed` must be labeled inference and blocked from durable carry-forward use
-   - Tests:
-     - Add negative tests for missing `inputsUsed`, orphan requirement IDs, first phase without 2-5 success criteria, and unlabeled outside-digest claims.
+1. **Sequential - share next-whole-number logic for new-milestone and add-phase.**
+   - Files:
+     - `src/mcp/tools/phase-numbering.ts`
+     - `src/mcp/tools/phase.ts`
+     - new-milestone scaffold/source owner chosen for implementation.
+   - Extract or reuse the highest-base integer logic already used by add-phase.
+   - Decimal phases count only toward their base; gaps are preserved.
+   - Empty or malformed ROADMAP must block unless a later source slice explicitly defines safe Phase 1 initialization.
 
-2. **Sequential after task 1 - render top-level starter docs from seed.**
-   - Dependencies: task 1.
-   - Files and exact changes:
-     - `src/mcp/tools/artifacts.ts:1544-1944`: update PROJECT/REQUIREMENTS/ROADMAP renderers or add adapter helpers so `newMilestoneSeed` populates:
-       - `PROJECT.md`: transition mode, source scope, target outcome, retained decisions, reset/carry-forward note, do-not-carry-forward summary.
-       - `REQUIREMENTS.md`: `Milestone Requirements Transition Ledger` with carried/modified/deferred/retired/new/self-derived rows.
-       - `ROADMAP.md`: first phase as next whole-number phase, objective, requirement IDs, 2-5 success criteria, `whyFirst`, `inspectableProgress`, `deferredNotDoingNow`, source refs, uncertainty.
-     - Preserve existing bootstrap output for `/blu-new-project`; do not let transition-only text leak into normal bootstrap.
-     - `docs/ARTIFACT-SCHEMA.md:72-125`: document optional new-milestone transition sections while preserving required headings.
-   - Tests:
-     - Add `tests/new-milestone-scaffold.test.ts`.
-     - Update `tests/new-project.test.ts:382-492` only if shared renderers change.
+2. **Sequential after task 1 - add new-milestone first-phase commit guard.**
+   - Files:
+     - `src/mcp/tools/artifacts.ts` if scaffold remains the commit tool.
+     - or a deliberately new dedicated milestone-start tool if the scaffold tool becomes too command-aware.
+     - `src/mcp/tools/state.ts` for state-after-scaffold consistency.
+   - Compute and receipt:
+     - `highestBasePhaseNumber`
+     - `firstPhaseNumber`
+     - `firstPhasePrefix`
+     - `firstPhaseDir`
+     - `firstContextPath`
+   - Re-read ROADMAP immediately before scaffold commit.
+   - Block on stale first phase, conflicting phase directory, ambiguous matching directory, user-authored first context without overwrite approval, or missing exact context path before state update.
+   - Report `deletedPhaseDirectories: []` and `renamedPhaseDirectories: []`.
 
-3. **Sequential after task 1 - render first context starter handoff.**
-   - Dependencies: task 1; coordinate with Wave 6 receiver-side text.
-   - Files and exact changes:
-     - `src/mcp/tools/artifacts.ts:2223-2277`: pass `newMilestoneSeed.firstContextHandoff` into phase context rendering when the requested artifact equals the seed's first context path.
-     - `src/mcp/artifact-contracts/index.ts:4001-4059`: add contract notes that new-milestone context scaffold may include handoff content but remains starter-only.
-     - `docs/ARTIFACT-SCHEMA.md:297-309`: document that a seeded first context is useful starter material and must be replaced by `/blu-discuss-phase` final model output.
-   - Tests:
-     - `tests/new-milestone-scaffold.test.ts`: assert first context includes `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and a starter marker/scaffold footer.
-     - Add or update phase-readiness tests so seeded context is not mistaken for final authored context.
+3. **Parallel-safe after task 2 - preserve add/insert authority.**
+   - Add-phase keeps `blueprint_roadmap_add_phase` as the authority for `phaseNumber`, `phasePrefix`, `phaseDir`, and `roadmapPath`.
+   - Insert-phase keeps `blueprint_roadmap_insert_phase` as the authority for decimal suffix, canonical directory, requirement mapping, and no downstream renumbering.
+   - Do not make prompts hand-build slugs or paths except from returned MCP fields.
 
-4. **Parallel-safe after task 2 - update prompt/docs/runtime contract for seed.**
-   - Dependencies: task 2, or write the docs in the same source patch.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:12-19`: require `New Milestone Starter Seed` before scaffold writes.
-     - `docs/commands/new-milestone.md:76-82,142-162`: add seed expectations and acceptance criteria.
-     - `skills/blueprint-roadmap-admin/SKILL.md:221-231,249`: add seed checklist and output summary.
-     - `docs/MCP-TOOLS.md:83-88,190-193,241-250`: document `newMilestoneSeed` input and clarify that `createdFiles`/`reusedFiles` are touch receipts, not content-quality proof.
-     - `src/mcp/command-runtime-metadata.ts:1119-1120`: mention seed fields only after source behavior supports them.
-   - Paste-ready scaffold seed block:
-
-```text
-Before scaffold writes, build a New Milestone Starter Seed.
-
-Required:
-- schemaVersion: new-milestone-starter-seed/v1
-- mode: carry-forward or fresh-reset
-- starterOnly: true
-- previousMilestone and targetMilestone
-- firstPhaseNumber, firstPhaseTitle, and firstPhasePath
-- sourceScope.inputsUsed exactly from blueprint_artifact_summary_digest
-- sourceScope.summaryPath and sourceScope.roadmapPath
-- outcomeFrame.targetOutcome
-- outcomeFrame.measurableSignals, allowing "unknown: <reason>"
-- requirementTransitions with decision, sourceRefs, rationale, and uncertainty
-- roadmapSlice.whyFirst, requirementIds, objective, and 2-5 successCriteria
-- firstContextHandoff.openForDiscuss, deferredNotDoingNow, requiredFollowUpReads, and canonicalReferences
-
-Do not use scaffold output as final authored content. It remains starter material until owner review or a future approved authoring path refines top-level docs, and /blu-discuss-phase owns final phase.context.
-```
+4. **Parallel-safe after task 2 - add behavior tests.**
+   - New-milestone:
+     - decimal history `1`, `2.1`, `2.2` produces first whole phase `3`.
+     - gapped history `1`, `2`, `4` produces `5` and preserves gaps.
+     - stale preview blocks with no writes.
+     - conflicting/ambiguous first-phase directory blocks.
+     - state update does not route to missing context path.
+   - Add-phase:
+     - stale `expectedPhaseNumber` blocks.
+     - returned phase metadata drives scaffold path.
+   - Insert-phase:
+     - decimal target rejected.
+     - conflicting decimal directory blocks.
+     - later phases are not renumbered.
 
 5. **Sequential - verify Wave 4.**
-   - Dependencies: tasks 1-4.
-   - Commands:
 
 ```bash
 npm run typecheck
 npm run build
-npx tsx --test tests/new-milestone-scaffold.test.ts tests/new-milestone-metadata.test.ts tests/artifact-contracts.test.ts tests/command-contract-docs.test.ts
-npx tsx --test tests/new-project.test.ts
+npx tsx --test tests/roadmap-tools.test.ts tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- Starter docs are transition-shaped but still marked as starter material.
-- Existing bootstrap behavior remains compatible.
-- Generic scaffold docs describe new optional seed behavior without implying final authoring.
+- New-milestone no longer depends on prompt-only first-path computation.
+- Add-phase and insert-phase keep their existing MCP metadata authority.
+- No workflow deletes, renames, or renumbers historical phase directories.
 
-### Wave 5 - Phase Numbering, Path Safety, And State Consistency
+### Wave 5 - Starter Scaffolds And Discuss-Phase Handoff
 
-Objective: move the safety-critical first-phase continuity rules out of prose and into runtime checks.
+Objective: make the scaffold useful as starter evidence while preserving `/blu-discuss-phase` as the final context author.
 
 Tasks:
 
-1. **Sequential - add shared next-whole-number helper.**
-   - Dependencies: Waves 1-4 if scaffold seed path is implemented; can be done earlier as an isolated source refactor if needed.
-   - Files and exact changes:
-     - `src/mcp/tools/phase-numbering.ts:19-50`: add `nextWholeNumberPhase(phases: Array<{ phaseNumber: string }>): string` and `highestBasePhaseNumber(...)`.
-     - `src/mcp/tools/phase-numbering.ts:89-97`: reuse existing `slugifyPhaseName`.
-     - `src/mcp/tools/phase.ts:1471-1483`: replace local `nextIntegerPhaseNumber` logic with the shared helper or keep a wrapper that delegates to it.
-     - `src/mcp/tools/phase.ts:5544-5741`: keep add-phase behavior unchanged; tests should prove the helper did not change add-phase stale-number semantics.
-   - Tests:
-     - Existing `tests/roadmap-tools.test.ts` add-phase cases must keep passing.
-     - Add helper-level tests if there is a local pattern for pure helper tests; otherwise cover through new-milestone behavior tests.
+1. **Sequential - add new-milestone starter seed and first-phase handoff.**
+   - Files:
+     - `commands/blu-new-milestone.toml`
+     - `skills/blueprint-roadmap-admin/SKILL.md`
+     - `src/mcp/tools/artifacts.ts` if the seed becomes typed input.
+     - `docs/ARTIFACT-SCHEMA.md`
+   - Seed starter docs from `NewMilestoneTransitionPacket`, not raw digest prose.
+   - Include outcome frame, requirement transitions, `whyFirst`, inspectable progress, deferred-not-now items, risks, and source refs.
+   - Mark the first context as starter-only.
 
-2. **Sequential after task 1 - add new-milestone scaffold guard.**
-   - Dependencies: task 1 and Wave 4 seed type.
-   - Files and exact changes:
-     - `src/mcp/tools/artifacts.ts:8783-8868`: when `args.newMilestoneSeed` is present, require the requested artifacts to match `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, `.blueprint/phases/`, and the exact computed first context path.
-     - Re-read `.blueprint/ROADMAP.md` immediately before writes. If `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, or `firstContextPath` differ from the confirmed seed/preview, return or throw `stale-first-phase-number` before writing.
-     - Inspect `.blueprint/phases/` for directories with the computed numeric prefix:
-       - none: create computed directory.
-       - exact computed directory only: reuse subject to first-context overwrite rules.
-       - any different match: block as `phase-directory-conflict`.
-       - multiple matches: block as `ambiguous-first-phase-directory`.
-     - Do not delete, rename, merge, or renumber historical phase directories.
-   - Return shape:
-     - Extend `ArtifactScaffoldResult` with optional `newMilestoneReceipt?: NewMilestoneCompletionReceipt`.
-     - Keep existing `createdFiles`, `reusedFiles`, and `warnings` for compatibility.
-   - Tests:
-     - New `tests/new-milestone-tools.test.ts` or `tests/new-milestone-scaffold.test.ts` cases for decimal history, gapped history, stale preview, directory conflict, ambiguous directory, exact reuse, user-authored context protection, and no delete/rename.
+2. **Sequential after task 1 - add smaller add/insert handoffs.**
+   - Add-phase handoff fields:
+     - returned phase number/title.
+     - declared requirement IDs.
+     - confirmed objective.
+     - success criteria.
+     - source refs.
+     - open items for discuss-phase.
+   - Insert-phase handoff fields:
+     - decimal phase number/title.
+     - anchor phase.
+     - declared requirement IDs.
+     - no-renumbering/dependency-review note.
+     - roadmap evolution note summary.
+     - open risks and dependency questions.
+   - Keep both handoffs compact. Do not make add/insert author final `XX-CONTEXT.md`.
 
-3. **Sequential after task 2 - add state update consistency guard.**
-   - Dependencies: task 2 because state should trust scaffold receipt/path.
-   - Files and exact changes:
-     - `src/mcp/tools/state.ts:847-857`: if needed, expose enough directory detail to distinguish exact directory from any matching numeric prefix.
-     - `src/mcp/tools/state.ts:2480-2533`: keep the ignored requested phase warning, but future `/blu-new-milestone` command flow must treat this warning as incomplete transition.
-     - `src/mcp/tools/state.ts:2901-2980`: when `patch.activeCommand` identifies `/blu-new-milestone` or `new-milestone`, and `patch.currentPhase` plus `patch.nextAction` route to discuss-phase, reject or warn hard if the exact phase directory/context path from the receipt is missing, ambiguous, or conflicting.
-   - If the state tool cannot safely know the intended context path without overloading generic state update, keep the hard check in the scaffold guard and make the command manifest require treating any state warning about missing phase directory as failure.
-   - Tests:
-     - State ordering test: injected scaffold failure leaves `STATE.md` unchanged.
-     - State consistency test: missing phase directory warning makes `/blu-new-milestone` incomplete, not successful.
+3. **Sequential after task 2 - add discuss-phase receiver rules.**
+   - Files:
+     - `commands/blu-discuss-phase.toml`
+     - `skills/blueprint-phase-discovery/SKILL.md`
+     - `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
+   - When a phase was scaffolded by new/add/insert, read the starter handoff as seed evidence.
+   - Preserve source refs, requirement IDs, open questions, risk watchlist, and deferred items.
+   - Remove scaffold labels, packet headings, placeholder text, and unsupported claims from final `XX-CONTEXT.md`.
+   - Ask only for missing, contradictory, uncertain, or high-impact details.
 
-4. **Parallel-safe after task 2 - update contracts/tests for phase continuity.**
-   - Dependencies: task 2.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:15-20`: add preview/commit guard fields and blockers.
-     - `commands/blu-new-milestone.toml:23-33`: require completion receipt to include `deletedPhaseDirectories: []` and `renamedPhaseDirectories: []`.
-     - `docs/commands/new-milestone.md:125-150`: add decimal history, gapped history, stale preview, conflicting directory, ambiguous directory, exact first context path, and state-after-scaffold order.
-     - `skills/blueprint-roadmap-admin/SKILL.md:219-232,251-263`: add guard checklist and self-check bullets.
-     - `docs/MCP-TOOLS.md:220-258`: document new-milestone exception while preserving returned path metadata authority.
-     - `src/mcp/command-runtime-metadata.ts:1077-1123`: expose exact path and continuity guard.
-   - Paste-ready contract text:
-
-```md
-Before any `/blu-new-milestone` write, compute the first new phase from the live ROADMAP as the next whole-number phase after the highest base phase number. Decimal phases count only toward their integer base, so `2.1` and `2.2` make the next whole-number phase `3`; gaps are preserved, so `1`, `2`, and `4` make the next phase `5`.
-
-The canonical first context path is `.blueprint/phases/<NN>-<slug>/<NN>-CONTEXT.md`.
-
-Re-read ROADMAP immediately before the scaffold commit. If the recomputed first phase number or path differs from the confirmed preview, stop with `stale-first-phase-number` and make no writes.
-
-Preserve historical phase directories and numbering history. `/blu-new-milestone` must not call cleanup behavior, remove-phase behavior, filesystem delete, filesystem rename, or any renumbering pass for prior milestone artifacts.
-
-Update `STATE.md` only after the scaffold receipt confirms the exact first context path was created or safely reused.
-```
+4. **Parallel-safe after task 3 - add tests.**
+   - `tests/phase-discovery-discuss.test.ts`: starter handoff is consumed but not preserved verbatim.
+   - `tests/new-milestone-metadata.test.ts`: first-phase handoff fields exist.
+   - `tests/add-phase-metadata.test.ts`: add-phase remains starter-only and routes to discuss-phase.
+   - `tests/insert-phase-metadata.test.ts`: insert-phase dependency-review handoff exists.
+   - `tests/command-contract-docs.test.ts`: no command routes directly to plan/execute shortcuts.
 
 5. **Sequential - verify Wave 5.**
-   - Dependencies: tasks 1-4.
-   - Commands:
 
 ```bash
 npm run typecheck
 npm run build
-npx tsx --test tests/new-milestone-tools.test.ts tests/new-milestone-scaffold.test.ts tests/new-milestone-metadata.test.ts tests/roadmap-tools.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts
+npx tsx --test tests/phase-discovery-discuss.test.ts tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/command-contract-docs.test.ts tests/artifact-contracts.test.ts tests/built-schema-assets.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- Runtime refuses stale first-phase previews and conflicting phase directories.
-- Prompt/model text no longer carries safety-critical path logic alone.
-- Existing add/insert phase behavior remains intact.
+- Starter context helps `/blu-discuss-phase` without becoming final context.
+- Deferred risks and requirement grounding survive handoff.
+- Scaffold or packet text is not copied verbatim into final context.
 
-### Wave 6 - Downstream Discuss-Phase Handoff
+### Wave 6 - New-Milestone Roadmapper Packet And No-Subagent Parity
 
-Objective: seed the first phase with useful transition context while keeping `/blu-discuss-phase` the sole owner of final `phase.context` authoring.
+Objective: make optional delegation safe for `/blu-new-milestone` only.
 
 Tasks:
 
-1. **Sequential - add first-phase handoff packet to new-milestone surfaces.**
-   - Dependencies: Wave 4 starter seed; Wave 5 path guard for exact route/path.
-   - Files and exact changes:
-     - `commands/blu-new-milestone.toml:16,19-21`: build `New Milestone First-Phase Handoff Packet` before scaffold/state update and require final route text to use resolved phase number when known.
-     - `docs/commands/new-milestone.md:76-82,145-150`: describe starter-only packet and route receipt.
-     - `skills/blueprint-roadmap-admin/SKILL.md:221-231,249`: add packet fields and output requirement.
-     - `src/mcp/command-runtime-metadata.ts:1097-1120`: mention handoff only after source/scaffold support exists.
-   - Paste-ready text:
+1. **Sequential - define the roadmapper packet/result.**
+   - Files:
+     - `commands/blu-new-milestone.toml`
+     - `skills/blueprint-roadmap-admin/SKILL.md`
+     - `agents/blueprint-roadmapper.md`
+     - `src/mcp/command-runtime-metadata.ts`
+     - `docs/RUNTIME-REFERENCE.md`
+   - Use `blueprint_config_get(scope=effective)` before any roadmapper pass.
+   - Send a typed packet with digest scope, carry-forward facts, requirement transition hints, first-phase preview, parent-owned responsibilities, forbidden actions, and stop conditions.
+   - Roadmapper returns provisional ordered proposals, coverage notes, blockers, warnings, assumptions, confidence, and relative first-phase recommendation only.
+   - Parent owns final milestone name, phase numbers, paths, confirmation gates, MCP writes, state update, final response, and routing.
 
-```text
-Before scaffolding the first new phase context, build a compact New Milestone First-Phase Handoff Packet from the carry-forward digest and confirmed transition mode. Include: mode, fromMilestone, toMilestone, firstPhase {phaseNumber, title, objective, requirementIds, successCriteria, whyFirst, inspectableProgress}, digestInputsUsed, retainedDecisions, activeRequirementTransitions, openForDiscuss, riskWatchlist, deferredNotDoingNow, canonicalReferences, and routeReceipt.
+2. **Sequential after task 1 - define same-shape fallback.**
+   - If roadmapper is disabled, unavailable, or unnecessary, parent fills the same result shape inline from the same packet.
+   - Add `roadmapperMode`: `used`, `skipped-disabled`, `skipped-unnecessary`, or `unavailable-fallback`.
+   - Do not pass raw reports, chat history, unrestricted files, web search, browser-only findings, or shell-only substitutes.
 
-Treat the packet as starter-only seed material for /blu-discuss-phase, not as authored phase context. Keep it source-scoped to blueprint_artifact_summary_digest.inputsUsed unless a row is explicitly labeled new-milestone inference. Preserve deferred assumptions, risks, and not-now items as downstream questions or deferred ideas instead of dropping them. Do not fill final implementation decisions that belong to /blu-discuss-phase.
-```
-
-2. **Sequential after task 1 - add discuss-phase receiver rules.**
-   - Dependencies: task 1.
-   - Files and exact changes:
-     - `commands/blu-discuss-phase.toml:12-20,28-30`: say when selected phase was scaffolded by `/blu-new-milestone`, read the handoff as seed evidence, preserve source refs/deferred items/open gray areas, and replace scaffold text in final model output.
-     - `skills/blueprint-phase-discovery/SKILL.md:183-199`: add receiver-side rule near grounding, anti-pattern, and deferred idea preservation.
-     - `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:105-127`: mention handoff packet as a carry-forward context source for single-agent fallback.
-     - `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md:164-235`: map packet content into existing `phase.context` fields and keep final `XX-CONTEXT.md` model-rendered.
-     - Avoid schema changes unless mapping into current fields is impossible.
-   - Paste-ready receiver text:
-
-```text
-When the selected phase was just scaffolded by /blu-new-milestone, read the first-phase handoff packet as seed evidence before asking questions. Treat it as disposable starter material: carry forward its source refs, deferred risks, and open gray areas into the structured phase.context model, but do not preserve the packet heading, scaffold footer, placeholder labels, or unsupported claims in the final XX-CONTEXT.md.
-
-Ask only for missing, contradictory, uncertain, or high-impact details. If the packet marks an assumption or risk with a consequence-if-wrong, either confirm it with the user, convert it into an implementation decision with evidence, or keep it in Open Questions/Deferred Ideas. After writing context, report the refreshed derivedStatus.nextAction exactly.
-```
-
-3. **Parallel-safe after task 2 - add tests.**
-   - Dependencies: task 2.
-   - Files and exact changes:
-     - `tests/new-milestone-metadata.test.ts:11-61`: assert `New Milestone First-Phase Handoff Packet`, `digestInputsUsed`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, and resolved-phase route text.
-     - `tests/command-contract-docs.test.ts:1327-1339`: reject stale route wording and require starter-only handoff language.
-     - `tests/phase-discovery-discuss.test.ts:464-535`: seed a first-phase handoff, run context write path, assert final context preserves canonical references/open questions/deferred ideas.
-     - `tests/phase-discovery-discuss.test.ts:778-842`: reject final context that drops packet-marked deferred risks or preserves packet/scaffold text verbatim.
-     - If schema changes are made, update `tests/context-diagnostics.test.ts`, `tests/artifact-contracts.test.ts`, `tests/built-schema-assets.test.ts`, and fixtures together.
+3. **Parallel-safe after task 2 - keep add/insert no-subagent contracts locked.**
+   - Tests should assert add/insert optional agent lists remain empty.
+   - Roadmap-admin skill must continue saying there is no add-phase or insert-phase subagent path.
 
 4. **Sequential - verify Wave 6.**
-   - Dependencies: tasks 1-3.
-   - Commands:
 
 ```bash
 npm run typecheck
 npm run build
-npx tsx --test tests/new-milestone-metadata.test.ts tests/command-contract-docs.test.ts tests/phase-discovery-discuss.test.ts tests/context-diagnostics.test.ts tests/artifact-contracts.test.ts tests/built-schema-assets.test.ts
+npx tsx --test tests/new-milestone-metadata.test.ts tests/agent-contract-specialists.test.ts tests/command-catalog.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- First context is useful starter material, not final authored context.
-- Discuss-phase preserves deferred material and source refs without preserving scaffold/prompt literals.
+- Roadmapper can improve grouping but cannot take over control.
+- Disabled subagents do not create a weaker new-milestone path.
+- Add/insert remain subagent-free.
 
-### Wave 7 - Receipts, Idempotency, And Recovery
+### Wave 7 - Response Receipts, Idempotency, And Recovery
 
-Objective: make partial scaffold/state failure diagnosable and retry-safe enough for a bounded transition command without adding a full workflow engine.
+Objective: make partial success and retry behavior clear without adding a workflow engine.
 
 Tasks:
 
-1. **Sequential - add response receipt fields first, no new durable receipt store.**
-   - Dependencies: Waves 4-5.
-   - Files and exact changes:
-     - `src/mcp/tools/artifacts.ts:225-229` or the local result type definition: extend scaffold result with optional `newMilestoneReceipt` only when `newMilestoneSeed` is present.
-     - `src/mcp/tools/artifacts.ts:8783-8868`: populate `status`, `mode`, `firstPhaseNumber`, `firstPhaseDir`, `firstContextPath`, `inputsUsed`, `createdFiles`, `reusedFiles`, `overwrittenFiles`, `blockedFiles`, `deletedPhaseDirectories: []`, `renamedPhaseDirectories: []`, `safeRetry`, and `warnings`.
-     - `docs/MCP-TOOLS.md:83-88,241-250`: document optional new-milestone receipt fields as command-specific scaffold metadata.
-     - `commands/blu-new-milestone.toml:20-21,23-33`: require final response to report receipt facts and to stop on partial/blocker status.
-   - Do not add `.blueprint/runs/`, `.blueprint/receipts/`, or host-global receipt files in this first recovery wave.
+1. **Sequential - add response receipts before durable receipt storage.**
+   - New-milestone receipt includes mode, roadmapperMode, first phase target, scaffold path statuses, inputsUsed, stateUpdated, safeRetry, nextAction, warnings, deleted/renamed phase directories as empty arrays.
+   - Add-phase receipt includes approved phase number, returned phase metadata, declared requirement IDs, goal, success criteria count, roadmap path, context scaffold path, state route, safeRetry, warnings.
+   - Insert-phase receipt includes anchor, inserted decimal, returned phase metadata, requirement mapping status, requirements path, roadmap path, context scaffold path, state route, no-renumbering note, safeRetry, warnings.
 
-2. **Sequential after task 1 - add retry/precondition matrix.**
-   - Dependencies: task 1.
-   - Files and exact changes:
-     - `docs/commands/new-milestone.md:133-139`: expand failure modes and recovery.
-     - `skills/blueprint-roadmap-admin/SKILL.md:251-263`: add self-check items for `safeRetry`, partial scaffold, state-update warning, and no direct file repair.
-     - `src/mcp/command-runtime-metadata.ts:1119-1120`: mention compact completion/recovery receipt.
-   - Required recovery matrix:
-     - no scaffold receipt and no state update: safe to start after blockers pass.
-     - scaffold receipt complete and state update missing: verify hashes/path existence, then complete only state update.
-     - scaffold receipt partial and paths unchanged: resume remaining scaffold operations, then update state.
-     - scaffold receipt partial and paths changed: block with `manual-recovery-required`.
-     - state updated but scaffold missing or inconsistent: block with diagnostics; do not silently recreate historical paths.
-     - confirmation missing or source summary missing: wait, no retry.
-   - Retry policy:
-     - Retry only transient file/lock/contention errors with bounded backoff.
-     - Never retry confirmation blockers, validation errors, path-containment failures, hash/precondition failures, or same-token/different-parameter mismatches.
+2. **Sequential after task 1 - add recovery matrices.**
+   - Shared matrix:
+     - mutation not attempted: safe to rerun after blocker is resolved.
+     - roadmap mutation succeeded and scaffold failed: report successful roadmap path and exact scaffold blocker; do not hand-write context.
+     - scaffold succeeded and state update failed: report roadmap/scaffold success and route to `/blu-progress` for recovery; do not hand-edit `STATE.md`.
+     - same preview, same returned files: safe reuse when tool reports reuse.
+     - same token or preview but changed params/files: block as stale or manual recovery required.
+   - New-milestone adds: summary missing, reset ambiguity, starter overwrite, stale first phase, directory conflict, state mismatch.
+   - Add-phase adds: stale `expectedPhaseNumber`, undeclared requirement IDs, missing metadata.
+   - Insert-phase adds: invalid anchor, declared-ID failure, already-mapped IDs, conflicting decimal directory, dependency-review warning.
 
-3. **Parallel-safe after task 1 - add tests.**
-   - Dependencies: task 1.
-   - Tests to add:
-     - duplicate same seed/path returns reused receipt without rewriting.
-     - same route but changed `inputsUsed` or first phase preview blocks as stale/precondition failure.
-     - confirmed overwrite blocked after file hash drift when hash support exists.
-     - injected state-update failure after scaffold can be resumed without rewriting existing starter docs.
-     - partial scaffold with user-edited file blocks as `manual-recovery-required`.
-     - missing-summary wait returns `safeRetry=false`.
-     - starter-overwrite wait returns `safeRetry=false`.
-     - no command text recommends direct edits to `.blueprint/PROJECT.md`, `.blueprint/REQUIREMENTS.md`, `.blueprint/ROADMAP.md`, first context, or `STATE.md` after tool blockers.
+3. **Sequential after task 2 - extend MCP result fields only where needed.**
+   - Add/insert roadmap tool results can gain non-breaking fields such as:
+     - `contextPath`
+     - `requirementValidationStatus`
+     - `requirementMappingStatus`
+     - `createdPhaseDir`
+     - `idempotencyStatus`
+   - New-milestone scaffold can gain command-specific `newMilestoneReceipt` only when `newMilestoneSeed` or equivalent input is present.
+   - Do not add durable receipt files unless a later approved slice defines schema, retention, cleanup, and source-of-truth relationship.
 
-4. **Sequential - decide whether a later durable receipt store is warranted.**
-   - Dependencies: task 1 and at least one real partial-failure use case.
-   - If needed later, plan a separate artifact-schema wave for a project-local receipt path. Do not add it opportunistically.
-   - Any durable receipt path must document:
-     - exact `.blueprint/...` location
-     - cleanup/retention behavior
-     - relation to `.blueprint/mcp-write-failures.ndjson`
-     - why it is recovery evidence, not a second source of truth
-     - tests proving completed current files/state remain authoritative
+4. **Parallel-safe after task 3 - add tests.**
+   - Add-phase: undeclared IDs block with no mutation; stale expected number blocks; scaffold failure does not hand-write context.
+   - Insert-phase: conflicting decimal directory blocks; requirement mapping failure rolls back or reports no partial success accurately; state-update failure is reported separately.
+   - New-milestone: partial scaffold/state scenarios return safeRetry or manual blocker; same inputs reuse safely; changed path/hash blocks.
+   - Metadata/docs tests assert final response requirements include receipt fields without overpromising generic MCP tool behavior.
 
 5. **Sequential - verify Wave 7.**
-   - Dependencies: tasks 1-3.
-   - Commands:
 
 ```bash
 npm run typecheck
 npm run build
-npx tsx --test tests/new-milestone-tools.test.ts tests/new-milestone-scaffold.test.ts tests/new-milestone-metadata.test.ts tests/command-contract-docs.test.ts
+npx tsx --test tests/roadmap-tools.test.ts tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/command-contract-docs.test.ts tests/command-catalog.test.ts
 git diff --check
 ```
 
 Exit criteria:
 
-- Ordinary success output stays compact.
-- Partial/blocker results are typed and do not invite manual `.blueprint/` repair.
-- Recovery semantics remain bounded; no full workflow engine is introduced.
+- User-facing output distinguishes roadmap, requirements, scaffold, and state outcomes.
+- Retry guidance is bounded and does not invite manual `.blueprint/` repair.
+- No durable receipt store was introduced accidentally.
 
-### Wave 8 - Final Parity, Built Assets, And End-To-End Verification
+### Wave 8 - Final Parity And End-To-End Verification
 
-Objective: prove future changes are aligned across command, skill, agent, runtime metadata, docs, MCP behavior, and tests.
+Objective: prove all three workflows remain coherent after implementation.
 
 Tasks:
 
 1. **Parallel-safe - run wording and boundary sweeps.**
-   - Dependencies: all implementation waves in the branch.
-   - Commands:
 
 ```bash
-rg -n "route to requirements|<NN-CONTEXT|Are you sure\\?|\\bOK\\b|\\bCancel\\b|update_topic|write_todos|task tracker" commands docs skills agents src tests
-rg -n "new-milestone" commands docs skills agents src tests
+rg -n "route to requirements|<NN-CONTEXT|Are you sure\?|\bOK\b|\bCancel\b|update_topic|write_todos|task tracker|tracker-backed" commands docs skills agents src tests
+rg -n "new-milestone|add-phase|insert-phase" commands docs skills agents src tests
 rg -n "blueprint_config_get" commands/blu-new-milestone.toml docs/commands/new-milestone.md docs/RUNTIME-REFERENCE.md docs/MCP-TOOLS.md skills/blueprint-roadmap-admin/SKILL.md src/mcp/command-runtime-metadata.ts tests
+rg -n "deletedPhaseDirectories|renamedPhaseDirectories|roadmapperMode|safeRetry|phase-number-confirmation|phase-insert-confirmation" commands docs skills agents src tests
 ```
 
-2. **Sequential - run full focused verification.**
-   - Dependencies: task 1.
-   - Commands:
+2. **Sequential - run focused verification.**
 
 ```bash
 npm run typecheck
 npm run build
-npx tsx --test tests/new-milestone-metadata.test.ts tests/new-milestone-scaffold.test.ts tests/new-milestone-tools.test.ts tests/command-catalog.test.ts tests/command-contract-docs.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts tests/agent-contract-specialists.test.ts tests/phase-discovery-discuss.test.ts tests/artifact-contracts.test.ts tests/built-schema-assets.test.ts
+npx tsx --test tests/new-milestone-metadata.test.ts tests/add-phase-metadata.test.ts tests/insert-phase-metadata.test.ts tests/roadmap-tools.test.ts tests/command-catalog.test.ts tests/command-contract-docs.test.ts tests/roadmap-admin-runtime-contract-resource.test.ts tests/extension-runtime-contracts.test.ts tests/agent-contract-specialists.test.ts tests/phase-discovery-discuss.test.ts tests/artifact-contracts.test.ts tests/built-schema-assets.test.ts
 git diff --check
 ```
 
-3. **Sequential - inspect built assets after source changes.**
-   - Dependencies: task 2 and `npm run build`.
-   - If `src/mcp/command-runtime-metadata.ts`, `src/mcp/tools/artifacts.ts`, `src/mcp/tools/state.ts`, schema assets, or command resources changed, inspect the `dist/` diff and include tracked built output required by the extension-install contract.
-   - Do not touch `dist/` for docs-only or manifest-only slices unless build output is intentionally part of that future branch.
+3. **Sequential - inspect built assets.**
+   - If `src/mcp/command-runtime-metadata.ts`, MCP tools, schema assets, or command resources changed, inspect `dist/` and include the tracked built output required by the extension-install contract.
+   - Do not touch `dist/` for docs-only or manifest-only slices unless build output intentionally changed.
 
-4. **Sequential - final behavior checklist.**
-   - Dependencies: tasks 1-3.
-   - Confirm:
-     - `new-milestone` remains `implemented` only because manifest, primary skill, and required MCP tools exist.
-     - `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` still recommend implemented-only commands.
-     - Runtime contract resource still builds without `docs/` for roadmap-admin command inputs.
-     - Optional roadmapper remains gated by `blueprint_config_get(scope=effective)`.
-     - No prompt text instructs direct `.blueprint/` mutation.
-     - No command text introduces a tracker, visible todo layer, or stage-by-stage long-running posture for `new-milestone`.
+4. **Sequential - final checklist.**
+   - Confirm all three commands remain `implemented` only because their manifest, primary skill/input, and required MCP tools are present.
+   - Confirm `/blu`, `/blu-help`, `/blu-progress`, and `/blu-next` still recommend implemented-only commands.
+   - Confirm roadmap-admin runtime contracts still build when docs are unavailable.
+   - Confirm only new-milestone exposes optional `blueprint-roadmapper`, gated by `blueprint_config_get(scope=effective)`.
+   - Confirm add/insert optional agent lists remain empty.
+   - Confirm no prompt text instructs direct `.blueprint/` mutation.
+   - Confirm no command text introduces tracker-backed branching or long-running visible todo flow.
+
+### Suggested Small Implementation Order
+
+If future work starts from this plan, use this order unless the user names a specific wave:
+
+1. Wave 1 static parity for all three commands.
+2. Wave 2 add-phase requirement guard and tests.
+3. Wave 3 add/insert confirmation receipt wording and tests.
+4. Wave 4 new-milestone first-phase numbering/path guard.
+5. Wave 5 handoff receiver rules.
+6. Wave 6 new-milestone roadmapper packet.
+7. Wave 7 response receipts and recovery.
+8. Wave 8 final verification and built assets.
+
+This order gets the known sibling drift under control before the larger new-milestone runtime work.
 
 ### Future Implementor Prompt
 
 Use this prompt for a future code implementation run after this docs-only plan is approved:
 
 ```text
-You are implementing the approved `/blu-new-milestone` improvement plan in Blueprint.
+You are implementing the approved phase-admin improvement plan in Blueprint for `/blu-new-milestone`, `/blu-add-phase`, and `/blu-insert-phase`.
 
 Do not use GSD or Blueprint slash workflow to do your work. Use Codex tools only.
 Create a fresh worktree/branch before editing. Run `npm ci` before any build, typecheck, or tests.
 
 Read first:
-- docs/imp/new-milestone-frontier-research-and-improvement-plan.md, especially `## Detailed Improvement Plan`
+- docs/imp/new-milestone/new-milestone-frontier-research-and-improvement-plan.md, especially `## Detailed Improvement Plan`
 - commands/blu-new-milestone.toml
+- commands/blu-add-phase.toml
+- commands/blu-insert-phase.toml
 - docs/commands/new-milestone.md
+- docs/commands/add-phase.md
+- docs/commands/insert-phase.md
 - skills/blueprint-roadmap-admin/SKILL.md
+- skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md
+- skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - agents/blueprint-roadmapper.md
 - src/mcp/command-runtime-metadata.ts
-- docs/RUNTIME-REFERENCE.md
+- src/mcp/tools/phase.ts
+- src/mcp/tools/artifacts.ts
+- src/mcp/tools/state.ts
 - docs/MCP-TOOLS.md
+- docs/RUNTIME-REFERENCE.md
 - docs/ARTIFACT-SCHEMA.md
 - tests/new-milestone-metadata.test.ts
+- tests/add-phase-metadata.test.ts
+- tests/insert-phase-metadata.test.ts
+- tests/roadmap-tools.test.ts
 - tests/command-contract-docs.test.ts
 - tests/command-catalog.test.ts
 - tests/roadmap-admin-runtime-contract-resource.test.ts
 
 Implement only one approved wave at a time. Start with Wave 1 unless the user explicitly names another wave.
 Keep `.blueprint/` persistence MCP-owned. Do not hand-edit `.blueprint/` except inside isolated test fixtures.
-Keep `/blu-new-milestone` bounded: no tracker tools, no long-running progress posture, no final phase planning, no cleanup/renumber/delete of historical phase directories.
+Keep all three workflows bounded: no tracker tools, no long-running progress posture, no planned-only follow-up routes, no direct jump to plan/execute shortcuts.
+Use returned MCP metadata as authority for phase numbers, prefixes, directories, paths, writes, warnings, and next routes.
+Preserve historical phase directories and roadmap numbering history. `/blu-new-milestone` and `/blu-add-phase` start next whole-number phases; `/blu-insert-phase` inserts decimals under an integer anchor and does not renumber later phases.
+Only `/blu-new-milestone` may use `blueprint-roadmapper`, and only after `blueprint_config_get(scope=effective)` confirms subagents are enabled.
 If adding source behavior, update docs/tests/runtime metadata and run build/typecheck/focused tests in the same branch. Include tracked `dist/` output when required by the build.
 
-Stop and ask if current code conflicts with the plan in a way that would require changing routing semantics, adding host-global state, adding a new `.blueprint/` write surface, or widening beyond the named wave.
+Stop and ask if current code conflicts with the plan in a way that would require changing routing semantics, adding host-global state, adding a durable receipt store, adding a new `.blueprint/` write surface, or widening beyond the named wave.
 ```
 
 ### Risk And Rollback Plan
 
-- **Scope drift risk:** future work can easily turn a transition command into a planner or tracker. Rollback by reverting the wave that added tracker/stage/todo language; tests should search for `update_topic`, `write_todos`, and tracker wording in `new-milestone` surfaces.
-- **Parity drift risk:** packet fields can appear in prompt text but not runtime metadata or tests. Rollback by reverting the last wave and restoring Wave 1 parity; do not leave half-landed contract names in only one surface.
-- **MCP overpromise risk:** `docs/MCP-TOOLS.md` can imply a tool returns fields not yet implemented. Rollback docs first or implement the source behavior before merging.
-- **Runtime-input regression risk:** adding docs paths to `blueprint-roadmap-admin` active inputs would break docless installed-extension runtime contracts. Keep `tests/roadmap-admin-runtime-contract-resource.test.ts` as a required gate.
-- **Path safety risk:** prompt-only first-phase computation can still supply the wrong canonical path. Runtime guard work must block stale previews and directory conflicts before scaffold writes.
-- **Historical evidence risk:** any implementation that deletes, renames, or renumbers prior phase directories violates the core boundary. Add negative tests around `fs.rm`, `fs.rename`, cleanup, remove-phase, and renumber helper usage before merging runtime guard work.
-- **Recovery complexity risk:** durable receipt storage can become a second source of truth. Start with response receipts and live file/state verification; add persistent receipt artifacts only in a separate approved wave.
-- **Rollback mechanics:** revert one wave at a time. For source waves, revert matching source, docs, tests, and `dist/` together. Never repair a failed rollout by manually rewriting project `.blueprint/` artifacts in the repository checkout.
+- **Scope drift risk:** the shared plan can blur three distinct commands. Roll back any wave that removes command-specific semantics or turns add/insert into generic roadmapper-assisted workflows.
+- **Requirement traceability risk:** tightening add-phase requirement validation can expose existing weak fixtures. Roll back source behavior and keep docs/tests in a failed branch until fixtures and migration expectations are consciously updated.
+- **New-milestone overreach risk:** transition packets can turn into planning or retrospective ceremonies. Roll back packet fields that create final decisions better owned by `/blu-discuss-phase`, `/blu-plan-phase`, or `/blu-milestone-summary`.
+- **MCP overpromise risk:** docs may describe fields that tools do not return. Roll back docs or implement the fields with tests before merge.
+- **Runtime-input regression risk:** adding docs paths to roadmap-admin runtime inputs can break installed-extension runtime contracts. Keep `tests/roadmap-admin-runtime-contract-resource.test.ts` as a required gate.
+- **Historical evidence risk:** any implementation that deletes, renames, or renumbers prior phase directories violates the core boundary. Add negative tests before merging runtime guard work.
+- **Receipt complexity risk:** durable receipt storage can become a second source of truth. Start with response receipts and current file/state verification; plan durable receipt artifacts only in a separate approved wave.
+- **Rollback mechanics:** revert one wave at a time. For source waves, revert source, docs, tests, and `dist/` together. Never repair a failed rollout by manually rewriting project `.blueprint/` artifacts in the repository checkout.
