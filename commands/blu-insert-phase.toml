@@ -25,7 +25,7 @@ Response requirements:
 - Do not accept decimal insertion targets.
 - Keep the waiting state explicit as `phase-insert-confirmation` while the command is waiting for approval, `invalid-insertion-anchor` when the requested integer anchor is unusable, and `conflicting-decimal-directory` when on-disk state blocks the insert.
 - The preview packet must name the integer anchor, next decimal candidate, declared requirement IDs, objective, 2-5 success criteria, no-renumbering acknowledgment, dependency-review note, scaffold target, and `Safe default: stop without writing`.
-- Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `blueprint_roadmap_insert_phase` arguments.
+- Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `mcp_blueprint_blueprint_roadmap_insert_phase` arguments.
 - If the user declines, stop without writing and route to `/blu-progress` when a safe follow-up command is needed.
 - In the completion response, include a compact starter handoff block with the decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
 - Keep the handoff compact starter seed only. Do not make `/blu-insert-phase` author final `XX-CONTEXT.md`.

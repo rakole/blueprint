@@ -25,7 +25,7 @@ Response requirements:
 - Do not infer a description when the user omitted one.
 - Keep the waiting state explicit as `phase-number-confirmation` while the command is waiting for approval, and as `stale-phase-number` when the previewed append target is no longer current.
 - The preview packet must name `expectedPhaseNumber`, description, declared requirement IDs, objective, 2-5 success criteria, source warnings, scaffold target, and `Safe default: stop without writing`.
-- Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `blueprint_roadmap_add_phase` arguments.
+- Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `mcp_blueprint_blueprint_roadmap_add_phase` arguments.
 - If the user declines, stop without writing and route to `/blu-progress` when a safe follow-up command is needed.
 - In the completion response, include a compact starter handoff block with the returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
 - Keep the handoff compact starter seed only. Do not make `/blu-add-phase` author final `XX-CONTEXT.md`.

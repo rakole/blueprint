@@ -91,6 +91,8 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     "blueprint_state_update"
   ]);
   assert.deepEqual(contract.spec?.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, []);
+  assert.deepEqual(entry.availableOptionalAgents, []);
   assert.match(contract.spec?.purpose ?? "", /Append a new whole-number phase/i);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",

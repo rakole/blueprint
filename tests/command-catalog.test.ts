@@ -1986,6 +1986,16 @@ test("phase-admin command catalog required tools stay aligned with runtime metad
   }
 });
 
+test("phase-admin optional subagent exposure stays locked to new-milestone only", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  assert.deepEqual(catalog.commands["add-phase"].availableOptionalAgents, []);
+  assert.deepEqual(catalog.commands["insert-phase"].availableOptionalAgents, []);
+  assert.deepEqual(catalog.commands["new-milestone"].availableOptionalAgents, [
+    "blueprint-roadmapper"
+  ]);
+});
+
 test("docs-update is implemented once manifest, skill, and docs-report MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["docs-update"];

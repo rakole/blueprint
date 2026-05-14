@@ -8,6 +8,8 @@ import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
+const repoRoot = process.cwd();
+
 const ROADMAP_ADMIN_COMMAND_INPUTS = {
   "add-phase": [
     "skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md"
@@ -96,4 +98,14 @@ test("new-milestone runtime resource keeps config-gated roadmapper inputs docles
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     ...metadata.requiredTools
   ]);
+});
+
+test("roadmap-admin skill keeps add-phase and insert-phase on no-subagent paths", async () => {
+  const skillFile = await fs.readFile(
+    path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"),
+    "utf8"
+  );
+
+  assert.match(skillFile, /There is no add-phase subagent path/i);
+  assert.match(skillFile, /There is no insert-phase subagent path/i);
 });

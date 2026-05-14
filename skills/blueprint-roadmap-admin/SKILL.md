@@ -106,6 +106,12 @@ same evidence depth, confirmation discipline, and output quality by working one
 isolated roadmap or milestone unit at a time, compressing carry-forward context
 after each completed unit, and finishing through the same MCP-owned write path.
 
+For `/blu-new-milestone`, keep `roadmapperMode` explicit as `used`,
+`skipped-disabled`, `skipped-unnecessary`, or `unavailable-fallback`. The
+inline fallback must produce the same result shape as the delegated path:
+`provisionalOrderedProposals`, `coverageNotes`, `blockers`, `warnings`,
+`assumptions`, `confidence`, and `relativeFirstPhaseRecommendation`.
+
 Do not swap in browser-only, web-search-only, shell-only, or generic helper
 substitutes for `blueprint-roadmapper` or `blueprint-verifier`.
 
@@ -232,22 +238,25 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before generating carry-forward seeds, and normalize any summary-derived seed text to the returned authoring template when the contract provides one.
 4. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it, and prefer `ask_user` when the choice is not already explicit.
 5. Preview the exact source scope before mutation: the source milestone summary path, digest `inputsUsed`, warnings, carry-forward or reset mode, proposed milestone name, starter-doc overwrite set, first whole-number phase target, affected starter paths, overwrite risk, and `Safe default: stop without writing`.
-6. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the command still owns the final write path.
-7. If `blueprint-roadmapper` is unavailable or unnecessary, keep parity by carrying forward one roadmap or milestone synthesis unit at a time and compressing carry-forward context after each unit to the retained intent, starter-scope decisions, and unresolved assumptions before scaffolding.
-8. Treat `requirementTransitions` as starter-seed evidence only. Transition rows may use the decision vocabulary `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`, and every row must cite `sourceRefs` plus `rationale` with uncertainty labeled explicitly. Do not treat those rows as a competing `.blueprint/REQUIREMENTS.md` write path.
-9. Before scaffold, build a compact `New Milestone First-Phase Handoff Packet` with `mode`, `fromMilestone`, `toMilestone`, `firstPhase`, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
-10. Cap that packet to roughly 12-18 bullets total. Do not write final implementation decisions for unresolved gray areas; use `openForDiscuss` with confidence and consequence instead. Do not infer codebase facts not present in the digest or refreshed repo evidence; label unverified claims as assumptions. Preserve deferred material as `deferredNotDoingNow`, `riskWatchlist`, or `openForDiscuss`; never collapse it into `none`.
-11. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
-12. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
-13. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
-14. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
-15. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
-16. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields to the later scaffold and state-update arguments.
-17. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
-18. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
-19. Treat the handoff packet as starter-only seed material for `/blu-discuss-phase`, not as final authored `phase.context`. It must not widen into a new typed `.blueprint/` write surface or a durable handoff store.
-20. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
-21. Keep follow-up routing inside implemented Blueprint commands only.
+6. Before any optional delegation, build a typed `Roadmapper Packet` from digest-backed evidence only. The packet must include `digestScope`, `carryForwardFacts`, `requirementTransitionHints`, `firstPhasePreview`, `parentOwnedResponsibilities`, `forbiddenActions`, and `stopConditions`.
+7. `digestScope` must stay limited to the digest `inputsUsed` plus the resolved milestone summary path. `carryForwardFacts` must stay limited to digest-backed roadmap and milestone facts. `requirementTransitionHints` may summarize likely `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain` rows with `sourceRefs` plus `rationale`, but they remain starter-seed evidence only and do not become a competing `.blueprint/REQUIREMENTS.md` write path.
+8. `parentOwnedResponsibilities` must keep digest reads, evidence-scope construction, final milestone name, final phase numbers and paths, confirmation gates, MCP writes, final response, and routing with the parent command. `forbiddenActions` must forbid MCP writes, hand-editing `.blueprint/`, final phase-context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter. `stopConditions` must include missing summary evidence, conflicting carry-forward facts, unresolved transition uncertainty that changes grouping, stale preview receipts, and any case where the parent cannot keep the write path deterministic.
+9. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the roadmapper proposes grouping and ordering only. Do not pass raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes to it.
+10. The typed roadmapper result must stay limited to `roadmapperMode`, `provisionalOrderedProposals`, `coverageNotes`, `blockers`, `warnings`, `assumptions`, `confidence`, and `relativeFirstPhaseRecommendation`. `relativeFirstPhaseRecommendation` is advisory only; the parent still owns the final first phase number and path.
+11. If `blueprint-roadmapper` is disabled, unnecessary, or unavailable, keep parity by filling that same result shape inline before scaffold. Use `roadmapperMode: "skipped-disabled"` when effective config disables subagents, `roadmapperMode: "skipped-unnecessary"` when the carry-forward scope is small enough that inline synthesis is equivalent, `roadmapperMode: "unavailable-fallback"` when the agent is not available at runtime, and `roadmapperMode: "used"` only when the roadmapper was called.
+12. Before scaffold, build a compact `New Milestone First-Phase Handoff Packet` with `mode`, `fromMilestone`, `toMilestone`, `firstPhase`, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
+13. Cap that packet to roughly 12-18 bullets total. Do not write final implementation decisions for unresolved gray areas; use `openForDiscuss` with confidence and consequence instead. Do not infer codebase facts not present in the digest or refreshed repo evidence; label unverified claims as assumptions. Preserve deferred material as `deferredNotDoingNow`, `riskWatchlist`, or `openForDiscuss`; never collapse it into `none`.
+14. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
+15. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
+16. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
+17. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
+18. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
+19. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields and typed roadmapper result to the later scaffold and state-update arguments.
+20. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
+21. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
+22. Treat the handoff packet as starter-only seed material for `/blu-discuss-phase`, not as final authored `phase.context`. It must not widen into a new typed `.blueprint/` write surface or a durable handoff store.
+23. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
+24. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail
 

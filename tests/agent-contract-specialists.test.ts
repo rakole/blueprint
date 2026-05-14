@@ -42,6 +42,15 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
   assert.match(roadmapper, /## Parent-Owned Responsibilities/);
   assert.match(roadmapper, /external-research approval/i);
   assert.match(roadmapper, /`get_internal_docs` self-correction pass/i);
+  assert.match(roadmapper, /## Typed Input Contract/);
+  assert.match(roadmapper, /Roadmapper Packet/i);
+  assert.match(roadmapper, /digestScope/i);
+  assert.match(roadmapper, /carryForwardFacts/i);
+  assert.match(roadmapper, /requirementTransitionHints/i);
+  assert.match(roadmapper, /firstPhasePreview/i);
+  assert.match(roadmapper, /parentOwnedResponsibilities/i);
+  assert.match(roadmapper, /forbiddenActions/i);
+  assert.match(roadmapper, /stopConditions/i);
   assert.match(roadmapper, /## External Research And Self-Correction Rules/);
   assert.match(
     roadmapper,
@@ -63,8 +72,19 @@ test("bootstrap and roadmap specialist agents encode the repaired bounded contra
     roadmapper,
     /return\s+ordered proposals without inventing permanent phase numbers/i
   );
+  assert.match(roadmapper, /provisionalOrderedProposals/i);
+  assert.match(roadmapper, /coverageNotes/i);
+  assert.match(roadmapper, /blockers/i);
+  assert.match(roadmapper, /warnings/i);
+  assert.match(roadmapper, /assumptions/i);
+  assert.match(roadmapper, /confidence/i);
+  assert.match(roadmapper, /relativeFirstPhaseRecommendation/i);
   assert.match(roadmapper, /Do not invent web research, outside reviewers, or manual persistence paths/i);
   assert.match(roadmapper, /browser, web-search, shell-only, or generic helpers/i);
+  assert.match(roadmapper, /Do not call MCP write tools/i);
+  assert.match(roadmapper, /hand-edit `?\.blueprint\/`?/i);
+  assert.match(roadmapper, /final\s+`?phase\.context`?\s+authoring/i);
+  assert.match(roadmapper, /override parent confirmation gates/i);
   assert.match(roadmapper, /Do not rewrite `\.blueprint\/ROADMAP\.md`/);
 });
 

@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 
@@ -84,6 +85,17 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   assert.match(skillFile, /There is no insert-phase subagent path/);
   assert.match(skillFile, /phase\.context/);
   assert.match(skillFile, /jump directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
+});
+
+test("insert-phase runtime and catalog keep optional subagents empty", async () => {
+  const [contract, catalog] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("insert-phase"),
+    blueprintCommandCatalog(),
+  ]);
+
+  assert.deepEqual(contract.spec?.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, []);
+  assert.deepEqual(catalog.commands["insert-phase"].availableOptionalAgents, []);
 });
 
 test("insert-phase runtime contract locks stage mapping, fallback, repair, and completion behavior", async () => {

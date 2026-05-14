@@ -102,7 +102,7 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "roughly 12-18 bullets",
     "confidence and consequence",
     "assumptions",
-    "requirementTransitions",
+    "requirementTransitionHints",
     "starter-seed evidence only",
     "sourceRefs",
     "self-derived",
@@ -138,7 +138,7 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
   ]);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /blueprint_config_get[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation[\s\S]*firstPhaseNumber/
+    /blueprint_config_get[\s\S]*Roadmapper Packet[\s\S]*parentOwnedResponsibilities[\s\S]*roadmapperMode[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation[\s\S]*firstPhaseNumber/
   );
   assert.deepEqual(contract.skillInputs.effective, [
     "commands/blu-new-milestone.toml"
@@ -146,6 +146,10 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
+  );
+  assert.match(
+    (contract.spec?.reads ?? []).join("\n"),
+    /Roadmapper Packet[\s\S]*digestScope[\s\S]*carryForwardFacts[\s\S]*requirementTransitionHints[\s\S]*firstPhasePreview/
   );
 });
 
