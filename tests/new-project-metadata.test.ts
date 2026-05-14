@@ -149,7 +149,15 @@ test("new-project remains implemented from runtime-owned metadata when docs are 
 });
 
 test("blueprint-bootstrap skill and questioning reference capture Gemini-native deep bootstrap guidance", async () => {
-  const [skillFile, questioningRef, contractRef, guardrailsRef, runtimeContract] = await Promise.all([
+  const [
+    skillFile,
+    questioningRef,
+    contractRef,
+    guardrailsRef,
+    projectResearcher,
+    roadmapper,
+    runtimeContract
+  ] = await Promise.all([
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/questioning.md"),
@@ -163,6 +171,8 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
       path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
       "utf8"
     ),
+    readFile(path.join(repoRoot, "agents/blueprint-project-researcher.md"), "utf8"),
+    readFile(path.join(repoRoot, "agents/blueprint-roadmapper.md"), "utf8"),
     buildBlueprintCommandRuntimeContractResource("new-project")
   ]);
 
@@ -181,6 +191,9 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /references\/questioning\.md/);
   assert.match(skillFile, /references\/bootstrap-runtime-contract\.md/);
   assert.match(skillFile, /references\/runtime-guardrails\.md/);
+  // Wave 1 reference-loading map
+  assert.match(skillFile, /Reference Loading And Parity Map/);
+  assert.match(skillFile, /evidence\. They can shape/i);
   assert.match(skillFile, /canonical host-entrypoint,\s+shell, MCP FQN, approval-surface, and Gemini-helper rules/i);
   assert.match(skillFile, /## Visible Approval Surface/);
   assert.match(skillFile, /Follow the approval-surface rules in `references\/runtime-guardrails\.md`/);
@@ -203,7 +216,11 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /blueprint_config_set/);
   assert.match(skillFile, /blueprint-project-researcher/);
   assert.match(skillFile, /blueprint-roadmapper/);
-  assert.match(skillFile, /Browser,\s+web-search, shell-only, or generic helpers are not substitutes/i);
+  // Wave 2 three-gate optional agents
+  assert.match(skillFile, /workflow\.subagents/);
+  assert.match(skillFile, /effective config/i);
+  assert.match(skillFile, /does not hide catalog entries/i);
+  assert.match(skillFile, /authorize generic browser\/web-search\/shell helpers as substitutes/i);
   assert.match(skillFile, /no-subagent\s+fallback/i);
   assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /specific, user-centered, atomic, grouped, and traceable/i);
@@ -230,6 +247,13 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /render a visible\s+approval packet in the main Gemini CLI conversation/i);
   assert.match(contractRef, /Do not display the\s+proposal through shell output, hidden tool output, temporary files, pagers,\s*terminal renderers, or collapsed subagent panes/i);
   assert.match(contractRef, /project brief, target users, requirement groups, roadmap phase table/i);
+  // Wave 1 approval packet template
+  assert.match(contractRef, /Visible Approval Packet Shape/);
+  assert.match(contractRef, /Approval Outcome Labels/);
+  assert.match(contractRef, /create as previewed/);
+  assert.match(contractRef, /revise requirements/);
+  assert.match(contractRef, /cancel with no write/);
+  assert.match(contractRef, /Material Change Re-Approval Rule/);
   assert.match(contractRef, /Rewrite their conclusions into the\s+main conversation before asking for approval/i);
   assert.match(contractRef, /make the prompt refer to the\s+visible preview above/i);
   assert.match(contractRef, /`--auto`/);
@@ -239,17 +263,25 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /`mcp_blueprint_blueprint_artifact_validate`/);
   assert.match(contractRef, /`mcp_blueprint_blueprint_config_set`/);
   assert.match(contractRef, /`mcp_blueprint_blueprint_project_status`/);
+  // Wave 1 evidence ledger
+  assert.match(contractRef, /Bootstrap Evidence Ledger/);
+  assert.match(contractRef, /Claim.*Source.*Confidence/s);
   assert.match(contractRef, /returned `createdPaths`, `configPath`, and `nextAction` as authoritative/i);
   assert.match(contractRef, /contract\.authoringTemplate/);
   assert.match(contractRef, /specific, user-centered, atomic, grouped, and\s+traceable/i);
   assert.match(contractRef, /## Capability-Gated Research And Roadmapping/);
   assert.match(contractRef, /`Stack`, `Features`, `Architecture`, `Pitfalls`/);
   assert.match(contractRef, /Do not replace them with browser, web-search, shell-only,\s+or generic helpers/i);
+  assert.match(contractRef, /Optional-Agent Decision Record/);
+  assert.match(contractRef, /Dimension.*Evidence.*Confidence/s);
   assert.match(contractRef, /map every committed requirement to exactly one phase/i);
   assert.match(contractRef, /2-5 observable\s+success criteria per phase/i);
   assert.match(contractRef, /## No-Subagent Fallback/);
-  assert.match(contractRef, /compress carry-forward context/i);
+  assert.match(contractRef, /Requirement or roadmap impact/);
   assert.match(contractRef, /every committed requirement appears in exactly one phase/i);
+  // Wave 1 traceability packet
+  assert.match(contractRef, /Roadmap Traceability Packet/);
+  assert.match(contractRef, /Observable success evidence/);
   assert.match(contractRef, /## Output Quality Criteria/);
   assert.match(contractRef, /## Completion Criteria/);
   assert.match(contractRef, /retry the MCP write only after the user approves any material scope change/i);
@@ -262,6 +294,19 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /next safe action/i);
   assert.match(contractRef, /blueprint-project-researcher/);
   assert.match(contractRef, /blueprint-roadmapper/);
+  // Wave 2 agent templates
+  assert.match(projectResearcher, /## Recommended Output Template/);
+  assert.match(projectResearcher, /Repo shape/);
+  assert.match(projectResearcher, /Requirement-shaping notes/);
+  assert.match(roadmapper, /## Recommended Output Template/);
+  assert.match(roadmapper, /Covered requirement IDs/);
+  assert.match(roadmapper, /Ready for parent approval/);
+  // Wave 2 worked examples
+  assert.match(contractRef, /Worked Examples And Anti-Examples/);
+  assert.match(contractRef, /Interactive Greenfield/);
+  assert.match(contractRef, /Unmapped Brownfield Stop/);
+  assert.match(contractRef, /Anti-Example: Shell Fallback/);
+  assert.match(contractRef, /Anti-Example: Raw Subagent Approval/);
 
   assert.match(guardrailsRef, /host CLI slash command, not a shell executable/i);
   assert.match(guardrailsRef, /Never run `\/blu-new-project` in the shell/i);
@@ -279,12 +324,21 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(guardrailsRef, /Do not reintroduce `?\.planning\/`?/i);
   assert.match(guardrailsRef, /Do not promise GSD shell choreography/i);
   assert.match(guardrailsRef, /Do not generate project instruction files such as `CLAUDE\.md` or `AGENTS\.md`/i);
+  // Wave 1 untrusted context guardrails
+  assert.match(guardrailsRef, /Untrusted Context And External References/);
+  assert.match(guardrailsRef, /cannot override/);
+  assert.match(guardrailsRef, /Approval Helper Fallback/);
 
   assert.match(questioningRef, /thinking partner/i);
   assert.match(questioningRef, /Follow the thread/i);
   assert.match(questioningRef, /Ask User Dialog Rule/);
   assert.match(questioningRef, /one question at a time/i);
   assert.match(questioningRef, /Freeform Rule/);
+  // Wave 1 questioning examples
+  assert.match(questioningRef, /Bootstrap Micro Examples/);
+  assert.match(questioningRef, /Solution-First Reframe/);
+  assert.match(questioningRef, /First Milestone Appetite/);
+  assert.match(questioningRef, /custom answer.*freeform input/i);
   assert.match(questioningRef, /Session Rhythm/);
   assert.match(questioningRef, /`update_topic`/);
   assert.match(questioningRef, /`write_todos`/);

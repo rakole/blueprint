@@ -18,6 +18,7 @@ type StructuredConfirmationsMode = "auto" | "required";
 type UserCheckpointMode = "off" | "phase" | "plan";
 type TaskTrackerMode = "off" | "auto";
 type ExternalSourcesMode = "off" | "ask" | "auto";
+type SavedDefaultsPolicy = "apply" | "skip";
 
 type BlueprintConfig = {
   version: number;
@@ -101,6 +102,7 @@ type ConfigProvenance = {
   projectPath: string | null;
   defaultsApplied: boolean;
   projectApplied: boolean;
+  defaultsSkipped?: boolean;
 };
 
 type ConfigGetArgs = {
@@ -125,6 +127,7 @@ type ConfigSetProfileArgs = {
 type SeedProjectConfigArgs = {
   cwd?: string;
   defaultsPath?: string;
+  savedDefaultsPolicy?: SavedDefaultsPolicy;
 };
 
 type ConfigGetResult = {
@@ -164,6 +167,11 @@ const USER_CHECKPOINT_MODES = ["off", "phase", "plan"] as const;
 const TASK_TRACKER_MODES = ["off", "auto"] as const;
 const EXTERNAL_SOURCE_MODES = ["off", "ask", "auto"] as const;
 const HARD_CODED_CONFIG_VERSION = 2;
+const PROJECT_SEED_SAVED_DEFAULTS_DENYLIST = [
+  "project_code",
+  "git.default_branch",
+  "git.protected_branches"
+] as const;
 const HOST_DEFAULT_PATCH_REGISTRIES = {
   gemini: "~/.gemini/blueprint/patches",
   tabnine: "~/.tabnine/blueprint/patches"
@@ -322,6 +330,56 @@ function setNestedValue(
   const finalSegment = pathSegments[pathSegments.length - 1];
   validateFieldNameSegment(finalSegment);
   current[finalSegment] = value;
+}
+
+function deleteNestedValue(
+  target: Record<string, unknown>,
+  pathSegments: string[]
+): boolean {
+  const [segment, ...remainingSegments] = pathSegments;
+
+  if (!segment || !(segment in target)) {
+    return false;
+  }
+
+  if (remainingSegments.length === 0) {
+    delete target[segment];
+    return true;
+  }
+
+  const next = target[segment];
+
+  if (!isPlainObject(next)) {
+    return false;
+  }
+
+  const deleted = deleteNestedValue(next, remainingSegments);
+
+  if (deleted && Object.keys(next).length === 0) {
+    delete target[segment];
+  }
+
+  return deleted;
+}
+
+function sanitizeDefaultsForProjectSeed(
+  candidate: Record<string, unknown>
+): { config: Record<string, unknown>; warnings: string[] } {
+  const sanitized = deepCloneObject(candidate);
+  const warnings: string[] = [];
+
+  for (const fullPath of PROJECT_SEED_SAVED_DEFAULTS_DENYLIST) {
+    if (deleteNestedValue(sanitized, fullPath.split("."))) {
+      warnings.push(
+        `Ignored repo-specific saved default ${fullPath} during project bootstrap.`
+      );
+    }
+  }
+
+  return {
+    config: sanitized,
+    warnings
+  };
 }
 
 function coerceLegacyConfigCandidate(
@@ -669,13 +727,20 @@ async function readProjectConfig(
 }
 
 async function readDefaultsConfig(
-  defaultsPath?: string
+  defaultsPath?: string,
+  options: {
+    sanitizeForProjectSeed?: boolean;
+    savedDefaultsPolicy?: SavedDefaultsPolicy;
+  } = {}
 ): Promise<{
   config: BlueprintConfig | null;
   path: string;
   warnings: string[];
+  found: boolean;
+  skipped: boolean;
 }> {
   const resolvedPath = getDefaultUserConfigPath(defaultsPath);
+  const savedDefaultsPolicy = options.savedDefaultsPolicy ?? "apply";
   const raw = await readJsonIfPresent(resolvedPath).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -688,7 +753,19 @@ async function readDefaultsConfig(
     return {
       config: null,
       path: resolvedPath,
-      warnings: []
+      warnings: [],
+      found: false,
+      skipped: false
+    };
+  }
+
+  if (savedDefaultsPolicy === "skip") {
+    return {
+      config: null,
+      path: resolvedPath,
+      warnings: ["Saved defaults were found but skipped for this project by user choice."],
+      found: true,
+      skipped: true
     };
   }
 
@@ -698,32 +775,50 @@ async function readDefaultsConfig(
       path: resolvedPath,
       warnings: [
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
 
   try {
-    const normalized = normalizeConfigLayer(raw, "defaults");
+    const sanitized = options.sanitizeForProjectSeed
+      ? sanitizeDefaultsForProjectSeed(raw)
+      : { config: raw, warnings: [] };
+    const normalized = normalizeConfigLayer(sanitized.config, "defaults");
 
     return {
       config: normalized.config,
       path: resolvedPath,
-      warnings: normalized.warnings
+      warnings: [...sanitized.warnings, ...normalized.warnings],
+      found: true,
+      skipped: false
     };
   } catch {
+    const sanitizedWarnings = options.sanitizeForProjectSeed
+      ? sanitizeDefaultsForProjectSeed(raw).warnings
+      : [];
+
     return {
       config: null,
       path: resolvedPath,
       warnings: [
+        ...sanitizedWarnings,
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
 }
 
 async function composeConfig(
   projectRoot: string,
-  defaultsPath?: string
+  defaultsPath?: string,
+  options: {
+    sanitizeForProjectSeed?: boolean;
+    savedDefaultsPolicy?: SavedDefaultsPolicy;
+  } = {}
 ): Promise<{
   config: BlueprintConfig;
   provenance: ConfigProvenance;
@@ -731,7 +826,7 @@ async function composeConfig(
   sourcePath: string | null;
 }> {
   const warnings: string[] = [];
-  const defaults = await readDefaultsConfig(defaultsPath);
+  const defaults = await readDefaultsConfig(defaultsPath, options);
   const projectConfigRaw = await readProjectConfig(projectRoot);
   let projectConfig: BlueprintConfig | null = null;
   let projectConfigLayer: Record<string, unknown> | null = null;
@@ -783,10 +878,11 @@ async function composeConfig(
         ...(defaults.config ? ["defaults"] : []),
         ...(projectConfig ? ["project"] : [])
       ],
-      defaultsPath: defaults.config ? defaults.path : null,
+      defaultsPath: defaults.config || defaults.skipped ? defaults.path : null,
       projectPath: projectConfig ? toRepoRelativePath(projectRoot, projectPath) : null,
       defaultsApplied: defaults.config !== null,
-      projectApplied: projectConfig !== null
+      projectApplied: projectConfig !== null,
+      defaultsSkipped: defaults.skipped || undefined
     },
     warnings,
     sourcePath: projectConfig
@@ -975,7 +1071,11 @@ export async function seedProjectConfig(
   args: SeedProjectConfigArgs = {}
 ): Promise<SeedProjectConfigResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const composed = await composeConfig(projectRoot, args.defaultsPath);
+  const savedDefaultsPolicy = args.savedDefaultsPolicy ?? "apply";
+  const composed = await composeConfig(projectRoot, args.defaultsPath, {
+    sanitizeForProjectSeed: true,
+    savedDefaultsPolicy
+  });
   const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
   const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
 

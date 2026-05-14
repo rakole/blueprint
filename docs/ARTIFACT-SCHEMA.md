@@ -97,11 +97,24 @@ Purpose:
 - durable traceability target for roadmap phases and verification artifacts
 
 Minimum locked sections:
-- requirements table
-- requirement identifiers such as `REQ-*`
-- traceability or mapping notes
-- acceptance notes
-- deferred items
+- `Requirements Table`
+- `Scope Summary`
+- `Committed V1 Scope`
+- `Traceability Notes`
+- `Open Questions`
+
+Conditional sections:
+- `Deferred Scope` is required only when `Scope Summary` lists deferred
+  requirement IDs.
+- `Out-of-Scope Cuts` is required only when `Scope Summary` lists out-of-scope
+  requirement IDs.
+
+Contract notes:
+- `bootstrap.requirements` is Markdown-contract-backed. Its `requiredHeadings`
+  list covers always-present headings only; deferred and out-of-scope sections
+  are conditionally required when those groups contain items.
+- Requirement identifiers such as `REQ-*` or project-specific durable IDs must
+  remain stable because ROADMAP phases and later phase artifacts cite them.
 
 ### `ROADMAP.md`
 

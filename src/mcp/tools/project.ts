@@ -96,6 +96,7 @@ type CommandCatalogResult = {
 type ProjectInitArgs = {
   cwd?: string;
   defaultsPath?: string;
+  savedDefaultsPolicy?: "apply" | "skip";
   overwrite?: boolean;
   projectName?: string;
   bootstrapMode?: "interactive" | "auto";
@@ -121,6 +122,7 @@ type ProjectInitSuccessResult = {
     projectPath: string | null;
     defaultsApplied: boolean;
     projectApplied: boolean;
+    defaultsSkipped?: boolean;
   };
   brownfield: BootstrapAssessment;
   bootstrapDiagnostics: BootstrapArtifactDiagnostics;
@@ -177,6 +179,7 @@ const commandCatalogInputSchema = {};
 const projectInitInputSchema = {
   cwd: z.string().optional(),
   defaultsPath: z.string().optional(),
+  savedDefaultsPolicy: z.enum(["apply", "skip"]).optional(),
   overwrite: z.boolean().optional(),
   projectName: z.string().optional(),
   bootstrapMode: z.enum(["interactive", "auto"]).optional(),
@@ -1311,7 +1314,8 @@ export async function blueprintProjectInit(
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
-    defaultsPath: args.defaultsPath
+    defaultsPath: args.defaultsPath,
+    savedDefaultsPolicy: args.savedDefaultsPolicy
   });
   const bootstrapContextWarnings =
     overwrite || scaffold.createdFiles.includes(initialPhaseContextPath)

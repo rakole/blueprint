@@ -641,6 +641,45 @@ test("new-project protects partial .blueprint trees from accidental overwrite", 
   );
 });
 
+test("new-project requires explicit overwrite confirmation after initialization", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: buildAutoBootstrapSeed({
+      currentMilestone: "v1-overwrite-gate"
+    })
+  });
+
+  await assert.rejects(
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapSeed: buildAutoBootstrapSeed({
+        currentMilestone: "v2-overwrite-blocked"
+      })
+    }),
+    /explicit overwrite confirmation/i
+  );
+  await assert.rejects(
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapMode: "auto"
+    }),
+    /explicit overwrite confirmation/i
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.currentMilestone, "v1-overwrite-gate");
+  assert.equal(state.state.currentMilestone, "v1-overwrite-gate");
+  assert.match(status.nextAction, /\/blu-discuss-phase 1/);
+});
+
 test("new-project interactive mode rejects missing bootstrapSeed before writes", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -925,6 +964,61 @@ test("new-project rejects duplicate phase refs and generic success criteria befo
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
+test("new-project preflight diagnostics include allowed values and args patches", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-41",
+          scope: "deferred",
+          group: "Traceability",
+          requirement:
+            "Keep preflight repair metadata explicit when the seed has no committed requirement.",
+          status: "Pending",
+          notes: "Repair metadata guard."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Preflight Metadata",
+          objective: "Show structured repair metadata before persistence.",
+          requirementIds: ["PF-41"],
+          successCriteria: [
+            "The invalid result reports allowed values for requirement scope repair.",
+            "The invalid result includes an argsPatch for the proposed seed repair."
+          ]
+        }
+      ]
+    }
+  });
+  const noCommittedDiagnostic = result.diagnostics!.find(
+    (diagnostic) => diagnostic.code === "seed_no_committed_requirements"
+  );
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.ok(noCommittedDiagnostic);
+  assert.deepEqual(noCommittedDiagnostic!.allowedValues, [
+    "committed",
+    "deferred",
+    "out_of_scope"
+  ]);
+  assert.deepEqual(noCommittedDiagnostic!.argsPatch, {
+    bootstrapSeed: { requirements: [{ index: 0, scope: "committed" }] }
+  });
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
 test("new-project rejects bootstrap seed roadmap gaps before writes", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -997,6 +1091,85 @@ test("new-project applies valid saved defaults and reports provenance", async (t
   );
 });
 
+test("new-project can skip valid saved defaults by user choice", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  const defaultsPath = path.join(
+    fixtureRoot,
+    "saved-defaults/valid-defaults.json"
+  );
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed(),
+    defaultsPath,
+    savedDefaultsPolicy: "skip"
+  });
+  const config = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+
+  assert.equal(result.configProvenance.defaultsApplied, false);
+  assert.equal(result.configProvenance.defaultsSkipped, true);
+  assert.equal(result.configProvenance.defaultsPath, defaultsPath);
+  assert.equal(config.mode, "interactive");
+  assert.equal(
+    (config.parallelization as Record<string, unknown>).max_concurrent_agents,
+    3
+  );
+  assert.match(
+    result.warnings.join("\n"),
+    /Saved defaults were found but skipped for this project by user choice/
+  );
+});
+
+test("new-project ignores repo-specific saved defaults during project bootstrap", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "blueprint-defaults-"));
+  const defaultsPath = path.join(tempRoot, "defaults.json");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+  await writeFile(
+    defaultsPath,
+    JSON.stringify(
+      {
+        mode: "auto",
+        project_code: "OTHER",
+        git: {
+          default_branch: "trunk",
+          protected_branches: ["main"]
+        }
+      },
+      null,
+      2
+    )
+  );
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed(),
+    defaultsPath
+  });
+  const config = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+  const gitConfig = config.git as Record<string, unknown>;
+
+  assert.equal(result.configProvenance.defaultsApplied, true);
+  assert.equal(config.mode, "auto");
+  assert.equal(config.project_code, null);
+  assert.equal(gitConfig.base_branch, null);
+  assert.match(result.warnings.join("\n"), /project_code/);
+  assert.match(result.warnings.join("\n"), /git\.default_branch/);
+  assert.match(result.warnings.join("\n"), /git\.protected_branches/);
+});
+
 test("new-project falls back to hardcoded defaults when saved defaults are malformed", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   const defaultsPath = path.join(
@@ -1020,6 +1193,80 @@ test("new-project falls back to hardcoded defaults when saved defaults are malfo
   assert.equal(result.configProvenance.defaultsApplied, false);
   assert.equal(config.mode, "interactive");
   assert.match(result.warnings.join("\n"), /falling back to hardcoded defaults/i);
+});
+
+test("new-project supports host workflow preference patch after skipped defaults", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  const defaultsPath = path.join(
+    fixtureRoot,
+    "saved-defaults/valid-defaults.json"
+  );
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initResult = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed(),
+    defaultsPath,
+    savedDefaultsPolicy: "skip"
+  });
+  const configPatch = await blueprintConfigSet({
+    cwd: repoPath,
+    scope: "project",
+    patch: {
+      mode: "auto",
+      granularity: "detailed",
+      planning: {
+        commit_docs: false
+      },
+      parallelization: {
+        enabled: false,
+        plan_level: false,
+        task_level: false,
+        max_concurrent_agents: 1
+      },
+      workflow: {
+        subagents: false,
+        verifier: false,
+        code_review: false,
+        ui_phase: false
+      },
+      ux: {
+        progress_mode: "stage",
+        structured_confirmations: "required"
+      },
+      orchestration: {
+        task_tracker: "auto"
+      },
+      research: {
+        external_sources: "ask"
+      }
+    }
+  });
+  const effectiveConfig = await blueprintConfigGet({ cwd: repoPath, scope: "effective" });
+
+  assert.equal(initResult.configProvenance.defaultsSkipped, true);
+  assert.deepEqual(configPatch.updatedKeys.sort(), [
+    "granularity",
+    "mode",
+    "orchestration.task_tracker",
+    "parallelization.enabled",
+    "parallelization.max_concurrent_agents",
+    "parallelization.plan_level",
+    "planning.commit_docs",
+    "research.external_sources",
+    "ux.progress_mode",
+    "ux.structured_confirmations",
+    "workflow.code_review",
+    "workflow.subagents",
+    "workflow.ui_phase",
+    "workflow.verifier"
+  ]);
+  assert.equal(effectiveConfig.config.mode, "auto");
+  assert.equal(effectiveConfig.config.workflow.subagents, false);
+  assert.equal(effectiveConfig.config.parallelization.max_concurrent_agents, 1);
 });
 
 test("project status reports initialization and a clear next action after bootstrap", async (t) => {
@@ -1120,6 +1367,17 @@ test("new-project accepts an explicit bootstrap seed and writes traceable artifa
   assert.equal(status.currentPhase, "1");
 });
 
+test("bootstrap requirements contract treats deferred and out-of-scope sections as conditional", async () => {
+  const contractResult = await blueprintArtifactContractRead({
+    artifactId: "bootstrap.requirements"
+  });
+  const requiredHeadings = contractResult.contract.requiredHeadings;
+
+  assert.equal(requiredHeadings.includes("Deferred Scope"), false);
+  assert.equal(requiredHeadings.includes("Out-of-Scope Cuts"), false);
+  assert.match(contractResult.contract.notes.join("\n"), /conditionally required/i);
+});
+
 test("new-project accepts committed-only bootstrap seeds and keeps post-init validation green", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
@@ -1175,6 +1433,44 @@ test("new-project accepts committed-only bootstrap seeds and keeps post-init val
   assert.deepEqual(validation.issues, []);
   assert.equal(status.initialized, true);
   assert.match(status.nextAction, /\/blu-discuss-phase 1/);
+});
+
+test("new-project validation reports corrupted conditional requirements sections", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed()
+  });
+
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const requirementsDoc = await readFile(requirementsPath, "utf8");
+  await writeFile(
+    requirementsPath,
+    requirementsDoc.replace(
+      /\n## Deferred Scope\n[\s\S]*?\n## Out-of-Scope Cuts\n/,
+      "\n## Out-of-Scope Cuts\n"
+    )
+  );
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const deferredDiagnostic = validation.diagnostics.find(
+    (diagnostic) => diagnostic.section === "Deferred Scope"
+  );
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    validation.issues.join("\n"),
+    /Deferred Scope must include grouped requirement entries/i
+  );
+  assert.ok(deferredDiagnostic);
+  assert.equal(deferredDiagnostic!.artifactId, "bootstrap.requirements");
+  assert.equal(deferredDiagnostic!.path, ".blueprint/REQUIREMENTS.md");
+  assert.match(deferredDiagnostic!.repair, /Re-run \/blu-new-project/i);
 });
 
 test("new-project bootstrap seed validation rejects non-durable requirement identifiers", () => {
@@ -1270,6 +1566,42 @@ test("new-project hard-stops on unmapped brownfield before any writes", async (t
   assert.equal(status.bootstrap.brownfieldDetected, true);
   assert.equal(status.bootstrap.codebaseMapped, false);
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
+test("new-project hard-stops on mapping-incomplete codebase bundles before bootstrap writes", async (t) => {
+  const repoPath = await createRepoFromFixture("brownfield-repo");
+  const codebaseRoot = path.join(repoPath, ".blueprint/codebase");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(codebaseRoot, { recursive: true });
+  await writeFile(
+    path.join(codebaseRoot, "STACK.md"),
+    "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "utf8"
+  );
+
+  await assert.rejects(
+    blueprintProjectInit({
+      cwd: repoPath,
+      bootstrapSeed: buildAutoBootstrapSeed({
+        currentMilestone: "v1-mapping-incomplete"
+      })
+    }),
+    /\/blu-map-codebase/i
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.status, "mapping-incomplete");
+  assert.equal(status.bootstrap.repoShape, "brownfield");
+  assert.equal(status.bootstrap.codebaseMapped, false);
+  assert.deepEqual(status.health.missingArtifacts, []);
+  assert.match(status.nextAction, /\/blu-map-codebase/);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/PROJECT.md")), false);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/REQUIREMENTS.md")), false);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/ROADMAP.md")), false);
 });
 
 test("new-project bootstraps mapped-only brownfield and preserves codebase docs", async (t) => {

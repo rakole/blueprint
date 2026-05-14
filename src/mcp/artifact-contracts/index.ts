@@ -3751,8 +3751,6 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Requirements Table",
       "Scope Summary",
       "Committed V1 Scope",
-      "Deferred Scope",
-      "Out-of-Scope Cuts",
       "Traceability Notes",
       "Open Questions"
     ],
@@ -3767,7 +3765,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Requirements bootstrap should keep requirement IDs durable, grouped, and traceable into the roadmap.",
-      "Validation expects a populated requirements table plus substantive committed, deferred, and out-of-scope sections."
+      "Validation expects a populated requirements table plus a substantive committed scope section. `Deferred Scope` and `Out-of-Scope Cuts` are conditionally required only when those groups contain items."
     ],
     renderScaffoldTemplate: renderBootstrapRequirementsTemplate,
     renderAuthoringTemplate: renderBootstrapRequirementsTemplate

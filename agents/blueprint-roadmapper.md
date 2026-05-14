@@ -104,6 +104,18 @@ prior research.
 - Call out when brownfield uncertainty or missing discovery evidence makes the
   roadmap only provisional.
 
+## Recommended Output Template
+```text
+Phase: <title>
+  Objective: <one-line>
+  Covered requirement IDs: <ID list>
+  Dependency notes: <prior phase or external dependency>
+  Success criteria: 1. <observable criterion>
+  Confidence: <high | medium | low>
+(repeat per phase)
+Coverage summary: Mapped count: <N>; Total committed requirements: <M>; Duplicates: <IDs or none>; Orphans: <IDs or none>; Deferred items: <IDs or none>; Blockers: <issues or none>; Warnings: <issues or none>; Ready for parent approval: <yes/no - reason if no>
+```
+
 ## Boundaries
 
 - Keep implementation order aligned with `docs/IMPLEMENTATION-ORDER.md`.

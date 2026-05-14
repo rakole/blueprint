@@ -20,7 +20,8 @@ import {
   CODEBASE_ARTIFACTS,
   blueprintArtifactList,
   blueprintArtifactReportWrite,
-  blueprintArtifactValidate
+  blueprintArtifactValidate,
+  blueprintCodebaseArtifactWrite
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
@@ -178,6 +179,42 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
   }
 
   return repoPath;
+}
+
+async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
+  const authoredBundle: Record<
+    | "codebase.stack"
+    | "codebase.architecture"
+    | "codebase.structure"
+    | "codebase.conventions"
+    | "codebase.testing"
+    | "codebase.integrations"
+    | "codebase.concerns",
+    string
+  > = {
+    "codebase.stack": "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "codebase.architecture":
+      "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "codebase.structure":
+      "# Structure\n\nBlueprint runtime code lives in src/, with tests under tests/.\n",
+    "codebase.conventions":
+      "# Conventions\n\nBlueprint keeps runtime tool names explicit and persistence inside MCP.\n",
+    "codebase.testing":
+      "# Testing\n\nThe repo uses node:test via tsx and fixture-backed integration coverage.\n",
+    "codebase.integrations":
+      "# Integrations\n\nThe runtime integrates through @modelcontextprotocol/sdk and related command surfaces.\n",
+    "codebase.concerns":
+      "# Concerns\n\nPlaceholder codebase docs should not be treated as authoritative mapped context.\n"
+  };
+
+  for (const [artifactId, content] of Object.entries(authoredBundle)) {
+    const result = await blueprintCodebaseArtifactWrite({
+      cwd: repoPath,
+      artifactId: artifactId as keyof typeof authoredBundle,
+      content
+    });
+    assert.notEqual(result.status, "invalid", JSON.stringify(result));
+  }
 }
 
 async function createExecutionReadyRepo(): Promise<string> {
@@ -1470,6 +1507,34 @@ test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
 });
 
+test("read-path tools keep scaffold-only repos eligible for new-project bootstrap", async (t) => {
+  const repoPath = await createGitRepo("blueprint-scaffold-only-status-");
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "scaffold-only-status", private: true }, null, 2),
+    "utf8"
+  );
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.initialized, false);
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.equal(status.bootstrap.codebaseMapped, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-map-codebase/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
 test("read-path tools route unmapped brownfield repos to map-codebase before bootstrap", async (t) => {
   const repoPath = await createGitRepo("blueprint-brownfield-status-");
   await mkdir(path.join(repoPath, "src"), { recursive: true });
@@ -1525,6 +1590,40 @@ test("read-path tools route interrupted empty brownfield Blueprint roots to map-
   assert.match(state.derivedStatus.nextAction, /\/blu-map-codebase/);
   assert.deepEqual(artifacts.missing.sort(), CODEBASE_ARTIFACTS_SORTED);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools keep mapped-only brownfield repos on new-project instead of repair flows", async (t) => {
+  const repoPath = await createGitRepo("blueprint-mapped-only-status-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "mapped-only-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeMappedCodebaseBundle(repoPath);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "mapped-only");
+  assert.equal(status.initialized, false);
+  assert.equal(status.bootstrap.repoShape, "brownfield");
+  assert.equal(status.bootstrap.codebaseMapped, true);
+  assert.deepEqual(status.health.missingArtifacts, []);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-map-codebase/);
+  assert.doesNotMatch(status.nextAction, /\/blu-health/);
+  assert.equal(state.derivedStatus.projectStatus, "mapped-only");
+  assert.equal(state.derivedStatus.currentPhase, null);
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.equal(validation.valid, true);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-health/);
 });
 
 test("read-path tools distinguish partial Blueprint repos and expose repair blockers", async (t) => {
