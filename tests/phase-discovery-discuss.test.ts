@@ -299,6 +299,16 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /referenced runtime contract as the source of truth/i);
   assert.match(commandFile, /substantive user-authored artifacts/i);
   assert.match(commandFile, /host-supported structured choices/i);
+  assert.match(
+    commandFile,
+    /just scaffolded by `\/blu-new-project`, `\/blu-add-phase`, `\/blu-insert-phase`[\s\S]*starter handoff[\s\S]*seed evidence/i
+  );
+  assert.match(commandFile, /source refs, deferred risks, and open gray areas/i);
+  assert.match(commandFile, /Ask only for missing, contradictory, uncertain, or high-impact details/i);
+  assert.match(
+    commandFile,
+    /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text verbatim/i
+  );
   assert.match(commandFile, /Do not infer a direct `\/blu-plan-phase` handoff/i);
   assert.match(commandFile, /derivedStatus\.nextAction/);
   assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
@@ -321,6 +331,13 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, new RegExp(sharedProfilePath));
   assert.match(skillFile, /contract\.authoringTemplate.*schema authority/i);
   assert.match(skillFile, /derivedStatus\.nextAction/);
+  assert.match(skillFile, /starter handoff inside the starter context/i);
+  assert.match(skillFile, /source refs, deferred risks, and open gray areas/i);
+  assert.match(skillFile, /missing, contradictory, uncertain, or high-impact details/i);
+  assert.match(
+    skillFile,
+    /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text/i
+  );
   assert.match(skillFile, /Command-Scoped Required MCP Tools/i);
   const discussToolSection = skillFile.match(
     /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-research-phase`)/
@@ -339,6 +356,20 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /Do not infer `\/blu-plan-phase`/i);
   assert.match(discussReference, /`derivedStatus\.nextAction`/);
   assert.match(discussReference, /exactly `- none`/i);
+  assert.match(discussReference, /Starter Handoff Intake/);
+  assert.match(
+    discussReference,
+    /selected phase was just scaffolded by `\/blu-new-project`,[\s\S]*`\/blu-add-phase`, or `\/blu-insert-phase`/i
+  );
+  assert.match(discussReference, /source refs into `canonicalReferences`/i);
+  assert.match(discussReference, /deferred risks or consequence-if-wrong notes/i);
+  assert.match(discussReference, /open gray areas into `openQuestions`/i);
+  assert.match(discussReference, /missing, contradictory, uncertain, or high-impact details/i);
+  assert.match(discussReference, /starter packet heading/i);
+  assert.match(discussReference, /scaffold footer/i);
+  assert.match(discussReference, /placeholder labels/i);
+  assert.match(discussReference, /unsupported claims/i);
+  assert.match(discussReference, /raw handoff text verbatim/i);
   assert.match(
     discussReference,
     /Delete the checkpoint only after[\s\S]*context write[\s\S]*optional discussion-log[\s\S]*synced state update[\s\S]*state load/i
@@ -406,6 +437,9 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /compress carry-forward context/i);
   assert.match(discussReference, /Assumptions Mode/);
   assert.match(discussReference, /consequence if the assumption is wrong/i);
+  assert.match(discussReference, /Either confirm it with the user/i);
+  assert.match(discussReference, /evidence-backed `implementationDecisions` entry/i);
+  assert.match(discussReference, /explicit in `Open Questions` or `Deferred Ideas`/i);
   assert.match(discussReference, /Artifact Authoring/);
   assert.match(discussReference, /Validation And Repair/);
   assert.match(discussReference, /status: "invalid"/);
@@ -426,6 +460,23 @@ test("discuss runtime contract defines selected phase read packet", () => {
     "found: false"
   ]);
   assert.match(contract, /found:\s*false[\s\S]*stop/i);
+});
+
+test("discuss runtime contract treats starter handoff as seed evidence only", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Starter Handoff Intake",
+    "seed evidence",
+    "source refs",
+    "deferred risks",
+    "open gray areas"
+  ]);
+  assert.match(contract, /do not preserve the starter packet heading/i);
+  assert.match(contract, /scaffold footer/i);
+  assert.match(contract, /placeholder labels/i);
+  assert.match(contract, /unsupported claims/i);
+  assert.match(contract, /raw handoff text verbatim/i);
 });
 
 test("discuss runtime contract requires artifact status classification", () => {
@@ -684,6 +735,72 @@ test("discuss-phase context write preserves the exact Open Questions none sentin
 
   assert.match(saved, /## Open Questions\n\n- none\n/);
   assert.doesNotMatch(saved, /None that block this phase|no open questions currently/i);
+});
+
+test("discuss-phase context write replaces starter handoff packet with carried-forward model content", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contextPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+  );
+  await writeFile(
+    contextPath,
+    `# Phase 03: Phase Discovery - Context
+
+## Starter Handoff Packet
+- Source refs: .blueprint/ROADMAP.md, .blueprint/REQUIREMENTS.md
+- Deferred risks: UI applicability is still unclear until the discovery boundary is confirmed.
+- Open gray areas: whether research should run before fresh questions.
+
+---
+*Generated by \`blueprint_artifact_scaffold\`*
+`,
+    "utf8"
+  );
+
+  const model = validPhaseContextModel({
+    projectBrief: "Starter handoff should be consumed as seed evidence, not preserved verbatim.",
+    openQuestions: ["Should research run before fresh questions for this phase?"],
+    decision: "Replace starter handoff packet text with canonical phase.context sections."
+  }) as Record<string, unknown>;
+  model.deferredIdeas = [
+    "Keep the UI applicability risk explicit until /blu-ui-phase confirms whether a real UI contract is needed."
+  ];
+  model.canonicalReferences = [
+    {
+      source: ".blueprint/ROADMAP.md",
+      relevance: "Provides the selected phase objective and routing context."
+    },
+    {
+      source: ".blueprint/REQUIREMENTS.md",
+      relevance: "Provides the requirement grounding carried forward from the starter handoff."
+    }
+  ];
+
+  const writeResult = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model,
+    overwrite: true
+  });
+
+  const saved = await readFile(contextPath, "utf8");
+
+  assert.equal(writeResult.written, true);
+  assert.match(saved, /\.blueprint\/ROADMAP\.md/);
+  assert.match(saved, /\.blueprint\/REQUIREMENTS\.md/);
+  assert.match(saved, /Should research run before fresh questions/i);
+  assert.match(saved, /UI applicability risk explicit/i);
+  assert.doesNotMatch(saved, /^## Starter Handoff Packet$/im);
+  assert.doesNotMatch(saved, /^- Source refs:/im);
+  assert.doesNotMatch(saved, /^- Deferred risks:/im);
+  assert.doesNotMatch(saved, /^- Open gray areas:/im);
+  assert.doesNotMatch(saved, /Generated by `blueprint_artifact_scaffold`/i);
 });
 
 test("discuss-phase artifact flow seeds placeholders, persists real decisions, and clears checkpoints", async (t) => {
@@ -1064,6 +1181,43 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
   assert.equal(retained.found, true);
   assert.deepEqual(retained.checkpoint?.remainingAreas, ["Plan inventory warning"]);
+});
+
+test("discuss-phase context validation blocks dropped deferred risks from starter handoff", () => {
+  const validation = validatePhaseArtifactContent(
+    buildValidDiscussContext("- none")
+      .replace(
+        "## Dependencies\n- Prior phase artifacts: .blueprint/phases/03-phase-discovery/03-CONTEXT.md when it already exists.\n- External constraints: Discuss-phase must not weaken downstream planning detail requirements.\n- Required follow-up reads: src/mcp/artifact-contracts/index.ts and src/mcp/tools/artifacts.ts.",
+        "## Dependencies\n- Prior phase artifacts: .blueprint/phases/03-phase-discovery/03-CONTEXT.md when it already exists.\n- External constraints: Starter handoff deferred risks still include UI applicability uncertainty and dependency review consequence-if-wrong notes.\n- Required follow-up reads: src/mcp/artifact-contracts/index.ts and src/mcp/tools/artifacts.ts."
+      )
+      .replace(
+        "## Deferred Ideas\n- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.\n- Ideas to revisit after this phase: Evaluate whether model-backed phase.context writes should also enforce the same sentinel semantics.",
+        "## Deferred Ideas\n- Scope creep or later follow-up: Revisit naming polish after the current phase is stable.\n- Ideas to revisit after this phase: Audit additional renderer wording only after the routing gate is settled."
+      ),
+    "context"
+  );
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    validation.issues.join("\n"),
+    /deferred risks or consequence-if-wrong notes[\s\S]*Open Questions or Deferred Ideas/i
+  );
+});
+
+test("discuss-phase context validation blocks verbatim starter handoff packet copy", () => {
+  const validation = validatePhaseArtifactContent(
+    buildValidDiscussContext("- none").replace(
+      "## Specific Ideas\n- Specific idea 1: Keep the authoring template explicit so the model does not invent filler prose.\n- Specific idea 2: Preserve exact sentinel behavior through validation and repair loops.\n- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.",
+      "## Specific Ideas\n- Starter Handoff Packet\n- Source refs: .blueprint/ROADMAP.md, .blueprint/REQUIREMENTS.md\n- Deferred risks: UI applicability remains unresolved.\n- Open gray areas: research-before-questions ordering."
+    ),
+    "context"
+  );
+
+  assert.equal(validation.valid, false);
+  assert.match(
+    validation.issues.join("\n"),
+    /raw starter or handoff packet headings\/labels/i
+  );
 });
 
 test("discuss-phase write keeps overwrite explicit for authored invalid artifacts", async (t) => {

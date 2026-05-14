@@ -8,7 +8,8 @@ import path from "node:path";
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import {
   blueprintArtifactScaffold,
-  blueprintArtifactValidate
+  blueprintArtifactValidate,
+  type BootstrapSeed
 } from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhasePlanAuthoringContext,
@@ -18,6 +19,7 @@ import {
   blueprintRoadmapRead,
   blueprintRoadmapRemovePhase
 } from "../src/mcp/tools/phase.js";
+import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -75,7 +77,21 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Repair roadmap drift deterministically. | Pending | Phase 2.1 coverage. |
+| RQ-03 | Close validation parity gaps. | Pending | Phase 2.2 coverage. |
+| RQ-04 | Deliver the notifications flow. | Pending | Reserved for the next whole-number phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Fixture
@@ -257,6 +273,112 @@ async function createInsertRoadmapRepo(): Promise<string> {
   );
 
   return repoPath;
+}
+
+type NewMilestonePhaseFixture = {
+  phaseNumber: string;
+  phaseName: string;
+  phaseDir: string;
+  completed?: boolean;
+  summary?: string;
+  goal?: string;
+  requirements?: string[];
+};
+
+async function createNewMilestoneTransitionRepo(options: {
+  milestone?: string;
+  currentPhase?: string;
+  phases: NewMilestonePhaseFixture[];
+}): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-new-milestone-tools-");
+
+  for (const phase of options.phases) {
+    await mkdir(path.join(repoPath, phase.phaseDir), {
+      recursive: true
+    });
+  }
+
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Milestone Transition Fixture
+
+## Milestone
+
+- Active milestone: ${options.milestone ?? "v2"}
+
+## Phases
+
+${options.phases
+  .map(
+    (phase) =>
+      `- [${phase.completed ? "x" : " "}] **Phase ${phase.phaseNumber}: ${phase.phaseName}**${phase.summary ? ` - ${phase.summary}` : ""}`
+  )
+  .join("\n")}
+
+## Phase Details
+
+${options.phases
+  .map(
+    (phase) => `### Phase ${phase.phaseNumber}: ${phase.phaseName}
+**Goal**: ${phase.goal ?? `${phase.phaseName} remains traceable.`}
+**Requirements**: ${(phase.requirements ?? []).join(", ") || "none"}
+`
+  )
+  .join("\n")}
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: ${options.milestone ?? "v2"}
+- Current phase: ${options.currentPhase ?? options.phases.at(-1)?.phaseNumber ?? "1"}
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+function newMilestoneScaffoldRequest(firstContextPath: string): string[] {
+  return [
+    ".blueprint/PROJECT.md",
+    ".blueprint/REQUIREMENTS.md",
+    ".blueprint/ROADMAP.md",
+    ".blueprint/phases/",
+    firstContextPath
+  ];
+}
+
+function newMilestoneBootstrapSeed(phase: string, title = "Next Milestone"): BootstrapSeed {
+  return {
+    currentMilestone: "v3",
+    roadmapPhases: [
+      {
+        phase,
+        title,
+        objective: "Carry forward the next milestone starter scope.",
+        requirementIds: ["RQ-01"],
+        successCriteria: ["The first carried-forward phase has a starter context scaffold."]
+      }
+    ]
+  };
 }
 
 async function createContractRoadmapRepo(options: {
@@ -484,7 +606,19 @@ async function createMalformedRoadmapRepo(): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Malformed Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Add recovery guidance coverage. | Pending | Reserved for the next whole-number phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Malformed Fixture
@@ -636,6 +770,66 @@ test("blueprint_roadmap_add_phase rejects plain appends without requirement IDs 
   );
 });
 
+test("blueprint_roadmap_add_phase rejects undeclared requirement IDs before any mutation", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
+
+  await assert.rejects(
+    blueprintRoadmapAddPhase({
+      cwd: repoPath,
+      description: "Notifications Flow",
+      ...addPhaseRoadmapDetails,
+      expectedPhaseNumber: "3",
+      requirementIds: ["RQ-04", "RQ-MISSING"]
+    }),
+    /Cannot add Phase 3 because requirement IDs are not declared in \.blueprint\/REQUIREMENTS\.md Requirements Table: RQ-MISSING/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    false
+  );
+});
+
+test("blueprint_roadmap_add_phase accepts declared requirement IDs and materializes the phase", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Notifications Flow",
+    ...addPhaseRoadmapDetails,
+    expectedPhaseNumber: "3",
+    requirementIds: ["RQ-04"]
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.equal(result.phaseDir, ".blueprint/phases/03-notifications-flow");
+  assert.equal(result.contextPath, ".blueprint/phases/03-notifications-flow/03-CONTEXT.md");
+  assert.equal(result.requirementValidationStatus, "declared");
+  assert.equal(result.createdPhaseDir, true);
+  assert.equal(result.idempotencyStatus, "created");
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    true
+  );
+  assert.match(roadmapBody, /- \[ \] Phase 3: Notifications Flow \(Requirements: RQ-04\)/);
+});
+
 test("blueprint_roadmap_add_phase with requirement IDs keeps the mutated ROADMAP artifact-valid", async (t) => {
   const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
   t.after(async () => {
@@ -668,6 +862,35 @@ test("blueprint_roadmap_add_phase with requirement IDs keeps the mutated ROADMAP
   assert.deepEqual(validation.issues, []);
 });
 
+test("blueprint_roadmap_add_phase keeps audit-backed repair appends intact without plain requirementIds", async (t) => {
+  const repoPath = await createAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria:
+        "Repair the affected requirements and document the closure path.; Milestone audit traceability can be verified from the reassigned requirements.",
+      repairRequirementIds: ["GAP-001", "GAP-002"]
+    }
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.equal(result.contextPath, ".blueprint/phases/03-audit-gap-closure/03-CONTEXT.md");
+  assert.equal(result.requirementValidationStatus, "traceability-repaired");
+  assert.equal(result.createdPhaseDir, true);
+  assert.equal(result.idempotencyStatus, "created");
+  assert.match(roadmapBody, /Phase 3: Audit Gap Closure/);
+  assert.match(requirementsBody, /Reassigned to Phase 3 \(Audit Gap Closure\)/);
+});
+
 test("blueprint_roadmap_add_phase keeps audit-backed ROADMAP appends artifact-valid", async (t) => {
   const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
   t.after(async () => {
@@ -686,7 +909,6 @@ test("blueprint_roadmap_add_phase keeps audit-backed ROADMAP appends artifact-va
       repairRequirementIds: ["RQ-05"]
     }
   });
-
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
 
   assert.equal(validation.valid, true, validation.issues.join("\n"));
@@ -706,7 +928,7 @@ test("add-phase scaffold path uses returned phase metadata as authoritative cont
     expectedPhaseNumber: "3",
     requirementIds: ["RQ-04"]
   });
-  const contextPath = `${result.phaseDir}/${result.phasePrefix}-CONTEXT.md`;
+  const contextPath = result.contextPath;
   const scaffold = await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [contextPath]
@@ -747,6 +969,272 @@ test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale
     await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
     false
   );
+});
+
+test("new-milestone scaffolding uses the first whole-number phase after decimal history", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const firstContextPath = ".blueprint/phases/03-next-milestone/03-CONTEXT.md";
+  const scaffold = await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: newMilestoneScaffoldRequest(firstContextPath),
+    bootstrapSeed: newMilestoneBootstrapSeed("3")
+  });
+
+  assert.ok(scaffold.createdFiles.includes(firstContextPath));
+  assert.equal(scaffold.highestBasePhaseNumber, "2");
+  assert.equal(scaffold.firstPhaseNumber, "3");
+  assert.equal(scaffold.firstPhasePrefix, "03");
+  assert.equal(scaffold.firstPhaseDir, ".blueprint/phases/03-next-milestone");
+  assert.equal(scaffold.firstContextPath, firstContextPath);
+  assert.deepEqual(scaffold.deletedPhaseDirectories, []);
+  assert.deepEqual(scaffold.renamedPhaseDirectories, []);
+  assert.equal(await pathExists(path.join(repoPath, firstContextPath)), true);
+});
+
+test("new-milestone scaffolding preserves numbering gaps when computing the first whole-number phase", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2",
+        phaseName: "Core Runtime",
+        phaseDir: ".blueprint/phases/02-core-runtime"
+      },
+      {
+        phaseNumber: "4",
+        phaseName: "Release Hardening",
+        phaseDir: ".blueprint/phases/04-release-hardening"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const firstContextPath = ".blueprint/phases/05-next-milestone/05-CONTEXT.md";
+  const scaffold = await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: newMilestoneScaffoldRequest(firstContextPath),
+    bootstrapSeed: newMilestoneBootstrapSeed("5")
+  });
+
+  assert.ok(scaffold.createdFiles.includes(firstContextPath));
+  assert.equal(scaffold.highestBasePhaseNumber, "4");
+  assert.equal(scaffold.firstPhaseNumber, "5");
+  assert.equal(scaffold.firstPhasePrefix, "05");
+  assert.equal(scaffold.firstPhaseDir, ".blueprint/phases/05-next-milestone");
+  assert.equal(scaffold.firstContextPath, firstContextPath);
+  assert.equal(await pathExists(path.join(repoPath, firstContextPath)), true);
+});
+
+test("new-milestone scaffolding rejects stale first-phase previews without writes", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const requestedContextPath = ".blueprint/phases/04-stale-preview/04-CONTEXT.md";
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(requestedContextPath),
+        bootstrapSeed: newMilestoneBootstrapSeed("4", "Stale Preview")
+      }),
+    /live next whole phase 3|stale first phase|first whole-number phase/i
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(await pathExists(path.join(repoPath, requestedContextPath)), false);
+});
+
+test("new-milestone scaffolding rejects conflicting first-phase directory drift", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-prior-milestone-seed"), {
+    recursive: true
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(
+          ".blueprint/phases/03-next-milestone/03-CONTEXT.md"
+        ),
+        bootstrapSeed: newMilestoneBootstrapSeed("3")
+      }),
+    /conflicting directory|Phase 3 already maps|Phase 3 already has/i
+  );
+});
+
+test("new-milestone scaffolding rejects ambiguous first-phase directory drift", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-alpha-seed"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-beta-seed"), {
+    recursive: true
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(
+          ".blueprint/phases/03-next-milestone/03-CONTEXT.md"
+        ),
+        bootstrapSeed: newMilestoneBootstrapSeed("3")
+      }),
+    /ambiguous|multiple matching directories/i
+  );
+});
+
+test("blueprint_state_update rejects missing first context paths before routing new-milestone to discuss-phase", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    currentPhase: "2.2",
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      },
+      {
+        phaseNumber: "3",
+        phaseName: "Next Milestone",
+        phaseDir: ".blueprint/phases/03-next-milestone"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const beforeState = await readFile(statePath, "utf8");
+
+  await assert.rejects(
+    () =>
+      blueprintStateUpdate({
+        cwd: repoPath,
+        base: "synced",
+        patch: {
+          activeCommand: "/blu-new-milestone",
+          currentPhase: "3",
+          lastUpdated: "2026-04-12T00:00:00.000Z"
+        }
+      }),
+    /missing exact context path|missing context path|03-CONTEXT\.md|\/blu-discuss-phase 3/i
+  );
+
+  assert.equal(await readFile(statePath, "utf8"), beforeState);
 });
 
 test("blueprint_roadmap_add_phase does not mutate ROADMAP when the phase path is not a directory", async (t) => {
@@ -870,6 +1358,10 @@ test("blueprint_roadmap_add_phase reuses an existing audit-backed phase on retry
 
   assert.equal(second.phaseNumber, "3");
   assert.equal(second.phaseDir, ".blueprint/phases/03-audit-gap-closure");
+  assert.equal(second.contextPath, ".blueprint/phases/03-audit-gap-closure/03-CONTEXT.md");
+  assert.equal(second.requirementValidationStatus, "traceability-repaired");
+  assert.equal(second.createdPhaseDir, true);
+  assert.equal(second.idempotencyStatus, "reused-existing-phase");
   assert.match(second.warnings.join("\n"), /Reused existing audit-backed Phase 3/);
   assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1", "2.2", "3"]);
   assert.equal(
@@ -997,6 +1489,9 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   assert.equal(result.phaseName, "API Stabilization");
   assert.equal(result.slug, "api-stabilization");
   assert.equal(result.phaseDir, ".blueprint/phases/02.1-api-stabilization");
+  assert.equal(result.contextPath, ".blueprint/phases/02.1-api-stabilization/02.1-CONTEXT.md");
+  assert.equal(result.requirementMappingStatus, "updated");
+  assert.equal(result.createdPhaseDir, true);
   assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2", "2.1", "4"]);
   assert.equal(after.phases[2]?.phaseDir, ".blueprint/phases/02.1-api-stabilization");
   assert.equal(after.phases[3]?.phaseNumber, "4");
@@ -1440,6 +1935,12 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
 
   await assert.rejects(
     () =>
@@ -1449,6 +1950,14 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
         description: "Emergency follow-up"
       }),
     /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-emergency-follow-up")),
+    false
   );
 });
 

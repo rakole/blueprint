@@ -1,7 +1,11 @@
 export type NumericInput = string | number;
+export type WholePhaseNumberInput = NumericInput | {
+    phaseNumber: NumericInput;
+};
 export declare function normalizeBlueprintInput(value: NumericInput): string;
 export declare function normalizePhaseNumber(value: NumericInput): string;
 export declare function basePhaseNumber(value: NumericInput): string;
+export declare function computeNextWholePhaseNumber(roadmapPhases: readonly WholePhaseNumberInput[]): string;
 export declare function comparePhaseNumbers(left: NumericInput, right: NumericInput): number;
 export declare function formatPhasePrefix(value: NumericInput): string;
 export declare function extractPhaseNumberToken(value: NumericInput): string | null;

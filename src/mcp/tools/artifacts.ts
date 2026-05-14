@@ -29,6 +29,12 @@ import {
 } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
 import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
+import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import {
+  computeNextWholePhaseNumber,
+  normalizePhaseNumber as normalizePhaseNumberToken,
+  slugifyPhaseName
+} from "./phase-numbering.js";
 import {
   blueprintPhaseExecutionTargets,
   blueprintPhasePlanIndex,
@@ -226,6 +232,13 @@ type ArtifactScaffoldResult = {
   createdFiles: string[];
   reusedFiles: string[];
   warnings: string[];
+  highestBasePhaseNumber: string | null;
+  firstPhaseNumber: string | null;
+  firstPhasePrefix: string | null;
+  firstPhaseDir: string | null;
+  firstContextPath: string | null;
+  deletedPhaseDirectories: string[];
+  renamedPhaseDirectories: string[];
 };
 
 type ArtifactListResult = {
@@ -5819,6 +5832,55 @@ function hasConcreteDeferredIdeas(section: string): boolean {
     .some((line) => countMeaningfulWords(line) >= 3);
 }
 
+function hasConcreteOpenQuestions(section: string): boolean {
+  return markdownSectionLines(section)
+    .filter(
+      (line) =>
+        !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line)
+    )
+    .some((line) => countMeaningfulWords(line) >= 3);
+}
+
+function hasCarryForwardRiskSignal(section: string): boolean {
+  return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
+}
+
+function hasOpenGrayAreaSignal(section: string): boolean {
+  return /\b(?:open gray areas?|open items for discuss-phase|open risks and dependency questions)\b/i.test(
+    section
+  );
+}
+
+function hasConcreteRiskCarryForward(section: string): boolean {
+  return markdownSectionLines(section)
+    .filter((line) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line))
+    .some((line) =>
+      /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
+        line
+      )
+    );
+}
+
+const RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
+  /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,
+  /^downstream handoff packet\b:?/i,
+  /^source refs?\b:?/i,
+  /^(?:deferred|open)\s+risks?\b:?/i,
+  /^open (?:gray areas?|items for discuss-phase|risks and dependency questions)\b:?/i,
+  /^(?:researchBrief|uiBrief|planBrief|planInventory|routingGates)\b:?/i
+] as const;
+
+function containsRawHandoffPacketLabel(content: string): boolean {
+  return content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim())
+    .filter((line) => line.length > 0)
+    .some((line) =>
+      RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line))
+    );
+}
+
 function validateDiscussPhaseContextAntiPatterns(content: string): {
   issues: string[];
   warnings: string[];
@@ -5827,18 +5889,24 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
   const warnings: string[] = [];
   const canonicalReferences = extractMarkdownSection(content, "Canonical References");
   const deferredIdeas = extractMarkdownSection(content, "Deferred Ideas");
+  const openQuestions = extractMarkdownSection(content, "Open Questions");
   const deferredSourceSections = [
     "Discovery Grounding",
     "Implementation Decisions",
     "Specific Ideas",
     "Existing Code Insights",
-    "Dependencies",
-    "Open Questions"
+    "Dependencies"
   ]
     .map((heading) => extractMarkdownSection(content, heading))
     .join("\n");
 
   issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+
+  if (containsRawHandoffPacketLabel(content)) {
+    issues.push(
+      "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections."
+    );
+  }
 
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
     issues.push(
@@ -5849,6 +5917,22 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
     issues.push(
       "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
+    );
+  }
+
+  if (
+    hasCarryForwardRiskSignal(deferredSourceSections) &&
+    !hasConcreteRiskCarryForward(deferredIdeas) &&
+    !hasConcreteRiskCarryForward(openQuestions)
+  ) {
+    issues.push(
+      "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas."
+    );
+  }
+
+  if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
+    issues.push(
+      "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions."
     );
   }
 
@@ -8780,6 +8864,132 @@ function inferProjectName(projectRoot: string, requestedName?: string): string {
   return path.basename(projectRoot);
 }
 
+type CarryForwardBootstrapReceipt = Pick<
+  ArtifactScaffoldResult,
+  | "highestBasePhaseNumber"
+  | "firstPhaseNumber"
+  | "firstPhasePrefix"
+  | "firstPhaseDir"
+  | "firstContextPath"
+  | "deletedPhaseDirectories"
+  | "renamedPhaseDirectories"
+>;
+
+function emptyCarryForwardBootstrapReceipt(): CarryForwardBootstrapReceipt {
+  return {
+    highestBasePhaseNumber: null,
+    firstPhaseNumber: null,
+    firstPhasePrefix: null,
+    firstPhaseDir: null,
+    firstContextPath: null,
+    deletedPhaseDirectories: [],
+    renamedPhaseDirectories: []
+  };
+}
+
+function buildScaffoldPhaseDirectoryPath(phaseNumber: string, phaseTitle: string): string {
+  const phasePrefix = formatPhasePrefix(phaseNumber);
+
+  return `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slugifyPhaseName(phaseTitle.trim())}`;
+}
+
+async function prepareCarryForwardBootstrapReceipt(args: {
+  projectRoot: string;
+  artifacts: string[];
+  bootstrapSeed?: BootstrapSeed;
+  overwrite: boolean;
+}): Promise<CarryForwardBootstrapReceipt> {
+  const receipt = emptyCarryForwardBootstrapReceipt();
+  const requestedContextArtifact =
+    args.artifacts
+      .map((artifact) => parsePhaseArtifactRequest(artifact))
+      .find((artifact): artifact is PhaseArtifactRequest => artifact?.kind === "CONTEXT") ?? null;
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (!args.bootstrapSeed || requestedContextArtifact === null || !(await pathExists(roadmapPath))) {
+    return receipt;
+  }
+
+  const roadmap = parseRoadmapDocument(await fs.readFile(roadmapPath, "utf8"));
+  const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+  const firstPhasePrefix = formatPhasePrefix(firstPhaseNumber);
+  const firstPhaseTitle =
+    args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
+  const firstPhaseDir = buildScaffoldPhaseDirectoryPath(firstPhaseNumber, firstPhaseTitle);
+  const firstContextPath = `${firstPhaseDir}/${firstPhasePrefix}-CONTEXT.md`;
+  const previewedFirstPhase = args.bootstrapSeed.roadmapPhases?.[0]?.phase?.trim()
+    ? normalizePhaseNumberToken(args.bootstrapSeed.roadmapPhases[0].phase)
+    : normalizePhaseNumberToken(requestedContextArtifact.phasePrefix);
+  const highestBasePhaseNumber = String(Number.parseInt(firstPhaseNumber, 10) - 1);
+
+  receipt.highestBasePhaseNumber = highestBasePhaseNumber;
+  receipt.firstPhaseNumber = firstPhaseNumber;
+  receipt.firstPhasePrefix = firstPhasePrefix;
+  receipt.firstPhaseDir = firstPhaseDir;
+  receipt.firstContextPath = firstContextPath;
+
+  if (previewedFirstPhase !== firstPhaseNumber) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: bootstrapSeed first phase ${previewedFirstPhase} no longer matches the live next whole phase ${firstPhaseNumber}. Re-run /blu-new-milestone after re-reading ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
+  if (requestedContextArtifact.artifact !== firstContextPath) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: expected first context path ${firstContextPath} but received ${requestedContextArtifact.artifact}. Re-run /blu-new-milestone before committing starter docs.`
+    );
+  }
+
+  const phaseRoot = resolveBlueprintPath(args.projectRoot, BLUEPRINT_PHASES_PATH);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
+    const directoryPhaseNumber = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+
+    return (
+      directoryPhaseNumber !== undefined &&
+      normalizePhaseNumber(directoryPhaseNumber) === firstPhaseNumber
+    );
+  });
+  const computedPhaseDirName = path.basename(firstPhaseDir);
+
+  if (matchingPhaseDirs.length > 1) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs
+        .map((phaseDir) => `${BLUEPRINT_PHASES_PATH}/${phaseDir}`)
+        .join(", ")}.`
+    );
+  }
+
+  if (matchingPhaseDirs.length === 1 && matchingPhaseDirs[0] !== computedPhaseDirName) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} already maps to ${BLUEPRINT_PHASES_PATH}/${matchingPhaseDirs[0]}, not ${firstPhaseDir}. Historical phase directories cannot be renamed in place.`
+    );
+  }
+
+  const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
+
+  if (await pathExists(firstContextAbsolutePath)) {
+    const existingContext = await fs.readFile(firstContextAbsolutePath, "utf8");
+
+    if (
+      !args.overwrite &&
+      !isScaffoldGeneratedArtifact(existingContext) &&
+      !isBootstrapStarterContext(existingContext)
+    ) {
+      throw new Error(
+        `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
+      );
+    }
+  }
+
+  if (matchingPhaseDirs.length === 1 && !args.overwrite) {
+    throw new Error(
+      `Carry-forward scaffold would overwrite existing Phase ${firstPhaseNumber} starter artifacts at ${firstPhaseDir}. Re-run with explicit overwrite approval before writing starter docs.`
+    );
+  }
+
+  return receipt;
+}
+
 export async function blueprintArtifactScaffold(
   args: ArtifactScaffoldArgs = {}
 ): Promise<ArtifactScaffoldResult> {
@@ -8797,6 +9007,12 @@ export async function blueprintArtifactScaffold(
   const createdFiles: string[] = [];
   const reusedFiles: string[] = [];
   const warnings: string[] = [];
+  const carryForwardReceipt = await prepareCarryForwardBootstrapReceipt({
+    projectRoot,
+    artifacts,
+    bootstrapSeed: args.bootstrapSeed,
+    overwrite
+  });
   const renderContext: BootstrapRenderContext = {
     projectName,
     bootstrapSeed: args.bootstrapSeed,
@@ -8864,7 +9080,8 @@ export async function blueprintArtifactScaffold(
   return {
     createdFiles,
     reusedFiles,
-    warnings
+    warnings,
+    ...carryForwardReceipt
   };
 }
 

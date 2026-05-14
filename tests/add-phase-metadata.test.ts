@@ -27,15 +27,44 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /exact next integer phase number/i);
-  assert.match(commandFile, /preview that computed phase number together with the description/i);
+  assert.match(commandFile, /Before any mutation, show a preview packet that includes `expectedPhaseNumber`, description/i);
+  assert.match(commandFile, /source warnings/i);
+  assert.match(commandFile, /scaffold target/i);
+  assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /compact starter handoff block/i);
+  assert.match(commandFile, /returned phase number and title/i);
+  assert.match(commandFile, /declared requirement IDs/i);
+  assert.match(commandFile, /confirmed objective/i);
+  assert.match(commandFile, /success criteria/i);
+  assert.match(commandFile, /source refs/i);
+  assert.match(commandFile, /open items for discuss-phase/i);
+  assert.match(commandFile, /Do not author final `XX-CONTEXT\.md`/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /expectedPhaseNumber/);
+  assert.match(commandFile, /Treat the approved `phase-number-confirmation` gate as a named in-flight receipt/);
+  assert.match(commandFile, /bind the approved preview packet fields to the later `mcp_blueprint_blueprint_roadmap_add_phase` arguments/i);
+  assert.match(commandFile, /If the user declines, stop without writing/);
+  assert.match(commandFile, /point to `\/blu-progress`/);
   assert.match(commandFile, /do not mutate anything until the computed next phase number has been previewed and confirmed through `ask_user`/i);
   assert.match(commandFile, /phase-number-confirmation/);
   assert.match(commandFile, /stale-phase-number/);
+  assert.match(commandFile, /successCriteriaCount/);
+  assert.match(commandFile, /contextScaffoldPath/);
+  assert.match(commandFile, /stateRoute/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /completion receipt/i);
+  assert.match(commandFile, /Do not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(commandFile, /mutation not attempted/i);
+  assert.match(commandFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(commandFile, /scaffold success plus state-update failure/i);
+  assert.match(commandFile, /same preview plus the same returned files/i);
+  assert.match(commandFile, /changed params or files/i);
+  assert.match(commandFile, /undeclared `requirementIds`/i);
+  assert.match(commandFile, /missing returned metadata/i);
   assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /if the tool rejects because the live next phase changed/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
+  assert.match(commandFile, /prefer `\/blu-discuss-phase <phase>` over `\/blu-plan-phase` or `\/blu-execute-phase` shortcuts/);
 });
 
 test("add-phase runtime-owned metadata and skill inputs are docless at runtime", async () => {
@@ -75,6 +104,8 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     "blueprint_state_update"
   ]);
   assert.deepEqual(contract.spec?.optionalSubagents, []);
+  assert.deepEqual(contract.runtimeReference?.optionalAgents, []);
+  assert.deepEqual(entry.availableOptionalAgents, []);
   assert.match(contract.spec?.purpose ?? "", /Append a new whole-number phase/i);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
@@ -102,18 +133,79 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     skillFile,
     /Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter/
   );
+  assert.match(skillFile, /durable requirement ID declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(skillFile, /auditBackedDetails\.repairRequirementIds/);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
+  assert.match(skillFile, /compact starter handoff/i);
+  assert.match(skillFile, /returned phase number and title/i);
+  assert.match(skillFile, /open items for discuss-phase/i);
+  assert.match(skillFile, /successCriteriaCount/);
+  assert.match(skillFile, /contextScaffoldPath/);
+  assert.match(skillFile, /stateRoute/);
+  assert.match(skillFile, /safeRetry/);
+  assert.match(skillFile, /\.blueprint\/receipts/);
+  assert.match(skillFile, /stale `expectedPhaseNumber`/);
+  assert.match(skillFile, /undeclared `requirementIds`/);
+  assert.match(skillFile, /missing returned metadata/i);
   assert.match(skillFile, /There is no add-phase subagent path/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(addPhaseContract, /## Stage Mapping/);
   assert.match(addPhaseContract, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
   assert.match(addPhaseContract, /next integer after the highest base phase number/i);
   assert.match(addPhaseContract, /Decimal suffixes are ignored/i);
+  assert.match(addPhaseContract, /validate `requirementIds` against declared rows\s*in `\.blueprint\/REQUIREMENTS\.md` before mutation/);
+  assert.match(addPhaseContract, /auditBackedDetails\.repairRequirementIds/);
   assert.match(addPhaseContract, /expectedPhaseNumber/);
   assert.match(addPhaseContract, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(addPhaseContract, /Scaffold text is starter material only/i);
+  assert.match(addPhaseContract, /compact starter handoff block/i);
+  assert.match(addPhaseContract, /source refs/i);
+  assert.match(
+    addPhaseContract,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or\s*`\/blu-execute-phase`/i
+  );
   assert.match(addPhaseContract, /Do not use browser, web-search-only, shell-only, or generic agents/i);
   assert.match(addPhaseContract, /\/blu-discuss-phase <phase>/);
+});
+
+test("add-phase docs keep plain append requirement validation distinct from audit-backed repair", async () => {
+  const addPhaseDoc = await fs.readFile(
+    path.join(repoRoot, "docs/commands/add-phase.md"),
+    "utf8"
+  );
+
+  assert.match(
+    addPhaseDoc,
+    /Plain append validation must confirm those `requirementIds` are already declared in `\.blueprint\/REQUIREMENTS\.md` before mutation/
+  );
+  assert.match(addPhaseDoc, /auditBackedDetails\.repairRequirementIds/);
+  assert.match(
+    addPhaseDoc,
+    /Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `\.blueprint\/REQUIREMENTS\.md`/
+  );
+  assert.match(addPhaseDoc, /Safe default: stop without writing/);
+  assert.match(addPhaseDoc, /compact starter handoff block/i);
+  assert.match(addPhaseDoc, /source refs/i);
+  assert.match(addPhaseDoc, /open items for discuss-phase/i);
+  assert.match(addPhaseDoc, /named in-flight receipt/i);
+  assert.match(addPhaseDoc, /command response receipt only/i);
+  assert.match(addPhaseDoc, /successCriteriaCount/);
+  assert.match(addPhaseDoc, /contextScaffoldPath/);
+  assert.match(addPhaseDoc, /stateRoute/);
+  assert.match(addPhaseDoc, /safeRetry/);
+  assert.match(addPhaseDoc, /Mutation not attempted/);
+  assert.match(addPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(addPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(addPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(addPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(addPhaseDoc, /Stale `expectedPhaseNumber`/);
+  assert.match(addPhaseDoc, /Undeclared `requirementIds`/);
+  assert.match(addPhaseDoc, /Missing returned metadata/);
+  assert.match(addPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
+  assert.match(
+    addPhaseDoc,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or `\/blu-execute-phase`/i
+  );
 });
 
 test("add-phase remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {

@@ -129,6 +129,13 @@ type ArtifactScaffoldResult = {
     createdFiles: string[];
     reusedFiles: string[];
     warnings: string[];
+    highestBasePhaseNumber: string | null;
+    firstPhaseNumber: string | null;
+    firstPhasePrefix: string | null;
+    firstPhaseDir: string | null;
+    firstContextPath: string | null;
+    deletedPhaseDirectories: string[];
+    renamedPhaseDirectories: string[];
 };
 type ArtifactListResult = {
     artifacts: {

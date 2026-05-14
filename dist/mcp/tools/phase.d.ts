@@ -225,17 +225,24 @@ type ResolvedPhaseLocation = {
     phaseName: string;
     phaseDir: string;
 };
+type RoadmapAddPhaseRequirementValidationStatus = "declared" | "traceability-repaired";
+type RoadmapAddPhaseIdempotencyStatus = "created" | "reused-existing-phase";
 type RoadmapAddPhaseResult = {
     phaseNumber: string;
     phasePrefix: string;
     phaseName: string;
     slug: string;
     phaseDir: string;
+    contextPath: string;
     roadmapPath: string;
     milestone: string | null;
+    requirementValidationStatus: RoadmapAddPhaseRequirementValidationStatus;
+    createdPhaseDir: boolean;
+    idempotencyStatus: RoadmapAddPhaseIdempotencyStatus;
     written: boolean;
     warnings: string[];
 };
+type RoadmapInsertPhaseRequirementMappingStatus = "updated" | "unchanged";
 type RoadmapInsertPhaseResult = {
     afterPhaseNumber: string;
     phaseNumber: string;
@@ -243,8 +250,11 @@ type RoadmapInsertPhaseResult = {
     phaseName: string;
     slug: string;
     phaseDir: string;
+    contextPath: string;
     roadmapPath: string;
     milestone: string | null;
+    requirementMappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
+    createdPhaseDir: boolean;
     written: boolean;
     warnings: string[];
 };
