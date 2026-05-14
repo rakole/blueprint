@@ -3860,6 +3860,14 @@ function extractTaskSubsection(taskBlock: string, subsectionHeading: string): st
   return match?.[1]?.trim() ?? "";
 }
 
+function isPlaceholderOnlyTaskHeading(headingText: string): boolean {
+  const title = headingText.replace(/^Task\s+\d+(?::\s*)?/i, "").trim();
+
+  return /^(?:todo|to do|tbd|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
+    title
+  );
+}
+
 function isBlankOrPlaceholderPlanLine(line: string): boolean {
   return (
     line.length === 0 ||
@@ -4202,7 +4210,7 @@ function validatePlanTaskBlock(taskBlock: string, taskNumber: number): string[] 
   if (
     headingText.length === 0 ||
     /^Task\s+\d+(?::\s*)?$/i.test(headingText) ||
-    /(?:replace with|todo|tbd|placeholder|coming soon|insert here|fill in here)/i.test(headingText)
+    isPlaceholderOnlyTaskHeading(headingText)
   ) {
     issues.push(`Task ${taskNumber} must use a concrete heading.`);
   }
