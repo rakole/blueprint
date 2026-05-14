@@ -40,7 +40,7 @@
 - Requirement mappings such as `none yet`, placeholder text, blank values, or IDs not declared in `.blueprint/REQUIREMENTS.md` are invalid for inserted phases.
 - Confirmed `requirementIds` must also not already be mapped to another roadmap phase. Inserted phases need their own durable requirement grounding before mutation.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
-- Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation.
+- Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation as a structured packet that also names the dependency-review note, scaffold target, and `Safe default: stop without writing`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
 
 
@@ -78,6 +78,7 @@
 
 ## Phase Insertion Contract
 
+- Treat `phase-insert-confirmation` as a named in-flight receipt that binds the approved preview packet fields to the later `blueprint_roadmap_insert_phase` arguments: integer `after`, description, `goal`, `successCriteria`, and `requirementIds`.
 - Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`.
 - Validate those `requirementIds` before mutation: they must be declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
@@ -124,7 +125,8 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, the no-renumbering acknowledgment, the dependency-review note, the scaffold target, and `Safe default: stop without writing` before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
 
 
 ## Edge Cases
@@ -152,6 +154,7 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Inserts the next decimal after the requested integer phase group and does not renumber later phases.
+- Uses a named confirmation receipt that binds the approved preview packet to the later integer anchor, `requirementIds`, `goal`, and `successCriteria` arguments.
 - Creates the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` scaffold.
 - Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
 - Writes concrete goal and success criteria at ROADMAP mutation time so `/blu-discuss-phase` is not expected to backfill placeholders.
@@ -160,6 +163,7 @@
 - Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
+- Stops without writing when the user declines the preview confirmation.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

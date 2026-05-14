@@ -1546,6 +1546,12 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
 
   await assert.rejects(
     () =>
@@ -1555,6 +1561,14 @@ test("blueprint_roadmap_insert_phase rejects decimal insertion targets", async (
         description: "Emergency follow-up"
       }),
     /not a valid Blueprint integer phase number|cannot be used as an insertion target/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/02.1-emergency-follow-up")),
+    false
   );
 });
 

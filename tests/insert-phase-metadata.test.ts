@@ -30,9 +30,16 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /roadmapEvolutionNotes/);
   assert.match(commandFile, /confirmed integer phase number/);
+  assert.match(commandFile, /next decimal candidate/i);
+  assert.match(commandFile, /dependency-review note/i);
+  assert.match(commandFile, /Safe default: stop without writing/);
   assert.match(commandFile, /confirmed durable IDs from `\.blueprint\/REQUIREMENTS\.md` in `requirementIds`/);
   assert.match(commandFile, /Do not accept `none yet`, placeholder text, blank values, or undeclared requirement mappings/);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /Treat the approved `phase-insert-confirmation` gate as a named in-flight receipt/);
+  assert.match(commandFile, /bind the approved preview packet fields to the later `mcp_blueprint_blueprint_roadmap_insert_phase` arguments/i);
+  assert.match(commandFile, /If the user declines, stop without writing/);
+  assert.match(commandFile, /point to `\/blu-progress`/);
   assert.match(commandFile, /phase-insert-confirmation/);
   assert.match(commandFile, /invalid-insertion-anchor/);
   assert.match(commandFile, /conflicting-decimal-directory/);
@@ -150,6 +157,9 @@ test("insert-phase docs keep requirement traceability in the declared write surf
     insertPhaseDoc,
     /must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase/
   );
+  assert.match(insertPhaseDoc, /Safe default: stop without writing/);
+  assert.match(insertPhaseDoc, /named in-flight receipt/i);
+  assert.match(insertPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
 });
 
 test("roadmap-admin agent contracts retain insert-phase output-quality expectations", async () => {

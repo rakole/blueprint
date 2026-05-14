@@ -34,9 +34,18 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /carry-forward as the default/i);
   assert.match(commandFile, /ask_user/);
+  assert.match(commandFile, /source milestone summary path/i);
+  assert.match(commandFile, /inputsUsed/);
+  assert.match(commandFile, /affected starter paths/i);
+  assert.match(commandFile, /overwrite risk/i);
+  assert.match(commandFile, /Safe default: stop without writing/);
   assert.match(commandFile, /missing-milestone-summary/);
   assert.match(commandFile, /carry-forward-confirmation/);
   assert.match(commandFile, /starter-doc-overwrite-confirmation/);
+  assert.match(commandFile, /named in-flight receipt/i);
+  assert.match(commandFile, /bind the approved preview packet fields to the later scaffold and state-update arguments/i);
+  assert.match(commandFile, /If the user declines either confirmation gate, stop without writing/i);
+  assert.match(commandFile, /point to `\/blu-progress`/);
   assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
   assert.match(
     commandFile,
@@ -122,4 +131,7 @@ test("new-milestone docs keep requirementTransitions as starter-seed evidence on
   assert.match(newMilestoneDoc, /sourceRefs/);
   assert.match(newMilestoneDoc, /rationale/);
   assert.match(newMilestoneDoc, /uncertainty explicitly/i);
+  assert.match(newMilestoneDoc, /Safe default: stop without writing/);
+  assert.match(newMilestoneDoc, /named in-flight receipt/i);
+  assert.match(newMilestoneDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
 });

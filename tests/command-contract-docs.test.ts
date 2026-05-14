@@ -1194,6 +1194,8 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
     /Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number\./
   );
   assert.match(addPhaseDoc, /expectedPhaseNumber/);
+  assert.match(addPhaseDoc, /Safe default: stop without writing/);
+  assert.match(addPhaseDoc, /named in-flight receipt/i);
   assert.match(addPhaseDoc, /Refuses to append when the confirmed next phase number is stale\./);
   assert.match(
     addPhaseDoc,
@@ -1223,6 +1225,8 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
   assert.match(insertPhaseDoc, /blueprint_state_update/);
   assert.match(insertPhaseDoc, /existing integer phase/i);
   assert.match(insertPhaseDoc, /next decimal/i);
+  assert.match(insertPhaseDoc, /Safe default: stop without writing/);
+  assert.match(insertPhaseDoc, /named in-flight receipt/i);
   assert.match(insertPhaseDoc, /do not renumber later phases/i);
   assert.match(insertPhaseDoc, /\/blu-discuss-phase <decimal>/);
   for (const snippet of [
@@ -1361,6 +1365,8 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /sourceRefs/);
   assert.match(newMilestoneDoc, /self-derived/);
   assert.match(newMilestoneDoc, /uncertain/);
+  assert.match(newMilestoneDoc, /Safe default: stop without writing/);
+  assert.match(newMilestoneDoc, /named in-flight receipt/i);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);
@@ -1369,6 +1375,7 @@ test("new-milestone command docs keep the carry-forward default and phase contin
     "Shared phase-admin spine",
     "inputsUsed",
     "starter-doc-overwrite-confirmation",
+    "stop without writing",
     "starter material only",
     "STATE.md` only after scaffold succeeds",
     "planned-only shortcuts",

@@ -27,9 +27,16 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_scaffold/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
   assert.match(commandFile, /exact next integer phase number/i);
-  assert.match(commandFile, /preview that computed phase number together with the description/i);
+  assert.match(commandFile, /Before any mutation, show a preview packet that includes `expectedPhaseNumber`, description/i);
+  assert.match(commandFile, /source warnings/i);
+  assert.match(commandFile, /scaffold target/i);
+  assert.match(commandFile, /Safe default: stop without writing/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /expectedPhaseNumber/);
+  assert.match(commandFile, /Treat the approved `phase-number-confirmation` gate as a named in-flight receipt/);
+  assert.match(commandFile, /bind the approved preview packet fields to the later `mcp_blueprint_blueprint_roadmap_add_phase` arguments/i);
+  assert.match(commandFile, /If the user declines, stop without writing/);
+  assert.match(commandFile, /point to `\/blu-progress`/);
   assert.match(commandFile, /do not mutate anything until the computed next phase number has been previewed and confirmed through `ask_user`/i);
   assert.match(commandFile, /phase-number-confirmation/);
   assert.match(commandFile, /stale-phase-number/);
@@ -135,6 +142,9 @@ test("add-phase docs keep plain append requirement validation distinct from audi
     addPhaseDoc,
     /Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `\.blueprint\/REQUIREMENTS\.md`/
   );
+  assert.match(addPhaseDoc, /Safe default: stop without writing/);
+  assert.match(addPhaseDoc, /named in-flight receipt/i);
+  assert.match(addPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
 });
 
 test("add-phase remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {

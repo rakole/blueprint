@@ -36,7 +36,7 @@
 - A matching `milestone-summary-<milestone>.md` report should already exist in `.blueprint/reports/`.
 - Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
 - Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
-- Preview the exact carry-forward evidence scope before mutation: resolved milestone, digest `inputsUsed`, any warnings, the starter-doc overwrite set, the proposed new milestone name, and the first whole-number phase target that will receive the starter context scaffold.
+- Preview the exact carry-forward evidence scope before mutation as a structured packet: resolved milestone summary path, digest `inputsUsed`, carry-forward or reset mode, any warnings, the proposed new milestone name, the first whole-number phase target that will receive the starter context scaffold, the affected starter-doc paths, overwrite risk, and `Safe default: stop without writing`.
 - Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
 
 
@@ -81,6 +81,7 @@
 
 - Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any summary-derived seed text to the returned `authoringTemplate` when the contract provides one.
 - Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
+- Treat the confirmation review as a named in-flight receipt. `carry-forward-confirmation` binds the approved summary path, `inputsUsed`, mode, proposed milestone name, first phase preview, and starter-doc scope to the later scaffold and state-update arguments. `starter-doc-overwrite-confirmation` binds the approved overwrite set and overwrite risk to the later scaffold call.
 - Build `requirementTransitions` only as starter-seed evidence for the next milestone. The carry-forward packet may include rows with `decision` values `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`, but those rows do not become a competing `.blueprint/REQUIREMENTS.md` write path on their own.
 - Each `requirementTransitions` row must cite `sourceRefs` plus `rationale`. If the disposition is inferred, partial, or not yet proven, label that uncertainty explicitly instead of hiding it inside a confident-looking transition row.
 - Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
@@ -127,8 +128,10 @@
 
 - Carry-forward is the default path. Require explicit confirmation only when the user wants a fresh reset instead.
 - Show the exact evidence scope, first-phase target, and overwrite set in the confirmation preview before any mutation.
+- The preview packet should name the summary source path, `inputsUsed`, carry-forward or reset mode, proposed milestone name, first phase preview, affected starter paths, overwrite risk, and `Safe default: stop without writing`.
 - Require explicit overwrite confirmation before replacing the existing milestone starter docs.
 - Prefer Gemini CLI `ask_user` for the reset-vs-carry-forward and overwrite confirmation gates.
+- If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
 
 
 ## Edge Cases
@@ -153,11 +156,13 @@
 
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
 - Uses the saved `milestone-summary-<milestone>.md` report as the durable carry-forward input for the next milestone start.
+- Uses named confirmation receipts that bind the approved preview packet to later scaffold and state-update arguments instead of relying on prose-only approval.
 - Treats `requirementTransitions` as starter-seed evidence only: rows carry `sourceRefs`, `rationale`, and explicit uncertainty labeling when needed, but they do not replace the canonical `.blueprint/REQUIREMENTS.md` authoring path.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
 - Scaffolds the first new phase context artifact so `/blu-discuss-phase <first phase>` has a valid phase directory to target.
 - Returns `/blu-discuss-phase <first phase>` as the next safe implemented follow-up.
+- Stops without writing when the user declines the preview or overwrite confirmation.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
