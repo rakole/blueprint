@@ -136,6 +136,7 @@ Contract notes:
 - `bootstrap.roadmap` has a structured `modelContract` and JSON Schema. The model is the canonical contract for active milestone, bootstrap readiness, committed/deferred/out-of-scope requirement coverage, phase status vocabulary (`planned`, `in_progress`, `completed`, `done`), dependency phase numbers, decimal inserted phases, durable requirement IDs, optional phase detail blocks, and 2-5 success criteria per phase. Whole-number bootstrap phases should carry at least one durable requirement ID; inserted decimal phases may temporarily use empty requirement grounding until discovery assigns it.
 - `requiredHeadings` remains the always-present Markdown surface; `modelContract.renderedHeadings` additionally includes optional `Phase Details` so schema-first authoring and roadmap-admin mutations share the same rendered ROADMAP vocabulary.
 - `new-milestone` may rewrite `ROADMAP.md` for the next milestone, but it should preserve historical phase artifacts and continue numbering at the next whole-number phase instead of renumbering prior milestones.
+- During `new-milestone` starter scaffolding, `blueprint_artifact_scaffold` re-reads `ROADMAP.md` before writing, computes the next whole-number phase from the highest historical base phase, verifies the previewed first context path, and blocks stale previews, conflicting first-phase directories, or ambiguous first-phase directories without deleting or renaming historical phase directories. The scaffold receipt reports `deletedPhaseDirectories: []` and `renamedPhaseDirectories: []`.
 
 ### `STATE.md`
 
@@ -146,6 +147,7 @@ Purpose:
 - blockers
 - next suggested action
 - durable roadmap evolution notes when an urgent decimal phase is inserted after an integer anchor
+- phase-scoped next actions only after the matching current-phase context path exists
 
 Minimum locked fields:
 - project status

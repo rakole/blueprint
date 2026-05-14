@@ -49,6 +49,7 @@ import { evaluatePhaseQualityGates } from "./quality-gates.js";
 import {
   basePhaseNumber,
   comparePhaseNumbers,
+  computeNextWholePhaseNumber,
   extractExactPhaseNumberToken,
   extractPhaseNumberToken,
   formatPhasePrefix,
@@ -1469,17 +1470,7 @@ export function buildBlueprintPhaseDirectoryPath(
 }
 
 function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
-  const basePhaseNumbers = phases
-    .map((phase) => phase.phaseNumber)
-    .map((phaseNumber) => phaseNumber.split(".")[0] ?? phaseNumber)
-    .map((phaseNumber) => Number.parseInt(phaseNumber, 10))
-    .filter((phaseNumber) => !Number.isNaN(phaseNumber));
-
-  const maxIntegerPhase = basePhaseNumbers.length === 0
-    ? 0
-    : Math.max(...basePhaseNumbers);
-
-  return String(maxIntegerPhase + 1);
+  return computeNextWholePhaseNumber(phases);
 }
 
 function normalizedPhaseText(value: string | null | undefined): string {
@@ -5645,7 +5636,7 @@ export async function blueprintRoadmapAddPhase(
       );
     }
 
-    const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
+    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
 
     if (
       args.expectedPhaseNumber &&

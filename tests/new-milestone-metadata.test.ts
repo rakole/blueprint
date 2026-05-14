@@ -53,6 +53,11 @@ test("new-milestone manifest references carry-forward seed generation and discus
   );
   assert.match(commandFile, /next integer after the highest base phase number/i);
   assert.match(commandFile, /Preserve historical phase directories/i);
+  assert.match(commandFile, /highestBasePhaseNumber/);
+  assert.match(commandFile, /firstPhaseNumber/);
+  assert.match(commandFile, /firstContextPath/);
+  assert.match(commandFile, /deletedPhaseDirectories/);
+  assert.match(commandFile, /renamedPhaseDirectories/);
   assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
   assert.match(commandFile, /\/blu-discuss-phase <first phase>/);
 });
@@ -77,6 +82,9 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "uncertain",
     "Preserve historical phase directories",
     "next whole-number phase",
+    "firstPhaseNumber",
+    "firstContextPath",
+    "renamedPhaseDirectories",
     "/blu-discuss-phase <first phase>",
     "ask_user",
   ]);
@@ -102,7 +110,7 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
   ]);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /blueprint_config_get[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation/
+    /blueprint_config_get[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation[\s\S]*firstPhaseNumber/
   );
   assert.deepEqual(contract.skillInputs.effective, [
     "commands/blu-new-milestone.toml"
@@ -133,5 +141,38 @@ test("new-milestone docs keep requirementTransitions as starter-seed evidence on
   assert.match(newMilestoneDoc, /uncertainty explicitly/i);
   assert.match(newMilestoneDoc, /Safe default: stop without writing/);
   assert.match(newMilestoneDoc, /named in-flight receipt/i);
+  assert.match(newMilestoneDoc, /firstPhaseNumber/);
+  assert.match(newMilestoneDoc, /firstContextPath/);
+  assert.match(newMilestoneDoc, /renamedPhaseDirectories/);
   assert.match(newMilestoneDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
+});
+
+test("new-milestone runtime docs expose scaffold first-phase receipt fields", async () => {
+  const mcpTools = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
+  const runtimeReference = await readFile(
+    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
+    "utf8"
+  );
+  const artifactSchema = await readFile(
+    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
+    "utf8"
+  );
+
+  for (const field of [
+    "highestBasePhaseNumber",
+    "firstPhaseNumber",
+    "firstPhasePrefix",
+    "firstPhaseDir",
+    "firstContextPath",
+    "deletedPhaseDirectories",
+    "renamedPhaseDirectories"
+  ]) {
+    assert.match(mcpTools, new RegExp(field));
+    assert.match(runtimeReference, new RegExp(field));
+  }
+
+  assert.match(mcpTools, /stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block/i);
+  assert.match(artifactSchema, /stale previews, conflicting first-phase directories, or ambiguous first-phase directories/i);
+  assert.match(artifactSchema, /deletedPhaseDirectories: \[\]/);
+  assert.match(artifactSchema, /renamedPhaseDirectories: \[\]/);
 });

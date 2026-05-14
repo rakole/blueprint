@@ -239,8 +239,9 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 13. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
 14. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields to the later scaffold and state-update arguments.
 15. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
-16. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
-17. Keep follow-up routing inside implemented Blueprint commands only.
+16. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
+17. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
+18. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail
 
@@ -260,6 +261,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, and the next safe implemented action.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when a confirmation gate is shown, render the preview packet fields explicitly and name the safe default as `stop without writing`.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when confirmation succeeds, the completion summary should name the gate receipt implicitly by carrying forward the exact approved target or scaffold values instead of introducing new mutation arguments after approval.
+- For `new-milestone`, include the MCP scaffold receipt values for the first phase: `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
 
 ## Completion Self-Check
 

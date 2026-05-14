@@ -856,6 +856,52 @@ async function phaseDirectoryExists(projectRoot: string, phaseNumber: string): P
   });
 }
 
+async function assertCurrentPhaseContextPathExists(args: {
+  projectRoot: string;
+  currentPhase: string;
+  nextAction: string;
+}): Promise<void> {
+  const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
+
+  if (
+    nextActionSelection.command === null ||
+    nextActionSelection.currentPhase === null ||
+    nextActionSelection.currentPhase !== args.currentPhase
+  ) {
+    return;
+  }
+
+  const phaseRoot = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/phases`);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+
+    return extractedPhase !== null && normalizePhaseNumber(extractedPhase) === args.currentPhase;
+  });
+
+  if (matchingPhaseDirs.length === 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because no matching phase directory exists under ${BLUEPRINT_DIR}/phases/.`
+    );
+  }
+
+  if (matchingPhaseDirs.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because multiple matching phase directories exist under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs
+        .map((phaseDir) => `${BLUEPRINT_DIR}/phases/${phaseDir}/`)
+        .join(", ")}.`
+    );
+  }
+
+  const phasePrefix = formatPhasePrefix(args.currentPhase);
+  const contextPath = `${BLUEPRINT_DIR}/phases/${matchingPhaseDirs[0]}/${phasePrefix}-CONTEXT.md`;
+
+  if (!(await blueprintPathExists(resolveBlueprintPath(args.projectRoot, contextPath)))) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because ${contextPath} is missing while next action points to ${nextActionSelection.command} ${args.currentPhase}.`
+    );
+  }
+}
+
 function formatPhasePrefix(value: string): string {
   return formatBlueprintPhasePrefix(value);
 }
@@ -2956,6 +3002,17 @@ export async function blueprintStateUpdate(
       sanitizedPatch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: sanitizedPatch.lastUpdated ?? new Date().toISOString()
   };
+
+  const normalizedNextStateCurrentPhase = normalizeSelectedPhase(nextState.currentPhase);
+
+  if (normalizedNextStateCurrentPhase !== null) {
+    await assertCurrentPhaseContextPathExists({
+      projectRoot,
+      currentPhase: normalizedNextStateCurrentPhase,
+      nextAction: nextState.nextAction
+    });
+  }
+
   const updatedFields = [
     ...new Set([
       ...Object.keys(sanitizedPatch),

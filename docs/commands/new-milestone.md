@@ -87,6 +87,7 @@
 - Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative carry-forward evidence scope.
 - Use `blueprint_artifact_scaffold` only to seed the next milestone starter docs and first context file. Do not treat scaffold text as the final authored milestone content.
+- Treat returned scaffold receipt fields as authoritative for the first carried-forward phase: `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`. Stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of triggering prompt-side recomputation.
 - Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing starter context path.
 - Preserve the confirmed next phase number when building the first context path; do not invent or renumber historical phase directories manually.
 
@@ -157,6 +158,7 @@
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
 - Uses the saved `milestone-summary-<milestone>.md` report as the durable carry-forward input for the next milestone start.
 - Uses named confirmation receipts that bind the approved preview packet to later scaffold and state-update arguments instead of relying on prose-only approval.
+- Uses the `blueprint_artifact_scaffold` first-phase receipt for `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
 - Treats `requirementTransitions` as starter-seed evidence only: rows carry `sourceRefs`, `rationale`, and explicit uncertainty labeling when needed, but they do not replace the canonical `.blueprint/REQUIREMENTS.md` authoring path.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.

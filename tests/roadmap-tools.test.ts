@@ -8,7 +8,8 @@ import path from "node:path";
 import { blueprintToolNames, blueprintToolRegistry } from "../src/mcp/server.js";
 import {
   blueprintArtifactScaffold,
-  blueprintArtifactValidate
+  blueprintArtifactValidate,
+  type BootstrapSeed
 } from "../src/mcp/tools/artifacts.js";
 import {
   blueprintPhasePlanAuthoringContext,
@@ -18,6 +19,7 @@ import {
   blueprintRoadmapRead,
   blueprintRoadmapRemovePhase
 } from "../src/mcp/tools/phase.js";
+import { blueprintStateUpdate } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -271,6 +273,112 @@ async function createInsertRoadmapRepo(): Promise<string> {
   );
 
   return repoPath;
+}
+
+type NewMilestonePhaseFixture = {
+  phaseNumber: string;
+  phaseName: string;
+  phaseDir: string;
+  completed?: boolean;
+  summary?: string;
+  goal?: string;
+  requirements?: string[];
+};
+
+async function createNewMilestoneTransitionRepo(options: {
+  milestone?: string;
+  currentPhase?: string;
+  phases: NewMilestonePhaseFixture[];
+}): Promise<string> {
+  const repoPath = await createGitRepo("blueprint-new-milestone-tools-");
+
+  for (const phase of options.phases) {
+    await mkdir(path.join(repoPath, phase.phaseDir), {
+      recursive: true
+    });
+  }
+
+  await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Milestone Transition Fixture
+
+## Milestone
+
+- Active milestone: ${options.milestone ?? "v2"}
+
+## Phases
+
+${options.phases
+  .map(
+    (phase) =>
+      `- [${phase.completed ? "x" : " "}] **Phase ${phase.phaseNumber}: ${phase.phaseName}**${phase.summary ? ` - ${phase.summary}` : ""}`
+  )
+  .join("\n")}
+
+## Phase Details
+
+${options.phases
+  .map(
+    (phase) => `### Phase ${phase.phaseNumber}: ${phase.phaseName}
+**Goal**: ${phase.goal ?? `${phase.phaseName} remains traceable.`}
+**Requirements**: ${(phase.requirements ?? []).join(", ") || "none"}
+`
+  )
+  .join("\n")}
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: ${options.milestone ?? "v2"}
+- Current phase: ${options.currentPhase ?? options.phases.at(-1)?.phaseNumber ?? "1"}
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify({ version: 2 }, null, 2),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+function newMilestoneScaffoldRequest(firstContextPath: string): string[] {
+  return [
+    ".blueprint/PROJECT.md",
+    ".blueprint/REQUIREMENTS.md",
+    ".blueprint/ROADMAP.md",
+    ".blueprint/phases/",
+    firstContextPath
+  ];
+}
+
+function newMilestoneBootstrapSeed(phase: string, title = "Next Milestone"): BootstrapSeed {
+  return {
+    currentMilestone: "v3",
+    roadmapPhases: [
+      {
+        phase,
+        title,
+        objective: "Carry forward the next milestone starter scope.",
+        requirementIds: ["RQ-01"],
+        successCriteria: ["The first carried-forward phase has a starter context scaffold."]
+      }
+    ]
+  };
 }
 
 async function createContractRoadmapRepo(options: {
@@ -853,6 +961,272 @@ test("blueprint_roadmap_add_phase rejects when the confirmed next phase is stale
     await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
     false
   );
+});
+
+test("new-milestone scaffolding uses the first whole-number phase after decimal history", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const firstContextPath = ".blueprint/phases/03-next-milestone/03-CONTEXT.md";
+  const scaffold = await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: newMilestoneScaffoldRequest(firstContextPath),
+    bootstrapSeed: newMilestoneBootstrapSeed("3")
+  });
+
+  assert.ok(scaffold.createdFiles.includes(firstContextPath));
+  assert.equal(scaffold.highestBasePhaseNumber, "2");
+  assert.equal(scaffold.firstPhaseNumber, "3");
+  assert.equal(scaffold.firstPhasePrefix, "03");
+  assert.equal(scaffold.firstPhaseDir, ".blueprint/phases/03-next-milestone");
+  assert.equal(scaffold.firstContextPath, firstContextPath);
+  assert.deepEqual(scaffold.deletedPhaseDirectories, []);
+  assert.deepEqual(scaffold.renamedPhaseDirectories, []);
+  assert.equal(await pathExists(path.join(repoPath, firstContextPath)), true);
+});
+
+test("new-milestone scaffolding preserves numbering gaps when computing the first whole-number phase", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2",
+        phaseName: "Core Runtime",
+        phaseDir: ".blueprint/phases/02-core-runtime"
+      },
+      {
+        phaseNumber: "4",
+        phaseName: "Release Hardening",
+        phaseDir: ".blueprint/phases/04-release-hardening"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const firstContextPath = ".blueprint/phases/05-next-milestone/05-CONTEXT.md";
+  const scaffold = await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: newMilestoneScaffoldRequest(firstContextPath),
+    bootstrapSeed: newMilestoneBootstrapSeed("5")
+  });
+
+  assert.ok(scaffold.createdFiles.includes(firstContextPath));
+  assert.equal(scaffold.highestBasePhaseNumber, "4");
+  assert.equal(scaffold.firstPhaseNumber, "5");
+  assert.equal(scaffold.firstPhasePrefix, "05");
+  assert.equal(scaffold.firstPhaseDir, ".blueprint/phases/05-next-milestone");
+  assert.equal(scaffold.firstContextPath, firstContextPath);
+  assert.equal(await pathExists(path.join(repoPath, firstContextPath)), true);
+});
+
+test("new-milestone scaffolding rejects stale first-phase previews without writes", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const requestedContextPath = ".blueprint/phases/04-stale-preview/04-CONTEXT.md";
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(requestedContextPath),
+        bootstrapSeed: newMilestoneBootstrapSeed("4", "Stale Preview")
+      }),
+    /live next whole phase 3|stale first phase|first whole-number phase/i
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(await pathExists(path.join(repoPath, requestedContextPath)), false);
+});
+
+test("new-milestone scaffolding rejects conflicting first-phase directory drift", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-prior-milestone-seed"), {
+    recursive: true
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(
+          ".blueprint/phases/03-next-milestone/03-CONTEXT.md"
+        ),
+        bootstrapSeed: newMilestoneBootstrapSeed("3")
+      }),
+    /conflicting directory|Phase 3 already maps|Phase 3 already has/i
+  );
+});
+
+test("new-milestone scaffolding rejects ambiguous first-phase directory drift", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-alpha-seed"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-beta-seed"), {
+    recursive: true
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintArtifactScaffold({
+        cwd: repoPath,
+        artifacts: newMilestoneScaffoldRequest(
+          ".blueprint/phases/03-next-milestone/03-CONTEXT.md"
+        ),
+        bootstrapSeed: newMilestoneBootstrapSeed("3")
+      }),
+    /ambiguous|multiple matching directories/i
+  );
+});
+
+test("blueprint_state_update rejects missing first context paths before routing new-milestone to discuss-phase", async (t) => {
+  const repoPath = await createNewMilestoneTransitionRepo({
+    currentPhase: "2.2",
+    phases: [
+      {
+        phaseNumber: "1",
+        phaseName: "Foundation",
+        phaseDir: ".blueprint/phases/01-foundation",
+        completed: true
+      },
+      {
+        phaseNumber: "2.1",
+        phaseName: "Planning Drift Recovery",
+        phaseDir: ".blueprint/phases/02.1-planning-drift-recovery"
+      },
+      {
+        phaseNumber: "2.2",
+        phaseName: "Validation Parity",
+        phaseDir: ".blueprint/phases/02.2-validation-parity"
+      },
+      {
+        phaseNumber: "3",
+        phaseName: "Next Milestone",
+        phaseDir: ".blueprint/phases/03-next-milestone"
+      }
+    ]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const statePath = path.join(repoPath, ".blueprint/STATE.md");
+  const beforeState = await readFile(statePath, "utf8");
+
+  await assert.rejects(
+    () =>
+      blueprintStateUpdate({
+        cwd: repoPath,
+        base: "synced",
+        patch: {
+          activeCommand: "/blu-new-milestone",
+          currentPhase: "3",
+          lastUpdated: "2026-04-12T00:00:00.000Z"
+        }
+      }),
+    /missing exact context path|missing context path|03-CONTEXT\.md|\/blu-discuss-phase 3/i
+  );
+
+  assert.equal(await readFile(statePath, "utf8"), beforeState);
 });
 
 test("blueprint_roadmap_add_phase does not mutate ROADMAP when the phase path is not a directory", async (t) => {

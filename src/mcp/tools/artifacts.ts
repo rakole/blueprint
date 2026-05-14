@@ -29,6 +29,12 @@ import {
 } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
 import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
+import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import {
+  computeNextWholePhaseNumber,
+  normalizePhaseNumber as normalizePhaseNumberToken,
+  slugifyPhaseName
+} from "./phase-numbering.js";
 import {
   blueprintPhaseExecutionTargets,
   blueprintPhasePlanIndex,
@@ -226,6 +232,13 @@ type ArtifactScaffoldResult = {
   createdFiles: string[];
   reusedFiles: string[];
   warnings: string[];
+  highestBasePhaseNumber: string | null;
+  firstPhaseNumber: string | null;
+  firstPhasePrefix: string | null;
+  firstPhaseDir: string | null;
+  firstContextPath: string | null;
+  deletedPhaseDirectories: string[];
+  renamedPhaseDirectories: string[];
 };
 
 type ArtifactListResult = {
@@ -8780,6 +8793,132 @@ function inferProjectName(projectRoot: string, requestedName?: string): string {
   return path.basename(projectRoot);
 }
 
+type CarryForwardBootstrapReceipt = Pick<
+  ArtifactScaffoldResult,
+  | "highestBasePhaseNumber"
+  | "firstPhaseNumber"
+  | "firstPhasePrefix"
+  | "firstPhaseDir"
+  | "firstContextPath"
+  | "deletedPhaseDirectories"
+  | "renamedPhaseDirectories"
+>;
+
+function emptyCarryForwardBootstrapReceipt(): CarryForwardBootstrapReceipt {
+  return {
+    highestBasePhaseNumber: null,
+    firstPhaseNumber: null,
+    firstPhasePrefix: null,
+    firstPhaseDir: null,
+    firstContextPath: null,
+    deletedPhaseDirectories: [],
+    renamedPhaseDirectories: []
+  };
+}
+
+function buildScaffoldPhaseDirectoryPath(phaseNumber: string, phaseTitle: string): string {
+  const phasePrefix = formatPhasePrefix(phaseNumber);
+
+  return `${BLUEPRINT_PHASES_PATH}/${phasePrefix}-${slugifyPhaseName(phaseTitle.trim())}`;
+}
+
+async function prepareCarryForwardBootstrapReceipt(args: {
+  projectRoot: string;
+  artifacts: string[];
+  bootstrapSeed?: BootstrapSeed;
+  overwrite: boolean;
+}): Promise<CarryForwardBootstrapReceipt> {
+  const receipt = emptyCarryForwardBootstrapReceipt();
+  const requestedContextArtifact =
+    args.artifacts
+      .map((artifact) => parsePhaseArtifactRequest(artifact))
+      .find((artifact): artifact is PhaseArtifactRequest => artifact?.kind === "CONTEXT") ?? null;
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+
+  if (!args.bootstrapSeed || requestedContextArtifact === null || !(await pathExists(roadmapPath))) {
+    return receipt;
+  }
+
+  const roadmap = parseRoadmapDocument(await fs.readFile(roadmapPath, "utf8"));
+  const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+  const firstPhasePrefix = formatPhasePrefix(firstPhaseNumber);
+  const firstPhaseTitle =
+    args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
+  const firstPhaseDir = buildScaffoldPhaseDirectoryPath(firstPhaseNumber, firstPhaseTitle);
+  const firstContextPath = `${firstPhaseDir}/${firstPhasePrefix}-CONTEXT.md`;
+  const previewedFirstPhase = args.bootstrapSeed.roadmapPhases?.[0]?.phase?.trim()
+    ? normalizePhaseNumberToken(args.bootstrapSeed.roadmapPhases[0].phase)
+    : normalizePhaseNumberToken(requestedContextArtifact.phasePrefix);
+  const highestBasePhaseNumber = String(Number.parseInt(firstPhaseNumber, 10) - 1);
+
+  receipt.highestBasePhaseNumber = highestBasePhaseNumber;
+  receipt.firstPhaseNumber = firstPhaseNumber;
+  receipt.firstPhasePrefix = firstPhasePrefix;
+  receipt.firstPhaseDir = firstPhaseDir;
+  receipt.firstContextPath = firstContextPath;
+
+  if (previewedFirstPhase !== firstPhaseNumber) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: bootstrapSeed first phase ${previewedFirstPhase} no longer matches the live next whole phase ${firstPhaseNumber}. Re-run /blu-new-milestone after re-reading ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+
+  if (requestedContextArtifact.artifact !== firstContextPath) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: expected first context path ${firstContextPath} but received ${requestedContextArtifact.artifact}. Re-run /blu-new-milestone before committing starter docs.`
+    );
+  }
+
+  const phaseRoot = resolveBlueprintPath(args.projectRoot, BLUEPRINT_PHASES_PATH);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
+    const directoryPhaseNumber = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+
+    return (
+      directoryPhaseNumber !== undefined &&
+      normalizePhaseNumber(directoryPhaseNumber) === firstPhaseNumber
+    );
+  });
+  const computedPhaseDirName = path.basename(firstPhaseDir);
+
+  if (matchingPhaseDirs.length > 1) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs
+        .map((phaseDir) => `${BLUEPRINT_PHASES_PATH}/${phaseDir}`)
+        .join(", ")}.`
+    );
+  }
+
+  if (matchingPhaseDirs.length === 1 && matchingPhaseDirs[0] !== computedPhaseDirName) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} already maps to ${BLUEPRINT_PHASES_PATH}/${matchingPhaseDirs[0]}, not ${firstPhaseDir}. Historical phase directories cannot be renamed in place.`
+    );
+  }
+
+  const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
+
+  if (await pathExists(firstContextAbsolutePath)) {
+    const existingContext = await fs.readFile(firstContextAbsolutePath, "utf8");
+
+    if (
+      !args.overwrite &&
+      !isScaffoldGeneratedArtifact(existingContext) &&
+      !isBootstrapStarterContext(existingContext)
+    ) {
+      throw new Error(
+        `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
+      );
+    }
+  }
+
+  if (matchingPhaseDirs.length === 1 && !args.overwrite) {
+    throw new Error(
+      `Carry-forward scaffold would overwrite existing Phase ${firstPhaseNumber} starter artifacts at ${firstPhaseDir}. Re-run with explicit overwrite approval before writing starter docs.`
+    );
+  }
+
+  return receipt;
+}
+
 export async function blueprintArtifactScaffold(
   args: ArtifactScaffoldArgs = {}
 ): Promise<ArtifactScaffoldResult> {
@@ -8797,6 +8936,12 @@ export async function blueprintArtifactScaffold(
   const createdFiles: string[] = [];
   const reusedFiles: string[] = [];
   const warnings: string[] = [];
+  const carryForwardReceipt = await prepareCarryForwardBootstrapReceipt({
+    projectRoot,
+    artifacts,
+    bootstrapSeed: args.bootstrapSeed,
+    overwrite
+  });
   const renderContext: BootstrapRenderContext = {
     projectName,
     bootstrapSeed: args.bootstrapSeed,
@@ -8864,7 +9009,8 @@ export async function blueprintArtifactScaffold(
   return {
     createdFiles,
     reusedFiles,
-    warnings
+    warnings,
+    ...carryForwardReceipt
   };
 }
 
