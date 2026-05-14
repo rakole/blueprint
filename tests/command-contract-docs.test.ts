@@ -1204,6 +1204,7 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
     "Shared phase-admin spine",
     "phase-number-confirmation",
     "requirement source",
+    "auditBackedDetails.repairRequirementIds",
     "starter material only",
     "STATE.md` only after scaffold succeeds",
     "planned-only shortcuts",
@@ -1228,6 +1229,7 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
     "Shared phase-admin spine",
     "phase-insert-confirmation",
     ".blueprint/REQUIREMENTS.md",
+    "already be mapped to another roadmap phase",
     "starter material only",
     "STATE.md` only after scaffold succeeds",
     "planned-only shortcuts",
@@ -1354,6 +1356,11 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /blueprint_artifact_scaffold/);
   assert.match(newMilestoneDoc, /blueprint_state_update/);
   assert.match(newMilestoneDoc, /carry-forward from the saved milestone summary/i);
+  assert.match(newMilestoneDoc, /requirementTransitions/);
+  assert.match(newMilestoneDoc, /starter-seed evidence only/i);
+  assert.match(newMilestoneDoc, /sourceRefs/);
+  assert.match(newMilestoneDoc, /self-derived/);
+  assert.match(newMilestoneDoc, /uncertain/);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);

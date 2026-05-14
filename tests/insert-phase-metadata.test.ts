@@ -53,6 +53,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "blueprint_roadmap_insert_phase",
     "confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`",
     "Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `.blueprint/REQUIREMENTS.md`",
+    "already mapped to another roadmap phase",
     "roadmap-driven",
     "conflicting decimal directory",
     "roadmapEvolutionNotes",
@@ -94,6 +95,7 @@ test("insert-phase runtime contract locks stage mapping, fallback, repair, and c
   assert.match(contract, /mcp_blueprint_blueprint_state_update/);
   assert.match(contract, /at least one confirmed durable requirement ID declared in\s*`\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(contract, /Do not accept `none yet`, placeholder text, blank values, or IDs that are not\s*declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(contract, /already mapped to another roadmap phase/);
   assert.match(contract, /passed as `requirementIds`; `none yet` requirement mappings were\s*not accepted/);
   assert.match(contract, /phase-insert-confirmation/);
   assert.match(contract, /invalid-insertion-anchor/);
@@ -143,6 +145,11 @@ test("insert-phase docs keep requirement traceability in the declared write surf
 
   assert.match(insertPhaseDoc, /## Blueprint And Global State Writes[\s\S]*`?\.blueprint\/REQUIREMENTS\.md`?/);
   assert.match(insertPhaseDoc, /Maps the confirmed requirement rows in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(insertPhaseDoc, /must also not already be mapped to another roadmap phase/);
+  assert.match(
+    insertPhaseDoc,
+    /must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase/
+  );
 });
 
 test("roadmap-admin agent contracts retain insert-phase output-quality expectations", async () => {

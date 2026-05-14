@@ -29922,6 +29922,33 @@ function parseRequirementTableRow(line) {
 function renderRequirementTableRow(row) {
   return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
 }
+async function readRequirementTable(projectRoot, options) {
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  if (!await pathExists(requirementsPath)) {
+    throw new Error(options.missingFileMessage);
+  }
+  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
+  const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
+  if (!requirementsSectionMatch) {
+    throw new Error(options.malformedMessage);
+  }
+  const rows = requirementsSectionMatch[2].split("\n").map((line) => parseRequirementTableRow(line)).filter((row) => row !== null);
+  return {
+    rawRequirements,
+    rows
+  };
+}
+function findUndeclaredRequirementIds(rows, requirementIds) {
+  const declaredRequirementIds = new Set(rows.map((row) => row.id));
+  return requirementIds.filter((requirementId) => !declaredRequirementIds.has(requirementId));
+}
+async function requireDeclaredRequirementIds(projectRoot, requirementIds, options) {
+  const { rows } = await readRequirementTable(projectRoot, options);
+  const undeclaredRequirementIds = findUndeclaredRequirementIds(rows, requirementIds);
+  if (undeclaredRequirementIds.length > 0) {
+    throw new Error(options.undeclaredMessage(undeclaredRequirementIds));
+  }
+}
 async function repairRequirementsTraceability(projectRoot, requirementIds, phaseNumber, phaseName, sourceReportPath) {
   const normalizedRequirementIds = [
     ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
@@ -29932,25 +29959,16 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
       warnings: []
     };
   }
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-  if (!await pathExists(requirementsPath)) {
-    throw new Error(
-      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
-    );
-  }
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+  });
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const noteSource = sourceReportPath?.trim() || "the milestone audit report";
   let updated = false;
   const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
       const nextBody = body.split("\n").map((line) => {
         const row = parseRequirementTableRow(line);
@@ -29991,23 +30009,19 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
 }
 async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phaseNumber, phaseName) {
   const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-  if (!await pathExists(requirementsPath)) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
-    );
-  }
+  await requireDeclaredRequirementIds(projectRoot, normalizedRequirementIds, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+    undeclaredMessage: (undeclaredRequirementIds) => `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+  });
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
+  });
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
       const nextBody = body.split("\n").map((line) => {
         const row = parseRequirementTableRow(line);
@@ -30029,13 +30043,6 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
 `;
     }
   );
-  if (remainingRequirementIds.size > 0) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${[
-        ...remainingRequirementIds
-      ].join(", ")}`
-    );
-  }
   return {
     content,
     warnings: []
@@ -32473,6 +32480,13 @@ async function blueprintRoadmapAddPhase(args) {
       throw new Error(
         `Confirmed next phase ${normalizePhaseNumber2(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
       );
+    }
+    if (normalizedRepairRequirementIds.length === 0) {
+      await requireDeclaredRequirementIds(projectRoot, effectiveRequirementIds, {
+        missingFileMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+        malformedMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+        undeclaredMessage: (undeclaredRequirementIds) => `Cannot add Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+      });
     }
     const phasePrefix2 = formatPhasePrefix2(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
@@ -35895,7 +35909,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -36186,6 +36200,7 @@ var init_phase = __esm({
       expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
       expectedMode: phaseCheckpointResumeModeSchema.optional()
     };
+    REQUIREMENTS_TABLE_SECTION_PATTERN = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
     phaseToolDefinitions = [
       {
         name: "blueprint_roadmap_read",

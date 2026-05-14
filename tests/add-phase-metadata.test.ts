@@ -103,7 +103,7 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     /Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter/
   );
   assert.match(skillFile, /durable requirement ID declared in `\.blueprint\/REQUIREMENTS\.md`/);
-  assert.match(skillFile, /audit-backed repair details/);
+  assert.match(skillFile, /auditBackedDetails\.repairRequirementIds/);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /There is no add-phase subagent path/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents are not substitutes/i);
@@ -111,13 +111,30 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.match(addPhaseContract, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
   assert.match(addPhaseContract, /next integer after the highest base phase number/i);
   assert.match(addPhaseContract, /Decimal suffixes are ignored/i);
-  assert.match(addPhaseContract, /`\.blueprint\/REQUIREMENTS\.md`/);
-  assert.match(addPhaseContract, /audit-backed repair/);
+  assert.match(addPhaseContract, /validate `requirementIds` against declared rows\s*in `\.blueprint\/REQUIREMENTS\.md` before mutation/);
+  assert.match(addPhaseContract, /auditBackedDetails\.repairRequirementIds/);
   assert.match(addPhaseContract, /expectedPhaseNumber/);
   assert.match(addPhaseContract, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(addPhaseContract, /Scaffold text is starter material only/i);
   assert.match(addPhaseContract, /Do not use browser, web-search-only, shell-only, or generic agents/i);
   assert.match(addPhaseContract, /\/blu-discuss-phase <phase>/);
+});
+
+test("add-phase docs keep plain append requirement validation distinct from audit-backed repair", async () => {
+  const addPhaseDoc = await fs.readFile(
+    path.join(repoRoot, "docs/commands/add-phase.md"),
+    "utf8"
+  );
+
+  assert.match(
+    addPhaseDoc,
+    /Plain append validation must confirm those `requirementIds` are already declared in `\.blueprint\/REQUIREMENTS\.md` before mutation/
+  );
+  assert.match(addPhaseDoc, /auditBackedDetails\.repairRequirementIds/);
+  assert.match(
+    addPhaseDoc,
+    /Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `\.blueprint\/REQUIREMENTS\.md`/
+  );
 });
 
 test("add-phase remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {

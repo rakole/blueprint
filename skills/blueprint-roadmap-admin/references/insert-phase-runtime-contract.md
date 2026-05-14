@@ -34,6 +34,9 @@ MCP tools.
 - Capture the durable requirement IDs declared in `.blueprint/REQUIREMENTS.md`
   that ground the urgent decimal insertion. Requirement IDs are mandatory for
   inserted phases and must not be omitted or replaced with `none yet`.
+- Treat requirement IDs that are already mapped to another roadmap phase as
+  invalid for insertion. Inserted phases need their own traceability mapping
+  before mutation.
 - Do not precompute the final decimal suffix as persistence truth. The read
   result supports the user preview, but the insert MCP tool remains
   authoritative for the committed phase number.
@@ -59,6 +62,9 @@ MCP tools.
 - Pass the confirmed integer `after` anchor, confirmed `description`, confirmed
   `goal`, confirmed `successCriteria`, and confirmed durable `requirementIds`
   declared in `.blueprint/REQUIREMENTS.md`.
+- Require requirement validation before mutation: the confirmed IDs must be
+  declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet` or
+  placeholders, and must not already be mapped to another roadmap phase.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, `phaseName`,
   `slug`, `phaseDir`, `roadmapPath`, `milestone`, `written`, and `warnings` as
   authoritative.
@@ -95,6 +101,9 @@ MCP tools.
 
 - Confirm `mcp_blueprint_blueprint_roadmap_insert_phase` returned `written:
   true`.
+- Confirm requirement validation accepted the submitted `requirementIds` as
+  declared, non-placeholder rows that were not already mapped to another
+  roadmap phase.
 - Confirm the scaffold result includes the returned context path in either
   `createdFiles` or `reusedFiles`.
 - Confirm the state update reports the current phase and next action fields
@@ -161,6 +170,9 @@ command must still own all MCP calls.
 - Missing durable requirement IDs, `none yet` mappings, placeholder mappings,
   blank mappings, or undeclared IDs: ask for confirmed requirement IDs from
   `.blueprint/REQUIREMENTS.md` and do not mutate until they are supplied.
+- Requirement IDs already mapped to another roadmap phase: stop without
+  mutation, surface the conflicting phase mapping, and ask for requirement IDs
+  that are declared but not already assigned elsewhere.
 - Decimal or malformed anchor: stop with `invalid-insertion-anchor` guidance and
   no mutation.
 - Missing target integer phase: report the invalid anchor and show valid roadmap
@@ -203,6 +215,8 @@ command must still own all MCP calls.
 - At least one durable requirement ID from `.blueprint/REQUIREMENTS.md` was
   confirmed and passed as `requirementIds`; `none yet` requirement mappings were
   not accepted.
+- Requirement validation rejected IDs already mapped to another roadmap phase,
+  so inserted-phase traceability stayed unique before mutation.
 - `mcp_blueprint_blueprint_roadmap_insert_phase` succeeded and returned
   `written: true`.
 - `${phaseDir}/${phasePrefix}-CONTEXT.md` was created or reused through

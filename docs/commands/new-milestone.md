@@ -81,6 +81,8 @@
 
 - Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any summary-derived seed text to the returned `authoringTemplate` when the contract provides one.
 - Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
+- Build `requirementTransitions` only as starter-seed evidence for the next milestone. The carry-forward packet may include rows with `decision` values `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`, but those rows do not become a competing `.blueprint/REQUIREMENTS.md` write path on their own.
+- Each `requirementTransitions` row must cite `sourceRefs` plus `rationale`. If the disposition is inferred, partial, or not yet proven, label that uncertainty explicitly instead of hiding it inside a confident-looking transition row.
 - Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative carry-forward evidence scope.
 - Use `blueprint_artifact_scaffold` only to seed the next milestone starter docs and first context file. Do not treat scaffold text as the final authored milestone content.
@@ -151,6 +153,7 @@
 
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
 - Uses the saved `milestone-summary-<milestone>.md` report as the durable carry-forward input for the next milestone start.
+- Treats `requirementTransitions` as starter-seed evidence only: rows carry `sourceRefs`, `rationale`, and explicit uncertainty labeling when needed, but they do not replace the canonical `.blueprint/REQUIREMENTS.md` authoring path.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
 - Scaffolds the first new phase context artifact so `/blu-discuss-phase <first phase>` has a valid phase directory to target.

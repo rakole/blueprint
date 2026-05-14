@@ -38,6 +38,7 @@
 - A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug, while the returned `phasePrefix` determines the scaffolded context filename.
 - A concrete ROADMAP objective, 2-5 observable success criteria, and at least one confirmed durable requirement ID declared in `.blueprint/REQUIREMENTS.md` are required and passed as `goal`, `successCriteria`, and `requirementIds`.
 - Requirement mappings such as `none yet`, placeholder text, blank values, or IDs not declared in `.blueprint/REQUIREMENTS.md` are invalid for inserted phases.
+- Confirmed `requirementIds` must also not already be mapped to another roadmap phase. Inserted phases need their own durable requirement grounding before mutation.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
 - Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
@@ -55,7 +56,7 @@
 
 
 - The current roadmap and milestone inventory through `blueprint_roadmap_read`
-- Durable requirement ID declarations in `.blueprint/REQUIREMENTS.md`, enforced by `blueprint_roadmap_insert_phase` before mutation
+- Durable requirement ID declarations in `.blueprint/REQUIREMENTS.md`, enforced by `blueprint_roadmap_insert_phase` before mutation, including rejection of placeholder values and IDs already mapped to another roadmap phase
 
 
 ## Blueprint And Global State Writes
@@ -78,6 +79,7 @@
 ## Phase Insertion Contract
 
 - Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`.
+- Validate those `requirementIds` before mutation: they must be declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
@@ -140,6 +142,7 @@
 - Show roadmap and phase-directory drift before mutation.
 - Refuse mutation when the target phase is not an existing integer phase.
 - Refuse mutation when the roadmap cannot place the new phase under `## Phases`; create an optional `## Phase Details` section only when the existing ROADMAP shape needs one.
+- Refuse mutation when any confirmed requirement ID is undeclared, placeholder-derived, or already mapped to another roadmap phase.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 - If scaffold or state update fails after roadmap insertion, report which MCP-backed steps succeeded, surface the failed step, and route to `/blu-progress` or recovery guidance instead of hand-editing `.blueprint/`.
 
@@ -153,6 +156,7 @@
 - Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
 - Writes concrete goal and success criteria at ROADMAP mutation time so `/blu-discuss-phase` is not expected to backfill placeholders.
 - Writes confirmed durable requirement IDs at ROADMAP mutation time and never records `none yet` requirement mappings for inserted phases.
+- Requires those inserted-phase `requirementIds` to already be declared in `.blueprint/REQUIREMENTS.md` and not already mapped to another roadmap phase.
 - Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.

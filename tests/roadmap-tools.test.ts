@@ -75,7 +75,21 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Repair roadmap drift deterministically. | Pending | Phase 2.1 coverage. |
+| RQ-03 | Close validation parity gaps. | Pending | Phase 2.2 coverage. |
+| RQ-04 | Deliver the notifications flow. | Pending | Reserved for the next whole-number phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Fixture
@@ -484,7 +498,19 @@ async function createMalformedRoadmapRepo(): Promise<string> {
     recursive: true
   });
   await writeFile(path.join(repoPath, ".blueprint/PROJECT.md"), "# Project\n", "utf8");
-  await writeFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/REQUIREMENTS.md"),
+    `# Requirements: Malformed Fixture
+
+## Requirements Table
+
+| ID | Requirement | Status | Notes |
+|----|-------------|--------|-------|
+| RQ-01 | Keep the foundation traceable. | Pending | Phase 1 coverage. |
+| RQ-02 | Add recovery guidance coverage. | Pending | Reserved for the next whole-number phase. |
+`,
+    "utf8"
+  );
   await writeFile(
     path.join(repoPath, ".blueprint/ROADMAP.md"),
     `# Roadmap: Malformed Fixture
@@ -636,6 +662,62 @@ test("blueprint_roadmap_add_phase rejects plain appends without requirement IDs 
   );
 });
 
+test("blueprint_roadmap_add_phase rejects undeclared requirement IDs before any mutation", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const requirementsPath = path.join(repoPath, ".blueprint/REQUIREMENTS.md");
+  const phasesPath = path.join(repoPath, ".blueprint/phases");
+  const beforeRoadmap = await readFile(roadmapPath, "utf8");
+  const beforeRequirements = await readFile(requirementsPath, "utf8");
+  const beforePhaseDirs = await readdir(phasesPath);
+
+  await assert.rejects(
+    blueprintRoadmapAddPhase({
+      cwd: repoPath,
+      description: "Notifications Flow",
+      ...addPhaseRoadmapDetails,
+      expectedPhaseNumber: "3",
+      requirementIds: ["RQ-04", "RQ-MISSING"]
+    }),
+    /Cannot add Phase 3 because requirement IDs are not declared in \.blueprint\/REQUIREMENTS\.md Requirements Table: RQ-MISSING/
+  );
+
+  assert.equal(await readFile(roadmapPath, "utf8"), beforeRoadmap);
+  assert.equal(await readFile(requirementsPath, "utf8"), beforeRequirements);
+  assert.deepEqual(await readdir(phasesPath), beforePhaseDirs);
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    false
+  );
+});
+
+test("blueprint_roadmap_add_phase accepts declared requirement IDs and materializes the phase", async (t) => {
+  const repoPath = await createRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Notifications Flow",
+    ...addPhaseRoadmapDetails,
+    expectedPhaseNumber: "3",
+    requirementIds: ["RQ-04"]
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.equal(result.phaseDir, ".blueprint/phases/03-notifications-flow");
+  assert.equal(
+    await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
+    true
+  );
+  assert.match(roadmapBody, /- \[ \] Phase 3: Notifications Flow \(Requirements: RQ-04\)/);
+});
+
 test("blueprint_roadmap_add_phase with requirement IDs keeps the mutated ROADMAP artifact-valid", async (t) => {
   const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
   t.after(async () => {
@@ -668,6 +750,31 @@ test("blueprint_roadmap_add_phase with requirement IDs keeps the mutated ROADMAP
   assert.deepEqual(validation.issues, []);
 });
 
+test("blueprint_roadmap_add_phase keeps audit-backed repair appends intact without plain requirementIds", async (t) => {
+  const repoPath = await createAuditBackedRoadmapRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintRoadmapAddPhase({
+    cwd: repoPath,
+    description: "Audit Gap Closure",
+    auditBackedDetails: {
+      sourceReportPath: ".blueprint/reports/milestone-audit-v2.md",
+      goal: "Close milestone audit gaps and restore requirement traceability.",
+      successCriteria:
+        "Repair the affected requirements and document the closure path.; Milestone audit traceability can be verified from the reassigned requirements.",
+      repairRequirementIds: ["GAP-001", "GAP-002"]
+    }
+  });
+  const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
+
+  assert.equal(result.phaseNumber, "3");
+  assert.match(roadmapBody, /Phase 3: Audit Gap Closure/);
+  assert.match(requirementsBody, /Reassigned to Phase 3 \(Audit Gap Closure\)/);
+});
+
 test("blueprint_roadmap_add_phase keeps audit-backed ROADMAP appends artifact-valid", async (t) => {
   const repoPath = await createContractRoadmapRepo({ includePhaseFiveRequirement: true });
   t.after(async () => {
@@ -686,7 +793,6 @@ test("blueprint_roadmap_add_phase keeps audit-backed ROADMAP appends artifact-va
       repairRequirementIds: ["RQ-05"]
     }
   });
-
   const validation = await blueprintArtifactValidate({ cwd: repoPath });
 
   assert.equal(validation.valid, true, validation.issues.join("\n"));

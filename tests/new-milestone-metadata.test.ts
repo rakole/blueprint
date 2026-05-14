@@ -61,6 +61,11 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "report.milestone-summary",
     "phase.context",
     "carry-forward as the default",
+    "requirementTransitions",
+    "starter-seed evidence only",
+    "sourceRefs",
+    "self-derived",
+    "uncertain",
     "Preserve historical phase directories",
     "next whole-number phase",
     "/blu-discuss-phase <first phase>",
@@ -97,4 +102,24 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+});
+
+test("new-milestone docs keep requirementTransitions as starter-seed evidence only", async () => {
+  const newMilestoneDoc = await readFile(
+    path.join(repoRoot, "docs/commands/new-milestone.md"),
+    "utf8"
+  );
+
+  assert.match(newMilestoneDoc, /requirementTransitions/);
+  assert.match(
+    newMilestoneDoc,
+    /starter-seed evidence[\s\S]*do not become a competing `?\.blueprint\/REQUIREMENTS\.md`? write path/i
+  );
+  assert.match(
+    newMilestoneDoc,
+    /`decision` values `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`/
+  );
+  assert.match(newMilestoneDoc, /sourceRefs/);
+  assert.match(newMilestoneDoc, /rationale/);
+  assert.match(newMilestoneDoc, /uncertainty explicitly/i);
 });

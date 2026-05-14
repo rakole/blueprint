@@ -36,7 +36,8 @@
 - A Blueprint project and roadmap must already exist.
 - A non-empty phase description is required. The description becomes the new phase title and drives the scaffolded phase slug.
 - At least one durable requirement ID declared in `.blueprint/REQUIREMENTS.md` is required for a plain whole-number add. Confirmed IDs are passed as `requirementIds`.
-- Roadmap-derived IDs are acceptable only when the roadmap already maps back to declared `.blueprint/REQUIREMENTS.md` rows or when audit-backed repair details explicitly name those durable IDs.
+- Plain append validation must confirm those `requirementIds` are already declared in `.blueprint/REQUIREMENTS.md` before mutation. Keep the audit-backed repair path separate by using `auditBackedDetails.repairRequirementIds` when repair evidence, rather than a plain append, is driving the requirement traceability update.
+- Roadmap-derived IDs are acceptable only when the roadmap already maps back to declared `.blueprint/REQUIREMENTS.md` rows; otherwise they are not valid plain-append grounding.
 - A concrete ROADMAP objective plus 2-5 observable success criteria are required and passed as `goal` and `successCriteria`.
 - The next phase number is the next integer after the highest base phase number already present in the roadmap. Decimal suffixes are ignored for numbering, so `2.1` and `2.2` still advance the next append target to `3`.
 - The computed next phase number, requirement IDs, requirement source, objective, and success criteria must be previewed from the roadmap read result before any mutation.
@@ -75,7 +76,7 @@
 ## Phase Creation Contract
 
 - Preview the exact computed next integer phase number from the roadmap read result before append, then use `ask_user` for the confirmation gate before any mutation.
-- Call `blueprint_roadmap_add_phase` with the confirmed phase description, the confirmed next phase number in `expectedPhaseNumber`, the confirmed durable IDs in `requirementIds`, the confirmed objective in `goal`, and 2-5 confirmed criteria in `successCriteria` after the user approves the previewed roadmap grounding. For plain add-phase, requirement grounding must resolve to durable `.blueprint/REQUIREMENTS.md` declarations; roadmap-only hints are acceptable only when they already map to those declarations or to explicit audit-backed repair details. Do not precompute the slug or directory path yourself.
+- Call `blueprint_roadmap_add_phase` with the confirmed phase description, the confirmed next phase number in `expectedPhaseNumber`, the confirmed durable IDs in `requirementIds`, the confirmed objective in `goal`, and 2-5 confirmed criteria in `successCriteria` after the user approves the previewed roadmap grounding. For plain add-phase, the command must validate `requirementIds` against declared `.blueprint/REQUIREMENTS.md` rows before mutation. Keep audit-backed repair traceability separate in `auditBackedDetails.repairRequirementIds` instead of weakening the plain-append requirement check. Do not precompute the slug or directory path yourself.
 - Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
 - Scaffold the initial context file at `${phaseDir}/${phasePrefix}-CONTEXT.md` from the returned phase metadata. Do not treat scaffold text as finished phase context.
 - Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing context path.
@@ -137,6 +138,7 @@
 - If state update fails after roadmap append and scaffold success, report the completed writes, the state-update failure, and `/blu-progress` as the recovery route instead of manually editing `STATE.md`.
 - Stop without mutation when the phase description is missing, the roadmap is unavailable, or the previewed next phase number cannot be confirmed.
 - Stop without mutation when a plain add-phase request has no confirmed requirement IDs.
+- Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `.blueprint/REQUIREMENTS.md`.
 - Stop without mutation when a plain add-phase request has no concrete objective or lacks 2-5 observable success criteria.
 
 
@@ -146,6 +148,7 @@
 - Keeps roadmap, phase directories, and state synchronized for add-phase only.
 - Previews the exact next integer phase number before append and confirms it through `ask_user`.
 - Chooses, previews, confirms, and passes at least one durable requirement ID for plain whole-number add-phase.
+- Requires those plain-append `requirementIds` to already exist in `.blueprint/REQUIREMENTS.md` before mutation, while preserving audit-backed repair through `auditBackedDetails.repairRequirementIds`.
 - Confirms and passes a concrete objective plus 2-5 observable success criteria so `/blu-discuss-phase` is not expected to backfill ROADMAP placeholders.
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
 - Refuses to append when the confirmed next phase number is stale.
