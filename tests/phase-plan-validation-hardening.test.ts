@@ -488,6 +488,13 @@ function planWithConcretePlaceholderTaskHeading(): string {
   );
 }
 
+function planWithConcreteReplaceWithAction(): string {
+  return validPlanContent("13", 2).replace(
+    "- Tighten the plan write validator around repo-relative paths, concrete task content, and checkable acceptance criteria.",
+    "- Use the package codemod to replace with ProjectPackageSkeleton when imports resolve."
+  );
+}
+
 function planWithCommandMentionsInTaskText(): string {
   return `---
 phase: 3
@@ -630,11 +637,11 @@ Harden plan validation.
 
 #### Read First
 
-- Replace with the files the executor must inspect before editing.
+- Replace with
 
 #### Action
 
-- Replace with concrete code, config, or artifact changes.
+- Placeholder
 
 #### Acceptance Criteria
 
@@ -1185,6 +1192,24 @@ test("strict plan writes allow concrete task headings that mention placeholder w
     phase: "3",
     planId: "12",
     content: planWithConcretePlaceholderTaskHeading(),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created", JSON.stringify(result.validation, null, 2));
+  assert.equal(result.validation?.valid, true, JSON.stringify(result.validation, null, 2));
+});
+
+test("strict plan writes allow replace-with phrasing inside concrete task prose", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "13",
+    content: planWithConcreteReplaceWithAction(),
     overwrite: true
   });
 

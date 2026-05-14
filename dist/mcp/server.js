@@ -38405,9 +38405,9 @@ function isPlaceholderOnlyTaskHeading(headingText) {
   );
 }
 function isBlankOrPlaceholderPlanLine(line) {
-  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
+  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
     line
-  ) || /replace with/i.test(line);
+  );
 }
 function isSubjectivePlanLine(line) {
   return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(

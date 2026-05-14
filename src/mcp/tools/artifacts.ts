@@ -3871,10 +3871,9 @@ function isPlaceholderOnlyTaskHeading(headingText: string): boolean {
 function isBlankOrPlaceholderPlanLine(line: string): boolean {
   return (
     line.length === 0 ||
-    /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
+    /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
       line
-    ) ||
-    /replace with/i.test(line)
+    )
   );
 }
 
