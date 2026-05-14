@@ -818,6 +818,41 @@ test("phase plan model validation allows concrete task headings that mention pla
   );
 });
 
+test("phase plan model validation allows replace-with phrasing inside concrete task prose", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  const [firstTask] = model.tasks as Array<Record<string, unknown>>;
+  firstTask.action = [
+    "Use the package codemod to replace with ProjectPackageSkeleton when imports resolve.",
+    "Verify src/mcp/tools/phase.ts still renders canonical phase plan Markdown."
+  ];
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(
+    savedContent,
+    /Use the package codemod to replace with ProjectPackageSkeleton when imports resolve\./
+  );
+});
+
 test("phase plan authoring context exposes a complete runtime-narrowed task schema", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
