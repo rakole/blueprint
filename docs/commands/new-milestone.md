@@ -11,13 +11,14 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `new-milestone` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded carry-forward or reset decision plus scaffold write, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Shared phase-admin spine: read roadmap state first, preview the exact carry-forward source scope plus first-phase target plus starter-doc write scope, require a named confirmation gate before any mutation, persist only through MCP tools, treat the scaffolded first context as starter material only, update `STATE.md` only after scaffold succeeds, route to `/blu-discuss-phase <first phase>`, and never widen into tracker tools, long-running progress posture, or planned-only shortcuts.
 - Keep the waiting state explicit as `missing-milestone-summary`, `carry-forward-confirmation`, or `starter-doc-overwrite-confirmation` when the command is blocked before writing.
 
 
 ## Purpose
 
 
-`new-milestone` is Blueprint's command for start a new milestone cycle — update PROJECT.md and route to requirements. In Blueprint it stays host-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, and starts the new milestone at the next whole-number phase instead of renumbering prior work.
+`new-milestone` is Blueprint's command for starting a new milestone cycle. In Blueprint it stays host-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, seeds the first starter context, and routes to `/blu-discuss-phase <first phase>` instead of any planned-only follow-up.
 
 
 ## Command Path And Examples
@@ -35,6 +36,7 @@
 - A matching `milestone-summary-<milestone>.md` report should already exist in `.blueprint/reports/`.
 - Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
 - Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
+- Preview the exact carry-forward evidence scope before mutation: resolved milestone, digest `inputsUsed`, any warnings, the starter-doc overwrite set, the proposed new milestone name, and the first whole-number phase target that will receive the starter context scaffold.
 - Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
 
 
@@ -52,6 +54,7 @@
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}` with `scope: "effective"` before any optional roadmapper pass
 
 
 ## Blueprint And Global State Writes
@@ -70,15 +73,18 @@
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_artifact_summary_digest` -> `{digest, inputsUsed}`
+- `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Carry-Forward Contract
 
 - Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any summary-derived seed text to the returned `authoringTemplate` when the contract provides one.
+- Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
 - Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
 - Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative carry-forward evidence scope.
 - Use `blueprint_artifact_scaffold` only to seed the next milestone starter docs and first context file. Do not treat scaffold text as the final authored milestone content.
+- Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing starter context path.
 - Preserve the confirmed next phase number when building the first context path; do not invent or renumber historical phase directories manually.
 
 
@@ -118,6 +124,7 @@
 
 
 - Carry-forward is the default path. Require explicit confirmation only when the user wants a fresh reset instead.
+- Show the exact evidence scope, first-phase target, and overwrite set in the confirmation preview before any mutation.
 - Require explicit overwrite confirmation before replacing the existing milestone starter docs.
 - Prefer Gemini CLI `ask_user` for the reset-vs-carry-forward and overwrite confirmation gates.
 

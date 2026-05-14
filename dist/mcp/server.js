@@ -15264,7 +15264,8 @@ var init_command_runtime_metadata = __esm({
         reads: [
           "blueprint_roadmap_read -> {roadmap, milestone, phases}",
           "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts",
-          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}",
+          "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass"
         ],
         writes: [
           ".blueprint/PROJECT.md",
@@ -15282,7 +15283,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEW_MILESTONE_REQUIRED_TOOLS,
         optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, update state only after scaffold succeeds, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };

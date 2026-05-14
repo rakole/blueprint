@@ -327,7 +327,7 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly executionProfile: "interactive-read";
         readonly rootRoutable: true;
         readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
-        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+        readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}", "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass"];
         readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
@@ -338,7 +338,7 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
         readonly optionalAgents: readonly ["blueprint-roadmapper"];
         readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-        readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
+        readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, update state only after scaffold succeeds, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
@@ -2120,7 +2120,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly executionProfile: "interactive-read";
             readonly rootRoutable: true;
             readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
-            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}"];
+            readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}", "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass"];
             readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
@@ -2131,7 +2131,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly exactMcpDestination: readonly ["blueprint_roadmap_read", "blueprint_artifact_contract_read", "blueprint_artifact_summary_digest", "blueprint_config_get", "blueprint_artifact_scaffold", "blueprint_state_update"];
             readonly optionalAgents: readonly ["blueprint-roadmapper"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
-            readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
+            readonly contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, update state only after scaffold succeeds, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

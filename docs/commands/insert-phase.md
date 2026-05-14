@@ -11,6 +11,7 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `insert-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap insert, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Shared phase-admin spine: read roadmap state first, preview the exact integer anchor plus decimal target plus requirement grounding plus roadmap objective and success criteria, require a named confirmation gate before any mutation, persist only through MCP tools, treat the scaffolded context as starter material only, update `STATE.md` only after scaffold succeeds, route to `/blu-discuss-phase <phase>`, and never widen into tracker tools, long-running progress posture, or planned-only shortcuts.
 - Rich runtime contract: `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`. The command manifest stays thin; the reference owns MCP result controls, artifact scaffold rules, no-subagent fallback, retry behavior, output quality, and completion criteria.
 - Keep the waiting state explicit as `phase-insert-confirmation` while the computed decimal insert is waiting for approval, `invalid-insertion-anchor` when the requested integer anchor is unusable, and `conflicting-decimal-directory` when on-disk state blocks the insert.
 
@@ -38,6 +39,7 @@
 - A concrete ROADMAP objective, 2-5 observable success criteria, and at least one confirmed durable requirement ID declared in `.blueprint/REQUIREMENTS.md` are required and passed as `goal`, `successCriteria`, and `requirementIds`.
 - Requirement mappings such as `none yet`, placeholder text, blank values, or IDs not declared in `.blueprint/REQUIREMENTS.md` are invalid for inserted phases.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
+- Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
 
 
@@ -79,6 +81,7 @@
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+- Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing context path.
 - Do not create an insert-phase-specific report. The only artifact seed is the initial `phase.context` scaffold, and `/blu-discuss-phase <decimal>` owns rich context authoring afterward.
 
 

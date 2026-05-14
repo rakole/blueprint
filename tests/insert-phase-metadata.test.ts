@@ -8,6 +8,12 @@ import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metad
 
 const repoRoot = process.cwd();
 
+function assertContainsAll(text: string, snippets: string[]) {
+  for (const snippet of snippets) {
+    assert.ok(text.includes(snippet), `expected to find ${snippet}`);
+  }
+}
+
 test("insert-phase manifest references roadmap insertion tools, confirmation gate, and discuss-phase routing", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-insert-phase.toml"),
@@ -41,16 +47,18 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu-insert-phase/);
-  assert.match(skillFile, /insert-phase-runtime-contract\.md/);
-  assert.match(skillFile, /blueprint_roadmap_insert_phase/);
-  assert.match(skillFile, /confirmed durable `requirementIds` declared in `\.blueprint\/REQUIREMENTS\.md`/);
-  assert.match(skillFile, /Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assertContainsAll(skillFile, [
+    "/blu-insert-phase",
+    "insert-phase-runtime-contract.md",
+    "blueprint_roadmap_insert_phase",
+    "confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`",
+    "Reject `none yet`, placeholder text, blank values, or requirement IDs not declared in `.blueprint/REQUIREMENTS.md`",
+    "roadmap-driven",
+    "conflicting decimal directory",
+    "roadmapEvolutionNotes",
+    "ask_user",
+  ]);
   assert.match(skillFile, /reject decimal targets/i);
-  assert.match(skillFile, /roadmap-driven/i);
-  assert.match(skillFile, /conflicting decimal directory/i);
-  assert.match(skillFile, /roadmapEvolutionNotes/);
-  assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
@@ -125,6 +133,16 @@ test("insert-phase runtime-owned metadata uses numeric after anchors and phasePr
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+});
+
+test("insert-phase docs keep requirement traceability in the declared write surface", async () => {
+  const insertPhaseDoc = await readFile(
+    path.join(repoRoot, "docs/commands/insert-phase.md"),
+    "utf8"
+  );
+
+  assert.match(insertPhaseDoc, /## Blueprint And Global State Writes[\s\S]*`?\.blueprint\/REQUIREMENTS\.md`?/);
+  assert.match(insertPhaseDoc, /Maps the confirmed requirement rows in `\.blueprint\/REQUIREMENTS\.md`/);
 });
 
 test("roadmap-admin agent contracts retain insert-phase output-quality expectations", async () => {

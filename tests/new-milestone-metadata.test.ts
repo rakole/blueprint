@@ -8,6 +8,12 @@ import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metad
 
 const repoRoot = process.cwd();
 
+function assertContainsAll(text: string, snippets: string[]) {
+  for (const snippet of snippets) {
+    assert.ok(text.includes(snippet), `expected to find ${snippet}`);
+  }
+}
+
 test("new-milestone manifest references carry-forward seed generation and discuss-phase routing", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-new-milestone.toml"),
@@ -20,6 +26,7 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
   assert.match(commandFile, /mcp_blueprint_blueprint_roadmap_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_config_get/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_summary_digest/);
   assert.match(commandFile, /artifactPaths/);
@@ -31,9 +38,9 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /carry-forward-confirmation/);
   assert.match(commandFile, /starter-doc-overwrite-confirmation/);
   assert.match(commandFile, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools/);
-  assert.ok(
-    commandFile.indexOf("If the milestone summary report is missing") <
-      commandFile.indexOf("Build carry-forward context through `mcp_blueprint_blueprint_artifact_summary_digest`")
+  assert.match(
+    commandFile,
+    /1\. Resolve[\s\S]*mcp_blueprint_blueprint_roadmap_read[\s\S]*then read `mcp_blueprint_blueprint_config_get` with `scope: "effective"`/
   );
   assert.match(commandFile, /next integer after the highest base phase number/i);
   assert.match(commandFile, /Preserve historical phase directories/i);
@@ -47,15 +54,18 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "utf8"
   );
 
-  assert.match(skillFile, /\/blu-new-milestone/);
-  assert.match(skillFile, /report\.milestone-summary/);
-  assert.match(skillFile, /phase\.context/);
-  assert.match(skillFile, /blueprint_artifact_contract_read/);
-  assert.match(skillFile, /carry-forward as the default/i);
-  assert.match(skillFile, /Preserve historical phase directories/i);
-  assert.match(skillFile, /next whole-number phase/i);
-  assert.match(skillFile, /\/blu-discuss-phase <first phase>/);
-  assert.match(skillFile, /ask_user/);
+  assertContainsAll(skillFile, [
+    "/blu-new-milestone",
+    "blueprint_config_get",
+    'scope: "effective"',
+    "report.milestone-summary",
+    "phase.context",
+    "carry-forward as the default",
+    "Preserve historical phase directories",
+    "next whole-number phase",
+    "/blu-discuss-phase <first phase>",
+    "ask_user",
+  ]);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
 });
@@ -71,9 +81,14 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
   assert.deepEqual(contract.runtimeReference?.optionalAgents, [
     "blueprint-roadmapper"
   ]);
+  assert.ok(metadata.requiredTools.includes("blueprint_config_get"));
+  assert.ok(contract.spec?.reads.some((read) => read.includes("blueprint_config_get")));
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation/
+    /blueprint_config_get[\s\S]*missing-milestone-summary[\s\S]*carry-forward-confirmation[\s\S]*starter-doc-overwrite-confirmation/
   );
   assert.deepEqual(contract.skillInputs.effective, [
     "commands/blu-new-milestone.toml"

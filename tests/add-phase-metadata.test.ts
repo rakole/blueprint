@@ -102,6 +102,8 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
     skillFile,
     /Roadmap-admin commands resolve active inputs from the structured `input_bundles` frontmatter/
   );
+  assert.match(skillFile, /durable requirement ID declared in `\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(skillFile, /audit-backed repair details/);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(skillFile, /There is no add-phase subagent path/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents are not substitutes/i);
@@ -109,6 +111,8 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.match(addPhaseContract, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
   assert.match(addPhaseContract, /next integer after the highest base phase number/i);
   assert.match(addPhaseContract, /Decimal suffixes are ignored/i);
+  assert.match(addPhaseContract, /`\.blueprint\/REQUIREMENTS\.md`/);
+  assert.match(addPhaseContract, /audit-backed repair/);
   assert.match(addPhaseContract, /expectedPhaseNumber/);
   assert.match(addPhaseContract, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(addPhaseContract, /Scaffold text is starter material only/i);

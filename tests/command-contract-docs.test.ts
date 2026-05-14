@@ -1200,6 +1200,16 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
     /Returns `\/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up\./
   );
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "phase-number-confirmation",
+    "requirement source",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(addPhaseDoc.includes(snippet), `expected add-phase doc to include ${snippet}`);
+  }
 });
 
 test("insert-phase command docs keep the decimal insertion contract explicit", async () => {
@@ -1214,6 +1224,16 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
   assert.match(insertPhaseDoc, /next decimal/i);
   assert.match(insertPhaseDoc, /do not renumber later phases/i);
   assert.match(insertPhaseDoc, /\/blu-discuss-phase <decimal>/);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "phase-insert-confirmation",
+    ".blueprint/REQUIREMENTS.md",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(insertPhaseDoc.includes(snippet), `expected insert-phase doc to include ${snippet}`);
+  }
 });
 
 test("cleanup command docs keep Gemini-native ask_user confirmation gates explicit", async () => {
@@ -1329,6 +1349,7 @@ test("new-milestone command docs keep the carry-forward default and phase contin
 
   assert.match(newMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
   assert.match(newMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(newMilestoneDoc, /blueprint_config_get/);
   assert.match(newMilestoneDoc, /blueprint_artifact_summary_digest/);
   assert.match(newMilestoneDoc, /blueprint_artifact_scaffold/);
   assert.match(newMilestoneDoc, /blueprint_state_update/);
@@ -1336,6 +1357,17 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);
+  assert.doesNotMatch(newMilestoneDoc, /route to requirements/i);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "inputsUsed",
+    "starter-doc-overwrite-confirmation",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(newMilestoneDoc.includes(snippet), `expected new-milestone doc to include ${snippet}`);
+  }
 });
 
 test("docs-update command docs keep the scoped report-backed docs contract explicit", async () => {

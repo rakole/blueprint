@@ -85,3 +85,15 @@ test("roadmap-admin implemented commands stay docless when docs are unavailable"
 
   assert.ok(attemptedDocs.has("docs/COMMAND-CATALOG.md"));
 });
+
+test("new-milestone runtime resource keeps config-gated roadmapper inputs docless", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("new-milestone");
+  const contract = await buildBlueprintCommandRuntimeContractResource("new-milestone");
+
+  assert.ok(metadata);
+  assert.deepEqual(contract.skillInputs.effective, ["commands/blu-new-milestone.toml"]);
+  assert.ok(contract.spec?.reads.some((read) => read.includes("blueprint_config_get")));
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...metadata.requiredTools
+  ]);
+});
