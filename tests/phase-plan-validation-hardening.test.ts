@@ -481,6 +481,13 @@ Harden plan validation.
 `;
 }
 
+function planWithConcretePlaceholderTaskHeading(): string {
+  return validPlanContent("12", 2).replace(
+    "### Task 1: Strengthen plan validation",
+    "### Task 1: Create the six placeholder classes for project package skeleton"
+  );
+}
+
 function planWithCommandMentionsInTaskText(): string {
   return `---
 phase: 3
@@ -619,7 +626,7 @@ Harden plan validation.
 
 ## Tasks
 
-### Task 1: Replace with a concrete task name
+### Task 1: Placeholder
 
 #### Read First
 
@@ -1165,6 +1172,24 @@ test("strict plan writes reject weak task subsections and subjective acceptance 
   assert.match(result.validation?.issues.join("\n") ?? "", /concrete content/i);
   assert.match(result.validation?.issues.join("\n") ?? "", /objectively checkable/i);
   assert.match(result.validation?.issues.join("\n") ?? "", /subjective language/i);
+});
+
+test("strict plan writes allow concrete task headings that mention placeholder work", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "12",
+    content: planWithConcretePlaceholderTaskHeading(),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created", JSON.stringify(result.validation, null, 2));
+  assert.equal(result.validation?.valid, true, JSON.stringify(result.validation, null, 2));
 });
 
 test("warn-mode plan writes surface malformed depends_on without blocking the write path", async (t) => {

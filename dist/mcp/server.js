@@ -38398,6 +38398,12 @@ function extractTaskSubsection(taskBlock, subsectionHeading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function isPlaceholderOnlyTaskHeading(headingText) {
+  const title = headingText.replace(/^Task\s+\d+(?::\s*)?/i, "").trim();
+  return /^(?:todo|to do|tbd|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
+    title
+  );
+}
 function isBlankOrPlaceholderPlanLine(line) {
   return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
     line
@@ -38601,7 +38607,7 @@ function validatePlanTaskBlock(taskBlock, taskNumber) {
   const lines = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
   const heading = lines[0] ?? "";
   const headingText = heading.replace(/^###\s+/, "").trim();
-  if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || /(?:replace with|todo|tbd|placeholder|coming soon|insert here|fill in here)/i.test(headingText)) {
+  if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || isPlaceholderOnlyTaskHeading(headingText)) {
     issues.push(`Task ${taskNumber} must use a concrete heading.`);
   }
   for (const subsectionHeading of ["Read First", "Action", "Acceptance Criteria"]) {

@@ -786,6 +786,38 @@ test("phase plan model validation allows XML and template placeholders in action
   assert.match(savedContent, /<\/dependencyManagement>/);
 });
 
+test("phase plan model validation allows concrete task headings that mention placeholder work", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  const [firstTask] = model.tasks as Array<Record<string, unknown>>;
+  firstTask.title = "Create the six placeholder classes for project package skeleton";
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(
+    savedContent,
+    /### Task 1: task-1 - Create the six placeholder classes for project package skeleton/
+  );
+});
+
 test("phase plan authoring context exposes a complete runtime-narrowed task schema", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
