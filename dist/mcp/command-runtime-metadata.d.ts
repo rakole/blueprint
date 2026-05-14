@@ -328,7 +328,7 @@ export declare const NEW_MILESTONE_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
         readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}", "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass", "typed Roadmapper Packet built by the parent from digestScope, carryForwardFacts, requirementTransitionHints, and a relative firstPhasePreview only"];
-        readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
+        readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN>-CONTEXT.md", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
@@ -2121,7 +2121,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.";
             readonly reads: readonly ["blueprint_roadmap_read -> {roadmap, milestone, phases}", "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts", "blueprint_artifact_summary_digest -> {digest, inputsUsed}", "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass", "typed Roadmapper Packet built by the parent from digestScope, carryForwardFacts, requirementTransitionHints, and a relative firstPhasePreview only"];
-            readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>", ".blueprint/STATE.md"];
+            readonly writes: readonly [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md", ".blueprint/ROADMAP.md", ".blueprint/phases/<next-phase-slug>/<NN>-CONTEXT.md", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;

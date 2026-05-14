@@ -86,7 +86,7 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /reset ambiguity/i);
   assert.match(commandFile, /directory conflicts/i);
   assert.match(commandFile, /state mismatch/i);
-  assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
+  assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN>-CONTEXT\.md/);
   assert.match(commandFile, /\/blu-discuss-phase <first phase>/);
   assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
   assert.doesNotMatch(commandFile, /\/blu-execute-phase/);

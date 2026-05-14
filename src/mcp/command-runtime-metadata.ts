@@ -1106,7 +1106,7 @@ export const NEW_MILESTONE_RUNTIME_METADATA = {
       ".blueprint/PROJECT.md",
       ".blueprint/REQUIREMENTS.md",
       ".blueprint/ROADMAP.md",
-      ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>",
+      ".blueprint/phases/<next-phase-slug>/<NN>-CONTEXT.md",
       ".blueprint/STATE.md"
     ]
   },
