@@ -49,6 +49,7 @@
 
 
 - User-facing result: a concise completion summary plus the next safe implemented action when applicable.
+- The completion response also includes a command response receipt only. It does not create `.blueprint/receipts`, `.blueprint/runs`, host-global receipt state, or any other durable receipt surface.
 - Repo side effects: Rewrites the starter milestone docs in `.blueprint/`, scaffolds the first carried-forward phase context artifact, and updates `.blueprint/STATE.md`.
 - In-flight posture: none beyond a concise inline summary or confirmation gate; `new-milestone` does not expose the long-running progress layer.
 
@@ -95,6 +96,20 @@
 - Treat returned scaffold receipt fields as authoritative for the first carried-forward phase: `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`. Stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of triggering prompt-side recomputation.
 - Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing starter context path.
 - Preserve the confirmed next phase number when building the first context path; do not invent or renumber historical phase directories manually.
+
+## Completion Receipt
+
+- Return the receipt only in the command response, never as persistent storage.
+- Include `mode`.
+- Include `roadmapperMode`.
+- Include `firstPhaseTarget` with `number`, `prefix`, `dir`, and `contextPath`.
+- Include `scaffoldPathStatuses` with `created`, `reused`, `overwritten`, or `blocked` per path.
+- Include `inputsUsed`.
+- Include `stateUpdated`.
+- Include `safeRetry`.
+- Include `nextAction`.
+- Include any `warnings`.
+- Include `deletedPhaseDirectories: []` and `renamedPhaseDirectories: []` as always-empty historical-preservation invariants.
 
 
 ## Skills And Subagents
@@ -152,8 +167,28 @@
 ## Failure Modes And Recovery
 
 
+- Shared recovery matrix:
+
+| Scenario | Recovery action |
+|---|---|
+| Mutation not attempted | Safe to rerun after the blocker is resolved. |
+| Roadmap mutation succeeded, scaffold failed | Report the successful roadmap path and the exact scaffold blocker. Do not hand-write starter docs. |
+| Scaffold succeeded, state update failed | Report the successful roadmap and scaffold writes, then route to `/blu-progress`. Do not hand-edit `STATE.md`. |
+| Same preview and same returned files on retry | Safe to reuse when the tool reports `reused`. |
+| Same confirmation token but changed params or files | Block as stale or require manual recovery. |
+
+- New-milestone recovery cases:
+
+| Scenario | Recovery action |
+|---|---|
+| Summary missing | Block with `missing-milestone-summary` and direct the user to `/blu-milestone-summary`. |
+| Reset ambiguity | Ask for an explicit mode choice before writing. |
+| Starter overwrite blocked | Ask for overwrite approval before writing. |
+| Stale first-phase number | Re-read the roadmap, recompute, and show a fresh preview. |
+| Directory conflict | Block and report the exact conflict. |
+| State mismatch | Report the mismatch and route to `/blu-progress`. |
+
 - Show roadmap and report drift before mutation.
-- If the milestone summary report is missing, stop with concise guidance to run `/blu-milestone-summary` first.
 - Preserve historical phase directories; do not delete or renumber prior milestones as part of this command.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
 
@@ -167,6 +202,7 @@
 - Builds a compact `New Milestone First-Phase Handoff Packet` from carry-forward evidence before scaffold, and keeps it as starter-only seed material rather than final authored phase context.
 - Keeps the handoff packet to roughly 12-18 bullets, preserves deferred material explicitly, and uses `openForDiscuss` for unresolved gray areas instead of writing final implementation decisions.
 - Uses the `blueprint_artifact_scaffold` first-phase receipt for `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
+- Returns a command response receipt with `mode`, `roadmapperMode`, first-phase target number/prefix/dir/context path, scaffold path statuses, `inputsUsed`, `stateUpdated`, `safeRetry`, `nextAction`, warnings, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
 - Treats `requirementTransitions` as starter-seed evidence only: rows carry `sourceRefs`, `rationale`, and explicit uncertainty labeling when needed, but they do not replace the canonical `.blueprint/REQUIREMENTS.md` authoring path.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
@@ -174,6 +210,7 @@
 - Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <first phase>` as the next safe implemented follow-up.
 - Stops without writing when the user declines the preview or overwrite confirmation.
+- Keeps receipts in the command response only and does not add a durable receipt write surface.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

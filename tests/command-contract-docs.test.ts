@@ -1196,6 +1196,20 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
   assert.match(addPhaseDoc, /expectedPhaseNumber/);
   assert.match(addPhaseDoc, /Safe default: stop without writing/);
   assert.match(addPhaseDoc, /named in-flight receipt/i);
+  assert.match(addPhaseDoc, /command response receipt only/i);
+  assert.match(addPhaseDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(addPhaseDoc, /successCriteriaCount/);
+  assert.match(addPhaseDoc, /contextScaffoldPath/);
+  assert.match(addPhaseDoc, /stateRoute/);
+  assert.match(addPhaseDoc, /safeRetry/);
+  assert.match(addPhaseDoc, /Mutation not attempted/);
+  assert.match(addPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(addPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(addPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(addPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(addPhaseDoc, /Stale `expectedPhaseNumber`/);
+  assert.match(addPhaseDoc, /Undeclared `requirementIds`/);
+  assert.match(addPhaseDoc, /Missing returned metadata/);
   assert.match(addPhaseDoc, /Refuses to append when the confirmed next phase number is stale\./);
   assert.match(
     addPhaseDoc,
@@ -1227,6 +1241,22 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
   assert.match(insertPhaseDoc, /next decimal/i);
   assert.match(insertPhaseDoc, /Safe default: stop without writing/);
   assert.match(insertPhaseDoc, /named in-flight receipt/i);
+  assert.match(insertPhaseDoc, /command response receipt only/i);
+  assert.match(insertPhaseDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(insertPhaseDoc, /requirementMappingStatus/);
+  assert.match(insertPhaseDoc, /requirementsPath/);
+  assert.match(insertPhaseDoc, /contextScaffoldPath/);
+  assert.match(insertPhaseDoc, /safeRetry/);
+  assert.match(insertPhaseDoc, /Mutation not attempted/);
+  assert.match(insertPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(insertPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(insertPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(insertPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(insertPhaseDoc, /Invalid anchor \(non-integer\)/);
+  assert.match(insertPhaseDoc, /Declared-ID failure/);
+  assert.match(insertPhaseDoc, /Already-mapped IDs/);
+  assert.match(insertPhaseDoc, /Conflicting decimal directory/);
+  assert.match(insertPhaseDoc, /Dependency-review warning/);
   assert.match(insertPhaseDoc, /do not renumber later phases/i);
   assert.match(insertPhaseDoc, /\/blu-discuss-phase <decimal>/);
   for (const snippet of [
@@ -1367,6 +1397,8 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /uncertain/);
   assert.match(newMilestoneDoc, /Safe default: stop without writing/);
   assert.match(newMilestoneDoc, /named in-flight receipt/i);
+  assert.match(newMilestoneDoc, /command response receipt only/i);
+  assert.match(newMilestoneDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
   assert.match(newMilestoneDoc, /New Milestone First-Phase Handoff Packet/);
   assert.match(newMilestoneDoc, /openForDiscuss/);
   assert.match(newMilestoneDoc, /riskWatchlist/);
@@ -1375,6 +1407,25 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /routeReceipt/);
   assert.match(newMilestoneDoc, /12-18 bullets/i);
   assert.match(newMilestoneDoc, /starter-only seed material/i);
+  assert.match(newMilestoneDoc, /roadmapperMode/);
+  assert.match(newMilestoneDoc, /firstPhaseTarget/);
+  assert.match(newMilestoneDoc, /scaffoldPathStatuses/);
+  assert.match(newMilestoneDoc, /stateUpdated/);
+  assert.match(newMilestoneDoc, /safeRetry/);
+  assert.match(newMilestoneDoc, /nextAction/);
+  assert.match(newMilestoneDoc, /deletedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /renamedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /Mutation not attempted/);
+  assert.match(newMilestoneDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(newMilestoneDoc, /Scaffold succeeded, state update failed/);
+  assert.match(newMilestoneDoc, /Same preview and same returned files on retry/);
+  assert.match(newMilestoneDoc, /Same confirmation token but changed params or files/);
+  assert.match(newMilestoneDoc, /Summary missing/);
+  assert.match(newMilestoneDoc, /Reset ambiguity/);
+  assert.match(newMilestoneDoc, /Starter overwrite blocked/);
+  assert.match(newMilestoneDoc, /Stale first-phase number/);
+  assert.match(newMilestoneDoc, /Directory conflict/);
+  assert.match(newMilestoneDoc, /State mismatch/);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);

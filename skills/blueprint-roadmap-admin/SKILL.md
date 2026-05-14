@@ -133,6 +133,8 @@ Treat roadmap-admin commands as short, bounded roadmap or report work, not as lo
 
 For `/blu-add-phase`, `/blu-insert-phase`, and `/blu-new-milestone`, keep the same shared phase-admin spine: roadmap read first, exact preview packet with source scope plus target phase plus requirement grounding, named confirmation before mutation, safe default as stop-without-writing, named in-flight receipt that binds the approved preview to later MCP arguments, MCP-only persistence, starter-only context scaffolding, state update after scaffold, `/blu-discuss-phase` follow-up routing after successful writes, `/blu-progress` decline routing when a safe route is needed, and no tracker-backed or planned-only shortcuts.
 
+For those same three commands, return command-specific completion receipts in the response only. Do not create `.blueprint/receipts`, `.blueprint/runs`, host-global receipt state, or any other new write surface for receipt storage.
+
 ### `add-phase`
 
 Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` as the richer local runtime contract for this command. The summary below is the quick checklist; the reference owns the detailed stage mapping, required MCP call controls, stale-confirmation behavior, no-subagent fallback, retry rules, and output-quality criteria.
@@ -146,9 +148,12 @@ Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` a
 7. Return a compact starter handoff before the route instruction: returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
 8. Do not treat scaffold text or the starter handoff as finished phase context; route to `/blu-discuss-phase <phase>` so the context is authored by the discovery workflow.
 9. Keep the handoff compact starter seed only. `/blu-add-phase` must not author final `XX-CONTEXT.md`, `/blu-plan-phase`, or `/blu-execute-phase` output.
-10. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the new phase becomes current, `/blu-add-phase` is the active command, and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
-11. Keep follow-up routing inside implemented Blueprint commands only.
-12. Keep the flow skill-led. There is no add-phase subagent path; browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin analysis.
+10. Return the add-phase completion receipt in the same response with the approved `phaseNumber`, returned phase metadata, declared `requirementIds`, confirmed `goal`, `successCriteriaCount`, `roadmapPath`, `contextScaffoldPath`, `stateRoute`, `safeRetry`, and `warnings`.
+11. Keep recovery wording explicit in the response: mutation not attempted is safe to rerun after blocker resolution; roadmap mutation plus scaffold failure must report the successful roadmap path and exact scaffold blocker without hand-writing context; scaffold success plus state-update failure must route to `/blu-progress` without hand-editing `STATE.md`; same preview plus same returned files may reuse when the tool reports `reused`; changed params or files under the same confirmation token must block as stale or require manual recovery.
+12. Add-phase-specific recovery must also stay explicit: stale `expectedPhaseNumber` requires a roadmap re-read and fresh preview; undeclared `requirementIds` must list the missing IDs; missing returned metadata must block and surface the tool error instead of guessing.
+13. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the new phase becomes current, `/blu-add-phase` is the active command, and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+14. Keep follow-up routing inside implemented Blueprint commands only.
+15. Keep the flow skill-led. There is no add-phase subagent path; browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin analysis.
 
 ### `insert-phase`
 
@@ -165,10 +170,13 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 9. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
 10. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
 11. Return a compact starter handoff before the route instruction: decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
-12. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
-13. Keep follow-up routing inside implemented Blueprint commands only.
-14. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
-15. Treat scaffold text and the starter handoff as starter material only. Do not author final `XX-CONTEXT.md` content, create insert-phase-specific reports, or jump directly to `/blu-plan-phase` or `/blu-execute-phase`; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
+12. Return the insert-phase completion receipt in the same response with the integer `anchor`, inserted decimal `phaseNumber`, returned phase metadata, `requirementMappingStatus`, `requirementsPath`, `roadmapPath`, `contextScaffoldPath`, `stateRoute`, the no-renumbering note, `safeRetry`, and `warnings`.
+13. Keep recovery wording explicit in the response: mutation not attempted is safe to rerun after blocker resolution; roadmap mutation plus scaffold failure must report the successful roadmap path and exact scaffold blocker without hand-writing context; scaffold success plus state-update failure must route to `/blu-progress` without hand-editing `STATE.md`; same preview plus same returned files may reuse when the tool reports `reused`; changed params or files under the same confirmation token must block as stale or require manual recovery.
+14. Insert-phase-specific recovery must also stay explicit: invalid non-integer anchors return an error; declared-ID failures list the failed IDs; already-mapped IDs list the conflicting phases; conflicting decimal directories block with the exact conflict; dependency-review warnings stay visible in receipt `warnings`.
+15. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
+16. Keep follow-up routing inside implemented Blueprint commands only.
+17. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
+18. Treat scaffold text and the starter handoff as starter material only. Do not author final `XX-CONTEXT.md` content, create insert-phase-specific reports, or jump directly to `/blu-plan-phase` or `/blu-execute-phase`; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
 
 ### `remove-phase`
 
@@ -254,9 +262,12 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 19. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields and typed roadmapper result to the later scaffold and state-update arguments.
 20. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
 21. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
-22. Treat the handoff packet as starter-only seed material for `/blu-discuss-phase`, not as final authored `phase.context`. It must not widen into a new typed `.blueprint/` write surface or a durable handoff store.
-23. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
-24. Keep follow-up routing inside implemented Blueprint commands only.
+22. Return the new-milestone completion receipt in the same response with `mode`, `roadmapperMode`, `firstPhaseTarget` (`number`, `prefix`, `dir`, `contextPath`), `scaffoldPathStatuses` (`created`, `reused`, `overwritten`, or `blocked` per path), `inputsUsed`, `stateUpdated`, `safeRetry`, `nextAction`, `warnings`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
+23. Keep recovery wording explicit in the response: mutation not attempted is safe to rerun after blocker resolution; roadmap mutation plus scaffold failure must report the successful roadmap path and exact scaffold blocker without hand-writing starter docs; scaffold success plus state-update failure must route to `/blu-progress` without hand-editing `STATE.md`; same preview plus same returned files may reuse when the tool reports `reused`; changed params or files under the same confirmation token must block as stale or require manual recovery.
+24. New-milestone-specific recovery must also stay explicit: missing summary blocks with `missing-milestone-summary`; reset ambiguity requires an explicit mode choice; starter overwrite blockers require overwrite approval; stale first-phase numbers require a roadmap re-read and fresh preview; directory conflicts block with the exact conflict; state mismatch is reported and routed to `/blu-progress`.
+25. Treat the handoff packet as starter-only seed material for `/blu-discuss-phase`, not as final authored `phase.context`. It must not widen into a new typed `.blueprint/` write surface or a durable handoff store.
+26. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
+27. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail
 
@@ -278,7 +289,11 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - For `insert-phase`, include the compact starter handoff block before the route instruction: decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when a confirmation gate is shown, render the preview packet fields explicitly and name the safe default as `stop without writing`.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when confirmation succeeds, the completion summary should name the gate receipt implicitly by carrying forward the exact approved target or scaffold values instead of introducing new mutation arguments after approval.
-- For `new-milestone`, include the MCP scaffold receipt values for the first phase: `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
+- For `add-phase`, include the completion receipt fields: approved `phaseNumber`, returned phase metadata, declared `requirementIds`, confirmed `goal`, `successCriteriaCount`, `roadmapPath`, `contextScaffoldPath`, `stateRoute`, `safeRetry`, and `warnings`.
+- For `insert-phase`, include the completion receipt fields: integer `anchor`, inserted decimal `phaseNumber`, returned phase metadata, `requirementMappingStatus`, `requirementsPath`, `roadmapPath`, `contextScaffoldPath`, `stateRoute`, the no-renumbering note, `safeRetry`, and `warnings`.
+- For `new-milestone`, include the completion receipt fields: `mode`, `roadmapperMode`, `firstPhaseTarget`, `scaffoldPathStatuses`, `inputsUsed`, `stateUpdated`, `safeRetry`, `nextAction`, `warnings`, `deletedPhaseDirectories: []`, and `renamedPhaseDirectories: []`.
+- For `add-phase`, `insert-phase`, and `new-milestone`, keep the recovery matrix visible in the response whenever the flow stops or partially succeeds: mutation not attempted, roadmap mutation plus scaffold failure, scaffold success plus state-update failure, same preview plus same returned files reuse, and stale same-token param or file changes.
+- For `new-milestone`, include the MCP scaffold receipt values for the first phase: `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories: []`, and `renamedPhaseDirectories: []`.
 
 ## Completion Self-Check
 
@@ -290,6 +305,9 @@ Before claiming completion, verify:
 - Returned MCP fields were treated as authoritative, including `status`, `written`, `created`, `updated`, `createdFiles`, `reusedFiles`, `path`, `phaseNumber`, `phasePrefix`, `phaseDir`, `inputsUsed`, validation results, warnings, recovery guidance, and `reason`.
 - Every required confirmation gate was satisfied before mutation: phase-number append, decimal insert, future/destructive removal, grouped gap plan, overwrite or replacement, carry-forward versus reset, and starter-doc regeneration.
 - For `add-phase`, `insert-phase`, and `new-milestone`, the approved preview packet and later MCP mutation arguments stayed aligned; declines stopped without writing and routed to `/blu-progress` only when a safe route was needed.
+- For `add-phase`, `insert-phase`, and `new-milestone`, the final response included the command-specific completion receipt fields and stated that receipts live only in the command response, not in `.blueprint/receipts`, `.blueprint/runs`, host-global state, or any other durable surface.
+- The shared recovery matrix stayed explicit for those three commands: mutation not attempted, roadmap mutation plus scaffold failure, scaffold success plus state-update failure, same preview plus same returned files reuse, and stale same-token param or file changes.
+- Command-specific recovery wording stayed explicit when applicable: stale `expectedPhaseNumber`, undeclared `requirementIds`, missing returned metadata, invalid non-integer anchors, declared-ID failures, already-mapped IDs, conflicting decimal directories, dependency-review warnings, missing summary, reset ambiguity, starter overwrite blockers, stale first-phase numbers, directory conflicts, and state mismatch.
 - Missing inputs, no-actionable-gap states, invalid anchors, stale phase numbers, conflicting directories, missing reports, audit-not-ready states, validation failures, tool rejections, partial writes, or skipped steps were repaired through the active reference or reported as blockers/no-write status, not described as successful completion.
 - The command stayed inside its write boundary: roadmap surgery only for add/insert/remove/gap phases, reports only through `.blueprint/reports/`, new-milestone starter scaffolds only through `blueprint_artifact_scaffold`, and no source, test, git, hook, catalog-status, or installed-extension mutation.
 - Final routing named only implemented Blueprint commands from the active contract; `/blu-progress` was used when the safe next action was ambiguous, blocked, declined, or not implemented.

@@ -50,6 +50,7 @@
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
+- The completion response also includes a command response receipt only. It does not create `.blueprint/receipts`, `.blueprint/runs`, host-global receipt state, or any other durable receipt surface.
 - Repo side effects: Maps the confirmed requirement rows in `.blueprint/REQUIREMENTS.md`, inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
 - In-flight posture: none beyond a concise inline summary or confirmation gate; `insert-phase` does not expose the long-running progress layer.
 
@@ -88,6 +89,18 @@
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
 - Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing context path.
 - Do not create an insert-phase-specific report. The only artifact seed is the initial `phase.context` scaffold, and `/blu-discuss-phase <decimal>` owns rich context authoring afterward.
+
+## Completion Receipt
+
+- Return the receipt only in the command response, never as persistent storage.
+- Include the integer `anchor` and the inserted decimal `phaseNumber`.
+- Include the returned phase metadata.
+- Include `requirementMappingStatus`.
+- Include `requirementsPath`, `roadmapPath`, and `contextScaffoldPath`.
+- Include the returned `stateRoute`.
+- Include the no-renumbering note.
+- Include `safeRetry`.
+- Include any `warnings`, including dependency-review warnings when present.
 
 
 ## Skills And Subagents
@@ -144,12 +157,31 @@
 ## Failure Modes And Recovery
 
 
+- Shared recovery matrix:
+
+| Scenario | Recovery action |
+|---|---|
+| Mutation not attempted | Safe to rerun after the blocker is resolved. |
+| Roadmap mutation succeeded, scaffold failed | Report the successful roadmap path and the exact scaffold blocker. Do not hand-write context. |
+| Scaffold succeeded, state update failed | Report the successful roadmap and scaffold writes, then route to `/blu-progress`. Do not hand-edit `STATE.md`. |
+| Same preview and same returned files on retry | Safe to reuse when the tool reports `reused`. |
+| Same confirmation token but changed params or files | Block as stale or require manual recovery. |
+
+- Insert-phase recovery cases:
+
+| Scenario | Recovery action |
+|---|---|
+| Invalid anchor (non-integer) | Return an error and do not mutate. |
+| Declared-ID failure | Return an error listing the failed IDs. |
+| Already-mapped IDs | Return an error listing the conflicting phases. |
+| Conflicting decimal directory | Block and report the exact conflict. |
+| Dependency-review warning | Keep the warning visible in the receipt `warnings`. |
+
 - Show roadmap and phase-directory drift before mutation.
 - Refuse mutation when the target phase is not an existing integer phase.
 - Refuse mutation when the roadmap cannot place the new phase under `## Phases`; create an optional `## Phase Details` section only when the existing ROADMAP shape needs one.
 - Refuse mutation when any confirmed requirement ID is undeclared, placeholder-derived, or already mapped to another roadmap phase.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
-- If scaffold or state update fails after roadmap insertion, report which MCP-backed steps succeeded, surface the failed step, and route to `/blu-progress` or recovery guidance instead of hand-editing `.blueprint/`.
 
 
 ## Acceptance Criteria
@@ -166,9 +198,11 @@
 - Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
 - Returns a compact starter handoff block with the decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
+- Returns a command response receipt with the anchor, inserted decimal, returned phase metadata, requirement mapping status, requirements path, roadmap path, context scaffold path, state route, no-renumbering note, `safeRetry`, and warnings.
 - Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Stops without writing when the user declines the preview confirmation.
+- Keeps receipts in the command response only and does not add a durable receipt write surface.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

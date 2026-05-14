@@ -51,6 +51,21 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /phase-insert-confirmation/);
   assert.match(commandFile, /invalid-insertion-anchor/);
   assert.match(commandFile, /conflicting-decimal-directory/);
+  assert.match(commandFile, /requirementMappingStatus/);
+  assert.match(commandFile, /requirementsPath/);
+  assert.match(commandFile, /contextScaffoldPath/);
+  assert.match(commandFile, /stateRoute/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /completion receipt/i);
+  assert.match(commandFile, /Do not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(commandFile, /mutation not attempted/i);
+  assert.match(commandFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(commandFile, /scaffold success plus state-update failure/i);
+  assert.match(commandFile, /same preview plus the same returned files/i);
+  assert.match(commandFile, /changed params or files/i);
+  assert.match(commandFile, /declared-ID failures?/i);
+  assert.match(commandFile, /already-mapped IDs/i);
+  assert.match(commandFile, /dependency-review warnings?/i);
   assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
@@ -76,6 +91,14 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "ask_user",
     "compact starter handoff",
     "open risks plus dependency questions",
+    "requirementMappingStatus",
+    "requirementsPath",
+    "contextScaffoldPath",
+    "stateRoute",
+    "safeRetry",
+    ".blueprint/receipts",
+    "declared-ID failures",
+    "already-mapped IDs",
   ]);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
@@ -192,6 +215,22 @@ test("insert-phase docs keep requirement traceability in the declared write surf
   assert.match(insertPhaseDoc, /roadmap evolution note summary/i);
   assert.match(insertPhaseDoc, /open risks plus dependency questions/i);
   assert.match(insertPhaseDoc, /named in-flight receipt/i);
+  assert.match(insertPhaseDoc, /command response receipt only/i);
+  assert.match(insertPhaseDoc, /requirementMappingStatus/);
+  assert.match(insertPhaseDoc, /requirementsPath/);
+  assert.match(insertPhaseDoc, /contextScaffoldPath/);
+  assert.match(insertPhaseDoc, /stateRoute/);
+  assert.match(insertPhaseDoc, /safeRetry/);
+  assert.match(insertPhaseDoc, /Mutation not attempted/);
+  assert.match(insertPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(insertPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(insertPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(insertPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(insertPhaseDoc, /Invalid anchor \(non-integer\)/);
+  assert.match(insertPhaseDoc, /Declared-ID failure/);
+  assert.match(insertPhaseDoc, /Already-mapped IDs/);
+  assert.match(insertPhaseDoc, /Conflicting decimal directory/);
+  assert.match(insertPhaseDoc, /Dependency-review warning/);
   assert.match(insertPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
   assert.match(
     insertPhaseDoc,

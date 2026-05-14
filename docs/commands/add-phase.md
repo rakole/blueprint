@@ -49,6 +49,7 @@
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
+- The completion response also includes a command response receipt only. It does not create `.blueprint/receipts`, `.blueprint/runs`, host-global receipt state, or any other durable receipt surface.
 - Repo side effects: Appends the new phase to `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phase-slug>/`, and updates `.blueprint/STATE.md`.
 - In-flight posture: none beyond a concise inline summary or confirmation gate; `add-phase` does not expose the long-running progress layer.
 
@@ -83,6 +84,17 @@
 - Treat returned `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative new-phase metadata.
 - Scaffold the initial context file at `${phaseDir}/${phasePrefix}-CONTEXT.md` from the returned phase metadata. Do not treat scaffold text as finished phase context.
 - Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing context path.
+
+## Completion Receipt
+
+- Return the receipt only in the command response, never as persistent storage.
+- Include `phaseNumber` as the approved integer phase number and include the returned phase metadata.
+- Include the declared `requirementIds`.
+- Include the confirmed `goal` and `successCriteriaCount`.
+- Include `roadmapPath` and `contextScaffoldPath`.
+- Include the returned `stateRoute` or next safe route.
+- Include `safeRetry`.
+- Include any `warnings`.
 
 
 ## Skills And Subagents
@@ -136,11 +148,27 @@
 ## Failure Modes And Recovery
 
 
+- Shared recovery matrix:
+
+| Scenario | Recovery action |
+|---|---|
+| Mutation not attempted | Safe to rerun after the blocker is resolved. |
+| Roadmap mutation succeeded, scaffold failed | Report the successful roadmap path and the exact scaffold blocker. Do not hand-write context. |
+| Scaffold succeeded, state update failed | Report the successful roadmap and scaffold writes, then route to `/blu-progress`. Do not hand-edit `STATE.md`. |
+| Same preview and same returned files on retry | Safe to reuse when the tool reports `reused`. |
+| Same confirmation token but changed params or files | Block as stale or require manual recovery. |
+
+- Add-phase recovery cases:
+
+| Scenario | Recovery action |
+|---|---|
+| Stale `expectedPhaseNumber` | Re-read the roadmap and show a fresh preview before retrying. |
+| Undeclared `requirementIds` | Return an error listing the missing IDs and do not mutate. |
+| Missing returned metadata | Block and surface the tool error instead of guessing completion values. |
+
 - Show roadmap and phase-directory drift before mutation if the roadmap read reveals a mismatch.
 - Explain which base phase numbers were considered and which decimal suffixes were ignored when deriving the append target.
-- Reject the add-phase mutation if the live next phase no longer matches the confirmed `expectedPhaseNumber`; re-read the roadmap before retrying.
 - If scaffold creation fails, report the exact `${phaseDir}/${phasePrefix}-CONTEXT.md` path and stop without manually writing the file.
-- If state update fails after roadmap append and scaffold success, report the completed writes, the state-update failure, and `/blu-progress` as the recovery route instead of manually editing `STATE.md`.
 - Stop without mutation when the phase description is missing, the roadmap is unavailable, or the previewed next phase number cannot be confirmed.
 - Stop without mutation when a plain add-phase request has no confirmed requirement IDs.
 - Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `.blueprint/REQUIREMENTS.md`.
@@ -157,6 +185,7 @@
 - Requires those plain-append `requirementIds` to already exist in `.blueprint/REQUIREMENTS.md` before mutation, while preserving audit-backed repair through `auditBackedDetails.repairRequirementIds`.
 - Confirms and passes a concrete objective plus 2-5 observable success criteria so `/blu-discuss-phase` is not expected to backfill ROADMAP placeholders.
 - Returns a compact starter handoff block with the returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open discuss items.
+- Returns a command response receipt with the approved phase number, returned phase metadata, declared requirement IDs, goal, success criteria count, roadmap path, context scaffold path, state route, `safeRetry`, and warnings.
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
 - Refuses to append when the confirmed next phase number is stale.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
@@ -164,6 +193,7 @@
 - Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up.
 - Stops without writing when the user declines the preview confirmation.
+- Keeps receipts in the command response only and does not add a durable receipt write surface.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

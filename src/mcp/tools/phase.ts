@@ -466,17 +466,29 @@ type ResolvedPhaseLocation = {
   phaseDir: string;
 };
 
+type RoadmapAddPhaseRequirementValidationStatus =
+  | "declared"
+  | "traceability-repaired";
+
+type RoadmapAddPhaseIdempotencyStatus = "created" | "reused-existing-phase";
+
 type RoadmapAddPhaseResult = {
   phaseNumber: string;
   phasePrefix: string;
   phaseName: string;
   slug: string;
   phaseDir: string;
+  contextPath: string;
   roadmapPath: string;
   milestone: string | null;
+  requirementValidationStatus: RoadmapAddPhaseRequirementValidationStatus;
+  createdPhaseDir: boolean;
+  idempotencyStatus: RoadmapAddPhaseIdempotencyStatus;
   written: boolean;
   warnings: string[];
 };
+
+type RoadmapInsertPhaseRequirementMappingStatus = "updated" | "unchanged";
 
 type RoadmapInsertPhaseResult = {
   afterPhaseNumber: string;
@@ -485,8 +497,11 @@ type RoadmapInsertPhaseResult = {
   phaseName: string;
   slug: string;
   phaseDir: string;
+  contextPath: string;
   roadmapPath: string;
   milestone: string | null;
+  requirementMappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
+  createdPhaseDir: boolean;
   written: boolean;
   warnings: string[];
 };
@@ -1586,8 +1601,13 @@ async function reuseAuditBackedPhase(
     phaseName: phase.phaseName,
     slug: slugifyPhaseName(phase.phaseName),
     phaseDir,
+    contextPath: buildArtifactPath(phaseDir, phase.phasePrefix, "-CONTEXT.md"),
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
+    requirementValidationStatus:
+      auditBackedDetails.repairRequirementIds?.length ? "traceability-repaired" : "declared",
+    createdPhaseDir: phaseDirState.created,
+    idempotencyStatus: "reused-existing-phase",
     written: true,
     warnings
   };
@@ -2219,6 +2239,7 @@ async function mapRequirementsToInsertedPhase(
   phaseName: string
 ): Promise<{
   content: string;
+  mappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
   warnings: string[];
 }> {
   const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
@@ -2235,6 +2256,7 @@ async function mapRequirementsToInsertedPhase(
 
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+  let mappingUpdated = false;
 
   const content = rawRequirements.replace(
     REQUIREMENTS_TABLE_SECTION_PATTERN,
@@ -2260,6 +2282,8 @@ async function mapRequirementsToInsertedPhase(
             return line;
           }
 
+          mappingUpdated = true;
+
           return renderRequirementTableRow({
             ...row,
             notes: nextNotes
@@ -2273,6 +2297,7 @@ async function mapRequirementsToInsertedPhase(
 
   return {
     content,
+    mappingStatus: mappingUpdated ? "updated" : "unchanged",
     warnings: []
   };
 }
@@ -5769,8 +5794,13 @@ export async function blueprintRoadmapAddPhase(
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementValidationStatus:
+        normalizedRepairRequirementIds.length > 0 ? "traceability-repaired" : "declared",
+      createdPhaseDir: materializedPhaseDir.created,
+      idempotencyStatus: "created",
       written: true,
       warnings
     };
@@ -5962,8 +5992,11 @@ export async function blueprintRoadmapInsertPhase(
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementMappingStatus: requirementMapping.mappingStatus,
+      createdPhaseDir: materializedPhaseDir.created,
       written: true,
       warnings
     };

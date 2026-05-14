@@ -69,8 +69,23 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /highestBasePhaseNumber/);
   assert.match(commandFile, /firstPhaseNumber/);
   assert.match(commandFile, /firstContextPath/);
-  assert.match(commandFile, /deletedPhaseDirectories/);
-  assert.match(commandFile, /renamedPhaseDirectories/);
+  assert.match(commandFile, /deletedPhaseDirectories: \[\]/);
+  assert.match(commandFile, /renamedPhaseDirectories: \[\]/);
+  assert.match(commandFile, /firstPhaseTarget/);
+  assert.match(commandFile, /scaffoldPathStatuses/);
+  assert.match(commandFile, /stateUpdated/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /nextAction/);
+  assert.match(commandFile, /completion receipt/i);
+  assert.match(commandFile, /Do not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(commandFile, /mutation not attempted/i);
+  assert.match(commandFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(commandFile, /scaffold success plus state-update failure/i);
+  assert.match(commandFile, /same preview plus the same returned files/i);
+  assert.match(commandFile, /changed params or files/i);
+  assert.match(commandFile, /reset ambiguity/i);
+  assert.match(commandFile, /directory conflicts/i);
+  assert.match(commandFile, /state mismatch/i);
   assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
   assert.match(commandFile, /\/blu-discuss-phase <first phase>/);
   assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
@@ -115,6 +130,15 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "/blu-discuss-phase <first phase>",
     "ask_user",
     "new typed `.blueprint/` write surface",
+    "firstPhaseTarget",
+    "scaffoldPathStatuses",
+    "stateUpdated",
+    "safeRetry",
+    "nextAction",
+    "missing-milestone-summary",
+    "reset ambiguity",
+    "state mismatch",
+    ".blueprint/receipts",
   ]);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
@@ -185,7 +209,26 @@ test("new-milestone docs keep requirementTransitions as starter-seed evidence on
   assert.match(newMilestoneDoc, /named in-flight receipt/i);
   assert.match(newMilestoneDoc, /firstPhaseNumber/);
   assert.match(newMilestoneDoc, /firstContextPath/);
-  assert.match(newMilestoneDoc, /renamedPhaseDirectories/);
+  assert.match(newMilestoneDoc, /deletedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /renamedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /firstPhaseTarget/);
+  assert.match(newMilestoneDoc, /scaffoldPathStatuses/);
+  assert.match(newMilestoneDoc, /stateUpdated/);
+  assert.match(newMilestoneDoc, /safeRetry/);
+  assert.match(newMilestoneDoc, /nextAction/);
+  assert.match(newMilestoneDoc, /command response receipt only/i);
+  assert.match(newMilestoneDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(newMilestoneDoc, /Mutation not attempted/);
+  assert.match(newMilestoneDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(newMilestoneDoc, /Scaffold succeeded, state update failed/);
+  assert.match(newMilestoneDoc, /Same preview and same returned files on retry/);
+  assert.match(newMilestoneDoc, /Same confirmation token but changed params or files/);
+  assert.match(newMilestoneDoc, /Summary missing/);
+  assert.match(newMilestoneDoc, /Reset ambiguity/);
+  assert.match(newMilestoneDoc, /Starter overwrite blocked/);
+  assert.match(newMilestoneDoc, /Stale first-phase number/);
+  assert.match(newMilestoneDoc, /Directory conflict/);
+  assert.match(newMilestoneDoc, /State mismatch/);
   assert.match(newMilestoneDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
   assert.match(newMilestoneDoc, /Does not route directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
 });

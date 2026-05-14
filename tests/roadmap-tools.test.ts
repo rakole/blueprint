@@ -819,6 +819,10 @@ test("blueprint_roadmap_add_phase accepts declared requirement IDs and materiali
 
   assert.equal(result.phaseNumber, "3");
   assert.equal(result.phaseDir, ".blueprint/phases/03-notifications-flow");
+  assert.equal(result.contextPath, ".blueprint/phases/03-notifications-flow/03-CONTEXT.md");
+  assert.equal(result.requirementValidationStatus, "declared");
+  assert.equal(result.createdPhaseDir, true);
+  assert.equal(result.idempotencyStatus, "created");
   assert.equal(
     await pathExists(path.join(repoPath, ".blueprint/phases/03-notifications-flow")),
     true
@@ -879,6 +883,10 @@ test("blueprint_roadmap_add_phase keeps audit-backed repair appends intact witho
   const requirementsBody = await readFile(path.join(repoPath, ".blueprint/REQUIREMENTS.md"), "utf8");
 
   assert.equal(result.phaseNumber, "3");
+  assert.equal(result.contextPath, ".blueprint/phases/03-audit-gap-closure/03-CONTEXT.md");
+  assert.equal(result.requirementValidationStatus, "traceability-repaired");
+  assert.equal(result.createdPhaseDir, true);
+  assert.equal(result.idempotencyStatus, "created");
   assert.match(roadmapBody, /Phase 3: Audit Gap Closure/);
   assert.match(requirementsBody, /Reassigned to Phase 3 \(Audit Gap Closure\)/);
 });
@@ -920,7 +928,7 @@ test("add-phase scaffold path uses returned phase metadata as authoritative cont
     expectedPhaseNumber: "3",
     requirementIds: ["RQ-04"]
   });
-  const contextPath = `${result.phaseDir}/${result.phasePrefix}-CONTEXT.md`;
+  const contextPath = result.contextPath;
   const scaffold = await blueprintArtifactScaffold({
     cwd: repoPath,
     artifacts: [contextPath]
@@ -1350,6 +1358,10 @@ test("blueprint_roadmap_add_phase reuses an existing audit-backed phase on retry
 
   assert.equal(second.phaseNumber, "3");
   assert.equal(second.phaseDir, ".blueprint/phases/03-audit-gap-closure");
+  assert.equal(second.contextPath, ".blueprint/phases/03-audit-gap-closure/03-CONTEXT.md");
+  assert.equal(second.requirementValidationStatus, "traceability-repaired");
+  assert.equal(second.createdPhaseDir, true);
+  assert.equal(second.idempotencyStatus, "reused-existing-phase");
   assert.match(second.warnings.join("\n"), /Reused existing audit-backed Phase 3/);
   assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2.1", "2.2", "3"]);
   assert.equal(
@@ -1477,6 +1489,9 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
   assert.equal(result.phaseName, "API Stabilization");
   assert.equal(result.slug, "api-stabilization");
   assert.equal(result.phaseDir, ".blueprint/phases/02.1-api-stabilization");
+  assert.equal(result.contextPath, ".blueprint/phases/02.1-api-stabilization/02.1-CONTEXT.md");
+  assert.equal(result.requirementMappingStatus, "updated");
+  assert.equal(result.createdPhaseDir, true);
   assert.deepEqual(after.phases.map((phase) => phase.phaseNumber), ["1", "2", "2.1", "4"]);
   assert.equal(after.phases[2]?.phaseDir, ".blueprint/phases/02.1-api-stabilization");
   assert.equal(after.phases[3]?.phaseNumber, "4");

@@ -48,6 +48,19 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /do not mutate anything until the computed next phase number has been previewed and confirmed through `ask_user`/i);
   assert.match(commandFile, /phase-number-confirmation/);
   assert.match(commandFile, /stale-phase-number/);
+  assert.match(commandFile, /successCriteriaCount/);
+  assert.match(commandFile, /contextScaffoldPath/);
+  assert.match(commandFile, /stateRoute/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /completion receipt/i);
+  assert.match(commandFile, /Do not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(commandFile, /mutation not attempted/i);
+  assert.match(commandFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(commandFile, /scaffold success plus state-update failure/i);
+  assert.match(commandFile, /same preview plus the same returned files/i);
+  assert.match(commandFile, /changed params or files/i);
+  assert.match(commandFile, /undeclared `requirementIds`/i);
+  assert.match(commandFile, /missing returned metadata/i);
   assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /if the tool rejects because the live next phase changed/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
@@ -126,6 +139,14 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.match(skillFile, /compact starter handoff/i);
   assert.match(skillFile, /returned phase number and title/i);
   assert.match(skillFile, /open items for discuss-phase/i);
+  assert.match(skillFile, /successCriteriaCount/);
+  assert.match(skillFile, /contextScaffoldPath/);
+  assert.match(skillFile, /stateRoute/);
+  assert.match(skillFile, /safeRetry/);
+  assert.match(skillFile, /\.blueprint\/receipts/);
+  assert.match(skillFile, /stale `expectedPhaseNumber`/);
+  assert.match(skillFile, /undeclared `requirementIds`/);
+  assert.match(skillFile, /missing returned metadata/i);
   assert.match(skillFile, /There is no add-phase subagent path/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(addPhaseContract, /## Stage Mapping/);
@@ -167,6 +188,19 @@ test("add-phase docs keep plain append requirement validation distinct from audi
   assert.match(addPhaseDoc, /source refs/i);
   assert.match(addPhaseDoc, /open items for discuss-phase/i);
   assert.match(addPhaseDoc, /named in-flight receipt/i);
+  assert.match(addPhaseDoc, /command response receipt only/i);
+  assert.match(addPhaseDoc, /successCriteriaCount/);
+  assert.match(addPhaseDoc, /contextScaffoldPath/);
+  assert.match(addPhaseDoc, /stateRoute/);
+  assert.match(addPhaseDoc, /safeRetry/);
+  assert.match(addPhaseDoc, /Mutation not attempted/);
+  assert.match(addPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(addPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(addPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(addPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(addPhaseDoc, /Stale `expectedPhaseNumber`/);
+  assert.match(addPhaseDoc, /Undeclared `requirementIds`/);
+  assert.match(addPhaseDoc, /Missing returned metadata/);
   assert.match(addPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
   assert.match(
     addPhaseDoc,

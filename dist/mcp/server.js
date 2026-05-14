@@ -29685,8 +29685,12 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phaseName: phase.phaseName,
     slug: slugifyPhaseName(phase.phaseName),
     phaseDir,
+    contextPath: buildArtifactPath(phaseDir, phase.phasePrefix, "-CONTEXT.md"),
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
+    requirementValidationStatus: auditBackedDetails.repairRequirementIds?.length ? "traceability-repaired" : "declared",
+    createdPhaseDir: phaseDirState.created,
+    idempotencyStatus: "reused-existing-phase",
     written: true,
     warnings
   };
@@ -30085,6 +30089,7 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
   });
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+  let mappingUpdated = false;
   const content = rawRequirements.replace(
     REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
@@ -30099,6 +30104,7 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
         if (nextNotes === row.notes) {
           return line;
         }
+        mappingUpdated = true;
         return renderRequirementTableRow({
           ...row,
           notes: nextNotes
@@ -30110,6 +30116,7 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
   );
   return {
     content,
+    mappingStatus: mappingUpdated ? "updated" : "unchanged",
     warnings: []
   };
 }
@@ -32651,8 +32658,12 @@ async function blueprintRoadmapAddPhase(args) {
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementValidationStatus: normalizedRepairRequirementIds.length > 0 ? "traceability-repaired" : "declared",
+      createdPhaseDir: materializedPhaseDir.created,
+      idempotencyStatus: "created",
       written: true,
       warnings
     };
@@ -32811,8 +32822,11 @@ async function blueprintRoadmapInsertPhase(args) {
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementMappingStatus: requirementMapping.mappingStatus,
+      createdPhaseDir: materializedPhaseDir.created,
       written: true,
       warnings
     };
