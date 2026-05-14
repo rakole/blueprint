@@ -427,11 +427,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Requirements Table",
     "Scope Summary",
     "Committed V1 Scope",
-    "Deferred Scope",
-    "Out-of-Scope Cuts",
     "Traceability Notes",
     "Open Questions"
   ]);
+  assert.match(requirementsContract.notes.join("\n"), /conditionally required/i);
   assert.match(requirementsContract.authoringTemplate, /## Requirements Table/);
   assert.match(requirementsContract.authoringTemplate, /## Traceability Notes/);
   assert.deepEqual(roadmapContract.requiredHeadings, [

@@ -108,7 +108,49 @@ When a concrete choice would benefit from structure, prefer one focused
 - Return to freeform conversation as soon as the user wants to elaborate in
   their own words.
 
+## Bootstrap Micro Examples
+
+### Vague Audience
+
+User says: "I want something simple for teams."
+
+Better follow-up: "When you say teams, who is the first real user, and what
+would they be able to finish in the first successful version?"
+
+If a structured choice helps, use one focused `ask_user`:
+
+- Internal operators who repeat a workflow every day
+- External customers who need a self-serve product
+- Maintainers who need safer project coordination
+- Type your own answer...
+
+### Solution-First Reframe
+
+User says: "I want to build a dashboard with React and Firebase."
+
+Better follow-up: "What user problem does the dashboard solve? Walk me through
+what someone would accomplish with it."
+
+Record the technology choices as solution hypotheses unless the user explicitly
+commits them as first-milestone scope.
+
+### First Milestone Appetite
+
+When the user's scope is still fluid, ask: "For the first milestone, should
+Blueprint capture enough to start planning, or should it also prove one
+end-to-end workflow?"
+
+### Freeform Answer Handling
+
+If the user chooses "Other" or writes a custom answer in `ask_user`, treat that
+text as the new source of truth, update the project brief, clear any stale
+option assumption it replaced, and continue conversationally.
+
 ## Freeform Rule
+
+A custom answer from `ask_user` is freeform input, not a rejected response;
+fold it into the brief, clear any stale option assumption it replaced, and
+continue conversationally before using another structured choice.
 
 When the user wants to explain in their own words, stop forcing structure.
 

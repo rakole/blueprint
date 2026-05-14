@@ -21536,8 +21536,6 @@ var init_artifact_contracts = __esm({
           "Requirements Table",
           "Scope Summary",
           "Committed V1 Scope",
-          "Deferred Scope",
-          "Out-of-Scope Cuts",
           "Traceability Notes",
           "Open Questions"
         ],
@@ -21552,7 +21550,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Requirements bootstrap should keep requirement IDs durable, grouped, and traceable into the roadmap.",
-          "Validation expects a populated requirements table plus substantive committed, deferred, and out-of-scope sections."
+          "Validation expects a populated requirements table plus a substantive committed scope section. `Deferred Scope` and `Out-of-Scope Cuts` are conditionally required only when those groups contain items."
         ],
         renderScaffoldTemplate: renderBootstrapRequirementsTemplate,
         renderAuthoringTemplate: renderBootstrapRequirementsTemplate
@@ -23438,6 +23436,40 @@ function setNestedValue(target, pathSegments, value) {
   validateFieldNameSegment(finalSegment);
   current[finalSegment] = value;
 }
+function deleteNestedValue(target, pathSegments) {
+  const [segment, ...remainingSegments] = pathSegments;
+  if (!segment || !(segment in target)) {
+    return false;
+  }
+  if (remainingSegments.length === 0) {
+    delete target[segment];
+    return true;
+  }
+  const next = target[segment];
+  if (!isPlainObject4(next)) {
+    return false;
+  }
+  const deleted = deleteNestedValue(next, remainingSegments);
+  if (deleted && Object.keys(next).length === 0) {
+    delete target[segment];
+  }
+  return deleted;
+}
+function sanitizeDefaultsForProjectSeed(candidate) {
+  const sanitized = deepCloneObject(candidate);
+  const warnings = [];
+  for (const fullPath of PROJECT_SEED_SAVED_DEFAULTS_DENYLIST) {
+    if (deleteNestedValue(sanitized, fullPath.split("."))) {
+      warnings.push(
+        `Ignored repo-specific saved default ${fullPath} during project bootstrap.`
+      );
+    }
+  }
+  return {
+    config: sanitized,
+    warnings
+  };
+}
 function coerceLegacyConfigCandidate(candidate, warnings) {
   const nextCandidate = deepCloneObject(candidate);
   const legacyTopLevelMappings = {
@@ -23686,8 +23718,9 @@ function collectChangedKeys(before, after, prefix = []) {
 async function readProjectConfig(projectRoot) {
   return readJsonIfPresent(resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH));
 }
-async function readDefaultsConfig(defaultsPath) {
+async function readDefaultsConfig(defaultsPath, options = {}) {
   const resolvedPath = getDefaultUserConfigPath(defaultsPath);
+  const savedDefaultsPolicy = options.savedDefaultsPolicy ?? "apply";
   const raw = await readJsonIfPresent(resolvedPath).catch((error2) => {
     const message = error2 instanceof Error ? error2.message : String(error2);
     return {
@@ -23698,7 +23731,18 @@ async function readDefaultsConfig(defaultsPath) {
     return {
       config: null,
       path: resolvedPath,
-      warnings: []
+      warnings: [],
+      found: false,
+      skipped: false
+    };
+  }
+  if (savedDefaultsPolicy === "skip") {
+    return {
+      config: null,
+      path: resolvedPath,
+      warnings: ["Saved defaults were found but skipped for this project by user choice."],
+      found: true,
+      skipped: true
     };
   }
   if ("__error" in raw) {
@@ -23707,29 +23751,38 @@ async function readDefaultsConfig(defaultsPath) {
       path: resolvedPath,
       warnings: [
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
   try {
-    const normalized = normalizeConfigLayer(raw, "defaults");
+    const sanitized = options.sanitizeForProjectSeed ? sanitizeDefaultsForProjectSeed(raw) : { config: raw, warnings: [] };
+    const normalized = normalizeConfigLayer(sanitized.config, "defaults");
     return {
       config: normalized.config,
       path: resolvedPath,
-      warnings: normalized.warnings
+      warnings: [...sanitized.warnings, ...normalized.warnings],
+      found: true,
+      skipped: false
     };
   } catch {
+    const sanitizedWarnings = options.sanitizeForProjectSeed ? sanitizeDefaultsForProjectSeed(raw).warnings : [];
     return {
       config: null,
       path: resolvedPath,
       warnings: [
+        ...sanitizedWarnings,
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
 }
-async function composeConfig(projectRoot, defaultsPath) {
+async function composeConfig(projectRoot, defaultsPath, options = {}) {
   const warnings = [];
-  const defaults = await readDefaultsConfig(defaultsPath);
+  const defaults = await readDefaultsConfig(defaultsPath, options);
   const projectConfigRaw = await readProjectConfig(projectRoot);
   let projectConfig = null;
   let projectConfigLayer = null;
@@ -23773,10 +23826,11 @@ async function composeConfig(projectRoot, defaultsPath) {
         ...defaults.config ? ["defaults"] : [],
         ...projectConfig ? ["project"] : []
       ],
-      defaultsPath: defaults.config ? defaults.path : null,
+      defaultsPath: defaults.config || defaults.skipped ? defaults.path : null,
       projectPath: projectConfig ? toRepoRelativePath(projectRoot, projectPath) : null,
       defaultsApplied: defaults.config !== null,
-      projectApplied: projectConfig !== null
+      projectApplied: projectConfig !== null,
+      defaultsSkipped: defaults.skipped || void 0
     },
     warnings,
     sourcePath: projectConfig ? toRepoRelativePath(projectRoot, projectPath) : defaults.config ? defaults.path : null
@@ -23916,7 +23970,11 @@ async function blueprintConfigSetProfile(args) {
 }
 async function seedProjectConfig(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const composed = await composeConfig(projectRoot, args.defaultsPath);
+  const savedDefaultsPolicy = args.savedDefaultsPolicy ?? "apply";
+  const composed = await composeConfig(projectRoot, args.defaultsPath, {
+    sanitizeForProjectSeed: true,
+    savedDefaultsPolicy
+  });
   const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
   const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
   await writeJsonFile(
@@ -23934,7 +23992,7 @@ async function seedProjectConfig(args = {}) {
     warnings: composed.warnings
   };
 }
-var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, HOST_DEFAULT_PATCH_REGISTRIES, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configToolDefinitions;
+var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, PROJECT_SEED_SAVED_DEFAULTS_DENYLIST, HOST_DEFAULT_PATCH_REGISTRIES, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configToolDefinitions;
 var init_config = __esm({
   "src/mcp/tools/config.ts"() {
     "use strict";
@@ -23949,6 +24007,11 @@ var init_config = __esm({
     TASK_TRACKER_MODES = ["off", "auto"];
     EXTERNAL_SOURCE_MODES = ["off", "ask", "auto"];
     HARD_CODED_CONFIG_VERSION = 2;
+    PROJECT_SEED_SAVED_DEFAULTS_DENYLIST = [
+      "project_code",
+      "git.default_branch",
+      "git.protected_branches"
+    ];
     HOST_DEFAULT_PATCH_REGISTRIES = {
       gemini: "~/.gemini/blueprint/patches",
       tabnine: "~/.tabnine/blueprint/patches"
@@ -63583,7 +63646,8 @@ async function blueprintProjectInit(args = {}) {
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
-    defaultsPath: args.defaultsPath
+    defaultsPath: args.defaultsPath,
+    savedDefaultsPolicy: args.savedDefaultsPolicy
   });
   const bootstrapContextWarnings = overwrite || scaffold.createdFiles.includes(initialPhaseContextPath) ? await writeTextFile(
     resolveBlueprintPath(projectRoot, initialPhaseContextPath),
@@ -63734,6 +63798,7 @@ var init_project = __esm({
     projectInitInputSchema = {
       cwd: string2().optional(),
       defaultsPath: string2().optional(),
+      savedDefaultsPolicy: _enum(["apply", "skip"]).optional(),
       overwrite: boolean2().optional(),
       projectName: string2().optional(),
       bootstrapMode: _enum(["interactive", "auto"]).optional(),
