@@ -1367,9 +1367,18 @@ test("new-milestone command docs keep the carry-forward default and phase contin
   assert.match(newMilestoneDoc, /uncertain/);
   assert.match(newMilestoneDoc, /Safe default: stop without writing/);
   assert.match(newMilestoneDoc, /named in-flight receipt/i);
+  assert.match(newMilestoneDoc, /New Milestone First-Phase Handoff Packet/);
+  assert.match(newMilestoneDoc, /openForDiscuss/);
+  assert.match(newMilestoneDoc, /riskWatchlist/);
+  assert.match(newMilestoneDoc, /deferredNotDoingNow/);
+  assert.match(newMilestoneDoc, /canonicalReferences/);
+  assert.match(newMilestoneDoc, /routeReceipt/);
+  assert.match(newMilestoneDoc, /12-18 bullets/i);
+  assert.match(newMilestoneDoc, /starter-only seed material/i);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);
+  assert.match(newMilestoneDoc, /Does not route directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
   assert.doesNotMatch(newMilestoneDoc, /route to requirements/i);
   for (const snippet of [
     "Shared phase-admin spine",

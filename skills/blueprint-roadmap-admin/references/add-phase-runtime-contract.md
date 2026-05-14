@@ -95,6 +95,13 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 - End with the new phase number and description, the scaffold path, warnings or
   reuse notes, and the next safe implemented command:
   `/blu-discuss-phase <phase>`.
+- Before that route instruction, include a compact starter handoff block for
+  `/blu-discuss-phase` with the returned phase number and title, declared
+  requirement IDs, confirmed objective, success criteria, source refs, and open
+  items that still need discuss-phase review.
+- Keep the handoff compact starter seed only. Do not treat it as final
+  `XX-CONTEXT.md`, and do not route directly to `/blu-plan-phase` or
+  `/blu-execute-phase`.
 - Do not route to planned-only commands or to `/blu-plan-phase` directly.
 
 ## Required MCP Calls
@@ -170,6 +177,8 @@ confirmation gate, and the parent command must still own all MCP calls.
 - The user can see which requirement IDs ground the whole-number phase.
 - The user can see the concrete roadmap objective and success criteria that will
   exist before `/blu-discuss-phase` authors full phase context.
+- The user can see the compact starter handoff fields that discuss-phase should
+  carry forward instead of starting cold.
 - Decimal insertions ignored during numbering are called out when present.
 - The result distinguishes roadmap append, scaffold creation or reuse, and
   state update.

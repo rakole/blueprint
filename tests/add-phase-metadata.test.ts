@@ -31,6 +31,14 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /source warnings/i);
   assert.match(commandFile, /scaffold target/i);
   assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /compact starter handoff block/i);
+  assert.match(commandFile, /returned phase number and title/i);
+  assert.match(commandFile, /declared requirement IDs/i);
+  assert.match(commandFile, /confirmed objective/i);
+  assert.match(commandFile, /success criteria/i);
+  assert.match(commandFile, /source refs/i);
+  assert.match(commandFile, /open items for discuss-phase/i);
+  assert.match(commandFile, /Do not author final `XX-CONTEXT\.md`/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /expectedPhaseNumber/);
   assert.match(commandFile, /Treat the approved `phase-number-confirmation` gate as a named in-flight receipt/);
@@ -43,6 +51,7 @@ test("add-phase manifest uses runtime skill and MCP identities for roadmap appen
   assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /if the tool rejects because the live next phase changed/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
+  assert.match(commandFile, /prefer `\/blu-discuss-phase <phase>` over `\/blu-plan-phase` or `\/blu-execute-phase` shortcuts/);
 });
 
 test("add-phase runtime-owned metadata and skill inputs are docless at runtime", async () => {
@@ -112,6 +121,9 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.match(skillFile, /durable requirement ID declared in `\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(skillFile, /auditBackedDetails\.repairRequirementIds/);
   assert.match(skillFile, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
+  assert.match(skillFile, /compact starter handoff/i);
+  assert.match(skillFile, /returned phase number and title/i);
+  assert.match(skillFile, /open items for discuss-phase/i);
   assert.match(skillFile, /There is no add-phase subagent path/i);
   assert.match(skillFile, /browser, web-search-only, shell-only, or generic agents are not substitutes/i);
   assert.match(addPhaseContract, /## Stage Mapping/);
@@ -123,6 +135,12 @@ test("add-phase runtime-owned metadata and skill inputs are docless at runtime",
   assert.match(addPhaseContract, /expectedPhaseNumber/);
   assert.match(addPhaseContract, /\$\{phaseDir\}\/\$\{phasePrefix\}-CONTEXT\.md/);
   assert.match(addPhaseContract, /Scaffold text is starter material only/i);
+  assert.match(addPhaseContract, /compact starter handoff block/i);
+  assert.match(addPhaseContract, /source refs/i);
+  assert.match(
+    addPhaseContract,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or\s*`\/blu-execute-phase`/i
+  );
   assert.match(addPhaseContract, /Do not use browser, web-search-only, shell-only, or generic agents/i);
   assert.match(addPhaseContract, /\/blu-discuss-phase <phase>/);
 });
@@ -143,8 +161,15 @@ test("add-phase docs keep plain append requirement validation distinct from audi
     /Stop without mutation when a plain add-phase request uses `requirementIds` that are not declared in `\.blueprint\/REQUIREMENTS\.md`/
   );
   assert.match(addPhaseDoc, /Safe default: stop without writing/);
+  assert.match(addPhaseDoc, /compact starter handoff block/i);
+  assert.match(addPhaseDoc, /source refs/i);
+  assert.match(addPhaseDoc, /open items for discuss-phase/i);
   assert.match(addPhaseDoc, /named in-flight receipt/i);
   assert.match(addPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
+  assert.match(
+    addPhaseDoc,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or `\/blu-execute-phase`/i
+  );
 });
 
 test("add-phase remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {

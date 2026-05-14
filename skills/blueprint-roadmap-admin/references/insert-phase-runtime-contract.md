@@ -118,6 +118,14 @@ MCP tools.
 - End with the inserted decimal phase number, anchor phase, description,
   scaffold path, roadmap/state paths when returned, warnings or reuse notes,
   and the next safe implemented command: `/blu-discuss-phase <phase>`.
+- Before that route instruction, include a compact starter handoff block for
+  `/blu-discuss-phase` with the decimal phase number and title, anchor phase,
+  declared requirement IDs, the no-renumbering and dependency-review note, the
+  roadmap evolution note summary, and the open risks plus dependency questions
+  that still need discuss-phase review.
+- Keep the handoff compact starter seed only. Do not treat it as final
+  `XX-CONTEXT.md`, and do not route directly to `/blu-plan-phase` or
+  `/blu-execute-phase`.
 - Include a brief dependency-review note: downstream phases were not renumbered
   or rewritten, so the user may need to inspect later dependency assumptions.
 - Do not route to planned-only commands or directly to planning/execution
@@ -196,6 +204,8 @@ command must still own all MCP calls.
   recorded, and why later phases were left untouched.
 - The result distinguishes roadmap insertion, context scaffold creation or
   reuse, and state update.
+- The user can see the compact starter handoff fields that discuss-phase should
+  carry forward instead of starting cold.
 - Warnings, drift, and uncertainty are reported instead of hidden.
 - The scaffold path is the returned `${phaseDir}/${phasePrefix}-CONTEXT.md`
   path, not a hand-built or guessed path.

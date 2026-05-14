@@ -42,6 +42,8 @@
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
 - Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation as a structured packet that also names the dependency-review note, scaffold target, and `Safe default: stop without writing`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
+- The completion response must include a compact starter handoff block for `/blu-discuss-phase` with the decimal phase number and title, anchor phase, declared requirement IDs, the no-renumbering and dependency-review note, the roadmap evolution note summary, and open risks plus dependency questions.
+- Keep that handoff compact starter seed only. Do not treat it as final `XX-CONTEXT.md`, and do not jump directly to `/blu-plan-phase` or `/blu-execute-phase`.
 
 
 ## Outputs
@@ -126,6 +128,7 @@
 
 
 - Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, the no-renumbering acknowledgment, the dependency-review note, the scaffold target, and `Safe default: stop without writing` before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Before the route instruction, include the compact starter handoff block for `/blu-discuss-phase`.
 - If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
 
 
@@ -162,6 +165,8 @@
 - Requires those inserted-phase `requirementIds` to already be declared in `.blueprint/REQUIREMENTS.md` and not already mapped to another roadmap phase.
 - Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
+- Returns a compact starter handoff block with the decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
+- Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
 - Stops without writing when the user declines the preview confirmation.
 - Creates or updates only the declared artifacts for this command.

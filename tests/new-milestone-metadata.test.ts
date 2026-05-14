@@ -39,6 +39,19 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /affected starter paths/i);
   assert.match(commandFile, /overwrite risk/i);
   assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /New Milestone First-Phase Handoff Packet/);
+  assert.match(commandFile, /digestInputsUsed/);
+  assert.match(commandFile, /retainedDecisions/);
+  assert.match(commandFile, /activeRequirementTransitions/);
+  assert.match(commandFile, /openForDiscuss/);
+  assert.match(commandFile, /riskWatchlist/);
+  assert.match(commandFile, /deferredNotDoingNow/);
+  assert.match(commandFile, /canonicalReferences/);
+  assert.match(commandFile, /routeReceipt/);
+  assert.match(commandFile, /roughly 12-18 bullets total/i);
+  assert.match(commandFile, /confidence plus consequence/i);
+  assert.match(commandFile, /unverified claims as assumptions/i);
+  assert.match(commandFile, /Treat the handoff packet as starter seed material/i);
   assert.match(commandFile, /missing-milestone-summary/);
   assert.match(commandFile, /carry-forward-confirmation/);
   assert.match(commandFile, /starter-doc-overwrite-confirmation/);
@@ -60,6 +73,8 @@ test("new-milestone manifest references carry-forward seed generation and discus
   assert.match(commandFile, /renamedPhaseDirectories/);
   assert.match(commandFile, /\.blueprint\/phases\/<NN>-<slug>\/<NN-CONTEXT\.md>/);
   assert.match(commandFile, /\/blu-discuss-phase <first phase>/);
+  assert.doesNotMatch(commandFile, /\/blu-plan-phase/);
+  assert.doesNotMatch(commandFile, /\/blu-execute-phase/);
 });
 
 test("roadmap-admin skill captures carry-forward new-milestone behavior", async () => {
@@ -75,6 +90,18 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "report.milestone-summary",
     "phase.context",
     "carry-forward as the default",
+    "New Milestone First-Phase Handoff Packet",
+    "digestInputsUsed",
+    "retainedDecisions",
+    "activeRequirementTransitions",
+    "openForDiscuss",
+    "riskWatchlist",
+    "deferredNotDoingNow",
+    "canonicalReferences",
+    "routeReceipt",
+    "roughly 12-18 bullets",
+    "confidence and consequence",
+    "assumptions",
     "requirementTransitions",
     "starter-seed evidence only",
     "sourceRefs",
@@ -87,6 +114,7 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "renamedPhaseDirectories",
     "/blu-discuss-phase <first phase>",
     "ask_user",
+    "new typed `.blueprint/` write surface",
   ]);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
   assert.match(skillFile, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
@@ -140,11 +168,22 @@ test("new-milestone docs keep requirementTransitions as starter-seed evidence on
   assert.match(newMilestoneDoc, /rationale/);
   assert.match(newMilestoneDoc, /uncertainty explicitly/i);
   assert.match(newMilestoneDoc, /Safe default: stop without writing/);
+  assert.match(newMilestoneDoc, /New Milestone First-Phase Handoff Packet/);
+  assert.match(newMilestoneDoc, /openForDiscuss/);
+  assert.match(newMilestoneDoc, /riskWatchlist/);
+  assert.match(newMilestoneDoc, /deferredNotDoingNow/);
+  assert.match(newMilestoneDoc, /canonicalReferences/);
+  assert.match(newMilestoneDoc, /routeReceipt/);
+  assert.match(newMilestoneDoc, /12-18 bullets/i);
+  assert.match(newMilestoneDoc, /starter-only seed material/i);
+  assert.match(newMilestoneDoc, /openForDiscuss.*confidence plus consequence/is);
+  assert.match(newMilestoneDoc, /unverified claims as assumptions/i);
   assert.match(newMilestoneDoc, /named in-flight receipt/i);
   assert.match(newMilestoneDoc, /firstPhaseNumber/);
   assert.match(newMilestoneDoc, /firstContextPath/);
   assert.match(newMilestoneDoc, /renamedPhaseDirectories/);
   assert.match(newMilestoneDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
+  assert.match(newMilestoneDoc, /Does not route directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
 });
 
 test("new-milestone runtime docs expose scaffold first-phase receipt fields", async () => {
@@ -175,4 +214,8 @@ test("new-milestone runtime docs expose scaffold first-phase receipt fields", as
   assert.match(artifactSchema, /stale previews, conflicting first-phase directories, or ambiguous first-phase directories/i);
   assert.match(artifactSchema, /deletedPhaseDirectories: \[\]/);
   assert.match(artifactSchema, /renamedPhaseDirectories: \[\]/);
+  assert.match(artifactSchema, /New Milestone First-Phase Handoff Packet/);
+  assert.match(artifactSchema, /starter-only material for `\/blu-discuss-phase`/);
+  assert.match(artifactSchema, /not a new typed `\.blueprint\/` write surface/i);
+  assert.match(artifactSchema, /do not create a separate schema field or durable artifact class/i);
 });

@@ -39657,20 +39657,50 @@ function hasConcreteDeferredIdeas(section) {
     )
   ).some((line) => countMeaningfulWords(line) >= 3);
 }
+function hasConcreteOpenQuestions(section) {
+  return markdownSectionLines(section).filter(
+    (line) => !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line)
+  ).some((line) => countMeaningfulWords(line) >= 3);
+}
+function hasCarryForwardRiskSignal(section) {
+  return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
+}
+function hasOpenGrayAreaSignal(section) {
+  return /\b(?:open gray areas?|open items for discuss-phase|open risks and dependency questions)\b/i.test(
+    section
+  );
+}
+function hasConcreteRiskCarryForward(section) {
+  return markdownSectionLines(section).filter((line) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line)).some(
+    (line) => /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
+      line
+    )
+  );
+}
+function containsRawHandoffPacketLabel(content) {
+  return content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).some(
+    (line) => RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line))
+  );
+}
 function validateDiscussPhaseContextAntiPatterns(content) {
   const issues = [];
   const warnings = [];
   const canonicalReferences = extractMarkdownSection5(content, "Canonical References");
   const deferredIdeas = extractMarkdownSection5(content, "Deferred Ideas");
+  const openQuestions = extractMarkdownSection5(content, "Open Questions");
   const deferredSourceSections = [
     "Discovery Grounding",
     "Implementation Decisions",
     "Specific Ideas",
     "Existing Code Insights",
-    "Dependencies",
-    "Open Questions"
+    "Dependencies"
   ].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
   issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  if (containsRawHandoffPacketLabel(content)) {
+    issues.push(
+      "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections."
+    );
+  }
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
     issues.push(
       "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
@@ -39679,6 +39709,16 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
     issues.push(
       "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
+    );
+  }
+  if (hasCarryForwardRiskSignal(deferredSourceSections) && !hasConcreteRiskCarryForward(deferredIdeas) && !hasConcreteRiskCarryForward(openQuestions)) {
+    issues.push(
+      "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas."
+    );
+  }
+  if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
+    issues.push(
+      "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions."
     );
   }
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
@@ -46094,7 +46134,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -46567,6 +46607,14 @@ var init_artifacts = __esm({
     ];
     UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
     UNSUPPORTED_MODE_NEGATION_PATTERN = /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
+    RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
+      /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,
+      /^downstream handoff packet\b:?/i,
+      /^source refs?\b:?/i,
+      /^(?:deferred|open)\s+risks?\b:?/i,
+      /^open (?:gray areas?|items for discuss-phase|risks and dependency questions)\b:?/i,
+      /^(?:researchBrief|uiBrief|planBrief|planInventory|routingGates)\b:?/i
+    ];
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;

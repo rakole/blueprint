@@ -15,7 +15,8 @@ Follow this flow exactly:
 6. Use `mcp_blueprint_blueprint_roadmap_insert_phase` with the confirmed integer phase number, description, objective in `goal`, criteria in `successCriteria`, and confirmed durable IDs from `.blueprint/REQUIREMENTS.md` in `requirementIds`. It must reject decimal targets, derive the next decimal phase number from the roadmap, insert the new roadmap entry immediately after the target phase group, insert concrete Phase Details when that optional section exists or must be created, and return the canonical phase metadata. Treat the returned `phaseNumber`, `phasePrefix`, and `phaseDir` as authoritative instead of inventing a slug or path manually.
 7. Use `mcp_blueprint_blueprint_artifact_scaffold` to create or reuse `${phaseDir}/${phasePrefix}-CONTEXT.md` from the returned phase metadata. Do not treat scaffold text as finished phase context.
 8. Use `mcp_blueprint_blueprint_state_update` to record the inserted decimal phase as current, append a durable `roadmapEvolutionNotes` entry that captures the urgent insertion after the integer anchor, set `/blu-insert-phase` as the active command, and point the next safe implemented action at `/blu-discuss-phase <phase>`.
-9. Return a concise summary covering the inserted phase number, the anchor phase, the description, the scaffold path, any warnings or dependency-review notes, and the next safe Blueprint action.
+9. Before the route instruction, return a compact starter handoff block for `/blu-discuss-phase` that includes the decimal phase number and title, anchor phase, declared requirement IDs, the no-renumbering and dependency-review note, the roadmap evolution note summary, and the open risks and dependency questions that still need discuss-phase review.
+10. Keep that handoff compact starter seed only. Do not author final `XX-CONTEXT.md`, and do not route directly to planning or execution shortcuts.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_roadmap_read`, `mcp_blueprint_blueprint_roadmap_insert_phase`, `mcp_blueprint_blueprint_artifact_scaffold`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
@@ -26,6 +27,8 @@ Response requirements:
 - The preview packet must name the integer anchor, next decimal candidate, declared requirement IDs, objective, 2-5 success criteria, no-renumbering acknowledgment, dependency-review note, scaffold target, and `Safe default: stop without writing`.
 - Treat the approved confirmation gate as a named receipt that binds the approved preview packet to the later `blueprint_roadmap_insert_phase` arguments.
 - If the user declines, stop without writing and route to `/blu-progress` when a safe follow-up command is needed.
+- In the completion response, include a compact starter handoff block with the decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
+- Keep the handoff compact starter seed only. Do not make `/blu-insert-phase` author final `XX-CONTEXT.md`.
 - Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools for `/blu-insert-phase`.
 - Do not turn `/blu-insert-phase` into a long-running progress flow with stage narration, visible todos, or tracker-backed branching.
 - Do not renumber later phases or claim that downstream dependency references were rewritten automatically.
@@ -34,5 +37,5 @@ Response requirements:
 - Do not accept `none yet`, placeholder text, blank values, or undeclared requirement mappings as requirement grounding for inserted phases.
 - Do not omit the durable roadmap-evolution note in `STATE.md`.
 - Do not advertise unimplemented roadmap commands as follow-up steps.
-- Keep the follow-up inside the shipped Blueprint lifecycle surface; prefer `/blu-discuss-phase <phase>` over planning or execution shortcuts.
+- Keep the follow-up inside the shipped Blueprint lifecycle surface; prefer `/blu-discuss-phase <phase>` over `/blu-plan-phase` or `/blu-execute-phase` shortcuts.
 """

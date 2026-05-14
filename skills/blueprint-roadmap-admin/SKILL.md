@@ -137,10 +137,12 @@ Load `skills/blueprint-roadmap-admin/references/add-phase-runtime-contract.md` a
 4. Choose at least one durable requirement ID declared in `.blueprint/REQUIREMENTS.md`, capture a concrete roadmap objective plus 2-5 observable success criteria, preview them with the phase number and requirement source, and persist the roadmap mutation through `blueprint_roadmap_add_phase` with the confirmed number in `expectedPhaseNumber` plus the confirmed `requirementIds`, `goal`, and `successCriteria`; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt. Plain add-phase must validate `requirementIds` against declared `.blueprint/REQUIREMENTS.md` rows before mutation. Keep audit-backed repair traceability separate in `auditBackedDetails.repairRequirementIds` instead of weakening the plain-append requirement check.
 5. The preview packet must include `expectedPhaseNumber`, description, declared requirement IDs, requirement source, objective, 2-5 success criteria, source warnings, scaffold target, and `Safe default: stop without writing`. Treat `phase-number-confirmation` as the named receipt that binds those approved fields to the later mutation arguments. If the user declines, stop without writing and point to `/blu-progress` when a safe route is needed.
 6. Treat returned `phaseNumber`, `phasePrefix`, `phaseName`, `slug`, and `phaseDir` as authoritative, and scaffold `${phaseDir}/${phasePrefix}-CONTEXT.md` through `blueprint_artifact_scaffold`.
-7. Do not treat scaffold text as finished phase context; route to `/blu-discuss-phase <phase>` so the context is authored by the discovery workflow.
-8. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the new phase becomes current, `/blu-add-phase` is the active command, and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
-9. Keep follow-up routing inside implemented Blueprint commands only.
-10. Keep the flow skill-led. There is no add-phase subagent path; browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin analysis.
+7. Return a compact starter handoff before the route instruction: returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
+8. Do not treat scaffold text or the starter handoff as finished phase context; route to `/blu-discuss-phase <phase>` so the context is authored by the discovery workflow.
+9. Keep the handoff compact starter seed only. `/blu-add-phase` must not author final `XX-CONTEXT.md`, `/blu-plan-phase`, or `/blu-execute-phase` output.
+10. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the new phase becomes current, `/blu-add-phase` is the active command, and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+11. Keep follow-up routing inside implemented Blueprint commands only.
+12. Keep the flow skill-led. There is no add-phase subagent path; browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin analysis.
 
 ### `insert-phase`
 
@@ -156,10 +158,11 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 8. Reject confirmed requirement IDs that are already mapped to another roadmap phase; insertion must not reuse another phase's requirement traceability note.
 9. Keep numbering roadmap-driven: derive the next decimal from the existing roadmap entries under that integer base and fail fast when a conflicting decimal directory already exists on disk.
 10. Scaffold the inserted phase directory through `blueprint_artifact_scaffold` by seeding the initial `XX-CONTEXT.md` file at `${phaseDir}/${phasePrefix}-CONTEXT.md`.
-11. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
-12. Keep follow-up routing inside implemented Blueprint commands only.
-13. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
-14. Treat scaffold text as starter material only. Do not author final `XX-CONTEXT.md` content or create insert-phase-specific reports; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
+11. Return a compact starter handoff before the route instruction: decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
+12. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the inserted decimal phase becomes current, add a durable `roadmapEvolutionNotes` entry that records the urgent insertion after the integer anchor, and set the next safe implemented follow-up to `/blu-discuss-phase <phase>`.
+13. Keep follow-up routing inside implemented Blueprint commands only.
+14. Keep the flow skill-led. There is no insert-phase subagent path; `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only, shell-only, or generic agents are not substitutes for roadmap-admin insertion analysis.
+15. Treat scaffold text and the starter handoff as starter material only. Do not author final `XX-CONTEXT.md` content, create insert-phase-specific reports, or jump directly to `/blu-plan-phase` or `/blu-execute-phase`; `/blu-discuss-phase <phase>` owns rich context authoring against the `phase.context` contract.
 
 ### `remove-phase`
 
@@ -232,16 +235,19 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 6. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the command still owns the final write path.
 7. If `blueprint-roadmapper` is unavailable or unnecessary, keep parity by carrying forward one roadmap or milestone synthesis unit at a time and compressing carry-forward context after each unit to the retained intent, starter-scope decisions, and unresolved assumptions before scaffolding.
 8. Treat `requirementTransitions` as starter-seed evidence only. Transition rows may use the decision vocabulary `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`, and every row must cite `sourceRefs` plus `rationale` with uncertainty labeled explicitly. Do not treat those rows as a competing `.blueprint/REQUIREMENTS.md` write path.
-9. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
-10. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
-11. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
-12. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
-13. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
-14. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields to the later scaffold and state-update arguments.
-15. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
-16. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
-17. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
-18. Keep follow-up routing inside implemented Blueprint commands only.
+9. Before scaffold, build a compact `New Milestone First-Phase Handoff Packet` with `mode`, `fromMilestone`, `toMilestone`, `firstPhase`, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
+10. Cap that packet to roughly 12-18 bullets total. Do not write final implementation decisions for unresolved gray areas; use `openForDiscuss` with confidence and consequence instead. Do not infer codebase facts not present in the digest or refreshed repo evidence; label unverified claims as assumptions. Preserve deferred material as `deferredNotDoingNow`, `riskWatchlist`, or `openForDiscuss`; never collapse it into `none`.
+11. Read `phase.context` through `blueprint_artifact_contract_read` before scaffolding the first phase context artifact for the new milestone so the seeded `XX-CONTEXT.md` stays aligned with the canonical contract.
+12. Regenerate starter docs through `blueprint_artifact_scaffold` with an explicit carry-forward seed. Do not hand-edit `PROJECT.md`, `REQUIREMENTS.md`, or `ROADMAP.md` from the command prompt.
+13. Preserve historical phase directories. Do not delete or renumber earlier milestone artifacts as part of `new-milestone`.
+14. Start the new milestone at the next whole-number phase and scaffold the first phase context artifact so `/blu-discuss-phase <first phase>` has a valid target directory.
+15. Require explicit overwrite confirmation before replacing the existing starter docs, and prefer `ask_user` for that confirmation gate.
+16. Treat `carry-forward-confirmation` and `starter-doc-overwrite-confirmation` as named in-flight receipts that bind the approved preview packet fields to the later scaffold and state-update arguments.
+17. If the user declines either gate, stop without writing and point to `/blu-progress` when a safe route is needed.
+18. Treat the scaffold receipt fields `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories` as authoritative; stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block instead of being recomputed in prompt text.
+19. Treat the handoff packet as starter-only seed material for `/blu-discuss-phase`, not as final authored `phase.context`. It must not widen into a new typed `.blueprint/` write surface or a durable handoff store.
+20. Update `STATE.md` through `blueprint_state_update` only after scaffold succeeds so the first carried-forward phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <first phase>`.
+21. Keep follow-up routing inside implemented Blueprint commands only.
 
 ## Wave 2 Closeout Guardrail
 
@@ -258,7 +264,9 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - For `audit-milestone`, call out the original milestone intent, the evidence that confirms or weakens it, grouped gap sections, any traceability repair notes, and the next safe implemented action.
 - For `complete-milestone`, report the milestone resolved, the audit readiness, audit report, and evidence used, whether the completion report was created or replaced, and the next safe implemented action.
 - For `milestone-summary`, report the milestone resolved, the source reports and evidence used, whether the summary report was created or replaced, and the next safe implemented action.
-- For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, and the next safe implemented action.
+- For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, the compact `New Milestone First-Phase Handoff Packet`, and the next safe implemented action.
+- For `add-phase`, include the compact starter handoff block before the route instruction: returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
+- For `insert-phase`, include the compact starter handoff block before the route instruction: decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when a confirmation gate is shown, render the preview packet fields explicitly and name the safe default as `stop without writing`.
 - For `add-phase`, `insert-phase`, and `new-milestone`, when confirmation succeeds, the completion summary should name the gate receipt implicitly by carrying forward the exact approved target or scaffold values instead of introducing new mutation arguments after approval.
 - For `new-milestone`, include the MCP scaffold receipt values for the first phase: `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.

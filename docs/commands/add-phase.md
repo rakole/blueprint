@@ -41,6 +41,8 @@
 - A concrete ROADMAP objective plus 2-5 observable success criteria are required and passed as `goal` and `successCriteria`.
 - The next phase number is the next integer after the highest base phase number already present in the roadmap. Decimal suffixes are ignored for numbering, so `2.1` and `2.2` still advance the next append target to `3`.
 - The computed next phase number, requirement IDs, requirement source, objective, and success criteria must be previewed from the roadmap read result before any mutation as a structured packet that also names source warnings, the scaffold target, and `Safe default: stop without writing`.
+- The completion response must include a compact starter handoff block for `/blu-discuss-phase` with the returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
+- Keep that handoff compact starter seed only. Do not treat it as final `XX-CONTEXT.md`, and do not jump directly to `/blu-plan-phase` or `/blu-execute-phase`.
 
 
 ## Outputs
@@ -121,6 +123,7 @@
 - Preview the exact computed next integer phase number from the roadmap read result before append.
 - Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number.
 - Include `expectedPhaseNumber`, the description, declared requirement IDs, requirement grounding, source warnings, objective, 2-5 success criteria, the scaffold target, and `Safe default: stop without writing` in that same confirmation preview.
+- Before the route instruction, include the compact starter handoff block for `/blu-discuss-phase`.
 - If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
 
 
@@ -153,10 +156,12 @@
 - Chooses, previews, confirms, and passes at least one durable requirement ID for plain whole-number add-phase.
 - Requires those plain-append `requirementIds` to already exist in `.blueprint/REQUIREMENTS.md` before mutation, while preserving audit-backed repair through `auditBackedDetails.repairRequirementIds`.
 - Confirms and passes a concrete objective plus 2-5 observable success criteria so `/blu-discuss-phase` is not expected to backfill ROADMAP placeholders.
+- Returns a compact starter handoff block with the returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open discuss items.
 - Appends the next whole-number phase to the roadmap instead of inserting a decimal phase.
 - Refuses to append when the confirmed next phase number is stale.
 - Creates the matching `.blueprint/phases/<phase-slug>/` scaffold.
 - Updates `.blueprint/STATE.md` with the new next action.
+- Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up.
 - Stops without writing when the user declines the preview confirmation.
 - Creates or updates only the declared artifacts for this command.

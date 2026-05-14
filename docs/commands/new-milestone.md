@@ -37,6 +37,11 @@
 - Carry-forward is the default. A fresh reset is allowed only after explicit confirmation.
 - Replacing the existing top-level milestone starter docs requires explicit overwrite confirmation.
 - Preview the exact carry-forward evidence scope before mutation as a structured packet: resolved milestone summary path, digest `inputsUsed`, carry-forward or reset mode, any warnings, the proposed new milestone name, the first whole-number phase target that will receive the starter context scaffold, the affected starter-doc paths, overwrite risk, and `Safe default: stop without writing`.
+- Before scaffold, build a compact `New Milestone First-Phase Handoff Packet` with `mode`, `fromMilestone`, `toMilestone`, the first-phase target, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
+- Keep that handoff packet compact at roughly 12-18 bullets total. It is starter-only seed material for `/blu-discuss-phase`, not final authored `XX-CONTEXT.md`.
+- Do not write final implementation decisions for unresolved first-phase gray areas. Use `openForDiscuss` with confidence plus consequence instead.
+- Do not infer codebase facts not present in the digest or refreshed repo evidence. Mark unverified claims as assumptions.
+- Preserve deferred material as `deferredNotDoingNow`, `riskWatchlist`, or `openForDiscuss`; do not collapse it into `none`.
 - Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
 
 
@@ -130,6 +135,7 @@
 - Carry-forward is the default path. Require explicit confirmation only when the user wants a fresh reset instead.
 - Show the exact evidence scope, first-phase target, and overwrite set in the confirmation preview before any mutation.
 - The preview packet should name the summary source path, `inputsUsed`, carry-forward or reset mode, proposed milestone name, first phase preview, affected starter paths, overwrite risk, and `Safe default: stop without writing`.
+- The completion summary should include the compact `New Milestone First-Phase Handoff Packet` before the route instruction to `/blu-discuss-phase <first phase>`.
 - Require explicit overwrite confirmation before replacing the existing milestone starter docs.
 - Prefer Gemini CLI `ask_user` for the reset-vs-carry-forward and overwrite confirmation gates.
 - If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
@@ -158,11 +164,14 @@
 - Defaults to carry-forward from the saved milestone summary and requires an explicit user choice to reset from scratch.
 - Uses the saved `milestone-summary-<milestone>.md` report as the durable carry-forward input for the next milestone start.
 - Uses named confirmation receipts that bind the approved preview packet to later scaffold and state-update arguments instead of relying on prose-only approval.
+- Builds a compact `New Milestone First-Phase Handoff Packet` from carry-forward evidence before scaffold, and keeps it as starter-only seed material rather than final authored phase context.
+- Keeps the handoff packet to roughly 12-18 bullets, preserves deferred material explicitly, and uses `openForDiscuss` for unresolved gray areas instead of writing final implementation decisions.
 - Uses the `blueprint_artifact_scaffold` first-phase receipt for `highestBasePhaseNumber`, `firstPhaseNumber`, `firstPhasePrefix`, `firstPhaseDir`, `firstContextPath`, `deletedPhaseDirectories`, and `renamedPhaseDirectories`.
 - Treats `requirementTransitions` as starter-seed evidence only: rows carry `sourceRefs`, `rationale`, and explicit uncertainty labeling when needed, but they do not replace the canonical `.blueprint/REQUIREMENTS.md` authoring path.
 - Rewrites starter docs through `blueprint_artifact_scaffold` using an explicit carry-forward seed rather than ad hoc file edits.
 - Preserves historical phase directories and starts the new milestone at the next whole-number phase.
 - Scaffolds the first new phase context artifact so `/blu-discuss-phase <first phase>` has a valid phase directory to target.
+- Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <first phase>` as the next safe implemented follow-up.
 - Stops without writing when the user declines the preview or overwrite confirmation.
 - Creates or updates only the declared artifacts for this command.

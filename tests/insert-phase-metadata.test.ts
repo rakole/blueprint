@@ -33,6 +33,13 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /next decimal candidate/i);
   assert.match(commandFile, /dependency-review note/i);
   assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /compact starter handoff block/i);
+  assert.match(commandFile, /decimal phase number and title/i);
+  assert.match(commandFile, /anchor phase/i);
+  assert.match(commandFile, /declared requirement IDs/i);
+  assert.match(commandFile, /no-renumbering and dependency-review note/i);
+  assert.match(commandFile, /roadmap evolution note summary/i);
+  assert.match(commandFile, /open risks and dependency questions/i);
   assert.match(commandFile, /confirmed durable IDs from `\.blueprint\/REQUIREMENTS\.md` in `requirementIds`/);
   assert.match(commandFile, /Do not accept `none yet`, placeholder text, blank values, or undeclared requirement mappings/);
   assert.match(commandFile, /ask_user/);
@@ -46,6 +53,7 @@ test("insert-phase manifest references roadmap insertion tools, confirmation gat
   assert.match(commandFile, /Do not use Gemini CLI's `update_topic`, `write_todos`, or task tracker tools/);
   assert.match(commandFile, /Do not accept decimal insertion targets/i);
   assert.match(commandFile, /\/blu-discuss-phase <phase>/);
+  assert.match(commandFile, /prefer `\/blu-discuss-phase <phase>` over `\/blu-plan-phase` or `\/blu-execute-phase` shortcuts/);
 });
 
 test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-phase follow-up", async () => {
@@ -65,6 +73,8 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
     "conflicting decimal directory",
     "roadmapEvolutionNotes",
     "ask_user",
+    "compact starter handoff",
+    "open risks plus dependency questions",
   ]);
   assert.match(skillFile, /reject decimal targets/i);
   assert.match(skillFile, /Execution profile for `\/blu-add-phase`, `\/blu-insert-phase`, `\/blu-remove-phase`, `\/blu-plan-milestone-gaps`, `\/blu-audit-milestone`, `\/blu-complete-milestone`, `\/blu-milestone-summary`, and `\/blu-new-milestone`: `interactive-read`/);
@@ -73,6 +83,7 @@ test("roadmap-admin skill captures insert-phase numbering, drift, and discuss-ph
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
   assert.match(skillFile, /There is no insert-phase subagent path/);
   assert.match(skillFile, /phase\.context/);
+  assert.match(skillFile, /jump directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
 });
 
 test("insert-phase runtime contract locks stage mapping, fallback, repair, and completion behavior", async () => {
@@ -109,6 +120,13 @@ test("insert-phase runtime contract locks stage mapping, fallback, repair, and c
   assert.match(contract, /conflicting-decimal-directory/);
   assert.match(contract, /phase\.context/);
   assert.match(contract, /starter scaffold only/);
+  assert.match(contract, /compact starter handoff block/i);
+  assert.match(contract, /roadmap evolution note summary/i);
+  assert.match(contract, /open risks plus dependency questions/i);
+  assert.match(
+    contract,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or\s*`\/blu-execute-phase`/i
+  );
   assert.match(contract, /No-Subagent Fallback/);
   assert.match(contract, /Do not use `blueprint-roadmapper`, `blueprint-verifier`, browser, web-search-only,\s*shell-only, or generic agents as substitutes/);
   assert.match(contract, /Retry And Repair Behavior/);
@@ -158,8 +176,15 @@ test("insert-phase docs keep requirement traceability in the declared write surf
     /must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase/
   );
   assert.match(insertPhaseDoc, /Safe default: stop without writing/);
+  assert.match(insertPhaseDoc, /compact starter handoff block/i);
+  assert.match(insertPhaseDoc, /roadmap evolution note summary/i);
+  assert.match(insertPhaseDoc, /open risks plus dependency questions/i);
   assert.match(insertPhaseDoc, /named in-flight receipt/i);
   assert.match(insertPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
+  assert.match(
+    insertPhaseDoc,
+    /do not (?:route|jump) directly to `\/blu-plan-phase` or `\/blu-execute-phase`/i
+  );
 });
 
 test("roadmap-admin agent contracts retain insert-phase output-quality expectations", async () => {

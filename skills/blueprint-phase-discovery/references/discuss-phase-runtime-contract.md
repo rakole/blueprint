@@ -48,6 +48,9 @@ evidence packet from:
   `workflow.skip_discuss`, and `workflow.research_before_questions`
 - `blueprint_phase_artifact_read`: current context, discussion log, and
   materially relevant earlier phase context artifacts
+- when the current context is a fresh starter seeded by `/blu-new-project`,
+  `/blu-add-phase`, or `/blu-insert-phase`, read the starter handoff packet
+  inside that starter context as seed evidence before asking new questions
 - `blueprint_phase_checkpoint_get`: resumable in-progress decisions
 - `blueprint_phase_plan_index`: saved plans that will not be rewritten by new
   context unless the user later reruns `/blu-plan-phase`
@@ -104,6 +107,28 @@ resolution source, `stateCurrentPhase` if different, config mode (`discuss`,
 `assumptions`, or `skip_discuss`), context status, discussion-log status,
 checkpoint status, prior context reused/skipped, codebase-summary status, and
 plan-inventory warning.
+
+### Starter Handoff Intake
+
+When the selected phase was just scaffolded by `/blu-new-project`,
+`/blu-add-phase`, or `/blu-insert-phase` and the current `XX-CONTEXT.md`
+contains starter-only material, treat its starter handoff as disposable seed
+evidence:
+
+- read the packet before asking fresh questions
+- carry forward its source refs into `canonicalReferences` and, when useful,
+  `dependencies.requiredFollowUpReads`
+- carry forward deferred risks or consequence-if-wrong notes into
+  `openQuestions`, `deferredIdeas`, or an evidence-backed
+  `implementationDecisions` entry
+- carry forward open gray areas into `openQuestions` or resolved
+  `implementationDecisions`
+- ask only for missing, contradictory, uncertain, or high-impact details that
+  still change the implementation result
+
+Do not preserve the starter packet heading, scaffold footer, placeholder
+labels, unsupported claims, or raw handoff text verbatim in the final saved
+`XX-CONTEXT.md`.
 
 ## Artifact Status Classification
 
@@ -318,6 +343,11 @@ as an `implementationDecisions` row, a `dependencies` item, an `openQuestions`
 item, a `deferredIdeas` item, or a `canonicalReferences` source. If none of
 those fields receives the area, the discussion is not ready to write.
 
+Starter-handoff seed evidence must follow the same rule. Source refs,
+deferred risks, and open gray areas are useful only after they are mapped into
+those canonical `phase.context` fields; copying packet labels or packet prose
+does not count as carry-forward.
+
 ### Anti-Generic Question Rule
 
 Do not ask checklist or atmosphere questions such as "Any other requirements?",
@@ -357,6 +387,9 @@ Good options are concrete and code-informed:
 
 Do not ask checklist questions. Start broad enough to learn the user's intent,
 then dig into the area that actually changes the implementation.
+
+Ask only for missing, contradictory, uncertain, or high-impact details once the
+read packet and any starter handoff evidence are in hand.
 
 Do not claim unshipped power, batch, chain, auto, or auto-advance behavior in
 this runtime.
@@ -436,6 +469,11 @@ required.
 
 Assume only when the evidence is repo-grounded, internally consistent, low
 blast-radius, and the final context can label the default as reversible.
+
+When a starter handoff or repo evidence already names a consequence-if-wrong,
+do not leave that assumption floating. Either confirm it with the user,
+convert it into an evidence-backed `implementationDecisions` entry, or keep it
+explicit in `Open Questions` or `Deferred Ideas`.
 
 ### Contradiction Handling
 
@@ -581,6 +619,11 @@ look next. The final artifact must be renderer output and must not preserve
 literal scaffold headings, placeholder bullets, example filler, or "replace me"
 instructions.
 
+Starter-handoff packet fields such as `Source refs`, `Deferred risks`, `Open
+gray areas`, `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, or
+`routingGates` are carry-forward inputs, not final headings. Map their
+substance into canonical sections and reject verbatim packet copy.
+
 Write `XX-DISCUSSION-LOG.md` when it adds durable value beyond the context,
 especially for multi-area sessions, assumptions-mode corrections, advisor-style
 comparison tables, or compliance/audit needs.
@@ -687,10 +730,11 @@ Before treating the discussion as complete:
 1. Build a `phase.context` model against the live `modelContract`; for discussion logs, normalize the draft to the live `authoringTemplate`.
 2. Self-check for placeholder text, empty required sections, contradiction with
    prior saved context, missing canonical references, unsupported mode claims,
-   dropped deferred ideas, preserved scaffold literals, and plan-inventory
-   warnings that were not carried forward. If `Open Questions` has no
-   unresolved items, preserve the exact `none` model value so the renderer emits
-   `- none` instead of expanding it into filler prose.
+   dropped deferred ideas, dropped deferred risks, preserved scaffold literals,
+   preserved packet headings or placeholder labels, verbatim handoff packet
+   text, and plan-inventory warnings that were not carried forward. If `Open
+   Questions` has no unresolved items, preserve the exact `none` model value so
+   the renderer emits `- none` instead of expanding it into filler prose.
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
    `status: "invalid"` or validation issues, repair the same model or discussion
    draft from the returned issues and retry before claiming success.
