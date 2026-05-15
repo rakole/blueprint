@@ -4154,8 +4154,12 @@ function hasConcretePlanSubsectionContent(section: string): boolean {
   });
 }
 
-function validateObjectivePlanBulletList(section: string, artifactLabel: string): string[] {
+function validateObjectivePlanBulletList(section: string, artifactLabel: string): {
+  issues: string[];
+  warnings: string[];
+} {
   const issues: string[] = [];
+  const warnings: string[] = [];
   const normalizedSection = stripPlanPlaceholderSignals(section);
   const bulletItems = normalizedSection
     .replace(/\r\n/g, "\n")
@@ -4168,7 +4172,7 @@ function validateObjectivePlanBulletList(section: string, artifactLabel: string)
 
   if (bulletItems.length === 0) {
     issues.push(`${artifactLabel} must include at least one objective bullet.`);
-    return issues;
+    return { issues, warnings };
   }
 
   const objectiveSignals = [
@@ -4188,17 +4192,21 @@ function validateObjectivePlanBulletList(section: string, artifactLabel: string)
         continue;
       }
 
-      issues.push(
+      warnings.push(
         `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
       );
     }
   }
 
-  return issues;
+  return { issues, warnings };
 }
 
-function validatePlanTaskBlock(taskBlock: string, taskNumber: number): string[] {
+function validatePlanTaskBlock(taskBlock: string, taskNumber: number): {
+  issues: string[];
+  warnings: string[];
+} {
   const issues: string[] = [];
+  const warnings: string[] = [];
   const lines = taskBlock
     .split("\n")
     .map((line) => line.trim())
@@ -4234,14 +4242,14 @@ function validatePlanTaskBlock(taskBlock: string, taskNumber: number): string[] 
   }
 
   const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
-  issues.push(
-    ...validateObjectivePlanBulletList(
-      acceptanceCriteria,
-      `Task ${taskNumber} subsection Acceptance Criteria`
-    )
+  const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+    acceptanceCriteria,
+    `Task ${taskNumber} subsection Acceptance Criteria`
   );
+  issues.push(...acceptanceCriteriaValidation.issues);
+  warnings.push(...acceptanceCriteriaValidation.warnings);
 
-  return issues;
+  return { issues, warnings };
 }
 
 function validateLockedMarkers(
@@ -8290,6 +8298,7 @@ export function validatePlanArtifactContent(
   metadata: PlanArtifactMetadata;
 } {
   const issues: string[] = [];
+  const warnings: string[] = [];
   const metadata = parsePlanFrontmatter(content);
 
   if (!extractFrontmatter(content)) {
@@ -8358,12 +8367,12 @@ export function validatePlanArtifactContent(
       "Plan frontmatter must include at least one grep/test-verifiable item in acceptance_criteria."
     );
   } else {
-    issues.push(
-      ...validateObjectivePlanBulletList(
-        metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
-        "Plan frontmatter acceptance_criteria"
-      )
+    const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+      metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
+      "Plan frontmatter acceptance_criteria"
     );
+    issues.push(...acceptanceCriteriaValidation.issues);
+    warnings.push(...acceptanceCriteriaValidation.warnings);
   }
 
   if (metadata.autonomous === null) {
@@ -8401,7 +8410,9 @@ export function validatePlanArtifactContent(
       }
     }
 
-    issues.push(...validatePlanTaskBlock(taskBlock, taskNumber));
+    const taskValidation = validatePlanTaskBlock(taskBlock, taskNumber);
+    issues.push(...taskValidation.issues);
+    warnings.push(...taskValidation.warnings);
   }
 
   const verificationSection = extractMarkdownSection(content, "Verification");
@@ -8441,7 +8452,7 @@ export function validatePlanArtifactContent(
   return {
     valid: issues.length === 0,
     issues,
-    warnings: [],
+    warnings,
     metadata
   };
 }

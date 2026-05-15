@@ -657,7 +657,7 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
-  assert.match(afterStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(afterStatus.nextAction, /\/blu-plan-phase 3/);
   assert.match(writtenBody, /Plan 02/);
 });
 
@@ -1404,7 +1404,7 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   assert.equal(unverifiable.status, "invalid");
   assert.match(
     unverifiable.validation.issues.join("\n"),
-    /acceptance criterion is not objectively verifiable/
+    /subjective language/
   );
   assert.equal(missingEvidence.status, "invalid");
   assert.ok(missingEvidence.modelValidation);

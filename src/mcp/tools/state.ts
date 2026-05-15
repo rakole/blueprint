@@ -32,6 +32,7 @@ import {
   type PhaseQualityGateEvaluation,
   type PhaseQualityGateMissingGate
 } from "./quality-gates.js";
+import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
 import {
   blueprintDirectCommand,
   blueprintRunDirectCommand
@@ -216,7 +217,9 @@ type CurrentPhaseArtifactStatus = {
   verificationReadyForUat: boolean;
   hasUat: boolean;
   hasPlans: boolean;
+  planSetExecutionReady: boolean;
   hasSummaries: boolean;
+  hasSavedSummaries: boolean;
   hasPendingExecution: boolean;
   codeReviewEnabled: boolean;
   requiresCodeReview: boolean;
@@ -233,6 +236,11 @@ type CurrentPhaseArtifactStatus = {
 type RoadmapPhaseSignal = {
   phaseNumber: string;
   completed: boolean;
+};
+
+type PhasePlanRoutingReadiness = {
+  executionReady: boolean;
+  warnings: string[];
 };
 
 type RoadmapPhaseDetailSignal = {
@@ -906,6 +914,197 @@ function formatPhasePrefix(value: string): string {
   return formatBlueprintPhasePrefix(value);
 }
 
+function normalizeRoutingPlanId(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  const numeric = Number.parseInt(trimmed, 10);
+
+  if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  return String(numeric).padStart(2, "0");
+}
+
+function detectRoutingPlanCycles(
+  dependencyGraph: ReadonlyMap<string, string[]>
+): string[][] {
+  const visited = new Set<string>();
+  const active = new Set<string>();
+  const cycles: string[][] = [];
+  const seenCycleKeys = new Set<string>();
+
+  const visit = (planId: string, trail: string[]): void => {
+    if (active.has(planId)) {
+      const cycleStartIndex = trail.indexOf(planId);
+
+      if (cycleStartIndex >= 0) {
+        const cycle = [...trail.slice(cycleStartIndex), planId];
+        const cycleKey = cycle.join("->");
+
+        if (!seenCycleKeys.has(cycleKey)) {
+          seenCycleKeys.add(cycleKey);
+          cycles.push(cycle);
+        }
+      }
+
+      return;
+    }
+
+    if (visited.has(planId)) {
+      return;
+    }
+
+    visited.add(planId);
+    active.add(planId);
+
+    for (const dependencyId of dependencyGraph.get(planId) ?? []) {
+      visit(dependencyId, [...trail, dependencyId]);
+    }
+
+    active.delete(planId);
+  };
+
+  for (const planId of dependencyGraph.keys()) {
+    visit(planId, [planId]);
+  }
+
+  return cycles;
+}
+
+async function inspectPhasePlanRoutingReadiness(args: {
+  projectRoot: string;
+  currentPhase: string;
+  planPaths: string[];
+}): Promise<PhasePlanRoutingReadiness> {
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  let roadmapRequirementIds: string[] = [];
+
+  try {
+    const roadmap = parseRoadmapDocument(await fs.readFile(roadmapPath, "utf8"));
+    roadmapRequirementIds =
+      roadmap.phases.find((phase) => normalizePhaseNumber(phase.phaseNumber) === args.currentPhase)
+        ?.requirements ?? [];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      executionReady: true,
+      warnings: [`${BLUEPRINT_DIR}/ROADMAP.md: ${message}`]
+    };
+  }
+
+  const coveredRequirementIds = new Set<string>();
+  const dependencyGraph = new Map<string, string[]>();
+  const missingDependencyIds = new Set<string>();
+  const planValidationIssues: string[] = [];
+  const waveOrderingIssues: string[] = [];
+  const planMetadata = new Map<
+    string,
+    {
+      path: string;
+      wave: number | null;
+      dependsOn: string[];
+    }
+  >();
+
+  for (const planPath of args.planPaths) {
+    try {
+      const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const validation = validatePlanArtifactContent(raw, args.currentPhase);
+      const planId = normalizeRoutingPlanId(validation.metadata.planId ?? "");
+
+      for (const issue of validation.issues) {
+        planValidationIssues.push(`${planPath}: ${issue}`);
+      }
+
+      if (!planId) {
+        planValidationIssues.push(`${planPath}: frontmatter plan_id is missing or invalid.`);
+        continue;
+      }
+
+      dependencyGraph.set(planId, []);
+      planMetadata.set(planId, {
+        path: planPath,
+        wave: typeof validation.metadata.wave === "number" ? validation.metadata.wave : null,
+        dependsOn: validation.metadata.dependsOn
+      });
+
+      for (const requirementId of validation.metadata.requirements) {
+        coveredRequirementIds.add(requirementId);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      planValidationIssues.push(`${planPath}: ${message}`);
+    }
+  }
+
+  for (const [planId, metadata] of planMetadata) {
+    const normalizedDependencies = metadata.dependsOn
+      .map((dependency) => normalizeRoutingPlanId(dependency))
+      .filter((dependency): dependency is string => dependency !== null);
+
+    dependencyGraph.set(planId, normalizedDependencies);
+
+    for (const dependencyId of normalizedDependencies) {
+      const dependencyMetadata = planMetadata.get(dependencyId);
+
+      if (!dependencyMetadata) {
+        missingDependencyIds.add(dependencyId);
+        continue;
+      }
+
+      if (
+        typeof metadata.wave === "number" &&
+        typeof dependencyMetadata.wave === "number" &&
+        dependencyMetadata.wave >= metadata.wave
+      ) {
+        waveOrderingIssues.push(
+          `${metadata.path}: wave ${metadata.wave} must come after dependency ${dependencyId} in wave ${dependencyMetadata.wave}.`
+        );
+      }
+    }
+  }
+
+  const uncoveredRequirementIds = roadmapRequirementIds.filter(
+    (requirementId) => !coveredRequirementIds.has(requirementId)
+  );
+  const cyclicDependencyPlanIds = detectRoutingPlanCycles(dependencyGraph);
+  const warnings: string[] = [];
+
+  if (uncoveredRequirementIds.length > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`
+    );
+  }
+
+  warnings.push(...planValidationIssues);
+
+  if (missingDependencyIds.size > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set references missing dependencies: ${[...missingDependencyIds]
+        .sort((left, right) => left.localeCompare(right))
+        .join(", ")}.`
+    );
+  }
+
+  for (const cycle of cyclicDependencyPlanIds) {
+    warnings.push(`Plan dependency cycle detected: ${cycle.join(" -> ")}.`);
+  }
+
+  warnings.push(...waveOrderingIssues);
+
+  return {
+    executionReady: warnings.length === 0,
+    warnings
+  };
+}
+
 function extractPhasePlanIds(artifacts: Iterable<string>, phasePrefix: string, kind: "PLAN" | "SUMMARY"): string[] {
   const suffix = kind === "PLAN" ? "PLAN" : "SUMMARY";
   const matcher = new RegExp(`/${phasePrefix.replace(".", "\\.")}-(\\d+)-${suffix}\\.md$`);
@@ -1325,7 +1524,9 @@ async function inspectCurrentPhaseArtifacts(
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -1385,7 +1586,9 @@ async function inspectCurrentPhaseArtifacts(
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -1431,7 +1634,9 @@ async function inspectCurrentPhaseArtifacts(
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -1462,6 +1667,7 @@ async function inspectCurrentPhaseArtifacts(
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const summaryArtifactPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix, "PLAN");
   const {
     summaryIds,
@@ -1484,7 +1690,15 @@ async function inspectCurrentPhaseArtifacts(
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
+  const hasSavedSummaries = summaryArtifactPaths.length > 0;
   const hasPendingExecution = pendingPlanIds.length > 0;
+  const planRoutingReadiness = hasPlans
+    ? await inspectPhasePlanRoutingReadiness({
+        projectRoot,
+        currentPhase: normalizedPhase,
+        planPaths
+      })
+    : { executionReady: false, warnings: [] };
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) =>
       artifact.endsWith(`${phasePrefix}-DISCUSSION-LOG.md`) ||
@@ -1577,6 +1791,7 @@ async function inspectCurrentPhaseArtifacts(
   }
 
   warnings.push(...summaryWarnings, ...validationWarnings);
+  warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
     projectRoot,
     phaseNumber: normalizedPhase,
@@ -1630,7 +1845,9 @@ async function inspectCurrentPhaseArtifacts(
     verificationReadyForUat,
     hasUat,
     hasPlans,
+    planSetExecutionReady: planRoutingReadiness.executionReady,
     hasSummaries,
+    hasSavedSummaries,
     hasPendingExecution,
     codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
     requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
@@ -2256,7 +2473,18 @@ async function deriveNextAction(args: {
 
   if (
     args.phaseArtifacts.hasPlans &&
+    !args.phaseArtifacts.planSetExecutionReady &&
     args.phaseArtifacts.hasPendingExecution &&
+    !args.phaseArtifacts.hasSavedSummaries &&
+    implementedCommands.has(planPhaseCommand)
+  ) {
+    return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
+  }
+
+  if (
+    args.phaseArtifacts.hasPlans &&
+    args.phaseArtifacts.hasPendingExecution &&
+    (args.phaseArtifacts.planSetExecutionReady || args.phaseArtifacts.hasSavedSummaries) &&
     implementedCommands.has(executePhaseCommand)
   ) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;

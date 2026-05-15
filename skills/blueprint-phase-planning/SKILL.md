@@ -19,7 +19,7 @@ input_bundles:
 
 ## Purpose
 
-Orchestrate Blueprint's phase-planning flow so the final plan is grounded in current phase context, normalized config, the live phase.plan contract, and an explicit planner/checker revision loop with coverage gating.
+Orchestrate Blueprint's phase-planning flow so the final plan is grounded in current phase context, normalized config, the live phase.plan contract, and an explicit planner/checker revision loop with coverage gating. Saved plans may land as incremental checkpoints, but completion advances only after final plan-set validation is truly valid.
 
 ## Shared Runtime Contract
 
@@ -27,7 +27,7 @@ Orchestrate Blueprint's phase-planning flow so the final plan is grounded in cur
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while planning.
-- Use a structured `reuse`, `revise`, or `replace` gate only when the current write would revise or replace saved plans. Additive new plan ids may proceed without that gate when no saved plan body is being overwritten.
+- If saved plans already exist and `planId` is omitted, require a structured `add`, `revise`, or `replace` gate before drafting so multi-plan authoring stays explicit. An empty plan set may auto-assign the first slot without that gate.
 - Load `references/plan-phase-runtime-contract.md` as the detailed runtime contract for stage mapping, MCP call control flow, anti-shallow artifact authoring, capability-gated subagent use, no-subagent fallback, validation repair, output quality, and completion criteria.
 
 ## Runtime Call Rules
@@ -42,7 +42,7 @@ Orchestrate Blueprint's phase-planning flow so the final plan is grounded in cur
 Carry forward the useful `plan-phase` intent while preserving Blueprint deltas:
 
 - config-driven research and UI gates stay authoritative
-- overwrite or replace paths require explicit confirmation, while additive new plan ids remain allowed
+- existing saved plans plus omitted `planId` require an explicit add/revise/replace choice, while empty plan sets and explicit add paths still support additive multi-plan authoring
 - plan checks stay config-gated and the checker loop stays bounded until the draft is acceptable or the gap is isolated
 - follow-up routing only stays inside the implemented Blueprint surface
 - persistent writes remain phase-scoped inside `.blueprint/`
@@ -83,21 +83,24 @@ does not grant broader tool scope to a command.
 
 1. Resolve the target phase before drafting anything and stop if it cannot be inferred safely.
 2. Treat `workflow.research`, `workflow.ui_phase`, `workflow.ui_safety_gate`, and `workflow.plan_check` from normalized effective config as the source of truth for planning gates.
-3. Read the live `phase.plan` contract, `blueprint_phase_plan_authoring_context`, `blueprint_phase_research_status.planningReadiness`, actual saved discovery artifact bodies, saved validation or review evidence when present, plan inventory, effective config, and state before replanning. Reuse `blueprint_phase_context.codebase` when the mapped codebase bundle is present.
-4. Treat `blueprint_phase_research_status.planningReadiness` as the config-aware handoff gate. If `readyForPlanPhase=false`, stop before drafting and route to `nextSafeAction`; report its blocker instead of guessing from raw missing-artifact lists. If research is enabled and missing or invalid, route to `/blu-research-phase` before finalizing the plan. Use saved research for unstable technical decisions instead of browsing live web docs during planning.
-5. Only require the reuse/revise/replace gate when the current write would revise or replace saved plan ids or the saved plan set. Additive new plan ids may be appended without that gate when no saved content is being overwritten.
-6. Use `blueprint-planner` to draft execution-ready structured plan models when suitable. If suitable planning agents are unavailable, use the no-subagent fallback from `references/plan-phase-runtime-contract.md`.
-7. Author a structured `phase.plan` JSON model against `blueprint_phase_plan_authoring_context.taskSchema`, validate it with `blueprint_phase_plan_validate_model`, then persist the same model through `blueprint_phase_plan_write` with `validationMode: "strict"` and `authoringMode: "model-only"`. Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation/write, especially after any successful plan write, because previously saved plan files become intentional known evidence artifacts for later plan slots. Omit `planId` to auto-assign the next slot, or pass only the numeric plan id when targeting a specific plan; use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`. Do not send `content` from `/blu-plan-phase`, do not rely on scaffold text as the finished plan, and do not use Markdown fallback after model validation fails.
-8. Preserve the strict model-rendered heading set: `Goal`, `Scope`, `Tasks`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`. Top-level `requirements` lists only requirements this plan covers now; `requirementCoverage` accounts for every known phase requirement exactly once as `covered`, `deferred`, or `irrelevant`. Treat `evidenceCoverage` as the current runtime-narrowed inventory, not a static list.
-9. When `workflow.plan_check=true`, run the bounded review loop from the runtime contract: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
-10. If `blueprint_phase_plan_validate_model`, `blueprint_phase_plan_write`, or `blueprint_phase_plan_validate` reports invalid model content, repair all diagnostics against the live task schema and contract in one pass before retrying through MCP; never bypass validation with raw `.blueprint/` edits.
-11. After persistence, prefer `blueprint_state_update` with `base: "synced"` so `STATE.md` recomputes the next safe action from the updated artifact inventory instead of leaving stale routing behind. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
-12. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
+3. Read the live `phase.plan` contract, `blueprint_phase_research_status.planningReadiness`, actual saved discovery artifact bodies, saved validation or review evidence when present, plan inventory, effective config, and state before replanning. Reuse `blueprint_phase_context.codebase` when the mapped codebase bundle is present.
+4. Treat `blueprint_phase_research_status.planningReadiness` as the config-aware handoff gate. If `readyForPlanPhase=false`, stop before drafting and route to `nextSafeAction`; report its blocker instead of guessing from raw missing-artifact lists. If research is enabled and missing or invalid, route to `/blu-research-phase` before finalizing the plan. Use saved research for unstable technical decisions instead of browsing live web docs during planning. Do not interpret `blueprint_phase_plan_authoring_context.taskSchema` for authoring until this readiness gate is satisfied.
+5. If saved plans already exist and `planId` is omitted, require an explicit `add`, `revise`, or `replace` choice before drafting. `add` keeps multi-plan authoring supported while selecting a new slot, `revise` means choose an existing saved plan id before drafting, and `replace` requires explicit confirmation for a saved-plan-set replacement. If no saved plans exist and `planId` is omitted, proceed to the first auto-assigned slot without that gate. If a specific saved `planId` was passed, treat that as a targeted revise flow and confirm before overwriting.
+6. Once readiness and any saved-plan add/revise/replace gate allow drafting, read `blueprint_phase_plan_authoring_context` for the selected slot and use its `taskSchema` plus `contract.modelContract.schemaPath` as the phase.plan authoring authority.
+7. Use `blueprint-planner` to draft execution-ready structured plan models when suitable. If suitable planning agents are unavailable, use the no-subagent fallback from `references/plan-phase-runtime-contract.md`.
+8. Author a structured `phase.plan` JSON model against `blueprint_phase_plan_authoring_context.taskSchema`, validate it with `blueprint_phase_plan_validate_model`, then persist the same model through `blueprint_phase_plan_write` with `validationMode: "strict"` and `authoringMode: "model-only"`. Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation/write, especially after any successful plan write, because previously saved plan files become intentional known evidence artifacts for later plan slots. Omit `planId` only when writing the first plan in an empty plan set or after an earlier explicit `add` choice selected a new slot, or pass only the numeric plan id when targeting a specific plan; use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`. Do not send `content` from `/blu-plan-phase`, do not rely on scaffold text as the finished plan, and do not use Markdown fallback after model validation fails.
+9. Preserve the strict model-rendered heading set: `Goal`, `Scope`, `Tasks`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`. Top-level `requirements` lists only requirements this plan covers now; `requirementCoverage` accounts for every known phase requirement exactly once as `covered`, `deferred`, or `irrelevant`. Treat `evidenceCoverage` as the current runtime-narrowed inventory, not a static list.
+10. When `workflow.plan_check=true`, run the bounded review loop from the runtime contract: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
+11. Call `blueprint_phase_plan_validate` after the final write path and require its final `status` to be `valid` before synced state update or completion advances. If `blueprint_phase_plan_validate_model`, `blueprint_phase_plan_write`, or `blueprint_phase_plan_validate` reports invalid model content, repair all diagnostics against the live task schema and contract in one pass before retrying through MCP; never bypass validation with raw `.blueprint/` edits.
+12. If a write succeeds but final scoped validation remains `invalid`, keep the saved plan as an incremental checkpoint, report the uncovered requirements or other issues, and do not claim final completion. Incomplete roadmap coverage may still be saved incrementally, but it is not final completion.
+13. After persistence, prefer `blueprint_state_update` with `base: "synced"` only after final scoped validation is `valid`, so `STATE.md` recomputes the next safe action from the updated artifact inventory instead of leaving stale routing behind. Prefer `/blu-progress` as the default safe follow-up unless a later lifecycle command is clearly implemented.
+14. Do not present planned-only lifecycle commands as runnable or as a guaranteed next step.
 
 ## Output Style
 
 - Explain which gates were enabled or skipped because normalized config said so.
-- Explain overwrite, replace, or revision risk before writes when saved plan bodies would change.
+- Explain add, overwrite, replace, or revision risk before writes when saved plan bodies or plan-set intent would change.
+- State whether the result is an incremental saved checkpoint or final completion.
 - Keep the user anchored on the next safe implemented action after planning.
 
 ## Completion Self-Check
@@ -105,10 +108,11 @@ does not grant broader tool scope to a command.
 Before claiming completion, verify:
 
 - `/blu-plan-phase` loaded `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`, its `Completion Criteria` were satisfied, and no sibling command reference was treated as active input.
-- Required reads and writes ran in the contract order through runtime FQNs, including phase locate, `phase.plan` contract, authoring context, phase context, research readiness, saved artifact bodies, validation/review evidence when present, plan inventory/read when revising, effective config, model validation, plan write, scoped validation, and synced state update.
+- Required reads and writes ran in the contract order through runtime FQNs, including phase locate, `phase.plan` contract, phase context, research readiness, saved artifact bodies, validation/review evidence when present, plan inventory/read when deciding add/revise/replace, effective config, post-gate authoring context, model validation, plan write, scoped validation, and synced state update only after final validation became valid.
 - Persistence used only `mcp_blueprint_blueprint_phase_plan_write` with the validated structured model, `authoringMode: "model-only"`, and `validationMode: "strict"`; no raw `.blueprint/` writes, Markdown fallback, installed-extension edits, runtime file mutations, or unrelated Blueprint state changes occurred.
 - MCP `status`, `written`, `created`, `updated`, `path`, validation diagnostics, warnings, and `reason` fields were treated as authoritative; rejected, invalid, partial, blocked, or skipped work was repaired through MCP or reported honestly.
-- `ask_user` confirmation was satisfied before revising or replacing saved plan bodies or plan sets; additive auto-assigned plan ids did not invent an overwrite gate.
+- `ask_user` confirmation was satisfied before any saved-plan add/revise/replace choice, revising or replacing saved plan bodies, or replacing a saved plan set; auto-assigned plan ids were limited to the first empty-plan slot or an explicit prior `add` choice.
 - Normalized config gates for research, UI, UI safety, and plan check matched the final behavior, and checker output or the inline fallback was resolved, deferred truthfully, or reported as a blocker.
+- Final scoped plan validation reached `status: "valid"` before synced state update or completion claims; incremental saved checkpoints with incomplete roadmap coverage were reported honestly as not complete.
 - Final routing named only implemented Blueprint commands, using `/blu-progress` when the safe next action was ambiguous or not implemented.
-- The final response named the phase, plan ids and returned artifact paths or no-write status, gate decisions, checker/validation result, warnings or blockers, and the next safe implemented action.
+- The final response named the phase, plan ids and returned artifact paths or no-write status, gate decisions, whether the outcome was incremental or final, checker/validation result, warnings or blockers, and the next safe implemented action.
