@@ -37,7 +37,7 @@ Focused checks reported by agents passed for plan tooling, including `tests/phas
 
 ## Findings
 
-### High: Strict write and final plan-set validation disagree on roadmap coverage
+### High: Strict write and final plan-set validation disagree on roadmap coverage (FIXME:)
 
 Two simulations saved a plan successfully while `blueprint_phase_plan_validate` immediately reported the saved plan set as invalid because not all roadmap requirements were covered.
 
@@ -52,7 +52,7 @@ Evidence:
 
 Why it matters: the command contract says to run final scoped validation after write. A model can see “write succeeded” and “plan set invalid” in the same run, and state may still advance if the orchestrator is not careful about the final validation result.
 
-### High: Exact-coverage diagnostics are noisy and partly misleading
+### High: Exact-coverage diagnostics are noisy and partly misleading (FIXME: agree to reduce unecessary noise)
 
 When a model omitted one required requirement or evidence artifact row, diagnostics included the useful `schema.exactCoverage` message, but also `schema.const` diagnostics that suggested replacing existing valid rows with the missing value.
 
@@ -63,7 +63,7 @@ Evidence:
 
 Why it matters: the correct repair is usually “add one missing row,” but the extra `const` diagnostics can nudge a model to replace existing rows and create a new coverage gap.
 
-### High: Acceptance-criterion verifier misses underscore-separated tool names
+### High: Acceptance-criterion verifier misses underscore-separated tool names (FIXME:)
 
 One simulation used a natural criterion such as `blueprint_phase_plan_validate_model returns status valid`. It failed with `coverage.unverifiable_acceptance_criterion` because the verifier did not treat underscore-separated tool names as containing `validate`.
 
@@ -97,7 +97,7 @@ Evidence:
 
 Why it matters: an LLM must interpret multiple results together: model validation, write result, final plan-set validation, and state load. Treating write success alone as completion is unsafe.
 
-### Medium: Lower-level authoring tools do not enforce the planning-readiness gate
+### Medium: Lower-level authoring tools do not enforce the planning-readiness gate (FIXME:)
 
 The command contract requires stopping when `phase_research_status.planningReadiness.readyForPlanPhase=false`, but `blueprint_phase_plan_authoring_context` itself primarily blocks on missing roadmap requirements. Command correctness depends on the orchestrator remembering to call and honor the readiness gate first.
 
@@ -108,7 +108,7 @@ Evidence:
 
 Why it matters: simulation agents could still get an authoring schema and write path even when the command should route back to research/UI/discuss first.
 
-### Medium: Saved plans becoming required evidence makes accidental auto-add costly
+### Medium: Saved plans becoming required evidence makes accidental auto-add costly (FIXME:)
 
 After saving plan `01`, omitting `planId` caused the next authoring context to target plan `02`. The task schema then required the saved `03-01-PLAN.md` as evidence. This is coherent for additive planning, but confusing when the model intended to revise plan `01`.
 
@@ -118,7 +118,7 @@ Evidence:
 
 Why it matters: a model trying to repair or revise an existing plan must explicitly target `planId: "01"`. Otherwise the schema shifts under it and reports missing evidence for the previous plan.
 
-### Medium: Schema errors can mask semantic repair feedback
+### Medium: Schema errors can mask semantic repair feedback (FIXME:)
 
 One invalid model also had vague acceptance criteria and placeholder-like values, but residual semantic checks did not appear until schema validity was repaired.
 
