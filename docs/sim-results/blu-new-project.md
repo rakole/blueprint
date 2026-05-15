@@ -39,7 +39,7 @@ Common successful save response:
 
 ## Findings
 
-### High: Visible bootstrap guidance underspecifies the required seed shape
+### High: Visible bootstrap guidance underspecifies the required seed shape (FIXME:)
 
 The runtime save gate requires a richer `bootstrapSeed` than the command/skill guidance makes obvious. Simulations that produced plausible project brief, requirements, and roadmap content still failed before the first write when phase `requirementIds`, phase `successCriteria`, or requirement row fields were missing.
 
@@ -56,7 +56,7 @@ Evidence:
 
 Why it matters: the first persistent write is blocked until the model satisfies hidden structured input requirements. This causes avoidable retries even when the intended Markdown artifacts are substantively good.
 
-### High: Pre-bootstrap status returns conflicting routing signals
+### High: Pre-bootstrap status returns conflicting routing signals 
 
 One simulation observed that an uninitialized greenfield repo returned a correct top-level `nextAction` of `Run /blu-new-project`, while nested `bootstrap.recommendedNextAction` pointed to `Run /blu-progress`.
 
@@ -66,7 +66,7 @@ Evidence:
 
 Why it matters: an LLM following the nested field could route away from bootstrap even though `/blu-new-project` is the correct next action.
 
-### Medium: Generic success-criterion validation causes wording retries
+### Medium: Generic success-criterion validation causes wording retries (FIXME: remove validation for successCriterion completely, let us trust the llm to do right thing here, its too restrictive and too many things get tripped up here, make sure it is removed from schema validation and markdown verifier and any other place we validate this for this particular doc)
 
 All simulations found the success-criteria gate useful in principle but somewhat aggressive in practice. Clear throwaway text like `Complete phase.` should fail, but one realistic contract-adjacent sentence, `Keep requirement IDs traceable into later roadmap artifacts.`, also failed as generic.
 
@@ -99,7 +99,7 @@ Evidence:
 
 Why it matters: the rule is actionable and may be a valid product choice, but it is a strong constraint for early roadmap drafting. LLMs can naturally map a broad requirement to discovery and implementation phases, so this rule is a likely retry driver.
 
-### Medium: Duplicate phase requirement refs are silently normalized
+### Medium: Duplicate phase requirement refs are silently normalized (FIXME:)
 
 One probe passed `requirementIds: ["CI-01", "CI-02", "CI-02"]`. The save succeeded and post-write validation passed even though there is a diagnostic intended for duplicate phase requirement refs.
 
@@ -109,7 +109,7 @@ Evidence:
 
 Why it matters: this is contract/runtime drift. Either duplicates should be accepted and normalized intentionally, or the preflight diagnostic should run before normalization.
 
-### Medium: `bootstrap.requirements` contract and runtime differ on conditional sections
+### Medium: `bootstrap.requirements` contract and runtime differ on conditional sections (FIXME:)
 
 The contract language expects substantive committed, deferred, and out-of-scope sections, while runtime/test coverage accepts committed-only bootstrap and omits deferred/out-of-scope sections.
 
