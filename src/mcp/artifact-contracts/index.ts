@@ -1593,14 +1593,14 @@ const CODE_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
     "Do not author runtime-owned fields such as depth, scopeSource, scopeReviewed, evidenceReviewed, evidenceDeferrals, severityCounts, or report paths; MCP resolves and renders them.",
     "Author against the narrowed taskSchema returned by blueprint_review_scope authoringContext or blueprint_review_validate_model so scoped finding locations, exact evidenceCoverage keys, and nextSafeAction stay deterministic.",
-    "Every known saved evidence artifact from the phase must appear as an exact evidenceCoverage key with status used, deferred, or irrelevant plus a concrete rationale.",
+    "Only author evidenceCoverage entries for exact known saved evidence artifacts that materially shaped the review; MCP renders known but omitted artifacts as not reviewed.",
     "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
     "Use only the allowed nextSafeAction values returned by the authoring context, and do not copy minimal example wording or placeholder review prose."
   ],
   contextBindings: [
     "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
     "depth, source, scopeReviewed, and severity counts come from blueprint_review_scope plus MCP rendering, not from authored JSON.",
-    "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into evidenceCoverage keys, and rendered visibly into Evidence Reviewed.",
+    "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into allowed evidenceCoverage keys, and rendered visibly into Evidence Reviewed even when the model omitted unused evidence.",
     "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
   ],
   renderedHeadings: [

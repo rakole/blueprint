@@ -133,6 +133,7 @@ type CodeReviewAuthoringContext = {
         depth: ReviewDepth;
         source: ReviewModeSource;
     };
+    hasSecurityArtifact: boolean;
     knownEvidenceArtifacts: string[];
     allowedNextActions: string[];
     preferredNextSafeAction: string | null;
@@ -559,6 +560,7 @@ type ReviewValidateModelArgs = {
     phase?: NumericInput;
     artifact?: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
     files?: string[];
+    scopeSource?: ReviewModeSource;
     depth?: ReviewDepth;
     targetIds?: string[];
     model: unknown;
@@ -658,6 +660,12 @@ export declare const reviewToolDefinitions: ({
             security: "security";
         }>>;
         files: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        scopeSource: z.ZodOptional<z.ZodEnum<{
+            "explicit-files": "explicit-files";
+            "phase-plans": "phase-plans";
+            "phase-summaries": "phase-summaries";
+            "phase-evidence": "phase-evidence";
+        }>>;
         depth: z.ZodOptional<z.ZodEnum<{
             quick: "quick";
             standard: "standard";

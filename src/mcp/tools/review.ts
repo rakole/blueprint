@@ -197,6 +197,7 @@ type CodeReviewAuthoringContext = {
     depth: ReviewDepth;
     source: ReviewModeSource;
   };
+  hasSecurityArtifact: boolean;
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
   preferredNextSafeAction: string | null;
@@ -654,6 +655,7 @@ type ReviewValidateModelArgs = {
   phase?: NumericInput;
   artifact?: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review";
   files?: string[];
+  scopeSource?: ReviewModeSource;
   depth?: ReviewDepth;
   targetIds?: string[];
   model: unknown;
@@ -777,6 +779,9 @@ const reviewValidateModelInputSchema = {
   phase: numericBlueprintInputSchema.optional(),
   artifact: z.enum(["code-review", "peer-review", "review-fix", "security", "ui-review"]).optional(),
   files: z.array(z.string()).optional(),
+  scopeSource: z
+    .enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"])
+    .optional(),
   depth: z.enum(["quick", "standard", "deep"]).optional(),
   targetIds: z.array(z.string()).optional(),
   model: z.unknown()
@@ -1293,9 +1298,8 @@ function buildCodeReviewTaskSchema(args: {
     properties.evidenceCoverage = {
       type: "object",
       description:
-        "Exhaustive coverage decisions for the exact known evidence artifacts in this phase.",
+        "Coverage decisions for the known evidence artifacts the model actually used. Omit known artifacts that were not part of the review reasoning; MCP renders missing known evidence as not reviewed.",
       additionalProperties: false,
-      required: args.knownEvidenceArtifacts,
       properties: Object.fromEntries(
         args.knownEvidenceArtifacts.map((artifactPath) => [
           artifactPath,
@@ -1327,6 +1331,7 @@ async function buildCodeReviewAuthoringContext(args: {
   phase: ReviewScopePhase;
   files: string[];
   reviewMode: ReviewScopeResult["reviewMode"];
+  hasSecurityArtifact: boolean;
   knownEvidenceArtifacts: string[];
 }): Promise<CodeReviewAuthoringContext> {
   const modelContract = readArtifactContract("review.code-review").modelContract;
@@ -1340,10 +1345,14 @@ async function buildCodeReviewAuthoringContext(args: {
 
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
   const preferredNextSafeAction =
-    allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ??
-    allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ??
-    allowedNextActions[0] ??
-    null;
+    args.hasSecurityArtifact
+      ? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ??
+        allowedNextActions.find((action) => action === "/blu-progress") ??
+        allowedNextActions[0] ??
+        null
+      : allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ??
+        allowedNextActions[0] ??
+        null;
   const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
     allowedNextActions,
     preferredNextSafeAction
@@ -1362,6 +1371,7 @@ async function buildCodeReviewAuthoringContext(args: {
     phase: args.phase,
     files: [...args.files],
     reviewMode: { ...args.reviewMode },
+    hasSecurityArtifact: args.hasSecurityArtifact,
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
     preferredNextSafeAction,
@@ -4876,13 +4886,20 @@ function renderCodeReviewEvidenceCoverage(args: {
   model: CodeReviewStructuredModel;
   knownEvidenceArtifacts: string[];
 }): string[] {
-  if (args.knownEvidenceArtifacts.length === 0) {
+  const artifactPaths = uniqueSortedStrings([
+    ...args.knownEvidenceArtifacts,
+    ...Object.keys(args.model.evidenceCoverage)
+  ]);
+
+  if (artifactPaths.length === 0) {
     return ["none"];
   }
 
-  return args.knownEvidenceArtifacts.map((artifactPath) => {
+  return artifactPaths.map((artifactPath) => {
     const coverage = args.model.evidenceCoverage[artifactPath];
-    return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
+    return coverage
+      ? `${artifactPath} - ${coverage.status}: ${coverage.rationale}`
+      : `${artifactPath} - not-reviewed: No model evidenceCoverage entry was authored.`;
   });
 }
 
@@ -6754,23 +6771,7 @@ function addEvidenceCoverageDiagnostics(args: {
 }): void {
   const knownEvidence = new Set(args.knownEvidenceArtifacts);
   const coverageKeys = Object.keys(args.model.evidenceCoverage);
-  const missing = args.knownEvidenceArtifacts.filter(
-    (artifactPath) => !(artifactPath in args.model.evidenceCoverage)
-  );
   const unknown = coverageKeys.filter((artifactPath) => !knownEvidence.has(artifactPath));
-
-  if (missing.length > 0) {
-    args.diagnostics.push(
-      modelDiagnostic({
-        source: "residual",
-        path: "model.evidenceCoverage",
-        code: "residual.evidence_missing",
-        message: `Code-review model evidenceCoverage must include every known evidence artifact. Missing: ${missing.join(", ")}.`,
-        context: { missing },
-        suggestion: "Add exact evidenceCoverage keys from authoringContext.knownEvidenceArtifacts."
-      })
-    );
-  }
 
   if (unknown.length > 0) {
     args.diagnostics.push(
@@ -6963,6 +6964,7 @@ async function addFindingLocationDiagnostics(args: {
 function addVerdictContradictionDiagnostics(args: {
   diagnostics: ReviewModelDiagnostic[];
   model: CodeReviewStructuredModel;
+  authoringContext: CodeReviewAuthoringContext;
 }): void {
   const followUpFindings = args.model.findings.filter(
     (finding) => finding.disposition === "follow-up"
@@ -7056,6 +7058,70 @@ function addVerdictContradictionDiagnostics(args: {
       })
     );
   }
+
+  if (
+    !args.authoringContext.hasSecurityArtifact &&
+    args.authoringContext.preferredNextSafeAction &&
+    nextAction !== args.authoringContext.preferredNextSafeAction
+  ) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_priority",
+        message:
+          `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence.`,
+        context: {
+          nextSafeAction: nextAction,
+          preferredNextSafeAction: args.authoringContext.preferredNextSafeAction,
+          secondaryNextSafeAction: args.authoringContext.secondaryNextSafeAction
+        },
+        suggestion:
+          args.authoringContext.secondaryNextSafeAction
+            ? `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction and mention ${args.authoringContext.secondaryNextSafeAction} as secondary follow-up guidance.`
+            : `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction.`
+      })
+    );
+  }
+}
+
+function diagnosticPathCoveredBySchema(
+  diagnostic: ReviewModelDiagnostic,
+  schemaDiagnostics: ReviewModelDiagnostic[]
+): boolean {
+  if (diagnostic.source !== "residual") {
+    return false;
+  }
+
+  return schemaDiagnostics.some((schemaDiagnostic) => {
+    if (schemaDiagnostic.path === diagnostic.path) {
+      return true;
+    }
+
+    if (diagnostic.path === "model") {
+      return false;
+    }
+
+    return (
+      schemaDiagnostic.path.length > 0 &&
+      (diagnostic.path.startsWith(`${schemaDiagnostic.path}.`) ||
+        schemaDiagnostic.path.startsWith(`${diagnostic.path}.`))
+    );
+  });
+}
+
+function suppressResidualSchemaOverlaps(
+  diagnostics: ReviewModelDiagnostic[]
+): ReviewModelDiagnostic[] {
+  const schemaDiagnostics = diagnostics.filter((diagnostic) => diagnostic.source === "schema");
+
+  if (schemaDiagnostics.length === 0) {
+    return diagnostics;
+  }
+
+  return diagnostics.filter(
+    (diagnostic) => !diagnosticPathCoveredBySchema(diagnostic, schemaDiagnostics)
+  );
 }
 
 async function collectCodeReviewResidualDiagnostics(args: {
@@ -7110,7 +7176,8 @@ async function collectCodeReviewResidualDiagnostics(args: {
   });
   addVerdictContradictionDiagnostics({
     diagnostics,
-    model: args.normalizedModel
+    model: args.normalizedModel,
+    authoringContext: args.authoringContext
   });
 
   const nextSafeActionIssues = await validateImplementedNextSafeAction(
@@ -8624,12 +8691,6 @@ async function deriveReviewFilesFromPlans(
 
     const validation = validatePlanArtifactContent(content, located.phaseNumber);
 
-    if (!validation.valid) {
-      warnings.push(
-        `Plan metadata issues in ${planPath}: ${validation.issues.join(" ")}`
-      );
-    }
-
     for (const plannedPath of validation.metadata.filesModified) {
       const requestedPath = plannedPath.trim();
 
@@ -9039,6 +9100,7 @@ export async function blueprintReviewScope(
         phase,
         files,
         reviewMode,
+        hasSecurityArtifact: artifacts.security !== null,
         knownEvidenceArtifacts
       })
     : undefined;
@@ -9242,6 +9304,45 @@ export async function blueprintReviewValidateModel(
 
   const modelObject = asJsonObject(args.model);
   const diagnostics: ReviewModelDiagnostic[] = [];
+
+  if (artifact === "code-review" && explicitReviewFilesRequested(args.files)) {
+    const codeReviewContext = context.authoringContext as CodeReviewAuthoringContext;
+
+    if (!args.scopeSource) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_required",
+          message: "Code-review validation with explicit files must also provide scopeSource.",
+          context: {
+            files: args.files ?? [],
+            reviewModeSource: codeReviewContext.reviewMode.source
+          },
+          suggestion:
+            "Pass the reviewMode.source returned by blueprint_review_scope alongside files when validating and recording the code-review model.",
+          retryable: false
+        })
+      );
+    } else if (args.scopeSource !== codeReviewContext.reviewMode.source) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_mismatch",
+          message:
+            `Code-review validation scopeSource ${args.scopeSource} does not match resolved review scope source ${codeReviewContext.reviewMode.source}.`,
+          context: {
+            scopeSource: args.scopeSource,
+            reviewModeSource: codeReviewContext.reviewMode.source
+          },
+          suggestion:
+            "Use the exact reviewMode.source returned by blueprint_review_scope for this validation and record call.",
+          retryable: false
+        })
+      );
+    }
+  }
 
   if (!modelObject) {
     const modelLabel =
@@ -9538,9 +9639,12 @@ export async function blueprintReviewValidateModel(
     }
   }
 
+  const finalDiagnostics =
+    artifact === "code-review" ? suppressResidualSchemaOverlaps(diagnostics) : diagnostics;
+
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: finalDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: finalDiagnostics.length === 0,
     phase: context.phase,
     files: context.files,
     reviewMode: context.reviewMode ?? {
@@ -9549,10 +9653,10 @@ export async function blueprintReviewValidateModel(
     },
     schemaPath: context.schemaPath,
     taskSchema: context.taskSchema,
-    diagnostics,
-    diagnosticCounts: countDiagnostics(diagnostics),
-    repairSummary: summarizeReviewModelRepairs(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+    diagnostics: finalDiagnostics,
+    diagnosticCounts: countDiagnostics(finalDiagnostics),
+    repairSummary: summarizeReviewModelRepairs(finalDiagnostics),
+    normalizedModel: finalDiagnostics.some((diagnostic) => diagnostic.source === "schema")
       ? null
       : artifact === "security"
         ? normalizedSecurityModel
@@ -9745,6 +9849,7 @@ export async function blueprintReviewRecord(
       phase: args.phase,
       artifact: modelArtifact,
       files: validationFiles,
+      scopeSource: args.artifact === "code-review" ? args.scopeSource : undefined,
       depth: args.depth,
       targetIds: args.targetIds,
       model: args.model

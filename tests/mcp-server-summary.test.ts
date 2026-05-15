@@ -7611,7 +7611,7 @@ test("public impact analyze live MCP response trims report-duplicated top-level 
     assert.equal(response.content[0]?.text, JSON.stringify(structuredContent));
     assert.equal(structuredContent.phaseStatus, directResult.phaseStatus);
     assert.deepEqual(structuredContent.report, directResult.report);
-    assert.deepEqual(structuredContent.warnings, directResult.warnings);
+    assert.deepEqual(structuredContent.warnings ?? [], directResult.warnings);
     assert.ok(!("impactId" in structuredContent));
     assert.ok(!("status" in structuredContent));
     assert.ok(!("impactStatus" in structuredContent));
@@ -7710,7 +7710,6 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.deepEqual(directResult.authoringContext?.files, directResult.files);
     assert.deepEqual(directResult.authoringContext?.reviewMode, directResult.reviewMode);
     assert.ok(Array.isArray(directResult.warnings));
-    assert.ok((directResult.warnings?.length ?? 0) > 0);
 
     const response = await client.callTool({
       name: "blueprint_review_scope",
@@ -7730,7 +7729,7 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.deepEqual(structuredContent.phase, directResult.phase);
     assert.deepEqual(structuredContent.files, directResult.files);
     assert.deepEqual(structuredContent.reviewMode, directResult.reviewMode);
-    assert.deepEqual(structuredContent.warnings, directResult.warnings);
+    assert.deepEqual(structuredContent.warnings ?? [], directResult.warnings);
     assert.ok(authoringContext);
     assert.ok(!("phase" in authoringContext));
     assert.ok(!("files" in authoringContext));
@@ -7754,7 +7753,7 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{"phase":/);
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{[^}]*"files":/);
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{[^}]*"reviewMode":/);
-    assert.match(response.content[0]?.text ?? "", /"warnings":\[/);
+    assert.doesNotMatch(response.content[0]?.text ?? "", /"warnings":\[\]/);
   } finally {
     await client.close();
     await server.close();
