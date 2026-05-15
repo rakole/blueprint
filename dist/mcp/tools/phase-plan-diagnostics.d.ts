@@ -39,7 +39,13 @@ export type PhasePlanDiagnosticCounts = {
 export declare function phasePlanDiagnostic(args: PhasePlanModelDiagnostic): PhasePlanModelDiagnostic;
 export declare function emptyPhasePlanDiagnosticCounts(): PhasePlanDiagnosticCounts;
 export declare function countPhasePlanDiagnostics(diagnostics: PhasePlanModelDiagnostic[]): PhasePlanDiagnosticCounts;
+export declare function isBlockingPhasePlanDiagnostic(diagnostic: PhasePlanModelDiagnostic): boolean;
+export declare function partitionPhasePlanDiagnostics(diagnostics: PhasePlanModelDiagnostic[]): {
+    blocking: PhasePlanModelDiagnostic[];
+    warnings: PhasePlanModelDiagnostic[];
+};
 export declare function summarizePhasePlanRepairs(diagnostics: PhasePlanModelDiagnostic[]): PhasePlanRepairSummary;
 export declare function formatPhasePlanDiagnostic(diagnostic: PhasePlanModelDiagnostic): string;
+export declare function isExactCoverageConstFallout(error: ErrorObject): boolean;
 export declare function schemaDiagnosticFromPhasePlanAjvError(error: ErrorObject, taskSchema: Record<string, unknown>, model: unknown): PhasePlanModelDiagnostic;
 export declare function phasePlanModelResidualDiagnostics(model: Record<string, unknown>): PhasePlanModelDiagnostic[];

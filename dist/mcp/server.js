@@ -25451,6 +25451,136 @@ async function assertCurrentPhaseContextPathExists(args) {
 function formatPhasePrefix2(value) {
   return formatBlueprintPhasePrefix(value);
 }
+function normalizeRoutingPlanId(value) {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const numeric = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+    return null;
+  }
+  return String(numeric).padStart(2, "0");
+}
+function detectRoutingPlanCycles(dependencyGraph) {
+  const visited = /* @__PURE__ */ new Set();
+  const active = /* @__PURE__ */ new Set();
+  const cycles = [];
+  const seenCycleKeys = /* @__PURE__ */ new Set();
+  const visit = (planId2, trail) => {
+    if (active.has(planId2)) {
+      const cycleStartIndex = trail.indexOf(planId2);
+      if (cycleStartIndex >= 0) {
+        const cycle = [...trail.slice(cycleStartIndex), planId2];
+        const cycleKey = cycle.join("->");
+        if (!seenCycleKeys.has(cycleKey)) {
+          seenCycleKeys.add(cycleKey);
+          cycles.push(cycle);
+        }
+      }
+      return;
+    }
+    if (visited.has(planId2)) {
+      return;
+    }
+    visited.add(planId2);
+    active.add(planId2);
+    for (const dependencyId of dependencyGraph.get(planId2) ?? []) {
+      visit(dependencyId, [...trail, dependencyId]);
+    }
+    active.delete(planId2);
+  };
+  for (const planId2 of dependencyGraph.keys()) {
+    visit(planId2, [planId2]);
+  }
+  return cycles;
+}
+async function inspectPhasePlanRoutingReadiness(args) {
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  let roadmapRequirementIds = [];
+  try {
+    const roadmap = parseRoadmapDocument(await fs2.readFile(roadmapPath, "utf8"));
+    roadmapRequirementIds = roadmap.phases.find((phase) => normalizePhaseNumber2(phase.phaseNumber) === args.currentPhase)?.requirements ?? [];
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      executionReady: true,
+      warnings: [`${BLUEPRINT_DIR}/ROADMAP.md: ${message}`]
+    };
+  }
+  const coveredRequirementIds = /* @__PURE__ */ new Set();
+  const dependencyGraph = /* @__PURE__ */ new Map();
+  const missingDependencyIds = /* @__PURE__ */ new Set();
+  const planValidationIssues = [];
+  const waveOrderingIssues = [];
+  const planMetadata = /* @__PURE__ */ new Map();
+  for (const planPath of args.planPaths) {
+    try {
+      const raw = await fs2.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const validation = validatePlanArtifactContent(raw, args.currentPhase);
+      const planId2 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
+      for (const issue2 of validation.issues) {
+        planValidationIssues.push(`${planPath}: ${issue2}`);
+      }
+      if (!planId2) {
+        planValidationIssues.push(`${planPath}: frontmatter plan_id is missing or invalid.`);
+        continue;
+      }
+      dependencyGraph.set(planId2, []);
+      planMetadata.set(planId2, {
+        path: planPath,
+        wave: typeof validation.metadata.wave === "number" ? validation.metadata.wave : null,
+        dependsOn: validation.metadata.dependsOn
+      });
+      for (const requirementId of validation.metadata.requirements) {
+        coveredRequirementIds.add(requirementId);
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      planValidationIssues.push(`${planPath}: ${message}`);
+    }
+  }
+  for (const [planId2, metadata] of planMetadata) {
+    const normalizedDependencies = metadata.dependsOn.map((dependency) => normalizeRoutingPlanId(dependency)).filter((dependency) => dependency !== null);
+    dependencyGraph.set(planId2, normalizedDependencies);
+    for (const dependencyId of normalizedDependencies) {
+      const dependencyMetadata = planMetadata.get(dependencyId);
+      if (!dependencyMetadata) {
+        missingDependencyIds.add(dependencyId);
+        continue;
+      }
+      if (typeof metadata.wave === "number" && typeof dependencyMetadata.wave === "number" && dependencyMetadata.wave >= metadata.wave) {
+        waveOrderingIssues.push(
+          `${metadata.path}: wave ${metadata.wave} must come after dependency ${dependencyId} in wave ${dependencyMetadata.wave}.`
+        );
+      }
+    }
+  }
+  const uncoveredRequirementIds = roadmapRequirementIds.filter(
+    (requirementId) => !coveredRequirementIds.has(requirementId)
+  );
+  const cyclicDependencyPlanIds = detectRoutingPlanCycles(dependencyGraph);
+  const warnings = [];
+  if (uncoveredRequirementIds.length > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`
+    );
+  }
+  warnings.push(...planValidationIssues);
+  if (missingDependencyIds.size > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set references missing dependencies: ${[...missingDependencyIds].sort((left, right) => left.localeCompare(right)).join(", ")}.`
+    );
+  }
+  for (const cycle of cyclicDependencyPlanIds) {
+    warnings.push(`Plan dependency cycle detected: ${cycle.join(" -> ")}.`);
+  }
+  warnings.push(...waveOrderingIssues);
+  return {
+    executionReady: warnings.length === 0,
+    warnings
+  };
+}
 function extractPhasePlanIds(artifacts, phasePrefix2, kind) {
   const suffix = kind === "PLAN" ? "PLAN" : "SUMMARY";
   const matcher = new RegExp(`/${phasePrefix2.replace(".", "\\.")}-(\\d+)-${suffix}\\.md$`);
@@ -25723,7 +25853,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -25779,7 +25911,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -25821,7 +25955,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -25851,6 +25987,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const summaryArtifactPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "PLAN");
   const {
     summaryIds,
@@ -25873,7 +26010,13 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
+  const hasSavedSummaries = summaryArtifactPaths.length > 0;
   const hasPendingExecution = pendingPlanIds.length > 0;
+  const planRoutingReadiness = hasPlans ? await inspectPhasePlanRoutingReadiness({
+    projectRoot,
+    currentPhase: normalizedPhase,
+    planPaths
+  }) : { executionReady: false, warnings: [] };
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
   );
@@ -25946,6 +26089,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     );
   }
   warnings.push(...summaryWarnings, ...validationWarnings);
+  warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
     projectRoot,
     phaseNumber: normalizedPhase,
@@ -25996,7 +26140,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     verificationReadyForUat,
     hasUat,
     hasPlans,
+    planSetExecutionReady: planRoutingReadiness.executionReady,
     hasSummaries,
+    hasSavedSummaries,
     hasPendingExecution,
     codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
     requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
@@ -26362,7 +26508,10 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasContext && researchReady && uiReady && !args.phaseArtifacts.hasPlans && implementedCommands.has(planPhaseCommand)) {
     return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
   }
-  if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && implementedCommands.has(executePhaseCommand)) {
+  if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.planSetExecutionReady && args.phaseArtifacts.hasPendingExecution && !args.phaseArtifacts.hasSavedSummaries && implementedCommands.has(planPhaseCommand)) {
+    return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
+  }
+  if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && (args.phaseArtifacts.planSetExecutionReady || args.phaseArtifacts.hasSavedSummaries) && implementedCommands.has(executePhaseCommand)) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
   }
   const savedReviewRepairAction = args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
@@ -26863,6 +27012,7 @@ var init_state = __esm({
     init_artifacts();
     init_config();
     init_quality_gates();
+    init_phase_roadmap_parser();
     init_command_paths();
     init_security();
     PAUSE_WORK_CONTRACT = readArtifactContract("report.pause-work");
@@ -29468,6 +29618,21 @@ function countPhasePlanDiagnostics(diagnostics) {
   }
   return counts;
 }
+function isBlockingPhasePlanDiagnostic(diagnostic) {
+  return diagnostic.severity !== "warning";
+}
+function partitionPhasePlanDiagnostics(diagnostics) {
+  const blocking = [];
+  const warnings = [];
+  for (const diagnostic of diagnostics) {
+    if (isBlockingPhasePlanDiagnostic(diagnostic)) {
+      blocking.push(diagnostic);
+    } else {
+      warnings.push(diagnostic);
+    }
+  }
+  return { blocking, warnings };
+}
 function summarizePhasePlanRepairs(diagnostics) {
   const firstPassActions = uniquePreservingOrder(
     diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
@@ -29477,7 +29642,7 @@ function summarizePhasePlanRepairs(diagnostics) {
   );
   const retryInstruction = diagnostics.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once." : "Repair every diagnostic in the returned model before retrying validation once.";
   return {
-    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
+    blockingCount: diagnostics.filter(isBlockingPhasePlanDiagnostic).length,
     firstPassActions,
     reReadAuthoringContext,
     retryInstruction
@@ -29544,6 +29709,11 @@ function schemaDiagnosticFromAjvError(error2, model) {
     patchHint,
     suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
   });
+}
+function isExactCoverageConstFallout(error2) {
+  return error2.keyword === "const" && /^#\/properties\/(?:requirementCoverage|evidenceCoverage)\/allOf\/\d+\/contains\/properties\/(?:requirement|artifact)\/const$/.test(
+    error2.schemaPath
+  );
 }
 function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema, model) {
   const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
@@ -31228,6 +31398,10 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
 }
 function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
   return validation.issues.filter((issue2) => {
+    const normalizedIssue = issue2.replace(/^[^:]+:\s*/, "");
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(normalizedIssue)) {
+      return false;
+    }
     if (issue2.startsWith(`${pathValue}:`) || issue2.includes(pathValue)) {
       return true;
     }
@@ -31607,6 +31781,34 @@ function isPhasePlanAcceptanceCriterionVerifiable(value) {
     value
   ) || /`[^`]+`/.test(value);
 }
+function isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2) {
+  return /must use grep\/test-verifiable or otherwise objectively checkable bullets:/i.test(issue2);
+}
+function partitionPhasePlanMarkdownValidationIssues(issues) {
+  const blockingIssues = [];
+  const warningIssues = [];
+  for (const issue2 of issues) {
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2)) {
+      warningIssues.push(issue2);
+    } else {
+      blockingIssues.push(issue2);
+    }
+  }
+  return { blockingIssues, warningIssues };
+}
+function phasePlanMarkdownDiagnosticFromIssue(issue2) {
+  const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2);
+  return phasePlanDiagnostic({
+    severity: heuristicGuidance ? "warning" : "error",
+    source: "markdown",
+    path: "renderPreview",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    message: issue2,
+    context: {},
+    repairAction: heuristicGuidance ? "make-verifiable" : void 0,
+    suggestion: heuristicGuidance ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching." : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+  });
+}
 async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, targetPath) {
   const located = await blueprintPhaseLocate({
     cwd: projectRoot,
@@ -31744,7 +31946,7 @@ function validatePhasePlanStructuredModelCoverage(model) {
     }
     for (const criterion of task.acceptanceCriteria) {
       if (!isPhasePlanAcceptanceCriterionVerifiable(criterion)) {
-        issues.push(
+        warnings.push(
           `Task ${task.id} acceptance criterion is not objectively verifiable: ${criterion}.`
         );
       }
@@ -31790,14 +31992,14 @@ function validatePhasePlanStructuredModelCoverage(model) {
       }
     }
     if (!isPhasePlanAcceptanceCriterionVerifiable(row.verification)) {
-      issues.push(
+      warnings.push(
         `File surface coverage for ${normalizedSurface} has unverifiable verification: ${row.verification}.`
       );
     }
   }
   for (const verification of model.verification) {
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
-      issues.push(
+      warnings.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
       );
     }
@@ -31834,6 +32036,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     const criterionIndex = taskIndex >= 0 ? model.tasks[taskIndex].acceptanceCriteria.findIndex((item) => item === criterion) : -1;
     const pathValue = taskIndex >= 0 && criterionIndex >= 0 ? `model.tasks[${taskIndex}].acceptanceCriteria[${criterionIndex}]` : "model.tasks";
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_acceptance_criterion",
@@ -31930,6 +32133,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     const rowIndex = findPhasePlanFileSurfaceCoverageIndex(model, surface);
     const pathValue = rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_file_surface",
@@ -31939,6 +32143,27 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
       expected: "A command, grep, file-read, test, or artifact-validation check.",
       repairAction: "make-verifiable",
       suggestion: "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
+    });
+  }
+  const verificationEvidenceMatch = issue2.match(
+    /^Verification item "(.+)" has evidence that is not objectively verifiable: (.+)\.$/
+  );
+  if (verificationEvidenceMatch) {
+    const item = verificationEvidenceMatch[1] ?? "";
+    const evidence = verificationEvidenceMatch[2] ?? "";
+    const rowIndex = model.verification.findIndex((row) => row.item === item);
+    const pathValue = rowIndex >= 0 ? `model.verification[${rowIndex}].evidence` : "model.verification";
+    return phasePlanDiagnostic({
+      severity: "warning",
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_verification_evidence",
+      message: issue2,
+      context: { item, evidence },
+      actual: evidence,
+      expected: "A command, grep, file-read, test, or artifact-validation check.",
+      repairAction: "make-verifiable",
+      suggestion: "Prefer evidence grounded in a concrete command, grep, file-read, test, or artifact-validation check when the plan can name one."
     });
   }
   return phasePlanDiagnostic({
@@ -31981,9 +32206,12 @@ async function validatePhasePlanModelWithContext(args) {
   if (modelObject) {
     const validate = createAjvValidator().compile(args.context.taskSchema);
     const schemaValid = validate(modelObject);
+    const schemaErrors = (validate.errors ?? []).filter(
+      (error2) => !isExactCoverageConstFallout(error2)
+    );
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(
+        ...schemaErrors.map(
           (error2) => schemaDiagnosticFromPhasePlanAjvError(error2, args.context.taskSchema, args.model)
         )
       );
@@ -32001,16 +32229,32 @@ async function validatePhasePlanModelWithContext(args) {
         })
       );
     }
+    if (!schemaValid) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          severity: "warning",
+          source: "schema",
+          path: "model",
+          code: "schema.deeper_checks_skipped",
+          message: "Schema validation failed, so cross-field coverage checks and rendered Markdown validation were skipped for this attempt.",
+          context: {},
+          suggestion: "Repair the schema diagnostics first, then retry validation to run the deeper coverage and render checks."
+        })
+      );
+    }
     if (schemaValid) {
       normalizedModel = modelObject;
       const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
       for (const issue2 of coverage.issues) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(issue2, normalizedModel));
       }
+      for (const warning of coverage.warnings) {
+        diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
+      }
     }
   }
   let renderPreview = null;
-  if (diagnostics.length === 0 && normalizedModel) {
+  if (!diagnostics.some(isBlockingPhasePlanDiagnostic) && normalizedModel) {
     const rendered = renderPhasePlanModelContent(
       normalizedModel,
       args.context.resolved,
@@ -32019,25 +32263,19 @@ async function validatePhasePlanModelWithContext(args) {
     const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
       strict: true
     });
-    for (const issue2 of validation.issues) {
-      diagnostics.push(
-        phasePlanDiagnostic({
-          source: "markdown",
-          path: "renderPreview",
-          code: "markdown.invalid_render",
-          message: issue2,
-          context: {},
-          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
-        })
-      );
-    }
-    if (validation.issues.length === 0) {
+    const markdownDiagnostics = [
+      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
+      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+    ];
+    diagnostics.push(...markdownDiagnostics);
+    if (!markdownDiagnostics.some(isBlockingPhasePlanDiagnostic)) {
       renderPreview = rendered;
     }
   }
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
     target: phasePlanValidateModelTarget({
       phase: args.context.resolved,
       planId: args.context.planId,
@@ -32056,17 +32294,23 @@ async function validatePhasePlanModelWithContext(args) {
     taskSchema: args.context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    normalizedModel: diagnostics.some(
+      (diagnostic) => diagnostic.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic)
+    ) ? null : normalizedModel,
     renderPreview,
     warnings: []
   };
 }
 async function phasePlanModelToContent(model, context) {
   const validation = await validatePhasePlanModelWithContext({ model, context });
+  const partitionedDiagnostics = partitionPhasePlanDiagnostics(validation.diagnostics);
   return {
     content: validation.renderPreview,
-    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
-    warnings: validation.warnings,
+    issues: partitionedDiagnostics.blocking.map(formatPhasePlanDiagnostic),
+    warnings: [
+      ...validation.warnings,
+      ...partitionedDiagnostics.warnings.map(formatPhasePlanDiagnostic)
+    ],
     validation
   };
 }
@@ -34621,13 +34865,23 @@ async function blueprintPhasePlanWrite(args) {
     const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
       strict: strictValidation
     });
+    const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
     const dependencyIssues = collectInvalidPlanDependencyIssues(
       pathValue,
       validation.metadata.dependsOn
     );
     const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
-    const validationIssues = [...modelCoverageIssues, ...validation.issues, ...dependencyIssues];
-    const warnings = [...modelWarnings, ...preparedContent.warnings];
+    const validationIssues = [
+      ...modelCoverageIssues,
+      ...contentValidationIssues.blockingIssues,
+      ...dependencyIssues
+    ];
+    const warnings = [
+      ...modelWarnings,
+      ...preparedContent.warnings,
+      ...contentValidationIssues.warningIssues,
+      ...validation.warnings
+    ];
     if (dependencyIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
@@ -34643,7 +34897,7 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         warnings: dependencyIssues
       };
@@ -34663,8 +34917,8 @@ async function blueprintPhasePlanWrite(args) {
         status: "invalid",
         validation: {
           valid: false,
-          issues: [...validation.issues, issue2],
-          warnings: validation.warnings
+          issues: [...contentValidationIssues.blockingIssues, issue2],
+          warnings
         },
         warnings: []
       };
@@ -34684,13 +34938,13 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         modelValidation,
-        warnings: [...warnings, ...validation.warnings]
+        warnings
       };
     }
-    if (!validation.valid && strictValidation) {
+    if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -34705,9 +34959,9 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
-        warnings: []
+        warnings
       };
     }
     const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
@@ -34757,10 +35011,11 @@ async function blueprintPhasePlanWrite(args) {
           overwritten: false,
           status: "reused",
           validation: {
-            valid: prospectiveValidation.status === "valid",
-            issues: prospectiveValidation.issues,
-            warnings: prospectiveValidation.warnings
+            valid: blockingIssues.length === 0,
+            issues: blockingIssues,
+            warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
+          modelValidation,
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -34790,10 +35045,11 @@ async function blueprintPhasePlanWrite(args) {
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: prospectiveValidation.status === "valid",
-        issues: prospectiveValidation.issues,
-        warnings: prospectiveValidation.warnings
+        valid: blockingIssues.length === 0,
+        issues: blockingIssues,
+        warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
+      modelValidation,
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
@@ -38669,11 +38925,12 @@ function hasConcretePlanSubsectionContent(section) {
 }
 function validateObjectivePlanBulletList(section, artifactLabel) {
   const issues = [];
+  const warnings = [];
   const normalizedSection = stripPlanPlaceholderSignals(section);
   const bulletItems = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !isBlankOrPlaceholderPlanLine(line));
   if (bulletItems.length === 0) {
     issues.push(`${artifactLabel} must include at least one objective bullet.`);
-    return issues;
+    return { issues, warnings };
   }
   const objectiveSignals = [
     /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bshows?\b|\bdisplays?\b|\brenders?\b|\blists?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
@@ -38690,15 +38947,16 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
         );
         continue;
       }
-      issues.push(
+      warnings.push(
         `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
       );
     }
   }
-  return issues;
+  return { issues, warnings };
 }
 function validatePlanTaskBlock(taskBlock, taskNumber) {
   const issues = [];
+  const warnings = [];
   const lines = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
   const heading = lines[0] ?? "";
   const headingText = heading.replace(/^###\s+/, "").trim();
@@ -38721,13 +38979,13 @@ function validatePlanTaskBlock(taskBlock, taskNumber) {
     );
   }
   const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
-  issues.push(
-    ...validateObjectivePlanBulletList(
-      acceptanceCriteria,
-      `Task ${taskNumber} subsection Acceptance Criteria`
-    )
+  const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+    acceptanceCriteria,
+    `Task ${taskNumber} subsection Acceptance Criteria`
   );
-  return issues;
+  issues.push(...acceptanceCriteriaValidation.issues);
+  warnings.push(...acceptanceCriteriaValidation.warnings);
+  return { issues, warnings };
 }
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
@@ -41488,6 +41746,7 @@ function validateStrictSummaryArtifactContent(content, options = {}) {
 }
 function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   const issues = [];
+  const warnings = [];
   const metadata = parsePlanFrontmatter(content);
   if (!extractFrontmatter(content)) {
     issues.push("Plan artifact must start with YAML-style frontmatter.");
@@ -41540,12 +41799,12 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
       "Plan frontmatter must include at least one grep/test-verifiable item in acceptance_criteria."
     );
   } else {
-    issues.push(
-      ...validateObjectivePlanBulletList(
-        metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
-        "Plan frontmatter acceptance_criteria"
-      )
+    const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+      metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
+      "Plan frontmatter acceptance_criteria"
     );
+    issues.push(...acceptanceCriteriaValidation.issues);
+    warnings.push(...acceptanceCriteriaValidation.warnings);
   }
   if (metadata.autonomous === null) {
     issues.push("Plan frontmatter must declare autonomous as true or false.");
@@ -41571,7 +41830,9 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
         issues.push(`Each task must include a #### ${taskHeading} subsection.`);
       }
     }
-    issues.push(...validatePlanTaskBlock(taskBlock, taskNumber));
+    const taskValidation = validatePlanTaskBlock(taskBlock, taskNumber);
+    issues.push(...taskValidation.issues);
+    warnings.push(...taskValidation.warnings);
   }
   const verificationSection = extractMarkdownSection5(content, "Verification");
   if (!hasSubstantivePlanListContent(verificationSection)) {
@@ -41599,7 +41860,7 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   return {
     valid: issues.length === 0,
     issues,
-    warnings: [],
+    warnings,
     metadata
   };
 }

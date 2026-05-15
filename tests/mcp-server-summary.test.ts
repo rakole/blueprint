@@ -1840,6 +1840,18 @@ Ship the plan-phase runtime.
 `;
 }
 
+function invalidPhasePlanWriteContentWithWarning(planId: string): string {
+  return validPhasePlanWriteContent(planId)
+    .replace(
+      "tests/mcp-server-summary.test.ts exits 0",
+      "Demonstrate the phase-specific migration outcome for the admin packet."
+    )
+    .replace(
+      "## Must Haves",
+      "## Missing Must Haves"
+    );
+}
+
 function validPhaseArtifactWriteContent(): string {
   return `# Phase 03: Phase Discovery - Context
 
@@ -6416,7 +6428,7 @@ test("public report validate tool trims taskSchema from invalid results", async 
   }
 });
 
-test("public phase plan write tool trims validation on success and trims empty invalid warnings at the MCP boundary only", async () => {
+test("public phase plan write tool trims validation on success and preserves non-empty invalid warnings", async () => {
   const repoPath = await createPhasePlanWriteRepo();
   const directSuccessResult = await blueprintPhasePlanWrite({
     cwd: repoPath,
@@ -6428,13 +6440,13 @@ test("public phase plan write tool trims validation on success and trims empty i
     cwd: repoPath,
     phase: "3",
     planId: "02",
-    content: "# invalid plan\n",
+    content: invalidPhasePlanWriteContentWithWarning("02"),
     overwrite: true
   });
 
   assert.deepEqual(directSuccessResult.warnings, []);
   assert.ok("validation" in directSuccessResult);
-  assert.deepEqual(directInvalidResult.warnings, []);
+  assert.match(directInvalidResult.warnings.join("\n"), /grep\/test-verifiable/);
   assert.ok("validation" in directInvalidResult);
 
   const server = createBlueprintServer();
@@ -6462,7 +6474,7 @@ test("public phase plan write tool trims validation on success and trims empty i
         cwd: repoPath,
         phase: "3",
         planId: "02",
-        content: "# invalid plan\n",
+        content: invalidPhasePlanWriteContentWithWarning("02"),
         overwrite: true
       }
     });
@@ -6481,8 +6493,11 @@ test("public phase plan write tool trims validation on success and trims empty i
     assert.equal(invalidResponse.content[0]?.text, JSON.stringify(invalidResponse.structuredContent));
     assert.equal(invalidResponse.structuredContent.status, "invalid");
     assert.ok("validation" in invalidResponse.structuredContent);
-    assert.ok(!("warnings" in invalidResponse.structuredContent));
-    assert.deepEqual(invalidResponse.structuredContent.validation?.warnings, []);
+    assert.match(invalidResponse.structuredContent.warnings?.join("\n") ?? "", /grep\/test-verifiable/);
+    assert.match(
+      invalidResponse.structuredContent.validation?.warnings?.join("\n") ?? "",
+      /grep\/test-verifiable/
+    );
     assert.match(invalidResponse.content[0]?.text ?? "", /validation|issues/);
   } finally {
     await client.close();

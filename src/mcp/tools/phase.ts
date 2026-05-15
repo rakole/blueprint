@@ -199,6 +199,9 @@ import {
 import {
   countPhasePlanDiagnostics,
   formatPhasePlanDiagnostic,
+  isBlockingPhasePlanDiagnostic,
+  isExactCoverageConstFallout,
+  partitionPhasePlanDiagnostics,
   phasePlanDiagnostic,
   phasePlanModelResidualDiagnostics,
   schemaDiagnosticFromPhasePlanAjvError,
@@ -3718,6 +3721,12 @@ function selectRelevantPlanValidationIssues(
   planId: string
 ): string[] {
   return validation.issues.filter((issue) => {
+    const normalizedIssue = issue.replace(/^[^:]+:\s*/, "");
+
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(normalizedIssue)) {
+      return false;
+    }
+
     if (issue.startsWith(`${pathValue}:`) || issue.includes(pathValue)) {
       return true;
     }
@@ -4308,6 +4317,47 @@ function isPhasePlanAcceptanceCriterionVerifiable(value: string): boolean {
   );
 }
 
+function isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue: string): boolean {
+  return (
+    /must use grep\/test-verifiable or otherwise objectively checkable bullets:/i.test(issue)
+  );
+}
+
+function partitionPhasePlanMarkdownValidationIssues(issues: readonly string[]): {
+  blockingIssues: string[];
+  warningIssues: string[];
+} {
+  const blockingIssues: string[] = [];
+  const warningIssues: string[] = [];
+
+  for (const issue of issues) {
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue)) {
+      warningIssues.push(issue);
+    } else {
+      blockingIssues.push(issue);
+    }
+  }
+
+  return { blockingIssues, warningIssues };
+}
+
+function phasePlanMarkdownDiagnosticFromIssue(issue: string): PhasePlanModelDiagnostic {
+  const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue);
+
+  return phasePlanDiagnostic({
+    severity: heuristicGuidance ? "warning" : "error",
+    source: "markdown",
+    path: "renderPreview",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    message: issue,
+    context: {},
+    repairAction: heuristicGuidance ? "make-verifiable" : undefined,
+    suggestion: heuristicGuidance
+      ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching."
+      : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+  });
+}
+
 async function collectKnownPhasePlanEvidenceArtifacts(
   projectRoot: string,
   resolved: ResolvedPhaseLocation,
@@ -4492,7 +4542,7 @@ function validatePhasePlanStructuredModelCoverage(
 
     for (const criterion of task.acceptanceCriteria) {
       if (!isPhasePlanAcceptanceCriterionVerifiable(criterion)) {
-        issues.push(
+        warnings.push(
           `Task ${task.id} acceptance criterion is not objectively verifiable: ${criterion}.`
         );
       }
@@ -4549,7 +4599,7 @@ function validatePhasePlanStructuredModelCoverage(
     }
 
     if (!isPhasePlanAcceptanceCriterionVerifiable(row.verification)) {
-      issues.push(
+      warnings.push(
         `File surface coverage for ${normalizedSurface} has unverifiable verification: ${row.verification}.`
       );
     }
@@ -4557,7 +4607,7 @@ function validatePhasePlanStructuredModelCoverage(
 
   for (const verification of model.verification) {
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
-      issues.push(
+      warnings.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
       );
     }
@@ -4621,6 +4671,7 @@ function phasePlanCoverageDiagnosticFromIssue(
         : "model.tasks";
 
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_acceptance_criterion",
@@ -4738,6 +4789,7 @@ function phasePlanCoverageDiagnosticFromIssue(
       rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
 
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_file_surface",
@@ -4748,6 +4800,31 @@ function phasePlanCoverageDiagnosticFromIssue(
       repairAction: "make-verifiable",
       suggestion:
         "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
+    });
+  }
+
+  const verificationEvidenceMatch = issue.match(
+    /^Verification item "(.+)" has evidence that is not objectively verifiable: (.+)\.$/
+  );
+  if (verificationEvidenceMatch) {
+    const item = verificationEvidenceMatch[1] ?? "";
+    const evidence = verificationEvidenceMatch[2] ?? "";
+    const rowIndex = model.verification.findIndex((row) => row.item === item);
+    const pathValue =
+      rowIndex >= 0 ? `model.verification[${rowIndex}].evidence` : "model.verification";
+
+    return phasePlanDiagnostic({
+      severity: "warning",
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_verification_evidence",
+      message: issue,
+      context: { item, evidence },
+      actual: evidence,
+      expected: "A command, grep, file-read, test, or artifact-validation check.",
+      repairAction: "make-verifiable",
+      suggestion:
+        "Prefer evidence grounded in a concrete command, grep, file-read, test, or artifact-validation check when the plan can name one."
     });
   }
 
@@ -4800,9 +4877,12 @@ async function validatePhasePlanModelWithContext(args: {
   if (modelObject) {
     const validate = createAjvValidator().compile(args.context.taskSchema);
     const schemaValid = validate(modelObject);
+    const schemaErrors = (validate.errors ?? []).filter(
+      (error) => !isExactCoverageConstFallout(error)
+    );
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map((error) =>
+        ...schemaErrors.map((error) =>
           schemaDiagnosticFromPhasePlanAjvError(error, args.context.taskSchema, args.model)
         )
       );
@@ -4823,6 +4903,22 @@ async function validatePhasePlanModelWithContext(args: {
       );
     }
 
+    if (!schemaValid) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          severity: "warning",
+          source: "schema",
+          path: "model",
+          code: "schema.deeper_checks_skipped",
+          message:
+            "Schema validation failed, so cross-field coverage checks and rendered Markdown validation were skipped for this attempt.",
+          context: {},
+          suggestion:
+            "Repair the schema diagnostics first, then retry validation to run the deeper coverage and render checks."
+        })
+      );
+    }
+
     if (schemaValid) {
       normalizedModel = modelObject as PhasePlanStructuredModel;
       const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
@@ -4830,12 +4926,16 @@ async function validatePhasePlanModelWithContext(args: {
       for (const issue of coverage.issues) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(issue, normalizedModel));
       }
+
+      for (const warning of coverage.warnings) {
+        diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
+      }
     }
   }
 
   let renderPreview: string | null = null;
 
-  if (diagnostics.length === 0 && normalizedModel) {
+  if (!diagnostics.some(isBlockingPhasePlanDiagnostic) && normalizedModel) {
     const rendered = renderPhasePlanModelContent(
       normalizedModel,
       args.context.resolved,
@@ -4844,28 +4944,22 @@ async function validatePhasePlanModelWithContext(args: {
     const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
       strict: true
     });
+    const markdownDiagnostics = [
+      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
+      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+    ];
+    diagnostics.push(...markdownDiagnostics);
 
-    for (const issue of validation.issues) {
-      diagnostics.push(
-        phasePlanDiagnostic({
-          source: "markdown",
-          path: "renderPreview",
-          code: "markdown.invalid_render",
-          message: issue,
-          context: {},
-          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
-        })
-      );
-    }
-
-    if (validation.issues.length === 0) {
+    if (!markdownDiagnostics.some(isBlockingPhasePlanDiagnostic)) {
       renderPreview = rendered;
     }
   }
 
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
+
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
     target: phasePlanValidateModelTarget({
       phase: args.context.resolved,
       planId: args.context.planId,
@@ -4884,7 +4978,9 @@ async function validatePhasePlanModelWithContext(args: {
     taskSchema: args.context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+    normalizedModel: diagnostics.some(
+      (diagnostic) => diagnostic.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic)
+    )
       ? null
       : normalizedModel,
     renderPreview,
@@ -4902,11 +4998,15 @@ async function phasePlanModelToContent(
   validation: PhasePlanValidateModelResult;
 }> {
   const validation = await validatePhasePlanModelWithContext({ model, context });
+  const partitionedDiagnostics = partitionPhasePlanDiagnostics(validation.diagnostics);
 
   return {
     content: validation.renderPreview,
-    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
-    warnings: validation.warnings,
+    issues: partitionedDiagnostics.blocking.map(formatPhasePlanDiagnostic),
+    warnings: [
+      ...validation.warnings,
+      ...partitionedDiagnostics.warnings.map(formatPhasePlanDiagnostic)
+    ],
     validation
   };
 }
@@ -8051,6 +8151,7 @@ export async function blueprintPhasePlanWrite(
     const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
       strict: strictValidation
     });
+    const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
     const dependencyIssues = collectInvalidPlanDependencyIssues(
       pathValue,
       validation.metadata.dependsOn
@@ -8059,8 +8160,17 @@ export async function blueprintPhasePlanWrite(
       validation.metadata.planId && /^\d+$/.test(validation.metadata.planId)
         ? normalizePlanId(validation.metadata.planId)
         : null;
-    const validationIssues = [...modelCoverageIssues, ...validation.issues, ...dependencyIssues];
-    const warnings: string[] = [...modelWarnings, ...preparedContent.warnings];
+    const validationIssues = [
+      ...modelCoverageIssues,
+      ...contentValidationIssues.blockingIssues,
+      ...dependencyIssues
+    ];
+    const warnings: string[] = [
+      ...modelWarnings,
+      ...preparedContent.warnings,
+      ...contentValidationIssues.warningIssues,
+      ...validation.warnings
+    ];
 
     if (dependencyIssues.length > 0 && strictValidation) {
       return {
@@ -8077,7 +8187,7 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         warnings: dependencyIssues
       };
@@ -8099,8 +8209,8 @@ export async function blueprintPhasePlanWrite(
         status: "invalid",
         validation: {
           valid: false,
-          issues: [...validation.issues, issue],
-          warnings: validation.warnings
+          issues: [...contentValidationIssues.blockingIssues, issue],
+          warnings
         },
         warnings: []
       };
@@ -8121,14 +8231,14 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         modelValidation,
-        warnings: [...warnings, ...validation.warnings]
+        warnings
       };
     }
 
-    if (!validation.valid && strictValidation) {
+    if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -8143,9 +8253,9 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
-        warnings: []
+        warnings
       };
     }
 
@@ -8202,10 +8312,11 @@ export async function blueprintPhasePlanWrite(
           overwritten: false,
           status: "reused",
           validation: {
-            valid: prospectiveValidation.status === "valid",
-            issues: prospectiveValidation.issues,
-            warnings: prospectiveValidation.warnings
+            valid: blockingIssues.length === 0,
+            issues: blockingIssues,
+            warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
+          modelValidation,
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -8239,10 +8350,11 @@ export async function blueprintPhasePlanWrite(
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: prospectiveValidation.status === "valid",
-        issues: prospectiveValidation.issues,
-        warnings: prospectiveValidation.warnings
+        valid: blockingIssues.length === 0,
+        issues: blockingIssues,
+        warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
+      modelValidation,
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });

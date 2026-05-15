@@ -5,7 +5,13 @@ import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { blueprintPhasePlanWrite } from "../src/mcp/tools/phase.js";
+import {
+  blueprintPhasePlanRead,
+  blueprintPhasePlanValidate,
+  blueprintPhasePlanValidateModel,
+  blueprintPhasePlanWrite
+} from "../src/mcp/tools/phase.js";
+import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -1073,6 +1079,234 @@ Allow legitimate XML and template placeholders in task prose.
 - Markup examples must not be misclassified as repo-relative paths.
 `;
 }
+
+function validPlanModel() {
+  return {
+    title: "Plan 14",
+    wave: 2,
+    status: "planned",
+    objective: "Harden plan validation.",
+    dependsOn: [],
+    requirements: ["LIFE-01"],
+    filesModified: ["src/mcp/tools/artifacts.ts"],
+    readFirst: ["src/mcp/tools/artifacts.ts"],
+    autonomous: true,
+    goal: "Harden plan validation.",
+    scope: ["Tighten plan write checks without changing the contract shape."],
+    tasks: [
+      {
+        id: "task-1",
+        title: "Strengthen plan validation",
+        readFirst: ["src/mcp/tools/artifacts.ts"],
+        action: [
+          "Tighten the plan write validator around repo-relative paths, concrete task content, and checkable acceptance criteria."
+        ],
+        acceptanceCriteria: ["tests/phase-plan-validation-hardening.test.ts exits 0"],
+        requirements: ["LIFE-01"],
+        filesModified: ["src/mcp/tools/artifacts.ts"]
+      }
+    ],
+    verification: [
+      {
+        item: "Focused hardening test",
+        method: "test",
+        evidence: "tests/phase-plan-validation-hardening.test.ts exits 0"
+      }
+    ],
+    mustHaves: ["Keep the existing required headings and frontmatter contract intact."],
+    requirementCoverage: [
+      {
+        requirement: "LIFE-01",
+        status: "covered",
+        coveredByTasks: ["task-1"],
+        evidence: "src/mcp/tools/artifacts.ts",
+        rationale: "Task 1 covers the live validator path."
+      }
+    ],
+    evidenceCoverage: [
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
+        status: "used",
+        rationale: "Captures the validation hardening decision."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+        status: "used",
+        rationale: "Supplies the validation hardening evidence."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md",
+        status: "used",
+        rationale: "Records the explicit UI skip rationale."
+      }
+    ],
+    fileSurfaceCoverage: [
+      {
+        surface: "src/mcp/tools/artifacts.ts",
+        coveredByTasks: ["task-1"],
+        verification: "tests/phase-plan-validation-hardening.test.ts exits 0",
+        rationale: "This row proves the declared modified surface is owned and verifiable."
+      }
+    ],
+    unknownsAndDeferrals: [
+      {
+        item: "No open validation-hardening unknowns remain.",
+        disposition: "none",
+        rationale: "The current slice is fully bounded.",
+        followUp: "Keep focused validation tests green."
+      }
+    ]
+  };
+}
+
+function planModelMissingExactCoverage() {
+  return {
+    ...validPlanModel(),
+    requirementCoverage: [],
+    evidenceCoverage: []
+  };
+}
+
+function planModelWithDomainSpecificVerifiabilityText() {
+  const model = validPlanModel();
+
+  model.tasks[0].acceptanceCriteria = [
+    "Demonstrate the phase-specific migration outcome for the admin packet."
+  ];
+  model.verification[0] = {
+    item: "Admin packet verification narrative",
+    method: "command",
+    evidence: "Reviewer notes confirm the phase-specific migration outcome."
+  };
+  model.fileSurfaceCoverage[0].verification =
+    "Inspect the admin packet change for the intended migration outcome.";
+
+  return model;
+}
+
+test("phase plan model validation suppresses exact-coverage const fallout and adds staged notice", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "14",
+    model: planModelMissingExactCoverage()
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.valid, false);
+  assert.ok(result.diagnostics.some((diagnostic) => diagnostic.code === "schema.exactCoverage"));
+  assert.ok(
+    result.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "schema.deeper_checks_skipped" && diagnostic.severity === "warning"
+    ),
+    JSON.stringify(result.diagnostics, null, 2)
+  );
+  assert.equal(
+    result.diagnostics.some((diagnostic) => diagnostic.code === "schema.const"),
+    false,
+    JSON.stringify(result.diagnostics, null, 2)
+  );
+});
+
+test("phase plan model validation and writes treat weak verifiability heuristics as warnings", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = planModelWithDomainSpecificVerifiabilityText();
+  const validation = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "14",
+    model
+  });
+
+  assert.equal(validation.status, "valid", JSON.stringify(validation, null, 2));
+  assert.equal(validation.valid, true, JSON.stringify(validation, null, 2));
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "coverage.unverifiable_acceptance_criterion" &&
+        diagnostic.severity === "warning"
+    ),
+    JSON.stringify(validation.diagnostics, null, 2)
+  );
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "coverage.unverifiable_file_surface" &&
+        diagnostic.severity === "warning"
+    ),
+    JSON.stringify(validation.diagnostics, null, 2)
+  );
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "coverage.unverifiable_verification_evidence" &&
+        diagnostic.severity === "warning"
+    ),
+    JSON.stringify(validation.diagnostics, null, 2)
+  );
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "markdown.verifiability_guidance" &&
+        diagnostic.severity === "warning"
+    ),
+    JSON.stringify(validation.diagnostics, null, 2)
+  );
+
+  const writeResult = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "14",
+    model,
+    authoringMode: "model-only",
+    overwrite: true
+  });
+
+  assert.equal(writeResult.status, "created", JSON.stringify(writeResult, null, 2));
+  assert.equal(writeResult.written, true, JSON.stringify(writeResult, null, 2));
+  assert.equal(writeResult.validation.valid, true, JSON.stringify(writeResult, null, 2));
+  assert.equal(writeResult.modelValidation?.valid, true, JSON.stringify(writeResult, null, 2));
+  assert.equal(writeResult.modelValidation?.repairSummary.blockingCount, 0);
+  assert.match(
+    writeResult.validation.warnings.join("\n"),
+    /verifiability|objectively checkable|grep\/test-verifiable/i
+  );
+
+  const readResult = await blueprintPhasePlanRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "14"
+  });
+  assert.equal(readResult.validation?.valid, true, JSON.stringify(readResult, null, 2));
+  assert.match(
+    readResult.validation?.warnings.join("\n") ?? "",
+    /verifiability|objectively checkable|grep\/test-verifiable/i
+  );
+
+  const planSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+  assert.equal(planSetValidation.status, "valid", JSON.stringify(planSetValidation, null, 2));
+  assert.equal(planSetValidation.issues.length, 0, JSON.stringify(planSetValidation, null, 2));
+  assert.match(
+    planSetValidation.warnings.join("\n"),
+    /verifiability|objectively checkable|grep\/test-verifiable/i
+  );
+
+  const projectStatus = await blueprintProjectStatus({ cwd: repoPath });
+  assert.match(projectStatus.nextAction, /\/blu-execute-phase 3/);
+});
 
 test("strict plan writes reject absolute and traversing repo paths", async (t) => {
   const repoPath = await createPhaseRepo();

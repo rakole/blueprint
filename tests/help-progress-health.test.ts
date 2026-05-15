@@ -451,6 +451,137 @@ Exercise the execute-phase router.
   return repoPath;
 }
 
+function executionRoutingPlanContent(args: {
+  planId: string;
+  wave: number;
+  requirements: string[];
+  dependsOn?: string[];
+}): string {
+  const dependsOn = args.dependsOn ?? [];
+  const requirementRows = args.requirements
+    .map(
+      (requirementId) =>
+        `| ${requirementId} | covered | task-1 | tests/help-progress-health.test.ts | The focused routing fixture covers ${requirementId}. |`
+    )
+    .join("\n");
+
+  return `---
+phase: 3
+plan_id: "${args.planId}"
+title: "Execution Plan ${args.planId}"
+wave: ${args.wave}
+status: planned
+objective: "Exercise the execute-phase router."
+depends_on: ${dependsOn.length === 0 ? "[]" : `[${dependsOn.join(", ")}]`}
+requirements:
+${args.requirements.map((requirementId) => `  - ${requirementId}`).join("\n")}
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan ${args.planId}
+
+## Goal
+
+Exercise the execute-phase router.
+
+## Scope
+
+- Keep next-action routing grounded in saved phase artifacts.
+
+## Tasks
+
+### Task 1: Review current phase readiness
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Confirm progress routing stays on the right lifecycle command for the saved plan inventory.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run the help/progress routing tests after updating saved phase artifacts.
+
+## Must Haves
+
+- Keep lifecycle routing limited to implemented commands.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+${requirementRows}
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds progress routing. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers lifecycle routing state. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for execute-phase routing. | none | The fixture has the saved artifacts needed for routing. | No follow-up required after the focused test passes. |
+`;
+}
+
+async function createPlanCoverageGatedExecutionRepo(): Promise<string> {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Execution Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Discovery**
+- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Execute the prepared plans
+**Requirements**: EXEC-01, EXEC-02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-01-PLAN.md"),
+    executionRoutingPlanContent({
+      planId: "01",
+      wave: 1,
+      requirements: ["EXEC-01"]
+    }),
+    "utf8"
+  );
+
+  return repoPath;
+}
+
 async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-ui-discovery-routing-");
 
@@ -1733,6 +1864,39 @@ test("project status recommends execute-phase once plans exist and summaries are
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-execute-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+});
+
+test("project status stays on plan-phase until the saved plan set covers roadmap requirements, then advances to execute-phase", async (t) => {
+  const repoPath = await createPlanCoverageGatedExecutionRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initialStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const initialState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(initialStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.match(initialState.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.doesNotMatch(initialStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(initialState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+
+  await writeFile(
+    path.join(phaseRoot, "03-02-PLAN.md"),
+    executionRoutingPlanContent({
+      planId: "02",
+      wave: 2,
+      requirements: ["EXEC-02"],
+      dependsOn: ["01"]
+    }),
+    "utf8"
+  );
+
+  const finalStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const finalState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(finalStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(finalState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 });
 
 test("project status recommends validate-phase once execution summaries exist without verification", async (t) => {
