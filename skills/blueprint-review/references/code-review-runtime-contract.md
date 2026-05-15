@@ -84,6 +84,9 @@ Call these tools in this order unless the command must stop early:
 5. `mcp_blueprint_blueprint_review_validate_model`
    - Controls JSON Schema validation, residual quality diagnostics, normalized
      model output, and render preview.
+   - Pass the resolved `reviewMode.source` as `scopeSource` whenever explicit
+     `files` are supplied so validation catches unrecordable provenance before
+     persistence.
    - Diagnostics are aggregated; repair all of them before retrying once.
 6. `mcp_blueprint_blueprint_review_record`
    - Controls the final filename, create/update/reuse status, counts,
@@ -108,8 +111,9 @@ The model-authored payload must include only:
 - `positiveSignals`: concrete pass evidence or safeguards
 - `findings`: each finding includes severity, disposition, scoped file:line or
   line-range location, evidence, impact, and recommendation
-- `evidenceCoverage`: exact keys from `authoringContext.knownEvidenceArtifacts`,
-  each with `{status: "used"|"deferred"|"irrelevant", rationale}`
+- `evidenceCoverage`: exact keys from `authoringContext.knownEvidenceArtifacts`
+  only for saved evidence that materially shaped the review, each with
+  `{status: "used"|"deferred"|"irrelevant", rationale}`
 - `followUps`: actionable follow-up fixes, test gaps, validation steps, or a
   verdict-consistent no-follow-up statement
 - `nextSafeAction`: one exact value from `authoringContext.allowedNextActions`
@@ -213,8 +217,9 @@ The review is strong enough to persist only when:
 - the resolved phase, depth, scope source, file count, and pending gate are
   visible before persistence
 - the authored model passed `blueprint_review_validate_model`
-- every known evidence artifact appears as an exact `evidenceCoverage` key with a
-  concrete status and rationale
+- model-authored `evidenceCoverage` contains only exact known evidence artifact
+  keys that materially shaped the review; MCP renders known but omitted evidence
+  as not reviewed
 - the persisted review keeps rendered `Scope Reviewed` aligned to the resolved
   `blueprint_review_scope.files` list
 - each material finding has severity, disposition, file:line evidence, impact,
