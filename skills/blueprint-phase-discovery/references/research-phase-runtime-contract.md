@@ -175,9 +175,9 @@ baseline.
   `contract.authoringTemplate`, and scaffold output is never completed
   research.
 - `blueprint_phase_checkpoint_put`: persists useful continuation state using
-  the structured checkpoint shape with `ownerCommand: "/blu-research-phase"`
-  and `resumeMeta.mode: "research"`. For non-trivial research, include a nested
-  `researchLedger` payload with `schemaVersion: "research-ledger/v1"`, compact
+  checkpoint v2 with `schemaVersion: 2`, `ownerCommand: "/blu-research-phase"`,
+  top-level `mode: "research"`, and a nested `researchLedger` payload with
+  `schemaVersion: "research-ledger/v1"`, compact
   strand state, accepted evidence packet references, sidecar status, draft
   state, and next action. Store packets and source references, not child
   transcripts. The MCP tool owns the shared checkpoint path; do not assume the
@@ -744,26 +744,13 @@ await blueprint_phase_checkpoint_delete({
 });
 ```
 
-Keep the existing generic checkpoint fields for compatibility. Add
-`researchLedger` as a nested payload instead of replacing the generic schema:
+Use checkpoint v2 and make `researchLedger` the resumability source of truth:
 
 ```json
 {
+  "schemaVersion": 2,
   "ownerCommand": "/blu-research-phase",
-  "completedAreas": ["S1 context-lock"],
-  "remainingAreas": ["S2 repo-map"],
-  "decisions": [],
-  "deferredIdeas": [],
-  "canonicalReferences": [],
-  "resumeMeta": {
-    "mode": "research",
-    "pendingTopics": ["S2 repo-map"],
-    "completedTopics": ["S1 context-lock"],
-    "currentQuestion": "Which repo surfaces constrain this phase?",
-    "notes": [],
-    "resumeHint": "Resume at S2.",
-    "updatedAt": "2026-05-12T00:00:00.000Z"
-  },
+  "mode": "research",
   "researchLedger": {
     "schemaVersion": "research-ledger/v1",
     "phase": {
@@ -852,10 +839,8 @@ Checkpoint resume behavior:
 - If a checkpoint exists but `safeToResume=false`, do not resume, overwrite, or
   delete it by default. Report `ownerCommand`, `resumeMode`, warnings, and the
   next safe implemented action.
-- If a legacy checkpoint is mode-compatible but missing `ownerCommand`, treat it
-  as resumable only when `safeToResume=true`, include the warning in the
-  progress recap, and refresh it into the richer research ledger before the next
-  pause.
+- If a legacy checkpoint is mode-compatible but missing v2 fields, treat it as
+  non-resumable evidence. Do not resume, overwrite, or delete it by default.
 - If final research is successfully written but state sync, state load, or
   command-catalog routing fails afterward, keep or refresh the checkpoint with
   the exact failure and do not claim the run fully completed.

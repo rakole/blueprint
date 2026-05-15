@@ -158,9 +158,11 @@ The classification controls the next gate:
 ## Checkpoint And Resume
 
 6. Write or refresh the structured checkpoint with
-   `ownerCommand: "/blu-discuss-phase"`, `completedAreas`, `remainingAreas`,
-   `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`.
-   Use `resumeMeta.mode: "discuss"`.
+   `schemaVersion: 2`, `ownerCommand: "/blu-discuss-phase"`, top-level
+   `mode: "discuss"`, `progress`, `areaQueue`, `carryForward`, and `readSet`.
+   Do not write compatibility summary fields such as `completedAreas`,
+   `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, or
+   `resumeMeta`.
 
 ### Checkpoint Persistence Frequency
 
@@ -180,12 +182,9 @@ unless new evidence contradicts the saved decision.
 
 ### Checkpoint V2 Shape
 
-The current MCP checkpoint schema tolerates extra fields via `.catchall()`.
-Use this extended shape as prompt-compatible metadata. Keep existing
-`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`,
-`canonicalReferences`, and `resumeMeta` for current runtime compatibility, but
-derive them from `areaQueue` when `areaQueue` exists. The `areaQueue` is the
-semantic source of truth; the lists are compatibility summaries.
+The MCP checkpoint schema is v2-only for new writes. The `areaQueue` is the
+semantic source of truth; legacy compatibility summary fields are non-resumable
+evidence and must not be written.
 
 Sample v2 checkpoint:
 
@@ -193,6 +192,7 @@ Sample v2 checkpoint:
 {
   "ownerCommand": "/blu-discuss-phase",
   "schemaVersion": 2,
+  "mode": "discuss",
   "phaseKey": "03-phase-discovery",
   "progress": {
     "activeStage": "Execute",
@@ -249,8 +249,7 @@ On resume, read with `expectedOwnerCommand: "/blu-discuss-phase"` and
 `expectedMode: "discuss"`. If `safeToResume` is false, ask resume-versus-
 discard using the warnings. If `safeToResume` is true, pick the first area
 with state `questioning`, then `blocked`, then `needs-revisit`, then the
-first `unseen` area. Never reconstruct the queue from `completedAreas` prose
-alone.
+first `unseen` area. Never reconstruct the queue from legacy summary prose.
 
 ### Stale-Input Detection
 

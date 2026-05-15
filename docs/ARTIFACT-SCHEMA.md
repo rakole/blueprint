@@ -309,7 +309,7 @@ Plan note:
 
 Auxiliary phase artifacts:
 - `XX-DISCUSSION-LOG.md`
-- `XX-DISCUSS-CHECKPOINT.json` (shared temporary phase continuation state; the retained filename is legacy-compatible, while ownership now comes from `ownerCommand` and `resumeMeta.mode`)
+- `XX-DISCUSS-CHECKPOINT.json` (shared temporary phase continuation state; the retained filename is legacy-compatible, while ownership now comes from `ownerCommand` and top-level `mode`)
 - `XX-REVIEW.md`
 - `XX-REVIEW-FIX.md`
 - `XX-REVIEWS.md`
@@ -374,12 +374,15 @@ actual owner is declared inside the checkpoint body.
 
 Structured persistence expectations:
 - top-level JSON value must be an object
-- persisted checkpoints must use the richer resumability shape with `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`
+- persisted checkpoints must use checkpoint v2 with `schemaVersion: 2`, `ownerCommand`, and top-level `mode`
 - `ownerCommand` identifies the command that owns the continuation state; current values are `/blu-discuss-phase` and `/blu-research-phase`
-- `resumeMeta.mode` is enum-like ownership metadata; current values are `discuss` and `research`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`)
-- `resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`
+- `mode` is enum-like ownership metadata; current values are `discuss` and `research`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`)
+- discuss checkpoints must carry durable resume metadata through `progress`, `areaQueue`, `carryForward`, and `readSet`
+- research checkpoints must carry durable resume metadata through `researchLedger`
 - the MCP tool owns the shared checkpoint path; callers must treat returned `path` values as authoritative instead of hand-building mode-specific filenames
-- legacy object-shaped checkpoints may still be read for compatibility, and matching legacy mode-only checkpoints may still be updated or deleted by the owning command, but `blueprint_phase_checkpoint_get` reports ownership/mode warnings and a `safeToResume` signal when the caller supplies expected ownership
+- legacy, malformed, or otherwise non-v2 checkpoints may still be read as compatibility evidence, but they are always non-resumable
+- guarded overwrite and delete operations refuse any checkpoint unless a valid v2 parse succeeds and the stored `ownerCommand` plus top-level `mode` match the caller's expected ownership
+- read-time compatibility may still surface legacy mode evidence from old payloads, but that evidence is informational only and never re-enables resume, overwrite, or delete
 
 ### `XX-RESEARCH.md`
 

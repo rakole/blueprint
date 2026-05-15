@@ -52,6 +52,36 @@ function expectedStructuredContentJson(result: Record<string, unknown>): string 
   return JSON.stringify(result);
 }
 
+function discussCheckpoint(): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-discuss-phase",
+    mode: "discuss",
+    progress: {
+      activeStage: "Execute",
+      pendingGate: "gray-area-question",
+      executionMode: "discuss/resumed",
+      areasDecided: 0,
+      areasTotal: 2,
+      nextActionPreview: "Resume the next discuss-phase area"
+    },
+    areaQueue: [
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "questioning"
+      },
+      {
+        areaId: "ui-expectations",
+        title: "UI expectations",
+        state: "unseen"
+      }
+    ],
+    carryForward: {},
+    readSet: [".blueprint/ROADMAP.md"]
+  };
+}
+
 async function runGit(args: string[], cwd?: string): Promise<string> {
   const { stdout } = await execFileAsync("git", args, { cwd });
   return stdout.trim();
@@ -3610,8 +3640,13 @@ test("public phase checkpoint get omits only empty top-level warnings while pres
     phaseDir: ".blueprint/phases/03-phase-discovery",
     path: ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json",
     checkpoint: {
+      schemaVersion: 2,
       ownerCommand: "/blu-discuss-phase",
-      resumeMeta: { mode: "discuss" }
+      mode: "discuss",
+      progress: {},
+      areaQueue: [],
+      carryForward: {},
+      readSet: []
     },
     ownerCommand: "/blu-discuss-phase",
     resumeMode: "discuss",
@@ -7959,21 +7994,7 @@ test("public phase checkpoint put live MCP response omits empty top-level warnin
     { capabilities: {} }
   );
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
@@ -8028,21 +8049,7 @@ test("public phase checkpoint get live MCP response omits empty top-level warnin
     { capabilities: {} }
   );
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
@@ -8134,21 +8141,7 @@ test("public phase checkpoint get live MCP response omits empty top-level warnin
 test("public phase checkpoint delete live MCP response already matches the direct compact contract", async () => {
   const directRepoPath = await createPhasePlanWriteRepo();
   const repoPath = await createPhasePlanWriteRepo();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await blueprintPhaseCheckpointPut({
     cwd: directRepoPath,

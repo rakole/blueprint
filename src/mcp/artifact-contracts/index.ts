@@ -781,7 +781,7 @@ function renderContextAuthoringTemplate(context?: ArtifactTemplateContext): stri
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions, replace the section with unresolved questions or use the exact sentinel \`- none\` when nothing remains open.
+For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -821,7 +821,8 @@ const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
     "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
     "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
     "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-    "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
+    "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+    "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
     "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
     "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
   ],
@@ -4017,6 +4018,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     sectionValidations: {
       "Open Questions": {
+        exactEmptySentinel: "- none"
+      },
+      "Deferred Ideas": {
         exactEmptySentinel: "- none"
       }
     },

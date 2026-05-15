@@ -26,6 +26,10 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
     contract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
     "- none"
   );
+  assert.equal(
+    contract.sectionValidations?.["Deferred Ideas"]?.exactEmptySentinel,
+    "- none"
+  );
 
   const required = modelContract.jsonSchema.required as string[];
   assert.deepEqual(required, [
@@ -51,7 +55,11 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   assert.ok("canonicalReferences" in properties);
   assert.match(
     String((properties.openQuestions as { description?: string }).description),
-    /exact string none only when no open questions remain/i
+    /empty array or the exact string none/i
+  );
+  assert.match(
+    String((properties.deferredIdeas as { description?: string }).description),
+    /empty array only when nothing is deferred/i
   );
 
   assert.ok(

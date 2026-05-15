@@ -25,6 +25,50 @@ import {
 } from "../src/mcp/tools/phase.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
+function discussCheckpoint(areaQueue: Array<Record<string, unknown>>): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-discuss-phase",
+    mode: "discuss",
+    progress: {
+      activeStage: "Execute",
+      pendingGate: "gray-area-question",
+      executionMode: "discuss/resumed",
+      areasDecided: areaQueue.filter((area) => area.state === "decided").length,
+      areasTotal: areaQueue.length,
+      nextActionPreview: "Resume the next discuss-phase area"
+    },
+    areaQueue,
+    carryForward: {},
+    readSet: [".blueprint/ROADMAP.md"]
+  };
+}
+
+function researchCheckpoint(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-research-phase",
+    mode: "research",
+    researchLedger: {
+      schemaVersion: "research-ledger/v1",
+      strands: [
+        {
+          id: "S1",
+          type: "context-lock",
+          status: "blocked",
+          question: "Which repo surfaces constrain this phase?"
+        }
+      ],
+      nextAction: {
+        stage: "Execute",
+        pendingGate: "research-continuation",
+        safeCommand: "/blu-research-phase 3"
+      }
+    },
+    ...overrides
+  };
+}
+
 async function createPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-phase-tools-");
 
@@ -743,45 +787,21 @@ test("phase plan indexing and checkpoint persistence accept numeric inputs with 
   const checkpoint = await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: 3,
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Phase boundary and discovery grounding"],
-      remainingAreas: ["Dependency scan", "Open questions"],
-      decisions: [
-        {
-          topic: "Scope",
-          decision: "Keep discuss-phase focused on discovery boundary",
-          rationale: "The checkpoint needs to resume the next discovery question quickly."
-        }
-      ],
-      deferredIdeas: [
-        {
-          idea: "Revisit alias cleanup",
-          reason: "It is outside the current discovery boundary.",
-          revisitWhen: "After the phase context is captured"
-        }
-      ],
-      canonicalReferences: [
-        {
-          label: "Project brief",
-          target: ".blueprint/PROJECT.md",
-          note: "Canonical project intent"
-        },
-        {
-          label: "Requirements",
-          target: ".blueprint/REQUIREMENTS.md"
-        }
-      ],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["Open questions"],
-        completedTopics: ["Phase boundary"],
-        currentQuestion: "What still needs to be grounded before planning starts?",
-        notes: ["Capture the durable context before moving on."],
-        resumeHint: "Resume with the remaining discovery questions.",
-        updatedAt: "2026-04-19T00:00:00.000Z"
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "phase-boundary",
+        title: "Phase boundary and discovery grounding",
+        state: "decided",
+        decisionIds: ["D-scope-001"],
+        evidenceRefs: [".blueprint/PROJECT.md", ".blueprint/REQUIREMENTS.md"]
+      },
+      {
+        areaId: "open-questions",
+        title: "Open questions",
+        state: "questioning",
+        currentQuestion: "What still needs to be grounded before planning starts?"
       }
-    }
+    ])
   });
   const indexed = await blueprintPhasePlanIndex({ cwd: repoPath, phase: 3 });
 
@@ -800,21 +820,9 @@ test("research checkpoints preserve nested strand ledger payloads", async (t) =>
   });
 
   const checkpointPayload = {
+    schemaVersion: 2,
     ownerCommand: "/blu-research-phase",
-    completedAreas: ["S1 context-lock"],
-    remainingAreas: ["S2 repo-map"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "research",
-      pendingTopics: ["S2 repo-map"],
-      completedTopics: ["S1 context-lock"],
-      currentQuestion: "Which repo surfaces constrain this phase?",
-      notes: ["Resume at the repo-map strand."],
-      resumeHint: "Resume /blu-research-phase 3 at S2.",
-      updatedAt: "2026-05-12T00:00:00.000Z"
-    },
+    mode: "research",
     researchLedger: {
       schemaVersion: "research-ledger/v1",
       phase: {
@@ -919,11 +927,11 @@ test("checkpoint persistence rejects legacy-style resumability fragments without
         updatedAt: "2026-04-19T00:00:00.000Z"
       }
     }),
-    /structured discuss checkpoint/i
+    /structured checkpoint v2/i
   );
 });
 
-test("checkpoint reads remain compatible with legacy object-shaped saves", async (t) => {
+test("checkpoint reads legacy object-shaped saves as non-resumable evidence", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -946,6 +954,44 @@ test("checkpoint reads remain compatible with legacy object-shaped saves", async
 
   assert.equal(checkpoint.found, true);
   assert.deepEqual(checkpoint.checkpoint, legacyCheckpoint);
+  assert.equal(checkpoint.safeToResume, false);
+  assert.match(checkpoint.warnings.join("\n"), /not a valid checkpoint v2 object/i);
+});
+
+test("checkpoint reads legacy resumeMeta mode as evidence-only", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  await writeFile(
+    checkpointPath,
+    `${JSON.stringify(
+      {
+        resumeMeta: {
+          mode: "discuss",
+          currentQuestion: "What remains to be clarified?"
+        },
+        pendingTopics: ["Scope boundaries"],
+        updatedAt: "2026-04-19T00:00:00.000Z"
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+
+  const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
+
+  assert.equal(checkpoint.found, true);
+  assert.equal(checkpoint.resumeMode, "discuss");
+  assert.equal(checkpoint.safeToResume, false);
+  assert.match(checkpoint.warnings.join("\n"), /not a valid checkpoint v2 object/i);
+  assert.doesNotMatch(checkpoint.warnings.join("\n"), /does not declare a resumable mode/i);
 });
 
 test("checkpoint writes refuse to overwrite a foreign shared checkpoint", async (t) => {
@@ -957,42 +1003,25 @@ test("checkpoint writes refuse to overwrite a foreign shared checkpoint", async 
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: 3,
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Scope boundaries"],
-      remainingAreas: ["Open questions"],
-      decisions: [],
-      deferredIdeas: [],
-      canonicalReferences: [],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["Open questions"],
-        completedTopics: ["Scope boundaries"],
-        notes: [],
-        updatedAt: "2026-04-19T00:00:06.000Z"
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "decided"
+      },
+      {
+        areaId: "open-questions",
+        title: "Open questions",
+        state: "questioning"
       }
-    }
+    ])
   });
 
   await assert.rejects(
     blueprintPhaseCheckpointPut({
       cwd: repoPath,
       phase: 3,
-      checkpoint: {
-        ownerCommand: "/blu-research-phase",
-        completedAreas: ["Dependency scan"],
-        remainingAreas: ["Recommendation synthesis"],
-        decisions: [],
-        deferredIdeas: [],
-        canonicalReferences: [],
-        resumeMeta: {
-          mode: "research",
-          pendingTopics: ["Recommendation synthesis"],
-          completedTopics: ["Dependency scan"],
-          notes: [],
-          updatedAt: "2026-04-19T00:00:07.000Z"
-        }
-      }
+      checkpoint: researchCheckpoint()
     }),
     /Refusing to overwrite .*belongs to \/blu-discuss-phase, not \/blu-research-phase/i
   );
@@ -1007,21 +1036,7 @@ test("checkpoint delete refuses to remove a foreign shared checkpoint when owner
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: 3,
-    checkpoint: {
-      ownerCommand: "/blu-research-phase",
-      completedAreas: ["Dependency scan"],
-      remainingAreas: ["Recommendation synthesis"],
-      decisions: [],
-      deferredIdeas: [],
-      canonicalReferences: [],
-      resumeMeta: {
-        mode: "research",
-        pendingTopics: ["Recommendation synthesis"],
-        completedTopics: ["Dependency scan"],
-        notes: [],
-        updatedAt: "2026-04-19T00:00:08.000Z"
-      }
-    }
+    checkpoint: researchCheckpoint()
   });
 
   const deleted = await blueprintPhaseCheckpointDelete({
@@ -1050,20 +1065,7 @@ test("checkpoint delete removes matching research-owned checkpoints after guarde
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: 3,
-    checkpoint: {
-      ownerCommand: "/blu-research-phase",
-      completedAreas: ["S1 context-lock"],
-      remainingAreas: [],
-      decisions: [],
-      deferredIdeas: [],
-      canonicalReferences: [],
-      resumeMeta: {
-        mode: "research",
-        pendingTopics: [],
-        completedTopics: ["S1 context-lock"],
-        notes: [],
-        updatedAt: "2026-05-12T00:00:00.000Z"
-      },
+    checkpoint: researchCheckpoint({
       researchLedger: {
         schemaVersion: "research-ledger/v1",
         strands: [
@@ -1081,7 +1083,7 @@ test("checkpoint delete removes matching research-owned checkpoints after guarde
           safeCommand: "/blu-plan-phase 3"
         }
       }
-    }
+    })
   });
 
   const deleted = await blueprintPhaseCheckpointDelete({
@@ -1105,21 +1107,18 @@ test("checkpoint delete refuses unguarded deletion of a shared checkpoint", asyn
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: 3,
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Scope boundaries"],
-      remainingAreas: ["Open questions"],
-      decisions: [],
-      deferredIdeas: [],
-      canonicalReferences: [],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["Open questions"],
-        completedTopics: ["Scope boundaries"],
-        notes: [],
-        updatedAt: "2026-04-19T00:00:08.000Z"
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "decided"
+      },
+      {
+        areaId: "open-questions",
+        title: "Open questions",
+        state: "questioning"
       }
-    }
+    ])
   });
 
   const deleted = await blueprintPhaseCheckpointDelete({
@@ -1137,7 +1136,7 @@ test("checkpoint delete refuses unguarded deletion of a shared checkpoint", asyn
   assert.equal(checkpoint.ownerCommand, "/blu-discuss-phase");
 });
 
-test("checkpoint delete remains compatible with legacy mode-owned checkpoints", async (t) => {
+test("checkpoint delete refuses legacy mode-owned checkpoints", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1171,8 +1170,50 @@ test("checkpoint delete remains compatible with legacy mode-owned checkpoints", 
   });
   const checkpoint = await blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 });
 
-  assert.equal(deleted.deleted, true);
-  assert.equal(checkpoint.found, false);
+  assert.equal(deleted.deleted, false);
+  assert.match(deleted.reason ?? "", /not a valid checkpoint v2 object/i);
+  assert.equal(checkpoint.found, true);
+});
+
+test("checkpoint read rejects malformed JSON payloads explicitly", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  await writeFile(checkpointPath, "{\n  \"schemaVersion\": 2,\n", "utf8");
+
+  await assert.rejects(
+    blueprintPhaseCheckpointGet({ cwd: repoPath, phase: 3 }),
+    /JSON|Unexpected end/i
+  );
+});
+
+test("checkpoint delete rejects malformed JSON payloads explicitly", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  await writeFile(checkpointPath, "{\n  \"schemaVersion\": 2,\n", "utf8");
+
+  await assert.rejects(
+    blueprintPhaseCheckpointDelete({
+      cwd: repoPath,
+      phase: 3,
+      expectedOwnerCommand: "/blu-discuss-phase",
+      expectedMode: "discuss"
+    }),
+    /JSON|Unexpected end/i
+  );
 });
 
 test("phase locate returns structured recovery when ROADMAP.md is missing", async (t) => {

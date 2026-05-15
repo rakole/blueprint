@@ -5610,7 +5610,7 @@ function matchesFuzzyEmptySentinel(section: string, exactEmptySentinel: string |
 
   return (
     normalizedSection.startsWith(normalizedSentinel) ||
-    /^(?:[-*]\s*)?(?:none(?:\b|$)|no open questions?\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
+    /^(?:[-*]\s*)?(?:none(?:\b|$)|no (?:open questions?|deferred ideas?)\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
       normalizedSection
     )
   );
@@ -5772,8 +5772,17 @@ const UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN =
 const UNSUPPORTED_MODE_NEGATION_PATTERN =
   /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
 
-function validateUnsupportedDiscussModeClaims(content: string, artifactLabel: string): string[] {
-  const issues: string[] = [];
+type DiscussPhaseAntiPatternDiagnostic = {
+  code: string;
+  message: string;
+  repair: string;
+};
+
+function validateUnsupportedDiscussModeClaims(
+  content: string,
+  artifactLabel: string
+): DiscussPhaseAntiPatternDiagnostic[] {
+  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
   const flaggedModes = new Set<string>();
 
   for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
@@ -5787,15 +5796,18 @@ function validateUnsupportedDiscussModeClaims(content: string, artifactLabel: st
 
     for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !flaggedModes.has(mode)) {
-        issues.push(
-          `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`
-        );
+        diagnostics.push({
+          code: "discuss.unsupported_mode_claim",
+          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
+          repair:
+            "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
+        });
         flaggedModes.add(mode);
       }
     }
   }
 
-  return issues;
+  return diagnostics;
 }
 
 function markdownSectionLines(section: string): string[] {
@@ -5889,10 +5901,10 @@ function containsRawHandoffPacketLabel(content: string): boolean {
 }
 
 function validateDiscussPhaseContextAntiPatterns(content: string): {
-  issues: string[];
+  diagnostics: DiscussPhaseAntiPatternDiagnostic[];
   warnings: string[];
 } {
-  const issues: string[] = [];
+  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
   const warnings: string[] = [];
   const canonicalReferences = extractMarkdownSection(content, "Canonical References");
   const deferredIdeas = extractMarkdownSection(content, "Deferred Ideas");
@@ -5907,24 +5919,36 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
     .map((heading) => extractMarkdownSection(content, heading))
     .join("\n");
 
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
 
   if (containsRawHandoffPacketLabel(content)) {
-    issues.push(
-      "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections."
-    );
+    diagnostics.push({
+      code: "context.raw_handoff_label",
+      message:
+        "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
+      repair:
+        "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
+    });
   }
 
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
-    issues.push(
-      "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
-    );
+    diagnostics.push({
+      code: "context.missing_canonical_reference",
+      message:
+        "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
+      repair:
+        "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
+    });
   }
 
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
-    issues.push(
-      "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
-    );
+    diagnostics.push({
+      code: "context.dropped_deferred_ideas",
+      message:
+        "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
+      repair:
+        "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
+    });
   }
 
   if (
@@ -5932,15 +5956,23 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
     !hasConcreteRiskCarryForward(deferredIdeas) &&
     !hasConcreteRiskCarryForward(openQuestions)
   ) {
-    issues.push(
-      "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas."
-    );
+    diagnostics.push({
+      code: "context.dropped_risk_carry_forward",
+      message:
+        "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
+      repair:
+        "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
+    });
   }
 
   if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
-    issues.push(
-      "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions."
-    );
+    diagnostics.push({
+      code: "context.dropped_open_questions",
+      message:
+        "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
+      repair:
+        "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
+    });
   }
 
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
@@ -5949,26 +5981,30 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
     );
   }
 
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 
 function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
-  issues: string[];
+  diagnostics: DiscussPhaseAntiPatternDiagnostic[];
   warnings: string[];
 } {
-  const issues: string[] = [];
+  const diagnostics: DiscussPhaseAntiPatternDiagnostic[] = [];
   const warnings: string[] = [];
   const followUps = extractMarkdownSection(content, "Follow-Ups");
   const discussionSections = ["Summary", "Notes"]
     .map((heading) => extractMarkdownSection(content, heading))
     .join("\n");
 
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
 
   if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
-    issues.push(
-      "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section."
-    );
+    diagnostics.push({
+      code: "discussion-log.dropped_follow_ups",
+      message:
+        "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
+      repair:
+        "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
+    });
   }
 
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
@@ -5977,7 +6013,7 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
     );
   }
 
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 
 function isLegacyPhaseContextShell(content: string): boolean {
@@ -6213,14 +6249,15 @@ export function validatePhaseArtifactContent(
     }
 
     const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map((issue) =>
+      ...discussValidation.diagnostics.map((diagnostic) =>
         phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "context.unsupported_claim",
-          message: issue
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );
@@ -6229,14 +6266,15 @@ export function validatePhaseArtifactContent(
 
   if (artifact === "discussion-log") {
     const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map((issue) =>
+      ...discussValidation.diagnostics.map((diagnostic) =>
         phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "discussion-log.unsupported_claim",
-          message: issue
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );

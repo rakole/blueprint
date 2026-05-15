@@ -1,6 +1,9 @@
 export function validPhaseContextModel(
   options: {
     openQuestions?: string[];
+    deferredIdeas?: string[];
+    priorPhaseArtifacts?: string[];
+    externalConstraints?: string[];
     phaseLabel?: string;
     projectBrief?: string;
     decision?: string;
@@ -55,17 +58,18 @@ export function validPhaseContextModel(
       "src/mcp/artifact-contracts/index.ts owns the phase.context contract."
     ],
     dependencies: {
-      priorPhaseArtifacts: [".blueprint/ROADMAP.md"],
-      externalConstraints: ["Do not mutate host-global Blueprint state."],
+      priorPhaseArtifacts: options.priorPhaseArtifacts ?? [".blueprint/ROADMAP.md"],
+      externalConstraints: options.externalConstraints ?? ["Do not mutate host-global Blueprint state."],
       requiredFollowUpReads: [
         "src/mcp/tools/phase.ts",
         "src/mcp/artifact-contracts/index.ts"
       ]
     },
     openQuestions: options.openQuestions ?? ["Which gray area should be discussed next?"],
-    deferredIdeas: [
-      "Revisit optional refinements only after the current phase boundary stays stable."
-    ],
+    deferredIdeas:
+      options.deferredIdeas ?? [
+        "Revisit optional refinements only after the current phase boundary stays stable."
+      ],
     canonicalReferences: [
       {
         source: "src/mcp/tools/phase.ts",
