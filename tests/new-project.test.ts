@@ -890,7 +890,7 @@ test("new-project can retry after a structured preflight invalid result", async 
   assert.equal(finalValidation.valid, true);
 });
 
-test("new-project rejects duplicate phase refs and generic success criteria before writes", async (t) => {
+test("new-project rejects duplicate phase refs before writes", async (t) => {
   const repoPath = await createRepoFromFixture("fresh-repo");
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -917,7 +917,7 @@ test("new-project rejects duplicate phase refs and generic success criteria befo
           scope: "committed",
           group: "Quality",
           requirement:
-            "Require observable success criteria before bootstrap artifacts are written.",
+            "Require 2-5 success criteria before bootstrap artifacts are written.",
           status: "Pending",
           notes: "Generic criterion guard."
         }
@@ -949,17 +949,208 @@ test("new-project rejects duplicate phase refs and generic success criteria befo
 
   assert.equal(result.status, "invalid");
   assert.match(result.issues!.join("\n"), /duplicate phase reference 1\.0/is);
-  assert.match(result.issues!.join("\n"), /generic success criterion/is);
   assert.deepEqual(
     result.diagnostics!
       .filter((diagnostic) =>
-        ["seed_duplicate_phase_ref", "seed_success_criterion_generic"].includes(diagnostic.code)
+        ["seed_duplicate_phase_ref"].includes(diagnostic.code)
       )
       .map((diagnostic) => diagnostic.path),
-    [
-      "bootstrapSeed.roadmapPhases[0].successCriteria[0]",
-      "bootstrapSeed.roadmapPhases[1].phase"
-    ]
+    ["bootstrapSeed.roadmapPhases[1].phase"]
+  );
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
+test("new-project accepts generic success criterion wording while preserving count validation", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const acceptedResult = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-51",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Keep requirement identifiers visible across the initial roadmap and later artifacts.",
+          status: "Pending",
+          notes: "Generic wording should not block persistence."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Trace Bootstrap Requirements",
+          objective: "Persist a roadmap with traceable requirement evidence.",
+          requirementIds: ["PF-51"],
+          successCriteria: [
+            "Keep requirement IDs traceable into later roadmap artifacts.",
+            "Complete phase."
+          ]
+        }
+      ]
+    }
+  });
+
+  assert.doesNotMatch(acceptedResult.warnings.join("\n"), /generic success criterion/is);
+  assert.match(acceptedResult.nextAction, /\/blu-discuss-phase 1/);
+
+  const countRepoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(countRepoPath), { recursive: true, force: true });
+  });
+
+  const countResult = await blueprintProjectInit({
+    cwd: countRepoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-52",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Keep requirement identifiers visible across the initial roadmap and later artifacts.",
+          status: "Pending",
+          notes: "Count validation remains structural."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Trace Bootstrap Requirements",
+          objective: "Persist a roadmap with traceable requirement evidence.",
+          requirementIds: ["PF-52"],
+          successCriteria: ["Keep requirement IDs traceable into later roadmap artifacts."]
+        }
+      ]
+    }
+  });
+
+  assert.equal(countResult.status, "invalid");
+  assert.match(countResult.issues!.join("\n"), /must include 2-5 success criteria/i);
+  assert.equal(
+    countResult.diagnostics!.find((diagnostic) => diagnostic.code === "seed_success_criteria_count_invalid")?.path,
+    "bootstrapSeed.roadmapPhases[0].successCriteria"
+  );
+  assert.equal(await pathExists(path.join(countRepoPath, ".blueprint")), false);
+});
+
+test("new-project rejects duplicate raw phase requirement refs before normalization", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-61",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Keep the committed requirement represented once in the initial roadmap.",
+          status: "Pending",
+          notes: "Committed requirement for raw duplicate preflight."
+        },
+        {
+          id: "PF-62",
+          scope: "deferred",
+          group: "Traceability",
+          requirement:
+            "Record deferred traceability follow-up without duplicating phase refs.",
+          status: "Pending",
+          notes: "Deferred requirement duplicated in raw phase refs."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Trace Bootstrap Requirements",
+          objective: "Persist a roadmap with traceable requirement evidence.",
+          requirementIds: ["PF-61", "PF-62", "PF-62"],
+          successCriteria: [
+            "The first phase captures committed requirement traceability.",
+            "The preflight rejects duplicate raw phase requirement references."
+          ]
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.match(result.issues!.join("\n"), /Phase 1 references requirement PF-62 more than once/i);
+  assert.equal(
+    result.diagnostics!.find((diagnostic) => diagnostic.code === "seed_duplicate_phase_requirement_ref")?.path,
+    "bootstrapSeed.roadmapPhases[0].requirementIds"
+  );
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
+});
+
+test("new-project aggregates raw duplicate phase requirement refs with other preflight diagnostics", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapSeed: {
+      vision:
+        "Create a reliable project bootstrap workflow with durable requirement traceability.",
+      currentMilestone: "v1",
+      requirements: [
+        {
+          id: "PF-71",
+          scope: "committed",
+          group: "Traceability",
+          requirement:
+            "Keep the committed requirement represented once in the initial roadmap.",
+          status: "Pending",
+          notes: "Committed requirement for mixed diagnostics."
+        },
+        {
+          id: "PF-72",
+          scope: "deferred",
+          group: "Traceability",
+          requirement:
+            "Record deferred follow-up without duplicating raw requirement references.",
+          status: "Pending",
+          notes: "Deferred requirement duplicated in raw phase refs."
+        }
+      ],
+      roadmapPhases: [
+        {
+          phase: "1",
+          title: "Trace Bootstrap Requirements",
+          objective: "Persist a roadmap with traceable requirement evidence.",
+          requirementIds: ["PF-71", "PF-72", "PF-72"],
+          successCriteria: ["The preflight reports all relevant seed diagnostics before writing."]
+        }
+      ]
+    }
+  });
+
+  assert.equal(result.status, "invalid");
+  assert.equal(result.written, false);
+  assert.match(result.issues!.join("\n"), /Phase 1 references requirement PF-72 more than once/i);
+  assert.match(result.issues!.join("\n"), /Phase 1 must include 2-5 success criteria before the first write/i);
+  assert.deepEqual(
+    result.diagnostics!.map((diagnostic) => diagnostic.code),
+    ["seed_duplicate_phase_requirement_ref", "seed_success_criteria_count_invalid"]
   );
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
@@ -1037,7 +1228,7 @@ test("new-project rejects bootstrap seed roadmap gaps before writes", async (t) 
           scope: "committed",
           group: "Traceability",
           requirement:
-            "Reject roadmap phases that omit requirement coverage or observable success criteria.",
+            "Reject roadmap phases that omit requirement coverage or success criteria.",
           status: "Pending",
           notes: "Missing phase detail guard."
         }
@@ -1376,6 +1567,14 @@ test("bootstrap requirements contract treats deferred and out-of-scope sections 
   assert.equal(requiredHeadings.includes("Deferred Scope"), false);
   assert.equal(requiredHeadings.includes("Out-of-Scope Cuts"), false);
   assert.match(contractResult.contract.notes.join("\n"), /conditionally required/i);
+  assert.match(
+    contractResult.contract.authoringTemplate,
+    /Include this section only when the Scope Summary lists deferred requirement IDs/i
+  );
+  assert.match(
+    contractResult.contract.authoringTemplate,
+    /Include this section only when the Scope Summary lists out-of-scope requirement IDs/i
+  );
 });
 
 test("new-project accepts committed-only bootstrap seeds and keeps post-init validation green", async (t) => {

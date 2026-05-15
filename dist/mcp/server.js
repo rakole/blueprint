@@ -18030,6 +18030,8 @@ function renderBootstrapRequirementsTemplate() {
 
 ## Deferred Scope
 
+Include this section only when the Scope Summary lists deferred requirement IDs.
+
 ### <group>
 
 - \`REQ-02\`: <requirement>
@@ -18037,6 +18039,8 @@ function renderBootstrapRequirementsTemplate() {
   - Notes: <notes>
 
 ## Out-of-Scope Cuts
+
+Include this section only when the Scope Summary lists out-of-scope requirement IDs.
 
 ### <group>
 
@@ -20022,7 +20026,7 @@ var init_artifact_contracts = __esm({
         "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
         "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
         "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-        "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+        "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
       ],
       contextBindings: [
         ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
@@ -63542,19 +63546,8 @@ function bootstrapSeedPreflightDiagnostics(seed) {
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_success_criteria_count_invalid",
         message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
-        repair: "Provide between 2 and 5 observable success criteria for the phase."
+        repair: "Provide between 2 and 5 success criteria for the phase."
       }));
-    }
-    for (const [criterionIndex, criterion] of successCriteria.entries()) {
-      const trimmedCriterion = criterion.trim();
-      if (!isSubstantiveText(trimmedCriterion) || GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))) {
-        diagnostics.push(seedDiagnostic({
-          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria[${criterionIndex}]`,
-          code: "seed_success_criterion_generic",
-          message: `Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`,
-          repair: "Replace generic success criteria with observable evidence that can be verified later."
-        }));
-      }
     }
   }
   for (const requirementId of committedRequirementIds) {
@@ -63595,11 +63588,45 @@ function bootstrapSeedExplicitGapDiagnostics(seed) {
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_phase_success_criteria_missing",
         message: `Phase ${phaseLabel2} must include explicit successCriteria before the first write.`,
-        repair: "Add at least two concrete success criteria before retrying."
+        repair: "Add at least two success criteria before retrying."
       }));
     }
   }
   return diagnostics;
+}
+function bootstrapSeedRawPhaseRequirementDiagnostics(seed) {
+  const diagnostics = [];
+  for (const [phaseIndex, phase] of (seed.roadmapPhases ?? []).entries()) {
+    const phaseLabel2 = phase.phase.trim() || "(blank)";
+    const seenRequirementIds = /* @__PURE__ */ new Set();
+    const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
+    for (const requirementId of requirementIds) {
+      if (seenRequirementIds.has(requirementId)) {
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_duplicate_phase_requirement_ref",
+          message: `Phase ${phaseLabel2} references requirement ${requirementId} more than once.`,
+          repair: "Remove duplicate requirement IDs from the phase requirementIds list."
+        }));
+      }
+      seenRequirementIds.add(requirementId);
+    }
+  }
+  return diagnostics;
+}
+function dedupeProjectInitDiagnostics(diagnostics) {
+  const deduped = /* @__PURE__ */ new Map();
+  for (const diagnostic of diagnostics) {
+    const key = JSON.stringify({
+      path: diagnostic.path,
+      code: diagnostic.code,
+      message: diagnostic.message
+    });
+    if (!deduped.has(key)) {
+      deduped.set(key, diagnostic);
+    }
+  }
+  return [...deduped.values()];
 }
 function buildInvalidProjectInitResult(args) {
   const issues = args.diagnostics.map((diagnostic) => diagnostic.message);
@@ -64005,19 +64032,19 @@ async function blueprintProjectInit(args = {}) {
     repoSummary ? { vision: repoSummary } : void 0
   ) : void 0;
   const seedInput = bootstrapMode === "auto" ? mergeBootstrapSeed(autoBaseSeed, args.bootstrapSeed) : args.bootstrapSeed;
+  const rawPhaseRequirementDiagnostics = bootstrapSeedRawPhaseRequirementDiagnostics(seedInput);
   const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
-  if (explicitGapDiagnostics.length > 0) {
-    return buildInvalidProjectInitResult({
-      projectRoot,
-      diagnostics: explicitGapDiagnostics
-    });
-  }
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
   const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
-  if (preflightDiagnostics.length > 0) {
+  const preWriteDiagnostics = dedupeProjectInitDiagnostics([
+    ...rawPhaseRequirementDiagnostics,
+    ...explicitGapDiagnostics,
+    ...preflightDiagnostics
+  ]);
+  if (preWriteDiagnostics.length > 0) {
     return buildInvalidProjectInitResult({
       projectRoot,
-      diagnostics: preflightDiagnostics
+      diagnostics: preWriteDiagnostics
     });
   }
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase ? normalizeBlueprintPhaseRef(
@@ -64180,7 +64207,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, GENERIC_SUCCESS_CRITERIA_PATTERNS, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -64274,12 +64301,6 @@ var init_project = __esm({
     ]);
     MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
-    GENERIC_SUCCESS_CRITERIA_PATTERNS = [
-      /^(?:complete|finish|do|implement|handle|support|make|prepare)\s+(?:the\s+)?(?:work|task|feature|phase|roadmap|bootstrap|workflow)\.?$/i,
-      /^(?:keep|ensure|verify|validate|confirm)\s+(?:things|it|this|the work|the phase|the roadmap|the workflow)\s+(?:working|done|ready|traceable|complete)\.?$/i,
-      /^complete .+ with traceable handoff evidence\.?$/i,
-      /^keep requirement ids traceable into later roadmap artifacts\.?$/i
-    ];
     projectToolDefinitions = [
       {
         name: "blueprint_command_catalog",

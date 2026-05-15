@@ -201,7 +201,7 @@ Use this shape unless the project is too small to need every heading:
 1. `## Project Brief` — product, audience, core value, first milestone, evidence limits
 2. `## Target Users` — first user group and any diverse/edge user considerations
 3. `## Requirement Groups` — committed, deferred, and out-of-scope items with durable IDs
-4. `## Roadmap Preview` — phase table with objective, covered requirement IDs, dependency notes, and 2–5 observable success criteria per phase
+4. `## Roadmap Preview` — phase table with objective, covered requirement IDs, dependency notes, and 2–5 success criteria per phase
 5. `## Assumptions And Open Questions` — each marked as safe to persist or requiring more user input, with source provenance when available
 6. `## Deferred And Out Of Scope` — items explicitly cut from first milestone
 7. `## Defaults And Workflow Choices` — applied/skipped/malformed defaults provenance
@@ -267,8 +267,9 @@ or generic helpers.
 4. Use `blueprint-roadmapper` when the roadmap needs requirement clustering,
    dependency ordering, or goal-backward success criteria.
 5. Roadmapper output must map every committed requirement to exactly one phase,
-   identify duplicates or orphans before persistence, derive 2-5 observable
-   success criteria per phase, and flag brownfield uncertainty honestly.
+   identify duplicates or orphans before persistence, derive 2-5 success
+   criteria per phase, prefer wording that points to observable evidence when
+   it helps later validation, and flag brownfield uncertainty honestly.
 
 ### No-Subagent Fallback
 
@@ -287,7 +288,8 @@ session instead of degrading to shallow synthesis.
    final coverage pass:
    - every committed requirement appears in exactly one phase
    - no phase lacks success criteria
-   - each success criterion is observable by a user or maintainer
+   - success criteria are specific enough to review, with observable evidence
+     preferred when it helps later validation
    - brownfield assumptions are marked provisional when mapping evidence is
      missing
 6. Show the same visible approval packet and revision loop as the subagent path
@@ -298,12 +300,13 @@ session instead of degrading to shallow synthesis.
 When more than one committed requirement or phase exists, include a compact
 traceability summary in the visible approval packet before persistence:
 
-| ID | Scope | Group | Source/Assumption | Proposed phase | Depends on | Observable success evidence | Open issue |
+| ID | Scope | Group | Source/Assumption | Proposed phase | Depends on | Success evidence | Open issue |
 |----|-------|-------|-------------------|----------------|------------|----------------------------|------------|
 
-This mirrors the existing validator expectation that committed requirements map
-exactly once and each phase has observable success criteria. The approval packet
-should show the same truth the MCP layer enforces.
+This mirrors the MCP-enforced floor: committed requirements map exactly once
+and each phase has 2-5 success criteria. The approval packet can still prefer
+observable evidence wording when that helps review, but the MCP gate is count
+plus requirement traceability.
 
 When the project has only one committed requirement and one phase, a short
 inline summary replaces the table.
@@ -322,6 +325,19 @@ inline summary replaces the table.
    - The seed should carry grouped committed requirements, deferred scope,
      explicit out-of-scope cuts, roadmap phases, requirement IDs, phase
      objectives, and success criteria.
+   - Required seed shape:
+     - `vision`: substantive project brief.
+     - `currentMilestone`: active milestone label.
+     - `requirements[]`: durable `id`, `scope`, `group`, `requirement`,
+       `status`, and `notes`.
+     - `roadmapPhases[]`: `phase`, `title`, `objective`, explicit
+       `requirementIds`, and 2-5 `successCriteria`.
+     - Optional shaping fields: `audience`, `constraints`, `nonGoals`,
+       `brownfieldMode`, and `assumptions`.
+   - `roadmapPhases[].requirementIds` and
+     `roadmapPhases[].successCriteria` are preflight-required before the first
+     write even though the raw MCP argument schema accepts them as optional
+     fields for compatibility.
    - If any committed requirement lacks a durable ID, appears in zero or
      multiple roadmap phases, or any phase lacks requirement IDs or success
      criteria, revise before calling the MCP tool.
@@ -338,7 +354,7 @@ Seed preflight matrix:
 | Committed coverage | At least one requirement is `committed`, and every committed requirement appears in exactly one roadmap phase. | Set one requirement to `committed` or repair `roadmapPhases[].requirementIds`. |
 | Phase identity | Each roadmap phase has a unique normalized phase ref and concrete title/objective. | Rename duplicate phases or normalize whole-number refs before retry. |
 | Phase grounding | Each phase has explicit `requirementIds` that reference declared requirements. | Add declared requirement IDs or remove ungrounded phases. |
-| Success evidence | Each phase has 2-5 observable success criteria, not recap or polish filler. | Replace generic criteria with concrete evidence checks. |
+| Success evidence | Each phase has 2-5 success criteria. | Add or trim success criteria so each phase has 2-5 entries. |
 
 When a preflight check fails, repair the seed shown in the visible approval
 packet before the MCP call whenever possible. If the MCP result still returns
@@ -397,7 +413,9 @@ repair source of truth.
 - The roadmap derives phases from requirement coverage and explicit sequencing
   rationale rather than imposing a generic setup/core/polish template.
 - Each committed requirement is covered exactly once in the roadmap.
-- Each phase has a concrete objective and 2-5 observable success criteria.
+- Each phase has a concrete objective and 2-5 success criteria. Prefer wording
+  that points to observable evidence when it helps later discovery, planning,
+  or validation.
 - Deferred and out-of-scope work is visible enough to prevent accidental
   re-entry during later planning.
 - Brownfield output distinguishes mapped evidence from provisional assumptions.
