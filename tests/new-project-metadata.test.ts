@@ -21,8 +21,9 @@ const newProjectRuntimeInputBundle = [
 ];
 
 test("new-project manifest stays thin while delegating runtime depth to the bootstrap skill package", async () => {
-  const [commandFile, skillFile, guardrailsRef, runtimeContract] = await Promise.all([
+  const [commandFile, commandSpecFile, skillFile, guardrailsRef, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
+    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
@@ -50,6 +51,9 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /invented auto-advance chaining|slash-command self-invocation/i);
   assert.match(commandFile, /Do not require `docs\/commands\/new-project\.md`/);
   assert.match(commandFile, /`--auto`/);
+  assert.match(commandFile, /required `bootstrapSeed` field shape/i);
+  assert.match(commandFile, /bootstrap-runtime-contract\.md` as the source of truth/i);
+  assert.match(commandSpecFile, /full required `bootstrapSeed` field shape lives in `skills\/blueprint-bootstrap\/references\/bootstrap-runtime-contract\.md`/);
   assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
   assert.doesNotMatch(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/i);
@@ -225,6 +229,7 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /specific, user-centered, atomic, grouped, and traceable/i);
   assert.match(skillFile, /cover every committed requirement exactly once/i);
+  assert.match(skillFile, /owns the required `bootstrapSeed`\s+field shape/i);
   assert.match(skillFile, /next safe implemented command/i);
 
   assert.ok(
@@ -258,6 +263,10 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /make the prompt refer to the\s+visible preview above/i);
   assert.match(contractRef, /`--auto`/);
   assert.match(contractRef, /`bootstrapSeed`/);
+  assert.match(contractRef, /Required seed shape:/);
+  assert.match(contractRef, /`requirements\[\]`: durable `id`, `scope`, `group`, `requirement`,\s+`status`, and `notes`/);
+  assert.match(contractRef, /`roadmapPhases\[\]`: `phase`, `title`, `objective`, explicit\s+`requirementIds`, and 2-5 `successCriteria`/);
+  assert.match(contractRef, /preflight-required before the first\s+write even though the raw MCP argument schema accepts them as optional/i);
   assert.match(contractRef, /`mcp_blueprint_blueprint_artifact_contract_read`/);
   assert.match(contractRef, /`bootstrap\.project`,\s*`bootstrap\.requirements`, and `bootstrap\.roadmap`/);
   assert.match(contractRef, /`mcp_blueprint_blueprint_artifact_validate`/);
@@ -275,13 +284,14 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /Optional-Agent Decision Record/);
   assert.match(contractRef, /Dimension.*Evidence.*Confidence/s);
   assert.match(contractRef, /map every committed requirement to exactly one phase/i);
-  assert.match(contractRef, /2-5 observable\s+success criteria per phase/i);
+  assert.match(contractRef, /2-5 success\s+criteria per phase/i);
+  assert.match(contractRef, /MCP-enforced floor: committed requirements map exactly once\s+and each phase has 2-5 success criteria/i);
   assert.match(contractRef, /## No-Subagent Fallback/);
   assert.match(contractRef, /Requirement or roadmap impact/);
   assert.match(contractRef, /every committed requirement appears in exactly one phase/i);
   // Wave 1 traceability packet
   assert.match(contractRef, /Roadmap Traceability Packet/);
-  assert.match(contractRef, /Observable success evidence/);
+  assert.match(contractRef, /Success evidence/);
   assert.match(contractRef, /## Output Quality Criteria/);
   assert.match(contractRef, /## Completion Criteria/);
   assert.match(contractRef, /retry the MCP write only after the user approves any material scope change/i);

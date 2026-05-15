@@ -262,6 +262,8 @@ function renderBootstrapRequirementsTemplate(): string {
 
 ## Deferred Scope
 
+Include this section only when the Scope Summary lists deferred requirement IDs.
+
 ### <group>
 
 - \`REQ-02\`: <requirement>
@@ -269,6 +271,8 @@ function renderBootstrapRequirementsTemplate(): string {
   - Notes: <notes>
 
 ## Out-of-Scope Cuts
+
+Include this section only when the Scope Summary lists out-of-scope requirement IDs.
 
 ### <group>
 
@@ -342,7 +346,7 @@ const BOOTSTRAP_ROADMAP_MODEL_CONTRACT: ArtifactModelContract = {
     "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
     "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
     "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-    "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+    "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
   ],
   contextBindings: [
     ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",

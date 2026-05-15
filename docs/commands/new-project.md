@@ -52,6 +52,7 @@
 - Approval must be reviewable in the main Gemini CLI conversation before the confirmation prompt.
 - `bootstrapMode` defaults to `interactive`; `--auto` is the command-facing way to request `bootstrapMode: "auto"`.
 - Interactive mode must pass a sufficient `bootstrapSeed` into `blueprint_project_init`. If the seed is missing or too thin, the tool rejects before writing and the command should keep asking rather than asking the MCP layer to invent purpose, requirements, roadmap, state, config, or phases.
+- The full required `bootstrapSeed` field shape lives in `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`; this command spec should point there rather than duplicating a partial shape.
 - `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough to produce a complete `bootstrapSeed`, and only after brownfield map-first gating has passed. If no complete seed can be produced, stop and ask for the missing brief.
 
 ## Behavior Stages
@@ -70,7 +71,7 @@
 - When project research is useful, the bootstrap contract uses the GSD-inspired dimensions that are relevant to the repo: stack, features, architecture, and pitfalls. These are synthesis inputs, not a `.planning/research/` runtime dependency.
 - When subagents are unavailable, the parent command falls back to sequential one-topic-at-a-time work: classify repo shape, handle stack/features/architecture/pitfalls as needed, scope one requirement group at a time, compress carry-forward evidence, then perform a final coverage pass.
 - Requirements must be specific, user-centered, atomic, grouped, and traceable.
-- Roadmap phases must map every committed requirement exactly once and carry 2-5 observable success criteria per phase.
+- Roadmap phases must map every committed requirement exactly once and carry 2-5 success criteria per phase. Prefer criteria that point to observable evidence, but bootstrap enforcement here is count plus requirement traceability.
 - Validation or MCP write failures caused by thin content, missing headings, placeholders, missing success criteria, or traceability gaps trigger seed repair and retry through MCP. The command must not hand-edit `.blueprint/` artifacts around the MCP owner.
 
 ## Blueprint And Global State Reads

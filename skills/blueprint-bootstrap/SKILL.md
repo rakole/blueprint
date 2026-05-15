@@ -127,8 +127,12 @@ no-subagent fallback in `references/bootstrap-runtime-contract.md`.
   bootstrap seed and visible approval packet, not from weakening validation.
 - Requirements must be specific, user-centered, atomic, grouped, and traceable.
   Roadmap phases must cover every committed requirement exactly once and carry
-  observable success criteria suitable for later discovery, planning, and
-  validation.
+  2-5 success criteria suitable for later discovery, planning, and validation.
+  Prefer wording that points to observable evidence, but treat count and
+  traceability as the enforced bootstrap gate.
+- `references/bootstrap-runtime-contract.md` owns the required `bootstrapSeed`
+  field shape. Use that contract for requirement row fields and roadmap phase
+  fields before calling `mcp_blueprint_blueprint_project_init`.
 - `mcp_blueprint_blueprint_project_init` remains the first persistent bootstrap write, with the detailed mutation contract preserved in `references/bootstrap-runtime-contract.md`; do not call scaffold before it.
 - Workflow preference capture still covers mode, granularity, parallelization posture, planning-doc git preference, and key workflow toggles through the local runtime references.
 - Preserve brownfield classification, saved-default handling, workflow
