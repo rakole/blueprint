@@ -2,48 +2,16 @@ import * as z from "zod/v4";
 
 export type PhaseCheckpointRecord = Record<string, unknown>;
 
-type PhaseCheckpointDecisionRecord = {
-  topic: string;
-  decision: string;
-  rationale?: string;
-};
-
-type PhaseCheckpointDeferredIdeaRecord = {
-  idea: string;
-  reason?: string;
-  revisitWhen?: string;
-};
-
-type PhaseCheckpointReferenceRecord = {
-  label: string;
-  target: string;
-  note?: string;
-};
-
 export type PhaseCheckpointOwnerCommand =
   | "/blu-discuss-phase"
   | "/blu-research-phase";
 
 export type PhaseCheckpointResumeMode = "discuss" | "research";
 
-type PhaseCheckpointResumeMetaRecord = {
-  mode: PhaseCheckpointResumeMode;
-  pendingTopics: string[];
-  completedTopics: string[];
-  currentQuestion?: string;
-  notes: string[];
-  resumeHint?: string;
-  updatedAt: string;
-};
-
 export type PhaseCheckpointWriteRecord = PhaseCheckpointRecord & {
+  schemaVersion: 2;
   ownerCommand: PhaseCheckpointOwnerCommand;
-  completedAreas: string[];
-  remainingAreas: string[];
-  decisions: PhaseCheckpointDecisionRecord[];
-  deferredIdeas: PhaseCheckpointDeferredIdeaRecord[];
-  canonicalReferences: PhaseCheckpointReferenceRecord[];
-  resumeMeta: PhaseCheckpointResumeMetaRecord;
+  mode: PhaseCheckpointResumeMode;
 };
 
 const PHASE_CHECKPOINT_OWNER_COMMANDS = [
@@ -84,60 +52,64 @@ const phaseCheckpointReferenceSchema = z
   })
   .catchall(z.unknown());
 
-export const phaseCheckpointOwnerCommandSchema = z.enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
-export const phaseCheckpointResumeModeSchema = z.enum(PHASE_CHECKPOINT_RESUME_MODES);
-
-const phaseCheckpointResumeMetaSchema = z
+const phaseCheckpointAreaSchema = z
   .object({
-    mode: phaseCheckpointResumeModeSchema,
-    pendingTopics: z.array(z.string().min(1)),
-    completedTopics: z.array(z.string().min(1)),
+    areaId: z.string().min(1),
+    title: z.string().min(1),
+    state: z.enum(["questioning", "assumed", "decided", "blocked", "needs-revisit", "unseen"]),
+    decisionIds: z.array(z.string().min(1)).optional(),
+    evidenceRefs: z.array(z.string().min(1)).optional(),
+    downstreamConsumers: z.array(z.string().min(1)).optional(),
     currentQuestion: z.string().min(1).optional(),
-    notes: z.array(z.string().min(1)),
-    resumeHint: z.string().min(1).optional(),
-    updatedAt: z.string().min(1)
+    questionWhyItMatters: z.string().min(1).optional(),
+    lastUserAnswer: z.unknown().optional(),
+    blockingReason: z.string().min(1).optional(),
+    resolutionCriterion: z.string().min(1).optional()
   })
   .catchall(z.unknown());
 
-export const phaseCheckpointWriteSchema = z
+const checkpointProgressSchema = z.object({}).catchall(z.unknown());
+const checkpointCarryForwardSchema = z.object({}).catchall(z.unknown());
+const checkpointReadSetSchema = z.array(z.unknown());
+const researchLedgerSchema = z
   .object({
-    ownerCommand: phaseCheckpointOwnerCommandSchema,
-    completedAreas: z.array(z.string().min(1)),
-    remainingAreas: z.array(z.string().min(1)),
-    decisions: z.array(phaseCheckpointDecisionSchema),
-    deferredIdeas: z.array(phaseCheckpointDeferredIdeaSchema),
-    canonicalReferences: z.array(phaseCheckpointReferenceSchema),
-    resumeMeta: phaseCheckpointResumeMetaSchema
+    schemaVersion: z.literal("research-ledger/v1"),
+    strands: z.array(z.object({}).catchall(z.unknown()))
   })
-  .catchall(z.unknown())
-  .superRefine((value, context) => {
-    const requiredSections = [
-      "ownerCommand",
-      "completedAreas",
-      "remainingAreas",
-      "decisions",
-      "deferredIdeas",
-      "canonicalReferences",
-      "resumeMeta"
-    ];
+  .catchall(z.unknown());
 
-    if (!requiredSections.every((key) => key in value)) {
-      context.addIssue({
-        code: "custom",
-        message:
-          "Checkpoint writes must include ownerCommand, completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
-      });
-    }
+export const phaseCheckpointOwnerCommandSchema = z.enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
+export const phaseCheckpointResumeModeSchema = z.enum(PHASE_CHECKPOINT_RESUME_MODES);
 
-    const expectedMode = PHASE_CHECKPOINT_OWNER_MODES[value.ownerCommand];
-    if (expectedMode && value.resumeMeta.mode !== expectedMode) {
-      context.addIssue({
-        code: "custom",
-        path: ["resumeMeta", "mode"],
-        message: `${value.ownerCommand} checkpoints must use resumeMeta.mode "${expectedMode}".`
-      });
-    }
-  });
+const phaseCheckpointBaseSchema = z.object({
+  schemaVersion: z.literal(2),
+  ownerCommand: phaseCheckpointOwnerCommandSchema,
+  mode: phaseCheckpointResumeModeSchema
+});
+
+const discussCheckpointWriteSchema = phaseCheckpointBaseSchema
+  .extend({
+    ownerCommand: z.literal("/blu-discuss-phase"),
+    mode: z.literal("discuss"),
+    progress: checkpointProgressSchema,
+    areaQueue: z.array(phaseCheckpointAreaSchema),
+    carryForward: checkpointCarryForwardSchema,
+    readSet: checkpointReadSetSchema
+  })
+  .catchall(z.unknown());
+
+const researchCheckpointWriteSchema = phaseCheckpointBaseSchema
+  .extend({
+    ownerCommand: z.literal("/blu-research-phase"),
+    mode: z.literal("research"),
+    researchLedger: researchLedgerSchema
+  })
+  .catchall(z.unknown());
+
+export const phaseCheckpointWriteSchema = z.union([
+  discussCheckpointWriteSchema,
+  researchCheckpointWriteSchema
+]);
 
 export function ensureCheckpointObject(
   checkpoint: unknown,
@@ -160,7 +132,9 @@ export function ensureCheckpointForPersistence(
 
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue) => issue.message).join("; ");
-    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+    throw new Error(
+      `${checkpointPath} must contain a structured checkpoint v2 object. ${issues}`
+    );
   }
 
   return parsed.data as PhaseCheckpointWriteRecord;
@@ -174,24 +148,24 @@ function checkpointStringField(
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function checkpointResumeMeta(record: Record<string, unknown>): Record<string, unknown> | null {
-  const resumeMeta = record.resumeMeta;
-  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
-    return null;
-  }
-
-  return resumeMeta as Record<string, unknown>;
-}
-
 function checkpointOwnerCommand(record: Record<string, unknown>): string | null {
   return checkpointStringField(record, "ownerCommand");
 }
 
 function checkpointResumeMode(record: Record<string, unknown>): string | null {
-  return (
-    checkpointStringField(checkpointResumeMeta(record) ?? {}, "mode") ??
-    checkpointStringField(record, "mode")
-  );
+  const topLevelMode = checkpointStringField(record, "mode");
+
+  if (topLevelMode) {
+    return topLevelMode;
+  }
+
+  const resumeMeta = record.resumeMeta;
+
+  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
+    return null;
+  }
+
+  return checkpointStringField(resumeMeta as Record<string, unknown>, "mode");
 }
 
 function isKnownCheckpointOwnerCommand(value: string | null): value is PhaseCheckpointOwnerCommand {
@@ -238,11 +212,18 @@ export function evaluateCheckpointResumeSafety(
 } {
   const ownerCommand = checkpointOwnerCommand(checkpoint);
   const resumeMode = checkpointResumeMode(checkpoint);
+  const parsed = phaseCheckpointWriteSchema.safeParse(checkpoint);
   const warnings: string[] = [];
+
+  if (!parsed.success) {
+    warnings.push(
+      `${checkpointPath} is not a valid checkpoint v2 object; treating it as non-resumable evidence.`
+    );
+  }
 
   if (!ownerCommand) {
     warnings.push(
-      `${checkpointPath} does not declare ownerCommand; treating it as a legacy checkpoint.`
+      `${checkpointPath} does not declare ownerCommand; treating it as non-resumable legacy checkpoint evidence.`
     );
   } else if (!isKnownCheckpointOwnerCommand(ownerCommand)) {
     warnings.push(`${checkpointPath} declares unknown ownerCommand "${ownerCommand}".`);
@@ -251,7 +232,7 @@ export function evaluateCheckpointResumeSafety(
   if (!resumeMode) {
     warnings.push(`${checkpointPath} does not declare a resumable mode.`);
   } else if (!isKnownCheckpointResumeMode(resumeMode)) {
-    warnings.push(`${checkpointPath} declares unknown resumeMeta.mode "${resumeMode}".`);
+    warnings.push(`${checkpointPath} declares unknown mode "${resumeMode}".`);
   }
 
   if (
@@ -260,7 +241,7 @@ export function evaluateCheckpointResumeSafety(
     PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode
   ) {
     warnings.push(
-      `${checkpointPath} ownerCommand "${ownerCommand}" does not match resumeMeta.mode "${resumeMode}".`
+      `${checkpointPath} ownerCommand "${ownerCommand}" does not match mode "${resumeMode}".`
     );
   }
 
@@ -272,7 +253,7 @@ export function evaluateCheckpointResumeSafety(
 
   if (expectedMode && resumeMode && resumeMode !== expectedMode) {
     warnings.push(
-      `${checkpointPath} has resumeMeta.mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
+      `${checkpointPath} has mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
     );
   }
 
@@ -291,6 +272,7 @@ export function evaluateCheckpointResumeSafety(
     ownerCommand,
     resumeMode,
     safeToResume:
+      parsed.success &&
       !hasForeignOwner &&
       !hasForeignMode &&
       !hasUnknownOwner &&

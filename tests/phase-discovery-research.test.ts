@@ -1755,23 +1755,26 @@ test("missing context keeps research routing pointed at discuss-phase", async (t
     artifact: "context"
   });
   const researchStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
-  const stateUpdate = await blueprintStateUpdate({
-    cwd: repoPath,
-    base: "synced",
-    patch: {
-      activeCommand: "/blu-research-phase",
-      lastUpdated: "2026-04-12T00:00:00.000Z"
-    }
-  });
+  await assert.rejects(
+    blueprintStateUpdate({
+      cwd: repoPath,
+      base: "synced",
+      patch: {
+        activeCommand: "/blu-research-phase",
+        lastUpdated: "2026-04-12T00:00:00.000Z"
+      }
+    }),
+    /CONTEXT\.md is missing/i
+  );
   const loadedState = await blueprintStateLoad({ cwd: repoPath });
   const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
 
   assert.equal(missingContext.found, false);
   assert.match(missingContext.reason ?? "", /03-CONTEXT\.md does not exist yet/i);
   assert.equal(researchStatus.hasContext, false);
-  assert.deepEqual(stateUpdate.updatedFields.sort(), ["activeCommand", "lastUpdated"].sort());
   assert.match(loadedState.derivedStatus.nextAction, /\/blu-discuss-phase 3/);
-  assert.match(stateBody, /Run \/blu-discuss-phase 3 to rebuild the current phase context/);
+  assert.match(stateBody, /Run \/blu-progress/);
+  assert.doesNotMatch(stateBody, /\/blu-research-phase/);
 });
 
 test("valid existing research can sync STATE without mutating the research artifact", async (t) => {

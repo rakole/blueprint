@@ -9661,7 +9661,7 @@ export async function blueprintPhaseCheckpointPut(
       existingCheckpoint,
       checkpointPath,
       args.checkpoint.ownerCommand,
-      args.checkpoint.resumeMeta.mode
+      args.checkpoint.mode
     );
 
     if (!ownershipSafety.safeToResume) {

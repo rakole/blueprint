@@ -47,6 +47,21 @@ function renderContextBulletList(items: string[]): string {
   return items.map((item) => `- ${item}`).join("\n");
 }
 
+function renderContextOptionalBulletList(
+  items: string[],
+  options?: { allowNoneAlias?: boolean }
+): string {
+  if (items.length === 0) {
+    return "- none";
+  }
+
+  if (options?.allowNoneAlias && items.length === 1 && items[0].trim().toLowerCase() === "none") {
+    return "- none";
+  }
+
+  return renderContextBulletList(items);
+}
+
 function renderContextTable(headers: string[], rows: string[][]): string {
   return [
     `| ${headers.map(markdownTableCell).join(" | ")} |`,
@@ -59,12 +74,6 @@ export function renderPhaseContextModelContent(args: {
   resolved: PhaseContextResolvedLocation;
   model: PhaseContextStructuredModel;
 }): string {
-  const openQuestions =
-    args.model.openQuestions.length === 1 &&
-    args.model.openQuestions[0].trim().toLowerCase() === "none"
-      ? "- none"
-      : renderContextBulletList(args.model.openQuestions);
-
   return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
 
 ## Phase Boundary
@@ -107,19 +116,19 @@ ${renderContextBulletList(args.model.existingCodeInsights)}
 ## Dependencies
 
 - Prior phase artifacts:
-${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
+${renderContextOptionalBulletList(args.model.dependencies.priorPhaseArtifacts)}
 - External constraints:
-${renderContextBulletList(args.model.dependencies.externalConstraints)}
+${renderContextOptionalBulletList(args.model.dependencies.externalConstraints)}
 - Required follow-up reads:
 ${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
 
 ## Open Questions
 
-${openQuestions}
+${renderContextOptionalBulletList(args.model.openQuestions, { allowNoneAlias: true })}
 
 ## Deferred Ideas
 
-${renderContextBulletList(args.model.deferredIdeas)}
+${renderContextOptionalBulletList(args.model.deferredIdeas)}
 
 ## Canonical References
 
@@ -197,7 +206,7 @@ export function validatePhaseContextModelInput(
               code: `schema.${error.keyword}`,
               message: `phase.context model schema violation at ${pathValue}: ${error.message ?? error.keyword}.`,
               missing: missingProperty ? [missingProperty] : undefined,
-              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
+              repair: phaseContextModelSchemaRepair(error.keyword, pathValue, missingProperty),
               retryable: true,
               nextTool: "blueprint_phase_artifact_write"
             };
@@ -219,8 +228,104 @@ export function validatePhaseContextModelInput(
     };
   }
 
+  diagnostics.push(
+    ...phaseContextModelSentinelDiagnostics(
+      modelObject as unknown as PhaseContextStructuredModel
+    )
+  );
+
+  if (diagnostics.length > 0) {
+    return {
+      model: null,
+      validation: {
+        valid: false,
+        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        warnings: [],
+        diagnostics
+      }
+    };
+  }
+
   return {
     model: modelObject as unknown as PhaseContextStructuredModel,
     validation: null
   };
+}
+
+function phaseContextModelSchemaRepair(
+  keyword: string,
+  pathValue: string,
+  missingProperty: string | null
+): string {
+  if (keyword === "required" && missingProperty) {
+    return `Add ${pathValue} using the phase.context model contract before retrying.`;
+  }
+
+  if (keyword === "type") {
+    return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
+  }
+
+  if (keyword === "minItems") {
+    if (pathValue === "model.openQuestions") {
+      return "Use openQuestions: [\"none\"] or openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel.";
+    }
+
+    if (pathValue === "model.deferredIdeas") {
+      return "Use deferredIdeas: [] when nothing is deferred; MCP renders the canonical - none sentinel.";
+    }
+
+    return `Populate ${pathValue} with at least one substantive item required by phase.context.modelContract.`;
+  }
+
+  if (keyword === "additionalProperties") {
+    return `Remove unsupported field ${pathValue}; MCP owns identity, artifact kind, paths, and final Markdown persistence.`;
+  }
+
+  return "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.";
+}
+
+function phaseContextModelSentinelDiagnostics(
+  model: PhaseContextStructuredModel
+): PhaseArtifactValidationDiagnostic[] {
+  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
+
+  const aliasSensitiveFields: Array<{
+    path: string;
+    items: string[];
+    repair: string;
+  }> = [
+    {
+      path: "model.dependencies.priorPhaseArtifacts",
+      items: model.dependencies.priorPhaseArtifacts,
+      repair:
+        "Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass [\"none\"] as model content."
+    },
+    {
+      path: "model.dependencies.externalConstraints",
+      items: model.dependencies.externalConstraints,
+      repair:
+        "Use dependencies.externalConstraints: [] when no external constraints apply; do not pass [\"none\"] as model content."
+    },
+    {
+      path: "model.deferredIdeas",
+      items: model.deferredIdeas,
+      repair:
+        "Use deferredIdeas: [] when nothing is deferred; do not pass [\"none\"] as model content."
+    }
+  ];
+
+  for (const field of aliasSensitiveFields) {
+    if (field.items.length === 1 && field.items[0].trim().toLowerCase() === "none") {
+      diagnostics.push({
+        path: field.path,
+        code: "schema.none_alias_forbidden",
+        message: `phase.context model field ${field.path} must use an empty array for the canonical none state; [\"none\"] is reserved for Open Questions compatibility only.`,
+        repair: field.repair,
+        retryable: true,
+        nextTool: "blueprint_phase_artifact_write"
+      });
+    }
+  }
+
+  return diagnostics;
 }

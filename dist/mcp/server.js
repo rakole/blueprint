@@ -18422,7 +18422,7 @@ function renderContextAuthoringTemplate(context) {
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions, replace the section with unresolved questions or use the exact sentinel \`- none\` when nothing remains open.
+For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -20104,7 +20104,8 @@ var init_artifact_contracts = __esm({
         "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
         "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
         "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-        "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
+        "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+        "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
         "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
         "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
       ],
@@ -21804,6 +21805,9 @@ var init_artifact_contracts = __esm({
         ],
         sectionValidations: {
           "Open Questions": {
+            exactEmptySentinel: "- none"
+          },
+          "Deferred Ideas": {
             exactEmptySentinel: "- none"
           }
         },
@@ -26991,7 +26995,9 @@ function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
   );
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
-    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+    throw new Error(
+      `${checkpointPath} must contain a structured checkpoint v2 object. ${issues}`
+    );
   }
   return parsed.data;
 }
@@ -26999,18 +27005,19 @@ function checkpointStringField(record2, key) {
   const value = record2[key];
   return typeof value === "string" && value.trim() ? value : null;
 }
-function checkpointResumeMeta(record2) {
-  const resumeMeta = record2.resumeMeta;
-  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
-    return null;
-  }
-  return resumeMeta;
-}
 function checkpointOwnerCommand(record2) {
   return checkpointStringField(record2, "ownerCommand");
 }
 function checkpointResumeMode(record2) {
-  return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
+  const topLevelMode = checkpointStringField(record2, "mode");
+  if (topLevelMode) {
+    return topLevelMode;
+  }
+  const resumeMeta = record2.resumeMeta;
+  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
+    return null;
+  }
+  return checkpointStringField(resumeMeta, "mode");
 }
 function isKnownCheckpointOwnerCommand(value) {
   return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
@@ -27035,10 +27042,16 @@ function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
 function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
   const ownerCommand = checkpointOwnerCommand(checkpoint);
   const resumeMode = checkpointResumeMode(checkpoint);
+  const parsed = phaseCheckpointWriteSchema.safeParse(checkpoint);
   const warnings = [];
+  if (!parsed.success) {
+    warnings.push(
+      `${checkpointPath} is not a valid checkpoint v2 object; treating it as non-resumable evidence.`
+    );
+  }
   if (!ownerCommand) {
     warnings.push(
-      `${checkpointPath} does not declare ownerCommand; treating it as a legacy checkpoint.`
+      `${checkpointPath} does not declare ownerCommand; treating it as non-resumable legacy checkpoint evidence.`
     );
   } else if (!isKnownCheckpointOwnerCommand(ownerCommand)) {
     warnings.push(`${checkpointPath} declares unknown ownerCommand "${ownerCommand}".`);
@@ -27046,11 +27059,11 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   if (!resumeMode) {
     warnings.push(`${checkpointPath} does not declare a resumable mode.`);
   } else if (!isKnownCheckpointResumeMode(resumeMode)) {
-    warnings.push(`${checkpointPath} declares unknown resumeMeta.mode "${resumeMode}".`);
+    warnings.push(`${checkpointPath} declares unknown mode "${resumeMode}".`);
   }
   if (isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode) {
     warnings.push(
-      `${checkpointPath} ownerCommand "${ownerCommand}" does not match resumeMeta.mode "${resumeMode}".`
+      `${checkpointPath} ownerCommand "${ownerCommand}" does not match mode "${resumeMode}".`
     );
   }
   if (expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand) {
@@ -27060,7 +27073,7 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   }
   if (expectedMode && resumeMode && resumeMode !== expectedMode) {
     warnings.push(
-      `${checkpointPath} has resumeMeta.mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
+      `${checkpointPath} has mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
     );
   }
   const hasForeignOwner = Boolean(expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand);
@@ -27074,11 +27087,11 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   return {
     ownerCommand,
     resumeMode,
-    safeToResume: !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
+    safeToResume: parsed.success && !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
     warnings
   };
 }
-var PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema;
+var PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointAreaSchema, checkpointProgressSchema, checkpointCarryForwardSchema, checkpointReadSetSchema, researchLedgerSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointBaseSchema, discussCheckpointWriteSchema, researchCheckpointWriteSchema, phaseCheckpointWriteSchema;
 var init_phase_checkpoint_records = __esm({
   "src/mcp/tools/phase-checkpoint-records.ts"() {
     "use strict";
@@ -27107,50 +27120,50 @@ var init_phase_checkpoint_records = __esm({
       target: string2().min(1),
       note: string2().min(1).optional()
     }).catchall(unknown());
+    phaseCheckpointAreaSchema = object2({
+      areaId: string2().min(1),
+      title: string2().min(1),
+      state: _enum(["questioning", "assumed", "decided", "blocked", "needs-revisit", "unseen"]),
+      decisionIds: array(string2().min(1)).optional(),
+      evidenceRefs: array(string2().min(1)).optional(),
+      downstreamConsumers: array(string2().min(1)).optional(),
+      currentQuestion: string2().min(1).optional(),
+      questionWhyItMatters: string2().min(1).optional(),
+      lastUserAnswer: unknown().optional(),
+      blockingReason: string2().min(1).optional(),
+      resolutionCriterion: string2().min(1).optional()
+    }).catchall(unknown());
+    checkpointProgressSchema = object2({}).catchall(unknown());
+    checkpointCarryForwardSchema = object2({}).catchall(unknown());
+    checkpointReadSetSchema = array(unknown());
+    researchLedgerSchema = object2({
+      schemaVersion: literal("research-ledger/v1"),
+      strands: array(object2({}).catchall(unknown()))
+    }).catchall(unknown());
     phaseCheckpointOwnerCommandSchema = _enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
     phaseCheckpointResumeModeSchema = _enum(PHASE_CHECKPOINT_RESUME_MODES);
-    phaseCheckpointResumeMetaSchema = object2({
-      mode: phaseCheckpointResumeModeSchema,
-      pendingTopics: array(string2().min(1)),
-      completedTopics: array(string2().min(1)),
-      currentQuestion: string2().min(1).optional(),
-      notes: array(string2().min(1)),
-      resumeHint: string2().min(1).optional(),
-      updatedAt: string2().min(1)
-    }).catchall(unknown());
-    phaseCheckpointWriteSchema = object2({
+    phaseCheckpointBaseSchema = object2({
+      schemaVersion: literal(2),
       ownerCommand: phaseCheckpointOwnerCommandSchema,
-      completedAreas: array(string2().min(1)),
-      remainingAreas: array(string2().min(1)),
-      decisions: array(phaseCheckpointDecisionSchema),
-      deferredIdeas: array(phaseCheckpointDeferredIdeaSchema),
-      canonicalReferences: array(phaseCheckpointReferenceSchema),
-      resumeMeta: phaseCheckpointResumeMetaSchema
-    }).catchall(unknown()).superRefine((value, context) => {
-      const requiredSections = [
-        "ownerCommand",
-        "completedAreas",
-        "remainingAreas",
-        "decisions",
-        "deferredIdeas",
-        "canonicalReferences",
-        "resumeMeta"
-      ];
-      if (!requiredSections.every((key) => key in value)) {
-        context.addIssue({
-          code: "custom",
-          message: "Checkpoint writes must include ownerCommand, completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
-        });
-      }
-      const expectedMode = PHASE_CHECKPOINT_OWNER_MODES[value.ownerCommand];
-      if (expectedMode && value.resumeMeta.mode !== expectedMode) {
-        context.addIssue({
-          code: "custom",
-          path: ["resumeMeta", "mode"],
-          message: `${value.ownerCommand} checkpoints must use resumeMeta.mode "${expectedMode}".`
-        });
-      }
+      mode: phaseCheckpointResumeModeSchema
     });
+    discussCheckpointWriteSchema = phaseCheckpointBaseSchema.extend({
+      ownerCommand: literal("/blu-discuss-phase"),
+      mode: literal("discuss"),
+      progress: checkpointProgressSchema,
+      areaQueue: array(phaseCheckpointAreaSchema),
+      carryForward: checkpointCarryForwardSchema,
+      readSet: checkpointReadSetSchema
+    }).catchall(unknown());
+    researchCheckpointWriteSchema = phaseCheckpointBaseSchema.extend({
+      ownerCommand: literal("/blu-research-phase"),
+      mode: literal("research"),
+      researchLedger: researchLedgerSchema
+    }).catchall(unknown());
+    phaseCheckpointWriteSchema = union([
+      discussCheckpointWriteSchema,
+      researchCheckpointWriteSchema
+    ]);
   }
 });
 
@@ -29195,6 +29208,15 @@ var init_phase_plan_rendering = __esm({
 function renderContextBulletList(items) {
   return items.map((item) => `- ${item}`).join("\n");
 }
+function renderContextOptionalBulletList(items, options) {
+  if (items.length === 0) {
+    return "- none";
+  }
+  if (options?.allowNoneAlias && items.length === 1 && items[0].trim().toLowerCase() === "none") {
+    return "- none";
+  }
+  return renderContextBulletList(items);
+}
 function renderContextTable(headers, rows) {
   return [
     `| ${headers.map(markdownTableCell).join(" | ")} |`,
@@ -29203,7 +29225,6 @@ function renderContextTable(headers, rows) {
   ].join("\n");
 }
 function renderPhaseContextModelContent(args) {
-  const openQuestions = args.model.openQuestions.length === 1 && args.model.openQuestions[0].trim().toLowerCase() === "none" ? "- none" : renderContextBulletList(args.model.openQuestions);
   return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
 
 ## Phase Boundary
@@ -29246,19 +29267,19 @@ ${renderContextBulletList(args.model.existingCodeInsights)}
 ## Dependencies
 
 - Prior phase artifacts:
-${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
+${renderContextOptionalBulletList(args.model.dependencies.priorPhaseArtifacts)}
 - External constraints:
-${renderContextBulletList(args.model.dependencies.externalConstraints)}
+${renderContextOptionalBulletList(args.model.dependencies.externalConstraints)}
 - Required follow-up reads:
 ${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
 
 ## Open Questions
 
-${openQuestions}
+${renderContextOptionalBulletList(args.model.openQuestions, { allowNoneAlias: true })}
 
 ## Deferred Ideas
 
-${renderContextBulletList(args.model.deferredIdeas)}
+${renderContextOptionalBulletList(args.model.deferredIdeas)}
 
 ## Canonical References
 
@@ -29307,7 +29328,7 @@ function validatePhaseContextModelInput(model) {
               code: `schema.${error2.keyword}`,
               message: `phase.context model schema violation at ${pathValue}: ${error2.message ?? error2.keyword}.`,
               missing: missingProperty ? [missingProperty] : void 0,
-              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
+              repair: phaseContextModelSchemaRepair(error2.keyword, pathValue, missingProperty),
               retryable: true,
               nextTool: "blueprint_phase_artifact_write"
             };
@@ -29327,10 +29348,80 @@ function validatePhaseContextModelInput(model) {
       }
     };
   }
+  diagnostics.push(
+    ...phaseContextModelSentinelDiagnostics(
+      modelObject
+    )
+  );
+  if (diagnostics.length > 0) {
+    return {
+      model: null,
+      validation: {
+        valid: false,
+        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        warnings: [],
+        diagnostics
+      }
+    };
+  }
   return {
     model: modelObject,
     validation: null
   };
+}
+function phaseContextModelSchemaRepair(keyword, pathValue, missingProperty) {
+  if (keyword === "required" && missingProperty) {
+    return `Add ${pathValue} using the phase.context model contract before retrying.`;
+  }
+  if (keyword === "type") {
+    return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
+  }
+  if (keyword === "minItems") {
+    if (pathValue === "model.openQuestions") {
+      return 'Use openQuestions: ["none"] or openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel.';
+    }
+    if (pathValue === "model.deferredIdeas") {
+      return "Use deferredIdeas: [] when nothing is deferred; MCP renders the canonical - none sentinel.";
+    }
+    return `Populate ${pathValue} with at least one substantive item required by phase.context.modelContract.`;
+  }
+  if (keyword === "additionalProperties") {
+    return `Remove unsupported field ${pathValue}; MCP owns identity, artifact kind, paths, and final Markdown persistence.`;
+  }
+  return "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.";
+}
+function phaseContextModelSentinelDiagnostics(model) {
+  const diagnostics = [];
+  const aliasSensitiveFields = [
+    {
+      path: "model.dependencies.priorPhaseArtifacts",
+      items: model.dependencies.priorPhaseArtifacts,
+      repair: 'Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass ["none"] as model content.'
+    },
+    {
+      path: "model.dependencies.externalConstraints",
+      items: model.dependencies.externalConstraints,
+      repair: 'Use dependencies.externalConstraints: [] when no external constraints apply; do not pass ["none"] as model content.'
+    },
+    {
+      path: "model.deferredIdeas",
+      items: model.deferredIdeas,
+      repair: 'Use deferredIdeas: [] when nothing is deferred; do not pass ["none"] as model content.'
+    }
+  ];
+  for (const field of aliasSensitiveFields) {
+    if (field.items.length === 1 && field.items[0].trim().toLowerCase() === "none") {
+      diagnostics.push({
+        path: field.path,
+        code: "schema.none_alias_forbidden",
+        message: `phase.context model field ${field.path} must use an empty array for the canonical none state; ["none"] is reserved for Open Questions compatibility only.`,
+        repair: field.repair,
+        retryable: true,
+        nextTool: "blueprint_phase_artifact_write"
+      });
+    }
+  }
+  return diagnostics;
 }
 var init_phase_context_model = __esm({
   "src/mcp/tools/phase-context-model.ts"() {
@@ -35877,7 +35968,7 @@ async function blueprintPhaseCheckpointPut(args) {
       existingCheckpoint,
       checkpointPath,
       args.checkpoint.ownerCommand,
-      args.checkpoint.resumeMeta.mode
+      args.checkpoint.mode
     );
     if (!ownershipSafety.safeToResume) {
       throw new Error(
@@ -39550,7 +39641,7 @@ function matchesFuzzyEmptySentinel(section, exactEmptySentinel) {
   if (normalizedSection === normalizedSentinel) {
     return false;
   }
-  return normalizedSection.startsWith(normalizedSentinel) || /^(?:[-*]\s*)?(?:none(?:\b|$)|no open questions?\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
+  return normalizedSection.startsWith(normalizedSentinel) || /^(?:[-*]\s*)?(?:none(?:\b|$)|no (?:open questions?|deferred ideas?)\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
     normalizedSection
   );
 }
@@ -39632,7 +39723,7 @@ function isExplicitUiSkipRationale(content) {
   );
 }
 function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
-  const issues = [];
+  const diagnostics = [];
   const flaggedModes = /* @__PURE__ */ new Set();
   for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
     if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
@@ -39643,14 +39734,16 @@ function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
     }
     for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !flaggedModes.has(mode)) {
-        issues.push(
-          `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`
-        );
+        diagnostics.push({
+          code: "discuss.unsupported_mode_claim",
+          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
+          repair: "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
+        });
         flaggedModes.add(mode);
       }
     }
   }
-  return issues;
+  return diagnostics;
 }
 function markdownSectionLines(section) {
   return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
@@ -39704,7 +39797,7 @@ function containsRawHandoffPacketLabel(content) {
   );
 }
 function validateDiscussPhaseContextAntiPatterns(content) {
-  const issues = [];
+  const diagnostics = [];
   const warnings = [];
   const canonicalReferences = extractMarkdownSection5(content, "Canonical References");
   const deferredIdeas = extractMarkdownSection5(content, "Deferred Ideas");
@@ -39716,56 +39809,68 @@ function validateDiscussPhaseContextAntiPatterns(content) {
     "Existing Code Insights",
     "Dependencies"
   ].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
   if (containsRawHandoffPacketLabel(content)) {
-    issues.push(
-      "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections."
-    );
+    diagnostics.push({
+      code: "context.raw_handoff_label",
+      message: "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
+      repair: "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
+    });
   }
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
-    issues.push(
-      "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
-    );
+    diagnostics.push({
+      code: "context.missing_canonical_reference",
+      message: "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
+      repair: "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
+    });
   }
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
-    issues.push(
-      "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
-    );
+    diagnostics.push({
+      code: "context.dropped_deferred_ideas",
+      message: "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
+      repair: "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
+    });
   }
   if (hasCarryForwardRiskSignal(deferredSourceSections) && !hasConcreteRiskCarryForward(deferredIdeas) && !hasConcreteRiskCarryForward(openQuestions)) {
-    issues.push(
-      "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas."
-    );
+    diagnostics.push({
+      code: "context.dropped_risk_carry_forward",
+      message: "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
+      repair: "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
+    });
   }
   if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
-    issues.push(
-      "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions."
-    );
+    diagnostics.push({
+      code: "context.dropped_open_questions",
+      message: "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
+      repair: "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
+    });
   }
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
     warnings.push(
       "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
     );
   }
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
-  const issues = [];
+  const diagnostics = [];
   const warnings = [];
   const followUps = extractMarkdownSection5(content, "Follow-Ups");
   const discussionSections = ["Summary", "Notes"].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
   if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
-    issues.push(
-      "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section."
-    );
+    diagnostics.push({
+      code: "discussion-log.dropped_follow_ups",
+      message: "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
+      repair: "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
+    });
   }
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
     warnings.push(
       "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
     );
   }
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 function isLegacyPhaseContextShell(content) {
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
@@ -39953,14 +40058,15 @@ function validatePhaseArtifactContent(content, artifact) {
       }
     }
     const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map(
-        (issue2) => phaseArtifactDiagnostic({
+      ...discussValidation.diagnostics.map(
+        (diagnostic) => phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "context.unsupported_claim",
-          message: issue2
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );
@@ -39968,14 +40074,15 @@ function validatePhaseArtifactContent(content, artifact) {
   }
   if (artifact === "discussion-log") {
     const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map(
-        (issue2) => phaseArtifactDiagnostic({
+      ...discussValidation.diagnostics.map(
+        (diagnostic) => phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "discussion-log.unsupported_claim",
-          message: issue2
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );

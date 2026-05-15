@@ -529,7 +529,7 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.doesNotMatch(contextContract.authoringTemplate, /<prior phase artifacts>/);
   assert.match(
     contextContract.authoringTemplate,
-    /use the exact sentinel `- none` when nothing remains open/i
+    /use the exact sentinel `- none` when nothing remains open or deferred/i
   );
   assert.doesNotMatch(contextContract.authoringTemplate, /<open question 1 or none>/);
   assert.match(contextContract.authoringTemplate, /## Deferred Ideas/);
@@ -563,6 +563,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     contextContract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
     "- none"
   );
+  assert.equal(
+    contextContract.sectionValidations?.["Deferred Ideas"]?.exactEmptySentinel,
+    "- none"
+  );
   assert.ok(contextContract.placeholderSignals.includes("<implementation decision 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<specific idea 1>"));
   assert.ok(contextContract.placeholderSignals.includes("<existing code insight 1>"));
@@ -572,7 +576,12 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.ok(contextContract.placeholderSignals.includes("<source 1>"));
   assert.ok(
     contextContract.modelContract?.qualityRules.some((rule) =>
-      /exact string `none` only when the section has no unresolved questions left/i.test(rule)
+      /empty array or the exact string `none` only when the section has no unresolved questions left/i.test(rule)
+    )
+  );
+  assert.ok(
+    contextContract.modelContract?.qualityRules.some((rule) =>
+      /Deferred ideas must list concrete carry-forward ideas/i.test(rule)
     )
   );
   assert.match(contextContract.notes.join("\n"), /Scaffold rendering is for first-write seeding/i);

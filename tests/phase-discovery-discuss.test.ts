@@ -57,6 +57,57 @@ function assertOrdered(content: string, orderedParts: readonly string[]) {
   }
 }
 
+function discussCheckpoint(areaQueue: Array<Record<string, unknown>>): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-discuss-phase",
+    mode: "discuss",
+    progress: {
+      activeStage: "Execute",
+      pendingGate: "gray-area-question",
+      executionMode: "discuss/resumed",
+      areasDecided: areaQueue.filter((area) => area.state === "decided").length,
+      areasTotal: areaQueue.length,
+      nextActionPreview: "Resume the next discuss-phase area"
+    },
+    areaQueue,
+    carryForward: {
+      phaseBoundary: [],
+      completedDecisions: [],
+      openQuestions: [],
+      deferredIdeas: [],
+      canonicalReferences: [],
+      contradictions: [],
+      doNotInferBeyond: []
+    },
+    readSet: [".blueprint/ROADMAP.md"]
+  };
+}
+
+function researchCheckpoint(): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-research-phase",
+    mode: "research",
+    researchLedger: {
+      schemaVersion: "research-ledger/v1",
+      strands: [
+        {
+          id: "S1",
+          type: "repo-map",
+          status: "blocked",
+          question: "Which recommendation should the research artifact preserve?"
+        }
+      ],
+      nextAction: {
+        stage: "Execute",
+        pendingGate: "research-continuation",
+        safeCommand: "/blu-research-phase 3"
+      }
+    }
+  };
+}
+
 async function createPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-discuss-phase-");
 
@@ -697,6 +748,38 @@ test("discuss-phase context validation rejects malformed Open Questions empty-st
   }
 });
 
+test("discuss-phase context validation accepts only exact Deferred Ideas none sentinel", () => {
+  const baseContext = buildValidDiscussContext("- none").replace(
+    "- Later follow-up: Reuse the same section-level pattern for future contracts only when needed.",
+    "- Implementation note: Keep section-level validation deterministic for current contracts."
+  );
+  const valid = validatePhaseArtifactContent(
+    baseContext.replace(
+      "## Deferred Ideas\n- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.\n- Ideas to revisit after this phase: Evaluate whether model-backed phase.context writes should also enforce the same sentinel semantics.",
+      "## Deferred Ideas\n- none"
+    ),
+    "context"
+  );
+
+  assert.equal(valid.valid, true, valid.issues.join("\n"));
+
+  for (const invalidSection of ["none", "- no deferred ideas currently", "- nothing deferred"]) {
+    const invalid = validatePhaseArtifactContent(
+      baseContext.replace(
+        "## Deferred Ideas\n- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.\n- Ideas to revisit after this phase: Evaluate whether model-backed phase.context writes should also enforce the same sentinel semantics.",
+        `## Deferred Ideas\n${invalidSection}`
+      ),
+      "context"
+    );
+
+    assert.equal(invalid.valid, false);
+    assert.match(invalid.issues.join("\n"), /Deferred Ideas/i);
+    assert.ok(
+      invalid.diagnostics.some((diagnostic) => diagnostic.code === "context.inexact_empty_sentinel")
+    );
+  }
+});
+
 test("discuss-phase context validation does not allow the none sentinel in other required sections", () => {
   const validation = validatePhaseArtifactContent(
     buildValidDiscussContext("- none").replace(
@@ -735,6 +818,26 @@ test("discuss-phase context write preserves the exact Open Questions none sentin
 
   assert.match(saved, /## Open Questions\n\n- none\n/);
   assert.doesNotMatch(saved, /None that block this phase|no open questions currently/i);
+});
+
+test("discuss-phase context write rejects deferredIdeas none alias in the structured model", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const writeResult = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({ deferredIdeas: ["none"] }),
+    overwrite: true
+  });
+
+  assert.equal(writeResult.status, "invalid");
+  assert.equal(writeResult.written, false);
+  assert.match(writeResult.validation.issues.join("\n"), /model\.deferredIdeas/i);
+  assert.match(writeResult.validation.issues.join("\n"), /Open Questions compatibility only/i);
 });
 
 test("discuss-phase context write replaces starter handoff packet with carried-forward model content", async (t) => {
@@ -826,21 +929,19 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   const checkpointCreated = await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: "3",
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: [],
-      remainingAreas: ["Scope boundaries", "UI expectations"],
-      decisions: [],
-      deferredIdeas: [],
-      canonicalReferences: [],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["Scope boundaries", "UI expectations"],
-        completedTopics: [],
-        notes: [],
-        updatedAt: "2026-04-11T00:00:00.000Z"
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "questioning",
+        currentQuestion: "What scope boundary should be settled first?"
+      },
+      {
+        areaId: "ui-expectations",
+        title: "UI expectations",
+        state: "unseen"
       }
-    }
+    ])
   });
   const checkpointResumed = await blueprintPhaseCheckpointGet({
     cwd: repoPath,
@@ -849,40 +950,24 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   const checkpointAreaRefreshed = await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: "3",
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Scope boundaries"],
-      remainingAreas: ["UI expectations"],
-      decisions: [
-        {
-          topic: "Scope boundaries",
-          decision: "Keep the discussion scoped to phase 3",
-          rationale: "Checkpoint per area for the discovery contract"
-        }
-      ],
-      deferredIdeas: [
-        {
-          idea: "Revisit UI expectations after the scope boundary recap",
-          revisitWhen: "After the next progress recap"
-        }
-      ],
-      canonicalReferences: [
-        {
-          label: "ROADMAP.md",
-          target: ".blueprint/ROADMAP.md",
-          note: "Phase discovery anchor"
-        }
-      ],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["UI expectations"],
-        completedTopics: ["Scope boundaries"],
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "decided",
+        decisionIds: ["D-scope-001"],
+        evidenceRefs: [".blueprint/ROADMAP.md"],
+        downstreamConsumers: ["/blu-research-phase", "/blu-plan-phase"]
+      },
+      {
+        areaId: "ui-expectations",
+        title: "UI expectations",
+        state: "questioning",
         currentQuestion: "What UI expectations still need input?",
-        notes: ["Resume after the progress recap"],
-        resumeHint: "Resume after the progress recap",
-        updatedAt: "2026-04-11T00:00:01.000Z"
+        questionWhyItMatters: "Controls whether UI-phase drafts UI work or skip rationale.",
+        evidenceRefs: [".blueprint/ROADMAP.md"]
       }
-    }
+    ])
   });
   const checkpointAreaLoaded = await blueprintPhaseCheckpointGet({
     cwd: repoPath,
@@ -957,18 +1042,16 @@ test("discuss-phase artifact flow seeds placeholders, persists real decisions, a
   assert.equal(checkpointCreated.updated, true);
   assert.equal(checkpointResumed.found, true);
   assert.equal(checkpointResumed.safeToResume, true);
-  assert.deepEqual(checkpointResumed.checkpoint?.resumeMeta?.pendingTopics, [
-    "Scope boundaries",
-    "UI expectations"
-  ]);
+  assert.equal(checkpointResumed.checkpoint?.schemaVersion, 2);
   assert.equal(checkpointAreaRefreshed.updated, true);
   assert.equal(checkpointAreaLoaded.found, true);
   assert.equal(checkpointAreaLoaded.ownerCommand, "/blu-discuss-phase");
   assert.equal(checkpointAreaLoaded.resumeMode, "discuss");
-  assert.deepEqual(checkpointAreaLoaded.checkpoint?.completedAreas, ["Scope boundaries"]);
-  assert.deepEqual(checkpointAreaLoaded.checkpoint?.resumeMeta?.completedTopics, ["Scope boundaries"]);
+  const loadedAreas = checkpointAreaLoaded.checkpoint?.areaQueue as Array<Record<string, unknown>>;
+  assert.equal(loadedAreas[0]?.state, "decided");
+  assert.equal(loadedAreas[1]?.state, "questioning");
   assert.equal(
-    checkpointAreaLoaded.checkpoint?.resumeMeta?.currentQuestion,
+    loadedAreas[1]?.currentQuestion,
     "What UI expectations still need input?"
   );
   assert.equal(contextWrite.written, true);
@@ -1046,32 +1129,25 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
     cwd: repoPath,
     phase: "3",
     checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Scope boundaries"],
-      remainingAreas: ["UI expectations"],
-      decisions: [
+      ...discussCheckpoint([
         {
-          topic: "Scope boundaries",
-          decision: "Keep checkpoint deletion gated on final state sync",
-          rationale: "The command should remain resumable if finalization fails"
-        }
-      ],
-      deferredIdeas: [],
-      canonicalReferences: [
+          areaId: "scope-boundaries",
+          title: "Scope boundaries",
+          state: "decided",
+          decisionIds: ["D-state-001"],
+          evidenceRefs: [".blueprint/STATE.md"]
+        },
         {
-          label: "STATE.md",
-          target: ".blueprint/STATE.md",
-          note: "Final routing state"
+          areaId: "ui-expectations",
+          title: "UI expectations",
+          state: "questioning",
+          currentQuestion: "What should resume after state sync is repaired?"
         }
-      ],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["UI expectations"],
-        completedTopics: ["Scope boundaries"],
-        currentQuestion: "What should resume after state sync is repaired?",
-        notes: ["Do not delete before synced state update and state load complete."],
-        resumeHint: "Repair STATE.md, then resume finalization.",
-        updatedAt: "2026-04-11T00:00:02.000Z"
+      ]),
+      progress: {
+        activeStage: "Route",
+        pendingGate: "state-sync-failure",
+        resumeHint: "Repair STATE.md, then resume finalization."
       }
     }
   });
@@ -1110,9 +1186,10 @@ test("discuss-phase keeps checkpoint when final synced state update fails", asyn
   });
 
   assert.equal(retained.found, true);
-  assert.deepEqual(retained.checkpoint?.completedAreas, ["Scope boundaries"]);
+  const retainedAreas = retained.checkpoint?.areaQueue as Array<Record<string, unknown>>;
+  assert.equal(retainedAreas[0]?.state, "decided");
   assert.equal(
-    retained.checkpoint?.resumeMeta?.resumeHint,
+    (retained.checkpoint?.progress as Record<string, unknown>)?.resumeHint,
     "Repair STATE.md, then resume finalization."
   );
 });
@@ -1126,38 +1203,20 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: "3",
-    checkpoint: {
-      ownerCommand: "/blu-discuss-phase",
-      completedAreas: ["Scope boundaries"],
-      remainingAreas: ["Plan inventory warning"],
-      decisions: [
-        {
-          topic: "Scope boundaries",
-          decision: "Keep validation repair resumable",
-          rationale: "The checkpoint must survive a failed artifact repair attempt."
-        }
-      ],
-      deferredIdeas: [
-        {
-          idea: "Revisit plan inventory after context repair",
-          revisitWhen: "After the validation issues are fixed"
-        }
-      ],
-      canonicalReferences: [
-        {
-          label: "ROADMAP.md",
-          target: ".blueprint/ROADMAP.md"
-        }
-      ],
-      resumeMeta: {
-        mode: "discuss",
-        pendingTopics: ["Plan inventory warning"],
-        completedTopics: ["Scope boundaries"],
-        currentQuestion: "Which warning must be preserved in repaired context?",
-        notes: ["Validation repair is still in progress."],
-        updatedAt: "2026-04-20T00:00:00.000Z"
+    checkpoint: discussCheckpoint([
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "decided",
+        decisionIds: ["D-validation-001"]
+      },
+      {
+        areaId: "plan-inventory-warning",
+        title: "Plan inventory warning",
+        state: "questioning",
+        currentQuestion: "Which warning must be preserved in repaired context?"
       }
-    }
+    ])
   });
 
   const invalidContext = await blueprintPhaseArtifactWrite({
@@ -1179,8 +1238,14 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   assert.equal(invalidContext.status, "invalid");
   assert.equal(invalidContext.written, false);
   assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
+  assert.ok(
+    invalidContext.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
   assert.equal(retained.found, true);
-  assert.deepEqual(retained.checkpoint?.remainingAreas, ["Plan inventory warning"]);
+  const validationAreas = retained.checkpoint?.areaQueue as Array<Record<string, unknown>>;
+  assert.equal(validationAreas[1]?.title, "Plan inventory warning");
 });
 
 test("discuss-phase context validation blocks dropped deferred risks from starter handoff", () => {
@@ -1198,6 +1263,11 @@ test("discuss-phase context validation blocks dropped deferred risks from starte
   );
 
   assert.equal(validation.valid, false);
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "context.dropped_risk_carry_forward"
+    )
+  );
   assert.match(
     validation.issues.join("\n"),
     /deferred risks or consequence-if-wrong notes[\s\S]*Open Questions or Deferred Ideas/i
@@ -1214,6 +1284,9 @@ test("discuss-phase context validation blocks verbatim starter handoff packet co
   );
 
   assert.equal(validation.valid, false);
+  assert.ok(
+    validation.diagnostics.some((diagnostic) => diagnostic.code === "context.raw_handoff_label")
+  );
   assert.match(
     validation.issues.join("\n"),
     /raw starter or handoff packet headings\/labels/i
@@ -1282,6 +1355,20 @@ test("discuss-phase discussion-log validation blocks dropped follow-ups and mode
   assert.equal(invalidDiscussion.status, "invalid");
   assert.match(invalidDiscussion.validation.issues.join("\n"), /chain mode/i);
   assert.match(invalidDiscussion.validation.issues.join("\n"), /Follow-Ups section/i);
+  assert.ok(
+    invalidDiscussion.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
+  assert.ok(
+    invalidDiscussion.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discussion-log.dropped_follow_ups"
+    )
+  );
+  assert.match(
+    invalidDiscussion.suggestedRepairs?.join("\n") ?? "",
+    /Remove shipped\/available claims[\s\S]*Move deferred or later follow-up ideas/i
+  );
 });
 
 test("discuss-phase checkpoint reads flag research-owned continuation state as unsafe", async (t) => {
@@ -1293,33 +1380,7 @@ test("discuss-phase checkpoint reads flag research-owned continuation state as u
   await blueprintPhaseCheckpointPut({
     cwd: repoPath,
     phase: "3",
-    checkpoint: {
-      ownerCommand: "/blu-research-phase",
-      completedAreas: ["Dependency scan"],
-      remainingAreas: ["Recommendation synthesis"],
-      decisions: [
-        {
-          topic: "Research strand",
-          decision: "Continue bounded research before drafting",
-          rationale: "The evidence pass is not complete enough for the research artifact."
-        }
-      ],
-      deferredIdeas: [],
-      canonicalReferences: [
-        {
-          label: "Context",
-          target: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
-        }
-      ],
-      resumeMeta: {
-        mode: "research",
-        pendingTopics: ["Recommendation synthesis"],
-        completedTopics: ["Dependency scan"],
-        currentQuestion: "Which recommendation should the research artifact preserve?",
-        notes: ["This is research continuation state, not discuss-phase state."],
-        updatedAt: "2026-04-19T00:00:03.000Z"
-      }
-    }
+    checkpoint: researchCheckpoint()
   });
 
   const checkpoint = await blueprintPhaseCheckpointGet({
@@ -1337,7 +1398,7 @@ test("discuss-phase checkpoint reads flag research-owned continuation state as u
   assert.match(checkpoint.warnings.join("\n"), /not "discuss"/i);
 });
 
-test("discuss-phase checkpoint reads warn instead of crashing on legacy foreign checkpoints", async (t) => {
+test("discuss-phase checkpoint reads legacy foreign checkpoints as non-resumable evidence", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1372,8 +1433,53 @@ test("discuss-phase checkpoint reads warn instead of crashing on legacy foreign 
   assert.equal(checkpoint.ownerCommand, null);
   assert.equal(checkpoint.resumeMode, "research");
   assert.equal(checkpoint.safeToResume, false);
-  assert.match(checkpoint.warnings.join("\n"), /legacy checkpoint/i);
+  assert.match(checkpoint.warnings.join("\n"), /not a valid checkpoint v2 object/i);
+  assert.match(checkpoint.warnings.join("\n"), /non-resumable legacy checkpoint evidence/i);
   assert.match(checkpoint.warnings.join("\n"), /not "discuss"/i);
+});
+
+test("discuss-phase checkpoint reads legacy resumeMeta mode evidence without treating it as resumable", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const checkpointPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json"
+  );
+  await writeFile(
+    checkpointPath,
+    `${JSON.stringify(
+      {
+        resumeMeta: {
+          mode: "research",
+          currentQuestion: "Which source remains unverified?"
+        },
+        pendingTopics: ["Recommendation synthesis"],
+        updatedAt: "2026-04-19T00:00:04.000Z"
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+
+  const checkpoint = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-discuss-phase",
+    expectedMode: "discuss"
+  });
+
+  assert.equal(checkpoint.found, true);
+  assert.equal(checkpoint.ownerCommand, null);
+  assert.equal(checkpoint.resumeMode, "research");
+  assert.equal(checkpoint.safeToResume, false);
+  assert.match(checkpoint.warnings.join("\n"), /not a valid checkpoint v2 object/i);
+  assert.match(checkpoint.warnings.join("\n"), /non-resumable legacy checkpoint evidence/i);
+  assert.match(checkpoint.warnings.join("\n"), /not "discuss"/i);
+  assert.doesNotMatch(checkpoint.warnings.join("\n"), /does not declare a resumable mode/i);
 });
 
 test("checkpoint persistence rejects unknown resume modes and owner-mode mismatches", async (t) => {
@@ -1383,19 +1489,19 @@ test("checkpoint persistence rejects unknown resume modes and owner-mode mismatc
   });
 
   const baseCheckpoint = {
+    schemaVersion: 2,
     ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-04-19T00:00:05.000Z"
-    }
+    mode: "discuss",
+    progress: {},
+    areaQueue: [
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "questioning"
+      }
+    ],
+    carryForward: {},
+    readSet: []
   };
 
   await assert.rejects(
@@ -1404,13 +1510,10 @@ test("checkpoint persistence rejects unknown resume modes and owner-mode mismatc
       phase: "3",
       checkpoint: {
         ...baseCheckpoint,
-        resumeMeta: {
-          ...baseCheckpoint.resumeMeta,
-          mode: "sidequest"
-        }
+        mode: "sidequest"
       } as Parameters<typeof blueprintPhaseCheckpointPut>[0]["checkpoint"]
     }),
-    /Invalid option|structured discuss checkpoint/i
+    /Invalid option|structured checkpoint v2/i
   );
 
   await assert.rejects(
@@ -1422,6 +1525,6 @@ test("checkpoint persistence rejects unknown resume modes and owner-mode mismatc
         ownerCommand: "/blu-research-phase"
       } as Parameters<typeof blueprintPhaseCheckpointPut>[0]["checkpoint"]
     }),
-    /must use resumeMeta\.mode "research"/i
+    /structured checkpoint v2/i
   );
 });
