@@ -36,7 +36,7 @@ Both simulations exercised `blueprint_review_scope`, `blueprint_review_validate_
 
 ## Findings
 
-### High: `evidenceCoverage` failures are overly noisy for a single authoring slip
+### High: `evidenceCoverage` failures are overly noisy for a single authoring slip (FIXME:)
 
 Both simulations hit a common mistake: missing, invented, or incomplete evidence keys. The narrowed task schema already requires exact known evidence keys and bans extras, but residual validation reports missing and unknown evidence again. One simulation saw eight evidence-related diagnostics from one root issue, and another saw awkward paths such as `model.evidenceCoverage..blueprint/...`.
 
@@ -58,7 +58,7 @@ Evidence:
 
 Why it matters: this can persist a review artifact whose next action short-circuits the intended post-review security gate. That is more than authoring friction; it is a route-contract mismatch.
 
-### Medium: A model can validate cleanly and still fail record because `scopeSource` is outside the model
+### Medium: A model can validate cleanly and still fail record because `scopeSource` is outside the model (FIXME:)
 
 Both simulations produced a valid structured review model, then failed `blueprint_review_record` because `scopeFiles` was supplied without `scopeSource`. The field must be copied from `blueprint_review_scope.reviewMode.source`, but it is not part of the validated model.
 
@@ -70,7 +70,7 @@ Evidence:
 
 Why it matters: this is a sharp second-stage gotcha. The model can pass validation and still be unrecordable because a required persistence argument lives outside the model validation surface.
 
-### Medium: Exhaustive evidence coverage can encourage filler
+### Medium: Exhaustive evidence coverage can encourage filler (FIXME:)
 
 The task schema requires a model-authored `evidenceCoverage` entry for every known evidence artifact. In small fixtures this was manageable; in larger phases this can push the model to write rationales for artifacts it barely used.
 
@@ -80,7 +80,7 @@ Evidence:
 
 Why it matters: full traceability is good, but forcing model-authored prose for every artifact risks ceremonial filler. MCP already knows the inventory and could render untouched evidence as not-reviewed or irrelevant.
 
-### Medium: First-pass diagnostics duplicate schema and residual failures
+### Medium: First-pass diagnostics duplicate schema and residual failures (FIXME:)
 
 One plausible first-pass model generated 18 diagnostics. Several root issues appeared twice: `schema.required` plus `residual.evidence_missing`, `schema.pattern` plus `residual.location_out_of_scope`, and `schema.enum` plus `residual.next_action_unimplemented`.
 
@@ -90,7 +90,7 @@ Evidence:
 
 Why it matters: the checks are mostly correct, but duplicate reporting makes the repair loop look worse than the actual problem.
 
-### Medium: Plan-shape warnings leak into successful review generation
+### Medium: Plan-shape warnings leak into successful review generation (FIXME: take a look at warnings, i think we should get rid of them)
 
 One simulation used plan frontmatter that was sufficient for scope derivation, but `blueprint_review_scope`, validation, and record carried a long warning list about missing full plan sections. The warnings did not affect review artifact creation.
 
