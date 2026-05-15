@@ -2,6 +2,8 @@
 
 ## Scope
 
+`status`: `implemented`
+
 Workflow simulated: `/blu-new-project`
 
 Simulation focus: realistic first-write bootstrap artifact generation through the real MCP save path, including retries when generated data fails validation.

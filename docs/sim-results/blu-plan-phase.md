@@ -2,6 +2,8 @@
 
 ## Scope
 
+`status`: `implemented`
+
 Workflow simulated: `/blu-plan-phase`
 
 Simulation focus: realistic structured `phase.plan` model generation through the real authoring context, model validation, strict write, final plan-set validation, overwrite/reuse behavior, readiness gating, and synced state update.
