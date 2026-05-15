@@ -2,6 +2,8 @@
 
 ## Scope
 
+`status`: `implemented`
+
 Workflow simulated: `/blu-discuss-phase`
 
 Simulation focus: realistic phase context generation through the real MCP write path, with optional discussion-log
