@@ -924,6 +924,21 @@ test("phase artifact writes reject context Markdown fallback and validate freeha
     invalidUiContractMissingSections.validation?.issues.join("\n") ?? "",
     /missing required contract sections/i
   );
+  assert.ok(
+    invalidUiContractMissingSections.validation?.diagnostics.every(
+      (diagnostic) =>
+        diagnostic.code !== "ui-spec.missing_required_section" ||
+        /Outcome Mode already selects UI contract/i.test(diagnostic.repair ?? "")
+    )
+  );
+  assert.doesNotMatch(
+    invalidUiContractMissingSections.suggestedRepairs?.join("\n") ?? "",
+    /explicit UI skip rationale|switching modes/i
+  );
+  assert.match(
+    invalidUiContractMissingSections.suggestedRepairs?.join("\n") ?? "",
+    /substantive UI-contract detail/i
+  );
   assert.equal(invalidUiSpecPlaceholder.status, "invalid");
   assert.match(
     invalidUiSpecPlaceholder.validation?.issues.join("\n") ?? "",
