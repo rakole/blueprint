@@ -82,6 +82,8 @@ test("ui-review manifest references the review tools, UI auditor, and safe routi
   assert.match(commandFile, /overall score out of 24/);
   assert.match(commandFile, /no-subagent fallback/);
   assert.match(commandFile, /repair the model once against `review\.ui-review`/);
+  assert.match(commandFile, /minimal explicit skip rationale/i);
+  assert.match(commandFile, /do not misread the skip form as a malformed contract/i);
   assert.match(commandFile, /XX-UI-REVIEW\.md/);
   assert.match(commandFile, /\/blu-execute-phase/);
   assert.match(commandFile, /\/blu-validate-phase/);
@@ -152,6 +154,8 @@ test("ui-review runtime contract captures rich artifact authoring and recovery",
   assert.match(runtimeContract, /overall score out of 24/);
   assert.match(runtimeContract, /Capability-Gated Subagent Path/);
   assert.match(runtimeContract, /No-Subagent Fallback/);
+  assert.match(runtimeContract, /first-class valid artifact shape/i);
+  assert.match(runtimeContract, /do not misread the skip form as a\s+malformed contract/i);
   assert.match(runtimeContract, /audit one pillar at a time/i);
   assert.match(runtimeContract, /Browser-only, web-search-only, shell-only, or generic helpers/);
   assert.match(runtimeContract, /Invalid UI-review model or write/);

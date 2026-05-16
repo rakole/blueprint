@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`ui-review` is Blueprint's command for retroactive 6-pillar visual audit of implemented frontend code. Blueprint ships it as a phase-scoped UI audit command: it grounds the review in saved execution evidence plus the saved `XX-UI-SPEC.md` contract when present, can delegate bounded visual analysis to a dedicated UI auditor, and persists the finished result through the shared review MCP tool instead of prompt-only file writes.
+`ui-review` is Blueprint's command for retroactive 6-pillar visual audit of implemented frontend code. Blueprint ships it as a phase-scoped UI audit command: it grounds the review in saved execution evidence plus the saved `XX-UI-SPEC.md` artifact when present, treats that artifact as either a real UI contract or an intentional minimal explicit skip rationale, can delegate bounded visual analysis to a dedicated UI auditor, and persists the finished result through the shared review MCP tool instead of prompt-only file writes.
 
 
 ## Command Path And Examples
@@ -155,7 +155,7 @@
 
 - Produces a durable artifact for review, security, UI, or shipping work.
 - Non-trivial ui-review runs use the shared long-running-mutation posture with visible stage and status fields.
-- Grounds the audit in saved execution evidence and the UI contract when available.
+- Grounds the audit in saved execution evidence and the UI artifact when available, including the minimal explicit skip-rationale form of `XX-UI-SPEC.md`.
 - Uses the schema-first `review.ui-review` model contract, narrowed task schema, and `blueprint_review_validate_model` before persistence or repair.
 - Produces scored six-pillar evidence, an overall `/24` score, and top priority fixes or explicit pass evidence.
 - Provides a capability-gated `blueprint-ui-auditor` path and a clear one-pillar-at-a-time no-subagent fallback.
