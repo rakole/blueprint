@@ -249,7 +249,7 @@ Quality rules for `XX-RESEARCH.md`:
   into tasks.
 - `## Claim Support Ledger`, when present, is the planner-critical claim ledger. Use columns `Claim ID`, `Claim`, `Claim Type`, `Evidence IDs`, `Support Status`, `Confidence`, and `Plan Impact`. Valid claim types are `repo_runtime`, `external_practice`, `dependency_tool`, `inference`, and `open_question`. Valid support statuses are `directly_supported`, `partially_supported`, `inferred_from_supported`, `contradicted`, `conflicting_sources`, `not_enough_evidence`, and `out_of_scope`.
 - `## Recommendations` should include a `Recommendation Handoff` table for planner-critical recommendations. Use columns `Recommendation ID`, `Recommendation`, `Supporting Claim IDs`, `Evidence IDs`, `Affected Surfaces`, `Tests / Checks`, and `Status`. A recommendation is planner-ready only when it cites supporting claim IDs or evidence IDs, names affected repo or contract surfaces, and names tests/checks, or when `Status` says `blocked` and points to a named open question.
-- Legacy non-table claim-addressable provenance remains valid when the artifact otherwise satisfies the current contract. It is good enough when planner-critical claims still include stable claim/evidence/source IDs, support status, source lane, and downstream use in nearby prose or the existing `Repo Evidence`, `External Sources`, and `Inference Notes` tables. It should receive warning diagnostics when those IDs cannot be connected, when recommendations lack affected surfaces or tests/checks, or when repo-runtime and external-source policy claims cannot be traced.
+- Legacy non-table claim-addressable provenance remains valid when the artifact otherwise satisfies the current contract. It is good enough when planner-critical claims still include stable claim/evidence/source IDs, support status, source lane, and downstream use in nearby prose or the existing `Repo Evidence`, `External Sources`, and `Inference Notes` tables. Post-write warnings are intentionally narrow: they should focus on planner-handoff gaps, repo-runtime grounding gaps, live external-verification honesty, and overconfident unsupported claims rather than every missing quality hint.
 - Each planner-critical recommendation should be traceable to a strand handoff
   that names affected files or modules, validation or test implications,
   unresolved blockers, evidence basis, and confidence.
@@ -1111,24 +1111,15 @@ These checks prove traceability shape and planner handoff completeness. They do 
 
 Warning diagnostic codes introduced by this slice:
 
-- `research.external_source_missing_access_date`
-- `research.source_id_missing`
-- `research.source_id_missing_from_register`
-- `research.evidence_id_missing_from_sources`
-- `research.evidence_missing_source_register_link`
-- `research.claim_missing_evidence`
 - `research.repo_runtime_claim_missing_repo_evidence`
 - `research.repo_runtime_claim_retrieval_partial`
-- `research.source_id_orphaned`
 - `research.recommendation_missing_evidence`
-- `research.recommendation_claim_id_missing_from_ledger`
 - `research.recommendation_missing_affected_surfaces`
 - `research.recommendation_missing_validation_signal`
-- `research.recommendation_handoff_missing`
 - `research.live_external_claim_without_evidence`
 - `research.high_confidence_unsupported`
 
-If the self-check fails but the legacy artifact structure is otherwise valid, lower confidence, add or update `## Open Questions`, and expect MCP validation to return research evidence warning diagnostics rather than a strict invalid result.
+If the self-check fails but the legacy artifact structure is otherwise valid, lower confidence, add or update `## Open Questions`, and expect MCP validation to reserve warnings for those narrow honesty and planner-handoff backstops rather than restating every authoring instruction.
 
 ## Retry And Repair Behavior
 

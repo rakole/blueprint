@@ -3552,34 +3552,6 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
   const claimRows = collectResearchClaimRows(content);
   const recommendationRows = collectResearchRecommendationRows(content);
   const sourceIds = new Set(sourceRowsById.keys());
-  const evidenceIds = new Set(evidenceRowsById.keys());
-  const claimIds = new Set(claimRows.map((row) => row.claim_id).filter((id) => id.length > 0));
-  const usedSourceIds = new Set<string>();
-
-  for (const line of sourceLinesWithUrlsMissingAccessDate(sources)) {
-    diagnostics.push(
-      researchEvidenceWarningDiagnostic({
-        code: "research.external_source_missing_access_date",
-        heading: "Sources",
-        message: `Research artifact external source row is missing an access date: ${line}`,
-        repair: "Add an Accessed value in YYYY-MM-DD form, or mark the source supplied-unchecked and do not use it as current evidence."
-      })
-    );
-  }
-
-  for (const row of sourceRows) {
-    const sourceId = sourceRegisterRowId(row);
-    if (!sourceId) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.source_id_missing",
-          heading: "Sources",
-          message: "Research artifact Source Register rows should include a stable Source ID.",
-          repair: "Add a Source ID such as SRC-001 to every Source Register row used by claims or recommendations."
-        })
-      );
-    }
-  }
 
   for (const row of claimRows) {
     const supportStatus = row.support_status || row.claim_class || "";
@@ -3591,59 +3563,6 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
       ...citedEvidenceIds.flatMap((id) => resolveEvidenceSourceIds(id, evidenceRowsById))
     ]);
     const existingResolvedSourceIds = resolvedSourceIds.filter((id) => sourceIds.has(id));
-
-    for (const id of existingResolvedSourceIds) {
-      usedSourceIds.add(id);
-    }
-
-    if (
-      existingResolvedSourceIds.length === 0 &&
-      !/\b(?:not_enough_evidence|out_of_scope)\b/i.test(supportStatus)
-    ) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.claim_missing_evidence",
-          heading: "Claim Support Ledger",
-          message: "Research artifact planner-critical claim rows should cite at least one evidence ID that resolves to a Source Register row, or explicitly mark missing evidence.",
-          repair: "Add EVID-* rows that resolve to Source Register rows, add direct SRC-* support, or set Support Status to not_enough_evidence or out_of_scope."
-        })
-      );
-    }
-
-    for (const id of directSourceIds) {
-      if (!sourceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.source_id_missing_from_register",
-            heading: "Claim Support Ledger",
-            message: `Research artifact claim cites ${id}, but ${id} is not present in the Source Register.`,
-            repair: "Add the cited source to the Source Register or change the claim evidence IDs to existing sources."
-          })
-        );
-      }
-    }
-
-    for (const id of citedEvidenceIds) {
-      if (!evidenceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_id_missing_from_sources",
-            heading: "Claim Support Ledger",
-            message: `Research artifact claim cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
-            repair: "Add the cited evidence row or change the claim evidence IDs to existing evidence."
-          })
-        );
-      } else if (resolveEvidenceSourceIds(id, evidenceRowsById).filter((sourceId) => sourceIds.has(sourceId)).length === 0) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_missing_source_register_link",
-            heading: "Sources",
-            message: `Research artifact evidence row ${id} does not resolve to any Source Register row.`,
-            repair: "Set Source Ref or Derived From to an existing SRC-* row, or mark the evidence as unsupported."
-          })
-        );
-      }
-    }
 
     if ((row.claim_type || "").trim() === "repo_runtime") {
       const repoSourceIds = existingResolvedSourceIds.filter((id) => {
@@ -3681,25 +3600,6 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
     }
   }
 
-  for (const row of sourceRows) {
-    const sourceId = sourceRegisterRowId(row);
-
-    if (
-      sourceId &&
-      !usedSourceIds.has(sourceId) &&
-      !isBackgroundSourceUse(row.used_for_claims || row.downstream_use || row.limitations || "")
-    ) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.source_id_orphaned",
-          heading: "Sources",
-          message: `Research artifact Source Register row ${sourceId} is not used by a claim and is not labeled background.`,
-          repair: "Use the source from a claim row, remove it, or label it background or do not use as support."
-        })
-      );
-    }
-  }
-
   for (const row of recommendationRows) {
     if (!row.recommendation_id && !row.recommendation) {
       continue;
@@ -3724,43 +3624,6 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
       );
     }
 
-    for (const id of recommendationEvidenceIds) {
-      if (id.startsWith("SRC-") && !sourceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.source_id_missing_from_register",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Source Register.`,
-            repair: "Add the cited source to the Source Register or change the recommendation evidence IDs to existing sources."
-          })
-        );
-      }
-
-      if (id.startsWith("EVID-") && !evidenceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_id_missing_from_sources",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
-            repair: "Add the cited evidence row or change the recommendation evidence IDs to existing evidence."
-          })
-        );
-      }
-    }
-
-    for (const id of supportingClaims.filter((candidate) => candidate.startsWith("CLM-"))) {
-      if (claimIds.size > 0 && !claimIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.recommendation_claim_id_missing_from_ledger",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Claim Support Ledger.`,
-            repair: "Add the claim to the Claim Support Ledger or change the recommendation to cite an existing claim."
-          })
-        );
-      }
-    }
-
     if (!row.affected_surfaces?.trim() && !/\bblocked\b/i.test(status)) {
       diagnostics.push(
         researchEvidenceWarningDiagnostic({
@@ -3782,17 +3645,6 @@ function researchEvidenceWarningDiagnostics(content: string): PhaseArtifactValid
         })
       );
     }
-  }
-
-  if (!/### Recommendation Handoff/i.test(extractMarkdownSection(content, "Recommendations"))) {
-    diagnostics.push(
-      researchEvidenceWarningDiagnostic({
-        code: "research.recommendation_handoff_missing",
-        heading: "Recommendations",
-        message: "Research artifact should include a Recommendation Handoff table for planner-critical recommendations.",
-        repair: "Add a Recommendation Handoff table with recommendation IDs, supporting claims/evidence, affected surfaces, tests/checks, and status."
-      })
-    );
   }
 
   if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
@@ -4251,82 +4103,6 @@ export function validateResearchArtifactContent(content: string): {
           "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
       })
     );
-  }
-
-  const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
-
-  if (externalSourceLinesMissingAccessDate.length > 0) {
-    warnings.push(
-      "Research artifact external source rows should include `accessed YYYY-MM-DD` for every URL or DOI used as current evidence."
-    );
-  }
-
-  if (!hasClaimAddressableSourceSections(sources)) {
-    warnings.push(
-      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for claim-addressable provenance."
-    );
-  }
-
-  if (!hasClaimAddressableEvidence(sources)) {
-    warnings.push(
-      "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
-    );
-  }
-
-  if (usesLiveVerificationLanguageWithoutExternalEvidence(normalizedContent)) {
-    warnings.push(
-      "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
-    );
-  }
-
-  if (hasHighConfidenceWithUnsupportedEvidenceClaims(normalizedContent)) {
-    warnings.push(
-      "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
-    );
-  }
-
-  if (mentionsDependencyOrToolChoice(normalizedContent)) {
-    if (!hasDependencyToolEvaluationTable(normalizedContent)) {
-      warnings.push(
-        "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
-      );
-    }
-
-    if (!hasDependencyAlternativesCoverage(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
-      );
-    }
-
-    if (!hasDependencySetupAndUpdatePosture(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
-      );
-    }
-
-    if (!hasLibraryVsCustomDecision(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
-      );
-    }
-
-    if (!hasSupplyChainEvidenceSource(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
-      );
-    }
-  }
-
-  if (mentionsUnsafeAutomaticDependencyRemediation(normalizedContent)) {
-    warnings.push(
-      "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
-    );
-  }
-
-  const codeExamples = extractMarkdownSection(normalizedContent, "Code Examples");
-
-  if (!/```/.test(codeExamples)) {
-    warnings.push("Research artifact should include a fenced code or pseudocode example when examples add value.");
   }
 
   const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);

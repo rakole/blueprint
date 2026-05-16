@@ -38504,58 +38504,6 @@ function containsSourceEvidence(section) {
   const repoRootFileReference = /(?:^|[\s([`])(?:AGENTS\.md|MEMORY\.md|PROGRESS\.md|README\.md|gemini-extension\.json|package(?:-lock)?\.json|tabnine-extension\.json|tsconfig\.json)\b/m;
   return /\bhttps?:\/\/[^\s)]+/.test(section) || repoDirectoryReference.test(section) || repoRootFileReference.test(section);
 }
-function researchDependencyChoiceText(content) {
-  return [
-    extractMarkdownSection5(content, "Phase Requirements"),
-    extractMarkdownSection5(content, "Summary"),
-    extractMarkdownSection5(content, "Standard Stack"),
-    extractMarkdownSection5(content, "Installation And Setup"),
-    extractMarkdownSection5(content, "Alternatives Considered"),
-    extractMarkdownSection5(content, "Don't Hand-Roll"),
-    extractMarkdownSection5(content, "Recommendations")
-  ].join("\n");
-}
-function hasResearchTableCoverage(content, descriptor) {
-  const section = extractMarkdownSection5(content, descriptor.sectionHeading);
-  return descriptor.requiredPatterns.every((pattern) => pattern.test(section));
-}
-function mentionsDependencyOrToolChoice(content) {
-  const candidateText = researchDependencyChoiceText(content);
-  const installArguments = Array.from(
-    candidateText.matchAll(new RegExp(RESEARCH_INSTALL_COMMAND_PATTERN.source, "gi")),
-    (match) => match[1]?.trim().toLowerCase() ?? ""
-  );
-  return RESEARCH_DEPENDENCY_CHOICE_PATTERN.test(candidateText) || installArguments.some(
-    (installArgument) => installArgument.length > 0 && !RESEARCH_GENERIC_INSTALL_ARGUMENTS.has(installArgument)
-  );
-}
-function hasDependencyToolEvaluationTable(content) {
-  return hasResearchTableCoverage(content, DEPENDENCY_TOOL_EVALUATION_COVERAGE);
-}
-function hasDependencyAlternativesCoverage(content) {
-  return hasResearchTableCoverage(content, DEPENDENCY_ALTERNATIVES_COVERAGE);
-}
-function hasDependencySetupAndUpdatePosture(content) {
-  return hasResearchTableCoverage(content, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE);
-}
-function hasLibraryVsCustomDecision(content) {
-  return hasResearchTableCoverage(content, LIBRARY_VS_CUSTOM_DECISION_COVERAGE);
-}
-function hasSupplyChainEvidenceSource(content) {
-  const sources = extractMarkdownSection5(content, "Sources");
-  return /Supply Chain Evidence/i.test(sources) && /signal=<version\|maintenance\|vulnerability\|license\|provenance\|transitive\|update>/.test(sources) === false && /\bsignal=(?:version|maintenance|vulnerability|license|provenance|transitive|update)\b/i.test(sources);
-}
-function sourceLinesWithUrlsMissingAccessDate(sources) {
-  return sources.split("\n").map((line) => line.trim()).filter((line) => /https?:\/\/|doi\.org\//i.test(line)).filter((line) => !RESEARCH_ACCESS_DATE_SIGNAL_PATTERN.test(line));
-}
-function hasClaimAddressableSourceSections(sources) {
-  return /### Repo Evidence/i.test(sources) && /### External Sources/i.test(sources) && /### Inference Notes/i.test(sources);
-}
-function hasClaimAddressableEvidence(sources) {
-  return /\b(?:Evidence ID|evidence_id)\b/i.test(sources) && /\b(?:Claim ID|claim_id)\b/i.test(sources) && /\b(?:directly_supported|partially_supported|inferred_from_supported|contradicted|conflicting_sources|not_enough_evidence|out_of_scope)\b/i.test(
-    sources
-  );
-}
 function hasPlannerRelevantDownstreamUse(value) {
   const normalized = value.trim();
   return normalized.length > 0 && !isBackgroundSourceUse(normalized) && !/\b(?:do not use|not used)\b[\s\S]{0,60}\bsupport\b/i.test(normalized);
@@ -38788,32 +38736,6 @@ function researchEvidenceWarningDiagnostics(content) {
   const claimRows = collectResearchClaimRows(content);
   const recommendationRows = collectResearchRecommendationRows(content);
   const sourceIds = new Set(sourceRowsById.keys());
-  const evidenceIds = new Set(evidenceRowsById.keys());
-  const claimIds = new Set(claimRows.map((row) => row.claim_id).filter((id) => id.length > 0));
-  const usedSourceIds = /* @__PURE__ */ new Set();
-  for (const line of sourceLinesWithUrlsMissingAccessDate(sources)) {
-    diagnostics.push(
-      researchEvidenceWarningDiagnostic({
-        code: "research.external_source_missing_access_date",
-        heading: "Sources",
-        message: `Research artifact external source row is missing an access date: ${line}`,
-        repair: "Add an Accessed value in YYYY-MM-DD form, or mark the source supplied-unchecked and do not use it as current evidence."
-      })
-    );
-  }
-  for (const row of sourceRows) {
-    const sourceId = sourceRegisterRowId(row);
-    if (!sourceId) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.source_id_missing",
-          heading: "Sources",
-          message: "Research artifact Source Register rows should include a stable Source ID.",
-          repair: "Add a Source ID such as SRC-001 to every Source Register row used by claims or recommendations."
-        })
-      );
-    }
-  }
   for (const row of claimRows) {
     const supportStatus = row.support_status || row.claim_class || "";
     const citedIds = splitResearchReferenceIds(row.evidence_ids || row.source_ids || row.evidence || "");
@@ -38824,52 +38746,6 @@ function researchEvidenceWarningDiagnostics(content) {
       ...citedEvidenceIds.flatMap((id) => resolveEvidenceSourceIds(id, evidenceRowsById))
     ]);
     const existingResolvedSourceIds = resolvedSourceIds.filter((id) => sourceIds.has(id));
-    for (const id of existingResolvedSourceIds) {
-      usedSourceIds.add(id);
-    }
-    if (existingResolvedSourceIds.length === 0 && !/\b(?:not_enough_evidence|out_of_scope)\b/i.test(supportStatus)) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.claim_missing_evidence",
-          heading: "Claim Support Ledger",
-          message: "Research artifact planner-critical claim rows should cite at least one evidence ID that resolves to a Source Register row, or explicitly mark missing evidence.",
-          repair: "Add EVID-* rows that resolve to Source Register rows, add direct SRC-* support, or set Support Status to not_enough_evidence or out_of_scope."
-        })
-      );
-    }
-    for (const id of directSourceIds) {
-      if (!sourceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.source_id_missing_from_register",
-            heading: "Claim Support Ledger",
-            message: `Research artifact claim cites ${id}, but ${id} is not present in the Source Register.`,
-            repair: "Add the cited source to the Source Register or change the claim evidence IDs to existing sources."
-          })
-        );
-      }
-    }
-    for (const id of citedEvidenceIds) {
-      if (!evidenceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_id_missing_from_sources",
-            heading: "Claim Support Ledger",
-            message: `Research artifact claim cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
-            repair: "Add the cited evidence row or change the claim evidence IDs to existing evidence."
-          })
-        );
-      } else if (resolveEvidenceSourceIds(id, evidenceRowsById).filter((sourceId) => sourceIds.has(sourceId)).length === 0) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_missing_source_register_link",
-            heading: "Sources",
-            message: `Research artifact evidence row ${id} does not resolve to any Source Register row.`,
-            repair: "Set Source Ref or Derived From to an existing SRC-* row, or mark the evidence as unsupported."
-          })
-        );
-      }
-    }
     if ((row.claim_type || "").trim() === "repo_runtime") {
       const repoSourceIds = existingResolvedSourceIds.filter((id) => {
         const source = sourceRowsById.get(id);
@@ -38897,19 +38773,6 @@ function researchEvidenceWarningDiagnostics(content) {
       }
     }
   }
-  for (const row of sourceRows) {
-    const sourceId = sourceRegisterRowId(row);
-    if (sourceId && !usedSourceIds.has(sourceId) && !isBackgroundSourceUse(row.used_for_claims || row.downstream_use || row.limitations || "")) {
-      diagnostics.push(
-        researchEvidenceWarningDiagnostic({
-          code: "research.source_id_orphaned",
-          heading: "Sources",
-          message: `Research artifact Source Register row ${sourceId} is not used by a claim and is not labeled background.`,
-          repair: "Use the source from a claim row, remove it, or label it background or do not use as support."
-        })
-      );
-    }
-  }
   for (const row of recommendationRows) {
     if (!row.recommendation_id && !row.recommendation) {
       continue;
@@ -38926,40 +38789,6 @@ function researchEvidenceWarningDiagnostics(content) {
           repair: "Add Supporting Claim IDs or Evidence IDs, or mark the recommendation blocked with the open question that prevents planner-ready action."
         })
       );
-    }
-    for (const id of recommendationEvidenceIds) {
-      if (id.startsWith("SRC-") && !sourceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.source_id_missing_from_register",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Source Register.`,
-            repair: "Add the cited source to the Source Register or change the recommendation evidence IDs to existing sources."
-          })
-        );
-      }
-      if (id.startsWith("EVID-") && !evidenceIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.evidence_id_missing_from_sources",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in Repo Evidence, External Sources, or Inference Notes.`,
-            repair: "Add the cited evidence row or change the recommendation evidence IDs to existing evidence."
-          })
-        );
-      }
-    }
-    for (const id of supportingClaims.filter((candidate) => candidate.startsWith("CLM-"))) {
-      if (claimIds.size > 0 && !claimIds.has(id)) {
-        diagnostics.push(
-          researchEvidenceWarningDiagnostic({
-            code: "research.recommendation_claim_id_missing_from_ledger",
-            heading: "Recommendations",
-            message: `Research artifact recommendation cites ${id}, but ${id} is not present in the Claim Support Ledger.`,
-            repair: "Add the claim to the Claim Support Ledger or change the recommendation to cite an existing claim."
-          })
-        );
-      }
     }
     if (!row.affected_surfaces?.trim() && !/\bblocked\b/i.test(status)) {
       diagnostics.push(
@@ -38982,16 +38811,6 @@ function researchEvidenceWarningDiagnostics(content) {
       );
     }
   }
-  if (!/### Recommendation Handoff/i.test(extractMarkdownSection5(content, "Recommendations"))) {
-    diagnostics.push(
-      researchEvidenceWarningDiagnostic({
-        code: "research.recommendation_handoff_missing",
-        heading: "Recommendations",
-        message: "Research artifact should include a Recommendation Handoff table for planner-critical recommendations.",
-        repair: "Add a Recommendation Handoff table with recommendation IDs, supporting claims/evidence, affected surfaces, tests/checks, and status."
-      })
-    );
-  }
   if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
     diagnostics.push(
       researchEvidenceWarningDiagnostic({
@@ -39013,13 +38832,6 @@ function researchEvidenceWarningDiagnostics(content) {
     );
   }
   return diagnostics;
-}
-function mentionsUnsafeAutomaticDependencyRemediation(content) {
-  const candidateText = [
-    extractMarkdownSection5(content, "Installation And Setup"),
-    extractMarkdownSection5(content, "Recommendations")
-  ].join("\n");
-  return /\b(?:npm audit fix|OSV guided remediation|dependency-update PRs?)\b/i.test(candidateText) && !/\b(?:not automatically safe|manual review|review manifest and lockfile diffs|inspect release notes|inspect changelog|run tests)\b/i.test(candidateText);
 }
 function stripTripleFencedCodeBlocks(content) {
   const strippedLines = [];
@@ -39307,68 +39119,6 @@ function validateResearchArtifactContent(content) {
         repair: "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
       })
     );
-  }
-  const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
-  if (externalSourceLinesMissingAccessDate.length > 0) {
-    warnings.push(
-      "Research artifact external source rows should include `accessed YYYY-MM-DD` for every URL or DOI used as current evidence."
-    );
-  }
-  if (!hasClaimAddressableSourceSections(sources)) {
-    warnings.push(
-      "Research artifact should split ## Sources into ### Repo Evidence, ### External Sources, and ### Inference Notes for claim-addressable provenance."
-    );
-  }
-  if (!hasClaimAddressableEvidence(sources)) {
-    warnings.push(
-      "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
-    );
-  }
-  if (usesLiveVerificationLanguageWithoutExternalEvidence(normalizedContent)) {
-    warnings.push(
-      "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
-    );
-  }
-  if (hasHighConfidenceWithUnsupportedEvidenceClaims(normalizedContent)) {
-    warnings.push(
-      "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
-    );
-  }
-  if (mentionsDependencyOrToolChoice(normalizedContent)) {
-    if (!hasDependencyToolEvaluationTable(normalizedContent)) {
-      warnings.push(
-        "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
-      );
-    }
-    if (!hasDependencyAlternativesCoverage(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
-      );
-    }
-    if (!hasDependencySetupAndUpdatePosture(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
-      );
-    }
-    if (!hasLibraryVsCustomDecision(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
-      );
-    }
-    if (!hasSupplyChainEvidenceSource(normalizedContent)) {
-      warnings.push(
-        "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
-      );
-    }
-  }
-  if (mentionsUnsafeAutomaticDependencyRemediation(normalizedContent)) {
-    warnings.push(
-      "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
-    );
-  }
-  const codeExamples = extractMarkdownSection5(normalizedContent, "Code Examples");
-  if (!/```/.test(codeExamples)) {
-    warnings.push("Research artifact should include a fenced code or pseudocode example when examples add value.");
   }
   const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
   for (const diagnostic of warningDiagnostics) {
@@ -47244,7 +46994,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -47656,73 +47406,7 @@ var init_artifacts = __esm({
       "milestone-complete-",
       "milestone-summary-"
     ];
-    RESEARCH_DEPENDENCY_CHOICE_PATTERN = /\b(?:add|adopt|introduce|install|select|choose|recommend|replace|upgrade|vendor|fork|hand-roll|hand roll|code-generate|code generate)\b[\s\S]{0,160}\b(?:package|dependency|library|framework|cli|service|code generator|code-generation|tool|package-manager|parser|protocol client)\b/i;
-    RESEARCH_INSTALL_COMMAND_PATTERN = /\b(?:npm install|npm add|pnpm add|yarn add|bun add|pip install|cargo add|go get|brew install)\s+([^\s`"'|]+)\b/i;
-    RESEARCH_GENERIC_INSTALL_ARGUMENTS = /* @__PURE__ */ new Set([
-      "after",
-      "before",
-      "during",
-      "first",
-      "for",
-      "if",
-      "local",
-      "locally",
-      "then",
-      "to",
-      "verification"
-    ]);
-    DEPENDENCY_TOOL_EVALUATION_COVERAGE = {
-      sectionHeading: "Standard Stack",
-      requiredPatterns: [
-        /Dependency \/ Tool Evaluation/i,
-        /\|\s*Decision ID\s*\|\s*Need\s*\|\s*Candidate\s*\|\s*Decision\s*\|/i,
-        /Current \/ Wanted \/ Latest Evidence/i,
-        /Maintenance Signal/i,
-        /Vulnerability Signal/i,
-        /\|\s*License\s*\|/i,
-        /Provenance \/ Signature Signal/i,
-        /Transitive Footprint/i,
-        /Existing \/ Standard-Library Alternative/i,
-        /Update Posture/i,
-        /Residual Risk And Mitigation/i,
-        /\bDEP-\d{3}\b/
-      ]
-    };
-    DEPENDENCY_ALTERNATIVES_COVERAGE = {
-      sectionHeading: "Alternatives Considered",
-      requiredPatterns: [
-        /Dependency Alternatives/i,
-        /No New Dependency/i,
-        /Existing Dependency/i,
-        /Standard Library \/ Platform API/i,
-        /Candidate Package \/ Tool/i,
-        /Custom Implementation/i
-      ]
-    };
-    DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE = {
-      sectionHeading: "Installation And Setup",
-      requiredPatterns: [
-        /Setup And Update Posture/i,
-        /Manifest \/ Lockfile Impact/i,
-        /Install Scope/i,
-        /Side Effects/i,
-        /Verification Command/i,
-        /Update \/ Monitoring Plan/i,
-        /Manual Review Required/i
-      ]
-    };
-    LIBRARY_VS_CUSTOM_DECISION_COVERAGE = {
-      sectionHeading: "Don't Hand-Roll",
-      requiredPatterns: [
-        /Library Vs Custom Decision/i,
-        /Domain Risk/i,
-        /Proven Library \/ Existing Option/i,
-        /Custom Path Allowed\?/i,
-        /Required Tests \/ Validation/i
-      ]
-    };
     RESEARCH_ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
-    RESEARCH_ACCESS_DATE_SIGNAL_PATTERN = /(?:\baccessed\s+|\|\s*)\d{4}-\d{2}-\d{2}\b/i;
     RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN = /https?:\/\/|doi\.org\/|\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;
     RESEARCH_STRUCTURED_DOI_PATTERN = /\b(?:doi:\s*)?10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i;
     RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN = /\b(?:npm|npx|pnpm|yarn|bun)\s+(?:run\s+)?[A-Za-z0-9:_./@-]+(?:\s+[-A-Za-z0-9:_./=@]+)*/i;
