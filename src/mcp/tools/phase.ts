@@ -5432,7 +5432,9 @@ export async function blueprintPhaseValidationValidateModel(
 
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
+        ...(validate.errors ?? []).map((error) =>
+          schemaDiagnosticFromPhaseValidationAjvError(error, context.taskSchema!, modelObject)
+        )
       );
     }
 
