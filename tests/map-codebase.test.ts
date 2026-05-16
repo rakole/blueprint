@@ -372,6 +372,32 @@ test("map-codebase scaffolds the stable codebase bundle and builds deterministic
   assert.match(summaries, /@octokit\/rest|src\/integrations\/github\.ts/);
 });
 
+test("starter scaffolding no longer qualifies as a map-first brownfield repo", async (t) => {
+  const repoPath = await createGitRepo("blueprint-map-codebase-scaffold-only-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await mkdir(path.join(repoPath, "docs"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "map-codebase-scaffold-only", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "docs/SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-map-codebase/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
 test("map-codebase keeps scaffold-only bundles provisional and authored bundles complete", async (t) => {
   const repoPath = await createRepoFromFixture("brownfield-repo");
   t.after(async () => {

@@ -36966,27 +36966,84 @@ function isScaffoldGeneratedArtifact(content) {
 function isBootstrapStarterContext(content) {
   return content.includes(BOOTSTRAP_STARTER_CONTEXT_MARKER);
 }
+function isBootstrapStarterFile(entryName) {
+  if (BOOTSTRAP_MANIFEST_FILES.has(entryName) || BOOTSTRAP_LOCKFILES.has(entryName)) {
+    return true;
+  }
+  return BOOTSTRAP_CONFIGURATION_FILE_PATTERNS.some((pattern) => pattern.test(entryName));
+}
+function isDocumentationLikeFile(entryName) {
+  const normalized = entryName.toLowerCase();
+  if (normalized === "readme" || normalized.startsWith("readme.")) {
+    return true;
+  }
+  if (normalized === "license" || normalized.startsWith("license.")) {
+    return true;
+  }
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path8.extname(normalized));
+}
+function isImplementationLikeFile(entryName) {
+  if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
+    return false;
+  }
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path8.extname(entryName).toLowerCase());
+}
+async function directoryHasImplementationEvidence(directoryPath) {
+  const entries = await fs5.readdir(directoryPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
+      if (await directoryHasImplementationEvidence(path8.join(directoryPath, entry.name))) {
+        return true;
+      }
+      continue;
+    }
+    if (entry.isFile() && isImplementationLikeFile(entry.name)) {
+      return true;
+    }
+  }
+  return false;
+}
 async function assessRootBootstrapShape(projectRoot) {
   const entries = await fs5.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
-  const hasSourceDirectories = substantiveEntries.some(
-    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
+  const hasStarterDirectories = substantiveEntries.some(
+    (entry) => entry.isDirectory() && BOOTSTRAP_STARTER_DIRECTORIES.has(entry.name)
   );
   const hasBuildManifest = substantiveEntries.some(
     (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
   );
+  const hasStarterFiles = substantiveEntries.some(
+    (entry) => entry.isFile() && isBootstrapStarterFile(entry.name)
+  );
   let repoShape = "greenfield";
   const reasons = [];
-  if (hasSourceDirectories || hasBuildManifest && substantiveEntries.length >= 2 || substantiveEntries.length >= 4) {
+  let hasImplementationEvidence = substantiveEntries.some(
+    (entry) => entry.isFile() && isImplementationLikeFile(entry.name)
+  );
+  if (!hasImplementationEvidence) {
+    for (const entry of substantiveEntries) {
+      if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
+      if (await directoryHasImplementationEvidence(path8.join(projectRoot, entry.name))) {
+        hasImplementationEvidence = true;
+        break;
+      }
+    }
+  }
+  if (hasImplementationEvidence) {
     repoShape = "brownfield";
-    reasons.push("Repo already contains substantive implementation or build structure.");
-  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
+    reasons.push("Repo already contains substantive implementation files that should be mapped before bootstrap.");
+  } else if (hasBuildManifest || hasStarterDirectories || hasStarterFiles) {
     repoShape = "scaffold-only";
-    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
+    reasons.push("Repo contains starter scaffolding but not enough implementation evidence for a mapped brownfield flow.");
   } else {
-    reasons.push("Repo shape still looks close to an empty or freshly created project.");
+    reasons.push("Repo shape still looks close to an empty or freshly created project, with only intent-setting content so far.");
   }
   return {
     repoShape,
@@ -46653,7 +46710,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -46744,6 +46801,78 @@ var init_artifacts = __esm({
       "composer.json",
       "mix.exs"
     ]);
+    BOOTSTRAP_LOCKFILES = /* @__PURE__ */ new Set([
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "bun.lockb",
+      "Cargo.lock",
+      "Gemfile.lock",
+      "poetry.lock"
+    ]);
+    BOOTSTRAP_STARTER_DIRECTORIES = /* @__PURE__ */ new Set([
+      ...BOOTSTRAP_SOURCE_DIRECTORIES,
+      ".github",
+      ".vscode",
+      ".idea"
+    ]);
+    BOOTSTRAP_CONFIGURATION_FILE_PATTERNS = [
+      /^tsconfig(?:\..+)?\.json$/i,
+      /^jsconfig\.json$/i,
+      /^vite\.config\./i,
+      /^vitest\.config\./i,
+      /^jest\.config\./i,
+      /^webpack\.config\./i,
+      /^rollup\.config\./i,
+      /^eslint\.config\./i,
+      /^prettier\.config\./i,
+      /^tailwind\.config\./i,
+      /^postcss\.config\./i,
+      /^next\.config\./i,
+      /^nuxt\.config\./i,
+      /^svelte\.config\./i
+    ];
+    BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".c",
+      ".cc",
+      ".cpp",
+      ".cs",
+      ".cts",
+      ".cjs",
+      ".ex",
+      ".exs",
+      ".go",
+      ".h",
+      ".hpp",
+      ".java",
+      ".js",
+      ".jsx",
+      ".kt",
+      ".kts",
+      ".m",
+      ".mm",
+      ".mjs",
+      ".mts",
+      ".php",
+      ".py",
+      ".rb",
+      ".rs",
+      ".scala",
+      ".sh",
+      ".sql",
+      ".swift",
+      ".ts",
+      ".tsx",
+      ".zsh"
+    ]);
+    BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".adoc",
+      ".md",
+      ".mdx",
+      ".pdf",
+      ".rst",
+      ".txt"
+    ]);
     BOOTSTRAP_IGNORED_ROOT_ENTRIES = /* @__PURE__ */ new Set([
       ".git",
       ".blueprint",
@@ -46755,6 +46884,20 @@ var init_artifacts = __esm({
       ".gitattributes",
       ".editorconfig",
       ".nvmrc"
+    ]);
+    BOOTSTRAP_IGNORED_SCAN_DIRECTORIES = /* @__PURE__ */ new Set([
+      ".git",
+      ".blueprint",
+      ".github",
+      ".idea",
+      ".next",
+      ".turbo",
+      ".vscode",
+      "build",
+      "coverage",
+      "dist",
+      "docs",
+      "node_modules"
     ]);
     BOOTSTRAP_PLACEHOLDER_SIGNALS = {
       ".blueprint/PROJECT.md": [

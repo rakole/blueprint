@@ -1666,6 +1666,72 @@ test("read-path tools keep scaffold-only repos eligible for new-project bootstra
   assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
 });
 
+test("read-path tools keep docs-only starter repos greenfield and bootstrap-eligible", async (t) => {
+  const repoPath = await createGitRepo("blueprint-docs-only-status-");
+  await writeFile(path.join(repoPath, "SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "greenfield");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools treat manifest plus docs starter repos as scaffold-only", async (t) => {
+  const repoPath = await createGitRepo("blueprint-manifest-docs-status-");
+  await mkdir(path.join(repoPath, "docs"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "manifest-docs-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "docs/SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools keep empty source scaffolds eligible for new-project bootstrap", async (t) => {
+  const repoPath = await createGitRepo("blueprint-empty-src-status-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
 test("read-path tools route unmapped brownfield repos to map-codebase before bootstrap", async (t) => {
   const repoPath = await createGitRepo("blueprint-brownfield-status-");
   await mkdir(path.join(repoPath, "src"), { recursive: true });

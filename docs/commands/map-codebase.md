@@ -33,7 +33,8 @@
 
 ## Inputs, Project State, And Prerequisite Artifacts
 
-- Default brownfield path: run before `new-project` when the repo already contains substantive implementation or build structure and no valid codebase map exists.
+- Default brownfield path: run before `new-project` when the repo already contains substantive implementation files or equivalent codebase evidence and no valid codebase map exists.
+- Starter scaffolding alone does not qualify: a manifest, lockfile, config-only setup, docs/specs, CI/editor metadata, or empty source directories should still route to `new-project` instead of `map-codebase`.
 - In that map-first path, `map-codebase` may be the first Blueprint write and may create only the seven `.blueprint/codebase/*.md` artifacts.
 - Greenfield and scaffold-only uninitialized repos should route to `new-project` instead.
 - Brownfield intent should still be explicit: do not silently replace existing codebase docs and do not hide the mapping step behind another command.
