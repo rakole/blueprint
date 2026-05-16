@@ -48,6 +48,32 @@ Blueprint-native.
   Trace before any drafting or subagent invocation. The full section is
   defined below, after Stage Mapping, to preserve the stage hierarchy.
 
+#### Read-Set Staleness Check
+
+- Record the key Read-stage evidence set used for drafting:
+  - `XX-CONTEXT.md` path and the substantive content relied on from its
+    `mcp_blueprint_blueprint_phase_artifact_read` result
+  - `XX-RESEARCH.md` path and relied-on content when research was read
+  - `XX-UI-SPEC.md` path and relied-on content when a UI contract was read
+  - Plan index state from `mcp_blueprint_blueprint_phase_plan_index`,
+    including saved plan count and plan ids
+  - Any saved plan bodies or excerpts from
+    `mcp_blueprint_blueprint_phase_plan_read` that were relied on during `add`,
+    `revise`, or `replace` decisions or while revising/replacing an existing
+    plan
+  - Any runtime-narrowed evidence rows or dependency-plan ids from
+    `mcp_blueprint_blueprint_phase_plan_authoring_context.taskSchema` that
+    materially constrained the draft
+- Immediately before final model validation/write and before claiming final
+  persistence, re-read the same MCP evidence surfaces and compare their current
+  content or inventory against the recorded read set.
+- If the comparison shows drift, surface it as a warning, re-read the changed
+  evidence before continuing, and repair the draft/checker context against the
+  refreshed evidence before persistence.
+- This is a warning-only MCP re-read/content-comparison guard. Do not rely on
+  filesystem mtime/stat checks, hidden host metadata, or non-MCP freshness
+  signals.
+
 ### Decide
 
 - Honor normalized effective config:
@@ -152,6 +178,26 @@ Blueprint-native.
   inventory.
 - Route only to implemented commands. Use `/blu-progress` when the natural next
   command is not implemented or the safest action is ambiguous.
+
+## Downstream Execution Handoff
+
+Before final routing, derive a compact execution handoff from the planning
+session. Include it in the final response as structured prose:
+
+- `planSummary`: plan count, wave structure, total tasks, key files
+- `executionOrder`: which plans run first and why
+- `evidenceGaps`: evidence that was missing or uncertain during planning;
+  execution should verify these early
+- `assumptions`: planning assumptions that execution should validate
+- `verificationPriorities`: which acceptance criteria are highest-risk and
+  should be checked first
+- `deferredItems`: requirements or ideas deferred from this planning pass with
+  rationale
+- `knownRisks`: risk factors from the investigation trace that execution
+  should monitor
+
+Do not create a new artifact. Include the handoff substance in the final
+response and in `unknownsAndDeferrals` where appropriate.
 
 ## Planning Investigation Trace
 
@@ -376,24 +422,36 @@ same plan quality, evidence coverage, and review bar expected from the bounded
 subagent path. Do not substitute browser-only, web-search-only, shell-only, or
 generic helpers for Blueprint planning, codebase, or workflow analysis.
 
-1. Compress the read context into a carry-forward note containing phase goal,
-   requirements, locked decisions, deferred ideas, config gates, codebase
-   evidence, and uncertainties.
-2. Draft one structured plan model or one coherent topic at a time from the
-   live runtime-narrowed task schema.
-3. Run an inline checklist for requirement coverage, decision fidelity,
-   dependency correctness, task specificity, scope sanity, verification
-   readiness, must-have quality, and invalid scope-reduction language. This
-   checklist is always required, and it becomes the final review fallback when
-   `workflow.plan_check=true` but no suitable checker agent is available.
-4. Compress the completed plan or topic back into the carry-forward note with
-   plan ids, requirement coverage decisions, evidence used, remaining blockers,
-   and what the next wave can assume.
-5. Persist only after the current plan passes the inline checklist.
-6. Move to the next dependency wave only after summarizing what was already
-   written and what evidence still carries forward.
-7. If the inline checklist finds a blocker, repair the affected plan before
+1. Build the Planning Investigation Trace from the read context: evidence
+   inventory, planning signals, and compact summary.
+2. Build the Pre-Draft Readiness Assessment. If any HIGH-risk dimension is not
+   ready, document it as a planning assumption or blocker.
+3. Draft one structured plan model at a time from the live runtime-narrowed
+   task schema. Start a Planning Decision Record for non-trivial decisions.
+4. Run the inline quality checklist with priority ordering:
+   a. Requirement coverage completeness (`no` is a BLOCKER)
+   b. Locked decision fidelity (`no` is a BLOCKER)
+   c. Task action specificity (`no` is a BLOCKER)
+   d. Acceptance criteria verifiability (`no` is a BLOCKER)
+   e. Dependency correctness (`no` is a WARNING unless it breaks validity)
+   f. Scope sanity and split signals (`no` is a WARNING unless the plan is no
+      longer coherent)
+   g. Evidence coverage match (`no` is a WARNING and must trigger the
+      Read-Set Staleness Check)
+   h. Must-have derivation quality (`no` is a WARNING unless the plan becomes
+      chore-only)
+5. Compress the completed plan into the carry-forward note with plan ids,
+   requirement coverage decisions, evidence used, remaining blockers, and what
+   the next wave can assume.
+6. Persist only after the current plan passes the inline checklist with no
+   BLOCKER items.
+7. Move to the next dependency wave only after summarizing what was written and
+   what evidence still carries forward.
+8. If the inline checklist finds a blocker, repair the affected plan before
    drafting more plans.
+9. Run the Post-Draft Semantic Self-Check before claiming completion. If any
+   answer is `no`, repair the plan before persistence or final completion
+   claims.
 
 ## Retry And Repair Behavior
 
@@ -581,7 +639,8 @@ best draft, reports the exact unresolved issue, and routes to `/blu-progress`.
 - `.blueprint/STATE.md` was refreshed through synced state update only after
   final scoped validation became `valid`.
 - The final response names the phase, gates, plan ids, revision/checker result,
-  warnings or blockers, and the next safe implemented action.
+  warnings or blockers, the Downstream Execution Handoff, and the next safe
+  implemented action.
 
 ## Phase Context Ownership And Repair Loop
 

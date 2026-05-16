@@ -12,6 +12,8 @@ Visible planning contract:
 - Narrate the current stage using Blueprint's shared vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the resolved scope, active stage, pending gate, execution mode, and next safe action visible while planning is in flight.
 - If saved plans already exist and `planId` is omitted, require a structured `add`, `revise`, or `replace` choice before drafting so multi-plan authoring stays explicit. An empty plan set may auto-assign the first slot without that gate.
+- Before drafting or subagent invocation, build the Planning Investigation Trace and Pre-Draft Readiness Assessment from the completed Read-stage evidence.
+- Before claiming completion, run the Post-Draft Semantic Self-Check; if any answer is `no`, repair the plan before persistence or final completion.
 
 Interactive planning UX rules:
 - Prefer  `ask_user` tool over plain assistant prose whenever you need overwrite confirmation or a structured add/revise/replace decision about an existing plan set.
@@ -42,7 +44,7 @@ Interactive planning UX rules:
    - Incomplete roadmap coverage may still be saved incrementally, but it is not final completion and must not advance synced state yet.
    - If the retry returns identical diagnostics, stop, preserve the planning checkpoint or best safe no-write state, report the exact diagnostics and next safe action, and do not inspect MCP source as a repair strategy.
 11. Only after final `mcp_blueprint_blueprint_phase_plan_validate` returns `status: "valid"`, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` to record completion, the active phase, and the next safe action derived from the refreshed artifact inventory.
-12. Return a concise summary covering the phase, config gates, whether plans were added, revised, or replaced, whether the result is an incremental saved checkpoint or final completion, checker behavior or config-disabled skip, any warnings, and the next safe implemented action.
+12. Return a concise final response covering the phase, config gates, whether plans were added, revised, or replaced, whether the result is an incremental saved checkpoint or final completion, checker behavior or config-disabled skip, any warnings, the Downstream Execution Handoff, and the next safe implemented action.
 
 Response requirements:
 - Use only `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_validation_read`, `mcp_blueprint_blueprint_review_load_findings`, `mcp_blueprint_blueprint_phase_plan_index`, `mcp_blueprint_blueprint_phase_plan_authoring_context`, `mcp_blueprint_blueprint_phase_plan_validate_model`, `mcp_blueprint_blueprint_phase_plan_read`, `mcp_blueprint_blueprint_phase_plan_validate`, `mcp_blueprint_blueprint_phase_plan_write`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, and `mcp_blueprint_blueprint_state_update` for persistent state work.
@@ -54,5 +56,6 @@ Response requirements:
 - Do not pretend research, UI, or plan-check steps were required if the normalized config disabled them.
 - Treat `blueprint_phase_research_status.suggestedRepairs` as artifact repair advice, not as a mandatory gate when `planningReadiness.readyForPlanPhase=true` under the normalized config.
 - Do not interpret `phase_plan_authoring_context.taskSchema` for drafting until `planningReadiness` allows planning and any saved-plan add/revise/replace gate is settled.
+- Do not claim completion until the final response includes the Downstream Execution Handoff with execution order, evidence gaps, assumptions, verification priorities, deferred items, and known risks.
 - Do not browse live web docs during planning. Use saved research or route to `/blu-research-phase` when freshness-sensitive decisions still need evidence.
 """

@@ -11,17 +11,17 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `plan-phase` uses the shared long-running-mutation posture. Keep the detailed behavior in `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md` and keep this command doc focused on the user-facing surface and MCP boundaries.
-- When saved plans would be revised or replaced, keep the pending gate explicit and require a structured `reuse`, `revise`, or `replace` decision before the overwrite path. Additive new plan ids may proceed without that gate when no saved plan body will be overwritten.
+- When saved plans already exist and `planId` is omitted, keep the pending gate explicit and require a structured `add`, `revise`, or `replace` decision before drafting. Only an empty saved plan set may auto-assign the first slot without that gate.
 - The rich local runtime contract lives at `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md`; it defines the detailed stage mapping, MCP call control flow, anti-shallow plan authoring rules, capability-gated subagent path, no-subagent fallback, validation repair behavior, output quality criteria, and completion criteria.
 
 
 ## Purpose
 
 
-`plan-phase` is Blueprint's command for creating a detailed phase plan with a verification loop. Blueprint now implements it with the plan index plus dedicated plan read/schema-context/model-validation/write/validate tools so it can read existing plans, read the actual current context and relevant discovery artifact content, run schema-backed requirements/evidence/dependency checks before finalization, persist real `XX-YY-PLAN.md` content from a structured `phase.plan` model, validate the saved plan set in phase scope, and update state deterministically while staying host-native.
+`plan-phase` is Blueprint's command for creating a detailed phase plan with a verification loop, visible evidence tracing, and quality self-assessment. Blueprint now implements it with the plan index plus dedicated plan read/schema-context/model-validation/write/validate tools so it can read existing plans, read the actual current context and relevant discovery artifact content, build a Planning Investigation Trace before drafting, run schema-backed requirements/evidence/dependency checks before finalization, persist real `XX-YY-PLAN.md` content from a structured `phase.plan` model, validate the saved plan set in phase scope, surface a Downstream Execution Handoff, and update state deterministically while staying host-native.
 
 Interactive planning UX rules:
-- Prefer Gemini CLI's built-in `ask_user` dialog over plain assistant prose whenever you need overwrite confirmation or a structured reuse/revise/replace decision about an existing plan.
+- Prefer Gemini CLI's built-in `ask_user` dialog over plain assistant prose whenever you need overwrite confirmation or a structured add/revise/replace decision about an existing plan.
 - Default to one focused question per `ask_user` call.
 - For structured decisions, use `ask_user` with `type: "choice"`, 2-4 labeled options, concise descriptions, and a placeholder such as `Type your own answer...` so the built-in custom-answer path stays open.
 
@@ -44,7 +44,7 @@ Interactive planning UX rules:
 ## Outputs
 
 
-- User-facing result: a concise completion summary plus the next logical action when applicable.
+- User-facing result: a concise completion summary, the Downstream Execution Handoff, and the next logical action when applicable.
 - Repo side effects: Writes the declared Blueprint artifacts and updates `.blueprint/STATE.md` through MCP.
 - In-flight planning should keep the resolved scope, active stage, pending gate, execution mode, and next safe action legible while the run is still live.
 
@@ -97,13 +97,13 @@ Interactive planning UX rules:
 - When `workflow.plan_check=true`, run the bounded review loop from the runtime contract before finalization: use `blueprint-checker` when suitable, otherwise use the inline fallback. When `workflow.plan_check=false`, skip checker review entirely and state that the config disabled it.
 - Pass `phase` as the resolved phase number, for example `"3"` or `3`.
 - Pass `model` as the full validated structured `phase.plan` JSON object, not scaffold placeholder text or Markdown.
-- Preserve the strict rendered heading set from the contract: `Goal`, `Scope`, `Tasks`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`.
+- Preserve the strict rendered heading set from the contract: `Goal`, `Scope`, `Tasks`, `External Service Prerequisites`, `Verification`, `Must Haves`, `Requirement Coverage`, `Evidence Coverage`, `File / Surface Coverage`, and `Unknowns And Deferrals`.
 - In the model, top-level `requirements` is only the covered-now subset for this plan; `requirementCoverage` must account for every known phase requirement exactly once as `covered`, `deferred`, or `irrelevant`.
 - Treat `evidenceCoverage` as a runtime-narrowed, dynamic inventory. Re-read `blueprint_phase_plan_authoring_context` after each successful plan write because saved plan files can become required evidence rows for later slots.
-- Omit `planId` to let Blueprint auto-assign the next available plan slot.
+- Omit `planId` only when writing the first plan in an empty saved plan set or after an earlier explicit `add` choice selected a new slot.
 - If targeting a specific plan, pass only the numeric plan id. Use the JSON string value `planId: "01"` or numeric value `planId: 1`, never the double-encoded string `planId: "\"01\""`.
 - Do not derive `planId` manually from a scaffold path and do not pass phase slugs, filenames, or combined tokens such as `02-01` as `planId`.
-- When omitting `planId` to add a new plan and no saved plan body will be overwritten, do not force a reuse/revise/replace gate just because other plans already exist for the phase.
+- When tasks, verification, or acceptance criteria depend on runtime state outside the repo, populate `externalServicePrerequisites` explicitly. Use an exact empty `externalServicePrerequisites: []` only when the plan truly has no external-service dependency.
 
 
 ## Skills And Subagents
@@ -145,7 +145,7 @@ Interactive planning UX rules:
 
 - Confirm destructive replanning when the current write would revise or replace saved plans.
 - Prefer reusing the existing plan index and reading existing plan files before creating replacements.
-- Use `ask_user` for overwrite confirmation and any reuse/revise/replace decision that would mutate an existing saved plan body or the saved plan set.
+- Use `ask_user` for overwrite confirmation and any add/revise/replace decision that would mutate an existing saved plan body or the saved plan set.
 
 
 ## Edge Cases
@@ -181,6 +181,9 @@ Interactive planning UX rules:
 - Keeps the plan-check loop conditional, bounded, requirements-aware, and split-friendly when the phase is too broad for a single coherent plan.
 - Reads the live `phase.plan` schema contract before writing instead of copying local template text.
 - Loads the local plan-phase runtime contract and applies its anti-shallow output criteria, no-subagent fallback, and validation repair loop.
+- Builds and uses a Planning Investigation Trace before drafting so visible evidence tracing stays aligned with the live read set.
+- Runs the Post-Draft Semantic Self-Check and repairs any `no` answer before claiming final completion.
+- Includes a Downstream Execution Handoff that summarizes execution order, assumptions, evidence gaps, verification priorities, deferred items, and known risks for `/blu-execute-phase`.
 
 
 ## Test Cases
@@ -191,3 +194,6 @@ Interactive planning UX rules:
 - Config-conditioned planning fixture with research or UI gating disabled.
 - Existing-plan overwrite and plan-index refresh fixture.
 - Direct `plan-phase` happy-path fixture.
+- Planning Investigation Trace and Pre-Draft Readiness Assessment fixture.
+- Post-Draft Semantic Self-Check repair fixture.
+- Downstream Execution Handoff fixture.
