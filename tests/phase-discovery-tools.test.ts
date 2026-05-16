@@ -318,6 +318,89 @@ function validContextContent(): string {
 `;
 }
 
+function validResearchContent(summary: string): string {
+  return `# Phase 03: Phase Discovery - Research
+
+**Researched:** 2026-04-11
+**Domain:** research heading hardening
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| LIFE-02 | Phase research should preserve canonical planner contracts. | Heading normalization and validation stay inside the MCP-owned write path. |
+
+## Summary
+
+- ${summary}
+
+## Locked Decisions From Context
+
+- Keep Blueprint research validation inside MCP tools and phase-scoped artifacts.
+
+## User Constraints
+
+- Do not broaden this slice beyond phase research integration.
+
+## Standard Stack
+
+- TypeScript
+- node:test via tsx --test
+
+## Installation And Setup
+
+- Use the existing repo dependencies and focused test runner.
+
+## Alternatives Considered
+
+- A second ad hoc heading parser was rejected because it would drift from runtime validation.
+
+## Architecture Patterns
+
+- Canonicalize research headings before validation and persistence.
+
+## Don't Hand-Roll
+
+- Reuse the existing research validator instead of inventing a separate contract.
+
+## Anti-Patterns
+
+- Leaving near-miss legacy headings unnormalized in new writes.
+
+## State Of The Art
+
+- Research artifacts already have a stable canonical heading contract.
+
+## Common Pitfalls
+
+- Generic repair text makes invalid research harder to fix on retry.
+
+## Open Questions
+
+- Which additional legacy research heading aliases, if any, should remain accepted after this hardening slice?
+
+## Confidence Breakdown
+
+| Claim | Confidence | Notes |
+|-------|------------|-------|
+| Heading normalization preserves contract intent. | HIGH | The canonical headings remain unchanged after rewrite. |
+
+## Code Examples
+
+~~~ts
+await blueprintPhaseArtifactWrite({ artifact: "research" });
+~~~
+
+## Recommendations
+
+- Normalize near-miss legacy headings before research validation and persistence.
+
+## Sources
+
+- Repo evidence: \`src/mcp/tools/phase.ts:1\`, symbol/heading=blueprintPhaseArtifactWrite, role=runtime, method=manual-read, supports=heading normalization.`;
+}
+
 async function createLegacyDecimalPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-phase-tools-legacy-");
 
@@ -684,6 +767,130 @@ test("phase research status reflects context, research, and UI-spec presence", a
   assert.match(after.suggestedRepairs.join("\n"), /discuss-phase/i);
   assert.match(after.suggestedRepairs.join("\n"), /ui-phase/i);
   assert.match(uiSpec, /Outcome Mode/);
+});
+
+test("phase research status treats saved near-miss legacy research headings as valid", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep saved research validation phase-scoped.
+
+## Discovery Grounding
+- Research status should validate saved research without rewriting the file.
+
+## Implementation Decisions
+- Reuse the research validator instead of forking a second contract.
+
+## Specific Ideas
+- Accept near-miss legacy headings when they canonicalize cleanly.
+
+## Existing Code Insights
+- Saved research is validated through phase research status.
+
+## Dependencies
+- None beyond the existing research validator.
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- none
+
+## Canonical References
+- src/mcp/tools/phase.ts
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    validResearchContent("Validate saved legacy headings through research status.")
+      .replace("## Installation And Setup", "## Installation & Setup")
+      .replace("## Don't Hand-Roll", "## Dont Hand Roll")
+      .replace("## State Of The Art", "## State of the Art"),
+    "utf8"
+  );
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.hasResearch, true);
+  assert.equal(status.researchValid, true);
+  assert.equal(status.hasUsableResearch, true);
+  assert.deepEqual(status.researchIssues, []);
+});
+
+test("phase research status returns heading-scoped diagnostics and repairs for invalid research", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep research validation grounded in saved phase artifacts.
+
+## Discovery Grounding
+- Status checks should surface structured repair guidance.
+
+## Implementation Decisions
+- Preserve MCP-owned validation instead of ad hoc markdown parsing in tests.
+
+## Specific Ideas
+- Surface heading-scoped diagnostics for missing research sections.
+
+## Existing Code Insights
+- Research status already returns diagnostics and suggested repairs.
+
+## Dependencies
+- src/mcp/tools/phase.ts
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- none
+
+## Canonical References
+- src/mcp/tools/artifacts.ts
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    "# Phase 03: Phase Discovery - Research\n\n**Confidence:** HIGH\n\n## Summary\n- Missing most required research sections.\n",
+    "utf8"
+  );
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.hasResearch, true);
+  assert.equal(status.researchValid, false);
+  assert.ok(
+    status.researchDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.path === "content.sections.Phase Requirements" &&
+        diagnostic.code === "research.heading_missing" &&
+        /## Phase Requirements/.test(diagnostic.repair)
+    )
+  );
+  assert.ok(
+    status.researchDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.path === "content.sections.Sources" &&
+        diagnostic.code === "research.heading_missing" &&
+        /## Sources/.test(diagnostic.repair)
+    )
+  );
+  assert.match(status.suggestedRepairs.join("\n"), /## Phase Requirements|## Sources/i);
 });
 
 test("phase research status exposes config-aware plan-phase readiness", async (t) => {

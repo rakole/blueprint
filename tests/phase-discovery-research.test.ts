@@ -1603,6 +1603,49 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(researchBody, /Update the artifact after an explicit overwrite path/);
 });
 
+test("phase artifact write canonicalizes near-miss research headings before save", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+
+  const variantHeadingContent = validResearchContent(
+    "Rewrite near-miss legacy headings to the canonical research contract."
+  )
+    .replace("## Installation And Setup", "## Installation & Setup")
+    .replace("## Don't Hand-Roll", "## Dont Hand Roll")
+    .replace("## Anti-Patterns", "## Anti Patterns")
+    .replace("## State Of The Art", "## State of the Art");
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: variantHeadingContent,
+    overwrite: true
+  });
+  const saved = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    "utf8"
+  );
+
+  assert.equal(written.status, "created");
+  assert.equal(written.validation?.valid, true, written.validation?.issues.join("\n"));
+  assert.match(saved, /^## Installation And Setup$/m);
+  assert.match(saved, /^## Don't Hand-Roll$/m);
+  assert.match(saved, /^## Anti-Patterns$/m);
+  assert.match(saved, /^## State Of The Art$/m);
+  assert.doesNotMatch(saved, /^## Installation & Setup$/m);
+  assert.doesNotMatch(saved, /^## Dont Hand Roll$/m);
+  assert.doesNotMatch(saved, /^## Anti Patterns$/m);
+  assert.doesNotMatch(saved, /^## State of the Art$/m);
+});
+
 test("research scaffold can be replaced by substantive content without explicit overwrite", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1675,10 +1718,12 @@ test("invalid existing research must be repaired instead of being treated as reu
 
   assert.equal(statusBefore.hasResearch, true);
   assert.equal(statusBefore.researchValid, false);
-  assert.match(statusBefore.suggestedRepairs.join("\n"), /Update the phase research through \/blu-research-phase/i);
+  assert.match(statusBefore.suggestedRepairs.join("\n"), /## Phase Requirements|## Sources|## Locked Decisions From Context/i);
   assert.equal(unchanged.status, "invalid");
   assert.equal(unchanged.written, false);
   assert.match(unchanged.validation?.issues.join("\n") ?? "", /required section|Confidence|source/i);
+  assert.match(unchanged.suggestedRepairs?.join("\n") ?? "", /## Phase Requirements|## Sources/i);
+  assert.match(unchanged.retryPlan?.steps.join("\n") ?? "", /## Phase Requirements|## Sources/i);
   assert.equal(repaired.status, "updated");
   assert.equal(repaired.written, true);
   assert.equal(statusAfter.researchValid, true);

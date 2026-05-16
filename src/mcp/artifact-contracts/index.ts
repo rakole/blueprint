@@ -935,6 +935,7 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 **Researched:** <YYYY-MM-DD>
 **Domain:** ${domain(context)}
 **Confidence:** LOW|MEDIUM|HIGH
+Keep the canonical ## headings exactly as written below.
 
 ## Phase Requirements
 
