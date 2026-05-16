@@ -216,6 +216,9 @@ import {
   filterImplementedBlueprintActions,
   getPhasePlanImplementedCommandNames
 } from "./phase-command-actions.js";
+import {
+  detectStrongExplicitNoUiSignal
+} from "./phase-no-ui-signals.js";
 
 type RoadmapReadArgs = {
   cwd?: string;
@@ -3096,6 +3099,7 @@ type PhaseArtifactUsability = {
   present: boolean;
   valid: boolean | null;
   usable: boolean;
+  content: string | null;
   issues: string[];
   diagnostics: PhaseArtifactValidationDiagnostic[];
   warnings: string[];
@@ -3112,6 +3116,7 @@ async function evaluatePhaseArtifactUsability(
       present: false,
       valid: null,
       usable: false,
+      content: null,
       issues: [],
       diagnostics: [],
       warnings: [],
@@ -3150,6 +3155,7 @@ async function evaluatePhaseArtifactUsability(
       present: true,
       valid: validation.valid,
       usable: validation.valid && !bootstrapStarter,
+      content: raw,
       issues,
       diagnostics,
       warnings,
@@ -3165,6 +3171,7 @@ async function evaluatePhaseArtifactUsability(
       present: true,
       valid: false,
       usable: false,
+      content: null,
       issues: [`${artifactPath} could not be read: ${reason}.`],
       diagnostics: [
         {
@@ -3188,6 +3195,7 @@ function buildPhasePlanningReadiness(args: {
   researchPath: string | null;
   researchValid: boolean | null;
   uiSpecStatus: PhaseArtifactUsability;
+  noUiSignalDetected: boolean;
 }): PhasePlanningReadiness {
   const phaseNumber = args.context.phase?.phaseNumber ?? null;
   const workflow = args.context.workflowPosture.workflow;
@@ -3245,13 +3253,18 @@ function buildPhasePlanningReadiness(args: {
 
   if (workflow.uiPhase && !args.uiSpecStatus.usable) {
     const uiSpecIssueBlockers = args.uiSpecStatus.issues.map((issue) => `UI spec validation: ${issue}`);
+    const nextSafeAction = args.uiSpecStatus.present
+      ? `Run /blu-ui-phase${phaseSuffix} to repair the phase UI contract`
+      : args.noUiSignalDetected
+        ? `Run /blu-ui-phase${phaseSuffix} to record the explicit UI skip rationale`
+        : `Run /blu-ui-phase${phaseSuffix} to draft the phase UI contract`;
 
     return {
       workflowResearchRequired: workflow.research,
       workflowUiPhaseRequired: workflow.uiPhase,
       workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
       readyForPlanPhase: false,
-      nextSafeAction: `Run /blu-ui-phase${phaseSuffix} to draft the phase UI contract`,
+      nextSafeAction,
       blockers: [
         args.uiSpecStatus.present
           ? "workflow.ui_phase=true but the saved XX-UI-SPEC.md artifact is not usable."
@@ -6956,12 +6969,17 @@ export async function blueprintPhaseResearchStatus(
     );
   }
 
+  const noUiBypassSignal = detectStrongExplicitNoUiSignal({
+    contextContent: contextStatus.content
+  });
+
   const planningReadiness = buildPhasePlanningReadiness({
     context,
     contextStatus,
     researchPath,
     researchValid,
-    uiSpecStatus
+    uiSpecStatus,
+    noUiSignalDetected: noUiBypassSignal.bypassAllowed
   });
 
   return {
