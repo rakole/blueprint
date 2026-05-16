@@ -344,7 +344,7 @@ revision pass can:
 
 ### Fold Into Plan Artifacts
 
-After final persistence, fold unresolved decisions into the plan's
+Before final model validation and write, fold unresolved decisions into the plan's
 `unknownsAndDeferrals` section. Fold rejected alternatives into `scope`
 when they clarify what the plan intentionally excludes.
 ```

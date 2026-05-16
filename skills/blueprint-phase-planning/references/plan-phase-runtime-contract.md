@@ -204,6 +204,36 @@ anticipated plan count, and highest-risk planning decision.
 
 Present this summary before any plan drafting or subagent invocation.
 
+## Planning Decision Record
+
+Maintain a session-local record of planning decisions that persist across
+revision passes. This is working state, not a new artifact.
+
+For each non-trivial planning decision, record:
+
+- `decision`: what was decided (split strategy, wave ordering, requirement
+  deferral, dependency direction, vertical vs horizontal slice)
+- `rationale`: why this choice over alternatives
+- `evidence`: which investigation trace source supported this decision
+- `alternatives`: what was considered and rejected
+- `risk`: what could invalidate this decision
+- `revision-stable`: whether this decision should survive a targeted
+  revision pass (yes by default; no only when the checker found it unsound)
+
+### Carry-Forward Between Revision Passes
+
+When the checker returns REVISE, carry the decision record forward so the
+revision pass can:
+1. Preserve decisions marked `revision-stable: yes`
+2. Revise only decisions the checker found unsound
+3. Avoid re-deriving decisions that were already validated
+
+### Fold Into Plan Artifacts
+
+Before final model validation and write, fold unresolved decisions into the
+plan's `unknownsAndDeferrals` section. Fold rejected alternatives into `scope`
+when they clarify what the plan intentionally excludes.
+
 ## Artifact Authoring Rules
 
 - Every plan must follow the live `phase.plan` authoring template and preserve
@@ -272,6 +302,51 @@ Present this summary before any plan drafting or subagent invocation.
   caches, auth sandboxes, and third-party SaaS test tenants.
 - For security-relevant changes, include threat boundaries and mitigation tasks
   when saved research, requirements, or config indicate security exposure.
+
+## Plan Complexity And Split Framework
+
+### Complexity Signals
+
+Evaluate these signals before and during drafting:
+
+| Signal | Threshold | Action |
+|--------|-----------|--------|
+| Tasks per plan | >3 | Consider split |
+| Files modified per plan | >8 | Consider split |
+| Files per task | >5 | Split the task or plan |
+| Independent features | >1 | Prefer vertical slice split |
+| Dependency layers | >2 | Consider horizontal foundation plan |
+| Requirement groups | >2 unrelated | Split by requirement group |
+| Risk concentration | 1 task has all risk | Isolate risky task in its own plan |
+
+### Split Axes (ordered by preference)
+
+1. **By feature/vertical slice**: when independent features can run and
+   validate in parallel without shared state
+2. **By requirement group**: when requirements cluster into distinct
+   implementation areas with different verification strategies
+3. **By dependency layer**: when a shared foundation must be proven before
+   dependent features can start (use sparingly)
+4. **By risk boundary**: when one area has disproportionate uncertainty,
+   security exposure, or external dependency
+
+### Minimum Viable Plan
+
+A plan is too small to be useful when it:
+- Has only 1 trivial task that could be a subtask of another plan
+- Creates no verifiable artifact or behavior change
+- Cannot be validated independently
+
+When a split would produce a below-minimum plan, merge it back into its
+nearest dependency neighbor.
+
+### Split Rationale In Output
+
+When splitting, include in the planning decision record:
+- Why this split axis was chosen over alternatives
+- What dependency exists between the resulting plans
+- What the execution order constraint is
+- What would trigger a re-merge if evidence changes
 
 ## Subagent Path
 
