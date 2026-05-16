@@ -120,6 +120,11 @@ helper guidance.
 - Run the target plan's required checks before claiming completion. Repair only
   issues caused by the current changes, cap repeated repair attempts, and write
   `PARTIAL` or `BLOCKED` summaries when verification cannot pass honestly.
+- If a dependency plan summary is still missing or not yet `COMPLETED`, do not
+  persist `COMPLETED` for the dependent plan. Downgrade to `PARTIAL` or
+  `BLOCKED`, update `Completion State`, `Readiness`, and `Next Safe Action` to
+  match that status, and keep the dependency blocker explicit in `Gap / Repair
+  Routes` until the dependency summary exists.
 - Do not persist `COMPLETED` summaries while required tests fail, lower-wave
   blockers remain, or acceptance criteria are unverified. A `COMPLETED`
   summary closes only the selected plan's execution debt; route it back to

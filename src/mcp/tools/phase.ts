@@ -4043,6 +4043,21 @@ function validateSummaryAgainstLivePlanInventory(
   };
 }
 
+function phaseSummaryMarkdownIssueSuggestion(issue: string): string {
+  if (
+    /depends on incomplete execution plan\(s\):/i.test(issue) ||
+    /linked dependency plan summaries are not completed yet:/i.test(issue)
+  ) {
+    return (
+      "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, " +
+      "update Completion State, Readiness, and Next Safe Action to match, and keep the " +
+      "dependency blocker in Gap / Repair Routes until the dependency summary exists."
+    );
+  }
+
+  return "Repair the summary so semantic completion evidence is truthful.";
+}
+
 function summarizeMarkdownContent(content: string): {
   title: string | null;
   summary: string | null;
@@ -8685,7 +8700,7 @@ export async function blueprintPhaseSummaryAuthoringContext(
     warnings.push(
       `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
-        .join(", ")}`
+        .join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
 
@@ -8867,8 +8882,7 @@ export async function blueprintPhaseSummaryValidateModel(
           code: "markdown.invalid_render",
           message: issue,
           context: {},
-          suggestion:
-            "Repair the summary so semantic completion evidence is truthful."
+          suggestion: phaseSummaryMarkdownIssueSuggestion(issue)
         })
       );
     }
@@ -9542,7 +9556,7 @@ export async function blueprintPhaseSummaryWrite(
     writeModeIssues.push(
       `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
-        .join(", ")}`
+        .join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
 
