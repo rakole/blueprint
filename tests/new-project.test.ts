@@ -1767,6 +1767,42 @@ test("new-project hard-stops on unmapped brownfield before any writes", async (t
   assert.equal(await pathExists(path.join(repoPath, ".blueprint")), false);
 });
 
+test("new-project bootstraps scaffold-only starter repos without map-codebase", async (t) => {
+  const repoPath = await createGitRepo("blueprint-new-project-scaffold-only-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await mkdir(path.join(repoPath, "docs"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "scaffold-only-bootstrap", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "docs/SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const preflightStatus = await blueprintProjectStatus({ cwd: repoPath });
+  assert.equal(preflightStatus.bootstrap.repoShape, "scaffold-only");
+  assert.match(preflightStatus.nextAction, /\/blu-new-project/);
+
+  const result = await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildAutoBootstrapSeed({
+      currentMilestone: "v1-scaffold-bootstrap"
+    })
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(result.brownfield.repoShape, "scaffold-only");
+  assert.equal(result.brownfield.codebaseMapped, false);
+  assert.equal(status.status, "initialized");
+  assert.match(status.nextAction, /\/blu-discuss-phase 1/);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/PROJECT.md")), true);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/REQUIREMENTS.md")), true);
+  assert.equal(await pathExists(path.join(repoPath, ".blueprint/ROADMAP.md")), true);
+});
+
 test("new-project hard-stops on mapping-incomplete codebase bundles before bootstrap writes", async (t) => {
   const repoPath = await createRepoFromFixture("brownfield-repo");
   const codebaseRoot = path.join(repoPath, ".blueprint/codebase");

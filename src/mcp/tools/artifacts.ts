@@ -785,6 +785,78 @@ const BOOTSTRAP_MANIFEST_FILES = new Set([
   "composer.json",
   "mix.exs"
 ]);
+const BOOTSTRAP_LOCKFILES = new Set([
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
+  "bun.lockb",
+  "Cargo.lock",
+  "Gemfile.lock",
+  "poetry.lock"
+]);
+const BOOTSTRAP_STARTER_DIRECTORIES = new Set([
+  ...BOOTSTRAP_SOURCE_DIRECTORIES,
+  ".github",
+  ".vscode",
+  ".idea"
+]);
+const BOOTSTRAP_CONFIGURATION_FILE_PATTERNS = [
+  /^tsconfig(?:\..+)?\.json$/i,
+  /^jsconfig\.json$/i,
+  /^vite\.config\./i,
+  /^vitest\.config\./i,
+  /^jest\.config\./i,
+  /^webpack\.config\./i,
+  /^rollup\.config\./i,
+  /^eslint\.config\./i,
+  /^prettier\.config\./i,
+  /^tailwind\.config\./i,
+  /^postcss\.config\./i,
+  /^next\.config\./i,
+  /^nuxt\.config\./i,
+  /^svelte\.config\./i
+] as const;
+const BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS = new Set([
+  ".c",
+  ".cc",
+  ".cpp",
+  ".cs",
+  ".cts",
+  ".cjs",
+  ".ex",
+  ".exs",
+  ".go",
+  ".h",
+  ".hpp",
+  ".java",
+  ".js",
+  ".jsx",
+  ".kt",
+  ".kts",
+  ".m",
+  ".mm",
+  ".mjs",
+  ".mts",
+  ".php",
+  ".py",
+  ".rb",
+  ".rs",
+  ".scala",
+  ".sh",
+  ".sql",
+  ".swift",
+  ".ts",
+  ".tsx",
+  ".zsh"
+]);
+const BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS = new Set([
+  ".adoc",
+  ".md",
+  ".mdx",
+  ".pdf",
+  ".rst",
+  ".txt"
+]);
 const BOOTSTRAP_IGNORED_ROOT_ENTRIES = new Set([
   ".git",
   ".blueprint",
@@ -797,6 +869,77 @@ const BOOTSTRAP_IGNORED_ROOT_ENTRIES = new Set([
   ".editorconfig",
   ".nvmrc"
 ]);
+const BOOTSTRAP_IGNORED_SCAN_DIRECTORIES = new Set([
+  ".git",
+  ".blueprint",
+  ".github",
+  ".idea",
+  ".next",
+  ".turbo",
+  ".vscode",
+  "build",
+  "coverage",
+  "dist",
+  "docs",
+  "node_modules"
+]);
+
+function isBootstrapStarterFile(entryName: string): boolean {
+  if (BOOTSTRAP_MANIFEST_FILES.has(entryName) || BOOTSTRAP_LOCKFILES.has(entryName)) {
+    return true;
+  }
+
+  return BOOTSTRAP_CONFIGURATION_FILE_PATTERNS.some((pattern) => pattern.test(entryName));
+}
+
+function isDocumentationLikeFile(entryName: string): boolean {
+  const normalized = entryName.toLowerCase();
+
+  if (normalized === "readme" || normalized.startsWith("readme.")) {
+    return true;
+  }
+
+  if (normalized === "license" || normalized.startsWith("license.")) {
+    return true;
+  }
+
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path.extname(normalized));
+}
+
+function isImplementationLikeFile(entryName: string): boolean {
+  if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
+    return false;
+  }
+
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path.extname(entryName).toLowerCase());
+}
+
+async function directoryHasImplementationEvidence(directoryPath: string): Promise<boolean> {
+  const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (
+        entry.name.startsWith(".") ||
+        BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)
+      ) {
+        continue;
+      }
+
+      if (await directoryHasImplementationEvidence(path.join(directoryPath, entry.name))) {
+        return true;
+      }
+
+      continue;
+    }
+
+    if (entry.isFile() && isImplementationLikeFile(entry.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 async function assessRootBootstrapShape(projectRoot: string): Promise<{
   repoShape: BootstrapRepoShape;
@@ -806,27 +949,45 @@ async function assessRootBootstrapShape(projectRoot: string): Promise<{
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
-  const hasSourceDirectories = substantiveEntries.some(
-    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
+  const hasStarterDirectories = substantiveEntries.some(
+    (entry) => entry.isDirectory() && BOOTSTRAP_STARTER_DIRECTORIES.has(entry.name)
   );
   const hasBuildManifest = substantiveEntries.some(
     (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
   );
+  const hasStarterFiles = substantiveEntries.some(
+    (entry) => entry.isFile() && isBootstrapStarterFile(entry.name)
+  );
   let repoShape: BootstrapRepoShape = "greenfield";
   const reasons: string[] = [];
+  let hasImplementationEvidence = substantiveEntries.some(
+    (entry) => entry.isFile() && isImplementationLikeFile(entry.name)
+  );
 
-  if (
-    hasSourceDirectories ||
-    (hasBuildManifest && substantiveEntries.length >= 2) ||
-    substantiveEntries.length >= 4
-  ) {
+  if (!hasImplementationEvidence) {
+    for (const entry of substantiveEntries) {
+      if (
+        !entry.isDirectory() ||
+        BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)
+      ) {
+        continue;
+      }
+
+      if (await directoryHasImplementationEvidence(path.join(projectRoot, entry.name))) {
+        hasImplementationEvidence = true;
+        break;
+      }
+    }
+  }
+
+  if (hasImplementationEvidence) {
     repoShape = "brownfield";
-    reasons.push("Repo already contains substantive implementation or build structure.");
-  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
+    reasons.push("Repo already contains substantive implementation files that should be mapped before bootstrap.");
+  } else if (hasBuildManifest || hasStarterDirectories || hasStarterFiles) {
     repoShape = "scaffold-only";
-    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
+    reasons.push("Repo contains starter scaffolding but not enough implementation evidence for a mapped brownfield flow.");
   } else {
-    reasons.push("Repo shape still looks close to an empty or freshly created project.");
+    reasons.push("Repo shape still looks close to an empty or freshly created project, with only intent-setting content so far.");
   }
 
   return {

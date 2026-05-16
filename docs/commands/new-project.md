@@ -58,6 +58,7 @@
 ## Behavior Stages
 
 1. `Resolve`: confirm repo root, detect `--auto`, classify greenfield/scaffold-only/brownfield, route unmapped brownfield and `mapping-incomplete` to `/blu-map-codebase` before writes, allow `mapped-only` bootstrap while preserving `.blueprint/codebase/*.md`, and require overwrite confirmation for initialized core artifacts.
+   Starter scaffolding such as manifests, lockfiles, config-only setup, docs/specs, CI/editor metadata, or empty source directories is not enough by itself to force the brownfield map-first path.
 2. `Read`: inspect saved defaults, effective warnings, repo evidence, and canonical bootstrap artifact contracts before the first persistent write.
 3. `Decide`: initialize Gemini-native session coordination, gather or synthesize the bootstrap brief, offer saved defaults first, and run approval or revision gates when interactive shaping needs a decision.
 4. `Execute`: draft specific, user-centered, traceable requirements and grouped roadmap phases with success criteria, using optional bounded research or roadmapping help only when it materially improves the bootstrap.
