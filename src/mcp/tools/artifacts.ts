@@ -755,6 +755,14 @@ export type PlanArtifactMetadata = {
   filesModified: string[];
   readFirst: string[];
   acceptanceCriteria: string[];
+  externalServicePrerequisites: Array<{
+    service: string;
+    category: string;
+    purpose: string;
+    userSetup: string;
+    readinessCheck: string;
+    canAgentProceedWithoutIt: boolean;
+  }>;
   autonomous: boolean | null;
 };
 type PhaseArtifactRequest = {
@@ -2794,6 +2802,7 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
       filesModified: [],
       readFirst: [],
       acceptanceCriteria: [],
+      externalServicePrerequisites: [],
       autonomous: null
     };
   }
@@ -2866,6 +2875,9 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
     filesModified: arrays.get("files_modified") ?? [],
     readFirst: arrays.get("read_first") ?? [],
     acceptanceCriteria: arrays.get("acceptance_criteria") ?? [],
+    externalServicePrerequisites: parsePlanExternalServicePrerequisites(
+      extractMarkdownSection(content, "External Service Prerequisites")
+    ),
     autonomous:
       autonomousValue === "true"
         ? true
@@ -2873,6 +2885,111 @@ function parsePlanFrontmatter(content: string): PlanArtifactMetadata {
           ? false
           : null
   };
+}
+
+function parseExternalServiceProceedWithoutIt(value: string): boolean | null {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
+
+  return null;
+}
+
+function parsePlanExternalServicePrerequisites(section: string): Array<{
+  service: string;
+  category: string;
+  purpose: string;
+  userSetup: string;
+  readinessCheck: string;
+  canAgentProceedWithoutIt: boolean;
+}> {
+  const rows = extractMarkdownTableRows(section);
+
+  if (
+    rows.length === 1 &&
+    rows[0]?.length >= 6 &&
+    rows[0][0]?.trim().toLowerCase() === "none" &&
+    rows[0][1]?.trim().toLowerCase() === "none"
+  ) {
+    return [];
+  }
+
+  return rows.flatMap((row) => {
+    if (row.length < 6) {
+      return [];
+    }
+
+    const canAgentProceedWithoutIt = parseExternalServiceProceedWithoutIt(row[5] ?? "");
+
+    if (canAgentProceedWithoutIt === null) {
+      return [];
+    }
+
+    return [{
+      service: row[0]?.trim() ?? "",
+      category: row[1]?.trim() ?? "",
+      purpose: row[2]?.trim() ?? "",
+      userSetup: row[3]?.trim() ?? "",
+      readinessCheck: row[4]?.trim() ?? "",
+      canAgentProceedWithoutIt
+    }];
+  });
+}
+
+function validatePlanExternalServicePrerequisitesSection(section: string): string[] {
+  const rows = extractMarkdownTableRows(section);
+
+  if (rows.length === 0) {
+    return [
+      "Plan artifact must include an explicit external-service prerequisite table row under ## External Service Prerequisites, or the canonical none row when no external services are required."
+    ];
+  }
+
+  if (
+    rows.length === 1 &&
+    rows[0]?.length >= 6 &&
+    rows[0][0]?.trim().toLowerCase() === "none" &&
+    rows[0][1]?.trim().toLowerCase() === "none"
+  ) {
+    return [];
+  }
+
+  const issues: string[] = [];
+
+  for (const row of rows) {
+    if (row.length < 6) {
+      issues.push(
+        "Each external-service prerequisite row must include Service, Category, Purpose, User Setup / Startup, Readiness Check, and Can Agent Proceed Without It."
+      );
+      continue;
+    }
+
+    const [service, category, purpose, userSetup, readinessCheck, canProceed] = row.map((cell) =>
+      cell.trim()
+    );
+
+    if (
+      [service, category, purpose, userSetup, readinessCheck].some((value) => value.length === 0)
+    ) {
+      issues.push(
+        "External-service prerequisite rows must populate Service, Category, Purpose, User Setup / Startup, and Readiness Check with concrete text."
+      );
+    }
+
+    if (parseExternalServiceProceedWithoutIt(canProceed) === null) {
+      issues.push(
+        "External-service prerequisite rows must use yes/no in Can Agent Proceed Without It."
+      );
+    }
+  }
+
+  return issues;
 }
 
 function containsSourceEvidence(section: string): boolean {
@@ -4819,6 +4936,14 @@ function isMarkdownTableHeaderRow(line: string): boolean {
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
     ["requirement", "task or check", "evidence", "coverage state"],
+    [
+      "service",
+      "category",
+      "purpose",
+      "user setup / startup",
+      "readiness check",
+      "can agent proceed without it"
+    ],
     ["#", "test", "expected behavior", "evidence", "result", "notes"],
     ["test", "truth", "status", "severity", "reason", "follow-up"],
     ["check", "command", "result", "evidence", "notes"],
@@ -8848,6 +8973,9 @@ export function validatePlanArtifactContent(
     issues.push(...taskValidation.issues);
     warnings.push(...taskValidation.warnings);
   }
+
+  const externalServiceSection = extractMarkdownSection(content, "External Service Prerequisites");
+  issues.push(...validatePlanExternalServicePrerequisitesSection(externalServiceSection));
 
   const verificationSection = extractMarkdownSection(content, "Verification");
   if (!hasSubstantivePlanListContent(verificationSection)) {

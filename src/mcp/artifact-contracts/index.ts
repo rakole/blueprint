@@ -1224,6 +1224,12 @@ Replace with a concrete, execution-ready goal.
 
 - Replace with grep/test-verifiable acceptance criteria.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - Replace with the exact checks that prove this plan is complete.
@@ -1263,7 +1269,7 @@ const PHASE_PLAN_MODEL_SCHEMA_PATH =
 
 const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
   schemaId: "blueprint.phase.plan.model",
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.1.0",
   schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
   jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
   qualityRules: [
@@ -1273,7 +1279,8 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
     "Evidence coverage is runtime-narrowed and dynamic: every saved context, research, UI, review, prior plan, summary, validation, or other evidence artifact in the current task schema must appear in evidenceCoverage as used, deferred, irrelevant, or unavailable with rationale.",
     "Re-read blueprint_phase_plan_authoring_context immediately before each validation/write because saved plan files become intentional known evidence artifacts for later plan slots.",
     "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
-    "The rendered plan must preserve the exact headings in renderedHeadings, including Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
+    "Declare external services the agent cannot safely assume are ready in externalServicePrerequisites. Keep the examples generic: container runtimes, databases, queues, emulators, local API servers, search services, caches, brokers, auth sandboxes, and third-party SaaS test tenants are all valid when the plan truly depends on them.",
+    "The rendered plan must preserve the exact headings in renderedHeadings, including External Service Prerequisites, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
     "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
     "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
   ],
@@ -1288,6 +1295,7 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
     "Goal",
     "Scope",
     "Tasks",
+    "External Service Prerequisites",
     "Verification",
     "Must Haves",
     "Requirement Coverage",
@@ -1320,6 +1328,7 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
         filesModified: ["src/mcp/artifact-contracts/index.ts"]
       }
     ],
+    externalServicePrerequisites: [],
     verification: [
       {
         item: "Run focused contract tests",
@@ -4350,8 +4359,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Plan frontmatter keys and task subsections are locked for MCP parsing.",
       "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
       "Additional top-level headings are allowed, but required plan sections must remain unchanged and match the model-rendered heading list.",
-      "Required plan sections include coverage ledgers for Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
+      "Required plan sections include External Service Prerequisites plus the coverage ledgers for Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
       "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+      "Declare generic external-service prerequisites whenever execution depends on runtime state the agent cannot safely assume is already available. Valid examples include Docker or other container runtimes, Postgres/MySQL/MongoDB/Redis, local API servers, queues or brokers, cloud emulators, search services, auth provider sandboxes, and third-party SaaS test tenants.",
       "Top-level `requirements` lists only requirements this plan covers now; `requirementCoverage` accounts for every known phase requirement exactly once as covered, deferred, or irrelevant.",
       "Evidence coverage is runtime-narrowed and dynamic; re-read `blueprint_phase_plan_authoring_context` after each plan write because saved plans become evidence for later slots.",
       "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",

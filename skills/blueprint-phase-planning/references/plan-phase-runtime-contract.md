@@ -158,7 +158,7 @@ Blueprint-native.
   `status`, `objective`, `depends_on`, `requirements`, `files_modified`,
   `read_first`, `acceptance_criteria`, and `autonomous`.
 - Preserve the exact required sections `## Goal`, `## Scope`, `## Tasks`,
-  `## Verification`, `## Must Haves`, `## Requirement Coverage`,
+  `## External Service Prerequisites`, `## Verification`, `## Must Haves`, `## Requirement Coverage`,
   `## Evidence Coverage`, `## File / Surface Coverage`, and
   `## Unknowns And Deferrals`.
 - Every task must include `#### Read First`, `#### Action`, and
@@ -209,7 +209,13 @@ Blueprint-native.
   an early task or acceptance criterion that creates or names the missing test
   evidence.
 - For external services, include only user setup the agent cannot perform
-  itself, and name required env vars or dashboard actions concretely.
+  itself, and name required env vars or dashboard actions concretely. Record
+  those dependencies in the structured `externalServicePrerequisites` field and
+  the rendered `## External Service Prerequisites` section whenever execution
+  depends on runtime state outside the repo. Keep this generic: valid examples
+  include Docker or other container runtimes, Postgres/MySQL/MongoDB/Redis,
+  queues or brokers, cloud emulators, local API servers, search services,
+  caches, auth sandboxes, and third-party SaaS test tenants.
 - For security-relevant changes, include threat boundaries and mitigation tasks
   when saved research, requirements, or config indicate security exposure.
 

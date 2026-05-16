@@ -236,6 +236,12 @@ Ship the plan-phase runtime.
 
 - src/mcp/tools/phase.ts contains blueprintPhasePlanWrite
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - npm test passes for phase planning coverage

@@ -10,7 +10,7 @@ import { type PhaseSummaryDiagnosticCounts, type PhaseSummaryModelDiagnostic } f
 import { type PhaseUatStructuredModel, type PhaseValidationRenderArgs, type PhaseVerificationStructuredModel } from "./phase-validation-rendering.js";
 import { type PhaseValidationAllowedValues } from "./phase-validation-contracts.js";
 import { type PhaseValidationDiagnosticCounts, type PhaseValidationModelDiagnostic } from "./phase-validation-diagnostics.js";
-import { type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
+import { type PhasePlanExternalServicePrerequisite, type PhasePlanStructuredModel } from "./phase-plan-rendering.js";
 import { type PhasePlanDiagnosticCounts, type PhasePlanModelDiagnostic, type PhasePlanRepairSummary } from "./phase-plan-diagnostics.js";
 type RoadmapReadArgs = {
     cwd?: string;
@@ -187,6 +187,7 @@ type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
     wave?: number;
     gapsOnly?: boolean;
     includeConflicts?: boolean;
+    externalServiceConfirmed?: boolean;
 };
 type PhasePlanWriteArgs = PhaseLookupArgs & {
     planId?: NumericInput;
@@ -582,6 +583,7 @@ type PhasePlanRecord = {
     filesModified: string[];
     readFirst: string[];
     acceptanceCriteria: string[];
+    externalServicePrerequisites: PhasePlanExternalServicePrerequisite[];
     autonomous: boolean | null;
     valid: boolean;
     issues: string[];
@@ -804,6 +806,11 @@ type PhaseExecutionTargetPlan = PhasePlanRecord & {
     missingDependencyPlans: string[];
     summary: PhaseExecutionTargetSummary;
 };
+type PhaseExecutionExternalServicePrerequisite = PhasePlanExternalServicePrerequisite & {
+    planId: string;
+    planPath: string;
+    wave: number | null;
+};
 type PhaseExecutionTargetConflictGroup = {
     planIds: string[];
     planPaths: string[];
@@ -838,6 +845,14 @@ type PhaseExecutionTargetsResult = {
     candidatePlans: PhaseExecutionTargetPlan[];
     selectedPlans: PhaseExecutionTargetPlan[];
     overlapPlans: PhaseExecutionTargetPlan[];
+    externalServicePreflight: {
+        confirmationRequired: boolean;
+        confirmed: boolean;
+        blocking: boolean;
+        declaredPrerequisites: PhaseExecutionExternalServicePrerequisite[];
+        blockingPrerequisites: PhaseExecutionExternalServicePrerequisite[];
+        reasons: string[];
+    };
     existingSummaries: Array<{
         planId: string;
         path: string;
@@ -1026,6 +1041,7 @@ export declare const phaseToolDefinitions: ({
         wave: z.ZodOptional<z.ZodNumber>;
         gapsOnly: z.ZodOptional<z.ZodBoolean>;
         includeConflicts: z.ZodOptional<z.ZodBoolean>;
+        externalServiceConfirmed: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseExecutionTargetsResult>;
 } | {

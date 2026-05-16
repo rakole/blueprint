@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "blueprint.phase.plan.model",
   "title": "Blueprint Phase Plan Model",
-  "description": "Strict model-authored payload for phase.plan. Runtime-owned phase identity, plan id, phase directory, canonical filename, output path, and final Markdown persistence are supplied by MCP tools. The model renders Goal, Scope, Tasks, Verification, Must Haves, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
+  "description": "Strict model-authored payload for phase.plan. Runtime-owned phase identity, plan id, phase directory, canonical filename, output path, and final Markdown persistence are supplied by MCP tools. The model renders Goal, Scope, Tasks, External Service Prerequisites, Verification, Must Haves, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,6 +18,7 @@
     "goal",
     "scope",
     "tasks",
+    "externalServicePrerequisites",
     "verification",
     "mustHaves",
     "requirementCoverage",
@@ -108,6 +109,13 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/task"
+      }
+    },
+    "externalServicePrerequisites": {
+      "type": "array",
+      "description": "External services or runtime dependencies the agent cannot safely assume are ready. Keep this generic across project types: examples include container runtimes, databases, queues, emulators, local API servers, search services, caches, brokers, auth sandboxes, and third-party SaaS test tenants. Use the exact empty array when no external services are required.",
+      "items": {
+        "$ref": "#/$defs/externalServicePrerequisite"
       }
     },
     "verification": {
@@ -233,6 +241,39 @@
           "items": {
             "$ref": "#/$defs/repoRelativePath"
           }
+        }
+      }
+    },
+    "externalServicePrerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "service",
+        "category",
+        "purpose",
+        "userSetup",
+        "readinessCheck",
+        "canAgentProceedWithoutIt"
+      ],
+      "properties": {
+        "service": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "purpose": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "userSetup": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "readinessCheck": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "canAgentProceedWithoutIt": {
+          "type": "boolean",
+          "description": "False means execute-phase should treat the service as a blocking preflight prerequisite until readiness is confirmed."
         }
       }
     },

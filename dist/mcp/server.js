@@ -18774,6 +18774,12 @@ Replace with a concrete, execution-ready goal.
 
 - Replace with grep/test-verifiable acceptance criteria.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - Replace with the exact checks that prove this plan is complete.
@@ -20182,7 +20188,7 @@ var init_artifact_contracts = __esm({
     PHASE_PLAN_MODEL_SCHEMA_PATH = "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json";
     PHASE_PLAN_MODEL_CONTRACT = {
       schemaId: "blueprint.phase.plan.model",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       schemaPath: PHASE_PLAN_MODEL_SCHEMA_PATH,
       jsonSchema: readJsonSchemaAsset(PHASE_PLAN_MODEL_SCHEMA_FILE),
       qualityRules: [
@@ -20192,7 +20198,8 @@ var init_artifact_contracts = __esm({
         "Evidence coverage is runtime-narrowed and dynamic: every saved context, research, UI, review, prior plan, summary, validation, or other evidence artifact in the current task schema must appear in evidenceCoverage as used, deferred, irrelevant, or unavailable with rationale.",
         "Re-read blueprint_phase_plan_authoring_context immediately before each validation/write because saved plan files become intentional known evidence artifacts for later plan slots.",
         "Every declared filesModified entry must be covered by at least one task and one verification item in fileSurfaceCoverage.",
-        "The rendered plan must preserve the exact headings in renderedHeadings, including Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
+        "Declare external services the agent cannot safely assume are ready in externalServicePrerequisites. Keep the examples generic: container runtimes, databases, queues, emulators, local API servers, search services, caches, brokers, auth sandboxes, and third-party SaaS test tenants are all valid when the plan truly depends on them.",
+        "The rendered plan must preserve the exact headings in renderedHeadings, including External Service Prerequisites, Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
         "Acceptance criteria and verification entries must be grep, test, command, file-read, or artifact-validation verifiable; do not use vague manual-only acceptance.",
         "Do not copy minimal example wording, placeholder prose, static-for-now language, or generic none rows where real unknowns or deferrals exist."
       ],
@@ -20207,6 +20214,7 @@ var init_artifact_contracts = __esm({
         "Goal",
         "Scope",
         "Tasks",
+        "External Service Prerequisites",
         "Verification",
         "Must Haves",
         "Requirement Coverage",
@@ -20239,6 +20247,7 @@ var init_artifact_contracts = __esm({
             filesModified: ["src/mcp/artifact-contracts/index.ts"]
           }
         ],
+        externalServicePrerequisites: [],
         verification: [
           {
             item: "Run focused contract tests",
@@ -22137,8 +22146,9 @@ var init_artifact_contracts = __esm({
           "Plan frontmatter keys and task subsections are locked for MCP parsing.",
           "Optional `gap_closure: true` frontmatter marks an explicit gap-closure plan for `--gaps-only` execution targeting.",
           "Additional top-level headings are allowed, but required plan sections must remain unchanged and match the model-rendered heading list.",
-          "Required plan sections include coverage ledgers for Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
+          "Required plan sections include External Service Prerequisites plus the coverage ledgers for Requirement Coverage, Evidence Coverage, File / Surface Coverage, and Unknowns And Deferrals.",
           "Plan authoring should stay execution-ready: exact repo-relative `Read First` paths, concrete target-state `Action` text, grep/test/CLI/file-read-verifiable `Acceptance Criteria`, and goal-backward must-haves with observable truths, required artifacts, and key links.",
+          "Declare generic external-service prerequisites whenever execution depends on runtime state the agent cannot safely assume is already available. Valid examples include Docker or other container runtimes, Postgres/MySQL/MongoDB/Redis, local API servers, queues or brokers, cloud emulators, search services, auth provider sandboxes, and third-party SaaS test tenants.",
           "Top-level `requirements` lists only requirements this plan covers now; `requirementCoverage` accounts for every known phase requirement exactly once as covered, deferred, or irrelevant.",
           "Evidence coverage is runtime-narrowed and dynamic; re-read `blueprint_phase_plan_authoring_context` after each plan write because saved plans become evidence for later slots.",
           "Use concrete repo-relative paths in `files_modified`, `read_first`, and task `Read First`; keep endpoint routes, command globs, and code snippets in `Action` or `Acceptance Criteria` rather than path-list positions.",
@@ -29468,6 +29478,23 @@ ${renderBulletList(task.action)}
 
 ${renderBulletList(task.acceptanceCriteria)}`
   ).join("\n\n");
+  const externalServiceRows = renderMarkdownTableRows(
+    model.externalServicePrerequisites.length > 0 ? model.externalServicePrerequisites.map((row) => [
+      row.service,
+      row.category,
+      row.purpose,
+      row.userSetup,
+      row.readinessCheck,
+      row.canAgentProceedWithoutIt ? "yes" : "no"
+    ]) : [[
+      "none",
+      "none",
+      "No external services are required for this plan.",
+      "No user setup required.",
+      "Repo-local execution only.",
+      "yes"
+    ]]
+  );
   const verificationItems = model.verification.map(
     (item) => `${item.item} (${item.method}): ${item.evidence}`
   );
@@ -29531,6 +29558,12 @@ ${renderBulletList(model.scope)}
 ## Tasks
 
 ${taskSections}
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+${externalServiceRows}
 
 ## Verification
 
@@ -31647,6 +31680,7 @@ function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
     filesModified: validation.metadata.filesModified,
     readFirst: validation.metadata.readFirst,
     acceptanceCriteria: validation.metadata.acceptanceCriteria,
+    externalServicePrerequisites: validation.metadata.externalServicePrerequisites,
     autonomous: validation.metadata.autonomous,
     valid: validation.valid,
     issues: validation.issues,
@@ -34885,6 +34919,7 @@ async function blueprintPhasePlanRead(args) {
       filesModified: validation.metadata.filesModified,
       readFirst: validation.metadata.readFirst,
       acceptanceCriteria: validation.metadata.acceptanceCriteria,
+      externalServicePrerequisites: validation.metadata.externalServicePrerequisites,
       autonomous: validation.metadata.autonomous
     },
     validation: {
@@ -35820,6 +35855,19 @@ async function blueprintPhaseSummaryRead(args) {
     reason: null
   };
 }
+function formatExternalServicePrerequisiteReason(prerequisite) {
+  return `${prerequisite.planId} (${prerequisite.planPath}) requires external service "${prerequisite.service}" [${prerequisite.category}] for ${prerequisite.purpose}. User setup/startup: ${prerequisite.userSetup}. Readiness check: ${prerequisite.readinessCheck}.`;
+}
+function selectedPlanExternalServicePrerequisites(plans) {
+  return plans.flatMap(
+    (plan) => plan.externalServicePrerequisites.map((prerequisite) => ({
+      ...prerequisite,
+      planId: plan.planId,
+      planPath: plan.path,
+      wave: plan.wave
+    }))
+  );
+}
 async function blueprintPhaseExecutionTargets(args = {}) {
   if (args.wave !== void 0 && (!Number.isInteger(args.wave) || args.wave < 1)) {
     throw new Error("Wave must be a positive integer.");
@@ -35849,6 +35897,14 @@ async function blueprintPhaseExecutionTargets(args = {}) {
       candidatePlans: [],
       selectedPlans: [],
       overlapPlans: [],
+      externalServicePreflight: {
+        confirmationRequired: false,
+        confirmed: args.externalServiceConfirmed ?? false,
+        blocking: false,
+        declaredPrerequisites: [],
+        blockingPrerequisites: [],
+        reasons: []
+      },
       existingSummaries: [],
       blockers: {
         executionBlocked: true,
@@ -35868,7 +35924,8 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
-  const [planIndex, summaryIndex] = await Promise.all([
+  const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
+  const [planIndex, summaryIndex, effectiveConfig] = await Promise.all([
     blueprintPhasePlanIndex({
       cwd: projectRoot,
       phase: resolved.phaseNumber
@@ -35876,8 +35933,13 @@ async function blueprintPhaseExecutionTargets(args = {}) {
     blueprintPhaseSummaryIndex({
       cwd: projectRoot,
       phase: resolved.phaseNumber
+    }),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
     })
   ]);
+  const alwaysConfirmExternalServices = effectiveConfig.config?.safety?.always_confirm_external_services === true;
   const pendingPlanIds = summaryIndex.pendingPlans;
   const pendingPlanIdSet = new Set(pendingPlanIds);
   const gapClosurePlanIdSet = new Set(planIndex.gapClosurePlans);
@@ -35965,6 +36027,19 @@ async function blueprintPhaseExecutionTargets(args = {}) {
     blockers.push(
       `Selected plans are stale because dependency plan artifacts are missing: ${stalePlanIds.join(", ")}.`
     );
+  }
+  const declaredExternalServicePrerequisites = selectedPlanExternalServicePrerequisites(selectedPlans);
+  const blockingExternalServicePrerequisites = declaredExternalServicePrerequisites.filter(
+    (prerequisite) => !prerequisite.canAgentProceedWithoutIt
+  );
+  const externalServicePreflightReasons = alwaysConfirmExternalServices && !externalServiceConfirmed && blockingExternalServicePrerequisites.length > 0 ? [
+    `Selected plans declare blocking external-service prerequisites that must be confirmed before execution because safety.always_confirm_external_services is enabled for phase ${resolved.phaseNumber}.`,
+    ...blockingExternalServicePrerequisites.map(
+      (prerequisite) => formatExternalServicePrerequisiteReason(prerequisite)
+    )
+  ] : [];
+  if (externalServicePreflightReasons.length > 0) {
+    blockers.push(...externalServicePreflightReasons);
   }
   const pairConflicts = [];
   if (includeConflicts) {
@@ -36103,6 +36178,14 @@ async function blueprintPhaseExecutionTargets(args = {}) {
     candidatePlans,
     selectedPlans,
     overlapPlans,
+    externalServicePreflight: {
+      confirmationRequired: alwaysConfirmExternalServices && blockingExternalServicePrerequisites.length > 0,
+      confirmed: externalServiceConfirmed,
+      blocking: externalServicePreflightReasons.length > 0,
+      declaredPrerequisites: declaredExternalServicePrerequisites,
+      blockingPrerequisites: blockingExternalServicePrerequisites,
+      reasons: externalServicePreflightReasons
+    },
     existingSummaries,
     blockers: {
       executionBlocked: blockers.length > 0,
@@ -36698,7 +36781,8 @@ var init_phase = __esm({
       phase: numericBlueprintInputSchema.optional(),
       wave: number2().int().positive().optional(),
       gapsOnly: boolean2().optional(),
-      includeConflicts: boolean2().optional()
+      includeConflicts: boolean2().optional(),
+      externalServiceConfirmed: boolean2().optional()
     };
     phaseArtifactWriteInputSchema = {
       cwd: string2().optional(),
@@ -38247,6 +38331,7 @@ function parsePlanFrontmatter(content) {
       filesModified: [],
       readFirst: [],
       acceptanceCriteria: [],
+      externalServicePrerequisites: [],
       autonomous: null
     };
   }
@@ -38304,8 +38389,78 @@ function parsePlanFrontmatter(content) {
     filesModified: arrays.get("files_modified") ?? [],
     readFirst: arrays.get("read_first") ?? [],
     acceptanceCriteria: arrays.get("acceptance_criteria") ?? [],
+    externalServicePrerequisites: parsePlanExternalServicePrerequisites(
+      extractMarkdownSection5(content, "External Service Prerequisites")
+    ),
     autonomous: autonomousValue === "true" ? true : autonomousValue === "false" ? false : null
   };
+}
+function parseExternalServiceProceedWithoutIt(value) {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
+  return null;
+}
+function parsePlanExternalServicePrerequisites(section) {
+  const rows = extractMarkdownTableRows(section);
+  if (rows.length === 1 && rows[0]?.length >= 6 && rows[0][0]?.trim().toLowerCase() === "none" && rows[0][1]?.trim().toLowerCase() === "none") {
+    return [];
+  }
+  return rows.flatMap((row) => {
+    if (row.length < 6) {
+      return [];
+    }
+    const canAgentProceedWithoutIt = parseExternalServiceProceedWithoutIt(row[5] ?? "");
+    if (canAgentProceedWithoutIt === null) {
+      return [];
+    }
+    return [{
+      service: row[0]?.trim() ?? "",
+      category: row[1]?.trim() ?? "",
+      purpose: row[2]?.trim() ?? "",
+      userSetup: row[3]?.trim() ?? "",
+      readinessCheck: row[4]?.trim() ?? "",
+      canAgentProceedWithoutIt
+    }];
+  });
+}
+function validatePlanExternalServicePrerequisitesSection(section) {
+  const rows = extractMarkdownTableRows(section);
+  if (rows.length === 0) {
+    return [
+      "Plan artifact must include an explicit external-service prerequisite table row under ## External Service Prerequisites, or the canonical none row when no external services are required."
+    ];
+  }
+  if (rows.length === 1 && rows[0]?.length >= 6 && rows[0][0]?.trim().toLowerCase() === "none" && rows[0][1]?.trim().toLowerCase() === "none") {
+    return [];
+  }
+  const issues = [];
+  for (const row of rows) {
+    if (row.length < 6) {
+      issues.push(
+        "Each external-service prerequisite row must include Service, Category, Purpose, User Setup / Startup, Readiness Check, and Can Agent Proceed Without It."
+      );
+      continue;
+    }
+    const [service, category, purpose, userSetup, readinessCheck, canProceed] = row.map(
+      (cell) => cell.trim()
+    );
+    if ([service, category, purpose, userSetup, readinessCheck].some((value) => value.length === 0)) {
+      issues.push(
+        "External-service prerequisite rows must populate Service, Category, Purpose, User Setup / Startup, and Readiness Check with concrete text."
+      );
+    }
+    if (parseExternalServiceProceedWithoutIt(canProceed) === null) {
+      issues.push(
+        "External-service prerequisite rows must use yes/no in Can Agent Proceed Without It."
+      );
+    }
+  }
+  return issues;
 }
 function containsSourceEvidence(section) {
   const repoDirectoryReference = /(?:^|[\s([`])(?:\.blueprint\/|(?:agents|commands|docs|hooks|scripts|skills|src|tests)\/)[A-Za-z0-9._~!$&'()*+,;=:@%/-]+/m;
@@ -39559,6 +39714,14 @@ function isMarkdownTableHeaderRow(line) {
     ["requirement", "task or check", "evidence", "coverage state", "notes"],
     ["id", "description", "research support"],
     ["requirement", "task or check", "evidence", "coverage state"],
+    [
+      "service",
+      "category",
+      "purpose",
+      "user setup / startup",
+      "readiness check",
+      "can agent proceed without it"
+    ],
     ["#", "test", "expected behavior", "evidence", "result", "notes"],
     ["test", "truth", "status", "severity", "reason", "follow-up"],
     ["check", "command", "result", "evidence", "notes"],
@@ -42308,6 +42471,8 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
     issues.push(...taskValidation.issues);
     warnings.push(...taskValidation.warnings);
   }
+  const externalServiceSection = extractMarkdownSection5(content, "External Service Prerequisites");
+  issues.push(...validatePlanExternalServicePrerequisitesSection(externalServiceSection));
   const verificationSection = extractMarkdownSection5(content, "Verification");
   if (!hasSubstantivePlanListContent(verificationSection)) {
     issues.push("Plan artifact must include at least one substantive verification bullet under ## Verification.");

@@ -315,6 +315,12 @@ Harden plan validation.
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent and the new checks pass under a strict write.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -396,6 +402,12 @@ Harden plan validation.
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -476,6 +488,12 @@ Harden plan validation.
 #### Acceptance Criteria
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -572,6 +590,12 @@ Harden plan validation.
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -652,6 +676,12 @@ Harden plan validation.
 #### Acceptance Criteria
 
 - The result feels better.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -735,6 +765,12 @@ Harden plan validation.
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -817,6 +853,12 @@ Harden plan validation.
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -897,6 +939,12 @@ Harden plan validation.
 #### Acceptance Criteria
 
 - src/mcp/tools/artifacts.ts contains validatePlanArtifactContent.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -984,6 +1032,12 @@ Harden plan validation without blocking route examples.
 
 - H2 console at /h2-console shows tables INVOICE, VALIDATION_RULE, VALIDATION_RESULT.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -1070,6 +1124,12 @@ Allow legitimate XML and template placeholders in task prose.
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Verification
 
 - tests/phase-plan-validation-hardening.test.ts exits 0
@@ -1106,6 +1166,7 @@ function validPlanModel() {
         filesModified: ["src/mcp/tools/artifacts.ts"]
       }
     ],
+    externalServicePrerequisites: [],
     verification: [
       {
         item: "Focused hardening test",

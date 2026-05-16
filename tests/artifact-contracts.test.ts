@@ -171,7 +171,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   );
 
   assert.equal(planContract.contract.modelContract?.schemaId, "blueprint.phase.plan.model");
-  assert.equal(planContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal(planContract.contract.modelContract?.schemaVersion, "1.1.0");
   assert.equal(
     planContract.contract.modelContract?.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
@@ -184,6 +184,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     "Goal",
     "Scope",
     "Tasks",
+    "External Service Prerequisites",
     "Verification",
     "Must Haves",
     "Requirement Coverage",
@@ -205,6 +206,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     | Record<string, unknown>
     | undefined;
   assert.equal(Boolean(planModelProperties && "planId" in planModelProperties), false);
+  assert.ok(planModelProperties && "externalServicePrerequisites" in planModelProperties);
   assert.ok(planModelProperties && "requirementCoverage" in planModelProperties);
   assert.ok(planModelProperties && "fileSurfaceCoverage" in planModelProperties);
   assert.match(

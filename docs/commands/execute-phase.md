@@ -38,6 +38,11 @@ state without claiming phase completion on its own.
 - `--wave`, `--gaps-only`, and `--interactive` are honored when present.
 - `blueprint_phase_execution_targets` is the deterministic selection helper for
   default runs plus `--wave` and `--gaps-only`.
+- `externalServicePreflight` from `blueprint_phase_execution_targets` is the
+  deterministic preflight packet for saved plan prerequisites the agent cannot
+  safely assume are ready, such as container runtimes, databases, queues,
+  emulators, local API servers, search services, caches, brokers, auth
+  sandboxes, or third-party SaaS test tenants.
 - `gapClosurePlans` from `blueprint_phase_plan_index` is the source of truth
   for `--gaps-only`.
 - Any lower-wave pending plan in `lowerWavePendingPlans` blocks later-wave
@@ -52,6 +57,11 @@ state without claiming phase completion on its own.
 - Pre-persistence gates: read the selected plan index, summary index,
   execution-target helper, effective config, canonical summary contract,
   artifact validation state, and phase state before any summary write.
+- External-service gates: when selected plans declare blocking external-service
+  prerequisites and `safety.always_confirm_external_services` is enabled,
+  confirm readiness before meaningful execution. If confirmation is granted,
+  rerun `blueprint_phase_execution_targets` with
+  `externalServiceConfirmed: true`; otherwise stop without entering execution.
 - Ownership gates: parallel executor agents are allowed only for disjoint
   write ownership; overlapping plan surfaces force sequential execution or
   explicit confirmation.
@@ -96,6 +106,7 @@ and no-subagent fallback behavior, read the rich runtime contract in
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans, gapClosurePlans}`
 - `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, blockers, conflicts, warnings}`
+- `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, externalServicePreflight, blockers, conflicts, warnings}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
@@ -185,6 +196,11 @@ and no-subagent fallback behavior, read the rich runtime contract in
   `workflow.use_worktrees`, and `git.branching_strategy`.
 - If later-wave work is selected while lower-wave plans remain pending, stop
   and report the lower-wave gap explicitly.
+- If saved plans declare blocking external-service prerequisites, stop before
+  meaningful execution until readiness is confirmed. When a required service
+  becomes unavailable after work starts, write truthful `PARTIAL` or `BLOCKED`
+  execution evidence and keep the next safe action on `/blu-execute-phase` or
+  `/blu-progress` rather than handing off to validation.
 
 ## Edge Cases
 

@@ -147,6 +147,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /final `status` to be `valid` before synced state update or completion advances/i);
   assert.match(skillFile, /Incomplete roadmap coverage may still be saved incrementally, but it is not final completion/i);
   assert.match(skillFile, /strict model-rendered heading set/i);
+  assert.match(skillFile, /External Service Prerequisites/i);
   assert.match(skillFile, /File \/ Surface Coverage/i);
   assert.match(skillFile, /Unknowns And Deferrals/i);
   assert.match(skillFile, /Top-level `requirements` lists only requirements this plan covers now/i);
@@ -203,6 +204,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /final `mcp_blueprint_blueprint_phase_plan_validate` status must be\s+`valid` before completion advances or `mcp_blueprint_blueprint_state_update`\s+is allowed to run/i);
   assert.match(runtimeContract, /Incomplete roadmap coverage may still be saved\s+incrementally, but it is not final completion/i);
   assert.match(runtimeContract, /Artifact Authoring Rules/);
+  assert.match(runtimeContract, /`## External Service Prerequisites`/);
   assert.match(runtimeContract, /`## Requirement Coverage`/);
   assert.match(runtimeContract, /`## Evidence Coverage`/);
   assert.match(runtimeContract, /`## File \/ Surface Coverage`/);
@@ -210,6 +212,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /Frontmatter\/top-level model `requirements` must list only requirements this\s+specific plan covers now/i);
   assert.match(runtimeContract, /`requirementCoverage` is the all-requirements ledger/i);
   assert.match(runtimeContract, /`evidenceCoverage` is runtime-narrowed and dynamic/i);
+  assert.match(runtimeContract, /externalServicePrerequisites/i);
   assert.match(runtimeContract, /goal-backward must-haves/i);
   assert.match(runtimeContract, /observable truths, required\s+artifacts,\s+and\s+key links/i);
   assert.match(runtimeContract, /Subagent Path/);
