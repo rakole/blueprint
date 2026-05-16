@@ -5593,7 +5593,7 @@ export async function blueprintPhaseValidationValidateModel(
       ? null
       : normalizedModel,
     renderPreview,
-    warnings: context.warnings
+    warnings: args.artifact === "verification" ? [] : context.warnings
   };
 }
 
@@ -7634,7 +7634,8 @@ export async function blueprintPhaseValidationWrite(
     completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
   );
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
-  const warnings: string[] = [...summaryWarnings];
+  const shouldSurfaceWarnings = args.artifact !== "verification";
+  const warnings: string[] = shouldSurfaceWarnings ? [...summaryWarnings] : [];
 
   if (summaryPaths.length === 0) {
     throw new Error(
@@ -7666,7 +7667,7 @@ export async function blueprintPhaseValidationWrite(
         overwritten: false,
         status: "invalid",
         issues: modelValidation.diagnostics.map(formatPhaseValidationDiagnostic),
-        warnings: [...warnings, ...modelValidation.warnings]
+        warnings: shouldSurfaceWarnings ? [...warnings, ...modelValidation.warnings] : []
       };
     }
 
@@ -7751,11 +7752,13 @@ export async function blueprintPhaseValidationWrite(
           overwritten: false,
           status: "invalid",
           issues: validation.issues,
-          warnings: [...warnings, ...validation.warnings]
+          warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
         };
       }
 
-      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      if (shouldSurfaceWarnings) {
+        warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      }
       if (args.artifact === "uat") {
         warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
       }
@@ -7773,7 +7776,7 @@ export async function blueprintPhaseValidationWrite(
         overwritten: false,
         status: "reused",
         issues: validation.issues,
-        warnings: [...warnings, ...validation.warnings]
+        warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
       };
     }
 
@@ -7816,13 +7819,14 @@ export async function blueprintPhaseValidationWrite(
     };
   }
 
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: artifactPath
-    })
-  );
+  const persistenceWarnings = await writeTextFile(absolutePath, normalizedContent, {
+    label: artifactPath
+  });
+  if (shouldSurfaceWarnings) {
+    warnings.push(...persistenceWarnings);
+  }
 
-  if (exists) {
+  if (exists && shouldSurfaceWarnings) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
 
@@ -7843,7 +7847,7 @@ export async function blueprintPhaseValidationWrite(
     overwritten: exists,
     status: exists ? "updated" : "created",
     issues: validation.issues,
-    warnings: [...warnings, ...validation.warnings]
+    warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
   };
 }
 
