@@ -18886,7 +18886,7 @@ function renderVerificationTemplate(context) {
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+| <manual-only item when any remain> | <reason> | <follow-up> | MANUAL|DEFERRED |
 
 ## Gate State
 
@@ -18902,11 +18902,11 @@ function renderVerificationTemplate(context) {
 
 ## Gaps Found
 
-- Explicit blocker, follow-up, or \`none\`.
+- Explicit blocker or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Suggested Repairs
 
-- Explicit next repair, follow-up, or \`none\`.
+- Explicit next repair or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Next Safe Action
 
@@ -32618,8 +32618,15 @@ async function blueprintPhaseValidationValidateModel(args) {
   }
   let normalizedModel = null;
   if (modelObject && context.taskSchema) {
+    const validationModelObject = args.artifact === "verification" ? {
+      ...modelObject,
+      manualOrDeferredCoverage: modelObject.manualOrDeferredCoverage ?? [],
+      gapClassification: modelObject.gapClassification ?? [],
+      gapsFound: modelObject.gapsFound ?? [],
+      suggestedRepairs: modelObject.suggestedRepairs ?? []
+    } : modelObject;
     const validate = createAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(validationModelObject);
     if (!schemaValid) {
       diagnostics.push(
         ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
@@ -32627,12 +32634,12 @@ async function blueprintPhaseValidationValidateModel(args) {
     }
     diagnostics.push(
       ...phaseValidationResidualDiagnostics(
-        modelObject,
+        validationModelObject,
         context.contract.modelContract,
         args.artifact
       )
     );
-    for (const issue2 of await validatePhaseValidationModelCommands(modelObject, args.artifact)) {
+    for (const issue2 of await validatePhaseValidationModelCommands(validationModelObject, args.artifact)) {
       diagnostics.push(
         phaseValidationDiagnostic({
           source: "residual",
@@ -32645,7 +32652,9 @@ async function blueprintPhaseValidationValidateModel(args) {
       );
     }
     if (schemaValid) {
-      normalizedModel = args.artifact === "verification" ? normalizeVerificationStructuredModel(modelObject) : modelObject;
+      normalizedModel = args.artifact === "verification" ? normalizeVerificationStructuredModel(
+        validationModelObject
+      ) : validationModelObject;
     }
   }
   let renderPreview = null;
