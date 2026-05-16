@@ -44,6 +44,9 @@ Blueprint-native.
 - Prefer saved `.blueprint/codebase/` summaries exposed through phase context
   before broad repo rereads. Call out missing or invalid mapped codebase
   evidence as uncertainty.
+- After all Read-stage MCP calls complete, build the Planning Investigation
+  Trace before any drafting or subagent invocation. The full section is
+  defined below, after Stage Mapping, to preserve the stage hierarchy.
 
 ### Decide
 
@@ -149,6 +152,57 @@ Blueprint-native.
   inventory.
 - Route only to implemented commands. Use `/blu-progress` when the natural next
   command is not implemented or the safest action is ambiguous.
+
+## Planning Investigation Trace
+
+After completing all Read-stage MCP calls, build a session-local planning
+evidence summary before drafting any plan content. This summary is working
+state, not a new artifact or MCP type.
+
+### Evidence Inventory
+
+| Source | Status | Key Finding | Planning Impact | Confidence |
+|--------|--------|-------------|-----------------|------------|
+
+Classify each source as one of:
+
+- `present-usable`: artifact exists with substantive authored content
+- `present-scaffold`: artifact exists but contains only scaffold or seed content
+- `present-invalid`: artifact exists but failed or may fail validation
+- `missing`: no artifact file exists
+- `disabled-by-config`: artifact gate disabled in normalized config
+
+Required sources to classify:
+
+- Phase context (`XX-CONTEXT.md`)
+- Research (`XX-RESEARCH.md`) only when `workflow.research=true`
+- UI spec (`XX-UI-SPEC.md`) only when `workflow.ui_phase=true`
+- Validation evidence when present
+- Review findings when present
+- Existing plan inventory
+- Mapped codebase summaries
+
+### Planning Signals
+
+Before drafting, extract and list:
+
+1. Locked decisions: implementation decisions from context that constrain the
+   plan and must not be reduced.
+2. Requirement mapping: which phase requirements map to which implementation
+   areas and what evidence supports each mapping.
+3. Evidence gaps: where saved evidence is missing, stale, or insufficient for
+   confident planning.
+4. Split signals: early indicators that the phase needs multiple plans, such
+   as broad scope, independent features, or dependency layers.
+5. Risk factors: security exposure, external dependencies, validation
+   complexity, or areas where research flagged uncertainty.
+
+### Compact Summary
+
+Summarize in 3-5 lines: phase goal, key constraints, evidence quality,
+anticipated plan count, and highest-risk planning decision.
+
+Present this summary before any plan drafting or subagent invocation.
 
 ## Artifact Authoring Rules
 
@@ -311,6 +365,129 @@ generic helpers for Blueprint planning, codebase, or workflow analysis.
   affects plan tasks.
 - Uncertainty is explicit. The plan names missing evidence rather than
   inventing certainty.
+
+## Planning Quality Self-Check
+
+### Pre-Draft Readiness Assessment
+
+Before drafting plan content, assess readiness per dimension:
+
+| Dimension | Ready? | Evidence | Risk If Weak |
+|-----------|--------|----------|--------------|
+| Phase goal clarity | | | |
+| Requirement completeness | | | |
+| Locked decision coverage | | | |
+| Evidence sufficiency | | | |
+| Dependency visibility | | | |
+| Verification feasibility | | | |
+
+If any HIGH-risk dimension is not ready, document the gap as a planning
+assumption or blocker before drafting. Do not silently resolve uncertainty by
+omitting the requirement or weakening the plan.
+
+### Post-Draft Semantic Self-Check
+
+Before claiming plan completion, answer yes or no:
+
+1. Does every task `Action` name concrete target state such as functions,
+   routes, schema fields, config keys, or expected values rather than vague
+   alignment or wiring language?
+2. Does every task `Read First` cite the actual files being modified plus
+   constraining docs, schemas, interfaces, or tests?
+3. Does every `Acceptance Criteria` item specify a mechanically checkable
+   condition such as a grep string, test command, CLI output, or file content?
+4. Does `requirementCoverage` account for every known phase requirement exactly
+   once with concrete rationale for deferred or irrelevant items?
+5. Does `evidenceCoverage` match the latest runtime-narrowed inventory from a
+   fresh `blueprint_phase_plan_authoring_context` read?
+6. Could `/blu-execute-phase` implement each task without asking what file,
+   function, route, or test is intended?
+7. Are deferred items, assumptions, and evidence gaps named in
+   `unknownsAndDeferrals` rather than silently omitted?
+
+If any answer is "no", repair the affected plan section before persistence.
+
+## Worked Examples And Anti-Examples
+
+### Good: Single-Plan Phase With Research
+
+Phase has 2 requirements, clear context, and valid research. The agent reads
+all evidence, builds an investigation trace showing both requirements map to
+one implementation area, drafts one structured plan model with 3 tasks,
+validates against the task schema, persists through MCP, runs checker
+(`ACCEPT`), validates the plan set, and syncs state. The final response names
+phase, plan id, gates honored, and next safe action.
+
+### Good: Multi-Plan Phase With Dependency Waves
+
+Phase has 5 requirements spanning UI and backend. The investigation trace
+identifies 2 independent feature slices plus 1 shared foundation. The agent
+drafts 3 plans: wave-1 foundation, wave-2a UI slice, and wave-2b backend
+slice. It re-reads authoring context after each write so saved plan files
+become evidence for later slots. Checker finds one `REVISE` issue; the agent
+fixes the affected plan only and re-validates. The final plan set passes
+scoped validation.
+
+### Good: Reuse Gate For Existing Plans
+
+Phase has 2 existing plans. The agent reads plan index and plan bodies. New
+context does not change the first plan but invalidates the second. The agent
+uses `ask_user` for add, revise, or replace. The user chooses revise plan 02,
+and the agent drafts a revised model for plan 02 only while preserving plan
+01.
+
+### Good: Config-Disabled Research Skip
+
+`workflow.research=false` in effective config. The agent reads config and
+reports that research was skipped because normalized config disabled it. It
+proceeds without blocking on a missing research artifact.
+
+### Good: Planning Readiness Block
+
+`planningReadiness.readyForPlanPhase=false` with blocker "missing usable
+context". The agent stops before drafting, reports the blocker, and routes to
+`/blu-discuss-phase <phase>`. No plan files are written.
+
+### Anti-Example: Skipping Investigation Trace
+
+Bad: Reading all MCP sources and immediately drafting a plan model without
+summarizing what was found.
+Correct: Building the evidence inventory and planning signals summary before
+any drafting.
+
+### Anti-Example: Markdown Fallback After Validation Failure
+
+Bad: `blueprint_phase_plan_validate_model` returns invalid diagnostics and the
+agent writes raw `.blueprint/` Markdown to bypass validation.
+Correct: Repairing diagnostics against the live task schema, retrying through
+`blueprint_phase_plan_write`, and stopping if identical diagnostics repeat.
+
+### Anti-Example: Ignoring Evidence Coverage Refresh
+
+Bad: Writing plan 01 and then writing plan 02 without re-reading
+`blueprint_phase_plan_authoring_context`. Plan 02's `evidenceCoverage` misses
+the newly saved plan 01 file.
+Correct: Re-reading authoring context immediately before each model validation
+and write.
+
+### Anti-Example: Scope Reduction Language
+
+Bad: A task action says "Add a simplified v1 authentication flow for now."
+Correct: A task action names the full target behavior required by the locked
+decision in context instead of reducing scope with placeholder language.
+
+### Anti-Example: Vague Acceptance Criteria
+
+Bad: "Authentication is properly configured and working."
+Correct: Acceptance criteria specify exact tests, grep targets, CLI outputs, or
+file content that can be checked mechanically.
+
+### Anti-Example: Unbounded Checker Loop
+
+Bad: Checker returns `REVISE` three times with the same issue and the agent
+keeps retrying without tracking convergence.
+Correct: After 3 passes with the same blocker, the agent stops, preserves the
+best draft, reports the exact unresolved issue, and routes to `/blu-progress`.
 
 ## Completion Criteria
 
