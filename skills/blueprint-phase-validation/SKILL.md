@@ -120,7 +120,12 @@ Runtime input resolution is structured and command-scoped:
 2. Keep validation saved-summary-first, phase-scoped, and MCP-owned: execution summaries are the baseline, existing `XX-VERIFICATION.md` is the audit baseline when present, and direct repo mutation is out of scope.
 3. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when deciding whether verifier analysis runs and whether Nyquist-style gap language is active or informational.
 4. Read `blueprint_phase_validation_authoring_context` and `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final authoring, build a structured verification evidence payload against the returned `taskSchema`, call `blueprint_phase_validation_validate_model`, keep every completed summary filename or path in the contract-defined evidence section, and persist only through `blueprint_phase_validation_write` with the `verification` artifact when validation returns `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
-5. Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome, then sync `STATE.md` through `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"`. Route explicit test-generation gaps to `/blu-add-tests <phase>` and implementation/behavior gaps to `/blu-audit-fix <phase>` only when the saved artifact keeps the gate `PARTIAL` or `BLOCKED` and makes that follow-up necessary.
+5. Apply this routing shorthand before the final verification model validation and write:
+   `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = /blu-verify-work <phase>`
+   `else if explicit deferred-test or test-generation gaps remain -> nextSafeAction = /blu-add-tests <phase>`
+   `else if implementation or behavior gaps remain -> nextSafeAction = /blu-audit-fix <phase>`
+   `else -> keep nextSafeAction on /blu-validate-phase <phase> only for validation-document repair or manual-only prerequisites`
+6. Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome, then sync `STATE.md` through `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"`. Route explicit test-generation gaps to `/blu-add-tests <phase>` and implementation/behavior gaps to `/blu-audit-fix <phase>` only when the saved artifact keeps the gate `PARTIAL` or `BLOCKED` and makes that follow-up necessary.
 
 ### `verify-work`
 

@@ -1118,6 +1118,40 @@ test("validation PASS task schema rejects manual coverage and non-empty none row
   );
 });
 
+test("verification PASS nextSafeAction diagnostics point directly to verify-work", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput([summaryPath], {
+    evidenceReviewedSummaryPaths: [summaryPath],
+    nextSafeAction: "/blu-progress"
+  });
+
+  const validated = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const routeDiagnostic = validated.diagnostics.find(
+    (diagnostic) => diagnostic.path === "model.nextSafeAction"
+  );
+
+  assert.equal(validated.status, "invalid");
+  assert.ok(routeDiagnostic);
+  assert.match(
+    routeDiagnostic?.message ?? "",
+    /When gateState is PASS, model\.nextSafeAction must be \/blu-verify-work 3\./
+  );
+  assert.match(
+    routeDiagnostic?.suggestion ?? "",
+    /Set model\.nextSafeAction to \/blu-verify-work 3\./
+  );
+});
+
 test("verification model preserves status, covered normalization, scalar summary, empty PASS gaps, and extended evidence", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {

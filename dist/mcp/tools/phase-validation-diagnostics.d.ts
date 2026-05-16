@@ -19,5 +19,5 @@ export declare function phaseValidationDiagnostic(args: PhaseValidationModelDiag
 export declare function emptyPhaseValidationDiagnosticCounts(): PhaseValidationDiagnosticCounts;
 export declare function countPhaseValidationDiagnostics(diagnostics: PhaseValidationModelDiagnostic[]): PhaseValidationDiagnosticCounts;
 export declare function formatPhaseValidationDiagnostic(diagnostic: PhaseValidationModelDiagnostic): string;
-export declare function schemaDiagnosticFromPhaseValidationAjvError(error: ErrorObject): PhaseValidationModelDiagnostic;
+export declare function schemaDiagnosticFromPhaseValidationAjvError(error: ErrorObject, taskSchema: Record<string, unknown>, model: unknown): PhaseValidationModelDiagnostic;
 export declare function phaseValidationResidualDiagnostics(model: Record<string, unknown>, modelContract: ArtifactContractReadResult["modelContract"], artifact: PhaseValidationArtifactKind): PhaseValidationModelDiagnostic[];

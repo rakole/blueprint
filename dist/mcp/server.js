@@ -29103,11 +29103,121 @@ function countPhaseValidationDiagnostics(diagnostics) {
 function formatPhaseValidationDiagnostic(diagnostic) {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
-function schemaDiagnosticFromPhaseValidationAjvError(error2) {
+function phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model) {
+  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const gateState = getValueAtJsonPointer(model, "/gateState");
+  const status = getValueAtJsonPointer(model, "/status");
+  const nextSafeAction = getValueAtJsonPointer(model, "/nextSafeAction");
+  const readyAction = typeof runtimeContext?.readyAction === "string" ? runtimeContext.readyAction : null;
+  const repairActions = Array.isArray(runtimeContext?.repairActions) ? runtimeContext.repairActions.filter((value) => typeof value === "string") : [];
+  const completeAction = typeof runtimeContext?.completeAction === "string" ? runtimeContext.completeAction : null;
+  const continuationActions = Array.isArray(runtimeContext?.continuationActions) ? runtimeContext.continuationActions.filter((value) => typeof value === "string") : [];
+  if (pathValue === "model.nextSafeAction" && (error2.keyword === "const" || error2.keyword === "enum")) {
+    if (gateState === "PASS" && readyAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When gateState is PASS, model.nextSafeAction must be ${readyAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: readyAction
+        },
+        suggestion: `Set model.nextSafeAction to ${readyAction}.`
+      });
+    }
+    if ((gateState === "PARTIAL" || gateState === "BLOCKED") && repairActions.length > 0) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When gateState is ${gateState}, model.nextSafeAction must be one of: ${repairActions.join(", ")}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          allowedActions: repairActions
+        },
+        suggestion: `Set model.nextSafeAction to one of: ${repairActions.join(", ")}.`
+      });
+    }
+    if (status === "PASS" && completeAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When status is PASS, model.nextSafeAction must be ${completeAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: completeAction
+        },
+        suggestion: `Set model.nextSafeAction to ${completeAction}.`
+      });
+    }
+    if ((status === "FAIL" || status === "PARTIAL") && continuationActions.length > 0) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When status is ${status}, model.nextSafeAction must be one of: ${continuationActions.join(", ")}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          allowedActions: continuationActions
+        },
+        suggestion: `Set model.nextSafeAction to one of: ${continuationActions.join(", ")}.`
+      });
+    }
+  }
+  if (error2.keyword === "if") {
+    if (gateState === "PASS" && readyAction && nextSafeAction !== readyAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: "model.nextSafeAction",
+        code: "schema.if",
+        message: `PASS verification models must route to ${readyAction} before UAT.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: readyAction
+        },
+        suggestion: `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
+      });
+    }
+    if (status === "PASS" && completeAction && nextSafeAction !== completeAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: "model.nextSafeAction",
+        code: "schema.if",
+        message: `PASS UAT models must route to ${completeAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: completeAction
+        },
+        suggestion: `Keep PASS-only UAT gap rows empty, then set model.nextSafeAction to ${completeAction}.`
+      });
+    }
+  }
+  return null;
+}
+function schemaDiagnosticFromPhaseValidationAjvError(error2, taskSchema, model) {
   const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
   const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
   const basePath = ajvInstancePathToModelPath(error2.instancePath);
   const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  const routeDiagnostic = phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model);
+  if (routeDiagnostic) {
+    return routeDiagnostic;
+  }
+  const allowedValues = ajvAllowedValues(error2);
   return phaseValidationDiagnostic({
     source: "schema",
     path: pathValue,
@@ -29116,9 +29226,10 @@ function schemaDiagnosticFromPhaseValidationAjvError(error2) {
     context: {
       keyword: error2.keyword,
       params: error2.params,
-      schemaPath: error2.schemaPath
+      schemaPath: error2.schemaPath,
+      allowedValues
     },
-    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
   });
 }
 function collectModelStringEntries(value, pathValue = "model") {
@@ -29216,6 +29327,7 @@ function phaseValidationResidualDiagnostics(model, modelContract, artifact) {
 var init_phase_validation_diagnostics = __esm({
   "src/mcp/tools/phase-validation-diagnostics.ts"() {
     "use strict";
+    init_phase_json_helpers();
     init_phase_schema_paths();
     init_phase_validation_contracts();
   }
@@ -32629,7 +32741,9 @@ async function blueprintPhaseValidationValidateModel(args) {
     const schemaValid = validate(validationModelObject);
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
+        ...(validate.errors ?? []).map(
+          (error2) => schemaDiagnosticFromPhaseValidationAjvError(error2, context.taskSchema, modelObject)
+        )
       );
     }
     diagnostics.push(

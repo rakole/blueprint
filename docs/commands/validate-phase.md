@@ -93,6 +93,11 @@
 - Read `blueprint_phase_validation_authoring_context` before final authoring so the mandatory completed-summary citations, allowed values, routing rules, existing baseline, prerequisite blockers, `schemaPath`, base schema, and narrowed `taskSchema` are explicit.
 - Build a structured verification evidence payload, call `blueprint_phase_validation_validate_model` for the pre-write self-check, and call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 - The `phase.verification` model contract is version `1.1.0`: include `status` plus `gateState` with matching values, use `COVERED` or `PASS` for passing coverage rows (`covered` is accepted and normalized), scalar `validationSummary` is accepted and normalized, empty no-gap arrays are allowed only for passing gates, and optional session state, checkpoint, test matrix, result summary, observed behavior, unresolved gaps, structured gaps, and follow-up fixes are preserved in rendered `XX-VERIFICATION.md`.
+- Apply this routing shorthand before the final verification model validation and write:
+- `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = /blu-verify-work <phase>`
+- `else if explicit deferred-test or test-generation gaps remain -> nextSafeAction = /blu-add-tests <phase>`
+- `else if implementation or behavior gaps remain -> nextSafeAction = /blu-audit-fix <phase>`
+- `else -> keep nextSafeAction on /blu-validate-phase <phase> only for validation-document repair or manual-only prerequisites`
 - Keep the locked markers and required section names unchanged, cite every completed saved summary under `## Evidence Reviewed`, and treat `blueprint_phase_validation_validate_model.diagnostics` plus `renderPreview` as the pre-write self-check result.
 - Build the concrete requirement/task coverage map, verifier behavior, no-subagent fallback, and retry path from the detailed runtime reference instead of duplicating that step-by-step contract in this doc.
 - For `/blu-validate-phase`, write `artifact: "verification"` and treat the returned `path` as the authoritative saved filename.
