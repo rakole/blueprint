@@ -32973,7 +32973,7 @@ async function blueprintPhaseValidationValidateModel(args) {
     diagnosticCounts: countPhaseValidationDiagnostics(diagnostics),
     normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
     renderPreview,
-    warnings: context.warnings
+    warnings: args.artifact === "verification" ? [] : context.warnings
   };
 }
 async function blueprintPhaseValidationRender(args) {
@@ -34633,7 +34633,8 @@ async function blueprintPhaseValidationWrite(args) {
     completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
   );
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
-  const warnings = [...summaryWarnings];
+  const shouldSurfaceWarnings = args.artifact !== "verification";
+  const warnings = shouldSurfaceWarnings ? [...summaryWarnings] : [];
   if (summaryPaths.length === 0) {
     throw new Error(
       `Phase ${resolved.phaseNumber} does not have any valid execution summaries yet. Run /blu-execute-phase ${resolved.phaseNumber} after fixing summary artifacts before writing ${artifactLabel} artifacts.`
@@ -34661,7 +34662,7 @@ async function blueprintPhaseValidationWrite(args) {
         overwritten: false,
         status: "invalid",
         issues: modelValidation.diagnostics.map(formatPhaseValidationDiagnostic),
-        warnings: [...warnings, ...modelValidation.warnings]
+        warnings: shouldSurfaceWarnings ? [...warnings, ...modelValidation.warnings] : []
       };
     }
     normalizedContent = normalizeTextContent(modelValidation.renderPreview);
@@ -34729,10 +34730,12 @@ async function blueprintPhaseValidationWrite(args) {
           overwritten: false,
           status: "invalid",
           issues: validation.issues,
-          warnings: [...warnings, ...validation.warnings]
+          warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
         };
       }
-      warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      if (shouldSurfaceWarnings) {
+        warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
+      }
       if (args.artifact === "uat") {
         warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
       }
@@ -34749,7 +34752,7 @@ async function blueprintPhaseValidationWrite(args) {
         overwritten: false,
         status: "reused",
         issues: validation.issues,
-        warnings: [...warnings, ...validation.warnings]
+        warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
       };
     }
     const resumableUatContinuation = args.artifact === "uat" && existingValidation.valid && existingUatState !== null && !existingUatState.complete && nextUatState !== null && nextUatState.resumeState !== "NEW";
@@ -34781,12 +34784,13 @@ async function blueprintPhaseValidationWrite(args) {
       warnings: [...warnings, ...validation.warnings]
     };
   }
-  warnings.push(
-    ...await writeTextFile(absolutePath, normalizedContent, {
-      label: artifactPath
-    })
-  );
-  if (exists) {
+  const persistenceWarnings = await writeTextFile(absolutePath, normalizedContent, {
+    label: artifactPath
+  });
+  if (shouldSurfaceWarnings) {
+    warnings.push(...persistenceWarnings);
+  }
+  if (exists && shouldSurfaceWarnings) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
   if (args.artifact === "uat") {
@@ -34805,7 +34809,7 @@ async function blueprintPhaseValidationWrite(args) {
     overwritten: exists,
     status: exists ? "updated" : "created",
     issues: validation.issues,
-    warnings: [...warnings, ...validation.warnings]
+    warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
   };
 }
 async function blueprintPhasePlanIndex(args = {}) {

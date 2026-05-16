@@ -823,6 +823,7 @@ test("verification model authoring blocks when completed summary context is miss
   assert.match(uatContext.prerequisiteBlockers.join("\n"), /valid completed execution summaries/i);
   assert.match(JSON.stringify(uatContext.taskSchema), /"testMatrix".*"maxItems":0/s);
   assert.equal(validatedEmpty.status, "invalid");
+  assert.deepEqual(validatedEmpty.warnings, []);
   assert.match(
     validatedEmpty.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
     /scope\.prerequisite_blocker/
@@ -3514,7 +3515,7 @@ test("verification writes do not rewrite roadmap completion state before UAT clo
   const roadmapBody = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
   assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
-  assert.doesNotMatch(verification.warnings.join("\n"), /ROADMAP\.md/);
+  assert.deepEqual(verification.warnings, []);
   assert.match(roadmapBody, /\*\*Status\*\*:\s*completed/);
   assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Phase Discovery\*\*/);
 });
