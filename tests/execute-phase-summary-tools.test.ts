@@ -831,7 +831,12 @@ function validAuditFixReportModel(
   };
 }
 
-function executionPlanContent(planId: string, wave: number, gapClosure = false): string {
+function executionPlanContent(
+  planId: string,
+  wave: number,
+  gapClosure = false,
+  externalServiceRows = "| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |"
+): string {
   return `---
 phase: 3
 plan_id: "${planId}"
@@ -876,6 +881,12 @@ Ship the plan-phase runtime.
 #### Acceptance Criteria
 
 - The plan remains execution-ready and indexed as a real gap-closure target when \`gap_closure: true\` is set.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+${externalServiceRows}
 
 ## Verification
 
@@ -3276,6 +3287,55 @@ test("phase execution targets surface stale selected plans and plan-index warnin
     [".blueprint/phases/03-phase-discovery/03-09-PLAN.md"]
   );
   assert.match(targets.blockers.reasons.join("\n"), /Selected plans are stale/i);
+});
+
+test("phase execution targets require explicit confirmation for blocking external services", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"),
+    executionPlanContent(
+      "01",
+      1,
+      false,
+      "| Docker | container-runtime | Run the extension-install smoke for the selected plan. | Start Docker Desktop before execution. | `docker info` exits 0. | no |"
+    ),
+    "utf8"
+  );
+
+  const blocked = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const confirmed = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3",
+    externalServiceConfirmed: true
+  });
+
+  assert.equal(blocked.externalServicePreflight.confirmationRequired, true);
+  assert.equal(blocked.externalServicePreflight.confirmed, false);
+  assert.equal(blocked.externalServicePreflight.blocking, true);
+  assert.equal(blocked.blockers.executionBlocked, true);
+  assert.equal(blocked.externalServicePreflight.declaredPrerequisites.length, 1);
+  assert.equal(
+    blocked.externalServicePreflight.declaredPrerequisites[0]?.service,
+    "Docker"
+  );
+  assert.match(
+    blocked.blockers.reasons.join("\n"),
+    /always_confirm_external_services/i
+  );
+  assert.match(blocked.blockers.reasons.join("\n"), /docker info/);
+
+  assert.equal(confirmed.externalServicePreflight.confirmationRequired, true);
+  assert.equal(confirmed.externalServicePreflight.confirmed, true);
+  assert.equal(confirmed.externalServicePreflight.blocking, false);
+  assert.equal(confirmed.blockers.executionBlocked, false);
+  assert.deepEqual(confirmed.selectedPlanIds, ["01"]);
 });
 
 test("phase validation writes require a valid execution summary before verification", async (t) => {

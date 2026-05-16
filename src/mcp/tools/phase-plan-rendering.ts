@@ -12,6 +12,15 @@ type PhasePlanRenderResolvedPhase = {
   phaseName: string;
 };
 
+export type PhasePlanExternalServicePrerequisite = {
+  service: string;
+  category: string;
+  purpose: string;
+  userSetup: string;
+  readinessCheck: string;
+  canAgentProceedWithoutIt: boolean;
+};
+
 export type PhasePlanStructuredModel = {
   title: string;
   wave: number;
@@ -34,6 +43,7 @@ export type PhasePlanStructuredModel = {
     requirements: string[];
     filesModified: string[];
   }>;
+  externalServicePrerequisites: PhasePlanExternalServicePrerequisite[];
   verification: Array<{
     item: string;
     method: "test" | "grep" | "command" | "file-read" | "artifact-validation";
@@ -105,6 +115,25 @@ ${renderBulletList(task.action)}
 ${renderBulletList(task.acceptanceCriteria)}`
     )
     .join("\n\n");
+  const externalServiceRows = renderMarkdownTableRows(
+    model.externalServicePrerequisites.length > 0
+      ? model.externalServicePrerequisites.map((row) => [
+          row.service,
+          row.category,
+          row.purpose,
+          row.userSetup,
+          row.readinessCheck,
+          row.canAgentProceedWithoutIt ? "yes" : "no"
+        ])
+      : [[
+          "none",
+          "none",
+          "No external services are required for this plan.",
+          "No user setup required.",
+          "Repo-local execution only.",
+          "yes"
+        ]]
+  );
   const verificationItems = model.verification.map(
     (item) => `${item.item} (${item.method}): ${item.evidence}`
   );
@@ -169,6 +198,12 @@ ${renderBulletList(model.scope)}
 ## Tasks
 
 ${taskSections}
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+${externalServiceRows}
 
 ## Verification
 

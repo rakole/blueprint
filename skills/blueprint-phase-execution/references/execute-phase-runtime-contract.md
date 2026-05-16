@@ -40,6 +40,8 @@ helper guidance.
 
 - Treat `mcp_blueprint_blueprint_phase_execution_targets` as the deterministic
   selection helper for default runs, `--wave`, and `--gaps-only`.
+- Treat `mcp_blueprint_blueprint_phase_execution_targets.externalServicePreflight`
+  as the deterministic packet for saved external service prerequisites.
 - Treat any lower-wave pending plan in `lowerWavePendingPlans` as an absolute
   blocker for later-wave work, including combined `--gaps-only --wave` runs.
 - Treat `gapClosurePlans` from `mcp_blueprint_blueprint_phase_plan_index` as
@@ -56,6 +58,12 @@ helper guidance.
 - If no plans exist, route to `/blu-plan-phase`. If selected plans are stale,
   invalid, missing dependencies, or otherwise unreadable, stop and repair or
   re-plan before execution.
+- If `externalServicePreflight.confirmationRequired` is true, stop before
+  meaningful execution, present the exact declared prerequisites, respect
+  `safety.always_confirm_external_services`, and ask the user to confirm
+  readiness. Only after confirmation should the command rerun
+  `mcp_blueprint_blueprint_phase_execution_targets` with
+  `externalServiceConfirmed: true`.
 
 ### Execute
 
@@ -120,6 +128,11 @@ helper guidance.
 - Run the target plan's required checks before claiming completion. Repair only
   issues caused by the current changes, cap repeated repair attempts, and write
   `PARTIAL` or `BLOCKED` summaries when verification cannot pass honestly.
+- Treat blocking external service availability as part of the required checks.
+  If a required service is not confirmed ready, do not enter meaningful
+  execution. If it becomes unavailable after work starts, write a truthful
+  `PARTIAL` or `BLOCKED` summary that names the prerequisite and keeps routing
+  on `/blu-execute-phase <phase>` or `/blu-progress`.
 - If a dependency plan summary is still missing or not yet `COMPLETED`, do not
   persist `COMPLETED` for the dependent plan. Downgrade to `PARTIAL` or
   `BLOCKED`, update `Completion State`, `Readiness`, and `Next Safe Action` to

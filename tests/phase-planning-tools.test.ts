@@ -256,10 +256,14 @@ function validPlanContent(
   options: {
     dependsOn?: string[];
     gapClosure?: boolean;
+    externalServiceRows?: string;
   } = {}
 ): string {
   const dependsOn = options.dependsOn ?? [];
   const gapClosure = options.gapClosure ?? false;
+  const externalServiceRows =
+    options.externalServiceRows ??
+    "| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |";
 
   return `---
 phase: 3
@@ -331,6 +335,12 @@ Ship the plan-phase runtime.
 
 - src/mcp/tools/phase.ts contains blueprintPhasePlanWrite
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+${externalServiceRows}
+
 ## Verification
 
 - npm test passes for phase planning coverage
@@ -376,6 +386,7 @@ function createStructuredPlanModel(
         filesModified: ["src/mcp/tools/phase.ts"]
       }
     ],
+    externalServicePrerequisites: [],
     verification: [
       {
         item: "Run focused phase planning tests",
@@ -551,6 +562,12 @@ Ship the plan-phase runtime.
 #### Acceptance Criteria
 
 - src/mcp/tools/phase.ts contains blueprintPhasePlanWrite
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -740,6 +757,7 @@ test("phase plan writes persist structured models as canonical plan markdown", a
   assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
   assert.match(savedContent, /plan_id: "01"/);
   assert.match(savedContent, /# Phase 03: Phase Discovery - Plan 01/);
+  assert.match(savedContent, /## External Service Prerequisites/);
   assert.match(savedContent, /## Requirement Coverage/);
   assert.match(savedContent, /## Evidence Coverage/);
   assert.match(savedContent, /## File \/ Surface Coverage/);
@@ -749,6 +767,7 @@ test("phase plan writes persist structured models as canonical plan markdown", a
   assert.doesNotMatch(savedContent, /Add structured model contract metadata/);
   assert.equal(read.validation?.valid, true);
   assert.deepEqual(read.metadata?.requirements, ["LIFE-01"]);
+  assert.deepEqual(read.metadata?.externalServicePrerequisites, []);
 });
 
 test("phase plan model validation allows XML and template placeholders in action prose", async (t) => {

@@ -3,6 +3,14 @@ type PhasePlanRenderResolvedPhase = {
     phasePrefix: string;
     phaseName: string;
 };
+export type PhasePlanExternalServicePrerequisite = {
+    service: string;
+    category: string;
+    purpose: string;
+    userSetup: string;
+    readinessCheck: string;
+    canAgentProceedWithoutIt: boolean;
+};
 export type PhasePlanStructuredModel = {
     title: string;
     wave: number;
@@ -25,6 +33,7 @@ export type PhasePlanStructuredModel = {
         requirements: string[];
         filesModified: string[];
     }>;
+    externalServicePrerequisites: PhasePlanExternalServicePrerequisite[];
     verification: Array<{
         item: string;
         method: "test" | "grep" | "command" | "file-read" | "artifact-validation";

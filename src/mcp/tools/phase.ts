@@ -191,6 +191,7 @@ import {
 } from "./phase-validation-diagnostics.js";
 import {
   renderPhasePlanModelContent,
+  type PhasePlanExternalServicePrerequisite,
   type PhasePlanStructuredModel
 } from "./phase-plan-rendering.js";
 import {
@@ -426,6 +427,7 @@ type PhaseExecutionTargetsArgs = PhaseLookupArgs & {
   wave?: number;
   gapsOnly?: boolean;
   includeConflicts?: boolean;
+  externalServiceConfirmed?: boolean;
 };
 
 type PhasePlanWriteArgs = PhaseLookupArgs & {
@@ -854,6 +856,7 @@ type PhasePlanRecord = {
   filesModified: string[];
   readFirst: string[];
   acceptanceCriteria: string[];
+  externalServicePrerequisites: PhasePlanExternalServicePrerequisite[];
   autonomous: boolean | null;
   valid: boolean;
   issues: string[];
@@ -1114,6 +1117,12 @@ type PhaseExecutionTargetPlan = PhasePlanRecord & {
   summary: PhaseExecutionTargetSummary;
 };
 
+type PhaseExecutionExternalServicePrerequisite = PhasePlanExternalServicePrerequisite & {
+  planId: string;
+  planPath: string;
+  wave: number | null;
+};
+
 type PhaseExecutionTargetConflictGroup = {
   planIds: string[];
   planPaths: string[];
@@ -1149,6 +1158,14 @@ type PhaseExecutionTargetsResult = {
   candidatePlans: PhaseExecutionTargetPlan[];
   selectedPlans: PhaseExecutionTargetPlan[];
   overlapPlans: PhaseExecutionTargetPlan[];
+  externalServicePreflight: {
+    confirmationRequired: boolean;
+    confirmed: boolean;
+    blocking: boolean;
+    declaredPrerequisites: PhaseExecutionExternalServicePrerequisite[];
+    blockingPrerequisites: PhaseExecutionExternalServicePrerequisite[];
+    reasons: string[];
+  };
   existingSummaries: Array<{
     planId: string;
     path: string;
@@ -1282,7 +1299,8 @@ const phaseExecutionTargetsInputSchema = {
   phase: numericBlueprintInputSchema.optional(),
   wave: z.number().int().positive().optional(),
   gapsOnly: z.boolean().optional(),
-  includeConflicts: z.boolean().optional()
+  includeConflicts: z.boolean().optional(),
+  externalServiceConfirmed: z.boolean().optional()
 };
 
 const phaseArtifactWriteInputSchema = {
@@ -3785,6 +3803,7 @@ function toPhasePlanRecord(
     filesModified: validation.metadata.filesModified,
     readFirst: validation.metadata.readFirst,
     acceptanceCriteria: validation.metadata.acceptanceCriteria,
+    externalServicePrerequisites: validation.metadata.externalServicePrerequisites,
     autonomous: validation.metadata.autonomous,
     valid: validation.valid,
     issues: validation.issues,
@@ -7946,6 +7965,7 @@ export async function blueprintPhasePlanRead(
       filesModified: validation.metadata.filesModified,
       readFirst: validation.metadata.readFirst,
       acceptanceCriteria: validation.metadata.acceptanceCriteria,
+      externalServicePrerequisites: validation.metadata.externalServicePrerequisites,
       autonomous: validation.metadata.autonomous
     },
     validation: {
@@ -9036,6 +9056,25 @@ export async function blueprintPhaseSummaryRead(
   };
 }
 
+function formatExternalServicePrerequisiteReason(
+  prerequisite: PhaseExecutionExternalServicePrerequisite
+): string {
+  return `${prerequisite.planId} (${prerequisite.planPath}) requires external service "${prerequisite.service}" [${prerequisite.category}] for ${prerequisite.purpose}. User setup/startup: ${prerequisite.userSetup}. Readiness check: ${prerequisite.readinessCheck}.`;
+}
+
+function selectedPlanExternalServicePrerequisites(
+  plans: PhaseExecutionTargetPlan[]
+): PhaseExecutionExternalServicePrerequisite[] {
+  return plans.flatMap((plan) =>
+    plan.externalServicePrerequisites.map((prerequisite) => ({
+      ...prerequisite,
+      planId: plan.planId,
+      planPath: plan.path,
+      wave: plan.wave
+    }))
+  );
+}
+
 export async function blueprintPhaseExecutionTargets(
   args: PhaseExecutionTargetsArgs = {}
 ): Promise<PhaseExecutionTargetsResult> {
@@ -9072,6 +9111,14 @@ export async function blueprintPhaseExecutionTargets(
       candidatePlans: [],
       selectedPlans: [],
       overlapPlans: [],
+      externalServicePreflight: {
+        confirmationRequired: false,
+        confirmed: args.externalServiceConfirmed ?? false,
+        blocking: false,
+        declaredPrerequisites: [],
+        blockingPrerequisites: [],
+        reasons: []
+      },
       existingSummaries: [],
       blockers: {
         executionBlocked: true,
@@ -9092,7 +9139,8 @@ export async function blueprintPhaseExecutionTargets(
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
-  const [planIndex, summaryIndex] = await Promise.all([
+  const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
+  const [planIndex, summaryIndex, effectiveConfig] = await Promise.all([
     blueprintPhasePlanIndex({
       cwd: projectRoot,
       phase: resolved.phaseNumber
@@ -9100,8 +9148,14 @@ export async function blueprintPhaseExecutionTargets(
     blueprintPhaseSummaryIndex({
       cwd: projectRoot,
       phase: resolved.phaseNumber
+    }),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
     })
   ]);
+  const alwaysConfirmExternalServices =
+    effectiveConfig.config?.safety?.always_confirm_external_services === true;
   const pendingPlanIds = summaryIndex.pendingPlans;
   const pendingPlanIdSet = new Set(pendingPlanIds);
   const gapClosurePlanIdSet = new Set(planIndex.gapClosurePlans);
@@ -9221,6 +9275,27 @@ export async function blueprintPhaseExecutionTargets(
     blockers.push(
       `Selected plans are stale because dependency plan artifacts are missing: ${stalePlanIds.join(", ")}.`
     );
+  }
+
+  const declaredExternalServicePrerequisites =
+    selectedPlanExternalServicePrerequisites(selectedPlans);
+  const blockingExternalServicePrerequisites = declaredExternalServicePrerequisites.filter(
+    (prerequisite) => !prerequisite.canAgentProceedWithoutIt
+  );
+  const externalServicePreflightReasons =
+    alwaysConfirmExternalServices &&
+    !externalServiceConfirmed &&
+    blockingExternalServicePrerequisites.length > 0
+      ? [
+          `Selected plans declare blocking external-service prerequisites that must be confirmed before execution because safety.always_confirm_external_services is enabled for phase ${resolved.phaseNumber}.`,
+          ...blockingExternalServicePrerequisites.map((prerequisite) =>
+            formatExternalServicePrerequisiteReason(prerequisite)
+          )
+        ]
+      : [];
+
+  if (externalServicePreflightReasons.length > 0) {
+    blockers.push(...externalServicePreflightReasons);
   }
 
   const pairConflicts: Array<{
@@ -9405,6 +9480,15 @@ export async function blueprintPhaseExecutionTargets(
     candidatePlans,
     selectedPlans,
     overlapPlans,
+    externalServicePreflight: {
+      confirmationRequired:
+        alwaysConfirmExternalServices && blockingExternalServicePrerequisites.length > 0,
+      confirmed: externalServiceConfirmed,
+      blocking: externalServicePreflightReasons.length > 0,
+      declaredPrerequisites: declaredExternalServicePrerequisites,
+      blockingPrerequisites: blockingExternalServicePrerequisites,
+      reasons: externalServicePreflightReasons
+    },
     existingSummaries,
     blockers: {
       executionBlocked: blockers.length > 0,

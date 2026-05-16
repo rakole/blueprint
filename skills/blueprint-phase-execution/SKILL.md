@@ -195,6 +195,10 @@ handoff, and no report persistence.
 - Persist one Markdown summary per executed plan through MCP and
   treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward
   evidence rather than completion.
+- Use saved plan external-service prerequisites plus
+  `blueprint_phase_execution_targets.externalServicePreflight` to stop for
+  readiness confirmation before meaningful execution when the plan depends on
+  runtime services the agent cannot safely assume are ready.
 - If a selected plan depends on another plan whose summary is not yet
   `COMPLETED`, do not write `COMPLETED` for the dependent plan. Use `PARTIAL`
   or `BLOCKED`, update the status markers to match, and keep the dependency

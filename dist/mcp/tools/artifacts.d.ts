@@ -610,6 +610,14 @@ export type PlanArtifactMetadata = {
     filesModified: string[];
     readFirst: string[];
     acceptanceCriteria: string[];
+    externalServicePrerequisites: Array<{
+        service: string;
+        category: string;
+        purpose: string;
+        userSetup: string;
+        readinessCheck: string;
+        canAgentProceedWithoutIt: boolean;
+    }>;
     autonomous: boolean | null;
 };
 export declare function parseCaptureIndexDocument(content: string, target: ArtifactMutateIndexTarget): {

@@ -57,6 +57,9 @@ test("execute-phase manifest stays thin while keeping the core execution invaria
   assertMatchesAll(commandFile, [
     /gapClosurePlans/,
     /lowerWavePendingPlans/,
+    /externalServicePreflight/,
+    /externalServiceConfirmed/,
+    /always_confirm_external_services/,
     /shared file set/i,
     /artifactId: "phase\.summary"/,
     /parallelization\.\*/,
@@ -95,6 +98,7 @@ test("execute-phase skill bundle points the command at execute-specific referenc
     skillFile,
     /If a selected plan depends on another plan whose summary is not yet[\s\S]*Use `PARTIAL`[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i
   );
+  assert.match(skillFile, /externalServicePreflight/i);
 });
 
 test("execute-phase command docs point at the rich runtime contract and keep the important invariants concise", async () => {
@@ -110,6 +114,7 @@ test("execute-phase command docs point at the rich runtime contract and keep the
     /blueprint_phase_execution_targets/i,
     /gapClosurePlans/,
     /lowerWavePendingPlans/,
+    /externalServicePreflight/,
     /Pre-persistence gates/i,
     /Post-execution checks/i,
     /Verifier handoff/i,
@@ -135,6 +140,7 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
     /blueprint_phase_execution_targets/,
     /gapClosurePlans/,
     /lowerWavePendingPlans/,
+    /externalServicePreflight/,
     /absolute\s+blocker/i,
     /PARTIAL` and `BLOCKED` summaries/i,
     /If a dependency plan summary is still missing or not yet `COMPLETED`[\s\S]*Downgrade to `PARTIAL` or[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i,
@@ -149,6 +155,7 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
     /summary-backed carry-forward evidence/i,
     /one-plan-at-a-time\s+inline execution/i,
     /phase-level completion claim/i,
+    /external service/i,
     /\/blu-validate-phase/,
     /\/blu-verify-work/
   ]);
