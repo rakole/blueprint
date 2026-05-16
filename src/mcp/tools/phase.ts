@@ -5417,8 +5417,18 @@ export async function blueprintPhaseValidationValidateModel(
   let normalizedModel: PhaseVerificationStructuredModel | PhaseUatStructuredModel | null = null;
 
   if (modelObject && context.taskSchema) {
+    const validationModelObject =
+      args.artifact === "verification"
+        ? {
+            ...modelObject,
+            manualOrDeferredCoverage: modelObject.manualOrDeferredCoverage ?? [],
+            gapClassification: modelObject.gapClassification ?? [],
+            gapsFound: modelObject.gapsFound ?? [],
+            suggestedRepairs: modelObject.suggestedRepairs ?? []
+          }
+        : modelObject;
     const validate = createAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(validationModelObject);
 
     if (!schemaValid) {
       diagnostics.push(
@@ -5428,13 +5438,13 @@ export async function blueprintPhaseValidationValidateModel(
 
     diagnostics.push(
       ...phaseValidationResidualDiagnostics(
-        modelObject,
+        validationModelObject,
         context.contract.modelContract,
         args.artifact
       )
     );
 
-    for (const issue of await validatePhaseValidationModelCommands(modelObject, args.artifact)) {
+    for (const issue of await validatePhaseValidationModelCommands(validationModelObject, args.artifact)) {
       diagnostics.push(
         phaseValidationDiagnostic({
           source: "residual",
@@ -5450,8 +5460,10 @@ export async function blueprintPhaseValidationValidateModel(
     if (schemaValid) {
       normalizedModel =
         args.artifact === "verification"
-          ? normalizeVerificationStructuredModel(modelObject as PhaseVerificationStructuredModel)
-          : modelObject as PhaseUatStructuredModel;
+          ? normalizeVerificationStructuredModel(
+              validationModelObject as PhaseVerificationStructuredModel
+            )
+          : validationModelObject as PhaseUatStructuredModel;
     }
   }
 

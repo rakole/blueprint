@@ -1450,7 +1450,7 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+| <manual-only item when any remain> | <reason> | <follow-up> | MANUAL|DEFERRED |
 
 ## Gate State
 
@@ -1466,11 +1466,11 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
 
 ## Gaps Found
 
-- Explicit blocker, follow-up, or \`none\`.
+- Explicit blocker or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Suggested Repairs
 
-- Explicit next repair, follow-up, or \`none\`.
+- Explicit next repair or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Next Safe Action
 
