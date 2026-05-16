@@ -177,6 +177,50 @@ function validContextContent(phaseNumber: string, phaseName: string): string {
 - Source 1: src/mcp/tools/state.ts`;
 }
 
+function backendOnlyNoUiContextContent(phaseNumber: string, phaseName: string): string {
+  const prefix = phaseNumber.padStart(2, "0");
+  return `# Phase ${prefix}: ${phaseName} - Context
+
+## Phase Boundary
+- Backend-only API phase with no user-facing work in scope.
+- Included work - persist discovery outputs for the explicitly selected phase only.
+- Excluded work - letting later roadmap phases override selected-phase routing.
+- Success target - downstream commands continue on the same selected phase.
+
+## Discovery Grounding
+- Project brief - This phase is purely backend and not user-facing.
+- Requirements grounding - downstream research and planning work must stay phase-scoped.
+- Workflow posture - synced state refresh should preserve an explicit earlier-phase selection.
+- Locked decisions - MCP-owned state writes are the only persistence path.
+
+## Implementation Decisions
+- Decision: preserve the resolved selected phase during synced state refresh.
+- Tradeoff or constraint: roadmap-derived current phase alone is not enough when the user selected an earlier phase.
+
+## Specific Ideas
+- Specific idea 1: keep the phase selection explicit in the final sync patch.
+- Specific idea 2: make regression coverage assert earlier-phase routing.
+
+## Existing Code Insights
+- Existing code insight 1: state sync recomputes routing from artifacts and the current phase.
+- Reusable pattern: patch currentPhase during synced updates when a command resolved a different selected phase.
+- Known gap or caution: roadmap-only sync can drift to a later phase.
+
+## Dependencies
+- Prior phase artifacts: selected phase context and research stay under the same phase directory.
+- External constraints: no host-global state writes.
+- Required follow-up reads: src/mcp/tools/state.ts
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Scope creep or later follow-up: generalize this regression shape for later lifecycle commands if needed.
+
+## Canonical References
+- Source 1: src/mcp/tools/state.ts`;
+}
+
 function validResearchContent(summary: string): string {
   return `# Phase 03: Phase Discovery - Research
 
@@ -1924,4 +1968,94 @@ test("research-phase synced state update stays on an explicitly selected earlier
   assert.match(stateBody, /- Current phase: 2/);
   assert.match(stateBody, /Run \/blu-ui-phase 2 to draft the phase UI contract/);
   assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 3|Run \/blu-plan-phase 3/);
+});
+
+test("research-phase synced state update skips ui-phase for explicit backend-only earlier phase", async (t) => {
+  const repoPath = await createEarlierSelectedResearchPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-CONTEXT.md"),
+    backendOnlyNoUiContextContent("2", "Earlier Discovery"),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-RESEARCH.md"),
+    validResearchContent(
+      "Keep research routing pinned to the explicitly selected earlier backend-only phase."
+    ).replaceAll("Phase 03: Phase Discovery", "Phase 02: Earlier Discovery"),
+    "utf8"
+  );
+
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "2",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.equal(loadedState.state.activeCommand, "/blu-research-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "2");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.match(loadedState.derivedStatus.nextAction, /explicit UI skip rationale/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 2/);
+  assert.match(stateBody, /Run \/blu-ui-phase 2 to record the explicit UI skip rationale/);
+  assert.doesNotMatch(stateBody, /Run \/blu-plan-phase 2 to create execution-ready phase plans/);
+});
+
+test("research-phase synced state update still routes to ui-phase when a saved ui-spec is invalid", async (t) => {
+  const repoPath = await createEarlierSelectedResearchPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-CONTEXT.md"),
+    backendOnlyNoUiContextContent("2", "Earlier Discovery"),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-RESEARCH.md"),
+    validResearchContent(
+      "Keep research routing pinned to the explicitly selected earlier backend-only phase."
+    ).replaceAll("Phase 03: Phase Discovery", "Phase 02: Earlier Discovery"),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-UI-SPEC.md"),
+    `# Phase 02 UI Spec
+
+## Outcome Mode
+- Choose one: UI contract or explicit skip rationale.
+`,
+    "utf8"
+  );
+
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "2",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.equal(loadedState.state.activeCommand, "/blu-research-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "2");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 2/);
+  assert.match(stateBody, /Run \/blu-ui-phase 2 to repair the phase UI contract/);
+  assert.doesNotMatch(stateBody, /Run \/blu-plan-phase 2 to create execution-ready phase plans/);
 });

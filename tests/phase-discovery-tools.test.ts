@@ -318,6 +318,131 @@ function validContextContent(): string {
 `;
 }
 
+function backendOnlyNoUiContextContent(): string {
+  return `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Backend-only API phase with no user-facing work in scope.
+- Capture durable context before planning begins.
+- Preserve implemented-only routing for the next lifecycle step.
+
+## Discovery Grounding
+- Project brief - This phase is purely backend and not user-facing.
+- Requirements grounding - keep LIFE-01, LIFE-02, and LIFE-03 visible to downstream planning.
+- Workflow posture - route through enabled research and lifecycle gates before planning.
+- Prior-context sweep - review existing artifacts before asking fresh questions.
+
+## Implementation Decisions
+- Keep MCP tools responsible for durable state updates and routing.
+- Limit the phase to server-side API and persistence work only.
+
+## Specific Ideas
+- Make planning readiness explicit so command prompts do not guess from missing artifact lists.
+
+## Existing Code Insights
+- The state loader already derives next action from effective workflow config.
+- The research-status tool can expose the same gate to plan-phase.
+
+## Dependencies
+- .blueprint/STATE.md controls the final handoff after discuss-phase.
+- .blueprint/config.json controls whether research and UI artifacts are required before planning.
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Broader lifecycle routing cleanup can happen outside this regression.
+
+## Canonical References
+- .blueprint/ROADMAP.md defines phase 3.
+- .blueprint/config.json defines workflow gates.
+`;
+}
+
+function neutralContextContentWithoutUiSignals(): string {
+  return `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Keep discovery scoped to phase 3 and the saved artifacts in .blueprint/phases/03-phase-discovery/.
+- Capture durable context before planning begins.
+- Preserve implemented-only routing for the next lifecycle step.
+
+## Discovery Grounding
+- Project brief - discovery should stay phase-scoped and resumable.
+- Requirements grounding - keep LIFE-01, LIFE-02, and LIFE-03 visible to downstream planning.
+- Workflow posture - route through enabled lifecycle gates before planning.
+- Prior-context sweep - review existing artifacts before asking fresh questions.
+
+## Implementation Decisions
+- Use the refreshed state next action as the end-of-discussion handoff.
+- Do not infer a direct plan-phase route when enabled gates still require other artifacts.
+- Keep MCP tools responsible for durable state updates and routing.
+
+## Specific Ideas
+- Make planning readiness explicit so command prompts do not guess from missing artifact lists.
+
+## Existing Code Insights
+- The state loader already derives next action from effective workflow config.
+- The research-status tool can expose the same gate to plan-phase.
+
+## Dependencies
+- .blueprint/STATE.md controls the final handoff after discuss-phase.
+- .blueprint/config.json controls which artifacts are required before planning.
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Broader lifecycle routing cleanup can happen outside this regression.
+
+## Canonical References
+- .blueprint/ROADMAP.md defines phase 3.
+- .blueprint/config.json defines workflow gates.
+`;
+}
+
+function backendOnlyUiVetoContextContent(): string {
+  return `# Phase 03: Phase Discovery - Context
+
+## Phase Boundary
+- Backend-only API phase with no user-facing work in scope.
+- Capture durable context before planning begins.
+- Preserve implemented-only routing for the next lifecycle step.
+
+## Discovery Grounding
+- Project brief - This phase is purely backend and not user-facing.
+- Requirements grounding - keep LIFE-01, LIFE-02, and LIFE-03 visible to downstream planning.
+- Workflow posture - route through enabled research and lifecycle gates before planning.
+- Prior-context sweep - review existing artifacts before asking fresh questions.
+
+## Implementation Decisions
+- Keep MCP tools responsible for durable state updates and routing.
+- Limit the phase to server-side API and persistence work only.
+
+## Specific Ideas
+- Keep the backend foundation aligned with the planned operator page layout and component rollout.
+
+## Existing Code Insights
+- The state loader already derives next action from effective workflow config.
+- The research-status tool can expose the same gate to plan-phase.
+
+## Dependencies
+- .blueprint/STATE.md controls the final handoff after discuss-phase.
+- .blueprint/config.json controls whether research and UI artifacts are required before planning.
+- Build page layout primitives and component wiring for the operator navigation flow before execution starts.
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Broader lifecycle routing cleanup can happen outside this regression.
+
+## Canonical References
+- .blueprint/ROADMAP.md defines phase 3.
+- .blueprint/config.json defines workflow gates.
+`;
+}
+
 function validResearchContent(summary: string): string {
   return `# Phase 03: Phase Discovery - Research
 
@@ -901,7 +1026,7 @@ test("phase research status exposes config-aware plan-phase readiness", async (t
 
   await writeFile(
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
-    validContextContent(),
+    neutralContextContentWithoutUiSignals(),
     "utf8"
   );
 
@@ -937,6 +1062,107 @@ test("phase research status exposes config-aware plan-phase readiness", async (t
     "Run /blu-plan-phase 3 to create execution-ready phase plans"
   );
   assert.deepEqual(disabledGateStatus.planningReadiness.blockers, []);
+});
+
+test("phase research status bypasses ui-phase only for strong explicit no-ui context", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    backendOnlyNoUiContextContent(),
+    "utf8"
+  );
+
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workflow: { research: boolean; ui_phase: boolean };
+  };
+  config.workflow.research = false;
+  config.workflow.ui_phase = true;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.planningReadiness.workflowResearchRequired, false);
+  assert.equal(status.planningReadiness.workflowUiPhaseRequired, true);
+  assert.equal(status.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-ui-phase 3 to record the explicit UI skip rationale"
+  );
+  assert.match(status.planningReadiness.blockers.join("\n"), /workflow\.ui_phase=true/i);
+});
+
+test("phase research status keeps ui-phase gate when positive UI clues are present", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    backendOnlyUiVetoContextContent(),
+    "utf8"
+  );
+
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workflow: { research: boolean; ui_phase: boolean };
+  };
+  config.workflow.research = false;
+  config.workflow.ui_phase = true;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-ui-phase 3 to draft the phase UI contract"
+  );
+  assert.match(status.planningReadiness.blockers.join("\n"), /workflow\.ui_phase=true/i);
+});
+
+test("phase research status routes invalid saved ui specs to ui-phase repair", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    backendOnlyNoUiContextContent(),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md"),
+    `# Phase 03 UI Spec
+
+## Outcome Mode
+- Choose one: UI contract or explicit skip rationale.
+`,
+    "utf8"
+  );
+
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workflow: { research: boolean; ui_phase: boolean };
+  };
+  config.workflow.research = false;
+  config.workflow.ui_phase = true;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-ui-phase 3 to repair the phase UI contract"
+  );
+  assert.match(status.planningReadiness.blockers.join("\n"), /saved XX-UI-SPEC\.md artifact is not usable/i);
 });
 
 test("phase research status does not treat the generic scaffold marker as a bootstrap starter by itself", async (t) => {

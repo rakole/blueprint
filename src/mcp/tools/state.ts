@@ -33,6 +33,7 @@ import {
   type PhaseQualityGateMissingGate
 } from "./quality-gates.js";
 import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import { detectStrongExplicitNoUiSignal } from "./phase-no-ui-signals.js";
 import {
   blueprintDirectCommand,
   blueprintRunDirectCommand
@@ -210,6 +211,7 @@ type CurrentPhaseArtifactStatus = {
   hasUiSpec: boolean;
   uiSpecValid: boolean | null;
   hasUsableUiSpec: boolean;
+  noUiSkipRationaleSuggested: boolean;
   hasUiReview: boolean;
   hasReview: boolean;
   hasSecurity: boolean;
@@ -1519,6 +1521,7 @@ async function inspectCurrentPhaseArtifacts(
       hasUiSpec: false,
       uiSpecValid: null,
       hasUsableUiSpec: false,
+      noUiSkipRationaleSuggested: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1581,6 +1584,7 @@ async function inspectCurrentPhaseArtifacts(
       hasUiSpec: false,
       uiSpecValid: null,
       hasUsableUiSpec: false,
+      noUiSkipRationaleSuggested: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1629,6 +1633,7 @@ async function inspectCurrentPhaseArtifacts(
       hasUiSpec: false,
       uiSpecValid: null,
       hasUsableUiSpec: false,
+      noUiSkipRationaleSuggested: false,
       hasUiReview: false,
       hasVerification: false,
       verificationReadyForUat: false,
@@ -1662,6 +1667,7 @@ async function inspectCurrentPhaseArtifacts(
   const hasUiSpec = phaseArtifacts.includes(uiSpecPath);
   let uiSpecValid: boolean | null = null;
   let hasUsableUiSpec = false;
+  let noUiSkipRationaleSuggested = false;
   let hasReviewableUiSpec = false;
   const hasUiReview = phaseArtifacts.includes(uiReviewPath);
   const hasReview = phaseArtifacts.includes(reviewPath);
@@ -1713,11 +1719,16 @@ async function inspectCurrentPhaseArtifacts(
       artifact.endsWith(`${phasePrefix}-UAT.md`)
   );
   let researchValid: boolean | null = null;
+  let contextContent: string | null = null;
+  let contextUsableForNoUiBypass = false;
 
   if (hasContext) {
     try {
       const raw = await fs.readFile(resolveBlueprintPath(projectRoot, contextPath), "utf8");
+      contextContent = raw;
       contextNeedsAuthoring = isBootstrapStarterContext(raw);
+      contextUsableForNoUiBypass =
+        validatePhaseArtifactContent(raw, "context").valid && !contextNeedsAuthoring;
 
       if (contextNeedsAuthoring) {
         warnings.push(
@@ -1752,6 +1763,12 @@ async function inspectCurrentPhaseArtifacts(
     hasUsableUiSpec = uiSpecReadiness.usable;
     hasReviewableUiSpec = await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
     warnings.push(...uiSpecReadiness.warnings);
+  }
+
+  if (!hasUiSpec && contextContent && contextUsableForNoUiBypass) {
+    noUiSkipRationaleSuggested = detectStrongExplicitNoUiSignal({
+      contextContent
+    }).bypassAllowed;
   }
 
   if (!hasContext && hasLaterArtifacts) {
@@ -1838,6 +1855,7 @@ async function inspectCurrentPhaseArtifacts(
     hasUiSpec,
     uiSpecValid,
     hasUsableUiSpec,
+    noUiSkipRationaleSuggested,
     hasUiReview,
     hasReview: qualityGateEvaluation.hasReview,
     hasSecurity: qualityGateEvaluation.hasSecurity,
@@ -2431,7 +2449,9 @@ async function deriveNextAction(args: {
     !args.phaseArtifacts.hasUiSpec &&
     implementedCommands.has(uiPhaseCommand)
   ) {
-    return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
+    return args.phaseArtifacts.noUiSkipRationaleSuggested
+      ? `Run ${uiPhaseCommand} ${args.currentPhase} to record the explicit UI skip rationale`
+      : `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
 
   if (
@@ -2440,7 +2460,9 @@ async function deriveNextAction(args: {
     !args.phaseArtifacts.hasUiSpec &&
     implementedCommands.has(uiPhaseCommand)
   ) {
-    return `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
+    return args.phaseArtifacts.noUiSkipRationaleSuggested
+      ? `Run ${uiPhaseCommand} ${args.currentPhase} to record the explicit UI skip rationale`
+      : `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
 
   if (
