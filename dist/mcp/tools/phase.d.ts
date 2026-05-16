@@ -79,6 +79,10 @@ type PhaseArtifactWriteArgs = PhaseLookupArgs & {
     overwrite?: boolean;
     validationMode?: "strict" | "warn";
 };
+type PhaseUiSkipWriteArgs = PhaseLookupArgs & {
+    skipRationale: string;
+    overwrite?: boolean;
+};
 type PhaseValidationReadArgs = PhaseLookupArgs & {
     artifact: PhaseValidationArtifactKind;
 };
@@ -914,6 +918,7 @@ export declare function blueprintPhaseResearchStatus(args?: PhaseLookupArgs): Pr
 export declare function blueprintPhaseArtifactRead(args: PhaseArtifactReadArgs): Promise<PhaseArtifactReadResult>;
 export declare function blueprintPhaseArtifactScaffold(args: PhaseArtifactScaffoldArgs): Promise<PhaseArtifactScaffoldResult>;
 export declare function blueprintPhaseArtifactWrite(args: PhaseArtifactWriteArgs): Promise<PhaseArtifactWriteResult>;
+export declare function blueprintPhaseUiSkipWrite(args: PhaseUiSkipWriteArgs): Promise<PhaseArtifactWriteResult>;
 export declare function blueprintPhaseValidationRead(args: PhaseValidationReadArgs): Promise<PhaseValidationReadResult>;
 export declare function blueprintPhaseValidationWrite(args: PhaseValidationWriteArgs): Promise<PhaseValidationWriteResult>;
 export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<PhasePlanIndexResult>;
@@ -1092,6 +1097,16 @@ export declare const phaseToolDefinitions: ({
             strict: "strict";
             warn: "warn";
         }>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhaseArtifactWriteResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        skipRationale: z.ZodString;
+        overwrite: z.ZodOptional<z.ZodBoolean>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseArtifactWriteResult>;
 } | {

@@ -12,6 +12,7 @@ import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactWrite,
+  blueprintPhaseUiSkipWrite,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
 import {
@@ -183,8 +184,9 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "blueprint_phase_locate",
     "blueprint_phase_research_status",
     "blueprint_config_get",
-    "blueprint_artifact_contract_read",
     "blueprint_phase_artifact_read",
+    "blueprint_phase_ui_skip_write",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_artifact_write",
     "blueprint_artifact_scaffold",
     "blueprint_state_load",
@@ -220,6 +222,9 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(commandFile, /workflow\.ui_phase/);
   assert.match(commandFile, /workflow\.ui_safety_gate/);
   assert.match(commandFile, /contract-versus-skip posture/i);
+  assert.match(commandFile, /progressive/i);
+  assert.match(commandFile, /skipRationale/);
+  assert.match(commandFile, /do not call both write tools/i);
   assert.match(commandFile, /checker-requested revision/i);
   assert.match(commandFile, /state_update` with `base: "synced"`/i);
   assert.match(commandFile, /patch\.currentPhase/i);
@@ -245,6 +250,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   );
   assert.match(skillFile, /contract-versus-skip choice/i);
   assert.match(skillFile, /`workflow\.ui_safety_gate` rationale confirmation/);
+  assert.match(skillFile, /progressive-disclosure if\/else branching/i);
+  assert.match(skillFile, /blueprint_phase_ui_skip_write/);
   assert.match(skillFile, /## Optional Agents[\s\S]*`blueprint-checker`/);
   assert.match(skillFile, /checker-requested revision/i);
   assert.match(skillFile, /six UI dimensions/i);
@@ -303,6 +310,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(docFile, /ui-phase-runtime-contract\.md/);
   assert.match(docFile, /contract-versus-skip posture/i);
   assert.match(docFile, /`workflow\.ui_safety_gate` rationale requirements/i);
+  assert.match(docFile, /skipRationale/);
+  assert.match(docFile, /progressive/i);
   assert.match(docFile, /checker revision gate/i);
   assert.match(docFile, /## UI Quality Contract/);
   assert.match(docFile, /saved context or research/i);
@@ -321,6 +330,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(uiRuntimeRow, /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
   assert.match(uiRuntimeRow, /contract-versus-skip posture/i);
   assert.match(uiRuntimeRow, /`workflow\.ui_safety_gate` rationale confirmation/);
+  assert.match(uiRuntimeRow, /progressive disclosure/i);
+  assert.match(uiRuntimeRow, /blueprint_phase_ui_skip_write/i);
   assert.match(uiRuntimeRow, /checker-requested revision/i);
   assert.match(uiRuntimeRow, /ui-phase-runtime-contract\.md/i);
   assert.match(uiRuntimeRow, /read actual saved context and research bodies/i);
@@ -329,10 +340,12 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(uiRuntimeRow, /repair invalid writes/i);
   assert.match(runtimeContract, /## Shared Stage Mapping/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_ui_skip_write/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_load/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_command_catalog/);
   assert.match(runtimeContract, /contract\.authoringTemplate/);
+  assert.match(runtimeContract, /do not call artifact_contract_read/i);
   assert.match(runtimeContract, /XX-CONTEXT\.md/);
   assert.match(runtimeContract, /XX-RESEARCH\.md/);
   assert.match(runtimeContract, /six UI\s+dimensions/i);
@@ -444,18 +457,11 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
 - /blu-plan-phase 3
 `
   });
-  const replaced = await blueprintPhaseArtifactWrite({
+  const replaced = await blueprintPhaseUiSkipWrite({
     cwd: repoPath,
     phase: "3",
-    artifact: "ui-spec",
-    content: `# Phase 03 UI Spec
-
-## Outcome Mode
-- Explicit skip rationale
-
-## Rationale
-- No frontend surface changes are in scope for this phase.
-`,
+    skipRationale:
+      "No frontend surface changes are in scope for this phase. Revisit only if the phase adds a user-facing surface.",
     overwrite: true
   });
   const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
@@ -474,6 +480,64 @@ test("ui-phase keeps UI output in a single reusable file for either contract or 
   assert.equal(body.found, true);
   assert.match(body.content ?? "", /Outcome Mode/);
   assert.match(body.content ?? "", /Explicit skip rationale/i);
+  assert.doesNotMatch(body.content ?? "", /## User Experience Goals/);
+});
+
+test("phase ui skip write produces a minimal valid skip artifact that routing accepts", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision: "Preserve skip-mode routing as a first-class planning input.",
+      openQuestions: ["Does any user-facing surface change in this phase?"]
+    }),
+    overwrite: true
+  });
+  await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Backend-only phases should be able to save a minimal UI skip rationale without loading the full UI-contract scaffold."
+    ),
+    overwrite: true
+  });
+
+  const skipWrite = await blueprintPhaseUiSkipWrite({
+    cwd: repoPath,
+    phase: "3",
+    skipRationale:
+      "No frontend surface changes are in scope for this phase. The UI safety gate was considered and there is no end-user interaction change to review. Revisit if the phase adds a new screen, form, or user-visible state."
+  });
+  const researchStatus = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+  const uiSpec = await blueprintPhaseArtifactRead({ cwd: repoPath, phase: "3", artifact: "ui-spec" });
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-ui-phase",
+      currentPhase: "3",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(skipWrite.status, "created");
+  assert.equal(researchStatus.hasUsableUiSpec, true);
+  assert.equal(researchStatus.uiSpecValid, true);
+  assert.match(uiSpec.content ?? "", /Explicit skip rationale/i);
+  assert.doesNotMatch(uiSpec.content ?? "", /## User Experience Goals/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-ui-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-ui-review 3/);
+  assert.match(status.nextAction, /\/blu-plan-phase 3/);
 });
 
 test("ui-phase final next action comes from refreshed synced state", async (t) => {

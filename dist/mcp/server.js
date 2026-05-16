@@ -14542,8 +14542,9 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_locate",
       "blueprint_phase_research_status",
       "blueprint_config_get",
-      "blueprint_artifact_contract_read",
       "blueprint_phase_artifact_read",
+      "blueprint_phase_ui_skip_write",
+      "blueprint_artifact_contract_read",
       "blueprint_phase_artifact_write",
       "blueprint_artifact_scaffold",
       "blueprint_state_load",
@@ -15706,7 +15707,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: UI_PHASE_REQUIRED_TOOLS,
         optionalAgents: UI_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, read the canonical phase.ui-spec contract before drafting or persisting, read actual saved context and research bodies when status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, call blueprint_state_update with base: "synced" while preserving patch.currentPhase and patch.activeCommand, then re-load blueprint_state_load.derivedStatus.nextAction and keep final routing constrained by blueprint_command_catalog, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.',
+        contractNotes: 'Long-running-mutation profile for bounded UI-contract drafting: keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, keep contract-versus-skip posture, workflow.ui_safety_gate rationale confirmation, overwrite confirmation, checker-requested revision, and MCP validation repair explicit as visible gates, branch early with progressive disclosure so explicit skip mode reads the existing UI artifact and writes through blueprint_phase_ui_skip_write without loading the full phase.ui-spec contract or scaffold, read the canonical phase.ui-spec contract only for real UI-contract drafting, read actual saved context and research bodies when contract-mode status reports them, load skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md as the richness, evidence, fallback, and retry authority, keep contract.authoringTemplate as heading/schema authority only for full UI-contract mode, use capability-gated blueprint-ui-designer and blueprint-checker for design-system evidence plus six-dimension UI quality review, preserve the no-subagent section-by-section fallback, reject browser/web-search/shell-only or generic substitute agents, repair invalid writes or checker-blocked dimensions before completion, call blueprint_state_update with base: "synced" while preserving patch.currentPhase and patch.activeCommand, then re-load blueprint_state_load.derivedStatus.nextAction and keep final routing constrained by blueprint_command_catalog, and use XX-UI-SPEC.md as the single durable output for either a UI contract or an explicit skip rationale.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -30093,6 +30094,7 @@ __export(phase_exports, {
   blueprintPhaseSummaryRead: () => blueprintPhaseSummaryRead,
   blueprintPhaseSummaryValidateModel: () => blueprintPhaseSummaryValidateModel,
   blueprintPhaseSummaryWrite: () => blueprintPhaseSummaryWrite,
+  blueprintPhaseUiSkipWrite: () => blueprintPhaseUiSkipWrite,
   blueprintPhaseValidationAuthoringContext: () => blueprintPhaseValidationAuthoringContext,
   blueprintPhaseValidationRead: () => blueprintPhaseValidationRead,
   blueprintPhaseValidationRender: () => blueprintPhaseValidationRender,
@@ -34267,6 +34269,19 @@ function invalidPhaseArtifactWriteResult(args) {
     warnings: [...args.warnings, ...args.validation.warnings]
   };
 }
+function renderExplicitUiSkipArtifact(resolved, skipRationale) {
+  const title = resolved.phaseName ? `# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UI Spec` : `# Phase ${resolved.phasePrefix} - UI Spec`;
+  return `${title}
+
+## Outcome Mode
+
+- Explicit skip rationale
+
+## Rationale
+
+${normalizeTextContent(skipRationale)}
+`;
+}
 async function blueprintPhaseArtifactWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
   const artifactPath = artifactPathFor(resolved, args.artifact);
@@ -34459,6 +34474,16 @@ async function blueprintPhaseArtifactWrite(args) {
     },
     warnings: [...warnings, ...validation.warnings]
   };
+}
+async function blueprintPhaseUiSkipWrite(args) {
+  const { resolved } = await resolveLocatedPhaseForMutation(args);
+  return blueprintPhaseArtifactWrite({
+    cwd: args.cwd,
+    phase: resolved.phaseNumber,
+    artifact: "ui-spec",
+    content: renderExplicitUiSkipArtifact(resolved, args.skipRationale),
+    overwrite: args.overwrite
+  });
 }
 async function blueprintPhaseValidationRead(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -36670,7 +36695,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseUiSkipWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -36792,6 +36817,12 @@ var init_phase = __esm({
       model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
       validationMode: _enum(["strict", "warn"]).optional()
+    };
+    phaseUiSkipWriteInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      skipRationale: string2(),
+      overwrite: boolean2().optional()
     };
     phaseValidationWriteInputSchema = {
       cwd: string2().optional(),
@@ -37042,6 +37073,12 @@ var init_phase = __esm({
         description: "Persist substantive phase-scoped discovery artifacts with overwrite protection; phase.context is model-only and rendered by MCP.",
         inputSchema: phaseArtifactWriteInputSchema,
         handler: async (args) => blueprintPhaseArtifactWrite(args)
+      },
+      {
+        name: "blueprint_phase_ui_skip_write",
+        description: "Persist the minimal explicit skip-rationale form of XX-UI-SPEC.md from a phase and skipRationale string without requiring the full UI-contract scaffold.",
+        inputSchema: phaseUiSkipWriteInputSchema,
+        handler: async (args) => blueprintPhaseUiSkipWrite(args)
       },
       {
         name: "blueprint_phase_validation_read",

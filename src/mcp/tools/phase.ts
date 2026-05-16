@@ -302,6 +302,11 @@ type PhaseArtifactWriteArgs = PhaseLookupArgs & {
   validationMode?: "strict" | "warn";
 };
 
+type PhaseUiSkipWriteArgs = PhaseLookupArgs & {
+  skipRationale: string;
+  overwrite?: boolean;
+};
+
 type PhaseValidationReadArgs = PhaseLookupArgs & {
   artifact: PhaseValidationArtifactKind;
 };
@@ -1311,6 +1316,12 @@ const phaseArtifactWriteInputSchema = {
   model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
   validationMode: z.enum(["strict", "warn"]).optional()
+};
+const phaseUiSkipWriteInputSchema = {
+  cwd: z.string().optional(),
+  phase: numericBlueprintInputSchema.optional(),
+  skipRationale: z.string(),
+  overwrite: z.boolean().optional()
 };
 const phaseValidationWriteInputSchema = {
   cwd: z.string().optional(),
@@ -7197,6 +7208,26 @@ function invalidPhaseArtifactWriteResult(args: {
   };
 }
 
+function renderExplicitUiSkipArtifact(
+  resolved: Pick<ResolvedPhaseLocation, "phasePrefix" | "phaseName">,
+  skipRationale: string
+): string {
+  const title = resolved.phaseName
+    ? `# Phase ${resolved.phasePrefix}: ${resolved.phaseName} - UI Spec`
+    : `# Phase ${resolved.phasePrefix} - UI Spec`;
+
+  return `${title}
+
+## Outcome Mode
+
+- Explicit skip rationale
+
+## Rationale
+
+${normalizeTextContent(skipRationale)}
+`;
+}
+
 export async function blueprintPhaseArtifactWrite(
   args: PhaseArtifactWriteArgs
 ): Promise<PhaseArtifactWriteResult> {
@@ -7412,6 +7443,20 @@ export async function blueprintPhaseArtifactWrite(
     },
     warnings: [...warnings, ...validation.warnings]
   };
+}
+
+export async function blueprintPhaseUiSkipWrite(
+  args: PhaseUiSkipWriteArgs
+): Promise<PhaseArtifactWriteResult> {
+  const { resolved } = await resolveLocatedPhaseForMutation(args);
+
+  return blueprintPhaseArtifactWrite({
+    cwd: args.cwd,
+    phase: resolved.phaseNumber,
+    artifact: "ui-spec",
+    content: renderExplicitUiSkipArtifact(resolved, args.skipRationale),
+    overwrite: args.overwrite
+  });
 }
 
 export async function blueprintPhaseValidationRead(
@@ -10148,6 +10193,14 @@ export const phaseToolDefinitions = [
     inputSchema: phaseArtifactWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)
+  },
+  {
+    name: "blueprint_phase_ui_skip_write",
+    description:
+      "Persist the minimal explicit skip-rationale form of XX-UI-SPEC.md from a phase and skipRationale string without requiring the full UI-contract scaffold.",
+    inputSchema: phaseUiSkipWriteInputSchema,
+    handler: async (args: Record<string, unknown>) =>
+      blueprintPhaseUiSkipWrite(args as PhaseUiSkipWriteArgs)
   },
   {
     name: "blueprint_phase_validation_read",

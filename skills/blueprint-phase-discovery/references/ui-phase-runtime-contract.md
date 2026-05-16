@@ -27,16 +27,18 @@ deterministic state reads and writes.
   action.
 - Read `mcp_blueprint_blueprint_config_get` with effective scope before
   deciding whether to draft a UI contract or an explicit skip rationale.
-- Read `mcp_blueprint_blueprint_artifact_contract_read` with
-  `artifactId: "phase.ui-spec"` before any scaffold, draft, revision, or write.
-  Treat `contract.authoringTemplate` as the heading and schema authority.
 - Read the existing `XX-UI-SPEC.md` through
   `mcp_blueprint_blueprint_phase_artifact_read` before proposing replacement.
+- Read `mcp_blueprint_blueprint_artifact_contract_read` with
+  `artifactId: "phase.ui-spec"` only after you have decided the run is in real
+  UI-contract mode. Treat `contract.authoringTemplate` as the heading and
+  schema authority only for that branch.
 - When research status reports saved context or research, read the actual
   `XX-CONTEXT.md` and `XX-RESEARCH.md` bodies through
-  `mcp_blueprint_blueprint_phase_artifact_read` before drafting. Ground the
-  draft in those artifacts, `.blueprint/codebase/*`, roadmap intent, and
-  requirements before asking new questions.
+  `mcp_blueprint_blueprint_phase_artifact_read` before drafting only when the
+  active branch actually needs that evidence. Ground real UI-contract drafts in
+  those artifacts, `.blueprint/codebase/*`, roadmap intent, and requirements
+  before asking new questions.
 
 ### Decide
 
@@ -46,9 +48,32 @@ deterministic state reads and writes.
   the same `XX-UI-SPEC.md` file.
 - If `workflow.ui_safety_gate=true` and the phase appears backend-only or
   intentionally skips UI, require a concrete rationale before writing.
+- Keep skip mode progressive and branch-local. Do not load the full
+  `phase.ui-spec` authoring template, do not scaffold, and do not draft full
+  UI-contract headings when the run only needs an explicit skip rationale.
 - Keep pending gates visible as phase ambiguity, contract-versus-skip choice,
   UI-safety rationale, overwrite confirmation, checker-requested revision, or
   MCP validation failure.
+
+Use this branch logic literally:
+
+```text
+if explicit skip mode:
+  read config + existing XX-UI-SPEC.md
+  confirm overwrite only if needed
+  gather only enough saved evidence to write one good skipRationale
+  call mcp_blueprint_blueprint_phase_ui_skip_write
+  do not call artifact_contract_read
+  do not call artifact_scaffold
+  do not call phase_artifact_write
+else:
+  read artifact_contract_read("phase.ui-spec")
+  read saved context/research bodies when present
+  scaffold only if needed
+  draft the real UI contract
+  optionally run blueprint-ui-designer + blueprint-checker
+  call mcp_blueprint_blueprint_phase_artifact_write
+```
 
 ### Execute
 
@@ -68,7 +93,9 @@ deterministic state reads and writes.
     such blocks are proposed
 - For explicit skip mode, include `## Outcome Mode` and a populated
   `## Rationale` that explains why UI work is out of scope, what safety gate was
-  considered, and what scope change should trigger a revisit.
+  considered, and what scope change should trigger a revisit. The skip branch
+  uses the dedicated write tool so the model only needs to supply the
+  `skipRationale` text, not the full UI-contract scaffold.
 
 ## Subagent Path
 
@@ -101,19 +128,27 @@ design, codebase, or workflow analysis.
    codebase evidence into a short carry-forward note.
 2. Decide contract versus skip mode from config, phase scope, and saved
    evidence.
-3. Draft one section at a time against `contract.authoringTemplate`, carrying
-   citations or source notes forward before moving to the next section.
-4. Self-check the same six dimensions that `blueprint-checker` would review.
-5. Compress the completed section back into the carry-forward note with the
-   key decision, evidence roots, and any unresolved UI risk before moving on.
-6. Repair any blocked dimensions before persistence, or stop with a named
+3. If the run is skip mode, write one concrete `skipRationale` string and send
+   it through `mcp_blueprint_blueprint_phase_ui_skip_write`.
+4. If the run is real UI-contract mode, draft one section at a time against
+   `contract.authoringTemplate`, carrying citations or source notes forward
+   before moving to the next section.
+5. Self-check the same six dimensions that `blueprint-checker` would review
+   only for real UI-contract mode.
+6. Compress the completed section back into the carry-forward note with the key
+   decision, evidence roots, and any unresolved UI risk before moving on.
+7. Repair any blocked dimensions before persistence, or stop with a named
    blocker and next safe implemented action.
 
 ## Persist
 
+- Use `mcp_blueprint_blueprint_phase_ui_skip_write` for explicit skip mode. It
+  owns the minimal valid `XX-UI-SPEC.md` render and takes only the final
+  `skipRationale` text.
 - Use `mcp_blueprint_blueprint_artifact_scaffold` only to seed a missing
-  repo-relative UI-spec artifact path. A scaffold is never finished content.
-- Persist only the final markdown through
+  repo-relative UI-spec artifact path in real UI-contract mode. A scaffold is
+  never finished content.
+- Persist real UI-contract markdown through
   `mcp_blueprint_blueprint_phase_artifact_write` with the resolved numeric
   `phase`, `artifact: "ui-spec"`, and the complete artifact body.
 - Pass `overwrite: true` only after explicit overwrite confirmation.
@@ -127,14 +162,15 @@ design, codebase, or workflow analysis.
 
 ## Validate
 
-- Normalize the final draft to the canonical `authoringTemplate` headings while
-  using this runtime contract as the richness and evidence-density authority.
+- Normalize the final draft to the canonical `authoringTemplate` headings only
+  for real UI-contract mode while using this runtime contract as the richness
+  and evidence-density authority.
 - Reject scaffold placeholders, missing `Outcome Mode`, missing skip rationale,
   vague UI-contract language, and checker-blocked dimensions before write.
-- If `mcp_blueprint_blueprint_phase_artifact_write` returns
-  `status: "invalid"` or validation issues, repair the same normalized draft
-  using the returned issues and retry through MCP once before treating the run
-  as blocked.
+- If `mcp_blueprint_blueprint_phase_ui_skip_write` or
+  `mcp_blueprint_blueprint_phase_artifact_write` returns `status: "invalid"` or
+  validation issues, repair the same branch-local draft using the returned
+  issues and retry through MCP once before treating the run as blocked.
 - If checker review asks for revisions, update only the affected sections,
   re-normalize to the same `authoringTemplate`, and re-run the checker or the
   no-subagent six-dimension self-check before persistence.

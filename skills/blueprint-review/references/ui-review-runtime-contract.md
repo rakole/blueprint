@@ -44,9 +44,11 @@ Map `/blu-ui-review` to the shared stages:
   `artifact: "ui-review"` before drafting. Treat missing completed summaries as
   a blocker, and treat returned evidence keys and allowed next actions as exact.
 - Read saved summaries, matching plans when available through artifact paths or
-  command context, the saved `XX-UI-SPEC.md` contract when present, validation
+  command context, the saved `XX-UI-SPEC.md` artifact when present, validation
   or UAT evidence when present, and the actual repo surface implicated by the
-  saved phase evidence. Inspect a prior `XX-UI-REVIEW.md` when present for the
+  saved phase evidence. Treat `XX-UI-SPEC.md` as either a real UI contract or a
+  valid minimal explicit skip rationale; do not misread the skip form as a
+  malformed contract. Inspect a prior `XX-UI-REVIEW.md` when present for the
   reuse-or-overwrite decision, but do not cite the replacement path as reviewed
   evidence because it will be overwritten in place.
 - Use explicitly supplied screenshots, recordings, browser observations, or
@@ -57,8 +59,10 @@ Map `/blu-ui-review` to the shared stages:
 ### Decide
 
 - Decide whether the phase has actual UI/UX scope or only a saved UI-spec skip
-  rationale. A no-UI phase may produce a `PASS` or `FOLLOW_UP` artifact only if
-  the evidence and skip rationale are explicit.
+  rationale. The explicit skip form may be only `Outcome Mode` plus
+  `Rationale`, and that is still a first-class valid artifact shape. A no-UI
+  phase may produce a `PASS` or `FOLLOW_UP` artifact only if the evidence and
+  skip rationale are explicit.
 - Decide whether an existing `XX-UI-REVIEW.md` is reused or replaced. Default
   to reuse and require explicit overwrite confirmation before replacement.
 - Decide whether the run benefits from `blueprint-ui-auditor`. Use the auditor

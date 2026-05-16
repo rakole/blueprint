@@ -243,8 +243,10 @@ Before running the command flow, read
 That command-specific reference preserves saved context or research grounding,
 contract-versus-skip choice handling, `workflow.ui_safety_gate` rationale
 confirmation, checker-requested revision, six-dimension UI quality review,
-six UI dimensions, `blueprint_artifact_contract_read` with `artifactId:
-"phase.ui-spec"`,
+six UI dimensions, progressive-disclosure if/else branching, the dedicated
+`blueprint_phase_ui_skip_write` path for explicit skip mode, and
+`blueprint_artifact_contract_read` with `artifactId: "phase.ui-spec"` only for
+real UI-contract mode,
 bounded `blueprint-checker` use, no-subagent fallback, browser-only,
 web-search-only, shell-only, or generic agents rejection, validation repair,
 and `/blu-plan-phase <phase>` or `/blu-progress` routing. Do not inline the
