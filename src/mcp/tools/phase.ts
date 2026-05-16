@@ -2571,7 +2571,7 @@ function replacePhaseLineCompletionMarker(
 } {
   const marker = completed ? "x" : " ";
   const pattern = new RegExp(
-    `^(- \\[)([ xX])(\\] (?:\\*\\*)?Phase ${escapeForRegex(phaseNumber)}: [^\\n]+)$`,
+    `^(- \\[)([ xX])(\\]\\s+(?:\\*\\*)?Phase ${escapeForRegex(phaseNumber)}: [^\\n]+)$`,
     "m"
   );
   const match = raw.match(pattern);
