@@ -7,6 +7,9 @@ import path from "node:path";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtimeContractPath =
   "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
+const skillPath = "skills/blueprint-phase-planning/SKILL.md";
+const manifestPath = "commands/blu-plan-phase.toml";
+const commandSpecPath = "docs/commands/plan-phase.md";
 const plannerAgentPath = "agents/blueprint-planner.md";
 const checkerAgentPath = "agents/blueprint-checker.md";
 
@@ -119,7 +122,8 @@ test("planning contract preserves existing completion criteria", () => {
     "All enabled config gates were honored or explicitly routed.",
     "Final plan bodies were persisted through",
     ".blueprint/STATE.md` was refreshed through synced state update only after",
-    "The final response names the phase, gates, plan ids"
+    "The final response names the phase, gates, plan ids",
+    "the Downstream Execution Handoff"
   ]);
 });
 
@@ -206,16 +210,71 @@ test("checker agent defines revision tracking", () => {
   ]);
 });
 
-test("planning contract keeps Wave 3 headings out of Wave 2", () => {
+test("planning contract defines Wave 3 staleness and downstream handoff", () => {
   const runtimeContract = readRepoText(runtimeContractPath);
 
-  for (const unexpectedHeading of [
+  assertIncludesAll(runtimeContract, [
+    "#### Read-Set Staleness Check",
     "## Downstream Execution Handoff",
-    "## Read-Set Staleness Check"
-  ]) {
-    assert.ok(
-      !runtimeContract.includes(unexpectedHeading),
-      `expected contract to exclude "${unexpectedHeading}"`
-    );
-  }
+    "Any saved plan bodies or excerpts from",
+    "that were relied on during `add`,",
+    "Immediately before final model validation/write and before claiming final",
+    "`verificationPriorities`",
+  ]);
+});
+
+test("planning contract strengthens no-subagent fallback", () => {
+  const runtimeContract = readRepoText(runtimeContractPath);
+
+  assertIncludesAll(runtimeContract, [
+    "## No-Subagent Fallback",
+    "Build the Planning Investigation Trace from the read context",
+    "Build the Pre-Draft Readiness Assessment",
+    "Compress the completed plan into the carry-forward note",
+    "Run the Post-Draft Semantic Self-Check before claiming completion",
+    "If any",
+    "answer is `no`, repair the plan before persistence or final completion",
+  ]);
+
+  assertOrdered(runtimeContract, [
+    "1. Build the Planning Investigation Trace from the read context",
+    "2. Build the Pre-Draft Readiness Assessment.",
+    "3. Draft one structured plan model at a time",
+    "4. Run the inline quality checklist with priority ordering:",
+    "5. Compress the completed plan into the carry-forward note",
+    "6. Persist only after the current plan passes the inline checklist with no",
+    "7. Move to the next dependency wave only after summarizing what was written",
+    "8. If the inline checklist finds a blocker, repair the affected plan before",
+    "9. Run the Post-Draft Semantic Self-Check before claiming completion.",
+  ]);
+});
+
+test("skill, manifest, and command spec reference Wave 3 planning checks", () => {
+  const skill = readRepoText(skillPath);
+  const manifest = readRepoText(manifestPath);
+  const commandSpec = readRepoText(commandSpecPath);
+
+  assertIncludesAll(skill, [
+    "Planning Investigation Trace",
+    "Planning Decision Record",
+    "Post-Draft Semantic Self-Check",
+    "the Downstream Execution Handoff",
+  ]);
+
+  assertIncludesAll(manifest, [
+    "Planning Investigation Trace and Pre-Draft Readiness Assessment",
+    "Post-Draft Semantic Self-Check",
+    "if any answer is `no`, repair the plan before persistence or final completion",
+    "Do not claim completion until the final response includes the Downstream Execution Handoff",
+  ]);
+
+  assertIncludesAll(commandSpec, [
+    "Planning Investigation Trace",
+    "Post-Draft Semantic Self-Check",
+    "Downstream Execution Handoff",
+    "External Service Prerequisites",
+    "When saved plans already exist and `planId` is omitted",
+    "Only an empty saved plan set may auto-assign the first slot without that gate.",
+    "Omit `planId` only when writing the first plan in an empty saved plan set",
+  ]);
 });
