@@ -16,6 +16,7 @@ import {
   validateReportArtifactContent,
   validateResearchArtifactContent,
   validateReviewArtifactContent,
+  validateReviewArtifactScopeCoverage,
   validateUatArtifactContent,
   validateVerificationArtifactContent
 } from "../src/mcp/tools/artifacts.js";
@@ -2259,6 +2260,22 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /Milestone Evidence Ledger/);
   assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /must reference milestone-complete/i);
   assert.equal(customReportValidation.valid, true, customReportValidation.issues.join("\n"));
+});
+
+test("validateReviewArtifactScopeCoverage accepts root extensionless scope entries and flags missing files", () => {
+  const extensionlessScope = `# Phase 05: Review Scope - Code Review
+
+## Scope Reviewed
+
+- mvnw
+`;
+  const covered = validateReviewArtifactScopeCoverage(extensionlessScope, ["mvnw"]);
+  const missing = validateReviewArtifactScopeCoverage(extensionlessScope, ["gradlew"]);
+
+  assert.equal(covered.valid, true, covered.issues.join("\n"));
+  assert.deepEqual(covered.issues, []);
+  assert.equal(missing.valid, false);
+  assert.match(missing.issues.join("\n"), /Missing: gradlew/);
 });
 
 test("verification and UAT contracts reject evidence that does not link to a valid summary", () => {

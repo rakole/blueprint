@@ -1947,6 +1947,49 @@ test("blueprint_review_scope task schema accepts scoped root extensionless file 
   assert.equal(valid, true, JSON.stringify(validate.errors, null, 2));
 });
 
+test("blueprint_review_record persists scoped root extensionless files through Scope Reviewed validation", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    planFilesModified: ["Dockerfile"],
+    summaryChangedFiles: ["Dockerfile"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const created = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "code-review",
+    model: createStructuredCodeReviewModel({
+      reviewSummary: [
+        "Phase 5 standard review covered one root-level Dockerfile with one high follow-up."
+      ],
+      positiveSignals: [
+        "Saved phase evidence narrowed the review to the root-level Dockerfile."
+      ],
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "Dockerfile:1",
+          evidence: "The Dockerfile fixture records a reviewable root-level extensionless change.",
+          impact: "Review evidence for extensionless root files must remain persistable.",
+          recommendation: "Keep root-level extensionless file:line citations valid in structured reviews."
+        }
+      ],
+      followUps: ["Keep extensionless root file citations covered by code-review regression tests."]
+    }),
+    scopeFiles: ["Dockerfile"],
+    scopeSource: "explicit-files"
+  });
+
+  assert.equal(created.status, "created");
+  const saved = await readFile(path.join(repoPath, created.reportPath), "utf8");
+  assert.match(saved, /## Scope Reviewed/);
+  assert.match(saved, /- Dockerfile/);
+  assert.match(saved, /`Dockerfile:1`/);
+});
+
 test("blueprint_review_record rejects invalid structured code-review models before persistence", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {

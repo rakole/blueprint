@@ -7607,13 +7607,29 @@ function isPlaceholderReviewArtifactItem(item: string): boolean {
   );
 }
 
+const SCOPE_REVIEWED_INLINE_PATH_PATTERN =
+  /(?:^|[\s(])`?(((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)|(?:[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+))`?(?=$|[\s),.;:!?])/g;
+const SCOPE_REVIEWED_PATH_PATTERN =
+  /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+|[A-Za-z0-9._-]+)$/;
+
+function unwrapScopeReviewedCandidate(value: string): string {
+  return value.trim().replace(/^`|`$/g, "");
+}
+
 function extractScopeReviewedPaths(section: string): string[] {
   const paths = new Set<string>();
-  const pathPattern = /(?:^|[\s(])`?(((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)|(?:[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+))`?(?=$|[\s),.;:!?])/g;
 
   for (const item of collectMarkdownListItems(section)) {
-    for (const match of item.matchAll(pathPattern)) {
+    for (const match of item.matchAll(SCOPE_REVIEWED_INLINE_PATH_PATTERN)) {
       paths.add(match[1]);
+    }
+
+    const candidate = unwrapScopeReviewedCandidate(item);
+    if (
+      !isPlaceholderReviewArtifactItem(candidate)
+      && SCOPE_REVIEWED_PATH_PATTERN.test(candidate)
+    ) {
+      paths.add(candidate);
     }
   }
 
@@ -7624,8 +7640,11 @@ function extractScopeReviewedPaths(section: string): string[] {
       continue;
     }
 
-    const unwrapped = candidate.replace(/^`|`$/g, "");
-    if (/^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+)$/.test(unwrapped)) {
+    const unwrapped = unwrapScopeReviewedCandidate(candidate);
+    if (
+      !isPlaceholderReviewArtifactItem(unwrapped)
+      && SCOPE_REVIEWED_PATH_PATTERN.test(unwrapped)
+    ) {
       paths.add(unwrapped);
     }
   }
