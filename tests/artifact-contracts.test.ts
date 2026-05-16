@@ -11,6 +11,7 @@ import {
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactContractRead,
+  canonicalizeResearchRequiredHeadings,
   validatePhaseArtifactContent,
   validateReportArtifactContent,
   validateResearchArtifactContent,
@@ -487,6 +488,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Recommendations",
     "Sources"
   ]);
+  assert.match(
+    researchContract.authoringTemplate,
+    /\*\*Confidence:\*\* LOW\|MEDIUM\|HIGH\nKeep the canonical ## headings exactly as written below\./
+  );
   assert.deepEqual(contextContract.requiredHeadings, [
     "Phase Boundary",
     "Discovery Grounding",
@@ -1257,6 +1262,97 @@ test("research contract rejects skeleton content that lacks substantive section 
     validation.issues.join("\n"),
     /Phase Requirements must include at least one populated requirement row|substantive content/i
   );
+});
+
+test("research contract emits heading-scoped diagnostics for non-substantive required sections", () => {
+  const research = canonicalResearchContent(
+    "Keep registry updates aligned with MCP.",
+    "| LIFE-01 | Keep endpoint research grounded. | Validation stays tied to the canonical contract. |"
+  ).replace(
+    /## Summary\s+[\s\S]*?\n## Locked Decisions From Context/,
+    `## Summary
+
+why it matters.
+
+## Locked Decisions From Context`
+  );
+  const validation = validateResearchArtifactContent(research);
+  const diagnostic = validation.diagnostics.find((entry) => entry.heading === "Summary");
+
+  assert.equal(validation.valid, false, validation.issues.join("\n"));
+  assert.match(validation.issues.join("\n"), /section Summary must contain substantive content/i);
+  assert.equal(diagnostic?.path, "content.sections.Summary");
+  assert.equal(diagnostic?.code, "research.section_non_substantive");
+  assert.match(diagnostic?.repair ?? "", /## Summary/);
+});
+
+test("research contract accepts format-only required heading variants", () => {
+  const research = canonicalResearchContent(
+    "Keep accepted heading normalization limited to format-level variants.",
+    "| LIFE-01 | Keep endpoint research grounded. | Format-only heading variants should still validate. |"
+  )
+    .replace("## Phase Requirements", "## phase   requirements ###")
+    .replace("## Installation And Setup", "## Installation & Setup #")
+    .replace("## Standard Stack", "## Standard-Stack")
+    .replace("## Don't Hand-Roll", "## Don’t Hand Roll")
+    .replace("## State Of The Art", "## state-of-the-art");
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+});
+
+test("research contract rejects semantic heading aliases and reports the canonical heading", () => {
+  const research = canonicalResearchContent(
+    "Reject semantic aliases even when they look close to the required heading.",
+    "| LIFE-01 | Keep endpoint research grounded. | Semantic aliases must not pass heading validation. |"
+  ).replace("## Don't Hand-Roll", "## Do Not Hand Roll");
+  const validation = validateResearchArtifactContent(research);
+  const diagnostic = validation.diagnostics.find(
+    (entry) => entry.heading === "Don't Hand-Roll"
+  );
+
+  assert.equal(validation.valid, false, validation.issues.join("\n"));
+  assert.match(validation.issues.join("\n"), /missing required section: Don't Hand-Roll/i);
+  assert.match(validation.issues.join("\n"), /Do Not Hand Roll/);
+  assert.equal(diagnostic?.path, "content.sections.Don't Hand-Roll");
+  assert.equal(diagnostic?.code, "research.heading_shape_invalid");
+  assert.deepEqual(diagnostic?.missing, ["Don't Hand-Roll"]);
+  assert.deepEqual(diagnostic?.allowedValues, readArtifactContract("phase.research").requiredHeadings);
+  assert.match(diagnostic?.repair ?? "", /## Don't Hand-Roll/);
+});
+
+test("research canonicalization preserves extra headings, body prose, and H3 headings", () => {
+  const content = `# Phase 03: Discovery - Research
+
+**Researched:** 2026-04-18
+**Domain:** blueprint contracts
+**Confidence:** HIGH
+
+## phase requirements ###
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| LIFE-01 | Keep endpoint research grounded. | Format-only heading variants should still validate. |
+
+## Summary
+
+- Mention standard-stack text in prose without changing the body.
+
+### Don’t Hand Roll
+
+- This H3 heading should stay untouched.
+
+## Additional Context
+
+- Extra top-level headings should stay untouched.
+`;
+  const canonicalized = canonicalizeResearchRequiredHeadings(content);
+
+  assert.match(canonicalized.content, /## Phase Requirements/);
+  assert.match(canonicalized.content, /standard-stack text in prose/);
+  assert.match(canonicalized.content, /### Don’t Hand Roll/);
+  assert.match(canonicalized.content, /## Additional Context/);
 });
 
 test("research contract allows intentional placeholder token prose", () => {

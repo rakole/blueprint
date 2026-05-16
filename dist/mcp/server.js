@@ -18487,6 +18487,7 @@ function renderResearchTemplate(context) {
 **Researched:** <YYYY-MM-DD>
 **Domain:** ${domain2(context)}
 **Confidence:** LOW|MEDIUM|HIGH
+Keep the canonical ## headings exactly as written below.
 
 ## Phase Requirements
 
@@ -33906,19 +33907,20 @@ async function blueprintPhaseResearchStatus(args = {}) {
   let researchValid = null;
   let researchIssues = [];
   let researchDiagnostics = [];
-  let researchUnreadable = false;
   const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs4.readFile(absolutePath, "utf8");
-      const validation = validatePhaseArtifactContent(raw, "research");
+      const validation = validatePhaseArtifactContent(
+        canonicalizeResearchHeadingLines(normalizeTextContent2(raw)),
+        "research"
+      );
       researchValid = validation.valid;
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
     } catch (error2) {
-      researchUnreadable = true;
       researchValid = false;
       const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
       researchIssues = [
@@ -33949,9 +33951,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
     );
   }
   if (researchIssues.length > 0) {
-    suggestedRepairs.push(
-      researchUnreadable ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.` : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-    );
+    suggestedRepairs.push(...phaseArtifactSuggestedRepairs("research", researchDiagnostics));
   }
   if (uiSpecStatus.issues.length > 0) {
     suggestedRepairs.push(
@@ -33984,7 +33984,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
     uiSpecDiagnostics: uiSpecStatus.diagnostics,
-    suggestedRepairs,
+    suggestedRepairs: [...new Set(suggestedRepairs)],
     planningReadiness,
     warnings
   };
@@ -34062,7 +34062,9 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
     return [...new Set(errorDiagnostics.map((diagnostic) => diagnostic.repair))];
   }
   if (artifact === "research") {
-    return ["Add the required research sections, confidence marker, and at least one cited source before retrying."];
+    return [
+      "Add the required research sections, confidence marker, and at least one cited source before retrying."
+    ];
   }
   if (artifact === "ui-spec") {
     return [
@@ -34218,12 +34220,18 @@ async function blueprintPhaseArtifactWrite(args) {
   } else {
     normalizedContent = normalizeTextContent2(args.content ?? "");
   }
+  if (args.artifact === "research") {
+    normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
+  }
   const exists = await pathExists(absolutePath);
   const warnings = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
   if (exists) {
     const existingContent = await fs4.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
+    const existingValidation = validatePhaseArtifactContent(
+      args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent2(existingContent)) : existingContent,
+      args.artifact
+    );
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
         return invalidPhaseArtifactWriteResult({
@@ -38738,6 +38746,86 @@ function stripResearchPlaceholderSignals(section) {
     section.replace(/\r\n/g, "\n")
   );
 }
+function stripResearchHeadingAdornment(value) {
+  return value.trim().replace(/\s+#+\s*$/u, "").trim();
+}
+function normalizeResearchHeadingKey(value) {
+  return stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\s*&\s*/gu, " and ").replace(/["']/gu, "").replace(/[-/]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
+}
+function normalizeResearchHeadingSimilarityText(value) {
+  const normalized = stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\b(?:don't|dont)\b/giu, "do not").replace(/\s*&\s*/gu, " and ").replace(/[^A-Za-z0-9]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
+  return normalized.split(" ").filter((token) => token.length > 0).map((token) => token.length > 3 && token.endsWith("s") ? token.slice(0, -1) : token).join(" ");
+}
+function researchHeadingSimilarityScore(left, right) {
+  if (left.length === 0 || right.length === 0) {
+    return 0;
+  }
+  if (left === right) {
+    return 1;
+  }
+  if (left.includes(right) || right.includes(left)) {
+    return 0.85;
+  }
+  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 0));
+  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 0));
+  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  if (overlap === 0) {
+    return 0;
+  }
+  return overlap / Math.max(leftTokens.size, rightTokens.size);
+}
+function findCloseResearchHeadingVariant(canonicalHeading, candidateHeadings) {
+  const normalizedCanonical = normalizeResearchHeadingSimilarityText(canonicalHeading);
+  let bestMatch = null;
+  for (const candidateHeading of candidateHeadings) {
+    const score = researchHeadingSimilarityScore(
+      normalizedCanonical,
+      normalizeResearchHeadingSimilarityText(candidateHeading)
+    );
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = {
+        heading: candidateHeading,
+        score
+      };
+    }
+  }
+  return bestMatch && bestMatch.score >= 0.6 ? bestMatch.heading : null;
+}
+function canonicalizeResearchRequiredHeadings(content) {
+  const canonicalHeadingByKey = new Map(
+    REQUIRED_RESEARCH_SECTIONS.map((heading) => [normalizeResearchHeadingKey(heading), heading])
+  );
+  const canonicalizedHeadings = [];
+  const unmatchedTopLevelHeadings = [];
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const canonicalizedLines = lines.map((line) => {
+    const match = line.match(/^(##)(?!#)\s+(.+?)\s*$/u);
+    if (!match) {
+      return line;
+    }
+    const originalHeading = stripResearchHeadingAdornment(match[2] ?? "");
+    const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
+    if (!canonicalHeading) {
+      unmatchedTopLevelHeadings.push(originalHeading);
+      return line;
+    }
+    if (originalHeading !== canonicalHeading) {
+      canonicalizedHeadings.push({
+        from: originalHeading,
+        to: canonicalHeading
+      });
+    }
+    return `## ${canonicalHeading}`;
+  });
+  return {
+    content: canonicalizedLines.join("\n"),
+    canonicalizedHeadings,
+    unmatchedTopLevelHeadings
+  };
+}
+function canonicalizeResearchHeadingLines(content) {
+  return canonicalizeResearchRequiredHeadings(content).content;
+}
 function countResearchContentWords(section) {
   return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
 }
@@ -38769,53 +38857,151 @@ function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
   const diagnostics = [];
-  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(content);
+  const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
+  const normalizedContent = canonicalizedHeadings.content;
+  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(normalizedContent);
+  const pushResearchIssue = (message, diagnostic) => {
+    issues.push(message);
+    diagnostics.push(diagnostic);
+  };
   if (!/^# .+ - Research\s*$/m.test(content)) {
-    issues.push("Research artifact must start with a '# ... - Research' heading.");
+    pushResearchIssue(
+      "Research artifact must start with a '# ... - Research' heading.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.title_missing",
+        message: "Research artifact must start with a '# ... - Research' heading.",
+        repair: "Start the artifact with the exact '# ... - Research' title, then retry blueprint_phase_artifact_write."
+      })
+    );
   }
   if (matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
     singleSignalPatterns: [/^Phase XX:$/i]
   }).length > 0) {
-    issues.push(
-      "Research artifact still contains scaffold placeholder text and must be replaced with real research content."
+    pushResearchIssue(
+      "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.placeholder_present",
+        message: "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
+        repair: "Replace scaffold placeholders with phase-specific research content before retrying blueprint_phase_artifact_write."
+      })
     );
   }
-  const confidenceMatch = content.match(
+  const confidenceMatch = normalizedContent.match(
     /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
   );
   if (!confidenceMatch) {
-    issues.push(
-      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`
+    pushResearchIssue(
+      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.confidence_missing",
+        message: `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
+        allowedValues: [...RESEARCH_CONFIDENCE_VALUES],
+        repair: "Set **Confidence:** to LOW, MEDIUM, or HIGH before retrying blueprint_phase_artifact_write."
+      })
     );
   }
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    if (!new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(
-      content
-    )) {
-      issues.push(`Research artifact is missing required section: ${heading}.`);
+    const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(
+      normalizedContent
+    );
+    if (!hasHeading) {
+      const closeVariant = findCloseResearchHeadingVariant(
+        heading,
+        canonicalizedHeadings.unmatchedTopLevelHeadings
+      );
+      const message = closeVariant ? `Research artifact is missing required section: ${heading}. Found similar heading "${closeVariant}", but only format-level variants of the canonical heading are auto-repaired.` : `Research artifact is missing required section: ${heading}.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: closeVariant ? "research.heading_shape_invalid" : "research.heading_missing",
+          message,
+          heading,
+          missing: [heading],
+          allowedValues: closeVariant ? [...REQUIRED_RESEARCH_SECTIONS] : void 0,
+          repair: closeVariant ? `Replace "${closeVariant}" with the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.` : `Add the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
+      );
       continue;
     }
-    const section = extractMarkdownSection5(content, heading);
+    const section = extractMarkdownSection5(normalizedContent, heading);
+    if (section.trim().length === 0) {
+      const message = `Research artifact section ${heading} must not be empty.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: "research.section_empty",
+          message,
+          heading,
+          repair: `Populate the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
+      );
+      continue;
+    }
     if (!hasSubstantiveResearchSection(section, heading)) {
-      issues.push(
-        `Research artifact section ${heading} must contain substantive content after placeholders are removed.`
+      const message = `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: "research.section_non_substantive",
+          message,
+          heading,
+          repair: `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
       );
     }
   }
-  const phaseRequirements = extractMarkdownSection5(content, "Phase Requirements");
+  const phaseRequirements = extractMarkdownSection5(normalizedContent, "Phase Requirements");
   if (!hasRequirementTableRows(phaseRequirements)) {
-    issues.push(
-      "Research artifact section Phase Requirements must include at least one populated requirement row."
+    pushResearchIssue(
+      "Research artifact section Phase Requirements must include at least one populated requirement row.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Phase Requirements",
+        code: "research.phase_requirements_rows_missing",
+        message: "Research artifact section Phase Requirements must include at least one populated requirement row.",
+        heading: "Phase Requirements",
+        repair: "Add at least one populated requirement row under the exact canonical heading `## Phase Requirements`, then retry blueprint_phase_artifact_write."
+      })
     );
   }
-  const recommendations = extractMarkdownSection5(content, "Recommendations");
-  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(content).length === 0) {
-    issues.push("Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.");
+  const recommendations = extractMarkdownSection5(normalizedContent, "Recommendations");
+  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(normalizedContent).length === 0) {
+    pushResearchIssue(
+      "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Recommendations",
+        code: "research.recommendations_missing",
+        message: "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
+        heading: "Recommendations",
+        repair: "Populate the exact canonical heading `## Recommendations` with a recommendation bullet or Recommendation Handoff row, then retry blueprint_phase_artifact_write."
+      })
+    );
   }
-  const sources = extractMarkdownSection5(content, "Sources");
-  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(content)) {
-    issues.push(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence."
+  const sources = extractMarkdownSection5(normalizedContent, "Sources");
+  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(normalizedContent)) {
+    pushResearchIssue(
+      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Sources",
+        code: "research.sources_missing",
+        message: "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
+        heading: "Sources",
+        repair: "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
+      })
     );
   }
   const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
@@ -38834,67 +39020,59 @@ function validateResearchArtifactContent(content) {
       "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
     );
   }
-  if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
+  if (usesLiveVerificationLanguageWithoutExternalEvidence(normalizedContent)) {
     warnings.push(
       "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
     );
   }
-  if (hasHighConfidenceWithUnsupportedEvidenceClaims(content)) {
+  if (hasHighConfidenceWithUnsupportedEvidenceClaims(normalizedContent)) {
     warnings.push(
       "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );
   }
-  if (mentionsDependencyOrToolChoice(content)) {
-    if (!hasDependencyToolEvaluationTable(content)) {
+  if (mentionsDependencyOrToolChoice(normalizedContent)) {
+    if (!hasDependencyToolEvaluationTable(normalizedContent)) {
       warnings.push(
         "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
       );
     }
-    if (!hasDependencyAlternativesCoverage(content)) {
+    if (!hasDependencyAlternativesCoverage(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
       );
     }
-    if (!hasDependencySetupAndUpdatePosture(content)) {
+    if (!hasDependencySetupAndUpdatePosture(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
       );
     }
-    if (!hasLibraryVsCustomDecision(content)) {
+    if (!hasLibraryVsCustomDecision(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
       );
     }
-    if (!hasSupplyChainEvidenceSource(content)) {
+    if (!hasSupplyChainEvidenceSource(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
       );
     }
   }
-  if (mentionsUnsafeAutomaticDependencyRemediation(content)) {
+  if (mentionsUnsafeAutomaticDependencyRemediation(normalizedContent)) {
     warnings.push(
       "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
     );
   }
-  const codeExamples = extractMarkdownSection5(content, "Code Examples");
+  const codeExamples = extractMarkdownSection5(normalizedContent, "Code Examples");
   if (!/```/.test(codeExamples)) {
     warnings.push("Research artifact should include a fenced code or pseudocode example when examples add value.");
   }
-  const issueDiagnostics = issues.map(
-    (issue2) => phaseArtifactDiagnostic({
-      artifact: "research",
-      path: "content",
-      code: "research.invalid",
-      message: issue2
-    })
-  );
-  const warningDiagnostics = researchEvidenceWarningDiagnostics(content);
+  const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
   for (const diagnostic of warningDiagnostics) {
     if (!warnings.includes(diagnostic.message)) {
       warnings.push(diagnostic.message);
     }
   }
-  diagnostics.push(...issueDiagnostics, ...warningDiagnostics);
+  diagnostics.push(...warningDiagnostics);
   return {
     valid: issues.length === 0,
     issues,
@@ -40113,6 +40291,7 @@ function phaseArtifactDiagnostic(args) {
     severity: "error",
     heading: args.heading,
     missing: args.missing,
+    allowedValues: args.allowedValues,
     repair: args.repair ?? phaseArtifactRepairInstruction({
       artifact: args.artifact,
       heading: args.heading

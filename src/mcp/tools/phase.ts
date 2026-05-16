@@ -28,6 +28,7 @@ import {
   extractSummaryPlanReference,
   extractSummaryStatus,
   extractSummaryMarkerValue,
+  canonicalizeResearchHeadingLines,
   readUatArtifactState,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
@@ -6887,21 +6888,22 @@ export async function blueprintPhaseResearchStatus(
   let researchValid: boolean | null = null;
   let researchIssues: string[] = [];
   let researchDiagnostics: PhaseArtifactValidationDiagnostic[] = [];
-  let researchUnreadable = false;
   const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
 
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs.readFile(absolutePath, "utf8");
-      const validation = validatePhaseArtifactContent(raw, "research");
+      const validation = validatePhaseArtifactContent(
+        canonicalizeResearchHeadingLines(normalizeTextContent(raw)),
+        "research"
+      );
 
       researchValid = validation.valid;
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
     } catch (error) {
-      researchUnreadable = true;
       researchValid = false;
       const reason =
         error instanceof Error && error.message.trim().length > 0
@@ -6943,11 +6945,7 @@ export async function blueprintPhaseResearchStatus(
   }
 
   if (researchIssues.length > 0) {
-    suggestedRepairs.push(
-      researchUnreadable
-        ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.`
-        : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-    );
+    suggestedRepairs.push(...phaseArtifactSuggestedRepairs("research", researchDiagnostics));
   }
 
   if (uiSpecStatus.issues.length > 0) {
@@ -6985,7 +6983,7 @@ export async function blueprintPhaseResearchStatus(
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
     uiSpecDiagnostics: uiSpecStatus.diagnostics,
-    suggestedRepairs,
+    suggestedRepairs: [...new Set(suggestedRepairs)],
     planningReadiness,
     warnings
   };
@@ -7080,7 +7078,9 @@ function phaseArtifactSuggestedRepairs(
   }
 
   if (artifact === "research") {
-    return ["Add the required research sections, confidence marker, and at least one cited source before retrying."];
+    return [
+      "Add the required research sections, confidence marker, and at least one cited source before retrying."
+    ];
   }
 
   if (artifact === "ui-spec") {
@@ -7267,13 +7267,23 @@ export async function blueprintPhaseArtifactWrite(
   } else {
     normalizedContent = normalizeTextContent(args.content ?? "");
   }
+
+  if (args.artifact === "research") {
+    normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
+  }
+
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
+    const existingValidation = validatePhaseArtifactContent(
+      args.artifact === "research"
+        ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent))
+        : existingContent,
+      args.artifact
+    );
 
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
