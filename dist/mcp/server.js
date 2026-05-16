@@ -38564,9 +38564,6 @@ function hasSubstantiveResearchSection(section, heading) {
   if (meaningfulLines.length === 0) {
     return false;
   }
-  if (heading === "Code Examples") {
-    return /```[\s\S]*```/.test(normalized) && countResearchContentWords(normalized) >= 3;
-  }
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
 function matchedScaffoldPlaceholderSignals(content, placeholderSignals, options = {}) {

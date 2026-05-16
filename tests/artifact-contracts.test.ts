@@ -1283,6 +1283,7 @@ test("research contract ignores scaffold placeholder tokens inside fenced code e
 - title: <title>
 - reason: <reason>
 - source: <URL>
+- Explain how the runtime evidence should map into the handoff packet.
 \`\`\`
 
 ## Recommendations`
@@ -1292,6 +1293,25 @@ test("research contract ignores scaffold placeholder tokens inside fenced code e
 
   assert.equal(validation.valid, true, validation.issues.join("\n"));
   assert.doesNotMatch(validation.issues.join("\n"), /placeholder scaffold text/i);
+});
+
+test("research contract accepts unfenced substantive code examples", () => {
+  const research = canonicalResearchContent(
+    "Allow code examples sections to pass when they contain substantive example content without fences.",
+    "| LIFE-01 | Keep endpoint research grounded. | Unfenced examples can still describe concrete usage guidance. |"
+  ).replace(
+    /## Code Examples[\s\S]*?\n## Recommendations/,
+    `## Code Examples
+
+- Example request: call blueprint_phase_artifact_write with the normalized research body.
+- Example expectation: persist the artifact only after validation and source checks pass.
+
+## Recommendations`
+  );
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
 });
 
 test("research contract accepts table-only claim-addressable source evidence", () => {

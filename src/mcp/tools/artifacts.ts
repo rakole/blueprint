@@ -3612,10 +3612,6 @@ function hasSubstantiveResearchSection(section: string, heading: string): boolea
     return false;
   }
 
-  if (heading === "Code Examples") {
-    return /```[\s\S]*```/.test(normalized) && countResearchContentWords(normalized) >= 3;
-  }
-
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
 
