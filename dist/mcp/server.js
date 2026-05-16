@@ -31730,6 +31730,12 @@ function validateSummaryAgainstLivePlanInventory(content, args) {
     warnings
   };
 }
+function phaseSummaryMarkdownIssueSuggestion(issue2) {
+  if (/depends on incomplete execution plan\(s\):/i.test(issue2) || /linked dependency plan summaries are not completed yet:/i.test(issue2)) {
+    return "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Completion State, Readiness, and Next Safe Action to match, and keep the dependency blocker in Gap / Repair Routes until the dependency summary exists.";
+  }
+  return "Repair the summary so semantic completion evidence is truthful.";
+}
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
   const summary = content.split("\n").map((line) => line.trim()).find(
@@ -35420,7 +35426,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   }
   if (unsatisfiedDependencyPlans.length > 0) {
     warnings.push(
-      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
+      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(resolved.phaseNumber);
@@ -35581,7 +35587,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
           code: "markdown.invalid_render",
           message: issue2,
           context: {},
-          suggestion: "Repair the summary so semantic completion evidence is truthful."
+          suggestion: phaseSummaryMarkdownIssueSuggestion(issue2)
         })
       );
     }
@@ -36133,7 +36139,7 @@ async function blueprintPhaseSummaryWrite(args) {
   }
   if (summaryStatus === "COMPLETED" && unsatisfiedDependencyPlans.length > 0) {
     writeModeIssues.push(
-      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
+      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
   if (writeModeIssues.length > 0) {

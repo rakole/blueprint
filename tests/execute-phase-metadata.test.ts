@@ -91,6 +91,10 @@ test("execute-phase skill bundle points the command at execute-specific referenc
     skillFile,
     /not inline[\s\S]*`\/blu-quick`[\s\S]*`\/blu-fast`[\s\S]*`\/blu-execute-phase` context/i
   );
+  assert.match(
+    skillFile,
+    /If a selected plan depends on another plan whose summary is not yet[\s\S]*Use `PARTIAL`[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i
+  );
 });
 
 test("execute-phase command docs point at the rich runtime contract and keep the important invariants concise", async () => {
@@ -133,6 +137,7 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
     /lowerWavePendingPlans/,
     /absolute\s+blocker/i,
     /PARTIAL` and `BLOCKED` summaries/i,
+    /If a dependency plan summary is still missing or not yet `COMPLETED`[\s\S]*Downgrade to `PARTIAL` or[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i,
     /carry-forward evidence/i,
     /one `XX-YY-SUMMARY\.md` artifact per executed plan/i,
     /phase_summary_authoring_context/,

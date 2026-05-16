@@ -195,6 +195,10 @@ handoff, and no report persistence.
 - Persist one Markdown summary per executed plan through MCP and
   treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward
   evidence rather than completion.
+- If a selected plan depends on another plan whose summary is not yet
+  `COMPLETED`, do not write `COMPLETED` for the dependent plan. Use `PARTIAL`
+  or `BLOCKED`, update the status markers to match, and keep the dependency
+  blocker in `Gap / Repair Routes` until the dependency summary exists.
 - Do not make a phase-level completion claim from execute-phase itself; that
   waits for `/blu-validate-phase`, and `/blu-verify-work` remains the verifier
   follow-up once validation evidence exists.
