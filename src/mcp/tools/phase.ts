@@ -7133,7 +7133,7 @@ function phaseArtifactSuggestedRepairs(
 
   if (artifact === "ui-spec") {
     return [
-      "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
+      "If Outcome Mode is `UI contract`, populate every missing required UI-contract section before retrying. If Outcome Mode is `Explicit skip rationale`, provide a non-empty `Rationale` instead."
     ];
   }
 

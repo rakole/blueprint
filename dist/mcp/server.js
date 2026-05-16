@@ -34215,7 +34215,7 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
   }
   if (artifact === "ui-spec") {
     return [
-      "Add a populated Outcome Mode section plus either the contract headings or an explicit skip Rationale before retrying."
+      "If Outcome Mode is `UI contract`, populate every missing required UI-contract section before retrying. If Outcome Mode is `Explicit skip rationale`, provide a non-empty `Rationale` instead."
     ];
   }
   if (artifact === "context") {
@@ -40583,12 +40583,37 @@ function matchesFuzzyEmptySentinel(section, exactEmptySentinel) {
 function exactEmptySentinelRepairInstruction(heading, exactEmptySentinel) {
   return `Populate ## ${heading} with concrete contract-compliant detail, or use exactly \`${exactEmptySentinel}\` when that section intentionally has no remaining items, then retry blueprint_phase_artifact_write.`;
 }
+function detectUiSpecAuthoringMode(content, requiredHeadings) {
+  if (isExplicitUiSkipRationale(content)) {
+    return "skip";
+  }
+  const outcomeMode = extractMarkdownSection5(content, "Outcome Mode");
+  if (/\bui contract\b/i.test(outcomeMode)) {
+    return "contract";
+  }
+  if (/\b(?:explicit\s+)?skip rationale\b/i.test(outcomeMode)) {
+    return "skip";
+  }
+  const contractHeadings = requiredHeadings.filter(
+    (heading) => heading !== "Outcome Mode" && heading !== "Next Safe Action"
+  );
+  if (contractHeadings.some((heading) => extractMarkdownSection5(content, heading).trim().length > 0)) {
+    return "contract";
+  }
+  return "unknown";
+}
 function phaseArtifactRepairInstruction(args) {
   if (args.artifact === "context") {
     return args.heading ? `Populate ## ${args.heading} with substantive downstream-planning detail, then retry blueprint_phase_artifact_write. Context requires every required heading to be present and substantive; one populated section is not enough.` : "Read the phase.context contract, repair every required heading with substantive downstream-planning detail, then retry blueprint_phase_artifact_write.";
   }
   if (args.artifact === "ui-spec") {
-    return args.heading ? `Populate ## ${args.heading}, or provide a valid explicit UI skip rationale where the contract allows it, then retry blueprint_phase_artifact_write.` : "Read the phase.ui-spec contract, repair the UI spec or explicit skip rationale, then retry blueprint_phase_artifact_write.";
+    if (args.uiSpecMode === "contract") {
+      return args.heading ? `Populate ## ${args.heading} with substantive UI-contract detail, then retry blueprint_phase_artifact_write. Outcome Mode already selects UI contract, so continue repairing the contract.` : "Read the phase.ui-spec contract, repair the missing UI-contract sections for the current mode, then retry blueprint_phase_artifact_write.";
+    }
+    if (args.uiSpecMode === "skip") {
+      return args.heading ? `Populate ## ${args.heading} with the explicit UI skip rationale details required for skip mode, then retry blueprint_phase_artifact_write.` : "Repair the explicit UI skip rationale sections for the current mode, then retry blueprint_phase_artifact_write.";
+    }
+    return args.heading ? `Choose the intended UI-spec mode first, then retry blueprint_phase_artifact_write: either populate ## ${args.heading} as part of a full UI contract, or replace the artifact with a valid explicit UI skip rationale.` : "Read the phase.ui-spec contract, repair the UI spec or explicit skip rationale, then retry blueprint_phase_artifact_write.";
   }
   if (args.artifact === "discussion-log") {
     return args.heading ? `Populate ## ${args.heading} with concrete discussion evidence, then retry blueprint_phase_artifact_write.` : "Read the phase.discussion-log contract, repair the discussion log, then retry blueprint_phase_artifact_write.";
@@ -40606,7 +40631,8 @@ function phaseArtifactDiagnostic(args) {
     allowedValues: args.allowedValues,
     repair: args.repair ?? phaseArtifactRepairInstruction({
       artifact: args.artifact,
-      heading: args.heading
+      heading: args.heading,
+      uiSpecMode: args.uiSpecMode
     }),
     retryable: true,
     nextTool: "blueprint_phase_artifact_write"
@@ -40865,6 +40891,7 @@ function validatePhaseArtifactContent(content, artifact) {
   const missingRequiredSections = contract.requiredHeadings.filter(
     (heading) => extractMarkdownSection5(content, heading).trim().length === 0
   );
+  const uiSpecMode = artifact === "ui-spec" ? detectUiSpecAuthoringMode(content, contract.requiredHeadings) : void 0;
   if (artifact === "ui-spec" && isExplicitUiSkipRationale(content)) {
     if (extractMarkdownSection5(content, "Outcome Mode").trim().length === 0) {
       const issue2 = "UI spec artifact section Outcome Mode must not be empty.";
@@ -40875,6 +40902,8 @@ function validatePhaseArtifactContent(content, artifact) {
           path: "content.sections.Outcome Mode",
           code: "ui-spec.empty_outcome_mode",
           message: issue2,
+          repair: "Populate ## Outcome Mode with `- Explicit skip rationale`, then retry blueprint_phase_artifact_write.",
+          uiSpecMode,
           heading: "Outcome Mode"
         })
       );
@@ -40888,6 +40917,8 @@ function validatePhaseArtifactContent(content, artifact) {
           path: "content.sections.Rationale",
           code: "ui-spec.empty_skip_rationale",
           message: issue2,
+          repair: "Populate ## Rationale with the explicit UI skip rationale, any safety-gate implication, and a revisit trigger, then retry blueprint_phase_artifact_write.",
+          uiSpecMode,
           heading: "Rationale"
         })
       );
@@ -40922,7 +40953,8 @@ function validatePhaseArtifactContent(content, artifact) {
           code: "ui-spec.missing_required_section",
           message: `UI spec artifact is missing required contract section: ${heading}.`,
           heading,
-          missing: [heading]
+          missing: [heading],
+          uiSpecMode
         })
       )
     );
@@ -40935,7 +40967,8 @@ function validatePhaseArtifactContent(content, artifact) {
         path: "content.sections",
         code: "markdown.no_populated_contract_sections",
         message: issue2,
-        missing: [...contract.requiredHeadings]
+        missing: [...contract.requiredHeadings],
+        uiSpecMode
       })
     );
   }
@@ -40948,6 +40981,8 @@ function validatePhaseArtifactContent(content, artifact) {
         path: "content.sections.Outcome Mode",
         code: "ui-spec.empty_outcome_mode",
         message: issue2,
+        repair: uiSpecMode === "contract" ? "Populate ## Outcome Mode with `- UI contract`, then retry blueprint_phase_artifact_write." : "Populate ## Outcome Mode with either `- UI contract` or `- Explicit skip rationale`, then retry blueprint_phase_artifact_write.",
+        uiSpecMode,
         heading: "Outcome Mode"
       })
     );
