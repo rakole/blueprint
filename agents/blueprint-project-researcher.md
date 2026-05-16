@@ -100,6 +100,20 @@ Gather repo and product context during bootstrap or milestone-definition work.
 - Keep the output concise enough that the parent can turn it into a bootstrap
   summary without rewriting the substance.
 
+## Recommended Output Template
+```text
+Repo shape: <greenfield | scaffold-only | brownfield>
+Confidence: <high | medium | low>
+Evidence: <repo paths, tool results, or explicit "none found">
+Confirmed product signals: - <signal 1>
+Assumptions (not confirmed): - <assumption with source and consequence if wrong>
+Missing inputs: - <what the parent command should ask the user>
+Bootstrap risks: - <risk with mitigation or "none identified">
+Requirement-shaping notes: - <concrete requirement suggestion or scope cut>
+Parent decision needed: <yes/no - what decision>
+Recommended next action: <continue bootstrap | ask user about X | stop>
+```
+
 ## Boundaries
 
 - Do not mutate repo files directly unless a caller explicitly grants write

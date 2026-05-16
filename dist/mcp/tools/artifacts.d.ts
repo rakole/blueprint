@@ -129,6 +129,13 @@ type ArtifactScaffoldResult = {
     createdFiles: string[];
     reusedFiles: string[];
     warnings: string[];
+    highestBasePhaseNumber: string | null;
+    firstPhaseNumber: string | null;
+    firstPhasePrefix: string | null;
+    firstPhaseDir: string | null;
+    firstContextPath: string | null;
+    deletedPhaseDirectories: string[];
+    renamedPhaseDirectories: string[];
 };
 type ArtifactListResult = {
     artifacts: {
@@ -187,6 +194,7 @@ export type PhaseArtifactValidationDiagnostic = {
     severity?: "error" | "warning";
     heading?: string;
     missing?: string[];
+    allowedValues?: string[];
     repair: string;
     retryable: boolean;
     nextTool?: string;
@@ -626,6 +634,16 @@ export declare function writeJsonFile(filePath: string, value: Record<string, un
 export declare function writeTextFile(filePath: string, value: string, options?: TextWriteOptions): Promise<string[]>;
 export declare function withBlueprintRepoLock<T>(projectRoot: string, lockName: string, task: () => Promise<T>): Promise<T>;
 export declare function extractMarkdownTableRows(section: string): string[][];
+type ResearchHeadingCanonicalizationResult = {
+    content: string;
+    canonicalizedHeadings: Array<{
+        from: string;
+        to: string;
+    }>;
+    unmatchedTopLevelHeadings: string[];
+};
+export declare function canonicalizeResearchRequiredHeadings(content: string): ResearchHeadingCanonicalizationResult;
+export declare function canonicalizeResearchHeadingLines(content: string): string;
 export declare function validateResearchArtifactContent(content: string): {
     valid: boolean;
     issues: string[];

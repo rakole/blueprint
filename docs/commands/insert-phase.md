@@ -11,6 +11,7 @@
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - `insert-phase` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded roadmap insert, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- Shared phase-admin spine: read roadmap state first, preview the exact integer anchor plus decimal target plus requirement grounding plus roadmap objective and success criteria, require a named confirmation gate before any mutation, persist only through MCP tools, treat the scaffolded context as starter material only, update `STATE.md` only after scaffold succeeds, route to `/blu-discuss-phase <phase>`, and never widen into tracker tools, long-running progress posture, or planned-only shortcuts.
 - Rich runtime contract: `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md`. The command manifest stays thin; the reference owns MCP result controls, artifact scaffold rules, no-subagent fallback, retry behavior, output quality, and completion criteria.
 - Keep the waiting state explicit as `phase-insert-confirmation` while the computed decimal insert is waiting for approval, `invalid-insertion-anchor` when the requested integer anchor is unusable, and `conflicting-decimal-directory` when on-disk state blocks the insert.
 
@@ -37,14 +38,19 @@
 - A non-empty phase description is required. The description becomes the inserted phase title and drives the scaffolded phase slug, while the returned `phasePrefix` determines the scaffolded context filename.
 - A concrete ROADMAP objective, 2-5 observable success criteria, and at least one confirmed durable requirement ID declared in `.blueprint/REQUIREMENTS.md` are required and passed as `goal`, `successCriteria`, and `requirementIds`.
 - Requirement mappings such as `none yet`, placeholder text, blank values, or IDs not declared in `.blueprint/REQUIREMENTS.md` are invalid for inserted phases.
+- Confirmed `requirementIds` must also not already be mapped to another roadmap phase. Inserted phases need their own durable requirement grounding before mutation.
 - The next decimal phase number is derived from roadmap state under the requested integer base only. If the roadmap contains `2`, `2.1`, and `2.2`, then inserting after `2` creates `2.3`.
+- Preview the exact integer anchor, computed decimal target, requirement grounding, and later-phase non-renumbering notice before any mutation as a structured packet that also names the dependency-review note, scaffold target, and `Safe default: stop without writing`.
 - Do not renumber later phases or rewrite later dependency lines automatically as part of `insert-phase`.
+- The completion response must include a compact starter handoff block for `/blu-discuss-phase` with the decimal phase number and title, anchor phase, declared requirement IDs, the no-renumbering and dependency-review note, the roadmap evolution note summary, and open risks plus dependency questions.
+- Keep that handoff compact starter seed only. Do not treat it as final `XX-CONTEXT.md`, and do not jump directly to `/blu-plan-phase` or `/blu-execute-phase`.
 
 
 ## Outputs
 
 
 - User-facing result: a concise completion summary plus the next safe Blueprint follow-up when applicable.
+- The completion response also includes a command response receipt only. It does not create `.blueprint/receipts`, `.blueprint/runs`, host-global receipt state, or any other durable receipt surface.
 - Repo side effects: Maps the confirmed requirement rows in `.blueprint/REQUIREMENTS.md`, inserts the new decimal phase into `.blueprint/ROADMAP.md`, scaffolds `.blueprint/phases/<phasePrefix>-<phaseSlug>/`, updates `.blueprint/STATE.md`, and does not mutate code or git state.
 - In-flight posture: none beyond a concise inline summary or confirmation gate; `insert-phase` does not expose the long-running progress layer.
 
@@ -53,7 +59,7 @@
 
 
 - The current roadmap and milestone inventory through `blueprint_roadmap_read`
-- Durable requirement ID declarations in `.blueprint/REQUIREMENTS.md`, enforced by `blueprint_roadmap_insert_phase` before mutation
+- Durable requirement ID declarations in `.blueprint/REQUIREMENTS.md`, enforced by `blueprint_roadmap_insert_phase` before mutation, including rejection of placeholder values and IDs already mapped to another roadmap phase
 
 
 ## Blueprint And Global State Writes
@@ -75,11 +81,26 @@
 
 ## Phase Insertion Contract
 
+- Treat `phase-insert-confirmation` as a named in-flight receipt that binds the approved preview packet fields to the later `blueprint_roadmap_insert_phase` arguments: integer `after`, description, `goal`, `successCriteria`, and `requirementIds`.
 - Call `blueprint_roadmap_insert_phase` with the confirmed integer anchor in `after`, the phase description, confirmed `goal`, 2-5 confirmed `successCriteria`, and confirmed durable `requirementIds` declared in `.blueprint/REQUIREMENTS.md`.
+- Validate those `requirementIds` before mutation: they must be declared in `.blueprint/REQUIREMENTS.md`, must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase.
 - Treat returned `afterPhaseNumber`, `phaseNumber`, `phasePrefix`, and `phaseDir` as the authoritative inserted-phase metadata. Do not invent decimal numbering, phase slugs, or scaffold paths manually.
 - Record the inserted decimal phase in `STATE.md` as a durable `roadmapEvolutionNotes` entry and keep later phases' numbering unchanged.
 - Scaffold the initial context file from the returned phase metadata. Do not treat scaffold text as finished phase context.
+- Update `STATE.md` only after scaffold succeeds so the active phase never points at a missing context path.
 - Do not create an insert-phase-specific report. The only artifact seed is the initial `phase.context` scaffold, and `/blu-discuss-phase <decimal>` owns rich context authoring afterward.
+
+## Completion Receipt
+
+- Return the receipt only in the command response, never as persistent storage.
+- Include the integer `anchor` and the inserted decimal `phaseNumber`.
+- Include the returned phase metadata.
+- Include `requirementMappingStatus`.
+- Include `requirementsPath`, `roadmapPath`, and `contextScaffoldPath`.
+- Include the returned `stateRoute`.
+- Include the no-renumbering note.
+- Include `safeRetry`.
+- Include any `warnings`, including dependency-review warnings when present.
 
 
 ## Skills And Subagents
@@ -119,7 +140,9 @@
 ## User Prompts And Confirmation Gates
 
 
-- Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, and the fact that later phases will not be renumbered automatically before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Confirm the integer insertion target, computed next decimal number, objective, success criteria, durable requirement IDs from `.blueprint/REQUIREMENTS.md`, the no-renumbering acknowledgment, the dependency-review note, the scaffold target, and `Safe default: stop without writing` before mutation. Prefer Gemini CLI `ask_user` for this confirmation gate instead of prose-only confirmation.
+- Before the route instruction, include the compact starter handoff block for `/blu-discuss-phase`.
+- If the user declines, stop without writing. When a safe route is needed, point to `/blu-progress`.
 
 
 ## Edge Cases
@@ -134,11 +157,31 @@
 ## Failure Modes And Recovery
 
 
+- Shared recovery matrix:
+
+| Scenario | Recovery action |
+|---|---|
+| Mutation not attempted | Safe to rerun after the blocker is resolved. |
+| Roadmap mutation succeeded, scaffold failed | Report the successful roadmap path and the exact scaffold blocker. Do not hand-write context. |
+| Scaffold succeeded, state update failed | Report the successful roadmap and scaffold writes, then route to `/blu-progress`. Do not hand-edit `STATE.md`. |
+| Same preview and same returned files on retry | Safe to reuse when the tool reports `reused`. |
+| Same confirmation token but changed params or files | Block as stale or require manual recovery. |
+
+- Insert-phase recovery cases:
+
+| Scenario | Recovery action |
+|---|---|
+| Invalid anchor (non-integer) | Return an error and do not mutate. |
+| Declared-ID failure | Return an error listing the failed IDs. |
+| Already-mapped IDs | Return an error listing the conflicting phases. |
+| Conflicting decimal directory | Block and report the exact conflict. |
+| Dependency-review warning | Keep the warning visible in the receipt `warnings`. |
+
 - Show roadmap and phase-directory drift before mutation.
 - Refuse mutation when the target phase is not an existing integer phase.
 - Refuse mutation when the roadmap cannot place the new phase under `## Phases`; create an optional `## Phase Details` section only when the existing ROADMAP shape needs one.
+- Refuse mutation when any confirmed requirement ID is undeclared, placeholder-derived, or already mapped to another roadmap phase.
 - Return the nearest valid phase or milestone candidates when the target does not exist.
-- If scaffold or state update fails after roadmap insertion, report which MCP-backed steps succeeded, surface the failed step, and route to `/blu-progress` or recovery guidance instead of hand-editing `.blueprint/`.
 
 
 ## Acceptance Criteria
@@ -146,13 +189,20 @@
 
 - Keeps roadmap, phase directories, and state synchronized.
 - Inserts the next decimal after the requested integer phase group and does not renumber later phases.
+- Uses a named confirmation receipt that binds the approved preview packet to the later integer anchor, `requirementIds`, `goal`, and `successCriteria` arguments.
 - Creates the matching `.blueprint/phases/<phasePrefix>-<phaseSlug>/` scaffold.
 - Writes `Depends on: Phase <integer>`, `Status: planned`, and the optional `Inserted: yes` marker for the inserted Phase Details block.
 - Writes concrete goal and success criteria at ROADMAP mutation time so `/blu-discuss-phase` is not expected to backfill placeholders.
 - Writes confirmed durable requirement IDs at ROADMAP mutation time and never records `none yet` requirement mappings for inserted phases.
+- Requires those inserted-phase `requirementIds` to already be declared in `.blueprint/REQUIREMENTS.md` and not already mapped to another roadmap phase.
 - Updates the matching `.blueprint/REQUIREMENTS.md` table rows with inserted-phase traceability before planning can begin.
 - Records the inserted decimal phase in `STATE.md` without renumbering later phases.
+- Returns a compact starter handoff block with the decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.
+- Returns a command response receipt with the anchor, inserted decimal, returned phase metadata, requirement mapping status, requirements path, roadmap path, context scaffold path, state route, no-renumbering note, `safeRetry`, and warnings.
+- Does not route directly to `/blu-plan-phase` or `/blu-execute-phase`; the starter handoff belongs to `/blu-discuss-phase`.
 - Returns `/blu-discuss-phase <decimal>` as the next safe Blueprint follow-up.
+- Stops without writing when the user declines the preview confirmation.
+- Keeps receipts in the command response only and does not add a durable receipt write surface.
 - Creates or updates only the declared artifacts for this command.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.

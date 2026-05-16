@@ -28,6 +28,7 @@ import {
   extractSummaryPlanReference,
   extractSummaryStatus,
   extractSummaryMarkerValue,
+  canonicalizeResearchHeadingLines,
   readUatArtifactState,
   validateStrictSummaryArtifactContent,
   validateUatArtifactContent,
@@ -49,6 +50,7 @@ import { evaluatePhaseQualityGates } from "./quality-gates.js";
 import {
   basePhaseNumber,
   comparePhaseNumbers,
+  computeNextWholePhaseNumber,
   extractExactPhaseNumberToken,
   extractPhaseNumberToken,
   formatPhasePrefix,
@@ -198,6 +200,9 @@ import {
 import {
   countPhasePlanDiagnostics,
   formatPhasePlanDiagnostic,
+  isBlockingPhasePlanDiagnostic,
+  isExactCoverageConstFallout,
+  partitionPhasePlanDiagnostics,
   phasePlanDiagnostic,
   phasePlanModelResidualDiagnostics,
   schemaDiagnosticFromPhasePlanAjvError,
@@ -465,17 +470,29 @@ type ResolvedPhaseLocation = {
   phaseDir: string;
 };
 
+type RoadmapAddPhaseRequirementValidationStatus =
+  | "declared"
+  | "traceability-repaired";
+
+type RoadmapAddPhaseIdempotencyStatus = "created" | "reused-existing-phase";
+
 type RoadmapAddPhaseResult = {
   phaseNumber: string;
   phasePrefix: string;
   phaseName: string;
   slug: string;
   phaseDir: string;
+  contextPath: string;
   roadmapPath: string;
   milestone: string | null;
+  requirementValidationStatus: RoadmapAddPhaseRequirementValidationStatus;
+  createdPhaseDir: boolean;
+  idempotencyStatus: RoadmapAddPhaseIdempotencyStatus;
   written: boolean;
   warnings: string[];
 };
+
+type RoadmapInsertPhaseRequirementMappingStatus = "updated" | "unchanged";
 
 type RoadmapInsertPhaseResult = {
   afterPhaseNumber: string;
@@ -484,8 +501,11 @@ type RoadmapInsertPhaseResult = {
   phaseName: string;
   slug: string;
   phaseDir: string;
+  contextPath: string;
   roadmapPath: string;
   milestone: string | null;
+  requirementMappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
+  createdPhaseDir: boolean;
   written: boolean;
   warnings: string[];
 };
@@ -1469,17 +1489,7 @@ export function buildBlueprintPhaseDirectoryPath(
 }
 
 function nextIntegerPhaseNumber(phases: ParsedRoadmapPhase[]): string {
-  const basePhaseNumbers = phases
-    .map((phase) => phase.phaseNumber)
-    .map((phaseNumber) => phaseNumber.split(".")[0] ?? phaseNumber)
-    .map((phaseNumber) => Number.parseInt(phaseNumber, 10))
-    .filter((phaseNumber) => !Number.isNaN(phaseNumber));
-
-  const maxIntegerPhase = basePhaseNumbers.length === 0
-    ? 0
-    : Math.max(...basePhaseNumbers);
-
-  return String(maxIntegerPhase + 1);
+  return computeNextWholePhaseNumber(phases);
 }
 
 function normalizedPhaseText(value: string | null | undefined): string {
@@ -1595,8 +1605,13 @@ async function reuseAuditBackedPhase(
     phaseName: phase.phaseName,
     slug: slugifyPhaseName(phase.phaseName),
     phaseDir,
+    contextPath: buildArtifactPath(phaseDir, phase.phasePrefix, "-CONTEXT.md"),
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
+    requirementValidationStatus:
+      auditBackedDetails.repairRequirementIds?.length ? "traceability-repaired" : "declared",
+    createdPhaseDir: phaseDirState.created,
+    idempotencyStatus: "reused-existing-phase",
     written: true,
     warnings
   };
@@ -2030,6 +2045,8 @@ type RequirementTableRow = {
   notes: string;
 };
 
+const REQUIREMENTS_TABLE_SECTION_PATTERN = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
+
 function parseRequirementTableRow(line: string): RequirementTableRow | null {
   if (!/^\|.*\|$/.test(line)) {
     return null;
@@ -2071,6 +2088,66 @@ function renderRequirementTableRow(row: RequirementTableRow): string {
   return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
 }
 
+async function readRequirementTable(
+  projectRoot: string,
+  options: {
+    missingFileMessage: string;
+    malformedMessage: string;
+  }
+): Promise<{
+  rawRequirements: string;
+  rows: RequirementTableRow[];
+}> {
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+
+  if (!(await pathExists(requirementsPath))) {
+    throw new Error(options.missingFileMessage);
+  }
+
+  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
+  const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
+
+  if (!requirementsSectionMatch) {
+    throw new Error(options.malformedMessage);
+  }
+
+  const rows = requirementsSectionMatch[2]
+    .split("\n")
+    .map((line) => parseRequirementTableRow(line))
+    .filter((row): row is RequirementTableRow => row !== null);
+
+  return {
+    rawRequirements,
+    rows
+  };
+}
+
+function findUndeclaredRequirementIds(
+  rows: RequirementTableRow[],
+  requirementIds: string[]
+): string[] {
+  const declaredRequirementIds = new Set(rows.map((row) => row.id));
+
+  return requirementIds.filter((requirementId) => !declaredRequirementIds.has(requirementId));
+}
+
+async function requireDeclaredRequirementIds(
+  projectRoot: string,
+  requirementIds: string[],
+  options: {
+    missingFileMessage: string;
+    malformedMessage: string;
+    undeclaredMessage: (undeclaredRequirementIds: string[]) => string;
+  }
+): Promise<void> {
+  const { rows } = await readRequirementTable(projectRoot, options);
+  const undeclaredRequirementIds = findUndeclaredRequirementIds(rows, requirementIds);
+
+  if (undeclaredRequirementIds.length > 0) {
+    throw new Error(options.undeclaredMessage(undeclaredRequirementIds));
+  }
+}
+
 async function repairRequirementsTraceability(
   projectRoot: string,
   requirementIds: string[],
@@ -2092,22 +2169,10 @@ async function repairRequirementsTraceability(
     };
   }
 
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-
-  if (!(await pathExists(requirementsPath))) {
-    throw new Error(
-      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-
-  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
-    );
-  }
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+  });
 
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const noteSource = sourceReportPath?.trim() || "the milestone audit report";
@@ -2115,7 +2180,7 @@ async function repairRequirementsTraceability(
   const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
 
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header: string, body: string) => {
       const nextBody = body
         .split("\n")
@@ -2178,31 +2243,27 @@ async function mapRequirementsToInsertedPhase(
   phaseName: string
 ): Promise<{
   content: string;
+  mappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
   warnings: string[];
 }> {
   const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-
-  if (!(await pathExists(requirementsPath))) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-
-  const rawRequirements = await fs.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
-    );
-  }
+  await requireDeclaredRequirementIds(projectRoot, normalizedRequirementIds, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+    undeclaredMessage: (undeclaredRequirementIds) =>
+      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+  });
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
+  });
 
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+  let mappingUpdated = false;
 
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header: string, body: string) => {
       const nextBody = body
         .split("\n")
@@ -2225,6 +2286,8 @@ async function mapRequirementsToInsertedPhase(
             return line;
           }
 
+          mappingUpdated = true;
+
           return renderRequirementTableRow({
             ...row,
             notes: nextNotes
@@ -2236,16 +2299,9 @@ async function mapRequirementsToInsertedPhase(
     }
   );
 
-  if (remainingRequirementIds.size > 0) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${[
-        ...remainingRequirementIds
-      ].join(", ")}`
-    );
-  }
-
   return {
     content,
+    mappingStatus: mappingUpdated ? "updated" : "unchanged",
     warnings: []
   };
 }
@@ -3666,6 +3722,12 @@ function selectRelevantPlanValidationIssues(
   planId: string
 ): string[] {
   return validation.issues.filter((issue) => {
+    const normalizedIssue = issue.replace(/^[^:]+:\s*/, "");
+
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(normalizedIssue)) {
+      return false;
+    }
+
     if (issue.startsWith(`${pathValue}:`) || issue.includes(pathValue)) {
       return true;
     }
@@ -3982,6 +4044,21 @@ function validateSummaryAgainstLivePlanInventory(
   };
 }
 
+function phaseSummaryMarkdownIssueSuggestion(issue: string): string {
+  if (
+    /depends on incomplete execution plan\(s\):/i.test(issue) ||
+    /linked dependency plan summaries are not completed yet:/i.test(issue)
+  ) {
+    return (
+      "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, " +
+      "update Completion State, Readiness, and Next Safe Action to match, and keep the " +
+      "dependency blocker in Gap / Repair Routes until the dependency summary exists."
+    );
+  }
+
+  return "Repair the summary so semantic completion evidence is truthful.";
+}
+
 function summarizeMarkdownContent(content: string): {
   title: string | null;
   summary: string | null;
@@ -4256,6 +4333,47 @@ function isPhasePlanAcceptanceCriterionVerifiable(value: string): boolean {
   );
 }
 
+function isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue: string): boolean {
+  return (
+    /must use grep\/test-verifiable or otherwise objectively checkable bullets:/i.test(issue)
+  );
+}
+
+function partitionPhasePlanMarkdownValidationIssues(issues: readonly string[]): {
+  blockingIssues: string[];
+  warningIssues: string[];
+} {
+  const blockingIssues: string[] = [];
+  const warningIssues: string[] = [];
+
+  for (const issue of issues) {
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue)) {
+      warningIssues.push(issue);
+    } else {
+      blockingIssues.push(issue);
+    }
+  }
+
+  return { blockingIssues, warningIssues };
+}
+
+function phasePlanMarkdownDiagnosticFromIssue(issue: string): PhasePlanModelDiagnostic {
+  const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue);
+
+  return phasePlanDiagnostic({
+    severity: heuristicGuidance ? "warning" : "error",
+    source: "markdown",
+    path: "renderPreview",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    message: issue,
+    context: {},
+    repairAction: heuristicGuidance ? "make-verifiable" : undefined,
+    suggestion: heuristicGuidance
+      ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching."
+      : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+  });
+}
+
 async function collectKnownPhasePlanEvidenceArtifacts(
   projectRoot: string,
   resolved: ResolvedPhaseLocation,
@@ -4440,7 +4558,7 @@ function validatePhasePlanStructuredModelCoverage(
 
     for (const criterion of task.acceptanceCriteria) {
       if (!isPhasePlanAcceptanceCriterionVerifiable(criterion)) {
-        issues.push(
+        warnings.push(
           `Task ${task.id} acceptance criterion is not objectively verifiable: ${criterion}.`
         );
       }
@@ -4497,7 +4615,7 @@ function validatePhasePlanStructuredModelCoverage(
     }
 
     if (!isPhasePlanAcceptanceCriterionVerifiable(row.verification)) {
-      issues.push(
+      warnings.push(
         `File surface coverage for ${normalizedSurface} has unverifiable verification: ${row.verification}.`
       );
     }
@@ -4505,7 +4623,7 @@ function validatePhasePlanStructuredModelCoverage(
 
   for (const verification of model.verification) {
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
-      issues.push(
+      warnings.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
       );
     }
@@ -4569,6 +4687,7 @@ function phasePlanCoverageDiagnosticFromIssue(
         : "model.tasks";
 
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_acceptance_criterion",
@@ -4686,6 +4805,7 @@ function phasePlanCoverageDiagnosticFromIssue(
       rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
 
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_file_surface",
@@ -4696,6 +4816,31 @@ function phasePlanCoverageDiagnosticFromIssue(
       repairAction: "make-verifiable",
       suggestion:
         "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
+    });
+  }
+
+  const verificationEvidenceMatch = issue.match(
+    /^Verification item "(.+)" has evidence that is not objectively verifiable: (.+)\.$/
+  );
+  if (verificationEvidenceMatch) {
+    const item = verificationEvidenceMatch[1] ?? "";
+    const evidence = verificationEvidenceMatch[2] ?? "";
+    const rowIndex = model.verification.findIndex((row) => row.item === item);
+    const pathValue =
+      rowIndex >= 0 ? `model.verification[${rowIndex}].evidence` : "model.verification";
+
+    return phasePlanDiagnostic({
+      severity: "warning",
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_verification_evidence",
+      message: issue,
+      context: { item, evidence },
+      actual: evidence,
+      expected: "A command, grep, file-read, test, or artifact-validation check.",
+      repairAction: "make-verifiable",
+      suggestion:
+        "Prefer evidence grounded in a concrete command, grep, file-read, test, or artifact-validation check when the plan can name one."
     });
   }
 
@@ -4748,9 +4893,12 @@ async function validatePhasePlanModelWithContext(args: {
   if (modelObject) {
     const validate = createAjvValidator().compile(args.context.taskSchema);
     const schemaValid = validate(modelObject);
+    const schemaErrors = (validate.errors ?? []).filter(
+      (error) => !isExactCoverageConstFallout(error)
+    );
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map((error) =>
+        ...schemaErrors.map((error) =>
           schemaDiagnosticFromPhasePlanAjvError(error, args.context.taskSchema, args.model)
         )
       );
@@ -4771,6 +4919,22 @@ async function validatePhasePlanModelWithContext(args: {
       );
     }
 
+    if (!schemaValid) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          severity: "warning",
+          source: "schema",
+          path: "model",
+          code: "schema.deeper_checks_skipped",
+          message:
+            "Schema validation failed, so cross-field coverage checks and rendered Markdown validation were skipped for this attempt.",
+          context: {},
+          suggestion:
+            "Repair the schema diagnostics first, then retry validation to run the deeper coverage and render checks."
+        })
+      );
+    }
+
     if (schemaValid) {
       normalizedModel = modelObject as PhasePlanStructuredModel;
       const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
@@ -4778,12 +4942,16 @@ async function validatePhasePlanModelWithContext(args: {
       for (const issue of coverage.issues) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(issue, normalizedModel));
       }
+
+      for (const warning of coverage.warnings) {
+        diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
+      }
     }
   }
 
   let renderPreview: string | null = null;
 
-  if (diagnostics.length === 0 && normalizedModel) {
+  if (!diagnostics.some(isBlockingPhasePlanDiagnostic) && normalizedModel) {
     const rendered = renderPhasePlanModelContent(
       normalizedModel,
       args.context.resolved,
@@ -4792,28 +4960,22 @@ async function validatePhasePlanModelWithContext(args: {
     const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
       strict: true
     });
+    const markdownDiagnostics = [
+      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
+      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+    ];
+    diagnostics.push(...markdownDiagnostics);
 
-    for (const issue of validation.issues) {
-      diagnostics.push(
-        phasePlanDiagnostic({
-          source: "markdown",
-          path: "renderPreview",
-          code: "markdown.invalid_render",
-          message: issue,
-          context: {},
-          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
-        })
-      );
-    }
-
-    if (validation.issues.length === 0) {
+    if (!markdownDiagnostics.some(isBlockingPhasePlanDiagnostic)) {
       renderPreview = rendered;
     }
   }
 
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
+
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
     target: phasePlanValidateModelTarget({
       phase: args.context.resolved,
       planId: args.context.planId,
@@ -4832,7 +4994,9 @@ async function validatePhasePlanModelWithContext(args: {
     taskSchema: args.context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema")
+    normalizedModel: diagnostics.some(
+      (diagnostic) => diagnostic.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic)
+    )
       ? null
       : normalizedModel,
     renderPreview,
@@ -4850,11 +5014,15 @@ async function phasePlanModelToContent(
   validation: PhasePlanValidateModelResult;
 }> {
   const validation = await validatePhasePlanModelWithContext({ model, context });
+  const partitionedDiagnostics = partitionPhasePlanDiagnostics(validation.diagnostics);
 
   return {
     content: validation.renderPreview,
-    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
-    warnings: validation.warnings,
+    issues: partitionedDiagnostics.blocking.map(formatPhasePlanDiagnostic),
+    warnings: [
+      ...validation.warnings,
+      ...partitionedDiagnostics.warnings.map(formatPhasePlanDiagnostic)
+    ],
     validation
   };
 }
@@ -5265,24 +5433,36 @@ export async function blueprintPhaseValidationValidateModel(
   let normalizedModel: PhaseVerificationStructuredModel | PhaseUatStructuredModel | null = null;
 
   if (modelObject && context.taskSchema) {
+    const validationModelObject =
+      args.artifact === "verification"
+        ? {
+            ...modelObject,
+            manualOrDeferredCoverage: modelObject.manualOrDeferredCoverage ?? [],
+            gapClassification: modelObject.gapClassification ?? [],
+            gapsFound: modelObject.gapsFound ?? [],
+            suggestedRepairs: modelObject.suggestedRepairs ?? []
+          }
+        : modelObject;
     const validate = createAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(validationModelObject);
 
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
+        ...(validate.errors ?? []).map((error) =>
+          schemaDiagnosticFromPhaseValidationAjvError(error, context.taskSchema!, modelObject)
+        )
       );
     }
 
     diagnostics.push(
       ...phaseValidationResidualDiagnostics(
-        modelObject,
+        validationModelObject,
         context.contract.modelContract,
         args.artifact
       )
     );
 
-    for (const issue of await validatePhaseValidationModelCommands(modelObject, args.artifact)) {
+    for (const issue of await validatePhaseValidationModelCommands(validationModelObject, args.artifact)) {
       diagnostics.push(
         phaseValidationDiagnostic({
           source: "residual",
@@ -5298,8 +5478,10 @@ export async function blueprintPhaseValidationValidateModel(
     if (schemaValid) {
       normalizedModel =
         args.artifact === "verification"
-          ? normalizeVerificationStructuredModel(modelObject as PhaseVerificationStructuredModel)
-          : modelObject as PhaseUatStructuredModel;
+          ? normalizeVerificationStructuredModel(
+              validationModelObject as PhaseVerificationStructuredModel
+            )
+          : validationModelObject as PhaseUatStructuredModel;
     }
   }
 
@@ -5609,7 +5791,7 @@ export async function blueprintRoadmapAddPhase(
       );
     }
 
-    const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
+    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
 
     if (
       args.expectedPhaseNumber &&
@@ -5618,6 +5800,15 @@ export async function blueprintRoadmapAddPhase(
       throw new Error(
         `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
       );
+    }
+
+    if (normalizedRepairRequirementIds.length === 0) {
+      await requireDeclaredRequirementIds(projectRoot, effectiveRequirementIds, {
+        missingFileMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+        malformedMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+        undeclaredMessage: (undeclaredRequirementIds) =>
+          `Cannot add Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+      });
     }
 
     const phasePrefix = formatPhasePrefix(phaseNumber);
@@ -5733,8 +5924,13 @@ export async function blueprintRoadmapAddPhase(
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementValidationStatus:
+        normalizedRepairRequirementIds.length > 0 ? "traceability-repaired" : "declared",
+      createdPhaseDir: materializedPhaseDir.created,
+      idempotencyStatus: "created",
       written: true,
       warnings
     };
@@ -5926,8 +6122,11 @@ export async function blueprintRoadmapInsertPhase(
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementMappingStatus: requirementMapping.mappingStatus,
+      createdPhaseDir: materializedPhaseDir.created,
       written: true,
       warnings
     };
@@ -6689,21 +6888,22 @@ export async function blueprintPhaseResearchStatus(
   let researchValid: boolean | null = null;
   let researchIssues: string[] = [];
   let researchDiagnostics: PhaseArtifactValidationDiagnostic[] = [];
-  let researchUnreadable = false;
   const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
 
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs.readFile(absolutePath, "utf8");
-      const validation = validatePhaseArtifactContent(raw, "research");
+      const validation = validatePhaseArtifactContent(
+        canonicalizeResearchHeadingLines(normalizeTextContent(raw)),
+        "research"
+      );
 
       researchValid = validation.valid;
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
     } catch (error) {
-      researchUnreadable = true;
       researchValid = false;
       const reason =
         error instanceof Error && error.message.trim().length > 0
@@ -6745,11 +6945,7 @@ export async function blueprintPhaseResearchStatus(
   }
 
   if (researchIssues.length > 0) {
-    suggestedRepairs.push(
-      researchUnreadable
-        ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.`
-        : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-    );
+    suggestedRepairs.push(...phaseArtifactSuggestedRepairs("research", researchDiagnostics));
   }
 
   if (uiSpecStatus.issues.length > 0) {
@@ -6787,7 +6983,7 @@ export async function blueprintPhaseResearchStatus(
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
     uiSpecDiagnostics: uiSpecStatus.diagnostics,
-    suggestedRepairs,
+    suggestedRepairs: [...new Set(suggestedRepairs)],
     planningReadiness,
     warnings
   };
@@ -6882,7 +7078,9 @@ function phaseArtifactSuggestedRepairs(
   }
 
   if (artifact === "research") {
-    return ["Add the required research sections, confidence marker, and at least one cited source before retrying."];
+    return [
+      "Add the required research sections, confidence marker, and at least one cited source before retrying."
+    ];
   }
 
   if (artifact === "ui-spec") {
@@ -7069,13 +7267,23 @@ export async function blueprintPhaseArtifactWrite(
   } else {
     normalizedContent = normalizeTextContent(args.content ?? "");
   }
+
+  if (args.artifact === "research") {
+    normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
+  }
+
   const exists = await pathExists(absolutePath);
   const warnings: string[] = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
 
   if (exists) {
     const existingContent = await fs.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
+    const existingValidation = validatePhaseArtifactContent(
+      args.artifact === "research"
+        ? canonicalizeResearchHeadingLines(normalizeTextContent(existingContent))
+        : existingContent,
+      args.artifact
+    );
 
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
@@ -7982,6 +8190,7 @@ export async function blueprintPhasePlanWrite(
     const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
       strict: strictValidation
     });
+    const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
     const dependencyIssues = collectInvalidPlanDependencyIssues(
       pathValue,
       validation.metadata.dependsOn
@@ -7990,8 +8199,17 @@ export async function blueprintPhasePlanWrite(
       validation.metadata.planId && /^\d+$/.test(validation.metadata.planId)
         ? normalizePlanId(validation.metadata.planId)
         : null;
-    const validationIssues = [...modelCoverageIssues, ...validation.issues, ...dependencyIssues];
-    const warnings: string[] = [...modelWarnings, ...preparedContent.warnings];
+    const validationIssues = [
+      ...modelCoverageIssues,
+      ...contentValidationIssues.blockingIssues,
+      ...dependencyIssues
+    ];
+    const warnings: string[] = [
+      ...modelWarnings,
+      ...preparedContent.warnings,
+      ...contentValidationIssues.warningIssues,
+      ...validation.warnings
+    ];
 
     if (dependencyIssues.length > 0 && strictValidation) {
       return {
@@ -8008,7 +8226,7 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         warnings: dependencyIssues
       };
@@ -8030,8 +8248,8 @@ export async function blueprintPhasePlanWrite(
         status: "invalid",
         validation: {
           valid: false,
-          issues: [...validation.issues, issue],
-          warnings: validation.warnings
+          issues: [...contentValidationIssues.blockingIssues, issue],
+          warnings
         },
         warnings: []
       };
@@ -8052,14 +8270,14 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         modelValidation,
-        warnings: [...warnings, ...validation.warnings]
+        warnings
       };
     }
 
-    if (!validation.valid && strictValidation) {
+    if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -8074,9 +8292,9 @@ export async function blueprintPhasePlanWrite(
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
-        warnings: []
+        warnings
       };
     }
 
@@ -8133,10 +8351,11 @@ export async function blueprintPhasePlanWrite(
           overwritten: false,
           status: "reused",
           validation: {
-            valid: prospectiveValidation.status === "valid",
-            issues: prospectiveValidation.issues,
-            warnings: prospectiveValidation.warnings
+            valid: blockingIssues.length === 0,
+            issues: blockingIssues,
+            warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
+          modelValidation,
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -8170,10 +8389,11 @@ export async function blueprintPhasePlanWrite(
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: prospectiveValidation.status === "valid",
-        issues: prospectiveValidation.issues,
-        warnings: prospectiveValidation.warnings
+        valid: blockingIssues.length === 0,
+        issues: blockingIssues,
+        warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
+      modelValidation,
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
@@ -8490,7 +8710,7 @@ export async function blueprintPhaseSummaryAuthoringContext(
     warnings.push(
       `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
-        .join(", ")}`
+        .join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
 
@@ -8672,8 +8892,7 @@ export async function blueprintPhaseSummaryValidateModel(
           code: "markdown.invalid_render",
           message: issue,
           context: {},
-          suggestion:
-            "Repair the summary so semantic completion evidence is truthful."
+          suggestion: phaseSummaryMarkdownIssueSuggestion(issue)
         })
       );
     }
@@ -9347,7 +9566,7 @@ export async function blueprintPhaseSummaryWrite(
     writeModeIssues.push(
       `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans
         .map((dependency) => `${dependency.planId} (${dependency.path})`)
-        .join(", ")}`
+        .join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
 
@@ -9592,7 +9811,7 @@ export async function blueprintPhaseCheckpointPut(
       existingCheckpoint,
       checkpointPath,
       args.checkpoint.ownerCommand,
-      args.checkpoint.resumeMeta.mode
+      args.checkpoint.mode
     );
 
     if (!ownershipSafety.safeToResume) {

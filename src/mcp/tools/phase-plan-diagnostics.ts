@@ -107,6 +107,32 @@ export function countPhasePlanDiagnostics(
   return counts;
 }
 
+export function isBlockingPhasePlanDiagnostic(
+  diagnostic: PhasePlanModelDiagnostic
+): boolean {
+  return diagnostic.severity !== "warning";
+}
+
+export function partitionPhasePlanDiagnostics(
+  diagnostics: PhasePlanModelDiagnostic[]
+): {
+  blocking: PhasePlanModelDiagnostic[];
+  warnings: PhasePlanModelDiagnostic[];
+} {
+  const blocking: PhasePlanModelDiagnostic[] = [];
+  const warnings: PhasePlanModelDiagnostic[] = [];
+
+  for (const diagnostic of diagnostics) {
+    if (isBlockingPhasePlanDiagnostic(diagnostic)) {
+      blocking.push(diagnostic);
+    } else {
+      warnings.push(diagnostic);
+    }
+  }
+
+  return { blocking, warnings };
+}
+
 export function summarizePhasePlanRepairs(
   diagnostics: PhasePlanModelDiagnostic[]
 ): PhasePlanRepairSummary {
@@ -127,7 +153,7 @@ export function summarizePhasePlanRepairs(
         : "Repair every diagnostic in the returned model before retrying validation once.";
 
   return {
-    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
+    blockingCount: diagnostics.filter(isBlockingPhasePlanDiagnostic).length,
     firstPassActions,
     reReadAuthoringContext,
     retryInstruction
@@ -246,6 +272,15 @@ function schemaDiagnosticFromAjvError(
             ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.`
           : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
   });
+}
+
+export function isExactCoverageConstFallout(error: ErrorObject): boolean {
+  return (
+    error.keyword === "const" &&
+    /^#\/properties\/(?:requirementCoverage|evidenceCoverage)\/allOf\/\d+\/contains\/properties\/(?:requirement|artifact)\/const$/.test(
+      error.schemaPath
+    )
+  );
 }
 
 export function schemaDiagnosticFromPhasePlanAjvError(

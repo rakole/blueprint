@@ -23,22 +23,46 @@ timeout_mins: 10
 Synthesize milestone and phase structure from requirements, constraints, and
 prior research.
 
+## Typed Input Contract
+
+The parent must pass a bounded `Roadmapper Packet` instead of raw reports or
+open-ended repo context. The packet must stay read-only and include:
+
+- `digestScope`: the exact digest `inputsUsed` plus the resolved milestone
+  summary path that the parent already read
+- `carryForwardFacts`: digest-backed roadmap, milestone, and starter-scope
+  facts only
+- `requirementTransitionHints`: starter-seed transition hints with source refs
+  and labeled uncertainty
+- `firstPhasePreview`: a relative non-binding first-phase preview only; never a
+  final phase number or path
+- `parentOwnedResponsibilities`: final milestone naming, final phase numbering
+  and paths, confirmation gates, MCP writes, final response, and routing
+- `forbiddenActions`: MCP writes, hand-editing `.blueprint/`, final
+  `phase.context` authoring, confirmation-gate overrides, and any web,
+  browser, or shell access not granted in this frontmatter
+- `stopConditions`: the cases where the parent must not proceed with delegated
+  synthesis
+
 ## Parent-Owned Responsibilities
 
-- The parent command owns orchestration, visible stage narration, and any
-  Gemini-native `update_topic`, `write_todos`, and `ask_user` gates.
+- The parent command owns digest reads, evidence-scope construction,
+  orchestration, visible stage narration, and any Gemini-native
+  `update_topic`, `write_todos`, and `ask_user` gates.
 - The parent command owns any external-research approval, any Gemini-native
   `get_internal_docs` self-correction pass for host/tool semantics, and final
   routing.
-- The parent command owns roadmap mutation, `.blueprint/` persistence, and
-  every other MCP-backed persistence step.
+- The parent command owns final milestone naming, final phase numbering and
+  paths, roadmap mutation, `.blueprint/` persistence, final phase-context
+  authoring, and every other MCP-backed persistence step.
 
 ## Required Reads
 
-- the active requirements, milestone intent, and roadmap state supplied by the
-  parent command
-- any existing roadmap slice, milestone audit, or gap summary already relevant
-  to the requested change
+- the bounded `Roadmapper Packet` supplied by the parent command
+- the active requirements, milestone intent, and roadmap state already reduced
+  into that packet by the parent command
+- any existing roadmap slice, milestone audit, or gap summary already approved
+  inside the packet as relevant to the requested change
 - locked Blueprint docs such as `docs/IMPLEMENTATION-ORDER.md` when sequencing
   or command exposure rules matter
 - bootstrap or codebase context when repo shape changes the right phase order
@@ -81,16 +105,22 @@ prior research.
 
 ## Outputs
 
-- a traceable roadmap draft
+- a typed read-only result with `provisionalOrderedProposals`, `coverageNotes`,
+  `blockers`, `warnings`, `assumptions`, `confidence`, and
+  `relativeFirstPhaseRecommendation`
 - milestone structure and phase ordering
 - requirement-to-phase coverage notes
 - sequencing notes and dependency warnings
-- revision guidance that preserves valid existing phases when only part of the roadmap changes
+- revision guidance that preserves valid existing phases when only part of the
+  roadmap changes
 - a provisional flag when brownfield mapping is still missing
 
 ## Required Output Contract
 
-- For each proposed phase, include a title, objective, covered
+- Return only the typed fields `provisionalOrderedProposals`, `coverageNotes`,
+  `blockers`, `warnings`, `assumptions`, `confidence`, and
+  `relativeFirstPhaseRecommendation`.
+- For each `provisionalOrderedProposal`, include a title, objective, covered
   requirement/gap set, dependency notes, and success criteria.
 - Include a coverage summary that states mapped count, total committed
   requirements, duplicates, orphans, and whether coverage is ready.
@@ -99,16 +129,36 @@ prior research.
 - Make grouped gap-closure reasoning explicit when the input is a milestone
   audit.
 - Separate blockers from warnings and identify any deferred optional gaps.
+- Keep `relativeFirstPhaseRecommendation` relative only, such as `first`,
+  `earliest-safe`, `after-transition-cluster`, or `not-recommended-yet`; do
+  not invent permanent phase numbers or paths.
+- Attach a top-level `confidence` statement and keep any unsupported carry-
+  forward claim under `assumptions` instead of upgrading it to fact.
 - When revising an existing roadmap, preserve unaffected phases and call out
   exactly what changed instead of silently replanning everything.
 - Call out when brownfield uncertainty or missing discovery evidence makes the
   roadmap only provisional.
 
+## Recommended Output Template
+```text
+Phase: <title>
+  Objective: <one-line>
+  Covered requirement IDs: <ID list>
+  Dependency notes: <prior phase or external dependency>
+  Success criteria: 1. <observable criterion>
+  Confidence: <high | medium | low>
+(repeat per phase)
+Coverage summary: Mapped count: <N>; Total committed requirements: <M>; Duplicates: <IDs or none>; Orphans: <IDs or none>; Deferred items: <IDs or none>; Blockers: <issues or none>; Warnings: <issues or none>; Ready for parent approval: <yes/no - reason if no>
+```
+
 ## Boundaries
 
 - Keep implementation order aligned with `docs/IMPLEMENTATION-ORDER.md`.
 - Do not expose commands whose substrate is not implemented.
-- Stay read-only unless the parent explicitly grants roadmap-write ownership.
+- Stay read-only. This frontmatter does not grant MCP write, browser, web, or
+  shell access.
+- Do not call MCP write tools, hand-edit `.blueprint/`, generate final
+  `phase.context`, or override parent confirmation gates.
 - Do not invent web research, outside reviewers, or manual persistence paths.
 - Do not accept browser, web-search, shell-only, or generic helpers as
   substitutes for the parent-provided requirements and Blueprint evidence.

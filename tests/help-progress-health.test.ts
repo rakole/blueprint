@@ -20,7 +20,8 @@ import {
   CODEBASE_ARTIFACTS,
   blueprintArtifactList,
   blueprintArtifactReportWrite,
-  blueprintArtifactValidate
+  blueprintArtifactValidate,
+  blueprintCodebaseArtifactWrite
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
@@ -178,6 +179,42 @@ async function createRepoFromFixture(fixtureName: string): Promise<string> {
   }
 
   return repoPath;
+}
+
+async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
+  const authoredBundle: Record<
+    | "codebase.stack"
+    | "codebase.architecture"
+    | "codebase.structure"
+    | "codebase.conventions"
+    | "codebase.testing"
+    | "codebase.integrations"
+    | "codebase.concerns",
+    string
+  > = {
+    "codebase.stack": "# Stack\n\nTypeScript runtime with MCP-facing tooling.\n",
+    "codebase.architecture":
+      "# Architecture\n\nMCP tools and command manifests anchor the runtime layout.\n",
+    "codebase.structure":
+      "# Structure\n\nBlueprint runtime code lives in src/, with tests under tests/.\n",
+    "codebase.conventions":
+      "# Conventions\n\nBlueprint keeps runtime tool names explicit and persistence inside MCP.\n",
+    "codebase.testing":
+      "# Testing\n\nThe repo uses node:test via tsx and fixture-backed integration coverage.\n",
+    "codebase.integrations":
+      "# Integrations\n\nThe runtime integrates through @modelcontextprotocol/sdk and related command surfaces.\n",
+    "codebase.concerns":
+      "# Concerns\n\nPlaceholder codebase docs should not be treated as authoritative mapped context.\n"
+  };
+
+  for (const [artifactId, content] of Object.entries(authoredBundle)) {
+    const result = await blueprintCodebaseArtifactWrite({
+      cwd: repoPath,
+      artifactId: artifactId as keyof typeof authoredBundle,
+      content
+    });
+    assert.notEqual(result.status, "invalid", JSON.stringify(result));
+  }
 }
 
 async function createExecutionReadyRepo(): Promise<string> {
@@ -408,6 +445,137 @@ Exercise the execute-phase router.
 |------|-------------|-----------|-----------|
 | No open unknowns for execute-phase routing. | none | The fixture has the saved artifacts needed for routing. | No follow-up required after the focused test passes. |
 `,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+function executionRoutingPlanContent(args: {
+  planId: string;
+  wave: number;
+  requirements: string[];
+  dependsOn?: string[];
+}): string {
+  const dependsOn = args.dependsOn ?? [];
+  const requirementRows = args.requirements
+    .map(
+      (requirementId) =>
+        `| ${requirementId} | covered | task-1 | tests/help-progress-health.test.ts | The focused routing fixture covers ${requirementId}. |`
+    )
+    .join("\n");
+
+  return `---
+phase: 3
+plan_id: "${args.planId}"
+title: "Execution Plan ${args.planId}"
+wave: ${args.wave}
+status: planned
+objective: "Exercise the execute-phase router."
+depends_on: ${dependsOn.length === 0 ? "[]" : `[${dependsOn.join(", ")}]`}
+requirements:
+${args.requirements.map((requirementId) => `  - ${requirementId}`).join("\n")}
+files_modified:
+  - src/mcp/tools/state.ts
+read_first:
+  - src/mcp/tools/state.ts
+acceptance_criteria:
+  - tests/help-progress-health.test.ts exits 0
+autonomous: true
+---
+
+# Phase 03: Phase Discovery - Plan ${args.planId}
+
+## Goal
+
+Exercise the execute-phase router.
+
+## Scope
+
+- Keep next-action routing grounded in saved phase artifacts.
+
+## Tasks
+
+### Task 1: Review current phase readiness
+
+#### Read First
+
+- src/mcp/tools/state.ts
+
+#### Action
+
+- Confirm progress routing stays on the right lifecycle command for the saved plan inventory.
+
+#### Acceptance Criteria
+
+- tests/help-progress-health.test.ts exits 0
+
+## Verification
+
+- Re-run the help/progress routing tests after updating saved phase artifacts.
+
+## Must Haves
+
+- Keep lifecycle routing limited to implemented commands.
+
+## Requirement Coverage
+
+| Requirement | Status | Covered By Tasks | Evidence | Rationale |
+|-------------|--------|------------------|----------|-----------|
+${requirementRows}
+
+## Evidence Coverage
+
+| Artifact | Status | Rationale |
+|----------|--------|-----------|
+| src/mcp/tools/state.ts | used | The state tool surface grounds progress routing. |
+
+## File / Surface Coverage
+
+| Surface | Covered By Tasks | Verification | Rationale |
+|---------|------------------|--------------|-----------|
+| src/mcp/tools/state.ts | task-1 | tests/help-progress-health.test.ts exits 0 | The focused test covers lifecycle routing state. |
+
+## Unknowns And Deferrals
+
+| Item | Disposition | Rationale | Follow-Up |
+|------|-------------|-----------|-----------|
+| No open unknowns for execute-phase routing. | none | The fixture has the saved artifacts needed for routing. | No follow-up required after the focused test passes. |
+`;
+}
+
+async function createPlanCoverageGatedExecutionRepo(): Promise<string> {
+  const repoPath = await createExecutionReadyRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Execution Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Discovery**
+- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Execute the prepared plans
+**Requirements**: EXEC-01, EXEC-02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseRoot, "03-01-PLAN.md"),
+    executionRoutingPlanContent({
+      planId: "01",
+      wave: 1,
+      requirements: ["EXEC-01"]
+    }),
     "utf8"
   );
 
@@ -1470,6 +1638,100 @@ test("read-path tools distinguish uninitialized Blueprint repos", async (t) => {
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
 });
 
+test("read-path tools keep scaffold-only repos eligible for new-project bootstrap", async (t) => {
+  const repoPath = await createGitRepo("blueprint-scaffold-only-status-");
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "scaffold-only-status", private: true }, null, 2),
+    "utf8"
+  );
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.initialized, false);
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.equal(status.bootstrap.codebaseMapped, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-map-codebase/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools keep docs-only starter repos greenfield and bootstrap-eligible", async (t) => {
+  const repoPath = await createGitRepo("blueprint-docs-only-status-");
+  await writeFile(path.join(repoPath, "SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "greenfield");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools treat manifest plus docs starter repos as scaffold-only", async (t) => {
+  const repoPath = await createGitRepo("blueprint-manifest-docs-status-");
+  await mkdir(path.join(repoPath, "docs"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "manifest-docs-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "docs/SPEC.md"), "# Product Spec\n", "utf8");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools keep empty source scaffolds eligible for new-project bootstrap", async (t) => {
+  const repoPath = await createGitRepo("blueprint-empty-src-status-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "uninitialized");
+  assert.equal(status.bootstrap.repoShape, "scaffold-only");
+  assert.equal(status.bootstrap.brownfieldDetected, false);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.equal(state.derivedStatus.projectStatus, "uninitialized");
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.match(validation.suggestedRepairs.join("\n"), /\/blu-new-project/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
 test("read-path tools route unmapped brownfield repos to map-codebase before bootstrap", async (t) => {
   const repoPath = await createGitRepo("blueprint-brownfield-status-");
   await mkdir(path.join(repoPath, "src"), { recursive: true });
@@ -1525,6 +1787,40 @@ test("read-path tools route interrupted empty brownfield Blueprint roots to map-
   assert.match(state.derivedStatus.nextAction, /\/blu-map-codebase/);
   assert.deepEqual(artifacts.missing.sort(), CODEBASE_ARTIFACTS_SORTED);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+});
+
+test("read-path tools keep mapped-only brownfield repos on new-project instead of repair flows", async (t) => {
+  const repoPath = await createGitRepo("blueprint-mapped-only-status-");
+  await mkdir(path.join(repoPath, "src"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    JSON.stringify({ name: "mapped-only-status", private: true }, null, 2),
+    "utf8"
+  );
+  await writeFile(path.join(repoPath, "src/index.ts"), "export const value = 1;\n", "utf8");
+  await writeMappedCodebaseBundle(repoPath);
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+
+  assert.equal(status.status, "mapped-only");
+  assert.equal(status.initialized, false);
+  assert.equal(status.bootstrap.repoShape, "brownfield");
+  assert.equal(status.bootstrap.codebaseMapped, true);
+  assert.deepEqual(status.health.missingArtifacts, []);
+  assert.match(status.nextAction, /\/blu-new-project/);
+  assert.doesNotMatch(status.nextAction, /\/blu-map-codebase/);
+  assert.doesNotMatch(status.nextAction, /\/blu-health/);
+  assert.equal(state.derivedStatus.projectStatus, "mapped-only");
+  assert.equal(state.derivedStatus.currentPhase, null);
+  assert.match(state.derivedStatus.nextAction, /\/blu-new-project/);
+  assert.equal(validation.valid, true);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-map-codebase/);
+  assert.doesNotMatch(validation.suggestedRepairs.join("\n"), /\/blu-health/);
 });
 
 test("read-path tools distinguish partial Blueprint repos and expose repair blockers", async (t) => {
@@ -1634,6 +1930,39 @@ test("project status recommends execute-phase once plans exist and summaries are
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-execute-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+});
+
+test("project status stays on plan-phase until the saved plan set covers roadmap requirements, then advances to execute-phase", async (t) => {
+  const repoPath = await createPlanCoverageGatedExecutionRepo();
+  const phaseRoot = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initialStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const initialState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(initialStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.match(initialState.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.doesNotMatch(initialStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(initialState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+
+  await writeFile(
+    path.join(phaseRoot, "03-02-PLAN.md"),
+    executionRoutingPlanContent({
+      planId: "02",
+      wave: 2,
+      requirements: ["EXEC-02"],
+      dependsOn: ["01"]
+    }),
+    "utf8"
+  );
+
+  const finalStatus = await blueprintProjectStatus({ cwd: repoPath });
+  const finalState = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.match(finalStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(finalState.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 });
 
 test("project status recommends validate-phase once execution summaries exist without verification", async (t) => {

@@ -52,11 +52,13 @@
 - Approval must be reviewable in the main Gemini CLI conversation before the confirmation prompt.
 - `bootstrapMode` defaults to `interactive`; `--auto` is the command-facing way to request `bootstrapMode: "auto"`.
 - Interactive mode must pass a sufficient `bootstrapSeed` into `blueprint_project_init`. If the seed is missing or too thin, the tool rejects before writing and the command should keep asking rather than asking the MCP layer to invent purpose, requirements, roadmap, state, config, or phases.
+- The full required `bootstrapSeed` field shape lives in `skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md`; this command spec should point there rather than duplicating a partial shape.
 - `--auto` may synthesize bootstrap artifacts only because the user explicitly requested it, only when the supplied or repo-derived brief is strong enough to produce a complete `bootstrapSeed`, and only after brownfield map-first gating has passed. If no complete seed can be produced, stop and ask for the missing brief.
 
 ## Behavior Stages
 
-1. `Resolve`: confirm repo root, detect `--auto`, classify repo shape, and require explicit overwrite confirmation when initialized core `.blueprint/` artifacts already exist.
+1. `Resolve`: confirm repo root, detect `--auto`, classify greenfield/scaffold-only/brownfield, route unmapped brownfield and `mapping-incomplete` to `/blu-map-codebase` before writes, allow `mapped-only` bootstrap while preserving `.blueprint/codebase/*.md`, and require overwrite confirmation for initialized core artifacts.
+   Starter scaffolding such as manifests, lockfiles, config-only setup, docs/specs, CI/editor metadata, or empty source directories is not enough by itself to force the brownfield map-first path.
 2. `Read`: inspect saved defaults, effective warnings, repo evidence, and canonical bootstrap artifact contracts before the first persistent write.
 3. `Decide`: initialize Gemini-native session coordination, gather or synthesize the bootstrap brief, offer saved defaults first, and run approval or revision gates when interactive shaping needs a decision.
 4. `Execute`: draft specific, user-centered, traceable requirements and grouped roadmap phases with success criteria, using optional bounded research or roadmapping help only when it materially improves the bootstrap.
@@ -70,7 +72,7 @@
 - When project research is useful, the bootstrap contract uses the GSD-inspired dimensions that are relevant to the repo: stack, features, architecture, and pitfalls. These are synthesis inputs, not a `.planning/research/` runtime dependency.
 - When subagents are unavailable, the parent command falls back to sequential one-topic-at-a-time work: classify repo shape, handle stack/features/architecture/pitfalls as needed, scope one requirement group at a time, compress carry-forward evidence, then perform a final coverage pass.
 - Requirements must be specific, user-centered, atomic, grouped, and traceable.
-- Roadmap phases must map every committed requirement exactly once and carry 2-5 observable success criteria per phase.
+- Roadmap phases must map every committed requirement exactly once and carry 2-5 success criteria per phase. Prefer criteria that point to observable evidence, but bootstrap enforcement here is count plus requirement traceability.
 - Validation or MCP write failures caused by thin content, missing headings, placeholders, missing success criteria, or traceability gaps trigger seed repair and retry through MCP. The command must not hand-edit `.blueprint/` artifacts around the MCP owner.
 
 ## Blueprint And Global State Reads
@@ -88,8 +90,8 @@
 
 ## Required MCP Tools
 
-- `blueprint_project_init` -> success `{projectRoot, createdPaths, seededState, configPath, configProvenance, brownfield, bootstrapDiagnostics, nextAction, warnings}` or recoverable seed/preflight invalid `{projectRoot, status, written, issues, diagnostics, suggestedRepairs}` with `bootstrapMode: "interactive" | "auto"` and default `interactive`; repair invalid seed diagnostics and retry through MCP instead of writing artifacts by hand
-- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_project_init` -> success `{projectRoot, createdPaths, seededState, configPath, configProvenance, brownfield, bootstrapDiagnostics, nextAction, warnings}` or recoverable seed/preflight invalid `{projectRoot, status, written, issues, diagnostics, suggestedRepairs}` with `bootstrapMode: "interactive" | "auto"`, `savedDefaultsPolicy: "apply" | "skip"`, and default `interactive`; repair invalid seed diagnostics and retry through MCP instead of writing artifacts by hand
+- `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}` plus status truth for `uninitialized`, `mapping-incomplete`, `mapped-only`, `partial`, and `initialized`, and bootstrap fields for `repoShape`, `brownfieldDetected`, `codebaseMapped`, and `recommendedNextAction`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_config_set` -> `{scope, updatedKeys, config, provenance, configPath, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
@@ -159,6 +161,7 @@
 ## User Prompts And Confirmation Gates
 
 - When interactive and `~/.<host>/blueprint/defaults.json` exists, offer those saved defaults before asking project-specific setup questions.
+- If the user declines valid saved defaults, initialize with `savedDefaultsPolicy: "skip"` and persist any approved repo workflow preferences afterward through `blueprint_config_set` at project scope.
 - In interactive mode, ask enough discovery questions to write a substantive project brief before the first persistent write.
 - Follow the thread of the user's idea instead of running a canned bootstrap survey.
 - Use concise conversational choices only when they help the user react to a real ambiguity or scope tradeoff.
@@ -168,6 +171,7 @@
 - In interactive mode, summarize your understanding and require explicit approval before the first persistent bootstrap write.
 - Follow the centralized approval-surface rule in `runtime-guardrails.md`: the prompt must refer to a visible preview already shown in the main Gemini CLI window.
 - In interactive mode, requirements and roadmap shape should support a revision loop before the first persistent write when the user wants adjustments.
+- Approval uses named outcomes: create as previewed, revise requirements, revise roadmap, keep exploring, or cancel with no write. Any material change to committed requirements, roadmap coverage, or defaults choices requires a refreshed visible packet.
 - Keep Gemini-native session coordination honest as described in `runtime-guardrails.md`.
 - For brownfield repos, classify the repo before the first persistent write and make the next safe step explicit:
 - if the repo is unmapped, hard-stop before writing and route to `/blu-map-codebase`
@@ -187,17 +191,19 @@
 - If saved defaults cannot be normalized, fall back to hardcoded defaults and explain that the defaults layer was skipped.
 - If the user has not supplied enough context for a credible bootstrap, keep questioning instead of inventing product intent.
 - Do not promise GSD-style `.planning/research/`, shell commit choreography, or generated instruction-file behavior that Blueprint has not implemented.
+- The final response should name whether defaults were applied, skipped, malformed, or fallback-only; confirm `.blueprint/config.json`; list updated project preference keys, warnings, and the final `blueprint_project_status.nextAction`.
 
 ## Acceptance Criteria
 
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Creates or updates only the declared artifacts for this command.
-- Seeds `.blueprint/config.json` as a fully materialized normalized v2 config using hardcoded defaults, optional user defaults, and the current command inputs.
+- Seeds `.blueprint/config.json` as a fully materialized normalized v2 config using hardcoded defaults plus any user-approved saved defaults, then any approved repo workflow preference patch persisted through `blueprint_config_set`.
 - Produces authored `PROJECT.md`, `REQUIREMENTS.md`, and `ROADMAP.md` bootstrap drafts instead of placeholder shells.
 - Interactive bootstrap discovery follows the user's idea thread deeply enough that project intent, milestone scope, and success outcomes are explicit before the first write.
 - Interactive bootstrap provides a revision loop for requirements and roadmap structure before first-write persistence when the user wants changes.
 - Interactive bootstrap shows the reviewable project brief and roadmap preview in the main Gemini CLI conversation before the approval prompt.
+- Approval packet includes project brief, target users, requirement groups, roadmap preview, assumptions, deferred/out-of-scope items, defaults provenance, brownfield confidence, and planned MCP writes.
 - Uses Gemini-native session helpers through the centralized guardrail contract when helpful, without turning those helpers into durable state.
 - Keeps requirement IDs traceable from `REQUIREMENTS.md` into `ROADMAP.md`.
 - Makes repo-shape assumptions explicit instead of silently inventing them.

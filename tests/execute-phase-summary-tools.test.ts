@@ -2973,14 +2973,25 @@ test("dependency plans must have completed summaries before dependent summaries 
 
   assert.equal(context.status, "ready");
   assert.match(context.warnings.join("\n"), /dependency plan summaries are completed/i);
+  assert.match(context.warnings.join("\n"), /Use Status: PARTIAL or BLOCKED until those dependency summaries exist/i);
   assert.equal(validation.status, "invalid");
   assert.match(
     validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /depends on incomplete execution plan/i
   );
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n"),
+    /Do not use Status: COMPLETED yet\./i
+  );
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.suggestion).join("\n"),
+    /Use Status: PARTIAL or Status: BLOCKED/i
+  );
   assert.equal(rejected.status, "invalid");
   assert.equal(rejected.written, false);
   assert.match(rejected.issues.join("\n"), /depends on incomplete execution plan/i);
+  assert.match(rejected.issues.join("\n"), /Do not use Status: COMPLETED yet\./i);
+  assert.match(rejected.issues.join("\n"), /Use Status: PARTIAL or Status: BLOCKED/i);
   assert.deepEqual(index.completedPlans, []);
   assert.deepEqual(index.pendingPlans, ["01", "02"]);
   assert.match(index.warnings.join("\n"), /depends on incomplete execution plan\(s\): 01/i);

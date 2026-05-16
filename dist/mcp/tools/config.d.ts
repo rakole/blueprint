@@ -6,6 +6,7 @@ type StructuredConfirmationsMode = "auto" | "required";
 type UserCheckpointMode = "off" | "phase" | "plan";
 type TaskTrackerMode = "off" | "auto";
 type ExternalSourcesMode = "off" | "ask" | "auto";
+type SavedDefaultsPolicy = "apply" | "skip";
 type BlueprintConfig = {
     version: number;
     mode: string;
@@ -87,6 +88,7 @@ type ConfigProvenance = {
     projectPath: string | null;
     defaultsApplied: boolean;
     projectApplied: boolean;
+    defaultsSkipped?: boolean;
 };
 type ConfigGetArgs = {
     scope?: ConfigScope;
@@ -107,6 +109,7 @@ type ConfigSetProfileArgs = {
 type SeedProjectConfigArgs = {
     cwd?: string;
     defaultsPath?: string;
+    savedDefaultsPolicy?: SavedDefaultsPolicy;
 };
 type ConfigGetResult = {
     scope: ConfigScope;

@@ -25,9 +25,11 @@ and all persistent state changes must stay on the Blueprint MCP tools.
   the recovery guidance instead of appending.
 - Derive the previewed next integer from the read result only: take the highest
   base phase number and ignore decimal suffixes such as `2.1` or `2.2`.
-- Choose at least one durable requirement ID from `.blueprint/ROADMAP.md` or
-  `.blueprint/REQUIREMENTS.md` for the new whole-number phase. Plain add-phase
-  appends must not proceed with empty requirement grounding.
+- Choose at least one durable requirement ID for the new whole-number phase.
+  Plain add-phase appends must validate `requirementIds` against declared rows
+  in `.blueprint/REQUIREMENTS.md` before mutation and must not proceed with
+  empty requirement grounding. Keep audit-backed repair traceability separate
+  through `auditBackedDetails.repairRequirementIds`.
 - Capture a concrete roadmap objective and 2-5 observable success criteria for
   the new phase. Do not use `/blu-discuss-phase` placeholder wording as ROADMAP
   content.
@@ -54,6 +56,9 @@ and all persistent state changes must stay on the Blueprint MCP tools.
   audit-backed repair flows, preserve the existing
   `auditBackedDetails.repairRequirementIds` traceability path while still
   preserving concrete audit-backed goal and success criteria.
+- Treat undeclared plain-append `requirementIds` as a no-write validation
+  failure. Only the audit-backed repair path may carry repair IDs through
+  `auditBackedDetails.repairRequirementIds`.
 - Treat returned `phaseNumber`, `phasePrefix`, `phaseName`, `slug`, `phaseDir`,
   `roadmapPath`, `milestone`, and `warnings` as authoritative.
 - Do not precompute slugs, directories, or artifact paths from prompt logic
@@ -75,6 +80,9 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 ### Validate
 
 - Confirm the roadmap mutation returned `written: true`.
+- Confirm plain-append requirement validation accepted the submitted
+  `requirementIds` as declared `.blueprint/REQUIREMENTS.md` rows, or that the
+  audit-backed repair path was used instead.
 - Confirm the scaffold result includes the returned context path in either
   `createdFiles` or `reusedFiles`.
 - If state update returns warnings, report them and keep the next safe action
@@ -87,6 +95,13 @@ and all persistent state changes must stay on the Blueprint MCP tools.
 - End with the new phase number and description, the scaffold path, warnings or
   reuse notes, and the next safe implemented command:
   `/blu-discuss-phase <phase>`.
+- Before that route instruction, include a compact starter handoff block for
+  `/blu-discuss-phase` with the returned phase number and title, declared
+  requirement IDs, confirmed objective, success criteria, source refs, and open
+  items that still need discuss-phase review.
+- Keep the handoff compact starter seed only. Do not treat it as final
+  `XX-CONTEXT.md`, and do not route directly to `/blu-plan-phase` or
+  `/blu-execute-phase`.
 - Do not route to planned-only commands or to `/blu-plan-phase` directly.
 
 ## Required MCP Calls
@@ -137,9 +152,12 @@ confirmation gate, and the parent command must still own all MCP calls.
 ## Retry And Repair Behavior
 
 - Missing description: stop with usage guidance and no mutation.
-- Missing requirement IDs for a plain add: re-read the roadmap or requirements
-  source of truth, choose or ask the user to confirm at least one durable ID,
-  and retry with `requirementIds`.
+- Missing requirement IDs for a plain add: re-read the requirements source of
+  truth, choose or ask the user to confirm at least one durable ID, and retry
+  with `requirementIds`.
+- Undeclared requirement IDs for a plain add: stop without mutation, ask for
+  IDs already declared in `.blueprint/REQUIREMENTS.md`, or switch explicitly to
+  an audit-backed repair flow that uses `auditBackedDetails.repairRequirementIds`.
 - Missing objective or success criteria: re-read the roadmap context as needed,
   ask the user to confirm concrete values, and retry with `goal` plus 2-5 item
   `successCriteria`.
@@ -159,6 +177,8 @@ confirmation gate, and the parent command must still own all MCP calls.
 - The user can see which requirement IDs ground the whole-number phase.
 - The user can see the concrete roadmap objective and success criteria that will
   exist before `/blu-discuss-phase` authors full phase context.
+- The user can see the compact starter handoff fields that discuss-phase should
+  carry forward instead of starting cold.
 - Decimal insertions ignored during numbering are called out when present.
 - The result distinguishes roadmap append, scaffold creation or reuse, and
   state update.
@@ -173,8 +193,9 @@ confirmation gate, and the parent command must still own all MCP calls.
 - `mcp_blueprint_blueprint_roadmap_read` completed and the next integer was
   previewed from its result.
 - The exact phase number and description were confirmed with `ask_user`.
-- The requirement IDs were chosen from roadmap or requirements context,
-  confirmed, and passed as `requirementIds` for plain add-phase.
+- The requirement IDs were confirmed as declared `.blueprint/REQUIREMENTS.md`
+  rows and passed as `requirementIds` for plain add-phase, or the audit-backed
+  repair path was used through `auditBackedDetails.repairRequirementIds`.
 - The objective and 2-5 success criteria were confirmed and passed as `goal`
   and `successCriteria`.
 - `mcp_blueprint_blueprint_roadmap_add_phase` succeeded with

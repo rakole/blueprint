@@ -657,7 +657,7 @@ test("phase planning tools write, read, and index execution-ready plan artifacts
   assert.equal(reused.status, "reused");
   assert.equal(invalid.status, "invalid");
   assert.match(invalid.validation.issues.join("\n"), /frontmatter|required section/i);
-  assert.match(afterStatus.nextAction, /\/blu-execute-phase 3/);
+  assert.match(afterStatus.nextAction, /\/blu-plan-phase 3/);
   assert.match(writtenBody, /Plan 02/);
 });
 
@@ -784,6 +784,73 @@ test("phase plan model validation allows XML and template placeholders in action
   assert.match(savedContent, /<release>\$\{java\.version\}<\/release>/);
   assert.match(savedContent, /<pluginManagement>\.\.\.<\/pluginManagement>/);
   assert.match(savedContent, /<\/dependencyManagement>/);
+});
+
+test("phase plan model validation allows concrete task headings that mention placeholder work", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  const [firstTask] = model.tasks as Array<Record<string, unknown>>;
+  firstTask.title = "Create the six placeholder classes for project package skeleton";
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(
+    savedContent,
+    /### Task 1: task-1 - Create the six placeholder classes for project package skeleton/
+  );
+});
+
+test("phase plan model validation allows replace-with phrasing inside concrete task prose", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel();
+  const [firstTask] = model.tasks as Array<Record<string, unknown>>;
+  firstTask.action = [
+    "Use the package codemod to replace with ProjectPackageSkeleton when imports resolve.",
+    "Verify src/mcp/tools/phase.ts still renders canonical phase plan Markdown."
+  ];
+
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model
+  });
+  const created = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true
+  });
+  const savedContent = await readFile(path.join(repoPath, created.path), "utf8");
+
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(created.status, "created", JSON.stringify(created, null, 2));
+  assert.equal(created.validation.valid, true, JSON.stringify(created.validation, null, 2));
+  assert.match(
+    savedContent,
+    /Use the package codemod to replace with ProjectPackageSkeleton when imports resolve\./
+  );
 });
 
 test("phase plan authoring context exposes a complete runtime-narrowed task schema", async (t) => {
@@ -1337,7 +1404,7 @@ test("phase plan structured model writes reject invalid identity, coverage, exam
   assert.equal(unverifiable.status, "invalid");
   assert.match(
     unverifiable.validation.issues.join("\n"),
-    /acceptance criterion is not objectively verifiable/
+    /subjective language/
   );
   assert.equal(missingEvidence.status, "invalid");
   assert.ok(missingEvidence.modelValidation);

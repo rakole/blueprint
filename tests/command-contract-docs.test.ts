@@ -1194,12 +1194,39 @@ test("add-phase command docs keep the roadmap append contract explicit", async (
     /Use Gemini CLI's built-in `ask_user` dialog for the structured confirmation gate instead of prose-only confirmation when the user must approve that exact phase number\./
   );
   assert.match(addPhaseDoc, /expectedPhaseNumber/);
+  assert.match(addPhaseDoc, /Safe default: stop without writing/);
+  assert.match(addPhaseDoc, /named in-flight receipt/i);
+  assert.match(addPhaseDoc, /command response receipt only/i);
+  assert.match(addPhaseDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(addPhaseDoc, /successCriteriaCount/);
+  assert.match(addPhaseDoc, /contextScaffoldPath/);
+  assert.match(addPhaseDoc, /stateRoute/);
+  assert.match(addPhaseDoc, /safeRetry/);
+  assert.match(addPhaseDoc, /Mutation not attempted/);
+  assert.match(addPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(addPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(addPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(addPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(addPhaseDoc, /Stale `expectedPhaseNumber`/);
+  assert.match(addPhaseDoc, /Undeclared `requirementIds`/);
+  assert.match(addPhaseDoc, /Missing returned metadata/);
   assert.match(addPhaseDoc, /Refuses to append when the confirmed next phase number is stale\./);
   assert.match(
     addPhaseDoc,
     /Returns `\/blu-discuss-phase <new phase number>` as the next safe Blueprint follow-up\./
   );
   assert.match(addPhaseDoc, /\.blueprint\/phases\/<phase-slug>\//);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "phase-number-confirmation",
+    "requirement source",
+    "auditBackedDetails.repairRequirementIds",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(addPhaseDoc.includes(snippet), `expected add-phase doc to include ${snippet}`);
+  }
 });
 
 test("insert-phase command docs keep the decimal insertion contract explicit", async () => {
@@ -1212,8 +1239,37 @@ test("insert-phase command docs keep the decimal insertion contract explicit", a
   assert.match(insertPhaseDoc, /blueprint_state_update/);
   assert.match(insertPhaseDoc, /existing integer phase/i);
   assert.match(insertPhaseDoc, /next decimal/i);
+  assert.match(insertPhaseDoc, /Safe default: stop without writing/);
+  assert.match(insertPhaseDoc, /named in-flight receipt/i);
+  assert.match(insertPhaseDoc, /command response receipt only/i);
+  assert.match(insertPhaseDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(insertPhaseDoc, /requirementMappingStatus/);
+  assert.match(insertPhaseDoc, /requirementsPath/);
+  assert.match(insertPhaseDoc, /contextScaffoldPath/);
+  assert.match(insertPhaseDoc, /safeRetry/);
+  assert.match(insertPhaseDoc, /Mutation not attempted/);
+  assert.match(insertPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(insertPhaseDoc, /Scaffold succeeded, state update failed/);
+  assert.match(insertPhaseDoc, /Same preview and same returned files on retry/);
+  assert.match(insertPhaseDoc, /Same confirmation token but changed params or files/);
+  assert.match(insertPhaseDoc, /Invalid anchor \(non-integer\)/);
+  assert.match(insertPhaseDoc, /Declared-ID failure/);
+  assert.match(insertPhaseDoc, /Already-mapped IDs/);
+  assert.match(insertPhaseDoc, /Conflicting decimal directory/);
+  assert.match(insertPhaseDoc, /Dependency-review warning/);
   assert.match(insertPhaseDoc, /do not renumber later phases/i);
   assert.match(insertPhaseDoc, /\/blu-discuss-phase <decimal>/);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "phase-insert-confirmation",
+    ".blueprint/REQUIREMENTS.md",
+    "already be mapped to another roadmap phase",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(insertPhaseDoc.includes(snippet), `expected insert-phase doc to include ${snippet}`);
+  }
 });
 
 test("cleanup command docs keep Gemini-native ask_user confirmation gates explicit", async () => {
@@ -1329,13 +1385,63 @@ test("new-milestone command docs keep the carry-forward default and phase contin
 
   assert.match(newMilestoneDoc, /Primary skill: `blueprint-roadmap-admin`/);
   assert.match(newMilestoneDoc, /blueprint_roadmap_read/);
+  assert.match(newMilestoneDoc, /blueprint_config_get/);
   assert.match(newMilestoneDoc, /blueprint_artifact_summary_digest/);
   assert.match(newMilestoneDoc, /blueprint_artifact_scaffold/);
   assert.match(newMilestoneDoc, /blueprint_state_update/);
   assert.match(newMilestoneDoc, /carry-forward from the saved milestone summary/i);
+  assert.match(newMilestoneDoc, /requirementTransitions/);
+  assert.match(newMilestoneDoc, /starter-seed evidence only/i);
+  assert.match(newMilestoneDoc, /sourceRefs/);
+  assert.match(newMilestoneDoc, /self-derived/);
+  assert.match(newMilestoneDoc, /uncertain/);
+  assert.match(newMilestoneDoc, /Safe default: stop without writing/);
+  assert.match(newMilestoneDoc, /named in-flight receipt/i);
+  assert.match(newMilestoneDoc, /command response receipt only/i);
+  assert.match(newMilestoneDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
+  assert.match(newMilestoneDoc, /New Milestone First-Phase Handoff Packet/);
+  assert.match(newMilestoneDoc, /openForDiscuss/);
+  assert.match(newMilestoneDoc, /riskWatchlist/);
+  assert.match(newMilestoneDoc, /deferredNotDoingNow/);
+  assert.match(newMilestoneDoc, /canonicalReferences/);
+  assert.match(newMilestoneDoc, /routeReceipt/);
+  assert.match(newMilestoneDoc, /12-18 bullets/i);
+  assert.match(newMilestoneDoc, /starter-only seed material/i);
+  assert.match(newMilestoneDoc, /roadmapperMode/);
+  assert.match(newMilestoneDoc, /firstPhaseTarget/);
+  assert.match(newMilestoneDoc, /scaffoldPathStatuses/);
+  assert.match(newMilestoneDoc, /stateUpdated/);
+  assert.match(newMilestoneDoc, /safeRetry/);
+  assert.match(newMilestoneDoc, /nextAction/);
+  assert.match(newMilestoneDoc, /deletedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /renamedPhaseDirectories: \[\]/);
+  assert.match(newMilestoneDoc, /Mutation not attempted/);
+  assert.match(newMilestoneDoc, /Roadmap mutation succeeded, scaffold failed/);
+  assert.match(newMilestoneDoc, /Scaffold succeeded, state update failed/);
+  assert.match(newMilestoneDoc, /Same preview and same returned files on retry/);
+  assert.match(newMilestoneDoc, /Same confirmation token but changed params or files/);
+  assert.match(newMilestoneDoc, /Summary missing/);
+  assert.match(newMilestoneDoc, /Reset ambiguity/);
+  assert.match(newMilestoneDoc, /Starter overwrite blocked/);
+  assert.match(newMilestoneDoc, /Stale first-phase number/);
+  assert.match(newMilestoneDoc, /Directory conflict/);
+  assert.match(newMilestoneDoc, /State mismatch/);
   assert.match(newMilestoneDoc, /next whole-number phase/i);
   assert.match(newMilestoneDoc, /Preserves historical phase directories/i);
   assert.match(newMilestoneDoc, /\/blu-discuss-phase <first phase>/);
+  assert.match(newMilestoneDoc, /Does not route directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
+  assert.doesNotMatch(newMilestoneDoc, /route to requirements/i);
+  for (const snippet of [
+    "Shared phase-admin spine",
+    "inputsUsed",
+    "starter-doc-overwrite-confirmation",
+    "stop without writing",
+    "starter material only",
+    "STATE.md` only after scaffold succeeds",
+    "planned-only shortcuts",
+  ]) {
+    assert.ok(newMilestoneDoc.includes(snippet), `expected new-milestone doc to include ${snippet}`);
+  }
 });
 
 test("docs-update command docs keep the scoped report-backed docs contract explicit", async () => {

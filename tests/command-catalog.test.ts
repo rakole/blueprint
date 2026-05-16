@@ -1974,6 +1974,28 @@ test("new-milestone is implemented once manifest, skill, and carry-forward scaff
   assert.deepEqual(entry.blockedBy, []);
 });
 
+test("phase-admin command catalog required tools stay aligned with runtime metadata", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  for (const commandName of ["add-phase", "insert-phase", "new-milestone"] as const) {
+    const metadata = getRuntimeOwnedCommandMetadata(commandName);
+    const entry = catalog.commands[commandName];
+
+    assert.ok(metadata);
+    assert.deepEqual([...entry.requiredTools], [...metadata.requiredTools]);
+  }
+});
+
+test("phase-admin optional subagent exposure stays locked to new-milestone only", async () => {
+  const catalog = await blueprintCommandCatalog();
+
+  assert.deepEqual(catalog.commands["add-phase"].availableOptionalAgents, []);
+  assert.deepEqual(catalog.commands["insert-phase"].availableOptionalAgents, []);
+  assert.deepEqual(catalog.commands["new-milestone"].availableOptionalAgents, [
+    "blueprint-roadmapper"
+  ]);
+});
+
 test("docs-update is implemented once manifest, skill, and docs-report MCP tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands["docs-update"];

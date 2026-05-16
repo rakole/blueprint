@@ -97,11 +97,24 @@ Purpose:
 - durable traceability target for roadmap phases and verification artifacts
 
 Minimum locked sections:
-- requirements table
-- requirement identifiers such as `REQ-*`
-- traceability or mapping notes
-- acceptance notes
-- deferred items
+- `Requirements Table`
+- `Scope Summary`
+- `Committed V1 Scope`
+- `Traceability Notes`
+- `Open Questions`
+
+Conditional sections:
+- `Deferred Scope` is required only when `Scope Summary` lists deferred
+  requirement IDs.
+- `Out-of-Scope Cuts` is required only when `Scope Summary` lists out-of-scope
+  requirement IDs.
+
+Contract notes:
+- `bootstrap.requirements` is Markdown-contract-backed. Its `requiredHeadings`
+  list covers always-present headings only; deferred and out-of-scope sections
+  are conditionally required when those groups contain items.
+- Requirement identifiers such as `REQ-*` or project-specific durable IDs must
+  remain stable because ROADMAP phases and later phase artifacts cite them.
 
 ### `ROADMAP.md`
 
@@ -123,6 +136,8 @@ Contract notes:
 - `bootstrap.roadmap` has a structured `modelContract` and JSON Schema. The model is the canonical contract for active milestone, bootstrap readiness, committed/deferred/out-of-scope requirement coverage, phase status vocabulary (`planned`, `in_progress`, `completed`, `done`), dependency phase numbers, decimal inserted phases, durable requirement IDs, optional phase detail blocks, and 2-5 success criteria per phase. Whole-number bootstrap phases should carry at least one durable requirement ID; inserted decimal phases may temporarily use empty requirement grounding until discovery assigns it.
 - `requiredHeadings` remains the always-present Markdown surface; `modelContract.renderedHeadings` additionally includes optional `Phase Details` so schema-first authoring and roadmap-admin mutations share the same rendered ROADMAP vocabulary.
 - `new-milestone` may rewrite `ROADMAP.md` for the next milestone, but it should preserve historical phase artifacts and continue numbering at the next whole-number phase instead of renumbering prior milestones.
+- During `new-milestone` starter scaffolding, `blueprint_artifact_scaffold` re-reads `ROADMAP.md` before writing, computes the next whole-number phase from the highest historical base phase, verifies the previewed first context path, and blocks stale previews, conflicting first-phase directories, or ambiguous first-phase directories without deleting or renaming historical phase directories. The scaffold receipt reports `deletedPhaseDirectories: []` and `renamedPhaseDirectories: []`.
+- Starter handoffs for `new-milestone`, `add-phase`, and `insert-phase` stay compact response or scaffold seed content, not a new typed `.blueprint/` write surface. They are starter-only material for `/blu-discuss-phase`, not a durable handoff store and not final authored phase context.
 
 ### `STATE.md`
 
@@ -133,6 +148,7 @@ Purpose:
 - blockers
 - next suggested action
 - durable roadmap evolution notes when an urgent decimal phase is inserted after an integer anchor
+- phase-scoped next actions only after the matching current-phase context path exists
 
 Minimum locked fields:
 - project status
@@ -144,6 +160,13 @@ Minimum locked fields:
 
 Optional durable section:
 - roadmap evolution notes, recorded as bullets under `## Roadmap Evolution Notes` and preserved across `STATE.md` sync/update cycles
+
+### Phase context starter rule
+
+- `new-milestone` may seed the first scaffolded `NN-CONTEXT.md` with a compact `New Milestone First-Phase Handoff Packet` that includes `mode`, `fromMilestone`, `toMilestone`, `firstPhase`, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
+- `add-phase` and `insert-phase` may return smaller compact starter handoff blocks in their completion responses, but they still leave final `XX-CONTEXT.md` authoring to `/blu-discuss-phase`.
+- Keep starter handoffs compact at roughly 12-18 bullets total. They must preserve deferred material explicitly, use `openForDiscuss` for unresolved gray areas, and label unverified claims as assumptions rather than presenting them as settled implementation decisions.
+- Starter handoffs map into existing `phase.context` sections during `/blu-discuss-phase`; they do not create a separate schema field or durable artifact class.
 
 ### `config.json`
 
@@ -286,7 +309,7 @@ Plan note:
 
 Auxiliary phase artifacts:
 - `XX-DISCUSSION-LOG.md`
-- `XX-DISCUSS-CHECKPOINT.json` (shared temporary phase continuation state; the retained filename is legacy-compatible, while ownership now comes from `ownerCommand` and `resumeMeta.mode`)
+- `XX-DISCUSS-CHECKPOINT.json` (shared temporary phase continuation state; the retained filename is legacy-compatible, while ownership now comes from `ownerCommand` and top-level `mode`)
 - `XX-REVIEW.md`
 - `XX-REVIEW-FIX.md`
 - `XX-REVIEWS.md`
@@ -351,12 +374,15 @@ actual owner is declared inside the checkpoint body.
 
 Structured persistence expectations:
 - top-level JSON value must be an object
-- persisted checkpoints must use the richer resumability shape with `ownerCommand`, `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`
+- persisted checkpoints must use checkpoint v2 with `schemaVersion: 2`, `ownerCommand`, and top-level `mode`
 - `ownerCommand` identifies the command that owns the continuation state; current values are `/blu-discuss-phase` and `/blu-research-phase`
-- `resumeMeta.mode` is enum-like ownership metadata; current values are `discuss` and `research`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`)
-- `resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`
+- `mode` is enum-like ownership metadata; current values are `discuss` and `research`, and new writes must match the owning command (`/blu-discuss-phase` -> `discuss`, `/blu-research-phase` -> `research`)
+- discuss checkpoints must carry durable resume metadata through `progress`, `areaQueue`, `carryForward`, and `readSet`
+- research checkpoints must carry durable resume metadata through `researchLedger`
 - the MCP tool owns the shared checkpoint path; callers must treat returned `path` values as authoritative instead of hand-building mode-specific filenames
-- legacy object-shaped checkpoints may still be read for compatibility, and matching legacy mode-only checkpoints may still be updated or deleted by the owning command, but `blueprint_phase_checkpoint_get` reports ownership/mode warnings and a `safeToResume` signal when the caller supplies expected ownership
+- legacy, malformed, or otherwise non-v2 checkpoints may still be read as compatibility evidence, but they are always non-resumable
+- guarded overwrite and delete operations refuse any checkpoint unless a valid v2 parse succeeds and the stored `ownerCommand` plus top-level `mode` match the caller's expected ownership
+- read-time compatibility may still surface legacy mode evidence from old payloads, but that evidence is informational only and never re-enables resume, overwrite, or delete
 
 ### `XX-RESEARCH.md`
 

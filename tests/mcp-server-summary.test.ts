@@ -52,6 +52,36 @@ function expectedStructuredContentJson(result: Record<string, unknown>): string 
   return JSON.stringify(result);
 }
 
+function discussCheckpoint(): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    ownerCommand: "/blu-discuss-phase",
+    mode: "discuss",
+    progress: {
+      activeStage: "Execute",
+      pendingGate: "gray-area-question",
+      executionMode: "discuss/resumed",
+      areasDecided: 0,
+      areasTotal: 2,
+      nextActionPreview: "Resume the next discuss-phase area"
+    },
+    areaQueue: [
+      {
+        areaId: "scope-boundaries",
+        title: "Scope boundaries",
+        state: "questioning"
+      },
+      {
+        areaId: "ui-expectations",
+        title: "UI expectations",
+        state: "unseen"
+      }
+    ],
+    carryForward: {},
+    readSet: [".blueprint/ROADMAP.md"]
+  };
+}
+
 async function runGit(args: string[], cwd?: string): Promise<string> {
   const { stdout } = await execFileAsync("git", args, { cwd });
   return stdout.trim();
@@ -1808,6 +1838,18 @@ Ship the plan-phase runtime.
 
 - Keep invalid plan-write diagnostics intact so repair flows still receive the full validation object.
 `;
+}
+
+function invalidPhasePlanWriteContentWithWarning(planId: string): string {
+  return validPhasePlanWriteContent(planId)
+    .replace(
+      "tests/mcp-server-summary.test.ts exits 0",
+      "Demonstrate the phase-specific migration outcome for the admin packet."
+    )
+    .replace(
+      "## Must Haves",
+      "## Missing Must Haves"
+    );
 }
 
 function validPhaseArtifactWriteContent(): string {
@@ -3610,8 +3652,13 @@ test("public phase checkpoint get omits only empty top-level warnings while pres
     phaseDir: ".blueprint/phases/03-phase-discovery",
     path: ".blueprint/phases/03-phase-discovery/03-DISCUSS-CHECKPOINT.json",
     checkpoint: {
+      schemaVersion: 2,
       ownerCommand: "/blu-discuss-phase",
-      resumeMeta: { mode: "discuss" }
+      mode: "discuss",
+      progress: {},
+      areaQueue: [],
+      carryForward: {},
+      readSet: []
     },
     ownerCommand: "/blu-discuss-phase",
     resumeMode: "discuss",
@@ -6381,7 +6428,7 @@ test("public report validate tool trims taskSchema from invalid results", async 
   }
 });
 
-test("public phase plan write tool trims validation on success and trims empty invalid warnings at the MCP boundary only", async () => {
+test("public phase plan write tool trims validation on success and preserves non-empty invalid warnings", async () => {
   const repoPath = await createPhasePlanWriteRepo();
   const directSuccessResult = await blueprintPhasePlanWrite({
     cwd: repoPath,
@@ -6393,13 +6440,13 @@ test("public phase plan write tool trims validation on success and trims empty i
     cwd: repoPath,
     phase: "3",
     planId: "02",
-    content: "# invalid plan\n",
+    content: invalidPhasePlanWriteContentWithWarning("02"),
     overwrite: true
   });
 
   assert.deepEqual(directSuccessResult.warnings, []);
   assert.ok("validation" in directSuccessResult);
-  assert.deepEqual(directInvalidResult.warnings, []);
+  assert.match(directInvalidResult.warnings.join("\n"), /grep\/test-verifiable/);
   assert.ok("validation" in directInvalidResult);
 
   const server = createBlueprintServer();
@@ -6427,7 +6474,7 @@ test("public phase plan write tool trims validation on success and trims empty i
         cwd: repoPath,
         phase: "3",
         planId: "02",
-        content: "# invalid plan\n",
+        content: invalidPhasePlanWriteContentWithWarning("02"),
         overwrite: true
       }
     });
@@ -6446,8 +6493,11 @@ test("public phase plan write tool trims validation on success and trims empty i
     assert.equal(invalidResponse.content[0]?.text, JSON.stringify(invalidResponse.structuredContent));
     assert.equal(invalidResponse.structuredContent.status, "invalid");
     assert.ok("validation" in invalidResponse.structuredContent);
-    assert.ok(!("warnings" in invalidResponse.structuredContent));
-    assert.deepEqual(invalidResponse.structuredContent.validation?.warnings, []);
+    assert.match(invalidResponse.structuredContent.warnings?.join("\n") ?? "", /grep\/test-verifiable/);
+    assert.match(
+      invalidResponse.structuredContent.validation?.warnings?.join("\n") ?? "",
+      /grep\/test-verifiable/
+    );
     assert.match(invalidResponse.content[0]?.text ?? "", /validation|issues/);
   } finally {
     await client.close();
@@ -7611,7 +7661,7 @@ test("public impact analyze live MCP response trims report-duplicated top-level 
     assert.equal(response.content[0]?.text, JSON.stringify(structuredContent));
     assert.equal(structuredContent.phaseStatus, directResult.phaseStatus);
     assert.deepEqual(structuredContent.report, directResult.report);
-    assert.deepEqual(structuredContent.warnings, directResult.warnings);
+    assert.deepEqual(structuredContent.warnings ?? [], directResult.warnings);
     assert.ok(!("impactId" in structuredContent));
     assert.ok(!("status" in structuredContent));
     assert.ok(!("impactStatus" in structuredContent));
@@ -7710,7 +7760,6 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.deepEqual(directResult.authoringContext?.files, directResult.files);
     assert.deepEqual(directResult.authoringContext?.reviewMode, directResult.reviewMode);
     assert.ok(Array.isArray(directResult.warnings));
-    assert.ok((directResult.warnings?.length ?? 0) > 0);
 
     const response = await client.callTool({
       name: "blueprint_review_scope",
@@ -7730,7 +7779,7 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.deepEqual(structuredContent.phase, directResult.phase);
     assert.deepEqual(structuredContent.files, directResult.files);
     assert.deepEqual(structuredContent.reviewMode, directResult.reviewMode);
-    assert.deepEqual(structuredContent.warnings, directResult.warnings);
+    assert.deepEqual(structuredContent.warnings ?? [], directResult.warnings);
     assert.ok(authoringContext);
     assert.ok(!("phase" in authoringContext));
     assert.ok(!("files" in authoringContext));
@@ -7754,7 +7803,7 @@ test("public review scope live MCP response trims only redundant nested authorin
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{"phase":/);
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{[^}]*"files":/);
     assert.doesNotMatch(response.content[0]?.text ?? "", /"authoringContext":\{[^}]*"reviewMode":/);
-    assert.match(response.content[0]?.text ?? "", /"warnings":\[/);
+    assert.doesNotMatch(response.content[0]?.text ?? "", /"warnings":\[\]/);
   } finally {
     await client.close();
     await server.close();
@@ -7960,21 +8009,7 @@ test("public phase checkpoint put live MCP response omits empty top-level warnin
     { capabilities: {} }
   );
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
@@ -8029,21 +8064,7 @@ test("public phase checkpoint get live MCP response omits empty top-level warnin
     { capabilities: {} }
   );
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
@@ -8135,21 +8156,7 @@ test("public phase checkpoint get live MCP response omits empty top-level warnin
 test("public phase checkpoint delete live MCP response already matches the direct compact contract", async () => {
   const directRepoPath = await createPhasePlanWriteRepo();
   const repoPath = await createPhasePlanWriteRepo();
-  const checkpoint = {
-    ownerCommand: "/blu-discuss-phase",
-    completedAreas: [],
-    remainingAreas: ["Scope boundaries", "UI expectations"],
-    decisions: [],
-    deferredIdeas: [],
-    canonicalReferences: [],
-    resumeMeta: {
-      mode: "discuss",
-      pendingTopics: ["Scope boundaries", "UI expectations"],
-      completedTopics: [],
-      notes: [],
-      updatedAt: "2026-05-09T00:00:00.000Z"
-    }
-  };
+  const checkpoint = discussCheckpoint();
 
   await blueprintPhaseCheckpointPut({
     cwd: directRepoPath,

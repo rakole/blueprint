@@ -23,8 +23,8 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
     commandFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(commandFile, /structured `reuse`, `revise`, or `replace` gate/i);
-  assert.match(commandFile, /Additive new plan ids may proceed without that gate/i);
+  assert.match(commandFile, /structured `add`, `revise`, or `replace` choice before drafting/i);
+  assert.match(commandFile, /empty plan set may auto-assign the first slot/i);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /blueprint-planner/);
   assert.match(commandFile, /blueprint-checker/);
@@ -51,26 +51,30 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /workflow\.plan_check/);
   assert.match(commandFile, /phase_research_status\.planningReadiness/);
   assert.match(commandFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
+  assert.match(commandFile, /Do not draft or interpret `mcp_blueprint_blueprint_phase_plan_authoring_context\.taskSchema` for authoring until this gate is ready/i);
   assert.match(commandFile, /current `context` artifact|actual saved discovery content/i);
   assert.match(commandFile, /saved validation or review evidence/i);
+  assert.match(commandFile, /saved plans already exist[\s\S]*`planId` is omitted[\s\S]*explicit `add`, `revise`, or `replace` choice before drafting/i);
   assert.match(commandFile, /explicit confirmation path/i);
   assert.match(commandFile, /requirements-aware review loop/i);
   assert.match(commandFile, /bounded/i);
   assert.match(commandFile, /base: "synced"/);
   assert.match(commandFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
   assert.match(commandFile, /\/blu-progress/);
-  assert.match(commandFile, /Omit `planId` to auto-assign the next available slot/i);
+  assert.match(commandFile, /Omit `planId` only when writing the first plan in an empty plan set or after an earlier explicit `add` choice selected a new slot/i);
   assert.match(commandFile, /numeric plan id when targeting a specific plan/i);
   assert.match(commandFile, /numeric value `planId: 1`/i);
   assert.match(commandFile, /double-encoded string/i);
   assert.match(commandFile, /taskSchema/);
   assert.match(commandFile, /contract\.modelContract\.schemaPath/);
-  assert.match(commandFile, /`reuse`, `revise`, or `replace`|reuse\/revise\/replace/i);
+  assert.match(commandFile, /`add`, `revise`, or `replace`|add\/revise\/replace/i);
   assert.match(commandFile, /Use saved research for unstable technical decisions/i);
   assert.match(commandFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
   assert.match(commandFile, /repair all diagnostics against the live task schema and contract/i);
   assert.match(commandFile, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
   assert.match(commandFile, /previously saved plan files become intentional known evidence artifacts/i);
+  assert.match(commandFile, /final `blueprint_phase_plan_validate` status must be `valid` before `mcp_blueprint_blueprint_state_update` or completion advances/i);
+  assert.match(commandFile, /Incomplete roadmap coverage may still be saved incrementally, but it is not final completion/i);
   assert.match(commandFile, /validationMode: "strict"/);
   assert.match(commandFile, /authoringMode: "model-only"/);
   assert.match(commandFile, /validationMode: "warn"/);
@@ -110,8 +114,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
     skillFile,
     /resolved scope, active stage, pending gate, execution mode, and next safe action/i
   );
-  assert.match(skillFile, /structured `reuse`, `revise`, or `replace` gate/i);
-  assert.match(skillFile, /Additive new plan ids may proceed without that gate/i);
+  assert.match(skillFile, /structured `add`, `revise`, or `replace` gate before drafting/i);
+  assert.match(skillFile, /empty plan set may auto-assign the first slot/i);
   assert.match(skillFile, /artifact_contract_read/);
   assert.match(skillFile, /workflow\.research/);
   assert.match(skillFile, /workflow\.ui_phase/);
@@ -119,24 +123,29 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /workflow\.plan_check/);
   assert.match(skillFile, /planningReadiness/);
   assert.match(skillFile, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
+  assert.match(skillFile, /Do not interpret `blueprint_phase_plan_authoring_context\.taskSchema` for authoring until this readiness gate is satisfied/i);
   assert.match(skillFile, /blueprint-planner/);
   assert.match(skillFile, /blueprint-checker/);
   assert.match(skillFile, /explicit confirmation/i);
   assert.match(skillFile, /config-gated/i);
   assert.match(skillFile, /base: "synced"/);
   assert.match(skillFile, /\/blu-progress/);
-  assert.match(skillFile, /Omit `planId` to auto-assign the next slot/i);
+  assert.match(skillFile, /Omit `planId` only when writing the first plan in an empty plan set or after an earlier explicit `add` choice selected a new slot/i);
   assert.match(skillFile, /numeric plan id when targeting a specific plan/i);
   assert.match(skillFile, /numeric value `planId: 1`/i);
   assert.match(skillFile, /double-encoded string/i);
   assert.match(skillFile, /taskSchema/);
-  assert.match(skillFile, /reuse\/revise\/replace|reuse.*revise.*replace/i);
+  assert.match(skillFile, /add\/revise\/replace|add.*revise.*replace/i);
   assert.match(skillFile, /no-subagent fallback/i);
   assert.match(skillFile, /saved research for unstable technical decisions instead of browsing live web docs/i);
   assert.match(skillFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
   assert.match(skillFile, /Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
   assert.match(skillFile, /previously saved plan files become intentional known evidence artifacts/i);
+  assert.match(skillFile, /saved plans may land as incremental checkpoints, but completion advances only after final plan-set validation is truly valid/i);
+  assert.match(skillFile, /saved plans already exist and `planId` is omitted[\s\S]*explicit `add`, `revise`, or `replace` choice before drafting/i);
+  assert.match(skillFile, /final `status` to be `valid` before synced state update or completion advances/i);
+  assert.match(skillFile, /Incomplete roadmap coverage may still be saved incrementally, but it is not final completion/i);
   assert.match(skillFile, /strict model-rendered heading set/i);
   assert.match(skillFile, /File \/ Surface Coverage/i);
   assert.match(skillFile, /Unknowns And Deferrals/i);
@@ -179,16 +188,20 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /Use saved research for freshness-sensitive or unstable technical decisions/i);
   assert.match(runtimeContract, /planningReadiness/);
   assert.match(runtimeContract, /readyForPlanPhase=false[\s\S]*nextSafeAction/);
+  assert.match(runtimeContract, /Do not\s+interpret `mcp_blueprint_blueprint_phase_plan_authoring_context\.taskSchema`\s+for drafting until this gate is satisfied/i);
   assert.match(
     runtimeContract,
     /route\s+to `\/blu-research-phase` instead of live browsing or ad hoc web-doc lookup/i
   );
-  assert.match(runtimeContract, /Additive new plan ids may proceed without/i);
+  assert.match(runtimeContract, /saved plans already exist and `planId` is omitted[\s\S]*`add`, `revise`, or `replace` before drafting/i);
+  assert.match(runtimeContract, /first slot may auto-assign without that gate/i);
   assert.match(runtimeContract, /workflow\.plan_check=true[\s\S]*blueprint-checker/i);
   assert.match(
     runtimeContract,
     /workflow\.plan_check=false[\s\S]*(checker review was skipped by|skip checker\s+review entirely)/i
   );
+  assert.match(runtimeContract, /final `mcp_blueprint_blueprint_phase_plan_validate` status must be\s+`valid` before completion advances or `mcp_blueprint_blueprint_state_update`\s+is allowed to run/i);
+  assert.match(runtimeContract, /Incomplete roadmap coverage may still be saved\s+incrementally, but it is not final completion/i);
   assert.match(runtimeContract, /Artifact Authoring Rules/);
   assert.match(runtimeContract, /`## Requirement Coverage`/);
   assert.match(runtimeContract, /`## Evidence Coverage`/);

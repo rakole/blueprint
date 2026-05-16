@@ -28,6 +28,7 @@ type CommandCatalogResult = {
 type ProjectInitArgs = {
     cwd?: string;
     defaultsPath?: string;
+    savedDefaultsPolicy?: "apply" | "skip";
     overwrite?: boolean;
     projectName?: string;
     bootstrapMode?: "interactive" | "auto";
@@ -52,6 +53,7 @@ type ProjectInitSuccessResult = {
         projectPath: string | null;
         defaultsApplied: boolean;
         projectApplied: boolean;
+        defaultsSkipped?: boolean;
     };
     brownfield: BootstrapAssessment;
     bootstrapDiagnostics: BootstrapArtifactDiagnostics;
@@ -113,6 +115,10 @@ export declare const projectToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         defaultsPath: z.ZodOptional<z.ZodString>;
+        savedDefaultsPolicy: z.ZodOptional<z.ZodEnum<{
+            apply: "apply";
+            skip: "skip";
+        }>>;
         overwrite: z.ZodOptional<z.ZodBoolean>;
         projectName: z.ZodOptional<z.ZodString>;
         bootstrapMode: z.ZodOptional<z.ZodEnum<{

@@ -1118,6 +1118,40 @@ test("validation PASS task schema rejects manual coverage and non-empty none row
   );
 });
 
+test("verification PASS nextSafeAction diagnostics point directly to verify-work", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const summaryPath = ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md";
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput([summaryPath], {
+    evidenceReviewedSummaryPaths: [summaryPath],
+    nextSafeAction: "/blu-progress"
+  });
+
+  const validated = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const routeDiagnostic = validated.diagnostics.find(
+    (diagnostic) => diagnostic.path === "model.nextSafeAction"
+  );
+
+  assert.equal(validated.status, "invalid");
+  assert.ok(routeDiagnostic);
+  assert.match(
+    routeDiagnostic?.message ?? "",
+    /When gateState is PASS, model\.nextSafeAction must be \/blu-verify-work 3\./
+  );
+  assert.match(
+    routeDiagnostic?.suggestion ?? "",
+    /Set model\.nextSafeAction to \/blu-verify-work 3\./
+  );
+});
+
 test("verification model preserves status, covered normalization, scalar summary, empty PASS gaps, and extended evidence", async (t) => {
   const repoPath = await createValidationReadyRepo();
   t.after(async () => {
@@ -1191,6 +1225,19 @@ test("verification model preserves status, covered normalization, scalar summary
     artifact: "verification",
     model
   });
+  const {
+    manualOrDeferredCoverage: _manualOrDeferredCoverage,
+    gapClassification: _gapClassification,
+    gapsFound: _gapsFound,
+    suggestedRepairs: _suggestedRepairs,
+    ...omittedNoGapLedgerModel
+  } = model;
+  const validatedWithOmittedNoGapLedgers = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: omittedNoGapLedgerModel
+  });
   const statusMismatch = await blueprintPhaseValidationValidateModel({
     cwd: repoPath,
     phase: "3",
@@ -1254,12 +1301,35 @@ test("verification model preserves status, covered normalization, scalar summary
     authoringMode: "model-only"
   });
   const saved = await readFile(path.join(repoPath, written.path), "utf8");
+  const omittedLedgerWrite = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model: omittedNoGapLedgerModel,
+    overwrite: true
+  });
+  const omittedLedgerSaved = await readFile(path.join(repoPath, omittedLedgerWrite.path), "utf8");
   const normalizedVerification = validated.normalizedModel as {
     requirementCoverage: Array<{ coverageState: string }>;
     validationSummary: string[];
+    manualOrDeferredCoverage: unknown[];
+    gapClassification: unknown[];
+    gapsFound: string[];
+    suggestedRepairs: string[];
+  } | null;
+  const normalizedWithOmittedNoGapLedgers = validatedWithOmittedNoGapLedgers.normalizedModel as {
+    manualOrDeferredCoverage: unknown[];
+    gapClassification: unknown[];
+    gapsFound: string[];
+    suggestedRepairs: string[];
   } | null;
 
   assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(
+    validatedWithOmittedNoGapLedgers.status,
+    "valid",
+    JSON.stringify(validatedWithOmittedNoGapLedgers.diagnostics, null, 2)
+  );
   assert.equal(
     normalizedVerification?.requirementCoverage[0]?.coverageState,
     "COVERED"
@@ -1267,6 +1337,10 @@ test("verification model preserves status, covered normalization, scalar summary
   assert.deepEqual(normalizedVerification?.validationSummary, [
     "Scalar validation summary is normalized into the rendered bullet list."
   ]);
+  assert.deepEqual(normalizedWithOmittedNoGapLedgers?.manualOrDeferredCoverage, []);
+  assert.deepEqual(normalizedWithOmittedNoGapLedgers?.gapClassification, []);
+  assert.deepEqual(normalizedWithOmittedNoGapLedgers?.gapsFound, []);
+  assert.deepEqual(normalizedWithOmittedNoGapLedgers?.suggestedRepairs, []);
   assert.equal(statusMismatch.status, "invalid");
   assert.match(
     statusMismatch.diagnostics.map((diagnostic) => diagnostic.path).join("\n"),
@@ -1283,12 +1357,17 @@ test("verification model preserves status, covered normalization, scalar summary
     /must not declare PASS while unresolved coverage, gap, or repair signals remain/
   );
   assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(omittedLedgerWrite.status, "reused", JSON.stringify(omittedLedgerWrite, null, 2));
   assert.match(saved, /\| VAL-01 \| Review completed execution evidence \| .* \| COVERED \|/);
   assert.match(saved, /## Session State/);
   assert.match(saved, /## Validation Test Matrix/);
   assert.match(saved, /## Result Summary/);
   assert.match(saved, /## Structured Gaps/);
   assert.match(saved, /## Follow-Up Fixes/);
+  assert.match(omittedLedgerSaved, /\| none \| none \| none \| NONE \|/);
+  assert.match(omittedLedgerSaved, /\| none \| none \| none \| none \|/);
+  assert.match(omittedLedgerSaved, /## Gaps Found\n\n- none/);
+  assert.match(omittedLedgerSaved, /## Suggested Repairs\n\n- none/);
 });
 
 test("validation write accepts a structured UAT model after ready verification evidence", async (t) => {

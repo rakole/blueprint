@@ -262,6 +262,8 @@ function renderBootstrapRequirementsTemplate(): string {
 
 ## Deferred Scope
 
+Include this section only when the Scope Summary lists deferred requirement IDs.
+
 ### <group>
 
 - \`REQ-02\`: <requirement>
@@ -269,6 +271,8 @@ function renderBootstrapRequirementsTemplate(): string {
   - Notes: <notes>
 
 ## Out-of-Scope Cuts
+
+Include this section only when the Scope Summary lists out-of-scope requirement IDs.
 
 ### <group>
 
@@ -342,7 +346,7 @@ const BOOTSTRAP_ROADMAP_MODEL_CONTRACT: ArtifactModelContract = {
     "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
     "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
     "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-    "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+    "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
   ],
   contextBindings: [
     ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
@@ -781,7 +785,7 @@ function renderContextAuthoringTemplate(context?: ArtifactTemplateContext): stri
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions, replace the section with unresolved questions or use the exact sentinel \`- none\` when nothing remains open.
+For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -821,7 +825,8 @@ const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
     "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
     "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
     "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-    "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
+    "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+    "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
     "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
     "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
   ],
@@ -930,6 +935,7 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 **Researched:** <YYYY-MM-DD>
 **Domain:** ${domain(context)}
 **Confidence:** LOW|MEDIUM|HIGH
+Keep the canonical ## headings exactly as written below.
 
 ## Phase Requirements
 
@@ -1445,7 +1451,7 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+| <manual-only item when any remain> | <reason> | <follow-up> | MANUAL|DEFERRED |
 
 ## Gate State
 
@@ -1461,11 +1467,11 @@ function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
 
 ## Gaps Found
 
-- Explicit blocker, follow-up, or \`none\`.
+- Explicit blocker or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Suggested Repairs
 
-- Explicit next repair, follow-up, or \`none\`.
+- Explicit next repair or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Next Safe Action
 
@@ -1593,14 +1599,14 @@ const CODE_REVIEW_MODEL_CONTRACT: ArtifactModelContract = {
     "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
     "Do not author runtime-owned fields such as depth, scopeSource, scopeReviewed, evidenceReviewed, evidenceDeferrals, severityCounts, or report paths; MCP resolves and renders them.",
     "Author against the narrowed taskSchema returned by blueprint_review_scope authoringContext or blueprint_review_validate_model so scoped finding locations, exact evidenceCoverage keys, and nextSafeAction stay deterministic.",
-    "Every known saved evidence artifact from the phase must appear as an exact evidenceCoverage key with status used, deferred, or irrelevant plus a concrete rationale.",
+    "Only author evidenceCoverage entries for exact known saved evidence artifacts that materially shaped the review; MCP renders known but omitted artifacts as not reviewed.",
     "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
     "Use only the allowed nextSafeAction values returned by the authoring context, and do not copy minimal example wording or placeholder review prose."
   ],
   contextBindings: [
     "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
     "depth, source, scopeReviewed, and severity counts come from blueprint_review_scope plus MCP rendering, not from authored JSON.",
-    "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into evidenceCoverage keys, and rendered visibly into Evidence Reviewed.",
+    "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into allowed evidenceCoverage keys, and rendered visibly into Evidence Reviewed even when the model omitted unused evidence.",
     "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
   ],
   renderedHeadings: [
@@ -3751,8 +3757,6 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Requirements Table",
       "Scope Summary",
       "Committed V1 Scope",
-      "Deferred Scope",
-      "Out-of-Scope Cuts",
       "Traceability Notes",
       "Open Questions"
     ],
@@ -3767,7 +3771,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     notes: [
       "Requirements bootstrap should keep requirement IDs durable, grouped, and traceable into the roadmap.",
-      "Validation expects a populated requirements table plus substantive committed, deferred, and out-of-scope sections."
+      "Validation expects a populated requirements table plus a substantive committed scope section. `Deferred Scope` and `Out-of-Scope Cuts` are conditionally required only when those groups contain items."
     ],
     renderScaffoldTemplate: renderBootstrapRequirementsTemplate,
     renderAuthoringTemplate: renderBootstrapRequirementsTemplate
@@ -4019,6 +4023,9 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     ],
     sectionValidations: {
       "Open Questions": {
+        exactEmptySentinel: "- none"
+      },
+      "Deferred Ideas": {
         exactEmptySentinel: "- none"
       }
     },

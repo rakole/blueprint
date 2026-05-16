@@ -96,6 +96,7 @@ type CommandCatalogResult = {
 type ProjectInitArgs = {
   cwd?: string;
   defaultsPath?: string;
+  savedDefaultsPolicy?: "apply" | "skip";
   overwrite?: boolean;
   projectName?: string;
   bootstrapMode?: "interactive" | "auto";
@@ -121,6 +122,7 @@ type ProjectInitSuccessResult = {
     projectPath: string | null;
     defaultsApplied: boolean;
     projectApplied: boolean;
+    defaultsSkipped?: boolean;
   };
   brownfield: BootstrapAssessment;
   bootstrapDiagnostics: BootstrapArtifactDiagnostics;
@@ -177,6 +179,7 @@ const commandCatalogInputSchema = {};
 const projectInitInputSchema = {
   cwd: z.string().optional(),
   defaultsPath: z.string().optional(),
+  savedDefaultsPolicy: z.enum(["apply", "skip"]).optional(),
   overwrite: z.boolean().optional(),
   projectName: z.string().optional(),
   bootstrapMode: z.enum(["interactive", "auto"]).optional(),
@@ -455,12 +458,6 @@ function bootstrapSeedIsSufficient(seed: BootstrapSeed | undefined): boolean {
 
 const MIN_SUBSTANTIVE_WORDS = 6;
 const GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
-const GENERIC_SUCCESS_CRITERIA_PATTERNS = [
-  /^(?:complete|finish|do|implement|handle|support|make|prepare)\s+(?:the\s+)?(?:work|task|feature|phase|roadmap|bootstrap|workflow)\.?$/i,
-  /^(?:keep|ensure|verify|validate|confirm)\s+(?:things|it|this|the work|the phase|the roadmap|the workflow)\s+(?:working|done|ready|traceable|complete)\.?$/i,
-  /^complete .+ with traceable handoff evidence\.?$/i,
-  /^keep requirement ids traceable into later roadmap artifacts\.?$/i
-];
 
 function countWords(value: string): number {
   return (value.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) ?? []).length;
@@ -614,25 +611,10 @@ function bootstrapSeedPreflightDiagnostics(seed: NormalizedBootstrapSeed): Proje
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_success_criteria_count_invalid",
         message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
-        repair: "Provide between 2 and 5 observable success criteria for the phase."
+        repair: "Provide between 2 and 5 success criteria for the phase."
       }));
     }
 
-    for (const [criterionIndex, criterion] of successCriteria.entries()) {
-      const trimmedCriterion = criterion.trim();
-
-      if (
-        !isSubstantiveText(trimmedCriterion) ||
-        GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))
-      ) {
-        diagnostics.push(seedDiagnostic({
-          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria[${criterionIndex}]`,
-          code: "seed_success_criterion_generic",
-          message: `Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`,
-          repair: "Replace generic success criteria with observable evidence that can be verified later."
-        }));
-      }
-    }
   }
 
   for (const requirementId of committedRequirementIds) {
@@ -686,7 +668,7 @@ function bootstrapSeedExplicitGapDiagnostics(seed: BootstrapSeed): ProjectInitDi
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_phase_success_criteria_missing",
         message: `Phase ${phaseLabel} must include explicit successCriteria before the first write.`,
-        repair: "Add at least two concrete success criteria before retrying."
+        repair: "Add at least two success criteria before retrying."
       }));
     }
   }
@@ -696,6 +678,51 @@ function bootstrapSeedExplicitGapDiagnostics(seed: BootstrapSeed): ProjectInitDi
 
 function bootstrapSeedExplicitGapIssues(seed: BootstrapSeed): string[] {
   return bootstrapSeedExplicitGapDiagnostics(seed).map((diagnostic) => diagnostic.message);
+}
+
+function bootstrapSeedRawPhaseRequirementDiagnostics(seed: BootstrapSeed): ProjectInitDiagnostic[] {
+  const diagnostics: ProjectInitDiagnostic[] = [];
+
+  for (const [phaseIndex, phase] of (seed.roadmapPhases ?? []).entries()) {
+    const phaseLabel = phase.phase.trim() || "(blank)";
+    const seenRequirementIds = new Set<string>();
+    const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
+
+    for (const requirementId of requirementIds) {
+      if (seenRequirementIds.has(requirementId)) {
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_duplicate_phase_requirement_ref",
+          message: `Phase ${phaseLabel} references requirement ${requirementId} more than once.`,
+          repair: "Remove duplicate requirement IDs from the phase requirementIds list."
+        }));
+      }
+
+      seenRequirementIds.add(requirementId);
+    }
+  }
+
+  return diagnostics;
+}
+
+function dedupeProjectInitDiagnostics(
+  diagnostics: ProjectInitDiagnostic[]
+): ProjectInitDiagnostic[] {
+  const deduped = new Map<string, ProjectInitDiagnostic>();
+
+  for (const diagnostic of diagnostics) {
+    const key = JSON.stringify({
+      path: diagnostic.path,
+      code: diagnostic.code,
+      message: diagnostic.message
+    });
+
+    if (!deduped.has(key)) {
+      deduped.set(key, diagnostic);
+    }
+  }
+
+  return [...deduped.values()];
 }
 
 function buildInvalidProjectInitResult(args: {
@@ -1250,23 +1277,20 @@ export async function blueprintProjectInit(
     bootstrapMode === "auto"
       ? mergeBootstrapSeed(autoBaseSeed!, args.bootstrapSeed)
       : args.bootstrapSeed!;
+  const rawPhaseRequirementDiagnostics = bootstrapSeedRawPhaseRequirementDiagnostics(seedInput);
   const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
-
-  if (explicitGapDiagnostics.length > 0) {
-    return buildInvalidProjectInitResult({
-      projectRoot,
-      diagnostics: explicitGapDiagnostics
-    });
-  }
-
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
-
   const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
+  const preWriteDiagnostics = dedupeProjectInitDiagnostics([
+    ...rawPhaseRequirementDiagnostics,
+    ...explicitGapDiagnostics,
+    ...preflightDiagnostics
+  ]);
 
-  if (preflightDiagnostics.length > 0) {
+  if (preWriteDiagnostics.length > 0) {
     return buildInvalidProjectInitResult({
       projectRoot,
-      diagnostics: preflightDiagnostics
+      diagnostics: preWriteDiagnostics
     });
   }
 
@@ -1311,7 +1335,8 @@ export async function blueprintProjectInit(
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
-    defaultsPath: args.defaultsPath
+    defaultsPath: args.defaultsPath,
+    savedDefaultsPolicy: args.savedDefaultsPolicy
   });
   const bootstrapContextWarnings =
     overwrite || scaffold.createdFiles.includes(initialPhaseContextPath)

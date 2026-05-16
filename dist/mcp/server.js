@@ -15264,13 +15264,15 @@ var init_command_runtime_metadata = __esm({
         reads: [
           "blueprint_roadmap_read -> {roadmap, milestone, phases}",
           "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts",
-          "blueprint_artifact_summary_digest -> {digest, inputsUsed}"
+          "blueprint_artifact_summary_digest -> {digest, inputsUsed}",
+          "blueprint_config_get -> effective config before any optional blueprint-roadmapper pass",
+          "typed Roadmapper Packet built by the parent from digestScope, carryForwardFacts, requirementTransitionHints, and a relative firstPhasePreview only"
         ],
         writes: [
           ".blueprint/PROJECT.md",
           ".blueprint/REQUIREMENTS.md",
           ".blueprint/ROADMAP.md",
-          ".blueprint/phases/<next-phase-slug>/<NN-CONTEXT.md>",
+          ".blueprint/phases/<next-phase-slug>/<NN>-CONTEXT.md",
           ".blueprint/STATE.md"
         ]
       },
@@ -15282,7 +15284,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEW_MILESTONE_REQUIRED_TOOLS,
         optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read report.milestone-summary before seeding, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, build a typed Roadmapper Packet from digestScope plus carryForwardFacts plus requirementTransitionHints plus a relative firstPhasePreview only, keep parentOwnedResponsibilities with the parent for digest reads, evidence-scope construction, final milestone naming, final phase numbering and paths, confirmation gates, MCP writes, final response, and routing, forbid MCP writes, hand-editing .blueprint/, final phase.context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter, pass only that packet to blueprint-roadmapper instead of raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes, require the same typed result shape in every mode with roadmapperMode plus provisionalOrderedProposals plus coverageNotes plus blockers plus warnings plus assumptions plus confidence plus relativeFirstPhaseRecommendation, use roadmapperMode values used, skipped-disabled, skipped-unnecessary, or unavailable-fallback, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, treat blueprint_artifact_scaffold receipt fields highestBasePhaseNumber, firstPhaseNumber, firstPhasePrefix, firstPhaseDir, firstContextPath, deletedPhaseDirectories, and renamedPhaseDirectories as authoritative, update state only after scaffold succeeds and the first context path exists, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18028,6 +18030,8 @@ function renderBootstrapRequirementsTemplate() {
 
 ## Deferred Scope
 
+Include this section only when the Scope Summary lists deferred requirement IDs.
+
 ### <group>
 
 - \`REQ-02\`: <requirement>
@@ -18035,6 +18039,8 @@ function renderBootstrapRequirementsTemplate() {
   - Notes: <notes>
 
 ## Out-of-Scope Cuts
+
+Include this section only when the Scope Summary lists out-of-scope requirement IDs.
 
 ### <group>
 
@@ -18420,7 +18426,7 @@ function renderContextAuthoringTemplate(context) {
 <!--
 Final saved content only.
 Replace every section below with the real phase goal, grounding, decisions, ideas, code insights, dependencies, deferred ideas, and canonical references.
-For Open Questions, replace the section with unresolved questions or use the exact sentinel \`- none\` when nothing remains open.
+For Open Questions and Deferred Ideas, replace the section with concrete bullets or use the exact sentinel \`- none\` when nothing remains open or deferred.
 Do not preserve scaffold labels, example bullets, or this guidance block in the final saved artifact.
 -->
 
@@ -18481,6 +18487,7 @@ function renderResearchTemplate(context) {
 **Researched:** <YYYY-MM-DD>
 **Domain:** ${domain2(context)}
 **Confidence:** LOW|MEDIUM|HIGH
+Keep the canonical ## headings exactly as written below.
 
 ## Phase Requirements
 
@@ -18880,7 +18887,7 @@ function renderVerificationTemplate(context) {
 
 | Item | Why manual or deferred | Follow-Up | Status |
 |------|------------------------|-----------|--------|
-| <manual-only item> | <reason> | <follow-up> | MANUAL|DEFERRED|NONE |
+| <manual-only item when any remain> | <reason> | <follow-up> | MANUAL|DEFERRED |
 
 ## Gate State
 
@@ -18896,11 +18903,11 @@ function renderVerificationTemplate(context) {
 
 ## Gaps Found
 
-- Explicit blocker, follow-up, or \`none\`.
+- Explicit blocker or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Suggested Repairs
 
-- Explicit next repair, follow-up, or \`none\`.
+- Explicit next repair or follow-up when gaps remain. For PASS no-gap model input, MCP can render \`none\` from an empty or omitted list.
 
 ## Next Safe Action
 
@@ -20020,7 +20027,7 @@ var init_artifact_contracts = __esm({
         "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
         "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
         "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",
-        "Do not copy minimal example wording, placeholder titles, generic success criteria, or static-for-now assumptions into a real project roadmap."
+        "Do not copy minimal example wording, placeholder titles, or static-for-now assumptions into a real project roadmap. Prefer specific success criteria over generic filler, but bootstrap validation itself enforces requirement grounding and 2-5 criteria."
       ],
       contextBindings: [
         ".blueprint/PROJECT.md supplies the active milestone, repository shape, codebase mapping posture, and roadmap confidence.",
@@ -20102,7 +20109,8 @@ var init_artifact_contracts = __esm({
         "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
         "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
         "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-        "Open questions must list concrete unresolved questions when any remain; use the exact string `none` only when the section has no unresolved questions left.",
+        "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+        "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
         "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
         "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
       ],
@@ -20290,14 +20298,14 @@ var init_artifact_contracts = __esm({
         "Do not include MCP-owned identity keys such as cwd, phase, phaseDir, artifact, path, reportPath, or content; the write tool owns identity and path derivation.",
         "Do not author runtime-owned fields such as depth, scopeSource, scopeReviewed, evidenceReviewed, evidenceDeferrals, severityCounts, or report paths; MCP resolves and renders them.",
         "Author against the narrowed taskSchema returned by blueprint_review_scope authoringContext or blueprint_review_validate_model so scoped finding locations, exact evidenceCoverage keys, and nextSafeAction stay deterministic.",
-        "Every known saved evidence artifact from the phase must appear as an exact evidenceCoverage key with status used, deferred, or irrelevant plus a concrete rationale.",
+        "Only author evidenceCoverage entries for exact known saved evidence artifacts that materially shaped the review; MCP renders known but omitted artifacts as not reviewed.",
         "Every finding must include severity, disposition, repo-relative file:line location, evidence, impact, and concrete fix or verification guidance.",
         "Use only the allowed nextSafeAction values returned by the authoring context, and do not copy minimal example wording or placeholder review prose."
       ],
       contextBindings: [
         "phase, phasePrefix, phaseName, phaseDir, canonical filename, and output path come from blueprint_phase_locate plus the write tool arguments.",
         "depth, source, scopeReviewed, and severity counts come from blueprint_review_scope plus MCP rendering, not from authored JSON.",
-        "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into evidenceCoverage keys, and rendered visibly into Evidence Reviewed.",
+        "Known evidence artifacts are read from the selected phase artifact inventory, narrowed into allowed evidenceCoverage keys, and rendered visibly into Evidence Reviewed even when the model omitted unused evidence.",
         "existing review content, when present, is the overwrite/reuse baseline and must not be replaced without explicit overwrite confirmation."
       ],
       renderedHeadings: [
@@ -21536,8 +21544,6 @@ var init_artifact_contracts = __esm({
           "Requirements Table",
           "Scope Summary",
           "Committed V1 Scope",
-          "Deferred Scope",
-          "Out-of-Scope Cuts",
           "Traceability Notes",
           "Open Questions"
         ],
@@ -21552,7 +21558,7 @@ var init_artifact_contracts = __esm({
         ],
         notes: [
           "Requirements bootstrap should keep requirement IDs durable, grouped, and traceable into the roadmap.",
-          "Validation expects a populated requirements table plus substantive committed, deferred, and out-of-scope sections."
+          "Validation expects a populated requirements table plus a substantive committed scope section. `Deferred Scope` and `Out-of-Scope Cuts` are conditionally required only when those groups contain items."
         ],
         renderScaffoldTemplate: renderBootstrapRequirementsTemplate,
         renderAuthoringTemplate: renderBootstrapRequirementsTemplate
@@ -21804,6 +21810,9 @@ var init_artifact_contracts = __esm({
         ],
         sectionValidations: {
           "Open Questions": {
+            exactEmptySentinel: "- none"
+          },
+          "Deferred Ideas": {
             exactEmptySentinel: "- none"
           }
         },
@@ -23438,6 +23447,40 @@ function setNestedValue(target, pathSegments, value) {
   validateFieldNameSegment(finalSegment);
   current[finalSegment] = value;
 }
+function deleteNestedValue(target, pathSegments) {
+  const [segment, ...remainingSegments] = pathSegments;
+  if (!segment || !(segment in target)) {
+    return false;
+  }
+  if (remainingSegments.length === 0) {
+    delete target[segment];
+    return true;
+  }
+  const next = target[segment];
+  if (!isPlainObject4(next)) {
+    return false;
+  }
+  const deleted = deleteNestedValue(next, remainingSegments);
+  if (deleted && Object.keys(next).length === 0) {
+    delete target[segment];
+  }
+  return deleted;
+}
+function sanitizeDefaultsForProjectSeed(candidate) {
+  const sanitized = deepCloneObject(candidate);
+  const warnings = [];
+  for (const fullPath of PROJECT_SEED_SAVED_DEFAULTS_DENYLIST) {
+    if (deleteNestedValue(sanitized, fullPath.split("."))) {
+      warnings.push(
+        `Ignored repo-specific saved default ${fullPath} during project bootstrap.`
+      );
+    }
+  }
+  return {
+    config: sanitized,
+    warnings
+  };
+}
 function coerceLegacyConfigCandidate(candidate, warnings) {
   const nextCandidate = deepCloneObject(candidate);
   const legacyTopLevelMappings = {
@@ -23686,8 +23729,9 @@ function collectChangedKeys(before, after, prefix = []) {
 async function readProjectConfig(projectRoot) {
   return readJsonIfPresent(resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH));
 }
-async function readDefaultsConfig(defaultsPath) {
+async function readDefaultsConfig(defaultsPath, options = {}) {
   const resolvedPath = getDefaultUserConfigPath(defaultsPath);
+  const savedDefaultsPolicy = options.savedDefaultsPolicy ?? "apply";
   const raw = await readJsonIfPresent(resolvedPath).catch((error2) => {
     const message = error2 instanceof Error ? error2.message : String(error2);
     return {
@@ -23698,7 +23742,18 @@ async function readDefaultsConfig(defaultsPath) {
     return {
       config: null,
       path: resolvedPath,
-      warnings: []
+      warnings: [],
+      found: false,
+      skipped: false
+    };
+  }
+  if (savedDefaultsPolicy === "skip") {
+    return {
+      config: null,
+      path: resolvedPath,
+      warnings: ["Saved defaults were found but skipped for this project by user choice."],
+      found: true,
+      skipped: true
     };
   }
   if ("__error" in raw) {
@@ -23707,29 +23762,38 @@ async function readDefaultsConfig(defaultsPath) {
       path: resolvedPath,
       warnings: [
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
   try {
-    const normalized = normalizeConfigLayer(raw, "defaults");
+    const sanitized = options.sanitizeForProjectSeed ? sanitizeDefaultsForProjectSeed(raw) : { config: raw, warnings: [] };
+    const normalized = normalizeConfigLayer(sanitized.config, "defaults");
     return {
       config: normalized.config,
       path: resolvedPath,
-      warnings: normalized.warnings
+      warnings: [...sanitized.warnings, ...normalized.warnings],
+      found: true,
+      skipped: false
     };
   } catch {
+    const sanitizedWarnings = options.sanitizeForProjectSeed ? sanitizeDefaultsForProjectSeed(raw).warnings : [];
     return {
       config: null,
       path: resolvedPath,
       warnings: [
+        ...sanitizedWarnings,
         `Saved defaults at ${resolvedPath} could not be normalized; falling back to hardcoded defaults.`
-      ]
+      ],
+      found: true,
+      skipped: false
     };
   }
 }
-async function composeConfig(projectRoot, defaultsPath) {
+async function composeConfig(projectRoot, defaultsPath, options = {}) {
   const warnings = [];
-  const defaults = await readDefaultsConfig(defaultsPath);
+  const defaults = await readDefaultsConfig(defaultsPath, options);
   const projectConfigRaw = await readProjectConfig(projectRoot);
   let projectConfig = null;
   let projectConfigLayer = null;
@@ -23773,10 +23837,11 @@ async function composeConfig(projectRoot, defaultsPath) {
         ...defaults.config ? ["defaults"] : [],
         ...projectConfig ? ["project"] : []
       ],
-      defaultsPath: defaults.config ? defaults.path : null,
+      defaultsPath: defaults.config || defaults.skipped ? defaults.path : null,
       projectPath: projectConfig ? toRepoRelativePath(projectRoot, projectPath) : null,
       defaultsApplied: defaults.config !== null,
-      projectApplied: projectConfig !== null
+      projectApplied: projectConfig !== null,
+      defaultsSkipped: defaults.skipped || void 0
     },
     warnings,
     sourcePath: projectConfig ? toRepoRelativePath(projectRoot, projectPath) : defaults.config ? defaults.path : null
@@ -23916,7 +23981,11 @@ async function blueprintConfigSetProfile(args) {
 }
 async function seedProjectConfig(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const composed = await composeConfig(projectRoot, args.defaultsPath);
+  const savedDefaultsPolicy = args.savedDefaultsPolicy ?? "apply";
+  const composed = await composeConfig(projectRoot, args.defaultsPath, {
+    sanitizeForProjectSeed: true,
+    savedDefaultsPolicy
+  });
   const projectConfigPath = resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH);
   const relativeConfigPath = toRepoRelativePath(projectRoot, projectConfigPath);
   await writeJsonFile(
@@ -23934,7 +24003,7 @@ async function seedProjectConfig(args = {}) {
     warnings: composed.warnings
   };
 }
-var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, HOST_DEFAULT_PATCH_REGISTRIES, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configToolDefinitions;
+var MODEL_PROFILES, PROGRESS_MODES, STRUCTURED_CONFIRMATION_MODES, USER_CHECKPOINT_MODES, TASK_TRACKER_MODES, EXTERNAL_SOURCE_MODES, HARD_CODED_CONFIG_VERSION, PROJECT_SEED_SAVED_DEFAULTS_DENYLIST, HOST_DEFAULT_PATCH_REGISTRIES, configGetInputSchema, configSetInputSchema, configSetProfileInputSchema, configToolDefinitions;
 var init_config = __esm({
   "src/mcp/tools/config.ts"() {
     "use strict";
@@ -23949,6 +24018,11 @@ var init_config = __esm({
     TASK_TRACKER_MODES = ["off", "auto"];
     EXTERNAL_SOURCE_MODES = ["off", "ask", "auto"];
     HARD_CODED_CONFIG_VERSION = 2;
+    PROJECT_SEED_SAVED_DEFAULTS_DENYLIST = [
+      "project_code",
+      "git.default_branch",
+      "git.protected_branches"
+    ];
     HOST_DEFAULT_PATCH_REGISTRIES = {
       gemini: "~/.gemini/blueprint/patches",
       tabnine: "~/.tabnine/blueprint/patches"
@@ -24013,6 +24087,317 @@ function isObviouslyNonPathMarkupToken(rawToken, normalizedToken) {
 var init_path_token_heuristics = __esm({
   "src/mcp/tools/path-token-heuristics.ts"() {
     "use strict";
+  }
+});
+
+// src/mcp/tools/phase-numbering.ts
+function normalizeBlueprintInput(value) {
+  if (typeof value === "number") {
+    return String(value);
+  }
+  const trimmed = value.trim();
+  const quoteMatch = trimmed.match(/^(['"])([\s\S]+)\1$/);
+  return quoteMatch ? quoteMatch[2].trim() : value;
+}
+function normalizePhaseNumber(value) {
+  return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
+}
+function basePhaseNumber(value) {
+  return normalizePhaseNumber(value).split(".")[0] ?? normalizePhaseNumber(value);
+}
+function resolveWholePhaseNumberInput(value) {
+  if (typeof value === "string" || typeof value === "number") {
+    return value;
+  }
+  return value.phaseNumber;
+}
+function computeNextWholePhaseNumber(roadmapPhases) {
+  if (roadmapPhases.length === 0) {
+    throw new Error(
+      "Cannot compute the next whole Blueprint phase number from an empty roadmap."
+    );
+  }
+  const basePhaseNumbers = roadmapPhases.map((phase, index) => {
+    const rawValue = resolveWholePhaseNumberInput(phase);
+    if (rawValue === void 0 || rawValue === null) {
+      throw new Error(
+        `Cannot compute the next whole Blueprint phase number because roadmap phase ${index + 1} is missing a phaseNumber.`
+      );
+    }
+    const normalizedBase = basePhaseNumber(rawValue);
+    const parsedBase = Number.parseInt(normalizedBase, 10);
+    if (Number.isNaN(parsedBase)) {
+      throw new Error(
+        `Cannot compute the next whole Blueprint phase number because roadmap phase ${index + 1} is malformed: ${String(rawValue)}`
+      );
+    }
+    return parsedBase;
+  });
+  return String(Math.max(...basePhaseNumbers) + 1);
+}
+function comparePhaseNumbers(left, right) {
+  const leftParts = normalizePhaseNumber(left).split(".").map((segment) => Number.parseInt(segment, 10));
+  const rightParts = normalizePhaseNumber(right).split(".").map((segment) => Number.parseInt(segment, 10));
+  const length = Math.max(leftParts.length, rightParts.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = leftParts[index] ?? 0;
+    const rightValue = rightParts[index] ?? 0;
+    if (leftValue !== rightValue) {
+      return leftValue - rightValue;
+    }
+  }
+  return 0;
+}
+function formatPhasePrefix(value) {
+  return formatBlueprintPhasePrefix(normalizeBlueprintInput(value));
+}
+function extractPhaseNumberToken(value) {
+  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
+  return match ? normalizePhaseNumber(match[1]) : null;
+}
+function extractExactPhaseNumberToken(value) {
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : null;
+  }
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  return normalizePhaseNumber(trimmed);
+}
+function isIntegerPhaseNumber(value) {
+  return !normalizePhaseNumber(value).includes(".");
+}
+function slugToTitle(value) {
+  return value.split("-").filter((segment) => segment.length > 0).map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
+}
+function normalizePhaseDescription(value) {
+  return value.trim().replace(/\s+/g, " ");
+}
+function slugifyPhaseName(value) {
+  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug.length > 0 ? slug : "new-phase";
+}
+var init_phase_numbering = __esm({
+  "src/mcp/tools/phase-numbering.ts"() {
+    "use strict";
+    init_security();
+  }
+});
+
+// src/mcp/tools/phase-roadmap-parser.ts
+function parseRequirements(value) {
+  if (!value) {
+    return [];
+  }
+  return value.split(",").map((entry) => entry.trim()).filter(
+    (entry) => entry.length > 0 && !["none", "none yet", "n/a", "not yet mapped"].includes(entry.toLowerCase())
+  );
+}
+function uniqueRequirements(values) {
+  return [...new Set(values)];
+}
+function extractDurableRequirementIds(value) {
+  return [...value.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1] ?? "").filter((requirementId) => requirementId.length > 0);
+}
+function parseRoadmapRequirements(value) {
+  return uniqueRequirements(
+    parseRequirements(value).flatMap((entry) => {
+      const durableIds = extractDurableRequirementIds(entry);
+      return durableIds.length > 0 ? durableIds : [entry];
+    })
+  );
+}
+function extractRoadmapDetailRequirements(body) {
+  return uniqueRequirements(
+    body.replace(/\r\n/g, "\n").split("\n").flatMap((line) => {
+      const normalized = line.trim().replace(/^[-*+]\s+/, "").replace(/\*\*/g, "").trim();
+      const match = normalized.match(
+        /^(?:mapped\s+)?requirements?(?:\s+ids?)?\s*:\s*(.+)$/i
+      );
+      return match ? parseRoadmapRequirements(match[1] ?? null) : [];
+    })
+  );
+}
+function parseRoadmapPhaseTitle(value) {
+  const unbolded = value.trim().replace(/\*\*$/u, "").trim();
+  const requirementsMatch = unbolded.match(/\s*\(\s*Requirements:\s*([^)]+)\)\s*$/i);
+  if (!requirementsMatch) {
+    return {
+      phaseName: unbolded,
+      requirements: []
+    };
+  }
+  return {
+    phaseName: unbolded.slice(0, requirementsMatch.index).trim(),
+    requirements: parseRoadmapRequirements(requirementsMatch[1] ?? null)
+  };
+}
+function parseRoadmapPhaseLine(line) {
+  const match = line.match(
+    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
+  );
+  if (!match) {
+    return null;
+  }
+  const title = parseRoadmapPhaseTitle(match[3] ?? "");
+  return {
+    completed: (match[1] ?? "").toLowerCase() === "x",
+    phaseNumber: normalizePhaseNumber(match[2] ?? ""),
+    phaseName: title.phaseName,
+    summary: match[4]?.trim() ?? null,
+    requirements: title.requirements
+  };
+}
+function parseRoadmapPhaseChildLines(lines) {
+  let goal = null;
+  const successCriteria = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const objectiveMatch = lines[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
+    if (objectiveMatch) {
+      goal = objectiveMatch[1]?.trim() ?? null;
+      continue;
+    }
+    const successCriteriaMatch = lines[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
+    if (!successCriteriaMatch) {
+      continue;
+    }
+    const labelIndent = successCriteriaMatch[1]?.length ?? 0;
+    const inlineCriterion = successCriteriaMatch[2]?.trim() ?? "";
+    if (inlineCriterion.length > 0) {
+      successCriteria.push(inlineCriterion);
+    }
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nestedMatch = lines[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
+      if (!nestedMatch || (nestedMatch[1]?.length ?? 0) <= labelIndent) {
+        break;
+      }
+      successCriteria.push(nestedMatch[2]?.trim() ?? "");
+      index = nextIndex;
+    }
+  }
+  return {
+    goal,
+    successCriteria: successCriteria.length > 0 ? successCriteria.filter((value) => value.length > 0).join("; ") : null
+  };
+}
+function parseSimpleMarkdownTableCells(line) {
+  const trimmed = line.trim();
+  if (!/^\|.*\|$/.test(trimmed)) {
+    return null;
+  }
+  return trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+}
+function isSimpleMarkdownTableSeparator(cells) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+function normalizeRoadmapTableHeader(value) {
+  return value.replace(/[`*_]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+function isRoadmapPhaseTableHeader(value) {
+  return ["phase", "phase #", "phase number", "#"].includes(
+    normalizeRoadmapTableHeader(value)
+  );
+}
+function isRoadmapRequirementsTableHeader(value) {
+  return /^(?:mapped\s+)?requirements?(?:\s+ids?)?$/.test(
+    normalizeRoadmapTableHeader(value)
+  );
+}
+function extractRoadmapPhaseTableRequirements(raw) {
+  const requirementsByPhase = /* @__PURE__ */ new Map();
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const headers = parseSimpleMarkdownTableCells(lines[index] ?? "");
+    if (!headers) {
+      continue;
+    }
+    const separator = parseSimpleMarkdownTableCells(lines[index + 1] ?? "");
+    if (!separator || !isSimpleMarkdownTableSeparator(separator)) {
+      continue;
+    }
+    const phaseIndex = headers.findIndex(isRoadmapPhaseTableHeader);
+    const requirementsIndex = headers.findIndex(isRoadmapRequirementsTableHeader);
+    if (phaseIndex < 0 || requirementsIndex < 0) {
+      continue;
+    }
+    for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
+      const cells = parseSimpleMarkdownTableCells(lines[rowIndex] ?? "");
+      if (!cells) {
+        break;
+      }
+      if (isSimpleMarkdownTableSeparator(cells)) {
+        continue;
+      }
+      const phaseNumber = extractPhaseNumberToken(cells[phaseIndex] ?? "");
+      const requirements = parseRoadmapRequirements(cells[requirementsIndex] ?? null);
+      if (!phaseNumber || requirements.length === 0) {
+        continue;
+      }
+      requirementsByPhase.set(phaseNumber, requirements);
+    }
+  }
+  return requirementsByPhase;
+}
+function parseRoadmapDocument(raw) {
+  const milestone2 = raw.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
+  const tableRequirements = extractRoadmapPhaseTableRequirements(raw);
+  const details = /* @__PURE__ */ new Map();
+  for (const block of raw.split(/^### Phase /gm).slice(1)) {
+    const newlineIndex = block.indexOf("\n");
+    const header = newlineIndex === -1 ? block.trim() : block.slice(0, newlineIndex).trim();
+    const body = newlineIndex === -1 ? "" : block.slice(newlineIndex + 1);
+    const headerMatch = header.match(/^(\d+(?:\.\d+)?): (.+)$/);
+    if (!headerMatch) {
+      continue;
+    }
+    const phaseNumber = normalizePhaseNumber(headerMatch[1]);
+    const goal = body.match(/^\*\*Goal\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
+    const successCriteria = body.match(/^\*\*Success Criteria\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
+    const requirements = extractRoadmapDetailRequirements(body);
+    details.set(phaseNumber, { goal, successCriteria, requirements });
+  }
+  const phases = [];
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  for (let index = 0; index < lines.length; index += 1) {
+    const inlinePhase = parseRoadmapPhaseLine(lines[index] ?? "");
+    if (!inlinePhase) {
+      continue;
+    }
+    const childLines = [];
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex] ?? "";
+      if (parseRoadmapPhaseLine(nextLine) || /^#{1,6}\s+/.test(nextLine)) {
+        break;
+      }
+      if (nextLine.trim().length === 0 || /^\s+-\s+/.test(nextLine)) {
+        childLines.push(nextLine);
+        index = nextIndex;
+        continue;
+      }
+      break;
+    }
+    const phaseNumber = inlinePhase.phaseNumber;
+    const phaseChildren = parseRoadmapPhaseChildLines(childLines);
+    const detail = details.get(phaseNumber);
+    const requirements = detail && detail.requirements.length > 0 ? detail.requirements : inlinePhase.requirements.length > 0 ? inlinePhase.requirements : tableRequirements.get(phaseNumber) ?? [];
+    phases.push({
+      phaseNumber,
+      phasePrefix: formatPhasePrefix(phaseNumber),
+      phaseName: inlinePhase.phaseName,
+      completed: inlinePhase.completed,
+      summary: inlinePhase.summary,
+      goal: detail ? detail.goal : phaseChildren.goal,
+      successCriteria: detail ? detail.successCriteria : phaseChildren.successCriteria,
+      requirements
+    });
+  }
+  return { milestone: milestone2, phases };
+}
+var init_phase_roadmap_parser = __esm({
+  "src/mcp/tools/phase-roadmap-parser.ts"() {
+    "use strict";
+    init_phase_numbering();
   }
 });
 
@@ -24972,12 +25357,12 @@ function parseStateDocument(raw) {
     roadmapEvolutionNotes
   };
 }
-function normalizePhaseNumber(value) {
+function normalizePhaseNumber2(value) {
   return normalizeBlueprintPhaseRef(value);
 }
-function comparePhaseNumbers(left, right) {
-  const leftParts = normalizePhaseNumber(left).split(".").map((segment) => Number.parseInt(segment, 10));
-  const rightParts = normalizePhaseNumber(right).split(".").map((segment) => Number.parseInt(segment, 10));
+function comparePhaseNumbers2(left, right) {
+  const leftParts = normalizePhaseNumber2(left).split(".").map((segment) => Number.parseInt(segment, 10));
+  const rightParts = normalizePhaseNumber2(right).split(".").map((segment) => Number.parseInt(segment, 10));
   const length = Math.max(leftParts.length, rightParts.length);
   for (let index = 0; index < length; index += 1) {
     const leftValue = leftParts[index] ?? 0;
@@ -25015,7 +25400,7 @@ function resolveStoredPhaseRoutingOverride(args) {
   if (args.currentPhase === null || args.roadmapCurrentPhase === null || nextActionSelection.currentPhase !== args.currentPhase) {
     return null;
   }
-  return comparePhaseNumbers(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
+  return comparePhaseNumbers2(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
 }
 function resolvePatchedPhaseRoutingOverride(args) {
   if (!PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(args.activeCommand)) {
@@ -25024,20 +25409,178 @@ function resolvePatchedPhaseRoutingOverride(args) {
   if (args.currentPhase === null || args.roadmapCurrentPhase === null) {
     return null;
   }
-  return comparePhaseNumbers(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
+  return comparePhaseNumbers2(args.currentPhase, args.roadmapCurrentPhase) < 0 ? args.currentPhase : null;
 }
 async function phaseDirectoryExists(projectRoot, phaseNumber) {
-  const normalizedPhase = normalizePhaseNumber(phaseNumber);
+  const normalizedPhase = normalizePhaseNumber2(phaseNumber);
   const phaseDirs = await listImmediateDirectories(
     resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
   );
   return phaseDirs.some((phaseDir) => {
     const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
-    return extractedPhase !== null && normalizePhaseNumber(extractedPhase) === normalizedPhase;
+    return extractedPhase !== null && normalizePhaseNumber2(extractedPhase) === normalizedPhase;
   });
 }
-function formatPhasePrefix(value) {
+async function assertCurrentPhaseContextPathExists(args) {
+  const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
+  if (nextActionSelection.command === null || nextActionSelection.currentPhase === null || nextActionSelection.currentPhase !== args.currentPhase) {
+    return;
+  }
+  const phaseRoot = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/phases`);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+    return extractedPhase !== null && normalizePhaseNumber2(extractedPhase) === args.currentPhase;
+  });
+  if (matchingPhaseDirs.length === 0) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because no matching phase directory exists under ${BLUEPRINT_DIR}/phases/.`
+    );
+  }
+  if (matchingPhaseDirs.length > 1) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because multiple matching phase directories exist under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs.map((phaseDir) => `${BLUEPRINT_DIR}/phases/${phaseDir}/`).join(", ")}.`
+    );
+  }
+  const phasePrefix2 = formatPhasePrefix2(args.currentPhase);
+  const contextPath = `${BLUEPRINT_DIR}/phases/${matchingPhaseDirs[0]}/${phasePrefix2}-CONTEXT.md`;
+  if (!await blueprintPathExists(resolveBlueprintPath(args.projectRoot, contextPath))) {
+    throw new Error(
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because ${contextPath} is missing while next action points to ${nextActionSelection.command} ${args.currentPhase}.`
+    );
+  }
+}
+function formatPhasePrefix2(value) {
   return formatBlueprintPhasePrefix(value);
+}
+function normalizeRoutingPlanId(value) {
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+  const numeric = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+    return null;
+  }
+  return String(numeric).padStart(2, "0");
+}
+function detectRoutingPlanCycles(dependencyGraph) {
+  const visited = /* @__PURE__ */ new Set();
+  const active = /* @__PURE__ */ new Set();
+  const cycles = [];
+  const seenCycleKeys = /* @__PURE__ */ new Set();
+  const visit = (planId2, trail) => {
+    if (active.has(planId2)) {
+      const cycleStartIndex = trail.indexOf(planId2);
+      if (cycleStartIndex >= 0) {
+        const cycle = [...trail.slice(cycleStartIndex), planId2];
+        const cycleKey = cycle.join("->");
+        if (!seenCycleKeys.has(cycleKey)) {
+          seenCycleKeys.add(cycleKey);
+          cycles.push(cycle);
+        }
+      }
+      return;
+    }
+    if (visited.has(planId2)) {
+      return;
+    }
+    visited.add(planId2);
+    active.add(planId2);
+    for (const dependencyId of dependencyGraph.get(planId2) ?? []) {
+      visit(dependencyId, [...trail, dependencyId]);
+    }
+    active.delete(planId2);
+  };
+  for (const planId2 of dependencyGraph.keys()) {
+    visit(planId2, [planId2]);
+  }
+  return cycles;
+}
+async function inspectPhasePlanRoutingReadiness(args) {
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  let roadmapRequirementIds = [];
+  try {
+    const roadmap = parseRoadmapDocument(await fs2.readFile(roadmapPath, "utf8"));
+    roadmapRequirementIds = roadmap.phases.find((phase) => normalizePhaseNumber2(phase.phaseNumber) === args.currentPhase)?.requirements ?? [];
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      executionReady: true,
+      warnings: [`${BLUEPRINT_DIR}/ROADMAP.md: ${message}`]
+    };
+  }
+  const coveredRequirementIds = /* @__PURE__ */ new Set();
+  const dependencyGraph = /* @__PURE__ */ new Map();
+  const missingDependencyIds = /* @__PURE__ */ new Set();
+  const planValidationIssues = [];
+  const waveOrderingIssues = [];
+  const planMetadata = /* @__PURE__ */ new Map();
+  for (const planPath of args.planPaths) {
+    try {
+      const raw = await fs2.readFile(resolveBlueprintPath(args.projectRoot, planPath), "utf8");
+      const validation = validatePlanArtifactContent(raw, args.currentPhase);
+      const planId2 = normalizeRoutingPlanId(validation.metadata.planId ?? "");
+      for (const issue2 of validation.issues) {
+        planValidationIssues.push(`${planPath}: ${issue2}`);
+      }
+      if (!planId2) {
+        planValidationIssues.push(`${planPath}: frontmatter plan_id is missing or invalid.`);
+        continue;
+      }
+      dependencyGraph.set(planId2, []);
+      planMetadata.set(planId2, {
+        path: planPath,
+        wave: typeof validation.metadata.wave === "number" ? validation.metadata.wave : null,
+        dependsOn: validation.metadata.dependsOn
+      });
+      for (const requirementId of validation.metadata.requirements) {
+        coveredRequirementIds.add(requirementId);
+      }
+    } catch (error2) {
+      const message = error2 instanceof Error ? error2.message : String(error2);
+      planValidationIssues.push(`${planPath}: ${message}`);
+    }
+  }
+  for (const [planId2, metadata] of planMetadata) {
+    const normalizedDependencies = metadata.dependsOn.map((dependency) => normalizeRoutingPlanId(dependency)).filter((dependency) => dependency !== null);
+    dependencyGraph.set(planId2, normalizedDependencies);
+    for (const dependencyId of normalizedDependencies) {
+      const dependencyMetadata = planMetadata.get(dependencyId);
+      if (!dependencyMetadata) {
+        missingDependencyIds.add(dependencyId);
+        continue;
+      }
+      if (typeof metadata.wave === "number" && typeof dependencyMetadata.wave === "number" && dependencyMetadata.wave >= metadata.wave) {
+        waveOrderingIssues.push(
+          `${metadata.path}: wave ${metadata.wave} must come after dependency ${dependencyId} in wave ${dependencyMetadata.wave}.`
+        );
+      }
+    }
+  }
+  const uncoveredRequirementIds = roadmapRequirementIds.filter(
+    (requirementId) => !coveredRequirementIds.has(requirementId)
+  );
+  const cyclicDependencyPlanIds = detectRoutingPlanCycles(dependencyGraph);
+  const warnings = [];
+  if (uncoveredRequirementIds.length > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`
+    );
+  }
+  warnings.push(...planValidationIssues);
+  if (missingDependencyIds.size > 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} plan set references missing dependencies: ${[...missingDependencyIds].sort((left, right) => left.localeCompare(right)).join(", ")}.`
+    );
+  }
+  for (const cycle of cyclicDependencyPlanIds) {
+    warnings.push(`Plan dependency cycle detected: ${cycle.join(" -> ")}.`);
+  }
+  warnings.push(...waveOrderingIssues);
+  return {
+    executionReady: warnings.length === 0,
+    warnings
+  };
 }
 function extractPhasePlanIds(artifacts, phasePrefix2, kind) {
   const suffix = kind === "PLAN" ? "PLAN" : "SUMMARY";
@@ -25311,20 +25854,22 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
       warnings
     };
   }
-  const normalizedPhase = normalizePhaseNumber(currentPhase2);
+  const normalizedPhase = normalizePhaseNumber2(currentPhase2);
   const phaseDirs = await listImmediateDirectories(
     resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
   );
   const matchingPhaseDirs = phaseDirs.filter((phaseDir2) => {
     const phaseNumber = extractPhaseNumberFromDirectory(phaseDir2);
-    return phaseNumber !== null && normalizePhaseNumber(phaseNumber) === normalizedPhase;
+    return phaseNumber !== null && normalizePhaseNumber2(phaseNumber) === normalizedPhase;
   });
   if (matchingPhaseDirs.length === 0) {
     if (inspectionPhases.length === 0) {
@@ -25342,7 +25887,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return {
       currentPhase: currentPhase2,
       phaseDir: null,
-      phasePrefix: formatPhasePrefix(normalizedPhase),
+      phasePrefix: formatPhasePrefix2(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
       researchPath: null,
@@ -25367,7 +25912,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -25384,7 +25931,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return {
       currentPhase: currentPhase2,
       phaseDir: null,
-      phasePrefix: formatPhasePrefix(normalizedPhase),
+      phasePrefix: formatPhasePrefix2(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
       researchPath: null,
@@ -25409,7 +25956,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       verificationReadyForUat: false,
       hasUat: false,
       hasPlans: false,
+      planSetExecutionReady: false,
       hasSummaries: false,
+      hasSavedSummaries: false,
       hasPendingExecution: false,
       researchValid: null,
       blockers,
@@ -25417,7 +25966,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     };
   }
   const phaseDir = matchingPhaseDirs[0];
-  const phasePrefix2 = formatPhasePrefix(normalizedPhase);
+  const phasePrefix2 = formatPhasePrefix2(normalizedPhase);
   const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
   const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
@@ -25439,6 +25988,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const hasReview = phaseArtifacts.includes(reviewPath);
   const hasSecurity = phaseArtifacts.includes(securityPath);
   const planPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-PLAN.md"));
+  const summaryArtifactPaths = phaseArtifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md"));
   const planIds = extractPhasePlanIds(phaseArtifacts, phasePrefix2, "PLAN");
   const {
     summaryIds,
@@ -25461,7 +26011,13 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
+  const hasSavedSummaries = summaryArtifactPaths.length > 0;
   const hasPendingExecution = pendingPlanIds.length > 0;
+  const planRoutingReadiness = hasPlans ? await inspectPhasePlanRoutingReadiness({
+    projectRoot,
+    currentPhase: normalizedPhase,
+    planPaths
+  }) : { executionReady: false, warnings: [] };
   const hasLaterArtifacts = [...phaseArtifacts].some(
     (artifact) => artifact.endsWith(`${phasePrefix2}-DISCUSSION-LOG.md`) || artifact.endsWith(`${phasePrefix2}-DISCUSS-CHECKPOINT.json`) || artifact.endsWith(`${phasePrefix2}-RESEARCH.md`) || artifact.endsWith(`${phasePrefix2}-UI-SPEC.md`) || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`) || artifact.endsWith("-PLAN.md") || artifact.endsWith("-SUMMARY.md") || artifact.endsWith(`${phasePrefix2}-VERIFICATION.md`) || artifact.endsWith(`${phasePrefix2}-UAT.md`)
   );
@@ -25534,6 +26090,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     );
   }
   warnings.push(...summaryWarnings, ...validationWarnings);
+  warnings.push(...planRoutingReadiness.warnings);
   const qualityGateEvaluation = await evaluatePhaseQualityGates({
     projectRoot,
     phaseNumber: normalizedPhase,
@@ -25584,7 +26141,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     verificationReadyForUat,
     hasUat,
     hasPlans,
+    planSetExecutionReady: planRoutingReadiness.executionReady,
     hasSummaries,
+    hasSavedSummaries,
     hasPendingExecution,
     codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
     requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
@@ -25950,7 +26509,10 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasContext && researchReady && uiReady && !args.phaseArtifacts.hasPlans && implementedCommands.has(planPhaseCommand)) {
     return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
   }
-  if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && implementedCommands.has(executePhaseCommand)) {
+  if (args.phaseArtifacts.hasPlans && !args.phaseArtifacts.planSetExecutionReady && args.phaseArtifacts.hasPendingExecution && !args.phaseArtifacts.hasSavedSummaries && implementedCommands.has(planPhaseCommand)) {
+    return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
+  }
+  if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && (args.phaseArtifacts.planSetExecutionReady || args.phaseArtifacts.hasSavedSummaries) && implementedCommands.has(executePhaseCommand)) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
   }
   const savedReviewRepairAction = args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
@@ -26068,7 +26630,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
   const requestedCurrentPhase = normalizeSelectedPhase(patch.currentPhase);
   const requestedCurrentPhaseExists = requestedCurrentPhase !== null && await phaseDirectoryExists(projectRoot, requestedCurrentPhase);
   const effectivePatchCurrentPhase = requestedCurrentPhaseExists ? requestedCurrentPhase : null;
-  const statePhaseIsAheadOfRoadmap = roadmapSignals.currentPhase !== null && existingState.currentPhase.length > 0 && comparePhaseNumbers(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
+  const statePhaseIsAheadOfRoadmap = roadmapSignals.currentPhase !== null && existingState.currentPhase.length > 0 && comparePhaseNumbers2(existingState.currentPhase, roadmapSignals.currentPhase) > 0;
   const patchedPhaseRoutingOverride = patch.activeCommand !== void 0 || patch.currentPhase !== void 0 ? resolvePatchedPhaseRoutingOverride({
     activeCommand: patch.activeCommand ?? existingState.activeCommand,
     currentPhase: effectivePatchCurrentPhase ?? normalizeSelectedPhase(existingState.currentPhase),
@@ -26211,7 +26773,7 @@ async function blueprintPauseHandoffWrite(args) {
   }
   const stateResult = await blueprintStateLoad({ cwd: projectRoot });
   const currentPhase2 = stateResult.derivedStatus.currentPhase ?? stateResult.state.currentPhase;
-  const phasePrefix2 = currentPhase2 ? formatPhasePrefix(currentPhase2) : null;
+  const phasePrefix2 = currentPhase2 ? formatPhasePrefix2(currentPhase2) : null;
   const reportSnapshot = {
     core: inspection.core.present,
     phaseArtifacts: phasePrefix2 === null ? [] : inspection.phases.filter(
@@ -26395,6 +26957,14 @@ async function blueprintStateUpdate(args = {}) {
     roadmapEvolutionNotes: sanitizedPatch.roadmapEvolutionNotes ?? currentState.roadmapEvolutionNotes,
     lastUpdated: sanitizedPatch.lastUpdated ?? (/* @__PURE__ */ new Date()).toISOString()
   };
+  const normalizedNextStateCurrentPhase = normalizeSelectedPhase(nextState.currentPhase);
+  if (normalizedNextStateCurrentPhase !== null) {
+    await assertCurrentPhaseContextPathExists({
+      projectRoot,
+      currentPhase: normalizedNextStateCurrentPhase,
+      nextAction: nextState.nextAction
+    });
+  }
   const updatedFields = [
     .../* @__PURE__ */ new Set([
       ...Object.keys(sanitizedPatch),
@@ -26443,6 +27013,7 @@ var init_state = __esm({
     init_artifacts();
     init_config();
     init_quality_gates();
+    init_phase_roadmap_parser();
     init_command_paths();
     init_security();
     PAUSE_WORK_CONTRACT = readArtifactContract("report.pause-work");
@@ -26566,287 +27137,6 @@ var init_state = __esm({
   }
 });
 
-// src/mcp/tools/phase-numbering.ts
-function normalizeBlueprintInput(value) {
-  if (typeof value === "number") {
-    return String(value);
-  }
-  const trimmed = value.trim();
-  const quoteMatch = trimmed.match(/^(['"])([\s\S]+)\1$/);
-  return quoteMatch ? quoteMatch[2].trim() : value;
-}
-function normalizePhaseNumber2(value) {
-  return normalizeBlueprintPhaseRef(normalizeBlueprintInput(value));
-}
-function basePhaseNumber(value) {
-  return normalizePhaseNumber2(value).split(".")[0] ?? normalizePhaseNumber2(value);
-}
-function comparePhaseNumbers2(left, right) {
-  const leftParts = normalizePhaseNumber2(left).split(".").map((segment) => Number.parseInt(segment, 10));
-  const rightParts = normalizePhaseNumber2(right).split(".").map((segment) => Number.parseInt(segment, 10));
-  const length = Math.max(leftParts.length, rightParts.length);
-  for (let index = 0; index < length; index += 1) {
-    const leftValue = leftParts[index] ?? 0;
-    const rightValue = rightParts[index] ?? 0;
-    if (leftValue !== rightValue) {
-      return leftValue - rightValue;
-    }
-  }
-  return 0;
-}
-function formatPhasePrefix2(value) {
-  return formatBlueprintPhasePrefix(normalizeBlueprintInput(value));
-}
-function extractPhaseNumberToken(value) {
-  const match = normalizeBlueprintInput(value).trim().match(/(\d+(?:\.\d+)?)/);
-  return match ? normalizePhaseNumber2(match[1]) : null;
-}
-function extractExactPhaseNumberToken(value) {
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? String(value) : null;
-  }
-  const trimmed = value.trim();
-  if (!/^\d+$/.test(trimmed)) {
-    return null;
-  }
-  return normalizePhaseNumber2(trimmed);
-}
-function isIntegerPhaseNumber(value) {
-  return !normalizePhaseNumber2(value).includes(".");
-}
-function slugToTitle(value) {
-  return value.split("-").filter((segment) => segment.length > 0).map((segment) => `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`).join(" ");
-}
-function normalizePhaseDescription(value) {
-  return value.trim().replace(/\s+/g, " ");
-}
-function slugifyPhaseName(value) {
-  const slug = value.normalize("NFKD").replace(/[^\w\s-]/g, "").toLowerCase().replace(/[_\s-]+/g, "-").replace(/^-+|-+$/g, "");
-  return slug.length > 0 ? slug : "new-phase";
-}
-var init_phase_numbering = __esm({
-  "src/mcp/tools/phase-numbering.ts"() {
-    "use strict";
-    init_security();
-  }
-});
-
-// src/mcp/tools/phase-roadmap-parser.ts
-function parseRequirements(value) {
-  if (!value) {
-    return [];
-  }
-  return value.split(",").map((entry) => entry.trim()).filter(
-    (entry) => entry.length > 0 && !["none", "none yet", "n/a", "not yet mapped"].includes(entry.toLowerCase())
-  );
-}
-function uniqueRequirements(values) {
-  return [...new Set(values)];
-}
-function extractDurableRequirementIds(value) {
-  return [...value.matchAll(/\b([A-Z][A-Z0-9-]*-\d+)\b/g)].map((match) => match[1] ?? "").filter((requirementId) => requirementId.length > 0);
-}
-function parseRoadmapRequirements(value) {
-  return uniqueRequirements(
-    parseRequirements(value).flatMap((entry) => {
-      const durableIds = extractDurableRequirementIds(entry);
-      return durableIds.length > 0 ? durableIds : [entry];
-    })
-  );
-}
-function extractRoadmapDetailRequirements(body) {
-  return uniqueRequirements(
-    body.replace(/\r\n/g, "\n").split("\n").flatMap((line) => {
-      const normalized = line.trim().replace(/^[-*+]\s+/, "").replace(/\*\*/g, "").trim();
-      const match = normalized.match(
-        /^(?:mapped\s+)?requirements?(?:\s+ids?)?\s*:\s*(.+)$/i
-      );
-      return match ? parseRoadmapRequirements(match[1] ?? null) : [];
-    })
-  );
-}
-function parseRoadmapPhaseTitle(value) {
-  const unbolded = value.trim().replace(/\*\*$/u, "").trim();
-  const requirementsMatch = unbolded.match(/\s*\(\s*Requirements:\s*([^)]+)\)\s*$/i);
-  if (!requirementsMatch) {
-    return {
-      phaseName: unbolded,
-      requirements: []
-    };
-  }
-  return {
-    phaseName: unbolded.slice(0, requirementsMatch.index).trim(),
-    requirements: parseRoadmapRequirements(requirementsMatch[1] ?? null)
-  };
-}
-function parseRoadmapPhaseLine(line) {
-  const match = line.match(
-    /^- \[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+(.+))?\s*$/
-  );
-  if (!match) {
-    return null;
-  }
-  const title = parseRoadmapPhaseTitle(match[3] ?? "");
-  return {
-    completed: (match[1] ?? "").toLowerCase() === "x",
-    phaseNumber: normalizePhaseNumber2(match[2] ?? ""),
-    phaseName: title.phaseName,
-    summary: match[4]?.trim() ?? null,
-    requirements: title.requirements
-  };
-}
-function parseRoadmapPhaseChildLines(lines) {
-  let goal = null;
-  const successCriteria = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const objectiveMatch = lines[index]?.match(/^\s+-\s+Objective:\s*(.+)$/i);
-    if (objectiveMatch) {
-      goal = objectiveMatch[1]?.trim() ?? null;
-      continue;
-    }
-    const successCriteriaMatch = lines[index]?.match(/^(\s*)-\s+Success Criteria:\s*(.*)$/i);
-    if (!successCriteriaMatch) {
-      continue;
-    }
-    const labelIndent = successCriteriaMatch[1]?.length ?? 0;
-    const inlineCriterion = successCriteriaMatch[2]?.trim() ?? "";
-    if (inlineCriterion.length > 0) {
-      successCriteria.push(inlineCriterion);
-    }
-    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
-      const nestedMatch = lines[nextIndex]?.match(/^(\s*)-\s+(.+)$/);
-      if (!nestedMatch || (nestedMatch[1]?.length ?? 0) <= labelIndent) {
-        break;
-      }
-      successCriteria.push(nestedMatch[2]?.trim() ?? "");
-      index = nextIndex;
-    }
-  }
-  return {
-    goal,
-    successCriteria: successCriteria.length > 0 ? successCriteria.filter((value) => value.length > 0).join("; ") : null
-  };
-}
-function parseSimpleMarkdownTableCells(line) {
-  const trimmed = line.trim();
-  if (!/^\|.*\|$/.test(trimmed)) {
-    return null;
-  }
-  return trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
-}
-function isSimpleMarkdownTableSeparator(cells) {
-  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
-}
-function normalizeRoadmapTableHeader(value) {
-  return value.replace(/[`*_]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-function isRoadmapPhaseTableHeader(value) {
-  return ["phase", "phase #", "phase number", "#"].includes(
-    normalizeRoadmapTableHeader(value)
-  );
-}
-function isRoadmapRequirementsTableHeader(value) {
-  return /^(?:mapped\s+)?requirements?(?:\s+ids?)?$/.test(
-    normalizeRoadmapTableHeader(value)
-  );
-}
-function extractRoadmapPhaseTableRequirements(raw) {
-  const requirementsByPhase = /* @__PURE__ */ new Map();
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const headers = parseSimpleMarkdownTableCells(lines[index] ?? "");
-    if (!headers) {
-      continue;
-    }
-    const separator = parseSimpleMarkdownTableCells(lines[index + 1] ?? "");
-    if (!separator || !isSimpleMarkdownTableSeparator(separator)) {
-      continue;
-    }
-    const phaseIndex = headers.findIndex(isRoadmapPhaseTableHeader);
-    const requirementsIndex = headers.findIndex(isRoadmapRequirementsTableHeader);
-    if (phaseIndex < 0 || requirementsIndex < 0) {
-      continue;
-    }
-    for (let rowIndex = index + 2; rowIndex < lines.length; rowIndex += 1) {
-      const cells = parseSimpleMarkdownTableCells(lines[rowIndex] ?? "");
-      if (!cells) {
-        break;
-      }
-      if (isSimpleMarkdownTableSeparator(cells)) {
-        continue;
-      }
-      const phaseNumber = extractPhaseNumberToken(cells[phaseIndex] ?? "");
-      const requirements = parseRoadmapRequirements(cells[requirementsIndex] ?? null);
-      if (!phaseNumber || requirements.length === 0) {
-        continue;
-      }
-      requirementsByPhase.set(phaseNumber, requirements);
-    }
-  }
-  return requirementsByPhase;
-}
-function parseRoadmapDocument(raw) {
-  const milestone2 = raw.match(/- Active milestone:\s*(.+)$/m)?.[1]?.trim() ?? null;
-  const tableRequirements = extractRoadmapPhaseTableRequirements(raw);
-  const details = /* @__PURE__ */ new Map();
-  for (const block of raw.split(/^### Phase /gm).slice(1)) {
-    const newlineIndex = block.indexOf("\n");
-    const header = newlineIndex === -1 ? block.trim() : block.slice(0, newlineIndex).trim();
-    const body = newlineIndex === -1 ? "" : block.slice(newlineIndex + 1);
-    const headerMatch = header.match(/^(\d+(?:\.\d+)?): (.+)$/);
-    if (!headerMatch) {
-      continue;
-    }
-    const phaseNumber = normalizePhaseNumber2(headerMatch[1]);
-    const goal = body.match(/^\*\*Goal\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
-    const successCriteria = body.match(/^\*\*Success Criteria\*\*:\s*(.+)$/m)?.[1]?.trim() ?? null;
-    const requirements = extractRoadmapDetailRequirements(body);
-    details.set(phaseNumber, { goal, successCriteria, requirements });
-  }
-  const phases = [];
-  const lines = raw.replace(/\r\n/g, "\n").split("\n");
-  for (let index = 0; index < lines.length; index += 1) {
-    const inlinePhase = parseRoadmapPhaseLine(lines[index] ?? "");
-    if (!inlinePhase) {
-      continue;
-    }
-    const childLines = [];
-    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
-      const nextLine = lines[nextIndex] ?? "";
-      if (parseRoadmapPhaseLine(nextLine) || /^#{1,6}\s+/.test(nextLine)) {
-        break;
-      }
-      if (nextLine.trim().length === 0 || /^\s+-\s+/.test(nextLine)) {
-        childLines.push(nextLine);
-        index = nextIndex;
-        continue;
-      }
-      break;
-    }
-    const phaseNumber = inlinePhase.phaseNumber;
-    const phaseChildren = parseRoadmapPhaseChildLines(childLines);
-    const detail = details.get(phaseNumber);
-    const requirements = detail && detail.requirements.length > 0 ? detail.requirements : inlinePhase.requirements.length > 0 ? inlinePhase.requirements : tableRequirements.get(phaseNumber) ?? [];
-    phases.push({
-      phaseNumber,
-      phasePrefix: formatPhasePrefix2(phaseNumber),
-      phaseName: inlinePhase.phaseName,
-      completed: inlinePhase.completed,
-      summary: inlinePhase.summary,
-      goal: detail ? detail.goal : phaseChildren.goal,
-      successCriteria: detail ? detail.successCriteria : phaseChildren.successCriteria,
-      requirements
-    });
-  }
-  return { milestone: milestone2, phases };
-}
-var init_phase_roadmap_parser = __esm({
-  "src/mcp/tools/phase-roadmap-parser.ts"() {
-    "use strict";
-    init_phase_numbering();
-  }
-});
-
 // src/mcp/tools/phase-checkpoint-records.ts
 function ensureCheckpointObject(checkpoint, checkpointPath) {
   if (typeof checkpoint !== "object" || checkpoint === null || Array.isArray(checkpoint)) {
@@ -26860,7 +27150,9 @@ function ensureCheckpointForPersistence(checkpoint, checkpointPath) {
   );
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue2) => issue2.message).join("; ");
-    throw new Error(`${checkpointPath} must contain a structured discuss checkpoint. ${issues}`);
+    throw new Error(
+      `${checkpointPath} must contain a structured checkpoint v2 object. ${issues}`
+    );
   }
   return parsed.data;
 }
@@ -26868,18 +27160,19 @@ function checkpointStringField(record2, key) {
   const value = record2[key];
   return typeof value === "string" && value.trim() ? value : null;
 }
-function checkpointResumeMeta(record2) {
-  const resumeMeta = record2.resumeMeta;
-  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
-    return null;
-  }
-  return resumeMeta;
-}
 function checkpointOwnerCommand(record2) {
   return checkpointStringField(record2, "ownerCommand");
 }
 function checkpointResumeMode(record2) {
-  return checkpointStringField(checkpointResumeMeta(record2) ?? {}, "mode") ?? checkpointStringField(record2, "mode");
+  const topLevelMode = checkpointStringField(record2, "mode");
+  if (topLevelMode) {
+    return topLevelMode;
+  }
+  const resumeMeta = record2.resumeMeta;
+  if (typeof resumeMeta !== "object" || resumeMeta === null || Array.isArray(resumeMeta)) {
+    return null;
+  }
+  return checkpointStringField(resumeMeta, "mode");
 }
 function isKnownCheckpointOwnerCommand(value) {
   return value !== null && PHASE_CHECKPOINT_OWNER_COMMANDS.includes(value);
@@ -26904,10 +27197,16 @@ function checkpointOwnershipBlockerReason(checkpointPath, warnings, action) {
 function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwnerCommand, expectedMode) {
   const ownerCommand = checkpointOwnerCommand(checkpoint);
   const resumeMode = checkpointResumeMode(checkpoint);
+  const parsed = phaseCheckpointWriteSchema.safeParse(checkpoint);
   const warnings = [];
+  if (!parsed.success) {
+    warnings.push(
+      `${checkpointPath} is not a valid checkpoint v2 object; treating it as non-resumable evidence.`
+    );
+  }
   if (!ownerCommand) {
     warnings.push(
-      `${checkpointPath} does not declare ownerCommand; treating it as a legacy checkpoint.`
+      `${checkpointPath} does not declare ownerCommand; treating it as non-resumable legacy checkpoint evidence.`
     );
   } else if (!isKnownCheckpointOwnerCommand(ownerCommand)) {
     warnings.push(`${checkpointPath} declares unknown ownerCommand "${ownerCommand}".`);
@@ -26915,11 +27214,11 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   if (!resumeMode) {
     warnings.push(`${checkpointPath} does not declare a resumable mode.`);
   } else if (!isKnownCheckpointResumeMode(resumeMode)) {
-    warnings.push(`${checkpointPath} declares unknown resumeMeta.mode "${resumeMode}".`);
+    warnings.push(`${checkpointPath} declares unknown mode "${resumeMode}".`);
   }
   if (isKnownCheckpointOwnerCommand(ownerCommand) && isKnownCheckpointResumeMode(resumeMode) && PHASE_CHECKPOINT_OWNER_MODES[ownerCommand] !== resumeMode) {
     warnings.push(
-      `${checkpointPath} ownerCommand "${ownerCommand}" does not match resumeMeta.mode "${resumeMode}".`
+      `${checkpointPath} ownerCommand "${ownerCommand}" does not match mode "${resumeMode}".`
     );
   }
   if (expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand) {
@@ -26929,7 +27228,7 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   }
   if (expectedMode && resumeMode && resumeMode !== expectedMode) {
     warnings.push(
-      `${checkpointPath} has resumeMeta.mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
+      `${checkpointPath} has mode "${resumeMode}", not "${expectedMode}"; do not resume it for this command.`
     );
   }
   const hasForeignOwner = Boolean(expectedOwnerCommand && ownerCommand && ownerCommand !== expectedOwnerCommand);
@@ -26943,11 +27242,11 @@ function evaluateCheckpointResumeSafety(checkpoint, checkpointPath, expectedOwne
   return {
     ownerCommand,
     resumeMode,
-    safeToResume: !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
+    safeToResume: parsed.success && !hasForeignOwner && !hasForeignMode && !hasUnknownOwner && !hasUnknownMode && !missingExpectedMode && !ownerModeMismatch,
     warnings
   };
 }
-var PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointResumeMetaSchema, phaseCheckpointWriteSchema;
+var PHASE_CHECKPOINT_OWNER_COMMANDS, PHASE_CHECKPOINT_RESUME_MODES, PHASE_CHECKPOINT_OWNER_MODES, phaseCheckpointDecisionSchema, phaseCheckpointDeferredIdeaSchema, phaseCheckpointReferenceSchema, phaseCheckpointAreaSchema, checkpointProgressSchema, checkpointCarryForwardSchema, checkpointReadSetSchema, researchLedgerSchema, phaseCheckpointOwnerCommandSchema, phaseCheckpointResumeModeSchema, phaseCheckpointBaseSchema, discussCheckpointWriteSchema, researchCheckpointWriteSchema, phaseCheckpointWriteSchema;
 var init_phase_checkpoint_records = __esm({
   "src/mcp/tools/phase-checkpoint-records.ts"() {
     "use strict";
@@ -26976,50 +27275,50 @@ var init_phase_checkpoint_records = __esm({
       target: string2().min(1),
       note: string2().min(1).optional()
     }).catchall(unknown());
+    phaseCheckpointAreaSchema = object2({
+      areaId: string2().min(1),
+      title: string2().min(1),
+      state: _enum(["questioning", "assumed", "decided", "blocked", "needs-revisit", "unseen"]),
+      decisionIds: array(string2().min(1)).optional(),
+      evidenceRefs: array(string2().min(1)).optional(),
+      downstreamConsumers: array(string2().min(1)).optional(),
+      currentQuestion: string2().min(1).optional(),
+      questionWhyItMatters: string2().min(1).optional(),
+      lastUserAnswer: unknown().optional(),
+      blockingReason: string2().min(1).optional(),
+      resolutionCriterion: string2().min(1).optional()
+    }).catchall(unknown());
+    checkpointProgressSchema = object2({}).catchall(unknown());
+    checkpointCarryForwardSchema = object2({}).catchall(unknown());
+    checkpointReadSetSchema = array(unknown());
+    researchLedgerSchema = object2({
+      schemaVersion: literal("research-ledger/v1"),
+      strands: array(object2({}).catchall(unknown()))
+    }).catchall(unknown());
     phaseCheckpointOwnerCommandSchema = _enum(PHASE_CHECKPOINT_OWNER_COMMANDS);
     phaseCheckpointResumeModeSchema = _enum(PHASE_CHECKPOINT_RESUME_MODES);
-    phaseCheckpointResumeMetaSchema = object2({
-      mode: phaseCheckpointResumeModeSchema,
-      pendingTopics: array(string2().min(1)),
-      completedTopics: array(string2().min(1)),
-      currentQuestion: string2().min(1).optional(),
-      notes: array(string2().min(1)),
-      resumeHint: string2().min(1).optional(),
-      updatedAt: string2().min(1)
-    }).catchall(unknown());
-    phaseCheckpointWriteSchema = object2({
+    phaseCheckpointBaseSchema = object2({
+      schemaVersion: literal(2),
       ownerCommand: phaseCheckpointOwnerCommandSchema,
-      completedAreas: array(string2().min(1)),
-      remainingAreas: array(string2().min(1)),
-      decisions: array(phaseCheckpointDecisionSchema),
-      deferredIdeas: array(phaseCheckpointDeferredIdeaSchema),
-      canonicalReferences: array(phaseCheckpointReferenceSchema),
-      resumeMeta: phaseCheckpointResumeMetaSchema
-    }).catchall(unknown()).superRefine((value, context) => {
-      const requiredSections = [
-        "ownerCommand",
-        "completedAreas",
-        "remainingAreas",
-        "decisions",
-        "deferredIdeas",
-        "canonicalReferences",
-        "resumeMeta"
-      ];
-      if (!requiredSections.every((key) => key in value)) {
-        context.addIssue({
-          code: "custom",
-          message: "Checkpoint writes must include ownerCommand, completedAreas, remainingAreas, decisions, deferredIdeas, canonicalReferences, and resumeMeta."
-        });
-      }
-      const expectedMode = PHASE_CHECKPOINT_OWNER_MODES[value.ownerCommand];
-      if (expectedMode && value.resumeMeta.mode !== expectedMode) {
-        context.addIssue({
-          code: "custom",
-          path: ["resumeMeta", "mode"],
-          message: `${value.ownerCommand} checkpoints must use resumeMeta.mode "${expectedMode}".`
-        });
-      }
+      mode: phaseCheckpointResumeModeSchema
     });
+    discussCheckpointWriteSchema = phaseCheckpointBaseSchema.extend({
+      ownerCommand: literal("/blu-discuss-phase"),
+      mode: literal("discuss"),
+      progress: checkpointProgressSchema,
+      areaQueue: array(phaseCheckpointAreaSchema),
+      carryForward: checkpointCarryForwardSchema,
+      readSet: checkpointReadSetSchema
+    }).catchall(unknown());
+    researchCheckpointWriteSchema = phaseCheckpointBaseSchema.extend({
+      ownerCommand: literal("/blu-research-phase"),
+      mode: literal("research"),
+      researchLedger: researchLedgerSchema
+    }).catchall(unknown());
+    phaseCheckpointWriteSchema = union([
+      discussCheckpointWriteSchema,
+      researchCheckpointWriteSchema
+    ]);
   }
 });
 
@@ -27316,7 +27615,7 @@ async function findPhaseDirectory(projectRoot, phaseNumber) {
     };
   }
   const entries = await fs3.readdir(phasesRoot, { withFileTypes: true });
-  const target = normalizePhaseNumber2(phaseNumber);
+  const target = normalizePhaseNumber(phaseNumber);
   const matches = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((directoryName) => {
     const prefix = extractPhaseNumberToken(directoryName);
     return prefix === target;
@@ -28805,11 +29104,121 @@ function countPhaseValidationDiagnostics(diagnostics) {
 function formatPhaseValidationDiagnostic(diagnostic) {
   return `${diagnostic.source}:${diagnostic.path}:${diagnostic.code}: ${diagnostic.message} Suggestion: ${diagnostic.suggestion}`;
 }
-function schemaDiagnosticFromPhaseValidationAjvError(error2) {
+function phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model) {
+  const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
+  const gateState = getValueAtJsonPointer(model, "/gateState");
+  const status = getValueAtJsonPointer(model, "/status");
+  const nextSafeAction = getValueAtJsonPointer(model, "/nextSafeAction");
+  const readyAction = typeof runtimeContext?.readyAction === "string" ? runtimeContext.readyAction : null;
+  const repairActions = Array.isArray(runtimeContext?.repairActions) ? runtimeContext.repairActions.filter((value) => typeof value === "string") : [];
+  const completeAction = typeof runtimeContext?.completeAction === "string" ? runtimeContext.completeAction : null;
+  const continuationActions = Array.isArray(runtimeContext?.continuationActions) ? runtimeContext.continuationActions.filter((value) => typeof value === "string") : [];
+  if (pathValue === "model.nextSafeAction" && (error2.keyword === "const" || error2.keyword === "enum")) {
+    if (gateState === "PASS" && readyAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When gateState is PASS, model.nextSafeAction must be ${readyAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: readyAction
+        },
+        suggestion: `Set model.nextSafeAction to ${readyAction}.`
+      });
+    }
+    if ((gateState === "PARTIAL" || gateState === "BLOCKED") && repairActions.length > 0) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When gateState is ${gateState}, model.nextSafeAction must be one of: ${repairActions.join(", ")}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          allowedActions: repairActions
+        },
+        suggestion: `Set model.nextSafeAction to one of: ${repairActions.join(", ")}.`
+      });
+    }
+    if (status === "PASS" && completeAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When status is PASS, model.nextSafeAction must be ${completeAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: completeAction
+        },
+        suggestion: `Set model.nextSafeAction to ${completeAction}.`
+      });
+    }
+    if ((status === "FAIL" || status === "PARTIAL") && continuationActions.length > 0) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: pathValue,
+        code: `schema.${error2.keyword}`,
+        message: `When status is ${status}, model.nextSafeAction must be one of: ${continuationActions.join(", ")}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          allowedActions: continuationActions
+        },
+        suggestion: `Set model.nextSafeAction to one of: ${continuationActions.join(", ")}.`
+      });
+    }
+  }
+  if (error2.keyword === "if") {
+    if (gateState === "PASS" && readyAction && nextSafeAction !== readyAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: "model.nextSafeAction",
+        code: "schema.if",
+        message: `PASS verification models must route to ${readyAction} before UAT.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: readyAction
+        },
+        suggestion: `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
+      });
+    }
+    if (status === "PASS" && completeAction && nextSafeAction !== completeAction) {
+      return phaseValidationDiagnostic({
+        source: "schema",
+        path: "model.nextSafeAction",
+        code: "schema.if",
+        message: `PASS UAT models must route to ${completeAction}.`,
+        context: {
+          keyword: error2.keyword,
+          params: error2.params,
+          schemaPath: error2.schemaPath,
+          expectedAction: completeAction
+        },
+        suggestion: `Keep PASS-only UAT gap rows empty, then set model.nextSafeAction to ${completeAction}.`
+      });
+    }
+  }
+  return null;
+}
+function schemaDiagnosticFromPhaseValidationAjvError(error2, taskSchema, model) {
   const missingProperty = typeof error2.params === "object" && error2.params !== null && "missingProperty" in error2.params && typeof error2.params.missingProperty === "string" ? error2.params.missingProperty : null;
   const additionalProperty = typeof error2.params === "object" && error2.params !== null && "additionalProperty" in error2.params && typeof error2.params.additionalProperty === "string" ? error2.params.additionalProperty : null;
   const basePath = ajvInstancePathToModelPath(error2.instancePath);
   const pathValue = missingProperty !== null ? `${basePath}.${missingProperty}` : additionalProperty !== null ? `${basePath}.${additionalProperty}` : basePath;
+  const routeDiagnostic = phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model);
+  if (routeDiagnostic) {
+    return routeDiagnostic;
+  }
+  const allowedValues = ajvAllowedValues(error2);
   return phaseValidationDiagnostic({
     source: "schema",
     path: pathValue,
@@ -28818,9 +29227,10 @@ function schemaDiagnosticFromPhaseValidationAjvError(error2) {
     context: {
       keyword: error2.keyword,
       params: error2.params,
-      schemaPath: error2.schemaPath
+      schemaPath: error2.schemaPath,
+      allowedValues
     },
-    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
+    suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_validation_authoring_context."
   });
 }
 function collectModelStringEntries(value, pathValue = "model") {
@@ -28918,6 +29328,7 @@ function phaseValidationResidualDiagnostics(model, modelContract, artifact) {
 var init_phase_validation_diagnostics = __esm({
   "src/mcp/tools/phase-validation-diagnostics.ts"() {
     "use strict";
+    init_phase_json_helpers();
     init_phase_schema_paths();
     init_phase_validation_contracts();
   }
@@ -29064,6 +29475,15 @@ var init_phase_plan_rendering = __esm({
 function renderContextBulletList(items) {
   return items.map((item) => `- ${item}`).join("\n");
 }
+function renderContextOptionalBulletList(items, options) {
+  if (items.length === 0) {
+    return "- none";
+  }
+  if (options?.allowNoneAlias && items.length === 1 && items[0].trim().toLowerCase() === "none") {
+    return "- none";
+  }
+  return renderContextBulletList(items);
+}
 function renderContextTable(headers, rows) {
   return [
     `| ${headers.map(markdownTableCell).join(" | ")} |`,
@@ -29072,7 +29492,6 @@ function renderContextTable(headers, rows) {
   ].join("\n");
 }
 function renderPhaseContextModelContent(args) {
-  const openQuestions = args.model.openQuestions.length === 1 && args.model.openQuestions[0].trim().toLowerCase() === "none" ? "- none" : renderContextBulletList(args.model.openQuestions);
   return `# Phase ${args.resolved.phasePrefix}: ${args.resolved.phaseName} - Context
 
 ## Phase Boundary
@@ -29115,19 +29534,19 @@ ${renderContextBulletList(args.model.existingCodeInsights)}
 ## Dependencies
 
 - Prior phase artifacts:
-${renderContextBulletList(args.model.dependencies.priorPhaseArtifacts)}
+${renderContextOptionalBulletList(args.model.dependencies.priorPhaseArtifacts)}
 - External constraints:
-${renderContextBulletList(args.model.dependencies.externalConstraints)}
+${renderContextOptionalBulletList(args.model.dependencies.externalConstraints)}
 - Required follow-up reads:
 ${renderContextBulletList(args.model.dependencies.requiredFollowUpReads)}
 
 ## Open Questions
 
-${openQuestions}
+${renderContextOptionalBulletList(args.model.openQuestions, { allowNoneAlias: true })}
 
 ## Deferred Ideas
 
-${renderContextBulletList(args.model.deferredIdeas)}
+${renderContextOptionalBulletList(args.model.deferredIdeas)}
 
 ## Canonical References
 
@@ -29176,7 +29595,7 @@ function validatePhaseContextModelInput(model) {
               code: `schema.${error2.keyword}`,
               message: `phase.context model schema violation at ${pathValue}: ${error2.message ?? error2.keyword}.`,
               missing: missingProperty ? [missingProperty] : void 0,
-              repair: "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.",
+              repair: phaseContextModelSchemaRepair(error2.keyword, pathValue, missingProperty),
               retryable: true,
               nextTool: "blueprint_phase_artifact_write"
             };
@@ -29196,10 +29615,80 @@ function validatePhaseContextModelInput(model) {
       }
     };
   }
+  diagnostics.push(
+    ...phaseContextModelSentinelDiagnostics(
+      modelObject
+    )
+  );
+  if (diagnostics.length > 0) {
+    return {
+      model: null,
+      validation: {
+        valid: false,
+        issues: diagnostics.map((diagnostic) => diagnostic.message),
+        warnings: [],
+        diagnostics
+      }
+    };
+  }
   return {
     model: modelObject,
     validation: null
   };
+}
+function phaseContextModelSchemaRepair(keyword, pathValue, missingProperty) {
+  if (keyword === "required" && missingProperty) {
+    return `Add ${pathValue} using the phase.context model contract before retrying.`;
+  }
+  if (keyword === "type") {
+    return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
+  }
+  if (keyword === "minItems") {
+    if (pathValue === "model.openQuestions") {
+      return 'Use openQuestions: ["none"] or openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel.';
+    }
+    if (pathValue === "model.deferredIdeas") {
+      return "Use deferredIdeas: [] when nothing is deferred; MCP renders the canonical - none sentinel.";
+    }
+    return `Populate ${pathValue} with at least one substantive item required by phase.context.modelContract.`;
+  }
+  if (keyword === "additionalProperties") {
+    return `Remove unsupported field ${pathValue}; MCP owns identity, artifact kind, paths, and final Markdown persistence.`;
+  }
+  return "Repair the structured phase.context model against contract.modelContract.jsonSchema before retrying.";
+}
+function phaseContextModelSentinelDiagnostics(model) {
+  const diagnostics = [];
+  const aliasSensitiveFields = [
+    {
+      path: "model.dependencies.priorPhaseArtifacts",
+      items: model.dependencies.priorPhaseArtifacts,
+      repair: 'Use dependencies.priorPhaseArtifacts: [] when no prior artifacts apply; do not pass ["none"] as model content.'
+    },
+    {
+      path: "model.dependencies.externalConstraints",
+      items: model.dependencies.externalConstraints,
+      repair: 'Use dependencies.externalConstraints: [] when no external constraints apply; do not pass ["none"] as model content.'
+    },
+    {
+      path: "model.deferredIdeas",
+      items: model.deferredIdeas,
+      repair: 'Use deferredIdeas: [] when nothing is deferred; do not pass ["none"] as model content.'
+    }
+  ];
+  for (const field of aliasSensitiveFields) {
+    if (field.items.length === 1 && field.items[0].trim().toLowerCase() === "none") {
+      diagnostics.push({
+        path: field.path,
+        code: "schema.none_alias_forbidden",
+        message: `phase.context model field ${field.path} must use an empty array for the canonical none state; ["none"] is reserved for Open Questions compatibility only.`,
+        repair: field.repair,
+        retryable: true,
+        nextTool: "blueprint_phase_artifact_write"
+      });
+    }
+  }
+  return diagnostics;
 }
 var init_phase_context_model = __esm({
   "src/mcp/tools/phase-context-model.ts"() {
@@ -29242,6 +29731,21 @@ function countPhasePlanDiagnostics(diagnostics) {
   }
   return counts;
 }
+function isBlockingPhasePlanDiagnostic(diagnostic) {
+  return diagnostic.severity !== "warning";
+}
+function partitionPhasePlanDiagnostics(diagnostics) {
+  const blocking = [];
+  const warnings = [];
+  for (const diagnostic of diagnostics) {
+    if (isBlockingPhasePlanDiagnostic(diagnostic)) {
+      blocking.push(diagnostic);
+    } else {
+      warnings.push(diagnostic);
+    }
+  }
+  return { blocking, warnings };
+}
 function summarizePhasePlanRepairs(diagnostics) {
   const firstPassActions = uniquePreservingOrder(
     diagnostics.map((diagnostic) => diagnostic.repairAction ?? "replace")
@@ -29251,7 +29755,7 @@ function summarizePhasePlanRepairs(diagnostics) {
   );
   const retryInstruction = diagnostics.length === 0 ? "No repair is required; the model is ready to render." : reReadAuthoringContext ? "Re-read blueprint_phase_plan_authoring_context, repair every diagnostic in the returned model, then retry validation once." : "Repair every diagnostic in the returned model before retrying validation once.";
   return {
-    blockingCount: diagnostics.filter((diagnostic) => diagnostic.severity !== "warning").length,
+    blockingCount: diagnostics.filter(isBlockingPhasePlanDiagnostic).length,
     firstPassActions,
     reReadAuthoringContext,
     retryInstruction
@@ -29318,6 +29822,11 @@ function schemaDiagnosticFromAjvError(error2, model) {
     patchHint,
     suggestion: missingProperty !== null ? `Add required field ${missingProperty}.` : additionalProperty !== null ? `Remove unsupported field ${additionalProperty}.` : allowedValues && allowedValues.length > 0 ? `Replace the value at ${pathValue} with one of: ${allowedValues.join(", ")}.` : "Revise the model to satisfy the narrowed task schema returned by blueprint_phase_plan_authoring_context."
   });
+}
+function isExactCoverageConstFallout(error2) {
+  return error2.keyword === "const" && /^#\/properties\/(?:requirementCoverage|evidenceCoverage)\/allOf\/\d+\/contains\/properties\/(?:requirement|artifact)\/const$/.test(
+    error2.schemaPath
+  );
 }
 function schemaDiagnosticFromPhasePlanAjvError(error2, taskSchema, model) {
   const runtimeContext = asJsonObject(taskSchema["x-blueprint-runtimeContext"]);
@@ -29464,14 +29973,12 @@ __export(phase_exports, {
 import { promises as fs4 } from "node:fs";
 import path7 from "node:path";
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
-  const phasePrefix2 = formatPhasePrefix2(phaseNumber);
+  const phasePrefix2 = formatPhasePrefix(phaseNumber);
   const normalizedPhaseName = normalizePhaseDescription(phaseName);
   return `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(normalizedPhaseName)}`;
 }
 function nextIntegerPhaseNumber(phases) {
-  const basePhaseNumbers = phases.map((phase) => phase.phaseNumber).map((phaseNumber) => phaseNumber.split(".")[0] ?? phaseNumber).map((phaseNumber) => Number.parseInt(phaseNumber, 10)).filter((phaseNumber) => !Number.isNaN(phaseNumber));
-  const maxIntegerPhase = basePhaseNumbers.length === 0 ? 0 : Math.max(...basePhaseNumbers);
-  return String(maxIntegerPhase + 1);
+  return computeNextWholePhaseNumber(phases);
 }
 function normalizedPhaseText(value) {
   return normalizePhaseDescription(value ?? "").toLowerCase();
@@ -29556,14 +30063,18 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phaseName: phase.phaseName,
     slug: slugifyPhaseName(phase.phaseName),
     phaseDir,
+    contextPath: buildArtifactPath(phaseDir, phase.phasePrefix, "-CONTEXT.md"),
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
+    requirementValidationStatus: auditBackedDetails.repairRequirementIds?.length ? "traceability-repaired" : "declared",
+    createdPhaseDir: phaseDirState.created,
+    idempotencyStatus: "reused-existing-phase",
     written: true,
     warnings
   };
 }
 function previousIntegerPhaseNumber(value) {
-  const normalizedPhaseNumber = normalizePhaseNumber2(value);
+  const normalizedPhaseNumber = normalizePhaseNumber(value);
   if (!isIntegerPhaseNumber(normalizedPhaseNumber)) {
     return null;
   }
@@ -29571,7 +30082,7 @@ function previousIntegerPhaseNumber(value) {
   return previousPhaseNumber > 0 ? String(previousPhaseNumber) : null;
 }
 function nextDecimalPhaseNumber(phases, afterPhaseNumber) {
-  const normalizedAfterPhase = normalizePhaseNumber2(afterPhaseNumber);
+  const normalizedAfterPhase = normalizePhaseNumber(afterPhaseNumber);
   const decimalMatcher = new RegExp(`^${escapeForRegex2(normalizedAfterPhase)}\\.(\\d+)$`);
   const suffixes = phases.map((phase) => phase.phaseNumber).map((phaseNumber) => phaseNumber.match(decimalMatcher)?.[1] ?? null).filter((suffix) => suffix !== null).map((suffix) => Number.parseInt(suffix, 10)).filter((suffix) => !Number.isNaN(suffix));
   const nextSuffix = suffixes.length === 0 ? 1 : Math.max(...suffixes) + 1;
@@ -29707,7 +30218,7 @@ function splitRoadmapPhaseListBlocks(body) {
   return blocks;
 }
 function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phaseName, options) {
-  const normalizedAnchor = normalizePhaseNumber2(insertAfterPhaseNumber);
+  const normalizedAnchor = normalizePhaseNumber(insertAfterPhaseNumber);
   const phaseBlock = buildRoadmapPhaseListBlock({
     phaseNumber,
     phaseName,
@@ -29728,7 +30239,7 @@ function insertPhaseLineToRoadmap(raw, insertAfterPhaseNumber, phaseNumber, phas
     const anchorIndex = blocks.findIndex((block) => {
       const firstLine = block.split("\n")[0] ?? "";
       const match = firstLine.match(/^- \[[ xX]\] (?:\*\*)?Phase (\d+(?:\.\d+)?): [^\n]+$/);
-      return match ? normalizePhaseNumber2(match[1]) === normalizedAnchor : false;
+      return match ? normalizePhaseNumber(match[1]) === normalizedAnchor : false;
     });
     if (anchorIndex === -1) {
       return `${header}${body}`;
@@ -29858,6 +30369,33 @@ function parseRequirementTableRow(line) {
 function renderRequirementTableRow(row) {
   return `| ${row.id} | ${row.requirement} | ${row.status} | ${row.notes} |`;
 }
+async function readRequirementTable(projectRoot, options) {
+  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
+  if (!await pathExists(requirementsPath)) {
+    throw new Error(options.missingFileMessage);
+  }
+  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
+  const requirementsSectionMatch = rawRequirements.match(REQUIREMENTS_TABLE_SECTION_PATTERN);
+  if (!requirementsSectionMatch) {
+    throw new Error(options.malformedMessage);
+  }
+  const rows = requirementsSectionMatch[2].split("\n").map((line) => parseRequirementTableRow(line)).filter((row) => row !== null);
+  return {
+    rawRequirements,
+    rows
+  };
+}
+function findUndeclaredRequirementIds(rows, requirementIds) {
+  const declaredRequirementIds = new Set(rows.map((row) => row.id));
+  return requirementIds.filter((requirementId) => !declaredRequirementIds.has(requirementId));
+}
+async function requireDeclaredRequirementIds(projectRoot, requirementIds, options) {
+  const { rows } = await readRequirementTable(projectRoot, options);
+  const undeclaredRequirementIds = findUndeclaredRequirementIds(rows, requirementIds);
+  if (undeclaredRequirementIds.length > 0) {
+    throw new Error(options.undeclaredMessage(undeclaredRequirementIds));
+  }
+}
 async function repairRequirementsTraceability(projectRoot, requirementIds, phaseNumber, phaseName, sourceReportPath) {
   const normalizedRequirementIds = [
     ...new Set(requirementIds.map((value) => value.trim()).filter((value) => value.length > 0))
@@ -29868,25 +30406,16 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
       warnings: []
     };
   }
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-  if (!await pathExists(requirementsPath)) {
-    throw new Error(
-      `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
-    );
-  }
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot repair requirement traceability because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Malformed ${BLUEPRINT_DIR}/REQUIREMENTS.md: missing a usable "## Requirements Table" section.`
+  });
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const noteSource = sourceReportPath?.trim() || "the milestone audit report";
   let updated = false;
   const reassignmentNote = `Reassigned to Phase ${phaseNumber} (${phaseName}) from ${noteSource}.`;
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
       const nextBody = body.split("\n").map((line) => {
         const row = parseRequirementTableRow(line);
@@ -29927,23 +30456,20 @@ async function repairRequirementsTraceability(projectRoot, requirementIds, phase
 }
 async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phaseNumber, phaseName) {
   const normalizedRequirementIds = normalizeRoadmapDetailList(requirementIds);
-  const requirementsPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/REQUIREMENTS.md`);
-  if (!await pathExists(requirementsPath)) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`
-    );
-  }
-  const rawRequirements = await fs4.readFile(requirementsPath, "utf8");
-  const requirementsSectionPattern = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
-  if (!requirementsSectionPattern.test(rawRequirements)) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
-    );
-  }
+  await requireDeclaredRequirementIds(projectRoot, normalizedRequirementIds, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+    undeclaredMessage: (undeclaredRequirementIds) => `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+  });
+  const { rawRequirements } = await readRequirementTable(projectRoot, {
+    missingFileMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+    malformedMessage: `Cannot insert Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`
+  });
   const remainingRequirementIds = new Set(normalizedRequirementIds);
   const mappingNote = `Mapped to inserted Phase ${phaseNumber} (${phaseName}).`;
+  let mappingUpdated = false;
   const content = rawRequirements.replace(
-    requirementsSectionPattern,
+    REQUIREMENTS_TABLE_SECTION_PATTERN,
     (_full, header, body) => {
       const nextBody = body.split("\n").map((line) => {
         const row = parseRequirementTableRow(line);
@@ -29956,6 +30482,7 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
         if (nextNotes === row.notes) {
           return line;
         }
+        mappingUpdated = true;
         return renderRequirementTableRow({
           ...row,
           notes: nextNotes
@@ -29965,15 +30492,9 @@ async function mapRequirementsToInsertedPhase(projectRoot, requirementIds, phase
 `;
     }
   );
-  if (remainingRequirementIds.size > 0) {
-    throw new Error(
-      `Cannot insert Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${[
-        ...remainingRequirementIds
-      ].join(", ")}`
-    );
-  }
   return {
     content,
+    mappingStatus: mappingUpdated ? "updated" : "unchanged",
     warnings: []
   };
 }
@@ -30042,7 +30563,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
   if (!phaseDetailsSectionPattern.test(raw)) {
     return appendPhaseDetailsSection(raw, detailBlock);
   }
-  const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber2(value)));
+  const phaseGroupSet = new Set(phaseGroupNumbers.map((value) => normalizePhaseNumber(value)));
   let inserted = false;
   const content = raw.replace(
     phaseDetailsSectionPattern,
@@ -30051,7 +30572,7 @@ function insertPhaseDetailsToRoadmap(raw, phaseGroupNumbers, phaseNumber, phaseN
       let insertIndex = -1;
       for (let index = blocks.length - 1; index >= 0; index -= 1) {
         const blockMatch = blocks[index]?.match(/^### Phase (\d+(?:\.\d+)?): /m);
-        const blockPhaseNumber = blockMatch ? normalizePhaseNumber2(blockMatch[1]) : null;
+        const blockPhaseNumber = blockMatch ? normalizePhaseNumber(blockMatch[1]) : null;
         if (blockPhaseNumber && phaseGroupSet.has(blockPhaseNumber)) {
           insertIndex = index + 1;
           break;
@@ -30092,7 +30613,7 @@ function removePhaseLineFromRoadmap(raw, phaseNumber) {
     const nextBlocks = blocks.filter((block) => {
       const firstLine = block.split("\n")[0] ?? "";
       const match = firstLine.match(/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+[^\n]+$/);
-      if (match && normalizePhaseNumber2(match[1]) === phaseNumber) {
+      if (match && normalizePhaseNumber(match[1]) === phaseNumber) {
         removed = true;
         return false;
       }
@@ -30124,7 +30645,7 @@ function removePhaseDetailsFromRoadmap(raw, phaseNumber) {
         if (!match) {
           return true;
         }
-        if (normalizePhaseNumber2(match[1]) === phaseNumber) {
+        if (normalizePhaseNumber(match[1]) === phaseNumber) {
           removed = true;
           return false;
         }
@@ -30178,7 +30699,7 @@ function replacePhaseDetailStatus(raw, phaseNumber, nextStatus) {
       const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.map((block) => {
         const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
-        if (!match || normalizePhaseNumber2(match[1]) !== phaseNumber) {
+        if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
           return block;
         }
         found = true;
@@ -30700,13 +31221,13 @@ function formatRoadmapPhaseCandidate(phase) {
 }
 function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   const orderedPhases = [...roadmap.phases].sort(
-    (left, right) => comparePhaseNumbers2(left.phaseNumber, right.phaseNumber)
+    (left, right) => comparePhaseNumbers(left.phaseNumber, right.phaseNumber)
   );
   const lowerCandidates = orderedPhases.filter(
-    (phase) => comparePhaseNumbers2(phase.phaseNumber, targetPhaseNumber) < 0
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) < 0
   );
   const higherCandidates = orderedPhases.filter(
-    (phase) => comparePhaseNumbers2(phase.phaseNumber, targetPhaseNumber) > 0
+    (phase) => comparePhaseNumbers(phase.phaseNumber, targetPhaseNumber) > 0
   );
   const nearestCandidates = [lowerCandidates.at(-1), higherCandidates[0]].filter(
     (phase) => phase !== void 0
@@ -30754,7 +31275,7 @@ function extractHeadingPhaseDetails(heading) {
     };
   }
   return {
-    phaseNumber: normalizePhaseNumber2(match[1]),
+    phaseNumber: normalizePhaseNumber(match[1]),
     phaseName: match[2]?.trim() ?? null
   };
 }
@@ -30765,7 +31286,7 @@ async function readPhaseRoadmapRequirements(projectRoot, phaseNumber) {
   }
   const roadmap = parseRoadmapDocument(await fs4.readFile(roadmapPath, "utf8"));
   const matchedPhase = roadmap.phases.find(
-    (phase) => normalizePhaseNumber2(phase.phaseNumber) === normalizePhaseNumber2(phaseNumber)
+    (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
   );
   return matchedPhase?.requirements ?? [];
 }
@@ -30912,7 +31433,7 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
       );
     }
     const headingPhase = extractHeadingPhaseDetails(plan.heading);
-    if (headingPhase.phaseNumber && normalizePhaseNumber2(headingPhase.phaseNumber) !== normalizePhaseNumber2(resolved.phaseNumber)) {
+    if (headingPhase.phaseNumber && normalizePhaseNumber(headingPhase.phaseNumber) !== normalizePhaseNumber(resolved.phaseNumber)) {
       issues.push(
         `${plan.path}: plan heading phase ${headingPhase.phaseNumber} must match Phase ${resolved.phaseNumber}.`
       );
@@ -30990,6 +31511,10 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
 }
 function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
   return validation.issues.filter((issue2) => {
+    const normalizedIssue = issue2.replace(/^[^:]+:\s*/, "");
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(normalizedIssue)) {
+      return false;
+    }
     if (issue2.startsWith(`${pathValue}:`) || issue2.includes(pathValue)) {
       return true;
     }
@@ -31206,6 +31731,12 @@ function validateSummaryAgainstLivePlanInventory(content, args) {
     warnings
   };
 }
+function phaseSummaryMarkdownIssueSuggestion(issue2) {
+  if (/depends on incomplete execution plan\(s\):/i.test(issue2) || /linked dependency plan summaries are not completed yet:/i.test(issue2)) {
+    return "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Completion State, Readiness, and Next Safe Action to match, and keep the dependency blocker in Gap / Repair Routes until the dependency summary exists.";
+  }
+  return "Repair the summary so semantic completion evidence is truthful.";
+}
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
   const summary = content.split("\n").map((line) => line.trim()).find(
@@ -31369,6 +31900,34 @@ function isPhasePlanAcceptanceCriterionVerifiable(value) {
     value
   ) || /`[^`]+`/.test(value);
 }
+function isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2) {
+  return /must use grep\/test-verifiable or otherwise objectively checkable bullets:/i.test(issue2);
+}
+function partitionPhasePlanMarkdownValidationIssues(issues) {
+  const blockingIssues = [];
+  const warningIssues = [];
+  for (const issue2 of issues) {
+    if (isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2)) {
+      warningIssues.push(issue2);
+    } else {
+      blockingIssues.push(issue2);
+    }
+  }
+  return { blockingIssues, warningIssues };
+}
+function phasePlanMarkdownDiagnosticFromIssue(issue2) {
+  const heuristicGuidance = isPhasePlanMarkdownVerifiabilityHeuristicIssue(issue2);
+  return phasePlanDiagnostic({
+    severity: heuristicGuidance ? "warning" : "error",
+    source: "markdown",
+    path: "renderPreview",
+    code: heuristicGuidance ? "markdown.verifiability_guidance" : "markdown.invalid_render",
+    message: issue2,
+    context: {},
+    repairAction: heuristicGuidance ? "make-verifiable" : void 0,
+    suggestion: heuristicGuidance ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching." : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
+  });
+}
 async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, targetPath) {
   const located = await blueprintPhaseLocate({
     cwd: projectRoot,
@@ -31506,7 +32065,7 @@ function validatePhasePlanStructuredModelCoverage(model) {
     }
     for (const criterion of task.acceptanceCriteria) {
       if (!isPhasePlanAcceptanceCriterionVerifiable(criterion)) {
-        issues.push(
+        warnings.push(
           `Task ${task.id} acceptance criterion is not objectively verifiable: ${criterion}.`
         );
       }
@@ -31552,14 +32111,14 @@ function validatePhasePlanStructuredModelCoverage(model) {
       }
     }
     if (!isPhasePlanAcceptanceCriterionVerifiable(row.verification)) {
-      issues.push(
+      warnings.push(
         `File surface coverage for ${normalizedSurface} has unverifiable verification: ${row.verification}.`
       );
     }
   }
   for (const verification of model.verification) {
     if (!isPhasePlanAcceptanceCriterionVerifiable(verification.evidence)) {
-      issues.push(
+      warnings.push(
         `Verification item "${verification.item}" has evidence that is not objectively verifiable: ${verification.evidence}.`
       );
     }
@@ -31596,6 +32155,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     const criterionIndex = taskIndex >= 0 ? model.tasks[taskIndex].acceptanceCriteria.findIndex((item) => item === criterion) : -1;
     const pathValue = taskIndex >= 0 && criterionIndex >= 0 ? `model.tasks[${taskIndex}].acceptanceCriteria[${criterionIndex}]` : "model.tasks";
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_acceptance_criterion",
@@ -31692,6 +32252,7 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     const rowIndex = findPhasePlanFileSurfaceCoverageIndex(model, surface);
     const pathValue = rowIndex >= 0 ? `model.fileSurfaceCoverage[${rowIndex}].verification` : "model.fileSurfaceCoverage";
     return phasePlanDiagnostic({
+      severity: "warning",
       source: "residual",
       path: pathValue,
       code: "coverage.unverifiable_file_surface",
@@ -31701,6 +32262,27 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
       expected: "A command, grep, file-read, test, or artifact-validation check.",
       repairAction: "make-verifiable",
       suggestion: "Replace the file surface verification with an objective check such as a focused test command or file-read assertion."
+    });
+  }
+  const verificationEvidenceMatch = issue2.match(
+    /^Verification item "(.+)" has evidence that is not objectively verifiable: (.+)\.$/
+  );
+  if (verificationEvidenceMatch) {
+    const item = verificationEvidenceMatch[1] ?? "";
+    const evidence = verificationEvidenceMatch[2] ?? "";
+    const rowIndex = model.verification.findIndex((row) => row.item === item);
+    const pathValue = rowIndex >= 0 ? `model.verification[${rowIndex}].evidence` : "model.verification";
+    return phasePlanDiagnostic({
+      severity: "warning",
+      source: "residual",
+      path: pathValue,
+      code: "coverage.unverifiable_verification_evidence",
+      message: issue2,
+      context: { item, evidence },
+      actual: evidence,
+      expected: "A command, grep, file-read, test, or artifact-validation check.",
+      repairAction: "make-verifiable",
+      suggestion: "Prefer evidence grounded in a concrete command, grep, file-read, test, or artifact-validation check when the plan can name one."
     });
   }
   return phasePlanDiagnostic({
@@ -31743,9 +32325,12 @@ async function validatePhasePlanModelWithContext(args) {
   if (modelObject) {
     const validate = createAjvValidator().compile(args.context.taskSchema);
     const schemaValid = validate(modelObject);
+    const schemaErrors = (validate.errors ?? []).filter(
+      (error2) => !isExactCoverageConstFallout(error2)
+    );
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(
+        ...schemaErrors.map(
           (error2) => schemaDiagnosticFromPhasePlanAjvError(error2, args.context.taskSchema, args.model)
         )
       );
@@ -31763,16 +32348,32 @@ async function validatePhasePlanModelWithContext(args) {
         })
       );
     }
+    if (!schemaValid) {
+      diagnostics.push(
+        phasePlanDiagnostic({
+          severity: "warning",
+          source: "schema",
+          path: "model",
+          code: "schema.deeper_checks_skipped",
+          message: "Schema validation failed, so cross-field coverage checks and rendered Markdown validation were skipped for this attempt.",
+          context: {},
+          suggestion: "Repair the schema diagnostics first, then retry validation to run the deeper coverage and render checks."
+        })
+      );
+    }
     if (schemaValid) {
       normalizedModel = modelObject;
       const coverage = validatePhasePlanStructuredModelCoverage(normalizedModel);
       for (const issue2 of coverage.issues) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(issue2, normalizedModel));
       }
+      for (const warning of coverage.warnings) {
+        diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
+      }
     }
   }
   let renderPreview = null;
-  if (diagnostics.length === 0 && normalizedModel) {
+  if (!diagnostics.some(isBlockingPhasePlanDiagnostic) && normalizedModel) {
     const rendered = renderPhasePlanModelContent(
       normalizedModel,
       args.context.resolved,
@@ -31781,25 +32382,19 @@ async function validatePhasePlanModelWithContext(args) {
     const validation = validatePlanArtifactContent(rendered, args.context.resolved.phaseNumber, {
       strict: true
     });
-    for (const issue2 of validation.issues) {
-      diagnostics.push(
-        phasePlanDiagnostic({
-          source: "markdown",
-          path: "renderPreview",
-          code: "markdown.invalid_render",
-          message: issue2,
-          context: {},
-          suggestion: "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
-        })
-      );
-    }
-    if (validation.issues.length === 0) {
+    const markdownDiagnostics = [
+      ...validation.issues.map(phasePlanMarkdownDiagnosticFromIssue),
+      ...validation.warnings.map(phasePlanMarkdownDiagnosticFromIssue)
+    ];
+    diagnostics.push(...markdownDiagnostics);
+    if (!markdownDiagnostics.some(isBlockingPhasePlanDiagnostic)) {
       renderPreview = rendered;
     }
   }
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
     target: phasePlanValidateModelTarget({
       phase: args.context.resolved,
       planId: args.context.planId,
@@ -31818,17 +32413,23 @@ async function validatePhasePlanModelWithContext(args) {
     taskSchema: args.context.taskSchema,
     diagnostics,
     diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : normalizedModel,
+    normalizedModel: diagnostics.some(
+      (diagnostic) => diagnostic.source === "schema" && isBlockingPhasePlanDiagnostic(diagnostic)
+    ) ? null : normalizedModel,
     renderPreview,
     warnings: []
   };
 }
 async function phasePlanModelToContent(model, context) {
   const validation = await validatePhasePlanModelWithContext({ model, context });
+  const partitionedDiagnostics = partitionPhasePlanDiagnostics(validation.diagnostics);
   return {
     content: validation.renderPreview,
-    issues: validation.diagnostics.map(formatPhasePlanDiagnostic),
-    warnings: validation.warnings,
+    issues: partitionedDiagnostics.blocking.map(formatPhasePlanDiagnostic),
+    warnings: [
+      ...validation.warnings,
+      ...partitionedDiagnostics.warnings.map(formatPhasePlanDiagnostic)
+    ],
     validation
   };
 }
@@ -32136,21 +32737,30 @@ async function blueprintPhaseValidationValidateModel(args) {
   }
   let normalizedModel = null;
   if (modelObject && context.taskSchema) {
+    const validationModelObject = args.artifact === "verification" ? {
+      ...modelObject,
+      manualOrDeferredCoverage: modelObject.manualOrDeferredCoverage ?? [],
+      gapClassification: modelObject.gapClassification ?? [],
+      gapsFound: modelObject.gapsFound ?? [],
+      suggestedRepairs: modelObject.suggestedRepairs ?? []
+    } : modelObject;
     const validate = createAjvValidator().compile(context.taskSchema);
-    const schemaValid = validate(modelObject);
+    const schemaValid = validate(validationModelObject);
     if (!schemaValid) {
       diagnostics.push(
-        ...(validate.errors ?? []).map(schemaDiagnosticFromPhaseValidationAjvError)
+        ...(validate.errors ?? []).map(
+          (error2) => schemaDiagnosticFromPhaseValidationAjvError(error2, context.taskSchema, modelObject)
+        )
       );
     }
     diagnostics.push(
       ...phaseValidationResidualDiagnostics(
-        modelObject,
+        validationModelObject,
         context.contract.modelContract,
         args.artifact
       )
     );
-    for (const issue2 of await validatePhaseValidationModelCommands(modelObject, args.artifact)) {
+    for (const issue2 of await validatePhaseValidationModelCommands(validationModelObject, args.artifact)) {
       diagnostics.push(
         phaseValidationDiagnostic({
           source: "residual",
@@ -32163,7 +32773,9 @@ async function blueprintPhaseValidationValidateModel(args) {
       );
     }
     if (schemaValid) {
-      normalizedModel = args.artifact === "verification" ? normalizeVerificationStructuredModel(modelObject) : modelObject;
+      normalizedModel = args.artifact === "verification" ? normalizeVerificationStructuredModel(
+        validationModelObject
+      ) : validationModelObject;
     }
   }
   let renderPreview = null;
@@ -32396,7 +33008,7 @@ async function blueprintRoadmapAddPhase(args) {
       normalizedDescription,
       auditBackedDetails
     );
-    if (existingAuditBackedPhase && (!args.expectedPhaseNumber || normalizePhaseNumber2(args.expectedPhaseNumber) === existingAuditBackedPhase.phaseNumber)) {
+    if (existingAuditBackedPhase && (!args.expectedPhaseNumber || normalizePhaseNumber(args.expectedPhaseNumber) === existingAuditBackedPhase.phaseNumber)) {
       return reuseAuditBackedPhase(
         projectRoot,
         roadmap,
@@ -32404,13 +33016,20 @@ async function blueprintRoadmapAddPhase(args) {
         auditBackedDetails
       );
     }
-    const phaseNumber = nextIntegerPhaseNumber(roadmap.phases);
-    if (args.expectedPhaseNumber && normalizePhaseNumber2(args.expectedPhaseNumber) !== phaseNumber) {
+    const phaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+    if (args.expectedPhaseNumber && normalizePhaseNumber(args.expectedPhaseNumber) !== phaseNumber) {
       throw new Error(
-        `Confirmed next phase ${normalizePhaseNumber2(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
+        `Confirmed next phase ${normalizePhaseNumber(args.expectedPhaseNumber)} no longer matches the live next phase ${phaseNumber}. Re-run /blu-add-phase after re-reading the roadmap.`
       );
     }
-    const phasePrefix2 = formatPhasePrefix2(phaseNumber);
+    if (normalizedRepairRequirementIds.length === 0) {
+      await requireDeclaredRequirementIds(projectRoot, effectiveRequirementIds, {
+        missingFileMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing.`,
+        malformedMessage: `Cannot add Phase ${phaseNumber} because ${BLUEPRINT_DIR}/REQUIREMENTS.md is missing a usable "## Requirements Table" section.`,
+        undeclaredMessage: (undeclaredRequirementIds) => `Cannot add Phase ${phaseNumber} because requirement IDs are not declared in ${BLUEPRINT_DIR}/REQUIREMENTS.md Requirements Table: ${undeclaredRequirementIds.join(", ")}`
+      });
+    }
+    const phasePrefix2 = formatPhasePrefix(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
@@ -32508,8 +33127,12 @@ async function blueprintRoadmapAddPhase(args) {
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementValidationStatus: normalizedRepairRequirementIds.length > 0 ? "traceability-repaired" : "declared",
+      createdPhaseDir: materializedPhaseDir.created,
+      idempotencyStatus: "created",
       written: true,
       warnings
     };
@@ -32568,7 +33191,7 @@ async function blueprintRoadmapInsertPhase(args) {
       );
     }
     const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
-    const phasePrefix2 = formatPhasePrefix2(phaseNumber);
+    const phasePrefix2 = formatPhasePrefix(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
     const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
@@ -32668,8 +33291,11 @@ async function blueprintRoadmapInsertPhase(args) {
       phaseName: normalizedDescription,
       slug,
       phaseDir,
+      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
+      requirementMappingStatus: requirementMapping.mappingStatus,
+      createdPhaseDir: materializedPhaseDir.created,
       written: true,
       warnings
     };
@@ -32677,7 +33303,7 @@ async function blueprintRoadmapInsertPhase(args) {
 }
 function renameLeadingPhaseToken(entryName, phaseNumber, replacementPrefix) {
   const match = entryName.match(/^(\d+(?:\.\d+)?)(.*)$/);
-  if (!match || normalizePhaseNumber2(match[1]) !== phaseNumber) {
+  if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
     return null;
   }
   return `${replacementPrefix}${match[2]}`;
@@ -32753,7 +33379,7 @@ async function blueprintRoadmapRemovePhase(args) {
       `Cannot validate future-phase removal because ${BLUEPRINT_DIR}/STATE.md does not contain a usable current phase.`
     );
   }
-  if (comparePhaseNumbers2(targetPhaseNumber, currentPhaseNumber) <= 0) {
+  if (comparePhaseNumbers(targetPhaseNumber, currentPhaseNumber) <= 0) {
     throw new Error(
       `Cannot remove Phase ${targetPhaseNumber}. Only future phases can be removed; current phase is ${currentPhaseNumber}.`
     );
@@ -32827,7 +33453,7 @@ async function blueprintRoadmapRemovePhase(args) {
   for (const { previousPhase, newPhaseNumber, previousPhaseDir } of preparedRenumberTargets) {
     const previousPhaseDirPath = resolveBlueprintPath(projectRoot, previousPhaseDir);
     const previousDirectoryName = path7.basename(previousPhaseDirPath);
-    const newPhasePrefix = formatPhasePrefix2(newPhaseNumber);
+    const newPhasePrefix = formatPhasePrefix(newPhaseNumber);
     const renamedDirectoryName = renameLeadingPhaseToken(
       previousDirectoryName,
       previousPhase.phaseNumber,
@@ -33024,7 +33650,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
   const createdPhaseDirs = [];
   for (const item of selectedItems) {
     const phaseNumber = nextIntegerPhaseNumber(roadmapPhases);
-    const phasePrefix2 = formatPhasePrefix2(phaseNumber);
+    const phasePrefix2 = formatPhasePrefix(phaseNumber);
     const phaseName = normalizePhaseDescription(item.description);
     const dependsOnPhaseNumber = previousIntegerPhaseNumber(phaseNumber);
     const phaseDirectory = await materializePromotedBacklogPhaseDirectory(
@@ -33132,13 +33758,13 @@ async function blueprintPhaseLocate(args = {}) {
     };
   }
   const matchedPhase = roadmap.phases.find(
-    (phase) => normalizePhaseNumber2(phase.phaseNumber) === normalizePhaseNumber2(phaseNumber)
+    (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(phaseNumber)
   );
   if (!matchedPhase) {
     return {
       found: false,
       phaseNumber,
-      phasePrefix: formatPhasePrefix2(phaseNumber),
+      phasePrefix: formatPhasePrefix(phaseNumber),
       phaseName: null,
       phaseDir: null,
       artifacts: [],
@@ -33281,19 +33907,20 @@ async function blueprintPhaseResearchStatus(args = {}) {
   let researchValid = null;
   let researchIssues = [];
   let researchDiagnostics = [];
-  let researchUnreadable = false;
   const warnings = [...context.warnings, ...contextStatus.warnings, ...uiSpecStatus.warnings];
   if (researchPath) {
     const absolutePath = resolveBlueprintPath(projectRoot, researchPath);
     try {
       const raw = await fs4.readFile(absolutePath, "utf8");
-      const validation = validatePhaseArtifactContent(raw, "research");
+      const validation = validatePhaseArtifactContent(
+        canonicalizeResearchHeadingLines(normalizeTextContent2(raw)),
+        "research"
+      );
       researchValid = validation.valid;
       researchIssues = validation.issues;
       researchDiagnostics = validation.diagnostics;
       warnings.push(...validation.warnings);
     } catch (error2) {
-      researchUnreadable = true;
       researchValid = false;
       const reason = error2 instanceof Error && error2.message.trim().length > 0 ? error2.message : "unknown read failure";
       researchIssues = [
@@ -33324,9 +33951,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
     );
   }
   if (researchIssues.length > 0) {
-    suggestedRepairs.push(
-      researchUnreadable ? `Restore or regenerate ${researchPath} with /blu-research-phase before planning.` : "Update the phase research through /blu-research-phase so it matches the required research schema before planning."
-    );
+    suggestedRepairs.push(...phaseArtifactSuggestedRepairs("research", researchDiagnostics));
   }
   if (uiSpecStatus.issues.length > 0) {
     suggestedRepairs.push(
@@ -33359,7 +33984,7 @@ async function blueprintPhaseResearchStatus(args = {}) {
     uiSpecValid: uiSpecStatus.valid,
     uiSpecIssues: uiSpecStatus.issues,
     uiSpecDiagnostics: uiSpecStatus.diagnostics,
-    suggestedRepairs,
+    suggestedRepairs: [...new Set(suggestedRepairs)],
     planningReadiness,
     warnings
   };
@@ -33437,7 +34062,9 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
     return [...new Set(errorDiagnostics.map((diagnostic) => diagnostic.repair))];
   }
   if (artifact === "research") {
-    return ["Add the required research sections, confidence marker, and at least one cited source before retrying."];
+    return [
+      "Add the required research sections, confidence marker, and at least one cited source before retrying."
+    ];
   }
   if (artifact === "ui-spec") {
     return [
@@ -33593,12 +34220,18 @@ async function blueprintPhaseArtifactWrite(args) {
   } else {
     normalizedContent = normalizeTextContent2(args.content ?? "");
   }
+  if (args.artifact === "research") {
+    normalizedContent = canonicalizeResearchHeadingLines(normalizedContent);
+  }
   const exists = await pathExists(absolutePath);
   const warnings = [];
   const validation = validatePhaseArtifactContent(normalizedContent, args.artifact);
   if (exists) {
     const existingContent = await fs4.readFile(absolutePath, "utf8");
-    const existingValidation = validatePhaseArtifactContent(existingContent, args.artifact);
+    const existingValidation = validatePhaseArtifactContent(
+      args.artifact === "research" ? canonicalizeResearchHeadingLines(normalizeTextContent2(existingContent)) : existingContent,
+      args.artifact
+    );
     if (existingContent === normalizedContent) {
       if (!validation.valid) {
         return invalidPhaseArtifactWriteResult({
@@ -34369,13 +35002,23 @@ async function blueprintPhasePlanWrite(args) {
     const validation = validatePlanArtifactContent(preparedContent.content, resolved.phaseNumber, {
       strict: strictValidation
     });
+    const contentValidationIssues = partitionPhasePlanMarkdownValidationIssues(validation.issues);
     const dependencyIssues = collectInvalidPlanDependencyIssues(
       pathValue,
       validation.metadata.dependsOn
     );
     const normalizedFrontmatterPlanId = validation.metadata.planId && /^\d+$/.test(validation.metadata.planId) ? normalizePlanId(validation.metadata.planId) : null;
-    const validationIssues = [...modelCoverageIssues, ...validation.issues, ...dependencyIssues];
-    const warnings = [...modelWarnings, ...preparedContent.warnings];
+    const validationIssues = [
+      ...modelCoverageIssues,
+      ...contentValidationIssues.blockingIssues,
+      ...dependencyIssues
+    ];
+    const warnings = [
+      ...modelWarnings,
+      ...preparedContent.warnings,
+      ...contentValidationIssues.warningIssues,
+      ...validation.warnings
+    ];
     if (dependencyIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
@@ -34391,7 +35034,7 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         warnings: dependencyIssues
       };
@@ -34411,8 +35054,8 @@ async function blueprintPhasePlanWrite(args) {
         status: "invalid",
         validation: {
           valid: false,
-          issues: [...validation.issues, issue2],
-          warnings: validation.warnings
+          issues: [...contentValidationIssues.blockingIssues, issue2],
+          warnings
         },
         warnings: []
       };
@@ -34432,13 +35075,13 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
         modelValidation,
-        warnings: [...warnings, ...validation.warnings]
+        warnings
       };
     }
-    if (!validation.valid && strictValidation) {
+    if (contentValidationIssues.blockingIssues.length > 0 && strictValidation) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -34453,9 +35096,9 @@ async function blueprintPhasePlanWrite(args) {
         validation: {
           valid: false,
           issues: validationIssues,
-          warnings: validation.warnings
+          warnings
         },
-        warnings: []
+        warnings
       };
     }
     const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
@@ -34505,10 +35148,11 @@ async function blueprintPhasePlanWrite(args) {
           overwritten: false,
           status: "reused",
           validation: {
-            valid: prospectiveValidation.status === "valid",
-            issues: prospectiveValidation.issues,
-            warnings: prospectiveValidation.warnings
+            valid: blockingIssues.length === 0,
+            issues: blockingIssues,
+            warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
+          modelValidation,
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -34538,10 +35182,11 @@ async function blueprintPhasePlanWrite(args) {
       overwritten: exists,
       status: exists ? "updated" : "created",
       validation: {
-        valid: prospectiveValidation.status === "valid",
-        issues: prospectiveValidation.issues,
-        warnings: prospectiveValidation.warnings
+        valid: blockingIssues.length === 0,
+        issues: blockingIssues,
+        warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
+      modelValidation,
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
@@ -34789,7 +35434,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   }
   if (unsatisfiedDependencyPlans.length > 0) {
     warnings.push(
-      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
+      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(resolved.phaseNumber);
@@ -34950,7 +35595,7 @@ async function blueprintPhaseSummaryValidateModel(args) {
           code: "markdown.invalid_render",
           message: issue2,
           context: {},
-          suggestion: "Repair the summary so semantic completion evidence is truthful."
+          suggestion: phaseSummaryMarkdownIssueSuggestion(issue2)
         })
       );
     }
@@ -35502,7 +36147,7 @@ async function blueprintPhaseSummaryWrite(args) {
   }
   if (summaryStatus === "COMPLETED" && unsatisfiedDependencyPlans.length > 0) {
     writeModeIssues.push(
-      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}`
+      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
     );
   }
   if (writeModeIssues.length > 0) {
@@ -35720,7 +36365,7 @@ async function blueprintPhaseCheckpointPut(args) {
       existingCheckpoint,
       checkpointPath,
       args.checkpoint.ownerCommand,
-      args.checkpoint.resumeMeta.mode
+      args.checkpoint.mode
     );
     if (!ownershipSafety.safeToResume) {
       throw new Error(
@@ -35831,7 +36476,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -36122,6 +36767,7 @@ var init_phase = __esm({
       expectedOwnerCommand: phaseCheckpointOwnerCommandSchema.optional(),
       expectedMode: phaseCheckpointResumeModeSchema.optional()
     };
+    REQUIREMENTS_TABLE_SECTION_PATTERN = /(## Requirements Table\s*\n)([\s\S]*?)(?=\n## |\s*$)/;
     phaseToolDefinitions = [
       {
         name: "blueprint_roadmap_read",
@@ -36328,27 +36974,84 @@ function isScaffoldGeneratedArtifact(content) {
 function isBootstrapStarterContext(content) {
   return content.includes(BOOTSTRAP_STARTER_CONTEXT_MARKER);
 }
+function isBootstrapStarterFile(entryName) {
+  if (BOOTSTRAP_MANIFEST_FILES.has(entryName) || BOOTSTRAP_LOCKFILES.has(entryName)) {
+    return true;
+  }
+  return BOOTSTRAP_CONFIGURATION_FILE_PATTERNS.some((pattern) => pattern.test(entryName));
+}
+function isDocumentationLikeFile(entryName) {
+  const normalized = entryName.toLowerCase();
+  if (normalized === "readme" || normalized.startsWith("readme.")) {
+    return true;
+  }
+  if (normalized === "license" || normalized.startsWith("license.")) {
+    return true;
+  }
+  return BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS.has(path8.extname(normalized));
+}
+function isImplementationLikeFile(entryName) {
+  if (isBootstrapStarterFile(entryName) || isDocumentationLikeFile(entryName)) {
+    return false;
+  }
+  return BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS.has(path8.extname(entryName).toLowerCase());
+}
+async function directoryHasImplementationEvidence(directoryPath) {
+  const entries = await fs5.readdir(directoryPath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (entry.name.startsWith(".") || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
+      if (await directoryHasImplementationEvidence(path8.join(directoryPath, entry.name))) {
+        return true;
+      }
+      continue;
+    }
+    if (entry.isFile() && isImplementationLikeFile(entry.name)) {
+      return true;
+    }
+  }
+  return false;
+}
 async function assessRootBootstrapShape(projectRoot) {
   const entries = await fs5.readdir(projectRoot, { withFileTypes: true });
   const substantiveEntries = entries.filter(
     (entry) => !BOOTSTRAP_IGNORED_ROOT_ENTRIES.has(entry.name)
   );
-  const hasSourceDirectories = substantiveEntries.some(
-    (entry) => entry.isDirectory() && BOOTSTRAP_SOURCE_DIRECTORIES.has(entry.name)
+  const hasStarterDirectories = substantiveEntries.some(
+    (entry) => entry.isDirectory() && BOOTSTRAP_STARTER_DIRECTORIES.has(entry.name)
   );
   const hasBuildManifest = substantiveEntries.some(
     (entry) => entry.isFile() && BOOTSTRAP_MANIFEST_FILES.has(entry.name)
   );
+  const hasStarterFiles = substantiveEntries.some(
+    (entry) => entry.isFile() && isBootstrapStarterFile(entry.name)
+  );
   let repoShape = "greenfield";
   const reasons = [];
-  if (hasSourceDirectories || hasBuildManifest && substantiveEntries.length >= 2 || substantiveEntries.length >= 4) {
+  let hasImplementationEvidence = substantiveEntries.some(
+    (entry) => entry.isFile() && isImplementationLikeFile(entry.name)
+  );
+  if (!hasImplementationEvidence) {
+    for (const entry of substantiveEntries) {
+      if (!entry.isDirectory() || BOOTSTRAP_IGNORED_SCAN_DIRECTORIES.has(entry.name)) {
+        continue;
+      }
+      if (await directoryHasImplementationEvidence(path8.join(projectRoot, entry.name))) {
+        hasImplementationEvidence = true;
+        break;
+      }
+    }
+  }
+  if (hasImplementationEvidence) {
     repoShape = "brownfield";
-    reasons.push("Repo already contains substantive implementation or build structure.");
-  } else if (hasBuildManifest || substantiveEntries.length >= 2) {
+    reasons.push("Repo already contains substantive implementation files that should be mapped before bootstrap.");
+  } else if (hasBuildManifest || hasStarterDirectories || hasStarterFiles) {
     repoShape = "scaffold-only";
-    reasons.push("Repo contains initial scaffolding but not enough evidence for a mapped brownfield flow.");
+    reasons.push("Repo contains starter scaffolding but not enough implementation evidence for a mapped brownfield flow.");
   } else {
-    reasons.push("Repo shape still looks close to an empty or freshly created project.");
+    reasons.push("Repo shape still looks close to an empty or freshly created project, with only intent-setting content so far.");
   }
   return {
     repoShape,
@@ -38043,6 +38746,86 @@ function stripResearchPlaceholderSignals(section) {
     section.replace(/\r\n/g, "\n")
   );
 }
+function stripResearchHeadingAdornment(value) {
+  return value.trim().replace(/\s+#+\s*$/u, "").trim();
+}
+function normalizeResearchHeadingKey(value) {
+  return stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\s*&\s*/gu, " and ").replace(/["']/gu, "").replace(/[-/]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
+}
+function normalizeResearchHeadingSimilarityText(value) {
+  const normalized = stripResearchHeadingAdornment(value).replace(/[‘’‛`]/gu, "'").replace(/[“”]/gu, '"').replace(/[‐‑–—−]/gu, "-").replace(/\b(?:don't|dont)\b/giu, "do not").replace(/\s*&\s*/gu, " and ").replace(/[^A-Za-z0-9]+/gu, " ").replace(/\s+/gu, " ").trim().toLowerCase();
+  return normalized.split(" ").filter((token) => token.length > 0).map((token) => token.length > 3 && token.endsWith("s") ? token.slice(0, -1) : token).join(" ");
+}
+function researchHeadingSimilarityScore(left, right) {
+  if (left.length === 0 || right.length === 0) {
+    return 0;
+  }
+  if (left === right) {
+    return 1;
+  }
+  if (left.includes(right) || right.includes(left)) {
+    return 0.85;
+  }
+  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 0));
+  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 0));
+  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  if (overlap === 0) {
+    return 0;
+  }
+  return overlap / Math.max(leftTokens.size, rightTokens.size);
+}
+function findCloseResearchHeadingVariant(canonicalHeading, candidateHeadings) {
+  const normalizedCanonical = normalizeResearchHeadingSimilarityText(canonicalHeading);
+  let bestMatch = null;
+  for (const candidateHeading of candidateHeadings) {
+    const score = researchHeadingSimilarityScore(
+      normalizedCanonical,
+      normalizeResearchHeadingSimilarityText(candidateHeading)
+    );
+    if (!bestMatch || score > bestMatch.score) {
+      bestMatch = {
+        heading: candidateHeading,
+        score
+      };
+    }
+  }
+  return bestMatch && bestMatch.score >= 0.6 ? bestMatch.heading : null;
+}
+function canonicalizeResearchRequiredHeadings(content) {
+  const canonicalHeadingByKey = new Map(
+    REQUIRED_RESEARCH_SECTIONS.map((heading) => [normalizeResearchHeadingKey(heading), heading])
+  );
+  const canonicalizedHeadings = [];
+  const unmatchedTopLevelHeadings = [];
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  const canonicalizedLines = lines.map((line) => {
+    const match = line.match(/^(##)(?!#)\s+(.+?)\s*$/u);
+    if (!match) {
+      return line;
+    }
+    const originalHeading = stripResearchHeadingAdornment(match[2] ?? "");
+    const canonicalHeading = canonicalHeadingByKey.get(normalizeResearchHeadingKey(originalHeading));
+    if (!canonicalHeading) {
+      unmatchedTopLevelHeadings.push(originalHeading);
+      return line;
+    }
+    if (originalHeading !== canonicalHeading) {
+      canonicalizedHeadings.push({
+        from: originalHeading,
+        to: canonicalHeading
+      });
+    }
+    return `## ${canonicalHeading}`;
+  });
+  return {
+    content: canonicalizedLines.join("\n"),
+    canonicalizedHeadings,
+    unmatchedTopLevelHeadings
+  };
+}
+function canonicalizeResearchHeadingLines(content) {
+  return canonicalizeResearchRequiredHeadings(content).content;
+}
 function countResearchContentWords(section) {
   return section.match(/[A-Za-z0-9][A-Za-z0-9'/-]*/g)?.length ?? 0;
 }
@@ -38054,9 +38837,6 @@ function hasSubstantiveResearchSection(section, heading) {
   const meaningfulLines = normalized.split("\n").map((line) => line.trim()).map((line) => line.replace(/^(?:[-*]\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line)).filter((line) => !/^why it matters\.?$/i.test(line));
   if (meaningfulLines.length === 0) {
     return false;
-  }
-  if (heading === "Code Examples") {
-    return /```[\s\S]*```/.test(normalized) && countResearchContentWords(normalized) >= 3;
   }
   return meaningfulLines.some((line) => countResearchContentWords(line) >= 3);
 }
@@ -38077,53 +38857,151 @@ function validateResearchArtifactContent(content) {
   const issues = [];
   const warnings = [];
   const diagnostics = [];
-  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(content);
+  const canonicalizedHeadings = canonicalizeResearchRequiredHeadings(content);
+  const normalizedContent = canonicalizedHeadings.content;
+  const contentWithoutFencedCodeBlocks = stripTripleFencedCodeBlocks(normalizedContent);
+  const pushResearchIssue = (message, diagnostic) => {
+    issues.push(message);
+    diagnostics.push(diagnostic);
+  };
   if (!/^# .+ - Research\s*$/m.test(content)) {
-    issues.push("Research artifact must start with a '# ... - Research' heading.");
+    pushResearchIssue(
+      "Research artifact must start with a '# ... - Research' heading.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.title_missing",
+        message: "Research artifact must start with a '# ... - Research' heading.",
+        repair: "Start the artifact with the exact '# ... - Research' title, then retry blueprint_phase_artifact_write."
+      })
+    );
   }
   if (matchedScaffoldPlaceholderSignals(contentWithoutFencedCodeBlocks, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, {
     singleSignalPatterns: [/^Phase XX:$/i]
   }).length > 0) {
-    issues.push(
-      "Research artifact still contains scaffold placeholder text and must be replaced with real research content."
+    pushResearchIssue(
+      "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.placeholder_present",
+        message: "Research artifact still contains scaffold placeholder text and must be replaced with real research content.",
+        repair: "Replace scaffold placeholders with phase-specific research content before retrying blueprint_phase_artifact_write."
+      })
     );
   }
-  const confidenceMatch = content.match(
+  const confidenceMatch = normalizedContent.match(
     /^\*\*Confidence:\*\*\s*(LOW|MEDIUM|HIGH)\s*$/m
   );
   if (!confidenceMatch) {
-    issues.push(
-      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`
+    pushResearchIssue(
+      `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content",
+        code: "research.confidence_missing",
+        message: `Research artifact must declare **Confidence:** using one of ${RESEARCH_CONFIDENCE_VALUES.join(", ")}.`,
+        allowedValues: [...RESEARCH_CONFIDENCE_VALUES],
+        repair: "Set **Confidence:** to LOW, MEDIUM, or HIGH before retrying blueprint_phase_artifact_write."
+      })
     );
   }
   for (const heading of REQUIRED_RESEARCH_SECTIONS) {
-    if (!new RegExp(`(?:^|\\n)## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(
-      content
-    )) {
-      issues.push(`Research artifact is missing required section: ${heading}.`);
+    const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex2(heading)}\\s*$`, "m").test(
+      normalizedContent
+    );
+    if (!hasHeading) {
+      const closeVariant = findCloseResearchHeadingVariant(
+        heading,
+        canonicalizedHeadings.unmatchedTopLevelHeadings
+      );
+      const message = closeVariant ? `Research artifact is missing required section: ${heading}. Found similar heading "${closeVariant}", but only format-level variants of the canonical heading are auto-repaired.` : `Research artifact is missing required section: ${heading}.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: closeVariant ? "research.heading_shape_invalid" : "research.heading_missing",
+          message,
+          heading,
+          missing: [heading],
+          allowedValues: closeVariant ? [...REQUIRED_RESEARCH_SECTIONS] : void 0,
+          repair: closeVariant ? `Replace "${closeVariant}" with the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.` : `Add the exact canonical heading \`## ${heading}\`, populate that section with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
+      );
       continue;
     }
-    const section = extractMarkdownSection5(content, heading);
+    const section = extractMarkdownSection5(normalizedContent, heading);
+    if (section.trim().length === 0) {
+      const message = `Research artifact section ${heading} must not be empty.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: "research.section_empty",
+          message,
+          heading,
+          repair: `Populate the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
+      );
+      continue;
+    }
     if (!hasSubstantiveResearchSection(section, heading)) {
-      issues.push(
-        `Research artifact section ${heading} must contain substantive content after placeholders are removed.`
+      const message = `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: "research.section_non_substantive",
+          message,
+          heading,
+          repair: `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
+        })
       );
     }
   }
-  const phaseRequirements = extractMarkdownSection5(content, "Phase Requirements");
+  const phaseRequirements = extractMarkdownSection5(normalizedContent, "Phase Requirements");
   if (!hasRequirementTableRows(phaseRequirements)) {
-    issues.push(
-      "Research artifact section Phase Requirements must include at least one populated requirement row."
+    pushResearchIssue(
+      "Research artifact section Phase Requirements must include at least one populated requirement row.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Phase Requirements",
+        code: "research.phase_requirements_rows_missing",
+        message: "Research artifact section Phase Requirements must include at least one populated requirement row.",
+        heading: "Phase Requirements",
+        repair: "Add at least one populated requirement row under the exact canonical heading `## Phase Requirements`, then retry blueprint_phase_artifact_write."
+      })
     );
   }
-  const recommendations = extractMarkdownSection5(content, "Recommendations");
-  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(content).length === 0) {
-    issues.push("Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.");
+  const recommendations = extractMarkdownSection5(normalizedContent, "Recommendations");
+  if (!/^- /m.test(recommendations) && collectResearchRecommendationRows(normalizedContent).length === 0) {
+    pushResearchIssue(
+      "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Recommendations",
+        code: "research.recommendations_missing",
+        message: "Research artifact must include at least one bullet or Recommendation Handoff row under Recommendations.",
+        heading: "Recommendations",
+        repair: "Populate the exact canonical heading `## Recommendations` with a recommendation bullet or Recommendation Handoff row, then retry blueprint_phase_artifact_write."
+      })
+    );
   }
-  const sources = extractMarkdownSection5(content, "Sources");
-  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(content)) {
-    issues.push(
-      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence."
+  const sources = extractMarkdownSection5(normalizedContent, "Sources");
+  if ((!/^- /m.test(sources) || !containsSourceEvidence(sources)) && !hasStructuredSourceEvidence(normalizedContent)) {
+    pushResearchIssue(
+      "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
+      phaseArtifactDiagnostic({
+        artifact: "research",
+        path: "content.sections.Sources",
+        code: "research.sources_missing",
+        message: "Research artifact must include at least one source bullet with a URL, repo path, or cited file, or a structured source row with concrete evidence.",
+        heading: "Sources",
+        repair: "Populate the exact canonical heading `## Sources` with at least one cited source bullet or structured evidence row, then retry blueprint_phase_artifact_write."
+      })
     );
   }
   const externalSourceLinesMissingAccessDate = sourceLinesWithUrlsMissingAccessDate(sources);
@@ -38142,67 +39020,59 @@ function validateResearchArtifactContent(content) {
       "Research artifact should use claim-addressable evidence with Evidence ID, Claim ID, and support classes for planner-critical claims."
     );
   }
-  if (usesLiveVerificationLanguageWithoutExternalEvidence(content)) {
+  if (usesLiveVerificationLanguageWithoutExternalEvidence(normalizedContent)) {
     warnings.push(
       "Research artifact appears to use live external verification wording without an External Sources row with an access date; lower confidence or mark the claim unchecked."
     );
   }
-  if (hasHighConfidenceWithUnsupportedEvidenceClaims(content)) {
+  if (hasHighConfidenceWithUnsupportedEvidenceClaims(normalizedContent)) {
     warnings.push(
       "Research artifact should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence."
     );
   }
-  if (mentionsDependencyOrToolChoice(content)) {
-    if (!hasDependencyToolEvaluationTable(content)) {
+  if (mentionsDependencyOrToolChoice(normalizedContent)) {
+    if (!hasDependencyToolEvaluationTable(normalizedContent)) {
       warnings.push(
         "Research artifact recommends or discusses a dependency/tool choice but does not include a complete Dependency / Tool Evaluation table with version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, update-posture, and DEP-* evidence."
       );
     }
-    if (!hasDependencyAlternativesCoverage(content)) {
+    if (!hasDependencyAlternativesCoverage(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation alternatives."
       );
     }
-    if (!hasDependencySetupAndUpdatePosture(content)) {
+    if (!hasDependencySetupAndUpdatePosture(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should record setup and update posture, including manifest or lockfile impact, install scope, side effects, verification command, monitoring/update plan, and manual-review posture."
       );
     }
-    if (!hasLibraryVsCustomDecision(content)) {
+    if (!hasLibraryVsCustomDecision(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should include a Library Vs Custom Decision when a recommendation could add, adopt, reject, or hand-roll a tool."
       );
     }
-    if (!hasSupplyChainEvidenceSource(content)) {
+    if (!hasSupplyChainEvidenceSource(normalizedContent)) {
       warnings.push(
         "Research artifact dependency/tool choice should cite Supply Chain Evidence rows or explicitly mark supply-chain evidence as unchecked under the configured external-source policy."
       );
     }
   }
-  if (mentionsUnsafeAutomaticDependencyRemediation(content)) {
+  if (mentionsUnsafeAutomaticDependencyRemediation(normalizedContent)) {
     warnings.push(
       "Research artifact should not present npm audit fix, OSV guided remediation, or dependency-update PRs as automatically safe; require manifest/lockfile review, release-note or changelog review, and tests."
     );
   }
-  const codeExamples = extractMarkdownSection5(content, "Code Examples");
+  const codeExamples = extractMarkdownSection5(normalizedContent, "Code Examples");
   if (!/```/.test(codeExamples)) {
     warnings.push("Research artifact should include a fenced code or pseudocode example when examples add value.");
   }
-  const issueDiagnostics = issues.map(
-    (issue2) => phaseArtifactDiagnostic({
-      artifact: "research",
-      path: "content",
-      code: "research.invalid",
-      message: issue2
-    })
-  );
-  const warningDiagnostics = researchEvidenceWarningDiagnostics(content);
+  const warningDiagnostics = researchEvidenceWarningDiagnostics(normalizedContent);
   for (const diagnostic of warningDiagnostics) {
     if (!warnings.includes(diagnostic.message)) {
       warnings.push(diagnostic.message);
     }
   }
-  diagnostics.push(...issueDiagnostics, ...warningDiagnostics);
+  diagnostics.push(...warningDiagnostics);
   return {
     valid: issues.length === 0,
     issues,
@@ -38240,10 +39110,16 @@ function extractTaskSubsection(taskBlock, subsectionHeading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function isPlaceholderOnlyTaskHeading(headingText) {
+  const title = headingText.replace(/^Task\s+\d+(?::\s*)?/i, "").trim();
+  return /^(?:todo|to do|tbd|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
+    title
+  );
+}
 function isBlankOrPlaceholderPlanLine(line) {
-  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace me|fill in here|insert here)$/i.test(
+  return line.length === 0 || /^(?:none|n\/a|na|tbd|todo|to do|placeholder|coming soon|replace with|replace me|fill in here|insert here)$/i.test(
     line
-  ) || /replace with/i.test(line);
+  );
 }
 function isSubjectivePlanLine(line) {
   return /(?:\blooks\b|\bfeels\b|\bsounds\b|\bseems\b|\bgood\b|\bbetter\b|\bnice\b|\bclean\b|\bclear\b|\brobust\b|\bstable\b|\bfast\b|\bsimple\b|\beasy\b|\beasier\b|\bseamless\b|\bhelpful\b|\buseful\b|\bintuitive\b|\bpolished\b|\bworking\b|\bworks\b)/i.test(
@@ -38410,11 +39286,12 @@ function hasConcretePlanSubsectionContent(section) {
 }
 function validateObjectivePlanBulletList(section, artifactLabel) {
   const issues = [];
+  const warnings = [];
   const normalizedSection = stripPlanPlaceholderSignals(section);
   const bulletItems = normalizedSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => /^[-*+]\s+/.test(line) || /^\d+\.\s+/.test(line)).map((line) => line.replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !isBlankOrPlaceholderPlanLine(line));
   if (bulletItems.length === 0) {
     issues.push(`${artifactLabel} must include at least one objective bullet.`);
-    return issues;
+    return { issues, warnings };
   }
   const objectiveSignals = [
     /(?:\bgrep\b|\btest\b|\btests?\b|\bassert\b|\bexits?\s+0\b|\bpasses?\b|\bfails?\b|\bcontains?\b|\bmatches?\b|\breturns?\b|\bshows?\b|\bdisplays?\b|\brenders?\b|\blists?\b|\bwrites?\b|\breads?\b|\bupdates?\b|\bcreates?\b|\brejects?\b|\bthrows?\b|\bproduces?\b|\bchecks?\b|\bruns?\b|\bverifies?\b)/i,
@@ -38431,19 +39308,20 @@ function validateObjectivePlanBulletList(section, artifactLabel) {
         );
         continue;
       }
-      issues.push(
+      warnings.push(
         `${artifactLabel} must use grep/test-verifiable or otherwise objectively checkable bullets: ${bullet}.`
       );
     }
   }
-  return issues;
+  return { issues, warnings };
 }
 function validatePlanTaskBlock(taskBlock, taskNumber) {
   const issues = [];
+  const warnings = [];
   const lines = taskBlock.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
   const heading = lines[0] ?? "";
   const headingText = heading.replace(/^###\s+/, "").trim();
-  if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || /(?:replace with|todo|tbd|placeholder|coming soon|insert here|fill in here)/i.test(headingText)) {
+  if (headingText.length === 0 || /^Task\s+\d+(?::\s*)?$/i.test(headingText) || isPlaceholderOnlyTaskHeading(headingText)) {
     issues.push(`Task ${taskNumber} must use a concrete heading.`);
   }
   for (const subsectionHeading of ["Read First", "Action", "Acceptance Criteria"]) {
@@ -38462,13 +39340,13 @@ function validatePlanTaskBlock(taskBlock, taskNumber) {
     );
   }
   const acceptanceCriteria = extractTaskSubsection(taskBlock, "Acceptance Criteria");
-  issues.push(
-    ...validateObjectivePlanBulletList(
-      acceptanceCriteria,
-      `Task ${taskNumber} subsection Acceptance Criteria`
-    )
+  const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+    acceptanceCriteria,
+    `Task ${taskNumber} subsection Acceptance Criteria`
   );
-  return issues;
+  issues.push(...acceptanceCriteriaValidation.issues);
+  warnings.push(...acceptanceCriteriaValidation.warnings);
+  return { issues, warnings };
 }
 function validateLockedMarkers(content, artifactLabel, markers) {
   return markers.filter((marker) => !content.includes(marker)).map((marker) => `${artifactLabel} is missing locked marker: ${marker}.`);
@@ -39386,7 +40264,7 @@ function matchesFuzzyEmptySentinel(section, exactEmptySentinel) {
   if (normalizedSection === normalizedSentinel) {
     return false;
   }
-  return normalizedSection.startsWith(normalizedSentinel) || /^(?:[-*]\s*)?(?:none(?:\b|$)|no open questions?\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
+  return normalizedSection.startsWith(normalizedSentinel) || /^(?:[-*]\s*)?(?:none(?:\b|$)|no (?:open questions?|deferred ideas?)\b|nothing(?:\b|$)|n\/a\b|na\b|not applicable\b)/i.test(
     normalizedSection
   );
 }
@@ -39413,6 +40291,7 @@ function phaseArtifactDiagnostic(args) {
     severity: "error",
     heading: args.heading,
     missing: args.missing,
+    allowedValues: args.allowedValues,
     repair: args.repair ?? phaseArtifactRepairInstruction({
       artifact: args.artifact,
       heading: args.heading
@@ -39468,7 +40347,7 @@ function isExplicitUiSkipRationale(content) {
   );
 }
 function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
-  const issues = [];
+  const diagnostics = [];
   const flaggedModes = /* @__PURE__ */ new Set();
   for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
     if (UNSUPPORTED_MODE_NEGATION_PATTERN.test(line)) {
@@ -39479,14 +40358,16 @@ function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
     }
     for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !flaggedModes.has(mode)) {
-        issues.push(
-          `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`
-        );
+        diagnostics.push({
+          code: "discuss.unsupported_mode_claim",
+          message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
+          repair: "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
+        });
         flaggedModes.add(mode);
       }
     }
   }
-  return issues;
+  return diagnostics;
 }
 function markdownSectionLines(section) {
   return section.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).filter((line) => !/^[#>*`|_\-\s]+$/.test(line));
@@ -39514,54 +40395,106 @@ function hasConcreteDeferredIdeas(section) {
     )
   ).some((line) => countMeaningfulWords(line) >= 3);
 }
+function hasConcreteOpenQuestions(section) {
+  return markdownSectionLines(section).filter(
+    (line) => !/^(?:none|n\/a|na|not applicable|no open questions?|nothing open)\b/i.test(line)
+  ).some((line) => countMeaningfulWords(line) >= 3);
+}
+function hasCarryForwardRiskSignal(section) {
+  return /\b(?:deferred risks?|open risks?|risk watchlist|consequence if wrong)\b/i.test(section);
+}
+function hasOpenGrayAreaSignal(section) {
+  return /\b(?:open gray areas?|open items for discuss-phase|open risks and dependency questions)\b/i.test(
+    section
+  );
+}
+function hasConcreteRiskCarryForward(section) {
+  return markdownSectionLines(section).filter((line) => !/^(?:none|n\/a|na|not applicable|nothing deferred|nothing open)\b/i.test(line)).some(
+    (line) => /\b(?:risk|uncertain|uncertainty|if wrong|unknown|unresolved|needs confirmation|dependency review)\b/i.test(
+      line
+    )
+  );
+}
+function containsRawHandoffPacketLabel(content) {
+  return content.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim().replace(/^(?:[-*+]\s*|\d+\.\s*)+/, "").trim()).filter((line) => line.length > 0).some(
+    (line) => RAW_HANDOFF_PACKET_LABEL_PATTERNS.some((pattern) => pattern.test(line))
+  );
+}
 function validateDiscussPhaseContextAntiPatterns(content) {
-  const issues = [];
+  const diagnostics = [];
   const warnings = [];
   const canonicalReferences = extractMarkdownSection5(content, "Canonical References");
   const deferredIdeas = extractMarkdownSection5(content, "Deferred Ideas");
+  const openQuestions = extractMarkdownSection5(content, "Open Questions");
   const deferredSourceSections = [
     "Discovery Grounding",
     "Implementation Decisions",
     "Specific Ideas",
     "Existing Code Insights",
-    "Dependencies",
-    "Open Questions"
+    "Dependencies"
   ].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
+  if (containsRawHandoffPacketLabel(content)) {
+    diagnostics.push({
+      code: "context.raw_handoff_label",
+      message: "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
+      repair: "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
+    });
+  }
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
-    issues.push(
-      "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL."
-    );
+    diagnostics.push({
+      code: "context.missing_canonical_reference",
+      message: "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
+      repair: "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
+    });
   }
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
-    issues.push(
-      "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section."
-    );
+    diagnostics.push({
+      code: "context.dropped_deferred_ideas",
+      message: "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
+      repair: "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
+    });
+  }
+  if (hasCarryForwardRiskSignal(deferredSourceSections) && !hasConcreteRiskCarryForward(deferredIdeas) && !hasConcreteRiskCarryForward(openQuestions)) {
+    diagnostics.push({
+      code: "context.dropped_risk_carry_forward",
+      message: "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
+      repair: "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
+    });
+  }
+  if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
+    diagnostics.push({
+      code: "context.dropped_open_questions",
+      message: "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
+      repair: "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
+    });
   }
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
     warnings.push(
       "Context artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
     );
   }
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
-  const issues = [];
+  const diagnostics = [];
   const warnings = [];
   const followUps = extractMarkdownSection5(content, "Follow-Ups");
   const discussionSections = ["Summary", "Notes"].map((heading) => extractMarkdownSection5(content, heading)).join("\n");
-  issues.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
+  diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
   if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
-    issues.push(
-      "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section."
-    );
+    diagnostics.push({
+      code: "discussion-log.dropped_follow_ups",
+      message: "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
+      repair: "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
+    });
   }
   if (/\b(?:plan inventory|existing plans?|saved plans?|current plans?)\b/i.test(content) && !/\/blu-plan-phase\b/i.test(content)) {
     warnings.push(
       "Discussion log artifact mentions existing plan inventory but does not preserve the /blu-plan-phase refresh warning."
     );
   }
-  return { issues, warnings };
+  return { diagnostics, warnings };
 }
 function isLegacyPhaseContextShell(content) {
   if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
@@ -39749,14 +40682,15 @@ function validatePhaseArtifactContent(content, artifact) {
       }
     }
     const discussValidation = validateDiscussPhaseContextAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map(
-        (issue2) => phaseArtifactDiagnostic({
+      ...discussValidation.diagnostics.map(
+        (diagnostic) => phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "context.unsupported_claim",
-          message: issue2
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );
@@ -39764,14 +40698,15 @@ function validatePhaseArtifactContent(content, artifact) {
   }
   if (artifact === "discussion-log") {
     const discussValidation = validateDiscussPhaseDiscussionLogAntiPatterns(content);
-    issues.push(...discussValidation.issues);
+    issues.push(...discussValidation.diagnostics.map((diagnostic) => diagnostic.message));
     diagnostics.push(
-      ...discussValidation.issues.map(
-        (issue2) => phaseArtifactDiagnostic({
+      ...discussValidation.diagnostics.map(
+        (diagnostic) => phaseArtifactDiagnostic({
           artifact,
           path: "content",
-          code: "discussion-log.unsupported_claim",
-          message: issue2
+          code: diagnostic.code,
+          message: diagnostic.message,
+          repair: diagnostic.repair
         })
       )
     );
@@ -41173,6 +42108,7 @@ function validateStrictSummaryArtifactContent(content, options = {}) {
 }
 function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   const issues = [];
+  const warnings = [];
   const metadata = parsePlanFrontmatter(content);
   if (!extractFrontmatter(content)) {
     issues.push("Plan artifact must start with YAML-style frontmatter.");
@@ -41225,12 +42161,12 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
       "Plan frontmatter must include at least one grep/test-verifiable item in acceptance_criteria."
     );
   } else {
-    issues.push(
-      ...validateObjectivePlanBulletList(
-        metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
-        "Plan frontmatter acceptance_criteria"
-      )
+    const acceptanceCriteriaValidation = validateObjectivePlanBulletList(
+      metadata.acceptanceCriteria.map((criterion) => `- ${criterion}`).join("\n"),
+      "Plan frontmatter acceptance_criteria"
     );
+    issues.push(...acceptanceCriteriaValidation.issues);
+    warnings.push(...acceptanceCriteriaValidation.warnings);
   }
   if (metadata.autonomous === null) {
     issues.push("Plan frontmatter must declare autonomous as true or false.");
@@ -41256,7 +42192,9 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
         issues.push(`Each task must include a #### ${taskHeading} subsection.`);
       }
     }
-    issues.push(...validatePlanTaskBlock(taskBlock, taskNumber));
+    const taskValidation = validatePlanTaskBlock(taskBlock, taskNumber);
+    issues.push(...taskValidation.issues);
+    warnings.push(...taskValidation.warnings);
   }
   const verificationSection = extractMarkdownSection5(content, "Verification");
   if (!hasSubstantivePlanListContent(verificationSection)) {
@@ -41284,7 +42222,7 @@ function validatePlanArtifactContent(content, expectedPhase, options = {}) {
   return {
     valid: issues.length === 0,
     issues,
-    warnings: [],
+    warnings,
     metadata
   };
 }
@@ -41603,6 +42541,83 @@ function inferProjectName(projectRoot, requestedName) {
   }
   return path8.basename(projectRoot);
 }
+function emptyCarryForwardBootstrapReceipt() {
+  return {
+    highestBasePhaseNumber: null,
+    firstPhaseNumber: null,
+    firstPhasePrefix: null,
+    firstPhaseDir: null,
+    firstContextPath: null,
+    deletedPhaseDirectories: [],
+    renamedPhaseDirectories: []
+  };
+}
+function buildScaffoldPhaseDirectoryPath(phaseNumber, phaseTitle) {
+  const phasePrefix2 = formatPhasePrefix3(phaseNumber);
+  return `${BLUEPRINT_PHASES_PATH}/${phasePrefix2}-${slugifyPhaseName(phaseTitle.trim())}`;
+}
+async function prepareCarryForwardBootstrapReceipt(args) {
+  const receipt = emptyCarryForwardBootstrapReceipt();
+  const requestedContextArtifact = args.artifacts.map((artifact) => parsePhaseArtifactRequest(artifact)).find((artifact) => artifact?.kind === "CONTEXT") ?? null;
+  const roadmapPath = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
+  if (!args.bootstrapSeed || requestedContextArtifact === null || !await pathExists2(roadmapPath)) {
+    return receipt;
+  }
+  const roadmap = parseRoadmapDocument(await fs5.readFile(roadmapPath, "utf8"));
+  const firstPhaseNumber = computeNextWholePhaseNumber(roadmap.phases);
+  const firstPhasePrefix = formatPhasePrefix3(firstPhaseNumber);
+  const firstPhaseTitle = args.bootstrapSeed.roadmapPhases?.[0]?.title?.trim() || requestedContextArtifact.phaseName;
+  const firstPhaseDir = buildScaffoldPhaseDirectoryPath(firstPhaseNumber, firstPhaseTitle);
+  const firstContextPath = `${firstPhaseDir}/${firstPhasePrefix}-CONTEXT.md`;
+  const previewedFirstPhase = args.bootstrapSeed.roadmapPhases?.[0]?.phase?.trim() ? normalizePhaseNumber(args.bootstrapSeed.roadmapPhases[0].phase) : normalizePhaseNumber(requestedContextArtifact.phasePrefix);
+  const highestBasePhaseNumber = String(Number.parseInt(firstPhaseNumber, 10) - 1);
+  receipt.highestBasePhaseNumber = highestBasePhaseNumber;
+  receipt.firstPhaseNumber = firstPhaseNumber;
+  receipt.firstPhasePrefix = firstPhasePrefix;
+  receipt.firstPhaseDir = firstPhaseDir;
+  receipt.firstContextPath = firstContextPath;
+  if (previewedFirstPhase !== firstPhaseNumber) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: bootstrapSeed first phase ${previewedFirstPhase} no longer matches the live next whole phase ${firstPhaseNumber}. Re-run /blu-new-milestone after re-reading ${BLUEPRINT_DIR}/ROADMAP.md.`
+    );
+  }
+  if (requestedContextArtifact.artifact !== firstContextPath) {
+    throw new Error(
+      `Carry-forward scaffold preview is stale: expected first context path ${firstContextPath} but received ${requestedContextArtifact.artifact}. Re-run /blu-new-milestone before committing starter docs.`
+    );
+  }
+  const phaseRoot = resolveBlueprintPath(args.projectRoot, BLUEPRINT_PHASES_PATH);
+  const matchingPhaseDirs = (await listImmediateDirectories2(phaseRoot)).filter((phaseDir) => {
+    const directoryPhaseNumber = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+    return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
+  });
+  const computedPhaseDirName = path8.basename(firstPhaseDir);
+  if (matchingPhaseDirs.length > 1) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir) => `${BLUEPRINT_PHASES_PATH}/${phaseDir}`).join(", ")}.`
+    );
+  }
+  if (matchingPhaseDirs.length === 1 && matchingPhaseDirs[0] !== computedPhaseDirName) {
+    throw new Error(
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} already maps to ${BLUEPRINT_PHASES_PATH}/${matchingPhaseDirs[0]}, not ${firstPhaseDir}. Historical phase directories cannot be renamed in place.`
+    );
+  }
+  const firstContextAbsolutePath = resolveBlueprintPath(args.projectRoot, firstContextPath);
+  if (await pathExists2(firstContextAbsolutePath)) {
+    const existingContext = await fs5.readFile(firstContextAbsolutePath, "utf8");
+    if (!args.overwrite && !isScaffoldGeneratedArtifact(existingContext) && !isBootstrapStarterContext(existingContext)) {
+      throw new Error(
+        `Carry-forward scaffold is blocked because ${firstContextPath} already contains user-authored context. Re-run with explicit overwrite approval before replacing the saved phase context.`
+      );
+    }
+  }
+  if (matchingPhaseDirs.length === 1 && !args.overwrite) {
+    throw new Error(
+      `Carry-forward scaffold would overwrite existing Phase ${firstPhaseNumber} starter artifacts at ${firstPhaseDir}. Re-run with explicit overwrite approval before writing starter docs.`
+    );
+  }
+  return receipt;
+}
 async function blueprintArtifactScaffold(args = {}) {
   if (args.phase !== void 0 || args.artifact !== void 0) {
     throw new Error(
@@ -41617,6 +42632,12 @@ async function blueprintArtifactScaffold(args = {}) {
   const createdFiles = [];
   const reusedFiles = [];
   const warnings = [];
+  const carryForwardReceipt = await prepareCarryForwardBootstrapReceipt({
+    projectRoot,
+    artifacts,
+    bootstrapSeed: args.bootstrapSeed,
+    overwrite
+  });
   const renderContext = {
     projectName,
     bootstrapSeed: args.bootstrapSeed,
@@ -41666,7 +42687,8 @@ async function blueprintArtifactScaffold(args = {}) {
   return {
     createdFiles,
     reusedFiles,
-    warnings
+    warnings,
+    ...carryForwardReceipt
   };
 }
 async function blueprintArtifactList(args = {}) {
@@ -45867,7 +46889,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_DEPENDENCY_CHOICE_PATTERN, RESEARCH_INSTALL_COMMAND_PATTERN, RESEARCH_GENERIC_INSTALL_ARGUMENTS, DEPENDENCY_TOOL_EVALUATION_COVERAGE, DEPENDENCY_ALTERNATIVES_COVERAGE, DEPENDENCY_SETUP_AND_UPDATE_POSTURE_COVERAGE, LIBRARY_VS_CUSTOM_DECISION_COVERAGE, RESEARCH_ISO_DATE_PATTERN, RESEARCH_ACCESS_DATE_SIGNAL_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -45878,6 +46900,8 @@ var init_artifacts = __esm({
     init_security();
     init_config();
     init_path_token_heuristics();
+    init_phase_roadmap_parser();
+    init_phase_numbering();
     init_phase();
     execFileAsync = promisify(execFile);
     BLUEPRINT_DIR = ".blueprint";
@@ -45956,6 +46980,78 @@ var init_artifacts = __esm({
       "composer.json",
       "mix.exs"
     ]);
+    BOOTSTRAP_LOCKFILES = /* @__PURE__ */ new Set([
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "bun.lockb",
+      "Cargo.lock",
+      "Gemfile.lock",
+      "poetry.lock"
+    ]);
+    BOOTSTRAP_STARTER_DIRECTORIES = /* @__PURE__ */ new Set([
+      ...BOOTSTRAP_SOURCE_DIRECTORIES,
+      ".github",
+      ".vscode",
+      ".idea"
+    ]);
+    BOOTSTRAP_CONFIGURATION_FILE_PATTERNS = [
+      /^tsconfig(?:\..+)?\.json$/i,
+      /^jsconfig\.json$/i,
+      /^vite\.config\./i,
+      /^vitest\.config\./i,
+      /^jest\.config\./i,
+      /^webpack\.config\./i,
+      /^rollup\.config\./i,
+      /^eslint\.config\./i,
+      /^prettier\.config\./i,
+      /^tailwind\.config\./i,
+      /^postcss\.config\./i,
+      /^next\.config\./i,
+      /^nuxt\.config\./i,
+      /^svelte\.config\./i
+    ];
+    BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".c",
+      ".cc",
+      ".cpp",
+      ".cs",
+      ".cts",
+      ".cjs",
+      ".ex",
+      ".exs",
+      ".go",
+      ".h",
+      ".hpp",
+      ".java",
+      ".js",
+      ".jsx",
+      ".kt",
+      ".kts",
+      ".m",
+      ".mm",
+      ".mjs",
+      ".mts",
+      ".php",
+      ".py",
+      ".rb",
+      ".rs",
+      ".scala",
+      ".sh",
+      ".sql",
+      ".swift",
+      ".ts",
+      ".tsx",
+      ".zsh"
+    ]);
+    BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
+      ".adoc",
+      ".md",
+      ".mdx",
+      ".pdf",
+      ".rst",
+      ".txt"
+    ]);
     BOOTSTRAP_IGNORED_ROOT_ENTRIES = /* @__PURE__ */ new Set([
       ".git",
       ".blueprint",
@@ -45967,6 +47063,20 @@ var init_artifacts = __esm({
       ".gitattributes",
       ".editorconfig",
       ".nvmrc"
+    ]);
+    BOOTSTRAP_IGNORED_SCAN_DIRECTORIES = /* @__PURE__ */ new Set([
+      ".git",
+      ".blueprint",
+      ".github",
+      ".idea",
+      ".next",
+      ".turbo",
+      ".vscode",
+      "build",
+      "coverage",
+      "dist",
+      "docs",
+      "node_modules"
     ]);
     BOOTSTRAP_PLACEHOLDER_SIGNALS = {
       ".blueprint/PROJECT.md": [
@@ -46338,6 +47448,14 @@ var init_artifacts = __esm({
     ];
     UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
     UNSUPPORTED_MODE_NEGATION_PATTERN = /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
+    RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
+      /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,
+      /^downstream handoff packet\b:?/i,
+      /^source refs?\b:?/i,
+      /^(?:deferred|open)\s+risks?\b:?/i,
+      /^open (?:gray areas?|items for discuss-phase|risks and dependency questions)\b:?/i,
+      /^(?:researchBrief|uiBrief|planBrief|planInventory|routingGates)\b:?/i
+    ];
     REQUIRED_VERIFICATION_SECTIONS = readArtifactContract(
       "phase.verification"
     ).requiredHeadings;
@@ -46755,9 +47873,8 @@ function buildCodeReviewTaskSchema(args) {
     }
     properties.evidenceCoverage = {
       type: "object",
-      description: "Exhaustive coverage decisions for the exact known evidence artifacts in this phase.",
+      description: "Coverage decisions for the known evidence artifacts the model actually used. Omit known artifacts that were not part of the review reasoning; MCP renders missing known evidence as not reviewed.",
       additionalProperties: false,
-      required: args.knownEvidenceArtifacts,
       properties: Object.fromEntries(
         args.knownEvidenceArtifacts.map((artifactPath) => [
           artifactPath,
@@ -46790,7 +47907,7 @@ async function buildCodeReviewAuthoringContext(args) {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
   const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
-  const preferredNextSafeAction = allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ?? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? allowedNextActions[0] ?? null;
+  const preferredNextSafeAction = args.hasSecurityArtifact ? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? allowedNextActions.find((action) => action === "/blu-progress") ?? allowedNextActions[0] ?? null : allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ?? allowedNextActions[0] ?? null;
   const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
     allowedNextActions,
     preferredNextSafeAction
@@ -46808,6 +47925,7 @@ async function buildCodeReviewAuthoringContext(args) {
     phase: args.phase,
     files: [...args.files],
     reviewMode: { ...args.reviewMode },
+    hasSecurityArtifact: args.hasSecurityArtifact,
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
     preferredNextSafeAction,
@@ -49386,12 +50504,16 @@ function renderCodeReviewFinding(finding, index) {
   return `- [${finding.severity}][${finding.disposition}] \`${formatReviewTargetId("F", index)}\` \`${sanitizeMarkdownScalar(finding.location)}\` - Evidence: ${sanitizeMarkdownScalar(finding.evidence)} Impact: ${sanitizeMarkdownScalar(finding.impact)} Fix/verification: ${sanitizeMarkdownScalar(finding.recommendation)}`;
 }
 function renderCodeReviewEvidenceCoverage(args) {
-  if (args.knownEvidenceArtifacts.length === 0) {
+  const artifactPaths = uniqueSortedStrings2([
+    ...args.knownEvidenceArtifacts,
+    ...Object.keys(args.model.evidenceCoverage)
+  ]);
+  if (artifactPaths.length === 0) {
     return ["none"];
   }
-  return args.knownEvidenceArtifacts.map((artifactPath) => {
+  return artifactPaths.map((artifactPath) => {
     const coverage = args.model.evidenceCoverage[artifactPath];
-    return `${artifactPath} - ${coverage.status}: ${coverage.rationale}`;
+    return coverage ? `${artifactPath} - ${coverage.status}: ${coverage.rationale}` : `${artifactPath} - not-reviewed: No model evidenceCoverage entry was authored.`;
   });
 }
 function renderCodeReviewModelContent(model, located, authoringContext) {
@@ -50661,22 +51783,7 @@ function addPlaceholderDiagnostics(args) {
 function addEvidenceCoverageDiagnostics(args) {
   const knownEvidence = new Set(args.knownEvidenceArtifacts);
   const coverageKeys = Object.keys(args.model.evidenceCoverage);
-  const missing = args.knownEvidenceArtifacts.filter(
-    (artifactPath) => !(artifactPath in args.model.evidenceCoverage)
-  );
   const unknown2 = coverageKeys.filter((artifactPath) => !knownEvidence.has(artifactPath));
-  if (missing.length > 0) {
-    args.diagnostics.push(
-      modelDiagnostic({
-        source: "residual",
-        path: "model.evidenceCoverage",
-        code: "residual.evidence_missing",
-        message: `Code-review model evidenceCoverage must include every known evidence artifact. Missing: ${missing.join(", ")}.`,
-        context: { missing },
-        suggestion: "Add exact evidenceCoverage keys from authoringContext.knownEvidenceArtifacts."
-      })
-    );
-  }
   if (unknown2.length > 0) {
     args.diagnostics.push(
       modelDiagnostic({
@@ -50920,6 +52027,45 @@ function addVerdictContradictionDiagnostics(args) {
       })
     );
   }
+  if (!args.authoringContext.hasSecurityArtifact && args.authoringContext.preferredNextSafeAction && nextAction !== args.authoringContext.preferredNextSafeAction) {
+    args.diagnostics.push(
+      modelDiagnostic({
+        source: "residual",
+        path: "model.nextSafeAction",
+        code: "residual.next_action_priority",
+        message: `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence.`,
+        context: {
+          nextSafeAction: nextAction,
+          preferredNextSafeAction: args.authoringContext.preferredNextSafeAction,
+          secondaryNextSafeAction: args.authoringContext.secondaryNextSafeAction
+        },
+        suggestion: args.authoringContext.secondaryNextSafeAction ? `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction and mention ${args.authoringContext.secondaryNextSafeAction} as secondary follow-up guidance.` : `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction.`
+      })
+    );
+  }
+}
+function diagnosticPathCoveredBySchema(diagnostic, schemaDiagnostics) {
+  if (diagnostic.source !== "residual") {
+    return false;
+  }
+  return schemaDiagnostics.some((schemaDiagnostic) => {
+    if (schemaDiagnostic.path === diagnostic.path) {
+      return true;
+    }
+    if (diagnostic.path === "model") {
+      return false;
+    }
+    return schemaDiagnostic.path.length > 0 && (diagnostic.path.startsWith(`${schemaDiagnostic.path}.`) || schemaDiagnostic.path.startsWith(`${diagnostic.path}.`));
+  });
+}
+function suppressResidualSchemaOverlaps(diagnostics) {
+  const schemaDiagnostics = diagnostics.filter((diagnostic) => diagnostic.source === "schema");
+  if (schemaDiagnostics.length === 0) {
+    return diagnostics;
+  }
+  return diagnostics.filter(
+    (diagnostic) => !diagnosticPathCoveredBySchema(diagnostic, schemaDiagnostics)
+  );
 }
 async function collectCodeReviewResidualDiagnostics(args) {
   const diagnostics = [];
@@ -50961,7 +52107,8 @@ async function collectCodeReviewResidualDiagnostics(args) {
   });
   addVerdictContradictionDiagnostics({
     diagnostics,
-    model: args.normalizedModel
+    model: args.normalizedModel,
+    authoringContext: args.authoringContext
   });
   const nextSafeActionIssues = await validateImplementedNextSafeAction(
     args.normalizedModel.nextSafeAction
@@ -52159,11 +53306,6 @@ async function deriveReviewFilesFromPlans(projectRoot, located, warnings) {
       continue;
     }
     const validation = validatePlanArtifactContent(content, located.phaseNumber);
-    if (!validation.valid) {
-      warnings.push(
-        `Plan metadata issues in ${planPath}: ${validation.issues.join(" ")}`
-      );
-    }
     for (const plannedPath of validation.metadata.filesModified) {
       const requestedPath = plannedPath.trim();
       if (requestedPath.length === 0) {
@@ -52480,6 +53622,7 @@ async function blueprintReviewScope(args) {
     phase,
     files,
     reviewMode,
+    hasSecurityArtifact: artifacts.security !== null,
     knownEvidenceArtifacts
   }) : void 0;
   return {
@@ -52630,6 +53773,40 @@ async function blueprintReviewValidateModel(args) {
   }
   const modelObject = asJsonObject3(args.model);
   const diagnostics = [];
+  if (artifact === "code-review" && explicitReviewFilesRequested(args.files)) {
+    const codeReviewContext = context.authoringContext;
+    if (!args.scopeSource) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_required",
+          message: "Code-review validation with explicit files must also provide scopeSource.",
+          context: {
+            files: args.files ?? [],
+            reviewModeSource: codeReviewContext.reviewMode.source
+          },
+          suggestion: "Pass the reviewMode.source returned by blueprint_review_scope alongside files when validating and recording the code-review model.",
+          retryable: false
+        })
+      );
+    } else if (args.scopeSource !== codeReviewContext.reviewMode.source) {
+      diagnostics.push(
+        modelDiagnostic({
+          source: "scope",
+          path: "scopeSource",
+          code: "scope.source_mismatch",
+          message: `Code-review validation scopeSource ${args.scopeSource} does not match resolved review scope source ${codeReviewContext.reviewMode.source}.`,
+          context: {
+            scopeSource: args.scopeSource,
+            reviewModeSource: codeReviewContext.reviewMode.source
+          },
+          suggestion: "Use the exact reviewMode.source returned by blueprint_review_scope for this validation and record call.",
+          retryable: false
+        })
+      );
+    }
+  }
   if (!modelObject) {
     const modelLabel = artifact === "security" ? "Security review" : artifact === "review-fix" ? "Review-fix" : artifact === "ui-review" ? "UI-review" : artifact === "peer-review" ? "Peer-review" : "Code-review";
     diagnostics.push(
@@ -52894,9 +54071,10 @@ async function blueprintReviewValidateModel(args) {
       renderPreview = rendered;
     }
   }
+  const finalDiagnostics = artifact === "code-review" ? suppressResidualSchemaOverlaps(diagnostics) : diagnostics;
   return {
-    status: diagnostics.length === 0 ? "valid" : "invalid",
-    valid: diagnostics.length === 0,
+    status: finalDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: finalDiagnostics.length === 0,
     phase: context.phase,
     files: context.files,
     reviewMode: context.reviewMode ?? {
@@ -52905,10 +54083,10 @@ async function blueprintReviewValidateModel(args) {
     },
     schemaPath: context.schemaPath,
     taskSchema: context.taskSchema,
-    diagnostics,
-    diagnosticCounts: countDiagnostics(diagnostics),
-    repairSummary: summarizeReviewModelRepairs(diagnostics),
-    normalizedModel: diagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "ui-review" ? normalizedUiReviewModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
+    diagnostics: finalDiagnostics,
+    diagnosticCounts: countDiagnostics(finalDiagnostics),
+    repairSummary: summarizeReviewModelRepairs(finalDiagnostics),
+    normalizedModel: finalDiagnostics.some((diagnostic) => diagnostic.source === "schema") ? null : artifact === "security" ? normalizedSecurityModel : artifact === "review-fix" ? normalizedReviewFixModel : artifact === "ui-review" ? normalizedUiReviewModel : artifact === "peer-review" ? normalizedPeerReviewModel : normalizedModel,
     renderPreview,
     warnings: uniqueSortedStrings2([...context.warnings, ...validationWarnings])
   };
@@ -53044,6 +54222,7 @@ async function blueprintReviewRecord(args) {
       phase: args.phase,
       artifact: modelArtifact,
       files: validationFiles,
+      scopeSource: args.artifact === "code-review" ? args.scopeSource : void 0,
       depth: args.depth,
       targetIds: args.targetIds,
       model: args.model
@@ -53350,6 +54529,7 @@ var init_review = __esm({
       phase: numericBlueprintInputSchema2.optional(),
       artifact: _enum(["code-review", "peer-review", "review-fix", "security", "ui-review"]).optional(),
       files: array(string2()).optional(),
+      scopeSource: _enum(["explicit-files", "phase-plans", "phase-summaries", "phase-evidence"]).optional(),
       depth: _enum(["quick", "standard", "deep"]).optional(),
       targetIds: array(string2()).optional(),
       model: unknown()
@@ -63075,19 +64255,8 @@ function bootstrapSeedPreflightDiagnostics(seed) {
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_success_criteria_count_invalid",
         message: `Phase ${phase.phase} must include 2-5 success criteria before the first write.`,
-        repair: "Provide between 2 and 5 observable success criteria for the phase."
+        repair: "Provide between 2 and 5 success criteria for the phase."
       }));
-    }
-    for (const [criterionIndex, criterion] of successCriteria.entries()) {
-      const trimmedCriterion = criterion.trim();
-      if (!isSubstantiveText(trimmedCriterion) || GENERIC_SUCCESS_CRITERIA_PATTERNS.some((pattern) => pattern.test(trimmedCriterion))) {
-        diagnostics.push(seedDiagnostic({
-          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria[${criterionIndex}]`,
-          code: "seed_success_criterion_generic",
-          message: `Phase ${phase.phase} has a generic success criterion: ${trimmedCriterion}`,
-          repair: "Replace generic success criteria with observable evidence that can be verified later."
-        }));
-      }
     }
   }
   for (const requirementId of committedRequirementIds) {
@@ -63128,11 +64297,45 @@ function bootstrapSeedExplicitGapDiagnostics(seed) {
         path: `bootstrapSeed.roadmapPhases[${phaseIndex}].successCriteria`,
         code: "seed_phase_success_criteria_missing",
         message: `Phase ${phaseLabel2} must include explicit successCriteria before the first write.`,
-        repair: "Add at least two concrete success criteria before retrying."
+        repair: "Add at least two success criteria before retrying."
       }));
     }
   }
   return diagnostics;
+}
+function bootstrapSeedRawPhaseRequirementDiagnostics(seed) {
+  const diagnostics = [];
+  for (const [phaseIndex, phase] of (seed.roadmapPhases ?? []).entries()) {
+    const phaseLabel2 = phase.phase.trim() || "(blank)";
+    const seenRequirementIds = /* @__PURE__ */ new Set();
+    const requirementIds = phase.requirementIds?.map((value) => value.trim()).filter(Boolean) ?? [];
+    for (const requirementId of requirementIds) {
+      if (seenRequirementIds.has(requirementId)) {
+        diagnostics.push(seedDiagnostic({
+          path: `bootstrapSeed.roadmapPhases[${phaseIndex}].requirementIds`,
+          code: "seed_duplicate_phase_requirement_ref",
+          message: `Phase ${phaseLabel2} references requirement ${requirementId} more than once.`,
+          repair: "Remove duplicate requirement IDs from the phase requirementIds list."
+        }));
+      }
+      seenRequirementIds.add(requirementId);
+    }
+  }
+  return diagnostics;
+}
+function dedupeProjectInitDiagnostics(diagnostics) {
+  const deduped = /* @__PURE__ */ new Map();
+  for (const diagnostic of diagnostics) {
+    const key = JSON.stringify({
+      path: diagnostic.path,
+      code: diagnostic.code,
+      message: diagnostic.message
+    });
+    if (!deduped.has(key)) {
+      deduped.set(key, diagnostic);
+    }
+  }
+  return [...deduped.values()];
 }
 function buildInvalidProjectInitResult(args) {
   const issues = args.diagnostics.map((diagnostic) => diagnostic.message);
@@ -63538,19 +64741,19 @@ async function blueprintProjectInit(args = {}) {
     repoSummary ? { vision: repoSummary } : void 0
   ) : void 0;
   const seedInput = bootstrapMode === "auto" ? mergeBootstrapSeed(autoBaseSeed, args.bootstrapSeed) : args.bootstrapSeed;
+  const rawPhaseRequirementDiagnostics = bootstrapSeedRawPhaseRequirementDiagnostics(seedInput);
   const explicitGapDiagnostics = bootstrapSeedExplicitGapDiagnostics(seedInput);
-  if (explicitGapDiagnostics.length > 0) {
-    return buildInvalidProjectInitResult({
-      projectRoot,
-      diagnostics: explicitGapDiagnostics
-    });
-  }
   const bootstrapSeed = buildDefaultBootstrapSeed(projectName, bootstrapAssessment, seedInput);
   const preflightDiagnostics = bootstrapSeedPreflightDiagnostics(bootstrapSeed);
-  if (preflightDiagnostics.length > 0) {
+  const preWriteDiagnostics = dedupeProjectInitDiagnostics([
+    ...rawPhaseRequirementDiagnostics,
+    ...explicitGapDiagnostics,
+    ...preflightDiagnostics
+  ]);
+  if (preWriteDiagnostics.length > 0) {
     return buildInvalidProjectInitResult({
       projectRoot,
-      diagnostics: preflightDiagnostics
+      diagnostics: preWriteDiagnostics
     });
   }
   const initialPhase = bootstrapSeed.roadmapPhases[0]?.phase ? normalizeBlueprintPhaseRef(
@@ -63583,7 +64786,8 @@ async function blueprintProjectInit(args = {}) {
   });
   const seededConfig = await seedProjectConfig({
     cwd: projectRoot,
-    defaultsPath: args.defaultsPath
+    defaultsPath: args.defaultsPath,
+    savedDefaultsPolicy: args.savedDefaultsPolicy
   });
   const bootstrapContextWarnings = overwrite || scaffold.createdFiles.includes(initialPhaseContextPath) ? await writeTextFile(
     resolveBlueprintPath(projectRoot, initialPhaseContextPath),
@@ -63712,7 +64916,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, GENERIC_SUCCESS_CRITERIA_PATTERNS, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -63734,6 +64938,7 @@ var init_project = __esm({
     projectInitInputSchema = {
       cwd: string2().optional(),
       defaultsPath: string2().optional(),
+      savedDefaultsPolicy: _enum(["apply", "skip"]).optional(),
       overwrite: boolean2().optional(),
       projectName: string2().optional(),
       bootstrapMode: _enum(["interactive", "auto"]).optional(),
@@ -63805,12 +65010,6 @@ var init_project = __esm({
     ]);
     MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
-    GENERIC_SUCCESS_CRITERIA_PATTERNS = [
-      /^(?:complete|finish|do|implement|handle|support|make|prepare)\s+(?:the\s+)?(?:work|task|feature|phase|roadmap|bootstrap|workflow)\.?$/i,
-      /^(?:keep|ensure|verify|validate|confirm)\s+(?:things|it|this|the work|the phase|the roadmap|the workflow)\s+(?:working|done|ready|traceable|complete)\.?$/i,
-      /^complete .+ with traceable handoff evidence\.?$/i,
-      /^keep requirement ids traceable into later roadmap artifacts\.?$/i
-    ];
     projectToolDefinitions = [
       {
         name: "blueprint_command_catalog",

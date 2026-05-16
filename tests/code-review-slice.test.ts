@@ -72,6 +72,7 @@ function makeBundledDocsUnavailable(t: TestContext): void {
 type CodeReviewRepoOptions = {
   withPlan?: boolean;
   withSummary?: boolean;
+  withSecurity?: boolean;
   planFilesModified?: string[];
   summaryChangedFiles?: string[];
   configPatch?: Record<string, unknown>;
@@ -136,6 +137,7 @@ async function createCodeReviewRepo(
   const {
     withPlan = true,
     withSummary = true,
+    withSecurity = false,
     planFilesModified = [
       "src/feature.ts",
       "tests/feature.test.ts",
@@ -349,6 +351,23 @@ ${summaryChanges}
     );
   }
 
+  if (withSecurity) {
+    await writeFile(
+      path.join(phaseDir, "05-SECURITY.md"),
+      `# Phase 05: Code Review Scope - Security
+
+## Findings
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`,
+      "utf8"
+    );
+  }
+
   return repoPath;
 }
 
@@ -388,7 +407,7 @@ function createStructuredCodeReviewModel(
       }
     },
     followUps: ["Add a negative-input regression test before shipping."],
-    nextSafeAction: "/blu-code-review-fix 5",
+    nextSafeAction: "/blu-secure-phase 5",
     ...overrides
   };
 }
@@ -396,7 +415,7 @@ function createStructuredCodeReviewModel(
 test("code-review catalog, runtime contract, and next-action validation survive bundled docs being unavailable", async (t) => {
   makeBundledDocsUnavailable(t);
 
-  const repoPath = await createCodeReviewRepo();
+  const repoPath = await createCodeReviewRepo({ withSecurity: true });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
@@ -445,6 +464,7 @@ test("code-review catalog, runtime contract, and next-action validation survive 
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       nextSafeAction: "/blu-code-review-fix 5"
     })
@@ -870,13 +890,8 @@ test("blueprint_review_scope returns model authoring context with narrowed task 
     {
       type: "object",
       description:
-        "Exhaustive coverage decisions for the exact known evidence artifacts in this phase.",
+        "Coverage decisions for the known evidence artifacts the model actually used. Omit known artifacts that were not part of the review reasoning; MCP renders missing known evidence as not reviewed.",
       additionalProperties: false,
-      required: [
-        ".blueprint/phases/05-review-scope/05-01-PLAN.md",
-        ".blueprint/phases/05-review-scope/05-01-SUMMARY.md",
-        ".blueprint/phases/05-review-scope/05-VERIFICATION.md"
-      ],
       properties: {
         ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
           $ref: "#/$defs/evidenceCoverageEntry"
@@ -892,6 +907,37 @@ test("blueprint_review_scope returns model authoring context with narrowed task 
   );
   assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5"));
   assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-progress"));
+});
+
+test("blueprint_review_validate_model accepts subset code-review evidence coverage", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
+    model: createStructuredCodeReviewModel({
+      evidenceCoverage: {
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+          status: "used",
+          rationale: "Plan metadata defined the reviewed source and test files."
+        }
+      }
+    })
+  });
+
+  assert.equal(
+    validation.status,
+    "valid",
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.match(validation.renderPreview ?? "", /05-01-PLAN\.md - used/);
+  assert.match(validation.renderPreview ?? "", /05-01-SUMMARY\.md - not-reviewed/);
+  assert.match(validation.renderPreview ?? "", /05-VERIFICATION\.md - not-reviewed/);
 });
 
 test("blueprint_review_scope reports phase-summaries when summary evidence alone defines the scope", async (t) => {
@@ -951,6 +997,38 @@ test("blueprint_review_scope ignores XML and template snippets in summary Change
   assert.equal(scoped.status, "ready");
   assert.deepEqual(scoped.files, ["src/summary.ts"]);
   assert.doesNotMatch(scoped.warnings.join("\n"), /java\.version|dependencyManagement/);
+});
+
+test("blueprint_review_scope hides nonblocking plan-shape warnings when files_modified is usable", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    summaryChangedFiles: ["src/feature.ts"]
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-review-scope/05-01-PLAN.md"),
+    `---
+phase: 5
+plan_id: 1
+files_modified:
+  - src/feature.ts
+---
+
+# Thin Plan
+`,
+    "utf8"
+  );
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5"
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.deepEqual(scoped.files, ["src/feature.ts"]);
+  assert.doesNotMatch(scoped.warnings.join("\n"), /Plan metadata issues|missing required section/i);
 });
 
 test("blueprint_review_scope keeps explicit files scoped exactly to the explicit list", async (t) => {
@@ -1352,6 +1430,7 @@ test("blueprint_review_record persists structured code-review models as canonica
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model
   });
 
@@ -1481,6 +1560,7 @@ test("blueprint_review_record preserves distinct critical and high counts when f
     cwd: repoPath,
     phase: "5",
     files: scopeFiles,
+    scopeSource: "explicit-files",
     model
   });
 
@@ -1649,7 +1729,7 @@ test("blueprint_review_record keeps no-follow-up sentinel unnumbered", async (t)
       verdict: "PASS",
       findings: [],
       followUps: ["none"],
-      nextSafeAction: "/blu-progress"
+      nextSafeAction: "/blu-secure-phase 5"
     }),
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
     scopeSource: "explicit-files"
@@ -1715,6 +1795,43 @@ test("blueprint_review_record requires scopeSource whenever scoped files are sup
   assert.match(
     reviewResultMessages(invalid as { warnings?: string[]; diagnostics?: Array<{ message: string }> }),
     /scopeSource/i
+  );
+});
+
+test("blueprint_review_validate_model requires scopeSource for explicit files", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const missingScopeSource = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    model: createStructuredCodeReviewModel()
+  });
+
+  assert.equal(missingScopeSource.status, "invalid");
+  assert.deepEqual(missingScopeSource.diagnosticCounts.bySource, {
+    scope: 1,
+    schema: 0,
+    residual: 0,
+    markdown: 0
+  });
+  assert.equal(missingScopeSource.diagnostics[0].code, "scope.source_required");
+
+  const valid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
+    model: createStructuredCodeReviewModel()
+  });
+
+  assert.equal(
+    valid.status,
+    "valid",
+    valid.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
   );
 });
 
@@ -1836,7 +1953,7 @@ test("blueprint_review_record rejects invalid structured code-review models befo
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
-  const missingEvidence = await blueprintReviewRecord({
+  const unknownEvidence = await blueprintReviewRecord({
     cwd: repoPath,
     phase: "5",
     artifact: "code-review",
@@ -1849,6 +1966,10 @@ test("blueprint_review_record rejects invalid structured code-review models befo
         ".blueprint/phases/05-review-scope/05-01-SUMMARY.md": {
           status: "used",
           rationale: "Summary evidence confirmed the completed delivery increment."
+        },
+        ".blueprint/phases/05-review-scope/05-INVENTED.md": {
+          status: "used",
+          rationale: "Invented evidence must be rejected before persistence."
         }
       }
     }),
@@ -1856,9 +1977,9 @@ test("blueprint_review_record rejects invalid structured code-review models befo
     scopeSource: "explicit-files"
   });
 
-  assert.equal(missingEvidence.status, "invalid");
-  assert.equal(missingEvidence.written, false);
-  assert.match(missingEvidence.warnings.join("\n"), /05-VERIFICATION\.md/);
+  assert.equal(unknownEvidence.status, "invalid");
+  assert.equal(unknownEvidence.written, false);
+  assert.match(unknownEvidence.warnings.join("\n"), /additional properties|05-INVENTED\.md/i);
 
   const genericFindingFields = await blueprintReviewRecord({
     cwd: repoPath,
@@ -1946,6 +2067,7 @@ test("blueprint_review_validate_model aggregates schema and residual diagnostics
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model
   });
 
@@ -1980,6 +2102,44 @@ test("blueprint_review_validate_model aggregates schema and residual diagnostics
         diagnostic.context &&
         diagnostic.suggestion
     )
+  );
+});
+
+test("blueprint_review_validate_model reports one canonical unknown evidence diagnostic", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
+    model: createStructuredCodeReviewModel({
+      evidenceCoverage: {
+        ".blueprint/phases/05-review-scope/05-01-PLAN.md": {
+          status: "used",
+          rationale: "Plan metadata defined the reviewed source and test files."
+        },
+        ".blueprint/phases/05-review-scope/05-INVENTED.md": {
+          status: "used",
+          rationale: "Invented evidence must be rejected without duplicate residual noise."
+        }
+      }
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.equal(
+    invalid.diagnostics.filter((diagnostic) => diagnostic.path.startsWith("model.evidenceCoverage")).length,
+    1
+  );
+  assert.equal(invalid.diagnostics[0].source, "schema");
+  assert.equal(invalid.diagnostics[0].code, "schema.additionalProperties");
+  assert.doesNotMatch(
+    invalid.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /residual\.evidence_unknown/
   );
 });
 
@@ -2024,6 +2184,7 @@ test("blueprint_review_validate_model accepts quoted placeholder tokens when the
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       findings: [
         {
@@ -2061,6 +2222,7 @@ test("blueprint_review_validate_model accepts distinct same-line findings when t
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       reviewSummary: [
         "Phase 5 review found two distinct issues anchored to the same guardless source line."
@@ -2152,6 +2314,7 @@ test("blueprint_review_validate_model rejects explicit finding locations outside
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       findings: [
         {
@@ -2171,10 +2334,14 @@ test("blueprint_review_validate_model rejects explicit finding locations outside
   assert.ok(
     invalid.diagnostics.some(
       (diagnostic) =>
-        diagnostic.code === "residual.location_out_of_scope" &&
+        diagnostic.code === "schema.pattern" &&
         diagnostic.path === "model.findings[0].location" &&
-        /outside the resolved review scope/i.test(diagnostic.message)
+        /must match pattern/i.test(diagnostic.message)
     )
+  );
+  assert.equal(
+    invalid.diagnostics.filter((diagnostic) => diagnostic.path === "model.findings[0].location").length,
+    1
   );
 });
 
@@ -2210,10 +2377,14 @@ test("blueprint_review_validate_model rejects implicit finding locations outside
   assert.ok(
     invalid.diagnostics.some(
       (diagnostic) =>
-        diagnostic.code === "residual.location_out_of_scope" &&
+        diagnostic.code === "schema.pattern" &&
         diagnostic.path === "model.findings[0].location" &&
-        /outside the resolved review scope/i.test(diagnostic.message)
+        /must match pattern/i.test(diagnostic.message)
     )
+  );
+  assert.equal(
+    invalid.diagnostics.filter((diagnostic) => diagnostic.path === "model.findings[0].location").length,
+    1
   );
 });
 
@@ -2227,6 +2398,7 @@ test("blueprint_review_validate_model rejects authored runtime-owned severity co
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       severityCounts: {
         critical: 0,
@@ -2346,6 +2518,59 @@ test("blueprint_review_validate_model rejects blocked reviews that route to prog
   );
 });
 
+test("blueprint_review_validate_model keeps secure-phase primary until security evidence exists", async (t) => {
+  const repoPath = await createCodeReviewRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const beforeSecurity = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-code-review-fix 5"
+    })
+  });
+
+  assert.equal(beforeSecurity.status, "invalid");
+  assert.ok(
+    beforeSecurity.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "residual.next_action_priority" &&
+        /\/blu-secure-phase 5/.test(diagnostic.message)
+    )
+  );
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/05-review-scope/05-SECURITY.md"),
+    `# Phase 05: Code Review Scope - Security
+
+## Findings
+
+- none
+
+## Next Safe Action
+
+- /blu-progress
+`,
+    "utf8"
+  );
+
+  const afterSecurity = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-code-review-fix 5"
+    })
+  });
+
+  assert.equal(
+    afterSecurity.status,
+    "valid",
+    afterSecurity.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+});
+
 test("blueprint_review_validate_model rejects next actions outside the narrowed allowed list", async (t) => {
   const repoPath = await createCodeReviewRepo();
   t.after(async () => {
@@ -2356,6 +2581,7 @@ test("blueprint_review_validate_model rejects next actions outside the narrowed 
     cwd: repoPath,
     phase: "5",
     files: ["src/feature.ts", "tests/feature.test.ts"],
+    scopeSource: "explicit-files",
     model: createStructuredCodeReviewModel({
       nextSafeAction: "/blu-do 5"
     })
@@ -2365,6 +2591,10 @@ test("blueprint_review_validate_model rejects next actions outside the narrowed 
   assert.match(
     invalid.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /allowed values|must be equal to one of/i
+  );
+  assert.equal(
+    invalid.diagnostics.filter((diagnostic) => diagnostic.path === "model.nextSafeAction").length,
+    1
   );
 });
 

@@ -4,6 +4,7 @@ import {
 } from "../../shared/security.js";
 
 export type NumericInput = string | number;
+export type WholePhaseNumberInput = NumericInput | { phaseNumber: NumericInput };
 
 export function normalizeBlueprintInput(value: NumericInput): string {
   if (typeof value === "number") {
@@ -22,6 +23,47 @@ export function normalizePhaseNumber(value: NumericInput): string {
 
 export function basePhaseNumber(value: NumericInput): string {
   return normalizePhaseNumber(value).split(".")[0] ?? normalizePhaseNumber(value);
+}
+
+function resolveWholePhaseNumberInput(value: WholePhaseNumberInput): NumericInput {
+  if (typeof value === "string" || typeof value === "number") {
+    return value;
+  }
+
+  return value.phaseNumber;
+}
+
+export function computeNextWholePhaseNumber(
+  roadmapPhases: readonly WholePhaseNumberInput[]
+): string {
+  if (roadmapPhases.length === 0) {
+    throw new Error(
+      "Cannot compute the next whole Blueprint phase number from an empty roadmap."
+    );
+  }
+
+  const basePhaseNumbers = roadmapPhases.map((phase, index) => {
+    const rawValue = resolveWholePhaseNumberInput(phase);
+
+    if (rawValue === undefined || rawValue === null) {
+      throw new Error(
+        `Cannot compute the next whole Blueprint phase number because roadmap phase ${index + 1} is missing a phaseNumber.`
+      );
+    }
+
+    const normalizedBase = basePhaseNumber(rawValue);
+    const parsedBase = Number.parseInt(normalizedBase, 10);
+
+    if (Number.isNaN(parsedBase)) {
+      throw new Error(
+        `Cannot compute the next whole Blueprint phase number because roadmap phase ${index + 1} is malformed: ${String(rawValue)}`
+      );
+    }
+
+    return parsedBase;
+  });
+
+  return String(Math.max(...basePhaseNumbers) + 1);
 }
 
 export function comparePhaseNumbers(left: NumericInput, right: NumericInput): number {

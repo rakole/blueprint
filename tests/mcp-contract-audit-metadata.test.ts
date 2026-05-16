@@ -206,9 +206,9 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussRuntimeContract, /structured checkpoint/i);
   assert.match(
     discussRuntimeContract,
-    /`completedAreas`[\s\S]*`remainingAreas`[\s\S]*`decisions`[\s\S]*`deferredIdeas`[\s\S]*`canonicalReferences`[\s\S]*`resumeMeta`/i
+    /`schemaVersion: 2`[\s\S]*`ownerCommand: "\/blu-discuss-phase"`[\s\S]*`mode: "discuss"`[\s\S]*`areaQueue`/i
   );
-  assert.match(discussRuntimeContract, /`resumeMeta\.mode: "discuss"`/i);
+  assert.match(discussRuntimeContract, /legacy compatibility summary fields are non-resumable\s+evidence/i);
   assert.match(discussRuntimeContract, /returned `path` as the authoritative saved filename/i);
   assert.match(discussRuntimeContract, /Normalize the draft to the live `authoringTemplate`/i);
   assert.match(discussRuntimeContract, /Self-check for placeholder text/i);
@@ -222,12 +222,12 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussRuntimeContract, /state_update` with `base: "synced"/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);
-  assert.match(discussDoc, /structured discuss checkpoint shape/i);
+  assert.match(discussDoc, /checkpoint v2/i);
   assert.match(
     discussDoc,
-    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
+    /`schemaVersion: 2`[\s\S]*`ownerCommand: "\/blu-discuss-phase"`[\s\S]*top-level `mode: "discuss"`[\s\S]*`areaQueue`/i
   );
-  assert.match(discussDoc, /`resumeMeta` with fields such as `mode`, `pendingTopics`/i);
+  assert.match(discussDoc, /Do not write compatibility summary fields/i);
   assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
   assert.match(discussDoc, /self-checked against that contract/i);
   assert.match(discussDoc, /discuss-phase-runtime-contract\.md/i);
@@ -248,7 +248,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     artifactSchema,
     /`Phase Boundary`, `Discovery Grounding`, `Implementation Decisions`, `Specific Ideas`, `Existing Code Insights`, `Dependencies`, `Open Questions`, `Deferred Ideas`, and `Canonical References`/i
   );
-  assert.match(artifactSchema, /`resumeMeta` must carry durable resume metadata such as `mode`, `pendingTopics`, `completedTopics`, `currentQuestion`, `notes`, `resumeHint`, and `updatedAt`/i);
+  assert.match(artifactSchema, /persisted checkpoints must use checkpoint v2/i);
+  assert.match(artifactSchema, /top-level `mode`/i);
   assert.match(discussRuntimeReference, /prior-context sweep/i);
   assert.match(discussRuntimeReference, /dedicated todo\/backlog file crawl/i);
   assert.match(discussRuntimeReference, /codebase summaries/i);
@@ -358,14 +359,14 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiDoc, /six dimensions/i);
   assert.match(uiDoc, /retry through MCP once/i);
 
-  assert.match(discoverySkill, /structured discuss checkpoint shape/i);
+  assert.match(discoverySkill, /checkpoint v2/i);
   assert.match(discoverySkill, /discuss-phase-runtime-contract\.md/i);
   assert.match(discoverySkill, /single-agent fallback/i);
   assert.match(
     discoverySkill,
-    /`completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, and `resumeMeta`/i
+    /`schemaVersion: 2`, `ownerCommand`, and top-level `mode`/i
   );
-  assert.match(discoverySkill, /`resumeMeta` carries the resumability fields/i);
+  assert.match(discoverySkill, /areaQueue[\s\S]*researchLedger/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /research-phase-runtime-contract\.md/);

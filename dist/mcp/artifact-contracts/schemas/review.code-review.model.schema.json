@@ -65,7 +65,7 @@
     },
     "evidenceCoverage": {
       "type": "object",
-      "description": "Coverage decisions keyed by exact known evidence artifact paths returned by blueprint_review_scope.authoringContext. The task schema narrows this to exhaustive exact keys.",
+      "description": "Coverage decisions keyed by exact known evidence artifact paths returned by blueprint_review_scope.authoringContext. The task schema narrows allowed keys to the live evidence inventory, but the model only authors entries for evidence it actually used.",
       "additionalProperties": {
         "$ref": "#/$defs/evidenceCoverageEntry"
       },

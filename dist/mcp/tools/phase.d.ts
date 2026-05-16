@@ -225,17 +225,24 @@ type ResolvedPhaseLocation = {
     phaseName: string;
     phaseDir: string;
 };
+type RoadmapAddPhaseRequirementValidationStatus = "declared" | "traceability-repaired";
+type RoadmapAddPhaseIdempotencyStatus = "created" | "reused-existing-phase";
 type RoadmapAddPhaseResult = {
     phaseNumber: string;
     phasePrefix: string;
     phaseName: string;
     slug: string;
     phaseDir: string;
+    contextPath: string;
     roadmapPath: string;
     milestone: string | null;
+    requirementValidationStatus: RoadmapAddPhaseRequirementValidationStatus;
+    createdPhaseDir: boolean;
+    idempotencyStatus: RoadmapAddPhaseIdempotencyStatus;
     written: boolean;
     warnings: string[];
 };
+type RoadmapInsertPhaseRequirementMappingStatus = "updated" | "unchanged";
 type RoadmapInsertPhaseResult = {
     afterPhaseNumber: string;
     phaseNumber: string;
@@ -243,8 +250,11 @@ type RoadmapInsertPhaseResult = {
     phaseName: string;
     slug: string;
     phaseDir: string;
+    contextPath: string;
     roadmapPath: string;
     milestone: string | null;
+    requirementMappingStatus: RoadmapInsertPhaseRequirementMappingStatus;
+    createdPhaseDir: boolean;
     written: boolean;
     warnings: string[];
 };
@@ -1334,41 +1344,42 @@ export declare const phaseToolDefinitions: ({
     inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
-        checkpoint: z.ZodObject<{
-            ownerCommand: z.ZodEnum<{
-                "/blu-discuss-phase": "/blu-discuss-phase";
-                "/blu-research-phase": "/blu-research-phase";
-            }>;
-            completedAreas: z.ZodArray<z.ZodString>;
-            remainingAreas: z.ZodArray<z.ZodString>;
-            decisions: z.ZodArray<z.ZodObject<{
-                topic: z.ZodString;
-                decision: z.ZodString;
-                rationale: z.ZodOptional<z.ZodString>;
-            }, z.core.$catchall<z.ZodUnknown>>>;
-            deferredIdeas: z.ZodArray<z.ZodObject<{
-                idea: z.ZodString;
-                reason: z.ZodOptional<z.ZodString>;
-                revisitWhen: z.ZodOptional<z.ZodString>;
-            }, z.core.$catchall<z.ZodUnknown>>>;
-            canonicalReferences: z.ZodArray<z.ZodObject<{
-                label: z.ZodString;
-                target: z.ZodString;
-                note: z.ZodOptional<z.ZodString>;
-            }, z.core.$catchall<z.ZodUnknown>>>;
-            resumeMeta: z.ZodObject<{
-                mode: z.ZodEnum<{
-                    research: "research";
-                    discuss: "discuss";
+        checkpoint: z.ZodUnion<readonly [z.ZodObject<{
+            schemaVersion: z.ZodLiteral<2>;
+            ownerCommand: z.ZodLiteral<"/blu-discuss-phase">;
+            mode: z.ZodLiteral<"discuss">;
+            progress: z.ZodObject<{}, z.core.$catchall<z.ZodUnknown>>;
+            areaQueue: z.ZodArray<z.ZodObject<{
+                areaId: z.ZodString;
+                title: z.ZodString;
+                state: z.ZodEnum<{
+                    blocked: "blocked";
+                    questioning: "questioning";
+                    assumed: "assumed";
+                    decided: "decided";
+                    "needs-revisit": "needs-revisit";
+                    unseen: "unseen";
                 }>;
-                pendingTopics: z.ZodArray<z.ZodString>;
-                completedTopics: z.ZodArray<z.ZodString>;
+                decisionIds: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                evidenceRefs: z.ZodOptional<z.ZodArray<z.ZodString>>;
+                downstreamConsumers: z.ZodOptional<z.ZodArray<z.ZodString>>;
                 currentQuestion: z.ZodOptional<z.ZodString>;
-                notes: z.ZodArray<z.ZodString>;
-                resumeHint: z.ZodOptional<z.ZodString>;
-                updatedAt: z.ZodString;
+                questionWhyItMatters: z.ZodOptional<z.ZodString>;
+                lastUserAnswer: z.ZodOptional<z.ZodUnknown>;
+                blockingReason: z.ZodOptional<z.ZodString>;
+                resolutionCriterion: z.ZodOptional<z.ZodString>;
+            }, z.core.$catchall<z.ZodUnknown>>>;
+            carryForward: z.ZodObject<{}, z.core.$catchall<z.ZodUnknown>>;
+            readSet: z.ZodArray<z.ZodUnknown>;
+        }, z.core.$catchall<z.ZodUnknown>>, z.ZodObject<{
+            schemaVersion: z.ZodLiteral<2>;
+            ownerCommand: z.ZodLiteral<"/blu-research-phase">;
+            mode: z.ZodLiteral<"research">;
+            researchLedger: z.ZodObject<{
+                schemaVersion: z.ZodLiteral<"research-ledger/v1">;
+                strands: z.ZodArray<z.ZodObject<{}, z.core.$catchall<z.ZodUnknown>>>;
             }, z.core.$catchall<z.ZodUnknown>>;
-        }, z.core.$catchall<z.ZodUnknown>>;
+        }, z.core.$catchall<z.ZodUnknown>>]>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhaseCheckpointPutResult>;
 } | {

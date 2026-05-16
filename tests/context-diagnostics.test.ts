@@ -104,6 +104,119 @@ test("phase context write accepts structured model and renders canonical context
   assert.match(savedContent, /\| Source \| Relevance \|/);
 });
 
+test("phase context write renders honest empty model arrays as none sentinels", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const written = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      openQuestions: [],
+      deferredIdeas: [],
+      priorPhaseArtifacts: [],
+      externalConstraints: []
+    })
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  const savedContent = await readFile(path.join(repoPath, written.path), "utf8");
+
+  assert.match(
+    savedContent,
+    /- Prior phase artifacts:\n- none\n- External constraints:\n- none\n- Required follow-up reads:/m
+  );
+  assert.match(savedContent, /## Open Questions\n\n- none/);
+  assert.match(savedContent, /## Deferred Ideas\n\n- none/);
+});
+
+test("phase context model diagnostics include field-aware repair guidance", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const model = validPhaseContextModel();
+
+  (model as { specificIdeas: unknown }).specificIdeas = "none";
+  delete (model as { phaseBoundary?: unknown }).phaseBoundary;
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.path === "model.phaseBoundary"));
+  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.path === "model.specificIdeas"));
+  assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /Add model\.phaseBoundary/i);
+  assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /Set model\.specificIdeas to the type required/i);
+});
+
+test("phase context model diagnostics keep nested required-field repair paths intact", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const model = validPhaseContextModel();
+
+  delete (model.dependencies as { requiredFollowUpReads?: unknown }).requiredFollowUpReads;
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(
+    invalid.diagnostics?.some(
+      (diagnostic) => diagnostic.path === "model.dependencies.requiredFollowUpReads"
+    )
+  );
+  assert.match(
+    invalid.suggestedRepairs?.join("\n") ?? "",
+    /Add model\.dependencies\.requiredFollowUpReads/i
+  );
+  assert.doesNotMatch(
+    invalid.suggestedRepairs?.join("\n") ?? "",
+    /Add model\.requiredFollowUpReads/i
+  );
+});
+
+test("phase context write rejects none alias outside openQuestions", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      deferredIdeas: ["none"]
+    })
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(
+    invalid.diagnostics?.some(
+      (diagnostic) => diagnostic.path === "model.deferredIdeas"
+    )
+  );
+  assert.match(invalid.validation.issues.join("\n"), /\[\"none\"\].*Open Questions compatibility only/i);
+  assert.match(
+    invalid.suggestedRepairs?.join("\n") ?? "",
+    /Use deferredIdeas: \[\] when nothing is deferred/i
+  );
+});
+
 test("phase research status surfaces underlying context validation issues", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
