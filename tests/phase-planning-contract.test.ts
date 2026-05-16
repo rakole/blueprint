@@ -7,6 +7,8 @@ import path from "node:path";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtimeContractPath =
   "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
+const plannerAgentPath = "agents/blueprint-planner.md";
+const checkerAgentPath = "agents/blueprint-checker.md";
 
 function readRepoText(relativePath: string): string {
   return readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -150,12 +152,64 @@ test("planning contract keeps stage hierarchy and Wave 1 section ordering", () =
   ]);
 });
 
-test("planning contract stays within Wave 1 scope", () => {
+test("planning contract defines decision record", () => {
+  const runtimeContract = readRepoText(runtimeContractPath);
+
+  assertIncludesAll(runtimeContract, [
+    "Planning Decision Record",
+    "revision-stable",
+    "Carry-Forward Between Revision Passes"
+  ]);
+});
+
+test("planning contract defines split framework", () => {
+  const runtimeContract = readRepoText(runtimeContractPath);
+
+  assertIncludesAll(runtimeContract, [
+    "Plan Complexity And Split Framework",
+    "Split Axes",
+    "Minimum Viable Plan"
+  ]);
+
+  assertOrdered(runtimeContract, [
+    "## Planning Investigation Trace",
+    "## Planning Decision Record",
+    "## Artifact Authoring Rules",
+    "## Plan Complexity And Split Framework",
+    "## Subagent Path"
+  ]);
+});
+
+test("planner agent defines handoff packet", () => {
+  const plannerAgent = readRepoText(plannerAgentPath);
+
+  assertIncludesAll(plannerAgent, [
+    "Expected Handoff Packet From Parent",
+    "investigationTrace",
+    "decisionRecord"
+  ]);
+});
+
+test("checker agent defines revision tracking", () => {
+  const checkerAgent = readRepoText(checkerAgentPath);
+
+  assertIncludesAll(checkerAgent, [
+    "Expected Handoff Packet From Parent",
+    "investigationTrace",
+    "priorFindings",
+    "Revision Tracking",
+    "resolved",
+    "recurring",
+    "new",
+    "regressed",
+    "convergence status"
+  ]);
+});
+
+test("planning contract keeps Wave 3 headings out of Wave 2", () => {
   const runtimeContract = readRepoText(runtimeContractPath);
 
   for (const unexpectedHeading of [
-    "## Planning Decision Record",
-    "## Plan Complexity And Split Framework",
     "## Downstream Execution Handoff",
     "## Read-Set Staleness Check"
   ]) {

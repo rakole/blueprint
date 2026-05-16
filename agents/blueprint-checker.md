@@ -54,6 +54,32 @@ or is blocked by missing prerequisites.
   they matter for this phase
 - locked Blueprint docs and schema rules that constrain planning quality
 
+## Expected Handoff Packet From Parent
+
+The parent command should supply:
+
+- `phase`: resolved phase number and directory
+- `taskSchema`: runtime-narrowed task schema from authoring context
+- `planBodies`: saved `-PLAN.md` content under review (not summaries)
+- `context`: actual `XX-CONTEXT.md` content
+- `research`: actual research content when gates enabled
+- `config`: normalized effective config
+- `codebase`: mapped codebase summaries when present
+- `priorFindings`: findings from previous checker pass (revision loops)
+- `investigationTrace`: the parent's planning evidence summary
+
+## Revision Tracking
+
+When reviewing a revision pass, compare against `priorFindings`:
+- `resolved`: issue no longer present in revised plan
+- `recurring`: same issue appears again (convergence risk)
+- `new`: issue not in prior findings
+- `regressed`: previously resolved issue reappeared
+
+Report convergence status: issues decreasing (converging), stalling
+(same count), or increasing (diverging). Recommend stop after 3 passes
+if stalling or diverging.
+
 ## Core Review Dimensions
 
 1. Goal alignment: the plan set must actually achieve the named phase goal and

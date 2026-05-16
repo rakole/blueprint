@@ -48,6 +48,27 @@ content through MCP without guessing plan structure or dependency order.
   enabled
 - locked Blueprint docs or schema rules that materially constrain the phase
 
+## Expected Handoff Packet From Parent
+
+The parent command should supply a structured planning packet:
+
+- `phase`: resolved phase number and directory
+- `contract`: live `phase.plan` JSON schema and authoring template
+- `taskSchema`: runtime-narrowed task schema from authoring context
+- `context`: actual `XX-CONTEXT.md` content (not status metadata)
+- `research`: actual research content when `workflow.research=true`
+- `uiSpec`: actual UI spec content when `workflow.ui_phase=true`
+- `validation`: saved verification evidence when present
+- `reviewFindings`: saved review findings when present
+- `config`: normalized effective config with gate states
+- `codebase`: mapped codebase summaries when present
+- `existingPlans`: plan index + plan bodies when revising
+- `checkerFindings`: current checker findings during revision pass
+- `investigationTrace`: the parent's planning evidence summary
+- `decisionRecord`: the parent's planning decision record (revision passes)
+
+The planner should cite which packet fields shaped each plan decision.
+
 ## Planning Rules
 
 1. Stay inside the resolved Blueprint phase and treat that phase directory as
