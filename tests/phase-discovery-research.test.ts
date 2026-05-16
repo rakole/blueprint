@@ -705,7 +705,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /Source Register/i);
   assert.match(runtimeContract, /Recommendation Handoff/i);
   assert.match(runtimeContract, /repo_runtime/i);
-  assert.match(runtimeContract, /research evidence warning diagnostics/i);
+  assert.match(runtimeContract, /Warning diagnostic codes introduced by this slice/i);
   assert.match(runtimeContract, /directly_supported/);
   assert.match(runtimeContract, /not_enough_evidence/);
   assert.match(runtimeContract, /Investigation Trace And Navigation Evidence/);
@@ -1009,7 +1009,7 @@ test("research template accepts claim-addressable provenance", async (t) => {
   );
 });
 
-test("research validation warns when external URL evidence lacks an access date", async (t) => {
+test("research validation warns when live external wording lacks dated evidence", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1036,15 +1036,6 @@ test("research validation warns when external URL evidence lacks an access date"
   });
 
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
-  assert.match(
-    written.validation.warnings.join("\n"),
-    /external source rows should include `accessed YYYY-MM-DD`/i
-  );
-  assert.ok(
-    written.validation?.diagnostics?.some(
-      (diagnostic) => diagnostic.code === "research.external_source_missing_access_date" && diagnostic.severity === "warning"
-    )
-  );
   assert.match(
     written.validation.warnings.join("\n"),
     /uses current external verification wording without an External Sources or Source Register row with an access date/i
@@ -1085,7 +1076,7 @@ test("research validation warns on HIGH confidence with unsupported claims", asy
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
   assert.match(
     written.validation.warnings.join("\n"),
-    /should not use HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence/i
+    /uses HIGH confidence while planner-critical claims are contradicted, conflicting, unchecked, unverified, or not enough evidence/i
   );
   assert.ok(
     written.validation?.diagnostics?.some(
@@ -1167,42 +1158,6 @@ test("research validation warns on HIGH confidence with planner-relevant unsuppo
   assert.ok(
     written.validation?.diagnostics?.some(
       (diagnostic) => diagnostic.code === "research.high_confidence_unsupported" && diagnostic.severity === "warning"
-    )
-  );
-});
-
-test("research validation returns warning diagnostics for missing source register ids", async (t) => {
-  const repoPath = await createPhaseRepo();
-  t.after(async () => {
-    await rm(path.dirname(repoPath), { recursive: true, force: true });
-  });
-
-  await blueprintArtifactScaffold({
-    cwd: repoPath,
-    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
-  });
-
-  const content = validResearchContent(
-    "Create research with a claim that cites a missing Source Register row."
-  ).replace("| EVID-001 | CLM-001 | SRC-001 | mcp-handler |", "| EVID-001 | CLM-001 | SRC-404 | mcp-handler |");
-
-  const written = await blueprintPhaseArtifactWrite({
-    cwd: repoPath,
-    phase: "3",
-    artifact: "research",
-    content,
-    overwrite: true
-  });
-
-  assert.equal(written.status, "created");
-  assert.equal(written.validation?.valid, true);
-  assert.match(
-    written.validation?.warnings.join("\n") ?? "",
-    /evidence row EVID-001 does not resolve to any Source Register row/i
-  );
-  assert.ok(
-    written.validation?.diagnostics?.some(
-      (diagnostic) => diagnostic.code === "research.evidence_missing_source_register_link" && diagnostic.severity === "warning"
     )
   );
 });
@@ -1317,9 +1272,18 @@ test("research validation returns warning diagnostics for weak recommendation ha
     written.validation?.warnings.join("\n") ?? "",
     /Recommendation Handoff rows should name tests\/checks or validation signals/i
   );
+  assert.match(
+    written.validation?.warnings.join("\n") ?? "",
+    /Recommendation Handoff rows should name affected files, commands, contracts, docs, or modules/i
+  );
   assert.ok(
     written.validation?.diagnostics?.some(
       (diagnostic) => diagnostic.code === "research.recommendation_missing_evidence" && diagnostic.severity === "warning"
+    )
+  );
+  assert.ok(
+    written.validation?.diagnostics?.some(
+      (diagnostic) => diagnostic.code === "research.recommendation_missing_affected_surfaces" && diagnostic.severity === "warning"
     )
   );
   assert.ok(
@@ -1404,7 +1368,7 @@ test("research validation accepts External Sources Accessed date as live externa
   );
 });
 
-test("research validation keeps legacy structurally valid research warning-only", async (t) => {
+test("research validation accepts legacy structurally valid research without warning-only shape nudges", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1430,7 +1394,7 @@ test("research validation keeps legacy structurally valid research warning-only"
 
   assert.equal(written.status, "created");
   assert.equal(written.validation?.valid, true, written.validation?.issues.join("\n"));
-  assert.match(written.validation?.warnings.join("\n") ?? "", /Recommendation Handoff|Source Register/i);
+  assert.equal(written.validation?.warnings.length ?? 0, 0);
 });
 
 test("research validation accepts table-only structured source evidence", async (t) => {
@@ -1520,7 +1484,7 @@ test("research validation rejects structured source tables without concrete evid
   );
 });
 
-test("research template warns when dependency recommendations omit dependency/tool evaluation", async (t) => {
+test("research template leaves dependency/tool completeness guidance to authoring instructions", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1554,11 +1518,7 @@ test("research template warns when dependency recommendations omit dependency/to
 
   assert.equal(written.status, "created");
   assert.equal(written.validation.valid, true, written.validation.issues.join("\n"));
-  assert.match(written.validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
-  assert.match(written.validation.warnings.join("\n"), /no-new-dependency/i);
-  assert.match(written.validation.warnings.join("\n"), /Setup And Update Posture/i);
-  assert.match(written.validation.warnings.join("\n"), /Library Vs Custom Decision/i);
-  assert.match(written.validation.warnings.join("\n"), /Supply Chain Evidence/i);
+  assert.equal(written.validation.warnings.length, 0);
 });
 
 test("phase artifact write creates, reuses, updates, and validates research content", async (t) => {
