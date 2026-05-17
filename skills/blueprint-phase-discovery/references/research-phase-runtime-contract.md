@@ -177,7 +177,7 @@ Visible research stages:
 
 | Step | User-visible wording | Shared stage | Required visibility |
 |------|----------------------|--------------|---------------------|
-| 1 | resolve phase | Resolve | selected phase or blocker |
+| 1 | selected-phase context read | Resolve | selected phase or recovery blocker |
 | 2 | load saved context and state | Read | context path/status and state source |
 | 3 | inspect existing research/checkpoint | Read | reuse/update/checkpoint posture |
 | 4 | classify research strands | Decide | active strand set and execution mode |
@@ -205,12 +205,21 @@ baseline.
 
 ## Required MCP Calls
 
-- `blueprint_phase_locate`: selects the phase and supplies authoritative phase
-  number, prefix, name, and directory. Stop on `found: false`.
-- `blueprint_phase_context`: provides project brief, roadmap boundary,
-  requirement mapping, workflow posture, missing artifacts, and saved codebase
-  bundle signals. This controls research scope and surfaces the mirrored
+- `blueprint_phase_context`: call this first as the selected-phase read. Use
+  `phaseSelection` plus non-null `phase` as the selected-phase authority only
+  when the phase number, prefix, name, directory, and
+  `phase_context.phase.artifacts` inventory are complete. It also provides
+  project brief, roadmap boundary, requirement mapping, workflow posture,
+  missing artifacts, and saved codebase bundle signals. This controls research
+  scope and surfaces the mirrored
   `workflowPosture.research.externalSources` policy view.
+- `blueprint_phase_locate`: fallback-only recovery when
+  `phase_context.phaseSelection` is missing,
+  `phase_context.phaseSelection.found` is false, `phase_context.phase` is null
+  or lacks number, prefix, name, directory, or `phase_context.phase.artifacts`,
+  diagnostics are ambiguous, or roadmap/phase-directory failure needs
+  locate-level recovery evidence. Stop with the explicit recovery blocker when
+  recovery cannot select one complete phase.
 - `blueprint_config_get` with `scope: "effective"`: provides the source-of-truth
   `research.external_sources` policy before any official-doc, package-registry,
   security-advisory, release-note, remote-code-search, or other external
@@ -226,15 +235,18 @@ baseline.
 - If the `context` read returns `found: false`, stop and route back to
   `/blu-discuss-phase <phase>` before drafting research. Do not continue from
   status-only signals.
-- `blueprint_phase_artifact_read` with `artifact: "research"`: supports
-  view, skip, update, and revision paths.
+- `blueprint_phase_artifact_read` with `artifact: "research"`: load the
+  existing research body only for view, update, or repair branches. A valid
+  skip path uses `blueprint_phase_research_status` validity and metadata unless
+  the user explicitly asks to view the saved body.
 - `blueprint_phase_checkpoint_get`: detects resumable in-progress research and
   controls resume-versus-discard branching. Pass
   `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"`,
   then honor `safeToResume` and `warnings` before using saved state. A safe
   research checkpoint resumes by default unless the user explicitly asks to
   discard it.
-- `blueprint_state_load`: grounds workflow posture before and after writes.
+- `blueprint_state_load`: grounds initial workflow posture before writes and
+  refreshes final workflow posture only after synced state update.
 - `blueprint_command_catalog`: gates every next-command recommendation.
 - `blueprint_artifact_contract_read` with `artifactId: "phase.research"`:
   supplies `contract.authoringTemplate`, required headings, locked markers,
@@ -243,6 +255,22 @@ baseline.
   creation only. Default drafting should start from
   `contract.authoringTemplate`, and scaffold output is never completed
   research.
+
+### Same-Turn Read Batching
+
+After the selected phase is known, request independent read-only MCP calls
+whose arguments are already known in the same model response/tool-call turn when
+the host supports batching. Good candidates include effective config, pre-write
+state load, research status, checkpoint get, artifact contract read, and
+artifact reads when the branch already knows it needs those bodies.
+
+Dependent reads stay sequenced: read the context artifact body before drafting,
+read the existing research body only for view/update/repair branches that need
+it, and read the artifact contract before drafting or revising rather than for a
+valid skip path. Do not batch user confirmations, mutating writes, validation
+repair, state update, post-write refreshed state load, command-catalog routing proof, or
+checkpoint deletion.
+
 - `blueprint_phase_checkpoint_put`: persists useful continuation state using
   checkpoint v2 with `schemaVersion: 2`, `ownerCommand: "/blu-research-phase"`,
   top-level `mode: "research"`, and a nested `researchLedger` payload with

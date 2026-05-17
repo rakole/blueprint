@@ -334,10 +334,55 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(researchCommand, /authoringTemplate/);
   assert.match(researchCommand, /research-phase-runtime-contract\.md/);
   assert.match(researchCommand, /parent-only fallback/i);
+  assert.match(
+    researchCommand,
+    /`mcp_blueprint_blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i
+  );
+  assert.match(
+    researchCommand,
+    /phase_context\.phaseSelection[\s\S]*phase_context\.phase[\s\S]*authority[\s\S]*phase\.artifacts/i
+  );
+  assert.match(
+    researchCommand,
+    /independent read-only MCP calls[\s\S]*same model response\/tool-call turn/i
+  );
+  assert.match(
+    researchCommand,
+    /Do not batch confirmation prompts[\s\S]*validation repair[\s\S]*post-write state load[\s\S]*checkpoint deletion/i
+  );
   assert.match(researchCommand, /runtime contract for evidence depth/i);
   assert.match(researchCommand, /dependency\/tool evaluation/i);
   assert.doesNotMatch(researchCommand, /rg --files|remote code-search|child-agent transcripts/i);
+  assert.match(
+    mcpToolsDoc,
+    /`research-phase` uses `blueprint_phase_context` as the first selected-phase read[\s\S]*number, prefix, name, directory, and `phase_context\.phase\.artifacts` inventory[\s\S]*`blueprint_phase_locate` available as fallback-only recovery/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Independent read-only calls[\s\S]*same model response\/tool-call turn[\s\S]*checkpoint deletion stay sequenced/i
+  );
   assert.match(researchRuntimeContract, /strict mode[\s\S]*repair invalid results/i);
+  assert.match(
+    researchRuntimeContract,
+    /`blueprint_phase_context`: call this first as the selected-phase read[\s\S]*selected-phase authority/i
+  );
+  assert.match(
+    researchRuntimeContract,
+    /`blueprint_phase_locate`: fallback-only recovery[\s\S]*phase_context\.phaseSelection\.found[\s\S]*phase_context\.phase[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase_context\.phase\.artifacts[\s\S]*locate-level recovery evidence/i
+  );
+  assert.match(researchRuntimeContract, /Same-Turn Read Batching/i);
+  assert.match(
+    researchRuntimeContract,
+    /Dependent reads stay sequenced[\s\S]*existing research body only for view\/update\/repair[\s\S]*Do not batch user confirmations/i
+  );
+  assert.match(
+    researchRuntimeContract,
+    /`artifact: "research"`[\s\S]*only for view, update, or repair branches[\s\S]*valid[\s\S]*skip path uses `blueprint_phase_research_status`/i
+  );
+  assert.match(
+    researchRuntimeContract,
+    /pre-write[\s\S]*state load[\s\S]*post-write refreshed state load/i
+  );
   assert.match(researchRuntimeContract, /per-strand search notes/i);
   assert.match(researchRuntimeContract, /remote code-search hits are discovery hints/i);
   assert.match(researchRuntimeContract, /source type, authority tier, support span/i);
