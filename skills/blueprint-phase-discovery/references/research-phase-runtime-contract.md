@@ -318,7 +318,16 @@ Quality rules for `XX-RESEARCH.md`:
   into tasks.
 - `## Claim Support Ledger`, when present, is the planner-critical claim ledger. Use columns `Claim ID`, `Claim`, `Claim Type`, `Evidence IDs`, `Support Status`, `Confidence`, and `Plan Impact`. Valid claim types are `repo_runtime`, `external_practice`, `dependency_tool`, `inference`, and `open_question`. Valid support statuses are `directly_supported`, `partially_supported`, `inferred_from_supported`, `contradicted`, `conflicting_sources`, `not_enough_evidence`, and `out_of_scope`.
 - `## Recommendations` should include a `Recommendation Handoff` table for planner-critical recommendations. Use columns `Recommendation ID`, `Recommendation`, `Supporting Claim IDs`, `Evidence IDs`, `Affected Surfaces`, `Tests / Checks`, and `Status`. A recommendation is planner-ready only when it cites supporting claim IDs or evidence IDs, names affected repo or contract surfaces, and names tests/checks, or when `Status` says `blocked` and points to a named open question.
-- Legacy non-table claim-addressable provenance remains valid when the artifact otherwise satisfies the current contract. It is good enough when planner-critical claims still include stable claim/evidence/source IDs, support status, source lane, and downstream use in nearby prose or the existing `Repo Evidence`, `External Sources`, and `Inference Notes` tables. Post-write warnings are intentionally narrow: they should focus on planner-handoff gaps, repo-runtime grounding gaps, live external-verification honesty, and overconfident unsupported claims rather than every missing quality hint.
+- Legacy non-table claim-addressable provenance remains valid for existing or
+  previously authored artifacts when the artifact otherwise satisfies the current
+  contract. New writes must follow `contract.authoringTemplate` table shapes.
+  Legacy provenance is good enough only when planner-critical claims still
+  include stable claim/evidence/source IDs, support status, source lane, and
+  downstream use in nearby prose or the existing `Repo Evidence`,
+  `External Sources`, and `Inference Notes` tables. Post-write warnings are
+  intentionally narrow: they should focus on planner-handoff gaps, repo-runtime
+  grounding gaps, live external-verification honesty, and overconfident
+  unsupported claims rather than every missing quality hint.
 - Each planner-critical recommendation should be traceable to a strand handoff
   that names affected files or modules, validation or test implications,
   unresolved blockers, evidence basis, and confidence.
@@ -352,25 +361,11 @@ Treat evidence as a parent-owned claim graph, not as a bibliography assembled
 after writing prose. Build the evidence packet before final synthesis, then cite
 evidence IDs or claim IDs from the packet while drafting `XX-RESEARCH.md`.
 
-Use this packet shape in prose, tables, or parent-side working notes:
-
-```text
-evidence_id: EVID-001
-lane: repo | external | inference
-claim_id: CLM-001
-claim_text: concise atomic claim
-claim_class: directly_supported | partially_supported | inferred_from_supported | contradicted | conflicting_sources | not_enough_evidence | out_of_scope
-source_type: repo_file | command_output | test_output | official_standard | official_product_doc | peer_reviewed_paper | preprint | supplied_reference | web_page | inference
-authority_tier: repo_runtime | official_standard | official_vendor_doc | peer_reviewed | maintained_project_doc | preprint | secondary | unknown
-source_ref: path:line, command, URL, DOI, or source packet IDs
-source_title: exact title when external
-accessed: YYYY-MM-DD for external sources, or observed YYYY-MM-DD for repo-local evidence when helpful
-support_span: quoted span, line range, page/section, command output summary, or extracted fact
-retrieval_context: search query, tool/API used, local command, targeted file read, or user-supplied source
-provenance: collected_by, collected_at, activity, and derivation/attribution notes
-limitations: missing lines, inaccessible full text, stale version risk, partial support, ambiguity, conflict, or none
-downstream_use: planner-safe conclusion, recommendation id, or "do not use as support"
-```
+Use compact evidence packets in prose, tables, or parent-side working notes. Each
+planner-critical packet must include at minimum an evidence id, lane, claim id,
+atomic claim, claim class, source type, authority tier, source reference, source
+title when external, access or observation date when relevant, support span,
+retrieval context, provenance, limitations, and downstream use.
 
 Evidence lanes:
 
@@ -419,40 +414,11 @@ Support classes:
 - `out_of_scope`: the claim belongs outside the selected phase or outside
   `/blu-research-phase`.
 
-Final sources should use this structure:
-
-```md
-## Sources
-
-### Source Register
-
-| Source ID | Lane | Path Or URL | Accessed | Repo Line Or Symbol | Source Type | Used For Claims | Limitations |
-|-----------|------|-------------|----------|---------------------|-------------|-----------------|-------------|
-| SRC-001 | repo | src/example.ts | observed 2026-05-12 | exampleFunction | repo_file | CLM-001 | local checkout only |
-| SRC-002 | external | https://example.com/docs | 2026-05-12 | n/a | official_product_doc | CLM-002 | may drift |
-
-### Repo Evidence
-
-| Evidence ID | Claim ID | Source Ref | Role | Retrieval Context | Support Span | Claim Class | Downstream Use | Limitations |
-|-------------|----------|------------|------|-------------------|--------------|-------------|----------------|-------------|
-| EVID-001 | CLM-001 | SRC-001 | runtime | scoped-rg + targeted-read | function behavior observed locally | directly_supported | REC-001 | local checkout only |
-
-### External Sources
-
-| Evidence ID | Claim ID | Source Type | Authority Tier | Source Title | Source Ref | Accessed | Support Span | Claim Class | Retrieval Context | Limitations | Downstream Use |
-|-------------|----------|-------------|----------------|--------------|------------|----------|--------------|-------------|-------------------|-------------|----------------|
-| EVID-002 | CLM-002 | official_product_doc | official_vendor_doc | <title> | SRC-002 | 2026-05-12 | <section or excerpt summary> | directly_supported | parent-approved external check | may drift | REC-001 |
-
-### Inference Notes
-
-| Evidence ID | Claim ID | Derived From | Claim Class | Derivation / Attribution | Limitations | Downstream Use |
-|-------------|----------|--------------|-------------|--------------------------|-------------|----------------|
-| EVID-003 | CLM-003 | EVID-001, EVID-002 | inferred_from_supported | Repo behavior plus official guidance suggest this planner-safe improvement. | verify during planning | REC-001 |
-
-### Supply Chain Evidence
-
-- Supply-chain evidence remains allowed when dependency/tool rows need it, but it should reference the relevant Source Register, claim-addressable evidence IDs, or dependency decision IDs.
-```
+`contract.authoringTemplate` owns the exact `## Sources` table shapes. The core
+runtime requirement is that final sources separate `### Source Register`,
+`### Repo Evidence`, `### External Sources`, `### Inference Notes`, and optional
+`### Supply Chain Evidence`, with each row traceable to source IDs, evidence IDs,
+claim IDs, limitations, and downstream use.
 
 Rules:
 
@@ -571,40 +537,20 @@ freshness limits. Treat them as labeled evidence inputs, not interchangeable
 truth. Remote code-search hits are discovery hints until local worktree evidence
 or saved Blueprint artifacts confirm them.
 
-A compact navigation evidence packet should use this shape in prose, tables, or
-the optional `## Investigation Trace` template section:
-
-```text
-Evidence ID: NAV-001
-Strand: <strand id or topic>
-Query or navigation method: <search query, symbol lookup, file-map read, parent packet, or manual read>
-Scope filter: <paths, languages, file types, command names, or "none">
-Retrieval mode: saved-context | codebase-summary | rg-files | scoped-rg | targeted-read | parent-navigation-packet | remote-code-search-hint | external-packet | inference
-Candidate files or symbols: <candidate paths/symbols considered>
-Files actually read: <paths read in full or targeted ranges>
-Source class: blueprint-artifact | repo-code | repo-test | repo-config | command-manifest | skill-contract | runtime-contract | artifact-contract | mcp-handler | built-entrypoint | official-reference | supplied-reference | inference
-Path / symbol / URL: <repo path, symbol, URL, or supplied source label>
-Role: definition | reference | test | config | contract | runtime | example | background | inference
-Finding: <what this proves for planning>
-Limits: <staleness, partial coverage, missing lines, no-hit search, heuristic navigation, remote-index limit, or none>
-Stop or widen reason: <why this evidence is enough or what would justify more search>
-```
+A compact Navigation Evidence Packet should record evidence id, strand, query or
+navigation method, scope filter, retrieval mode, candidate files or symbols,
+files actually read, source class, path/symbol/URL, role, finding, limits, and
+stop-or-widen reason. Use this in prose, tables, or the optional
+`## Investigation Trace` template section.
 
 Treat context files, skills, runtime contracts, and saved summaries as valuable
 but potentially stale. Cite them as repo evidence, then check that the live
 repository still agrees before presenting them as planner-grade truth.
 
-Each non-trivial topic strand must close with a Strand Planning Handoff:
-
-```text
-Strand: <id/topic>
-Recommendation: <planner-ready direction or "no safe recommendation">
-Affected files/modules: <repo paths, command surfaces, contracts, tests, or none>
-Validation or test implications: <specific tests/checks or "not yet known">
-Unresolved blockers: <none or exact blocker>
-Evidence basis: <NAV/source ids or concise citations>
-Confidence: LOW|MEDIUM|HIGH with reason
-```
+Each non-trivial topic strand must close with a Strand Planning Handoff that
+names the strand, planner-ready recommendation or "no safe recommendation",
+affected files/modules, validation or test implications, unresolved blockers,
+evidence basis, and confidence with rationale.
 
 Tie recommendations to evidence roles. API-usage recommendations should cite
 definitions and references. Regression-risk recommendations should cite tests,
@@ -742,79 +688,28 @@ Do not checkpoint after a straightforward successful final write except as a
 temporary pre-delete state. Delete only after the final research write, state
 sync, refreshed state load, and implemented-command routing receipt are known.
 
-Recommended parent command loop:
+Parent command loop summary:
 
-```ts
-const checkpoint = await blueprint_phase_checkpoint_get({
-  phase,
-  expectedOwnerCommand: "/blu-research-phase",
-  expectedMode: "research",
-});
+1. Read the guarded research checkpoint with `expectedOwnerCommand:
+   "/blu-research-phase"` and `expectedMode: "research"`.
+2. Classify the run as `simple` or `non-trivial`. Simple runs can skip formal
+   ledger/checkpoint overhead only when the fast-path criteria hold.
+3. For non-trivial runs, build the smallest useful parent-owned ledger, execute
+   one runnable strand at a time, checkpoint before sidecar dispatch or blocked
+   waits, and accept or reject sidecar packets before synthesis.
+4. Synthesize final research from accepted parent evidence and
+   `contract.authoringTemplate`; never persist child transcripts.
+5. Write through `blueprint_phase_artifact_write`. If validation rejects the
+   draft, checkpoint the diagnostics, repair the same normalized draft once, and
+   stop with the checkpoint preserved if identical diagnostics repeat.
+6. Finalization order stays separate and guarded:
+   `blueprint_phase_artifact_write` -> `blueprint_state_update` with
+   `base: "synced"` -> `blueprint_state_load` -> `blueprint_command_catalog` ->
+   `blueprint_phase_checkpoint_delete` with `expectedOwnerCommand:
+   "/blu-research-phase"` and `expectedMode: "research"`.
 
-const ledger = decideResumeOrFreshLedger(checkpoint, userIntent);
-classifyStrands(ledger, context, researchStatus, config, contract);
-
-for (const strand of nextRunnableStrands(ledger)) {
-  setProgress("Execute", strand);
-
-  if (shouldUseSidecar(strand, config)) {
-    await putCheckpoint(ledger.markDispatching(strand));
-    const packet = await runResearcherSidecar(strand);
-    ledger.acceptOrRejectPacket(strand.id, packet);
-    await putCheckpoint(ledger);
-  } else {
-    const packet = await parentInlineResearch(strand);
-    ledger.acceptOrRejectPacket(strand.id, packet);
-    if (ledger.hasRemainingCriticalWork()) {
-      await putCheckpoint(ledger);
-    }
-  }
-
-  if (strand.isBlockedOrInconclusive()) {
-    await putCheckpoint(ledger);
-    stopWithCheckpointReceipt(ledger);
-  }
-}
-
-const draft = synthesizeResearchFromParentLedger(
-  ledger,
-  contract.authoringTemplate
-);
-const write = await blueprint_phase_artifact_write({
-  phase,
-  artifact: "research",
-  content: draft,
-});
-
-if (write.status === "invalid") {
-  await putCheckpoint(ledger.recordValidationAttempt(write.validation));
-  const repaired = repairSameDraft(draft, write.validation);
-  const retry = await blueprint_phase_artifact_write({
-    phase,
-    artifact: "research",
-    content: repaired,
-    overwrite: true,
-  });
-  if (retry.status === "invalid") {
-    await putCheckpoint(ledger.recordRepeatedValidationFailure(retry.validation));
-    stopWithCheckpointReceipt(ledger);
-  }
-}
-
-await blueprint_state_update({
-  base: "synced",
-  patch: { currentPhase: phase, activeCommand: "/blu-research-phase" },
-});
-await blueprint_state_load({ phase });
-await blueprint_command_catalog({});
-await blueprint_phase_checkpoint_delete({
-  phase,
-  expectedOwnerCommand: "/blu-research-phase",
-  expectedMode: "research",
-});
-```
-
-Use checkpoint v2 and make `researchLedger` the resumability source of truth:
+Use checkpoint v2 and make `researchLedger` the resumability source of truth.
+The compact required shape is:
 
 ```json
 {
@@ -823,64 +718,15 @@ Use checkpoint v2 and make `researchLedger` the resumability source of truth:
   "mode": "research",
   "researchLedger": {
     "schemaVersion": "research-ledger/v1",
-    "phase": {
-      "number": "3",
-      "prefix": "03",
-      "name": "Phase Discovery",
-      "dir": ".blueprint/phases/03-phase-discovery"
-    },
-    "runtime": {
-      "ownerCommand": "/blu-research-phase",
-      "artifactId": "phase.research",
-      "externalSources": {
-        "effective": "ask",
-        "decision": "pending",
-        "reason": "Repo evidence cannot settle upstream behavior."
-      }
-    },
     "strands": [
       {
         "id": "S1",
         "type": "context-lock",
-        "question": "What saved context decisions constrain this research?",
-        "requirementIds": ["REQ-001"],
-        "repoAnchors": [".blueprint/phases/03-example/03-CONTEXT.md"],
-        "sourcePolicy": "repo-only",
-        "dependencies": [],
-        "expectedPacket": "parent-inline-evidence",
-        "budget": {
-          "maxFiles": 3,
-          "maxSidecars": 0
-        },
         "status": "complete",
-        "evidenceIds": ["SRC-001"],
-        "acceptedClaims": ["Context requires MCP-owned persistence."],
-        "rejectedOrLowQualitySources": [],
-        "searchNotes": [],
-        "uncertainty": "none",
         "stoppingReason": "evidence-sufficient",
         "nextAction": "feed planner-handoff"
       }
     ],
-    "evidencePackets": [
-      {
-        "id": "SRC-001",
-        "class": "repo",
-        "strandId": "S1",
-        "source": ".blueprint/phases/03-example/03-CONTEXT.md",
-        "claim": "Saved context constrains research scope.",
-        "confidence": "high"
-      }
-    ],
-    "sidecars": [],
-    "draftState": {
-      "hasDraft": false,
-      "sectionsTouched": [],
-      "validationAttempted": false,
-      "validationIssues": [],
-      "finalWriteAttempted": false,
-      "lastKnownPath": null
-    },
     "nextAction": {
       "stage": "Execute",
       "pendingGate": "none",
@@ -890,9 +736,10 @@ Use checkpoint v2 and make `researchLedger` the resumability source of truth:
 }
 ```
 
-Initial implementation must not require every optional nested field for every
-simple run. Runtime/text tests should require only the generic MCP checkpoint
-fields plus references to `researchLedger.schemaVersion`,
+Optional nested fields such as phase metadata, external-source decisions,
+evidence packets, sidecars, draft state, search notes, and validation attempts
+are branch-only details. Runtime/text tests should require only the generic MCP
+checkpoint fields plus references to `researchLedger.schemaVersion`,
 `researchLedger.strands`, and `researchLedger.nextAction`. Code should not add a
 strict `researchLedger` Zod schema in this slice.
 
@@ -997,47 +844,25 @@ new top-level required heading:
 - `## Sources`: cite repo, official, supplied, or unchecked `Supply Chain Evidence`
   rows for each planner-critical dependency/tool claim.
 
-Use this `## Standard Stack` table shape when a dependency/tool decision exists:
+`contract.authoringTemplate` owns the exact table shapes for these dependency
+and tool sections. The runtime contract only summarizes the required content;
+when a section is present, do not omit columns required by the live
+`contract.authoringTemplate`.
 
-```md
-### Dependency / Tool Evaluation
-
-| Decision ID | Need | Candidate | Decision | Official Source Or Repo Evidence | Package Ecosystem | Install Scope | Current / Wanted / Latest Evidence | Maintenance Signal | Vulnerability Signal | License | Provenance / Signature Signal | Transitive Footprint | Existing / Standard-Library Alternative | Update Posture | Residual Risk And Mitigation |
-|-------------|------|-----------|----------|----------------------------------|-------------------|---------------|------------------------------------|--------------------|----------------------|---------|-------------------------------|---------------------|------------------------------------------|----------------|-------------------------------|
-| DEP-001 | <capability needed> | <package, tool, repo helper, platform API, or custom> | already_in_repo|use_existing|add_candidate|defer|reject|custom | <repo path, official URL, supplied source, or unchecked> | <npm, stdlib, platform, repo-local, service, or none> | runtime|dev|global|none | <current/wanted/latest, observed version, or unchecked> | <release/maintainer/CI/security-policy signal or unchecked> | <audit/OSV/advisory result or unchecked> | <SPDX/license signal or unchecked> | <provenance/SLSA/signature/scope identity signal or unchecked> | <none, small, moderate, large, or unchecked> | <no-new-dependency, existing dependency, standard library, or platform API option> | <Dependabot/Renovate/audit/OSV/release-note/changelog/manual review posture> | <risk and mitigation> |
-```
-
-Use this `## Installation And Setup` table shape when setup changes:
-
-```md
-### Setup And Update Posture
-
-| Decision ID | Manifest / Lockfile Impact | Install Command Or Path | Install Scope | Side Effects | Verification Command | Update / Monitoring Plan | Manual Review Required |
-|-------------|----------------------------|-------------------------|---------------|--------------|----------------------|--------------------------|------------------------|
-| DEP-001 | <package.json/package-lock or none> | <repo-local command/path or none> | runtime|dev|global|none | <transitive deps, lifecycle scripts, native binaries, peers, engines, or none> | <test/build/check or manual verification> | <Dependabot/Renovate/dependency review/OSV/npm audit/release notes/changelog/manual> | yes|no - <reason> |
-```
-
-Use this `## Alternatives Considered` table shape when a dependency/tool decision
-exists:
-
-```md
-### Dependency Alternatives
-
-| Decision ID | Need | No New Dependency | Existing Dependency | Standard Library / Platform API | Candidate Package / Tool | Custom Implementation | Decision | Rationale |
-|-------------|------|-------------------|---------------------|---------------------------------|--------------------------|----------------------|----------|-----------|
-| DEP-001 | <capability needed> | <viable/rejected and why> | <viable/rejected and why> | <viable/rejected and why> | <candidate and evidence> | <allowed/rejected and tests needed> | use_existing|add_candidate|defer|reject|custom | <actionable rationale> |
-```
-
-Use this `## Don't Hand-Roll` table shape when custom code is recommended or a
-library should be preferred:
-
-```md
-### Library Vs Custom Decision
-
-| Decision ID | Capability | Domain Risk | Proven Library / Existing Option | Custom Path Allowed? | Rationale | Required Tests / Validation | Maintenance / Update Owner |
-|-------------|------------|-------------|----------------------------------|----------------------|-----------|-----------------------------|----------------------------|
-| DEP-001 | <capability> | security-sensitive|standardized|protocol|parser|package-resolution|low-risk-project-specific | <option or none> | yes|no | <why package/library/custom is safer> | <tests/checks required> | <owner or update path> |
-```
+- `### Dependency / Tool Evaluation`: decision id, need, candidate, decision,
+  repo/official/supplied/unchecked evidence, ecosystem, install scope,
+  `Current / Wanted / Latest Evidence`, maintenance, vulnerability, license,
+  provenance/signature, transitive footprint, existing or standard-library
+  alternative, update posture, and residual risk.
+- `### Setup And Update Posture`: manifest or lockfile impact, install command
+  or path, install scope, side effects, verification command, update or
+  monitoring plan, and manual-review posture.
+- `### Dependency Alternatives`: no-new-dependency, existing dependency,
+  standard-library or platform API, candidate package/tool, and custom
+  implementation alternatives, with the selected decision and rationale.
+- `### Library Vs Custom Decision`: capability, domain risk, proven existing
+  option, whether custom code is allowed, rationale, required tests or
+  validation, and maintenance/update owner.
 
 Selection rules:
 
