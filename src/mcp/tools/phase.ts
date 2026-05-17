@@ -4867,13 +4867,21 @@ function compareReadSetFreshness(
   const previousByKey = new Map(
     previousReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
   );
+  const previousByPathAndHash = new Set(
+    previousReadSet.map((entry) => `${entry.path}:${entry.hash}`)
+  );
   const stalePaths = previousReadSet.flatMap((entry) => {
     const current = currentByKey.get(`${entry.kind}:${entry.path}`);
 
     return current && current.hash === entry.hash ? [] : [entry.path];
   });
   const missingPreviousPaths = currentReadSet.flatMap((entry) =>
-    previousByKey.has(`${entry.kind}:${entry.path}`) || entry.hash === "missing"
+    previousByKey.has(`${entry.kind}:${entry.path}`) ||
+    entry.hash === "missing" ||
+    (
+      entry.kind === "phase.plan.body" &&
+      previousByPathAndHash.has(`${entry.path}:${entry.hash}`)
+    )
       ? []
       : [entry.path]
   );

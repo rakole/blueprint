@@ -1156,6 +1156,11 @@ test("phase plan write rejects stale target plan bodies before reuse", async (t)
   assert.equal(firstWrite.status, "created", JSON.stringify(firstWrite, null, 2));
 
   const planPath = ".blueprint/phases/03-phase-discovery/03-01-PLAN.md";
+  const normalReadiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
   const readiness = await blueprintPhasePlanReadiness({
     cwd: repoPath,
     phase: "3",
@@ -1163,10 +1168,39 @@ test("phase plan write rejects stale target plan bodies before reuse", async (t)
     includeSavedPlanBodies: "target"
   });
   assert.ok(
+    normalReadiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan"
+    )
+  );
+  assert.equal(
+    normalReadiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan.body"
+    ),
+    false
+  );
+  assert.ok(
     readiness.readSet.some(
       (entry) => entry.path === planPath && entry.kind === "phase.plan.body"
     )
   );
+  const freshReuseFromNormalReadiness = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: normalReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  assert.equal(
+    freshReuseFromNormalReadiness.status,
+    "reused",
+    JSON.stringify(freshReuseFromNormalReadiness, null, 2)
+  );
+  assert.deepEqual(freshReuseFromNormalReadiness.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
 
   await writeFile(
     path.join(repoPath, planPath),
@@ -1191,6 +1225,20 @@ test("phase plan write rejects stale target plan bodies before reuse", async (t)
     stalePaths: [planPath]
   });
   assert.match(staleReuse.validation.issues.join("\n"), /Read-set freshness check failed/);
+  const staleReuseFromNormalReadiness = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: normalReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  assert.equal(staleReuseFromNormalReadiness.status, "invalid");
+  assert.deepEqual(staleReuseFromNormalReadiness.freshness, {
+    checked: true,
+    fresh: false,
+    stalePaths: [planPath]
+  });
   assert.match(await readFile(path.join(repoPath, planPath), "utf8"), /changed after readiness/);
 });
 
