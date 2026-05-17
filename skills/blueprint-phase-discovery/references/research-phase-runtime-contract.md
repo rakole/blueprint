@@ -74,13 +74,14 @@ Use the shared long-running-mutation stages:
   repo-plus-external verification posture based on
   `research.external_sources`.
 - `Execute`: build the initial assessment, follow the repository evidence
-  ladder, classify non-trivial work into the parent-owned research strand
-  ledger, record per-strand search notes and navigation evidence, research one
+  ladder, classify the run as `simple` or `non-trivial`, use the parent-owned
+  research strand ledger only when the branch requires it, record per-strand
+  search notes and navigation evidence for non-trivial strands, research one
   runnable strand at a time, evaluate dependency/tool choices when they affect
   a recommendation, accept or reject sidecar packets before synthesis, close
-  each strand with a planning handoff, keep evidence provenance visible, and
-  construct the claim-addressable evidence packet before writing final
-  recommendations.
+  each non-trivial strand with a planning handoff, keep evidence provenance
+  visible, and construct the claim-addressable evidence packet before writing
+  final recommendations.
 - `Persist`: scaffold only a missing file, write checkpoints when there is
   useful resumable strand state, checkpoint before blocked waits or repair
   retries, and write final research through MCP only.
@@ -92,6 +93,74 @@ Use the shared long-running-mutation stages:
 
 During non-trivial runs, keep resolved scope, active stage, pending gate,
 execution mode, and next safe action visible through short progress updates.
+
+## Branch Classification And Fast Path
+
+Classify each run before deep research so the default path is proportional to
+the phase question. The classification controls orchestration overhead only; it
+does not lower artifact quality, source honesty, validation, state sync, or
+routing requirements.
+
+Use the `simple` path only when all of these are true:
+
+- there is one coherent research question for the selected phase;
+- repo-only evidence is enough under the effective `research.external_sources`
+  policy;
+- no saved research is invalid;
+- no research checkpoint exists, whether safe, unsafe, foreign-owned, legacy, or
+  invalid;
+- no external-source confirmation gate is pending;
+- no sidecar is needed or already dispatched;
+- no dependency/tool decision, no-new-dependency comparison, standard-library
+  comparison, candidate package/tool comparison, custom implementation choice,
+  or custom-vs-library posture affects planning;
+- no validation repair is required;
+- no contradictory or missing planner-critical evidence would change downstream
+  planning.
+
+Simple runs may skip the formal strand ledger and research checkpoint. They
+still must read actual saved `XX-CONTEXT.md` content, honor the effective
+external-source policy, draft or revise from `contract.authoringTemplate`, keep
+repo evidence distinct from external or supplied evidence, run the
+Source-Support Self-Check before persistence, write through
+`blueprint_phase_artifact_write` in strict mode, sync route state, prove the next
+implemented command, and produce every required `phase.research` section. When a
+simple run contains planner-critical claims, it still needs source/provenance
+rows or equivalent claim-addressable support in the saved artifact.
+
+Use the `non-trivial` path when any of these are true:
+
+- there are multiple independent research questions or separable evidence lanes;
+- evidence is contradictory, stale-risky, inaccessible, or insufficient for a
+  planner-critical recommendation;
+- a dependency/tool decision, no-new-dependency comparison, standard-library
+  comparison, candidate package/tool comparison, or custom implementation choice
+  affects planning;
+- external-source policy blocks or gates a claim the planner would otherwise
+  depend on;
+- a sidecar is dispatched or a previous sidecar packet must be accepted,
+  rejected, or repaired;
+- a research checkpoint exists and can resume, cannot safely resume, or must be
+  guarded before discard;
+- existing research is invalid;
+- validation repair is required;
+- post-write state sync or route proof fails;
+- any planner-critical uncertainty changes implementation scope, tests, routing,
+  security, schema/state behavior, or user-facing behavior.
+
+A `planner-critical` claim or recommendation is one that changes implementation
+files, dependency/tool choices, validation strategy, lifecycle routing,
+state/schema behavior, security posture, or user-facing product behavior. Treat
+that claim as planner-critical even when it appears in prose instead of a
+structured table.
+
+Use `sidecar material help` only when parallel bounded reading reduces total
+time without widening scope. Examples: a bounded code area where independent
+file reading is safe, a dependency/tool comparison that needs a separate
+evidence packet, a specific source-packet comparison, or independent strands
+with disjoint evidence packets that the parent can accept or reject before
+synthesis. Do not use a sidecar merely because the run is long, and do not load
+or inspect the agent contract solely to decide that no sidecar is needed.
 
 ## Visible Research Progress
 
@@ -575,9 +644,10 @@ uncertainty only in chat.
 
 ## Research Strand Ledger And Checkpoint Semantics
 
-Treat topic strands as a parent-owned ledger, not as ad hoc prose. A simple run
-may collapse strands, but every non-trivial, blocked, resumed, or sidecar-aided
-run should classify work into the smallest useful set from:
+Treat topic strands as a parent-owned ledger, not as ad hoc prose. Simple runs
+may skip the formal strand ledger and checkpoint when the fast-path criteria
+are met, but every non-trivial, blocked, resumed, or sidecar-aided run should
+classify work into the smallest useful set from:
 
 1. `context-lock`: saved `XX-CONTEXT.md`, requirement mapping, user constraints,
    prior phase artifacts, and current workflow gates.
