@@ -246,6 +246,90 @@ function trimEmptyTopLevelArrayFields(
   return trimmedResult;
 }
 
+function trimReadinessArtifactBodies(value: unknown): Record<string, unknown> | undefined {
+  const bodies = asRecord(value);
+
+  if (!bodies) {
+    return undefined;
+  }
+
+  const trimmedBodies: Record<string, unknown> = {};
+
+  for (const [key, bodyValue] of Object.entries(bodies)) {
+    const body = asRecord(bodyValue);
+
+    if (!body) {
+      trimmedBodies[key] = bodyValue;
+      continue;
+    }
+
+    const { content: _content, ...trimmedBody } = body;
+    trimmedBodies[key] = trimmedBody;
+  }
+
+  return trimmedBodies;
+}
+
+function trimPhasePlanReadinessPublicFields(result: ToolResult): ToolResult {
+  const contract = asRecord(result.contract);
+  const modelContract = asRecord(contract?.modelContract);
+  const authoringContext = asRecord(result.authoringContext);
+  const validationEvidence = asRecord(result.validationEvidence);
+  const savedPlanBodies = Array.isArray(result.savedPlanBodies)
+    ? result.savedPlanBodies.map((savedPlanBody) => {
+        const body = asRecord(savedPlanBody);
+
+        if (!body) {
+          return savedPlanBody;
+        }
+
+        const { content: _content, ...trimmedBody } = body;
+
+        return trimmedBody;
+      })
+    : result.savedPlanBodies;
+  const trimmedValidationEvidence = validationEvidence
+    ? (({
+        content: _content,
+        ...trimmed
+      }) => trimmed)(validationEvidence)
+    : result.validationEvidence;
+
+  return trimEmptyTopLevelWarnings({
+    status: result.status,
+    phaseSelection: result.phaseSelection,
+    researchStatus: result.researchStatus,
+    authoringContext: authoringContext
+      ? (({
+          baseSchema: _baseSchema,
+          taskSchema: _taskSchema,
+          ...trimmedAuthoringContext
+        }) => trimmedAuthoringContext)(authoringContext)
+      : result.authoringContext,
+    stateSnapshot: result.stateSnapshot,
+    contract: contract
+      ? {
+          ...contract,
+          modelContract: modelContract
+            ? {
+                ...modelContract,
+                jsonSchema: undefined
+              }
+            : contract.modelContract,
+          authoringTemplate: undefined
+        }
+      : result.contract,
+    artifactBodies: trimReadinessArtifactBodies(result.artifactBodies),
+    validationEvidence: trimmedValidationEvidence,
+    reviewFindings: result.reviewFindings,
+    savedPlanBodies,
+    readSet: result.readSet,
+    freshness: result.freshness,
+    nextSafeAction: result.nextSafeAction,
+    warnings: result.warnings
+  });
+}
+
 function trimRoadmapReadPublicFields(result: ToolResult): ToolResult {
   let trimmedResult = trimEmptyTopLevelArrayFields(result, [
     "warnings",
@@ -981,6 +1065,10 @@ export function sanitizeToolResultForPublicResponse(
     const { waves: _waves, ...trimmedResult } = result;
 
     return trimmedResult;
+  }
+
+  if (toolName === "blueprint_phase_plan_readiness") {
+    return trimPhasePlanReadinessPublicFields(result);
   }
 
   if (toolName === "blueprint_phase_execution_targets") {

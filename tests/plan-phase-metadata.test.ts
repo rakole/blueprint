@@ -29,7 +29,9 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /blueprint-planner/);
   assert.match(commandFile, /blueprint-checker/);
   assert.match(commandFile, /artifact_contract_read/);
-  assert.match(commandFile, /artifactId: "phase\.plan"/);
+  assert.match(commandFile, /phase_plan_readiness/);
+  assert.match(commandFile, /compact Read-stage packet/i);
+  assert.match(commandFile, /read-set freshness metadata/i);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_context")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_research_status")));
@@ -38,6 +40,7 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_review_load_findings")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_index")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_read")));
+  assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_readiness")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_authoring_context")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_validate_model")));
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_plan_validate")));
@@ -117,6 +120,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /structured `add`, `revise`, or `replace` gate before drafting/i);
   assert.match(skillFile, /empty plan set may auto-assign the first slot/i);
   assert.match(skillFile, /artifact_contract_read/);
+  assert.match(skillFile, /blueprint_phase_plan_readiness/);
+  assert.match(skillFile, /read-set freshness metadata/i);
   assert.match(skillFile, /workflow\.research/);
   assert.match(skillFile, /workflow\.ui_phase/);
   assert.match(skillFile, /workflow\.ui_safety_gate/);
@@ -173,6 +178,8 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /### Route/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_readiness/);
+  assert.match(runtimeContract, /readMode: "hashes-only"/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_validation_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_review_load_findings/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_write/);
@@ -252,6 +259,7 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
     "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
+    "blueprint_phase_plan_readiness",
     "blueprint_phase_plan_authoring_context",
     "blueprint_phase_plan_validate_model",
     "blueprint_phase_plan_write",
@@ -283,6 +291,7 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
     "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
+    "blueprint_phase_plan_readiness",
     "blueprint_phase_plan_authoring_context",
     "blueprint_phase_plan_validate_model",
     "blueprint_phase_plan_write",
@@ -301,6 +310,8 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
     "needs-behavior-audit"
   ]);
   assert.match(metadata.runtimeReference.contractNotes, /Long-running-mutation profile/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_phase_plan_readiness/i);
+  assert.match(metadata.runtimeReference.contractNotes, /read-set freshness metadata/i);
   assert.match(metadata.runtimeReference.contractNotes, /planningReadiness/i);
   assert.match(metadata.runtimeReference.contractNotes, /taskSchema/i);
   assert.match(metadata.runtimeReference.contractNotes, /re-read blueprint_phase_plan_authoring_context immediately before each model validation\/write/i);
@@ -407,8 +418,9 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
 
   assert.match(
     mcpToolsDoc,
-    /`plan-phase` uses the canonical `phase\.plan` contract read, phase context and readiness status, discovery artifact reads, validation reads when evidence exists, saved review findings when present, plan index\/read tools, `blueprint_phase_plan_authoring_context`, `blueprint_phase_plan_validate_model`, plan write\/validate tools, config, and state update tools\./i
+    /`plan-phase` uses `blueprint_phase_plan_readiness` as the preferred compact read-only read packet/i
   );
+  assert.match(mcpToolsDoc, /older contract\/context\/research\/artifact\/validation\/review\/index\/read tools still available for fallback/i);
   assert.match(mcpToolsDoc, /plan-phase-runtime-contract\.md/);
   assert.match(mcpToolsDoc, /schema-backed requirements\/evidence\/dependency coverage check before finalization/i);
   assert.match(mcpToolsDoc, /saved research rather than live browsing/i);

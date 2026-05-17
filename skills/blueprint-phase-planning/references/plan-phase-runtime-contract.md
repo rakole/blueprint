@@ -17,30 +17,35 @@ Blueprint-native.
 
 ### Read
 
-- Read `mcp_blueprint_blueprint_artifact_contract_read` with
-  `artifactId: "phase.plan"` and use `contract.modelContract.schemaPath` plus
-  the returned JSON Schema as the base model authority.
-- Read `mcp_blueprint_blueprint_phase_context` for roadmap, requirement, and
-  mapped codebase signals.
-- Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
-  UI readiness, and the config-aware `planningReadiness` handoff gate.
-- Read `mcp_blueprint_blueprint_phase_artifact_read` for actual current
-  `XX-CONTEXT.md`, research, UI, and other relevant discovery artifact content that
-  exists. Status metadata alone is not enough.
-- Read `mcp_blueprint_blueprint_phase_validation_read` for saved verification
-  or UAT evidence when present.
-- Read `mcp_blueprint_blueprint_review_load_findings` for saved review findings
-  when present.
-- Read `mcp_blueprint_blueprint_phase_plan_index` and
-  `mcp_blueprint_blueprint_phase_plan_read` before any add, revision, or
-  replacement decision against saved plans.
-- Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` and
-  `mcp_blueprint_blueprint_state_load`.
+- Prefer one `mcp_blueprint_blueprint_phase_plan_readiness` call as the compact
+  Read-stage packet. Use summary/hash mode by default; request bounded bodies
+  only when drafting or a subagent handoff needs actual context, research, or UI
+  excerpts.
+- Use readiness `contract.modelContract.schemaPath` plus the returned JSON
+  Schema as the base model authority. Fall back to
+  `mcp_blueprint_blueprint_artifact_contract_read` only when the packet omitted
+  or truncated contract detail.
+- Use readiness `context`, `researchStatus`, `planIndex`, `effectiveConfig`,
+  `stateSnapshot`, evidence absence/presence signals, and `readSet` freshness
+  metadata as the normal source for Read-stage grounding.
+- Call `mcp_blueprint_blueprint_phase_context`,
+  `mcp_blueprint_blueprint_phase_research_status`,
+  `mcp_blueprint_blueprint_phase_artifact_read`,
+  `mcp_blueprint_blueprint_phase_validation_read`,
+  `mcp_blueprint_blueprint_review_load_findings`,
+  `mcp_blueprint_blueprint_phase_plan_index`,
+  `mcp_blueprint_blueprint_phase_plan_read`,
+  `mcp_blueprint_blueprint_config_get`, or
+  `mcp_blueprint_blueprint_state_load` only when readiness reports omitted,
+  truncated, stale, or user-requested detail. Status metadata alone is not
+  enough when the draft needs actual saved discovery content.
 - After `planningReadiness` allows drafting and any saved-plan add/revise/replace
-  choice is settled, read `mcp_blueprint_blueprint_phase_plan_authoring_context`
-  for the selected phase and plan slot. Use its `taskSchema` as the effective
-  authoring contract; it narrows roadmap requirement ids, saved evidence
-  artifact rows, and allowed dependency plan ids for this exact write.
+  choice is settled, use readiness `authoringContext` when it matches the
+  selected phase and plan slot and its read set is fresh; otherwise read
+  `mcp_blueprint_blueprint_phase_plan_authoring_context` for that slot. Use its
+  `taskSchema` as the effective authoring contract; it narrows roadmap
+  requirement ids, saved evidence artifact rows, and allowed dependency plan ids
+  for this exact write.
 - Prefer saved `.blueprint/codebase/` summaries exposed through phase context
   before broad repo rereads. Call out missing or invalid mapped codebase
   evidence as uncertainty.
@@ -51,6 +56,8 @@ Blueprint-native.
 #### Read-Set Staleness Check
 
 - Record the key Read-stage evidence set used for drafting:
+  - `blueprint_phase_plan_readiness.readSet` entries and freshness result when
+    readiness was used
   - `XX-CONTEXT.md` path and the substantive content relied on from its
     `mcp_blueprint_blueprint_phase_artifact_read` result
   - `XX-RESEARCH.md` path and relied-on content when research was read
@@ -65,8 +72,9 @@ Blueprint-native.
     `mcp_blueprint_blueprint_phase_plan_authoring_context.taskSchema` that
     materially constrained the draft
 - Immediately before final model validation/write and before claiming final
-  persistence, re-read the same MCP evidence surfaces and compare their current
-  content or inventory against the recorded read set.
+  persistence, call readiness with `readMode: "hashes-only"` and
+  `previousReadSet` or re-read the same MCP evidence surfaces, then compare
+  their current content or inventory against the recorded read set.
 - If the comparison shows drift, surface it as a warning, re-read the changed
   evidence before continuing, and repair the draft/checker context against the
   refreshed evidence before persistence.
