@@ -246,6 +246,67 @@ function trimEmptyTopLevelArrayFields(
   return trimmedResult;
 }
 
+function trimReadinessArtifactBodies(value: unknown): Record<string, unknown> | undefined {
+  const bodies = asRecord(value);
+
+  if (!bodies) {
+    return undefined;
+  }
+
+  const trimmedBodies: Record<string, unknown> = {};
+
+  for (const [key, bodyValue] of Object.entries(bodies)) {
+    const body = asRecord(bodyValue);
+
+    if (!body) {
+      trimmedBodies[key] = bodyValue;
+      continue;
+    }
+
+    if (body.omittedReason && typeof body.content === "string") {
+      const { content: _content, ...trimmedBody } = body;
+      trimmedBodies[key] = trimmedBody;
+      continue;
+    }
+
+    trimmedBodies[key] = body;
+  }
+
+  return trimmedBodies;
+}
+
+function trimPhasePlanReadinessPublicFields(result: ToolResult): ToolResult {
+  const validationEvidence = asRecord(result.validationEvidence);
+  const trimmedValidationEvidence = validationEvidence
+    ? validationEvidence.found === true
+      ? result.validationEvidence
+      : (({
+          content: _content,
+          ...trimmed
+        }) => trimmed)(validationEvidence)
+    : result.validationEvidence;
+
+  return trimEmptyTopLevelWarnings({
+    status: result.status,
+    phaseSelection: result.phaseSelection,
+    context: result.context,
+    researchStatus: result.researchStatus,
+    planIndex: result.planIndex,
+    authoringContext: result.authoringContext,
+    effectiveConfig: result.effectiveConfig,
+    stateSnapshot: result.stateSnapshot,
+    contract: result.contract,
+    artifactBodies: trimReadinessArtifactBodies(result.artifactBodies),
+    validationEvidence: trimmedValidationEvidence,
+    reviewFindings: result.reviewFindings,
+    savedPlanBodies: result.savedPlanBodies,
+    readSet: result.readSet,
+    freshness: result.freshness,
+    nextSafeAction: result.nextSafeAction,
+    warnings: result.warnings
+  });
+}
+
 function trimRoadmapReadPublicFields(result: ToolResult): ToolResult {
   let trimmedResult = trimEmptyTopLevelArrayFields(result, [
     "warnings",
@@ -981,6 +1042,10 @@ export function sanitizeToolResultForPublicResponse(
     const { waves: _waves, ...trimmedResult } = result;
 
     return trimmedResult;
+  }
+
+  if (toolName === "blueprint_phase_plan_readiness") {
+    return trimPhasePlanReadinessPublicFields(result);
   }
 
   if (toolName === "blueprint_phase_execution_targets") {

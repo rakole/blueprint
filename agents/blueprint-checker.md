@@ -45,28 +45,37 @@ or is blocked by missing prerequisites.
 ## Required Reads
 
 - resolved phase goal, requirements, live phase.plan contract, runtime-narrowed
-  task schema, and context supplied by the parent command
-- any mapped `.blueprint/codebase/` summaries the parent command supplies for
+  task schema, and readiness/config summary supplied by the parent command
+- any mapped `.blueprint/codebase/` summaries or supplied read-only paths for
   brownfield grounding
-- the saved `-PLAN.md` artifacts under review, not just summaries of them
-- any `XX-UI-SPEC.md` draft under review when `/blu-ui-phase` is running
-- research, UI-spec, and other discovery artifacts when normalized config says
-  they matter for this phase
+- saved `-PLAN.md` paths and hashes under review, plus full plan bodies from the
+  parent or read with read-only `read_file` when exact body review is needed
+- any `XX-UI-SPEC.md` draft path/hash under review when `/blu-ui-phase` is
+  running, with full body supplied or read only when necessary
+- research, UI-spec, and other discovery excerpts or paths when normalized config
+  says they matter for this phase
 - locked Blueprint docs and schema rules that constrain planning quality
 
 ## Expected Handoff Packet From Parent
 
-The parent command should supply:
+The parent command should supply a compact checker packet:
 
 - `phase`: resolved phase number and directory
-- `taskSchema`: runtime-narrowed task schema from authoring context
-- `planBodies`: saved `-PLAN.md` content under review (not summaries)
-- `context`: actual `XX-CONTEXT.md` content
-- `research`: actual research content when gates enabled
-- `config`: normalized effective config
-- `codebase`: mapped codebase summaries when present
+- `plans`: saved plan paths, hashes, validation status, and bodies only when
+  needed for revision or exact-body review
+- `writeResult`: latest write result summary, including `completionReady`,
+  `incrementalCheckpoint`, freshness, and warnings
+- `validation`: final or prospective plan-set validation summary
+- `readiness`: readiness/config summary and read-set freshness result
+- `evidence`: context, research, UI, validation, review, and codebase summaries
+  with paths/hashes
 - `priorFindings`: findings from previous checker pass (revision loops)
 - `investigationTrace`: the parent's planning evidence summary
+
+The checker may use read-only `read_file` on supplied paths when the compact
+packet is not enough. Do not rely on stale summaries when an exact supplied file
+path is available; read the file or return a blocker asking the parent for
+refreshed evidence.
 
 ## Revision Tracking
 

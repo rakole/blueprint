@@ -14506,14 +14506,15 @@ var init_command_runtime_metadata = __esm({
     ];
     PLAN_PHASE_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
+      "blueprint_artifact_contract_read",
       "blueprint_phase_context",
       "blueprint_phase_research_status",
       "blueprint_phase_artifact_read",
       "blueprint_phase_validation_read",
       "blueprint_review_load_findings",
-      "blueprint_artifact_contract_read",
       "blueprint_phase_plan_index",
       "blueprint_phase_plan_read",
+      "blueprint_phase_plan_readiness",
       "blueprint_phase_plan_authoring_context",
       "blueprint_phase_plan_validate_model",
       "blueprint_phase_plan_write",
@@ -15628,7 +15629,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, respect blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, re-read blueprint_phase_plan_authoring_context immediately before each model validation/write after any successful plan write because saved plan files are intentional later-slot evidence artifacts, validate with blueprint_phase_plan_validate_model, persist the same model through blueprint_phase_plan_write with validationMode: "strict" and authoringMode: "model-only", and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Gate reuse/revise/replace only for writes that revise or replace saved plan ids, while additive new plan ids may proceed without an overwrite gate. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups.',
+        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -25735,6 +25736,11 @@ async function inspectPhasePlanRoutingReadiness(args) {
   );
   const cyclicDependencyPlanIds = detectRoutingPlanCycles(dependencyGraph);
   const warnings = [];
+  if (roadmapRequirementIds.length === 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} has no roadmap requirements; plan set cannot be treated as execution-ready.`
+    );
+  }
   if (uncoveredRequirementIds.length > 0) {
     warnings.push(
       `Phase ${args.currentPhase} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`
@@ -30096,6 +30102,7 @@ __export(phase_exports, {
   blueprintPhasePlanAuthoringContext: () => blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex: () => blueprintPhasePlanIndex,
   blueprintPhasePlanRead: () => blueprintPhasePlanRead,
+  blueprintPhasePlanReadiness: () => blueprintPhasePlanReadiness,
   blueprintPhasePlanValidate: () => blueprintPhasePlanValidate,
   blueprintPhasePlanValidateModel: () => blueprintPhasePlanValidateModel,
   blueprintPhasePlanWrite: () => blueprintPhasePlanWrite,
@@ -30119,6 +30126,7 @@ __export(phase_exports, {
   buildBlueprintPhaseDirectoryPath: () => buildBlueprintPhaseDirectoryPath,
   phaseToolDefinitions: () => phaseToolDefinitions
 });
+import { createHash } from "node:crypto";
 import { promises as fs4 } from "node:fs";
 import path7 from "node:path";
 function buildBlueprintPhaseDirectoryPath(phaseNumber, phaseName) {
@@ -31413,6 +31421,42 @@ function toResolvedPhaseLocation(located) {
     phaseDir: located.phaseDir
   };
 }
+function findRoadmapPhase(roadmap, phaseNumber) {
+  if (!roadmap || !phaseNumber) {
+    return null;
+  }
+  const normalizedPhaseNumber = normalizePhaseNumber(phaseNumber);
+  return roadmap.phases.find(
+    (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizedPhaseNumber
+  ) ?? null;
+}
+async function resolvePhaseRuntimeSnapshot(args = {}, options = {}) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  let roadmap;
+  try {
+    roadmap = await readRoadmap(projectRoot);
+  } catch (error2) {
+    const located2 = phaseLocateFailureFromError(error2);
+    return {
+      projectRoot,
+      roadmap: null,
+      located: located2,
+      resolved: null,
+      matchedPhase: null,
+      artifacts: []
+    };
+  }
+  const located = await locatePhaseFromRoadmap(projectRoot, args, roadmap, options);
+  const resolved = toResolvedPhaseLocation(located);
+  return {
+    projectRoot,
+    roadmap,
+    located,
+    resolved,
+    matchedPhase: findRoadmapPhase(roadmap, located.phaseNumber),
+    artifacts: located.artifacts
+  };
+}
 function extractHeadingPhaseDetails(heading) {
   if (!heading) {
     return {
@@ -31630,6 +31674,14 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
   const uncoveredRequirementIds = roadmapRequirementIds.filter(
     (requirementId) => !coveredRequirementIds.has(requirementId)
   );
+  if (roadmapRequirementIds.length === 0) {
+    const message = coverageSeverity === "warning" ? `Final plan-set validation is still invalid: Phase ${resolved.phaseNumber} has no roadmap requirements. Add roadmap requirement grounding before treating /blu-plan-phase as complete.` : `Phase ${resolved.phaseNumber} has no roadmap requirements; phase plan set cannot be final-valid without requirement grounding.`;
+    if (coverageSeverity === "issue") {
+      issues.push(message);
+    } else if (coverageSeverity === "warning") {
+      warnings.push(message);
+    }
+  }
   if (uncoveredRequirementIds.length > 0) {
     const message = coverageSeverity === "warning" ? `Final plan-set validation is still invalid: Phase ${resolved.phaseNumber} plan set does not yet cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}. Add or revise plans before treating /blu-plan-phase as complete.` : `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
     if (coverageSeverity === "issue") {
@@ -31690,6 +31742,34 @@ async function validateProspectivePhasePlanSetForPath(projectRoot, resolved, pat
       planId2
     ),
     warnings: prospectiveValidation.warnings
+  };
+}
+function summarizePhasePlanSetValidation(validation) {
+  return {
+    status: validation.status,
+    issueCount: validation.issues.length,
+    warningCount: validation.warnings.length,
+    issues: validation.issues,
+    warnings: validation.warnings,
+    planCount: validation.planCount,
+    planIds: validation.planIds,
+    roadmapRequirementIds: validation.roadmapRequirementIds,
+    coveredRequirementIds: validation.coveredRequirementIds,
+    uncoveredRequirementIds: validation.uncoveredRequirementIds,
+    unexpectedRequirementIds: validation.unexpectedRequirementIds,
+    missingDependencyIds: validation.missingDependencyIds,
+    cyclicDependencyPlanIds: validation.cyclicDependencyPlanIds
+  };
+}
+function isPhasePlanSetCompletionReady(validation) {
+  return validation.issues.length === 0 && validation.roadmapRequirementIds.length > 0 && validation.uncoveredRequirementIds.length === 0 && validation.missingDependencyIds.length === 0 && validation.cyclicDependencyPlanIds.length === 0;
+}
+function phasePlanWriteCompletionFields(args) {
+  const completionReady = isPhasePlanSetCompletionReady(args.prospectiveValidation);
+  return {
+    planSetValidationSummary: args.includeSummary ? summarizePhasePlanSetValidation(args.prospectiveValidation) : null,
+    completionReady,
+    incrementalCheckpoint: args.saved && !completionReady
   };
 }
 function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
@@ -32063,6 +32143,202 @@ function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
   }
   return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
+function hashString(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+function buildReadinessHashEntry(args) {
+  const serialized = typeof args.value === "string" ? args.value : JSON.stringify(args.value) ?? "undefined";
+  return {
+    path: args.pathValue,
+    kind: args.kind,
+    hash: hashString(serialized),
+    sizeBytes: Buffer.byteLength(serialized, "utf8"),
+    truncated: false,
+    included: false,
+    reason: args.reason ?? "freshness-metadata"
+  };
+}
+function truncateForReadiness(content, maxBodyBytes) {
+  const buffer = Buffer.from(content, "utf8");
+  if (buffer.byteLength <= maxBodyBytes) {
+    return {
+      content,
+      truncated: false
+    };
+  }
+  return {
+    content: buffer.subarray(0, maxBodyBytes).toString("utf8"),
+    truncated: true
+  };
+}
+async function readReadinessPath(args) {
+  const absolutePath = resolveBlueprintPath(args.projectRoot, args.pathValue);
+  if (!await pathExists(absolutePath)) {
+    return {
+      readSet: {
+        path: args.pathValue,
+        kind: args.kind,
+        hash: "missing",
+        sizeBytes: 0,
+        truncated: false,
+        included: false,
+        reason: args.reason ?? "missing"
+      },
+      body: {
+        path: args.pathValue,
+        summary: null,
+        hash: null,
+        sizeBytes: 0,
+        truncated: false,
+        omittedReason: args.reason ?? "missing",
+        warnings: []
+      },
+      raw: null
+    };
+  }
+  const raw = await fs4.readFile(absolutePath, "utf8");
+  const rawSizeBytes = Buffer.byteLength(raw, "utf8");
+  const hash2 = hashString(raw);
+  const summary = summarizeSavedArtifact(raw);
+  const truncatedContent = truncateForReadiness(raw, args.maxBodyBytes);
+  const contentIncluded = args.includeContent;
+  return {
+    readSet: {
+      path: args.pathValue,
+      kind: args.kind,
+      hash: hash2,
+      sizeBytes: rawSizeBytes,
+      truncated: contentIncluded ? truncatedContent.truncated : false,
+      included: contentIncluded,
+      reason: args.reason ?? (contentIncluded ? void 0 : "summary-only")
+    },
+    body: {
+      path: args.pathValue,
+      ...contentIncluded ? { content: truncatedContent.content } : {},
+      summary: `${summary.title}: ${summary.summary}`,
+      hash: hash2,
+      sizeBytes: rawSizeBytes,
+      truncated: contentIncluded ? truncatedContent.truncated : false,
+      ...contentIncluded ? {} : { omittedReason: args.reason ?? "bodyMode summary" },
+      warnings: []
+    },
+    raw
+  };
+}
+function dedupeReadSet(readSet) {
+  const entries = /* @__PURE__ */ new Map();
+  for (const entry of readSet) {
+    entries.set(`${entry.kind}:${entry.path}`, entry);
+  }
+  return [...entries.values()].sort(
+    (left, right) => `${left.kind}:${left.path}`.localeCompare(`${right.kind}:${right.path}`)
+  );
+}
+function compareReadSetFreshness(currentReadSet, previousReadSet) {
+  if (!previousReadSet || previousReadSet.length === 0) {
+    return {
+      checked: false,
+      fresh: true,
+      stalePaths: []
+    };
+  }
+  const currentByKey = new Map(
+    currentReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
+  );
+  const previousByKey = new Map(
+    previousReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
+  );
+  const previousByPathAndHash = new Set(
+    previousReadSet.map((entry) => `${entry.path}:${entry.hash}`)
+  );
+  const stalePaths = previousReadSet.flatMap((entry) => {
+    const current = currentByKey.get(`${entry.kind}:${entry.path}`);
+    return current && current.hash === entry.hash ? [] : [entry.path];
+  });
+  const missingPreviousPaths = currentReadSet.flatMap(
+    (entry) => previousByKey.has(`${entry.kind}:${entry.path}`) || entry.hash === "missing" || entry.kind === "phase.plan.body" && previousByPathAndHash.has(`${entry.path}:${entry.hash}`) ? [] : [entry.path]
+  );
+  return {
+    checked: true,
+    fresh: stalePaths.length === 0 && missingPreviousPaths.length === 0,
+    stalePaths: [.../* @__PURE__ */ new Set([...stalePaths, ...missingPreviousPaths])].sort(
+      (left, right) => left.localeCompare(right)
+    )
+  };
+}
+function phasePlanAuthoringContextFromData(args) {
+  const authoringBlockers = phasePlanAuthoringContextBlockers(args.context);
+  const ready = authoringBlockers.length === 0 && args.planningReadiness.readyForPlanPhase;
+  return {
+    status: ready ? "ready" : "invalid",
+    phase: args.context.resolved,
+    planId: args.context.planId,
+    path: args.context.pathValue,
+    schemaPath: args.context.schemaPath,
+    baseSchema: args.context.baseSchema,
+    taskSchema: args.context.taskSchema,
+    knownRequirements: args.context.knownRequirements,
+    knownEvidenceArtifacts: args.context.knownEvidenceArtifacts,
+    allowedDependencyPlanIds: args.context.allowedDependencyPlanIds,
+    planningReadiness: args.planningReadiness,
+    modelOnly: true,
+    reason: authoringBlockers.length > 0 ? authoringBlockers.join(" ") : args.planningReadiness.readyForPlanPhase ? null : buildPhasePlanAuthoringReadinessReason(args.planningReadiness),
+    warnings: []
+  };
+}
+function emptyReadinessReviewSeverityCounts() {
+  return {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    unknown: 0
+  };
+}
+function normalizeReadinessReviewSeverity(value) {
+  const normalized = value.trim().toLowerCase();
+  return ["critical", "high", "medium", "low", "unknown"].includes(normalized) ? normalized : null;
+}
+function countReviewSeverities(content) {
+  const counts = emptyReadinessReviewSeverityCounts();
+  for (const match of content.matchAll(
+    /(?:^|\n)\s*(?:[-*]\s*)?(?:\*\*)?Severity(?:\*\*)?\s*[:|-]\s*`?(critical|high|medium|low|unknown)`?/gi
+  )) {
+    const severity = normalizeReadinessReviewSeverity(match[1] ?? "");
+    if (severity) {
+      counts[severity] += 1;
+    }
+  }
+  const tableRows = extractMarkdownTableRows(content);
+  let severityIndex = -1;
+  for (const row of tableRows) {
+    const normalizedCells = row.map((cell) => cell.trim().toLowerCase());
+    if (severityIndex < 0) {
+      severityIndex = normalizedCells.findIndex((cell) => cell === "severity");
+      continue;
+    }
+    const severity = normalizeReadinessReviewSeverity(row[severityIndex] ?? "");
+    if (severity) {
+      counts[severity] += 1;
+    }
+  }
+  return counts;
+}
+function extractReviewFindingIds(content) {
+  return [
+    ...new Set(
+      [...content.matchAll(/\b(?:F|FU)-[A-Z0-9][A-Z0-9._-]*\b/g)].map((match) => match[0])
+    )
+  ].sort((left, right) => left.localeCompare(right));
+}
+function firstNonNull(values) {
+  for (const value of values) {
+    if (value !== null && value !== void 0) {
+      return value;
+    }
+  }
+  return null;
+}
 function normalizePhasePlanModelSurface(value) {
   return normalizeExecutionSurfacePath(value);
 }
@@ -32115,21 +32391,32 @@ function phasePlanMarkdownDiagnosticFromIssue(issue2) {
     suggestion: heuristicGuidance ? "Prefer an objective command, file-read, grep, test, or artifact-validation check when possible, but do not rewrite domain-specific criteria solely to satisfy keyword matching." : "Repair the model so MCP-rendered Markdown satisfies the phase.plan artifact contract."
   });
 }
-async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, targetPath) {
-  const located = await blueprintPhaseLocate({
+async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, targetPath, artifacts) {
+  const phaseArtifacts = artifacts ?? (await resolvePhaseRuntimeSnapshot({
     cwd: projectRoot,
     phase: resolved.phaseNumber
-  });
-  return located.artifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
+  })).artifacts;
+  return phaseArtifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
 }
 async function resolvePhasePlanAuthoringContextData(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const existingIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
+  return buildPhasePlanAuthoringContextData({
+    snapshot: await resolvePhaseRuntimeSnapshot(args),
+    planId: args.planId
+  });
+}
+async function buildPhasePlanAuthoringContextData(input) {
+  const { snapshot } = input;
+  const { projectRoot, resolved } = snapshot;
+  if (!resolved) {
+    throw new Error(snapshot.located.reason ?? "Phase could not be resolved for plan authoring.");
+  }
+  const existingIndex = await buildPhasePlanIndexFromResolved({
+    projectRoot,
+    resolved,
+    artifacts: snapshot.artifacts
   });
   const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))) + 1;
-  const planId2 = args.planId ? normalizePlanId(args.planId) : normalizePlanId(String(nextPlanNumber));
+  const planId2 = input.planId ? normalizePlanId(input.planId) : normalizePlanId(String(nextPlanNumber));
   const pathValue = planPathFor(resolved, planId2);
   const modelContract = readArtifactContract("phase.plan").modelContract;
   if (!modelContract) {
@@ -32138,11 +32425,12 @@ async function resolvePhasePlanAuthoringContextData(args) {
   if (!modelContract.schemaPath) {
     throw new Error("phase.plan modelContract does not expose a schemaPath.");
   }
-  const knownRequirements = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const knownRequirements = snapshot.matchedPhase?.requirements ?? [];
   const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
     projectRoot,
     resolved,
-    pathValue
+    pathValue,
+    snapshot.artifacts
   );
   const allowedDependencyPlanIds = existingIndex.plans.map((plan) => plan.planId).filter((existingPlanId) => existingPlanId !== planId2);
   const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
@@ -33120,15 +33408,17 @@ function isScaffoldGeneratedPhaseArtifact(content) {
   return isScaffoldGeneratedArtifact(content);
 }
 async function resolveLocatedPhaseForMutation(args) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const resolved = snapshot.resolved;
   if (!resolved) {
-    throw new Error(located.reason ?? "Phase could not be resolved for a deterministic write.");
+    throw new Error(snapshot.located.reason ?? "Phase could not be resolved for a deterministic write.");
   }
   return {
-    projectRoot,
-    resolved
+    projectRoot: snapshot.projectRoot,
+    resolved,
+    located: snapshot.located,
+    artifacts: snapshot.artifacts,
+    matchedPhase: snapshot.matchedPhase
   };
 }
 async function blueprintRoadmapRead(args = {}) {
@@ -33916,14 +34206,7 @@ async function blueprintRoadmapPromoteBacklog(args = {}) {
   };
 }
 async function blueprintPhaseLocate(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  let roadmap;
-  try {
-    roadmap = await readRoadmap(projectRoot);
-  } catch (error2) {
-    return phaseLocateFailureFromError(error2);
-  }
-  return locatePhaseFromRoadmap(projectRoot, args, roadmap);
+  return (await resolvePhaseRuntimeSnapshot(args)).located;
 }
 function phaseLocateFailureFromError(error2) {
   const reason = error2 instanceof Error ? error2.message : String(error2);
@@ -34058,6 +34341,9 @@ function phaseSelectionFromLocate(located) {
 }
 async function blueprintPhaseContext(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
+  return buildPhaseContext(projectRoot, args);
+}
+async function buildPhaseContext(projectRoot, args = {}) {
   const roadmapResultPromise = readRoadmap(projectRoot).then((roadmap2) => ({
     ok: true,
     roadmap: roadmap2
@@ -34176,7 +34462,10 @@ async function blueprintPhaseContext(args = {}) {
 }
 async function blueprintPhaseResearchStatus(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const context = await blueprintPhaseContext(args);
+  const context = await buildPhaseContext(projectRoot, args);
+  return buildPhaseResearchStatusFromContext(projectRoot, context);
+}
+async function buildPhaseResearchStatusFromContext(projectRoot, context) {
   const artifacts = context.phase?.artifacts;
   const contextStatus = await evaluatePhaseArtifactUsability(
     projectRoot,
@@ -34954,28 +35243,12 @@ async function blueprintPhaseValidationWrite(args) {
     warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
   };
 }
-async function blueprintPhasePlanIndex(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
-  if (!resolved) {
-    return {
-      phaseFound: false,
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName,
-      phaseDir: located.phaseDir,
-      plans: [],
-      waves: {},
-      missingPlans: [],
-      gapClosurePlans: [],
-      warnings: located.reason ? [located.reason] : []
-    };
-  }
-  const planPaths = located.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right));
+async function buildPhasePlanIndexFromResolved(input) {
+  const { projectRoot, resolved } = input;
+  const planPaths = input.artifacts.filter((artifact) => artifact.endsWith("-PLAN.md")).sort((left, right) => left.localeCompare(right));
   const plans = [];
   const waves = {};
-  const warnings = [];
+  const warnings = [...input.warnings ?? []];
   const knownPlanIds = /* @__PURE__ */ new Set();
   const gapClosurePlans = /* @__PURE__ */ new Set();
   for (const planPath of planPaths) {
@@ -35024,10 +35297,33 @@ async function blueprintPhasePlanIndex(args = {}) {
     warnings
   };
 }
+async function blueprintPhasePlanIndex(args = {}) {
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { located, resolved } = snapshot;
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      plans: [],
+      waves: {},
+      missingPlans: [],
+      gapClosurePlans: [],
+      warnings: located.reason ? [located.reason] : []
+    };
+  }
+  return buildPhasePlanIndexFromResolved({
+    projectRoot: snapshot.projectRoot,
+    resolved,
+    artifacts: snapshot.artifacts,
+    warnings: located.reason ? [located.reason] : []
+  });
+}
 async function blueprintPhasePlanRead(args) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot;
   if (!resolved) {
     return {
       phaseFound: false,
@@ -35102,9 +35398,8 @@ async function blueprintPhasePlanRead(args) {
   };
 }
 async function blueprintPhasePlanValidate(args = {}) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot;
   if (!resolved) {
     return {
       phaseFound: false,
@@ -35133,28 +35428,15 @@ async function blueprintPhasePlanValidate(args = {}) {
 async function blueprintPhasePlanAuthoringContext(args = {}) {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
-    const planningReadiness = (await blueprintPhaseResearchStatus({
+    const phaseContext = await buildPhaseContext(context.projectRoot, {
       cwd: context.projectRoot,
       phase: context.resolved.phaseNumber
-    })).planningReadiness;
-    const authoringBlockers = phasePlanAuthoringContextBlockers(context);
-    const ready = authoringBlockers.length === 0 && planningReadiness.readyForPlanPhase;
-    return {
-      status: ready ? "ready" : "invalid",
-      phase: context.resolved,
-      planId: context.planId,
-      path: context.pathValue,
-      schemaPath: context.schemaPath,
-      baseSchema: context.baseSchema,
-      taskSchema: context.taskSchema,
-      knownRequirements: context.knownRequirements,
-      knownEvidenceArtifacts: context.knownEvidenceArtifacts,
-      allowedDependencyPlanIds: context.allowedDependencyPlanIds,
-      planningReadiness,
-      modelOnly: true,
-      reason: authoringBlockers.length > 0 ? authoringBlockers.join(" ") : planningReadiness.readyForPlanPhase ? null : buildPhasePlanAuthoringReadinessReason(planningReadiness),
-      warnings: []
-    };
+    });
+    const planningReadiness = (await buildPhaseResearchStatusFromContext(context.projectRoot, phaseContext)).planningReadiness;
+    return phasePlanAuthoringContextFromData({
+      context,
+      planningReadiness
+    });
   } catch (error2) {
     const reason = error2 instanceof Error ? error2.message : String(error2);
     return {
@@ -35174,6 +35456,349 @@ async function blueprintPhasePlanAuthoringContext(args = {}) {
       warnings: []
     };
   }
+}
+async function blueprintPhasePlanReadiness(args = {}) {
+  const maxBodyBytes = args.maxBodyBytes ?? 8192;
+  const includeContent = args.bodyMode === "bounded" && args.readMode !== "hashes-only";
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const projectRoot = snapshot.projectRoot;
+  const state = await blueprintStateLoad({ cwd: projectRoot });
+  const config2 = await blueprintConfigGet({
+    cwd: projectRoot,
+    scope: "effective"
+  });
+  const context = await buildPhaseContext(projectRoot, args);
+  const researchStatus = await buildPhaseResearchStatusFromContext(projectRoot, context);
+  const resolved = snapshot.resolved;
+  const located = snapshot.located;
+  const phaseSelection = phaseSelectionFromLocate(located);
+  const contract = readArtifactContract("phase.plan");
+  const modelContract = contract.modelContract ?? null;
+  const readSet = [];
+  for (const [pathValue, kind] of [
+    [`${BLUEPRINT_DIR}/ROADMAP.md`, "roadmap"],
+    [`${BLUEPRINT_DIR}/STATE.md`, "state"],
+    [`${BLUEPRINT_DIR}/config.json`, "config.project"]
+  ]) {
+    const read = await readReadinessPath({
+      projectRoot,
+      pathValue,
+      kind,
+      includeContent: false,
+      maxBodyBytes,
+      reason: "freshness-metadata"
+    });
+    readSet.push(read.readSet);
+  }
+  readSet.push(
+    buildReadinessHashEntry({
+      pathValue: "effective-config",
+      kind: "config.effective",
+      value: config2.config
+    })
+  );
+  const invalidAuthoringContext = {
+    status: "invalid",
+    phase: null,
+    planId: null,
+    path: null,
+    schemaPath: null,
+    baseSchema: null,
+    taskSchema: null,
+    knownRequirements: [],
+    knownEvidenceArtifacts: [],
+    allowedDependencyPlanIds: [],
+    planningReadiness: invalidPhasePlanningReadiness(
+      located.reason ?? "Phase could not be resolved for plan readiness."
+    ),
+    modelOnly: true,
+    reason: located.reason ?? "Phase could not be resolved for plan readiness.",
+    warnings: []
+  };
+  let planIndex = {
+    phaseFound: false,
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    plans: [],
+    waves: {},
+    missingPlans: [],
+    gapClosurePlans: [],
+    warnings: located.reason ? [located.reason] : []
+  };
+  let authoringContext = invalidAuthoringContext;
+  if (resolved) {
+    readSet.push(
+      buildReadinessHashEntry({
+        pathValue: resolved.phaseDir,
+        kind: "phase.artifact.inventory",
+        value: snapshot.artifacts
+      })
+    );
+    planIndex = await buildPhasePlanIndexFromResolved({
+      projectRoot,
+      resolved,
+      artifacts: snapshot.artifacts
+    });
+    const authoringData = await buildPhasePlanAuthoringContextData({
+      snapshot,
+      planId: args.planId
+    });
+    authoringContext = phasePlanAuthoringContextFromData({
+      context: authoringData,
+      planningReadiness: researchStatus.planningReadiness
+    });
+    for (const plan of planIndex.plans) {
+      const read = await readReadinessPath({
+        projectRoot,
+        pathValue: plan.path,
+        kind: "phase.plan",
+        includeContent: false,
+        maxBodyBytes,
+        reason: "plan-index"
+      });
+      readSet.push(read.readSet);
+    }
+  }
+  const artifactBodies = {};
+  const contextPath = context.phase?.artifacts.context ?? null;
+  const researchPath = context.phase?.artifacts.research ?? null;
+  const uiSpecPath = context.phase?.artifacts.uiSpec ?? null;
+  const expectedArtifactPaths = resolved ? {
+    context: artifactPathFor(resolved, "context"),
+    research: artifactPathFor(resolved, "research"),
+    uiSpec: artifactPathFor(resolved, "ui-spec"),
+    verification: validationArtifactPathFor(resolved, "verification"),
+    uat: validationArtifactPathFor(resolved, "uat"),
+    review: buildArtifactPath(resolved.phaseDir, resolved.phasePrefix, "-REVIEW.md")
+  } : null;
+  for (const [key, pathValue, kind, relevant] of [
+    ["context", contextPath, "phase.context", true],
+    ["research", researchPath, "phase.research", config2.config.workflow.research],
+    ["uiSpec", uiSpecPath, "phase.uiSpec", config2.config.workflow.ui_phase]
+  ]) {
+    const expectedPath = expectedArtifactPaths?.[key] ?? null;
+    const omittedReason = relevant ? "artifact absent" : "disabled or not relevant under effective config";
+    if (!pathValue) {
+      if (expectedPath) {
+        const missingRead = await readReadinessPath({
+          projectRoot,
+          pathValue: expectedPath,
+          kind,
+          includeContent: false,
+          maxBodyBytes,
+          reason: omittedReason
+        });
+        readSet.push(missingRead.readSet);
+      }
+      artifactBodies[key] = {
+        path: expectedPath,
+        summary: null,
+        hash: null,
+        sizeBytes: 0,
+        truncated: false,
+        omittedReason,
+        warnings: []
+      };
+      continue;
+    }
+    const read = await readReadinessPath({
+      projectRoot,
+      pathValue,
+      kind,
+      includeContent: includeContent && relevant,
+      maxBodyBytes,
+      reason: relevant ? void 0 : "disabled or not relevant under effective config"
+    });
+    readSet.push(read.readSet);
+    artifactBodies[key] = read.body;
+  }
+  const validationPaths = [
+    context.phase?.artifacts.verification,
+    context.phase?.artifacts.uat
+  ].filter((value) => Boolean(value));
+  for (const expectedPath of [
+    expectedArtifactPaths?.verification,
+    expectedArtifactPaths?.uat
+  ].filter((value) => Boolean(value))) {
+    if (!validationPaths.includes(expectedPath)) {
+      const missingRead = await readReadinessPath({
+        projectRoot,
+        pathValue: expectedPath,
+        kind: "phase.validation",
+        includeContent: false,
+        maxBodyBytes,
+        reason: "artifact absent"
+      });
+      readSet.push(missingRead.readSet);
+    }
+  }
+  const includeValidationEvidence = args.includeValidationEvidence ?? validationPaths.length > 0;
+  const validationEvidence = includeValidationEvidence && validationPaths.length > 0 ? {
+    found: true,
+    paths: validationPaths,
+    summaryPaths: context.phase?.artifacts.summaries ?? []
+  } : {
+    found: false,
+    reason: validationPaths.length === 0 ? "No XX-VERIFICATION.md or XX-UAT.md artifact present." : "Validation evidence expansion disabled by request.",
+    paths: [],
+    summaryPaths: []
+  };
+  if (validationEvidence.found) {
+    const validationReads = await Promise.all(
+      validationEvidence.paths.map(
+        (pathValue) => readReadinessPath({
+          projectRoot,
+          pathValue,
+          kind: "phase.validation",
+          includeContent,
+          maxBodyBytes
+        })
+      )
+    );
+    readSet.push(...validationReads.map((read) => read.readSet));
+    validationEvidence.contentHash = hashString(
+      validationReads.map((read) => read.raw ?? "").join("\n--- blueprint-validation-evidence ---\n")
+    );
+    if (includeContent) {
+      validationEvidence.content = validationReads.map((read) => read.body.content).filter((value) => Boolean(value)).join("\n\n");
+    }
+  }
+  const reviewPath = context.phase?.artifacts.all.find(
+    (artifact) => artifact.endsWith("-REVIEW.md") && !artifact.endsWith("-UI-REVIEW.md")
+  ) ?? null;
+  if (expectedArtifactPaths?.review && !reviewPath) {
+    const missingRead = await readReadinessPath({
+      projectRoot,
+      pathValue: expectedArtifactPaths.review,
+      kind: "phase.review",
+      includeContent: false,
+      maxBodyBytes,
+      reason: "artifact absent"
+    });
+    readSet.push(missingRead.readSet);
+  }
+  const includeReviewFindings = args.includeReviewFindings ?? Boolean(reviewPath);
+  const reviewFindings = includeReviewFindings && reviewPath ? {
+    found: true,
+    path: reviewPath,
+    severityCounts: {},
+    findingIds: []
+  } : {
+    found: false,
+    reason: reviewPath ? "Review findings expansion disabled by request." : "No XX-REVIEW.md artifact present.",
+    path: reviewPath,
+    severityCounts: {},
+    findingIds: []
+  };
+  if (reviewFindings.found && reviewPath) {
+    const read = await readReadinessPath({
+      projectRoot,
+      pathValue: reviewPath,
+      kind: "phase.review",
+      includeContent,
+      maxBodyBytes
+    });
+    readSet.push(read.readSet);
+    const raw = read.raw ?? "";
+    reviewFindings.severityCounts = countReviewSeverities(raw);
+    reviewFindings.findingIds = extractReviewFindingIds(raw);
+    if (includeContent) {
+      reviewFindings.findings = raw.replace(/\r\n/g, "\n").split("\n").filter((line) => /\b(?:F|FU)-[A-Z0-9][A-Z0-9._-]*\b/.test(line)).slice(0, 20);
+    }
+  }
+  const savedPlanBodies = [];
+  if (args.includeSavedPlanBodies === "target" && authoringContext.planId) {
+    const targetPlan = planIndex.plans.find((plan) => plan.planId === authoringContext.planId);
+    if (targetPlan) {
+      const read = await readReadinessPath({
+        projectRoot,
+        pathValue: targetPlan.path,
+        kind: "phase.plan.body",
+        includeContent: true,
+        maxBodyBytes
+      });
+      readSet.push(read.readSet);
+      savedPlanBodies.push({
+        planId: targetPlan.planId,
+        path: targetPlan.path,
+        content: read.body.content ?? "",
+        hash: read.readSet.hash,
+        validation: {
+          valid: targetPlan.valid,
+          issues: targetPlan.issues,
+          warnings: targetPlan.warnings
+        }
+      });
+    } else if (authoringContext.path) {
+      const missingRead = await readReadinessPath({
+        projectRoot,
+        pathValue: authoringContext.path,
+        kind: "phase.plan.body",
+        includeContent: false,
+        maxBodyBytes,
+        reason: "artifact absent"
+      });
+      readSet.push(missingRead.readSet);
+    }
+  }
+  const finalReadSet = dedupeReadSet(readSet);
+  const freshness = compareReadSetFreshness(finalReadSet, args.previousReadSet);
+  const status = !resolved ? "invalid" : authoringContext.status === "ready" ? "ready" : "blocked";
+  const hashesOnly = args.readMode === "hashes-only";
+  const returnedAuthoringContext = hashesOnly ? {
+    ...authoringContext,
+    baseSchema: null,
+    taskSchema: null
+  } : authoringContext;
+  return {
+    status,
+    phaseSelection,
+    context: hashesOnly ? null : context,
+    researchStatus: hashesOnly ? null : researchStatus,
+    planIndex: hashesOnly ? null : planIndex,
+    authoringContext: returnedAuthoringContext,
+    effectiveConfig: config2.config,
+    stateSnapshot: {
+      projectStatus: state.derivedStatus.projectStatus,
+      currentMilestone: state.state.currentMilestone,
+      currentPhase: state.derivedStatus.currentPhase,
+      activeCommand: state.state.activeCommand,
+      nextAction: state.derivedStatus.nextAction,
+      blockers: state.blockers
+    },
+    contract: {
+      artifactId: "phase.plan",
+      schemaPath: modelContract?.schemaPath ?? null,
+      modelContract: {
+        schemaPath: modelContract?.schemaPath ?? null,
+        jsonSchema: hashesOnly || !modelContract ? null : cloneJsonObject2(modelContract.jsonSchema)
+      },
+      ...hashesOnly ? {} : { authoringTemplate: contract.authoringTemplate },
+      contractHash: hashString(
+        JSON.stringify({
+          schemaPath: modelContract?.schemaPath ?? null,
+          jsonSchema: modelContract?.jsonSchema ?? null,
+          authoringTemplate: contract.authoringTemplate
+        })
+      )
+    },
+    artifactBodies,
+    validationEvidence,
+    reviewFindings,
+    savedPlanBodies: hashesOnly ? [] : savedPlanBodies,
+    readSet: finalReadSet,
+    freshness,
+    nextSafeAction: authoringContext.planningReadiness.nextSafeAction || firstNonNull([state.derivedStatus.nextAction, "Run /blu-progress"]) || "Run /blu-progress",
+    warnings: [
+      ...config2.warnings,
+      ...context.warnings,
+      ...researchStatus.warnings,
+      ...planIndex.warnings,
+      ...freshness.checked && !freshness.fresh ? [`Read-set freshness check failed for: ${freshness.stalePaths.join(", ")}.`] : []
+    ]
+  };
 }
 async function blueprintPhasePlanValidateModel(args) {
   let context;
@@ -35248,15 +35873,26 @@ async function blueprintPhasePlanValidateModel(args) {
   return trimPhasePlanStandaloneValidateModelResult(enhancedValidation);
 }
 async function blueprintPhasePlanWrite(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved: initialResolved } = await resolveLocatedPhaseForMutation(args);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
   const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
+  const shouldReturnPlanSetValidation = args.returnPlanSetValidation ?? hasModel;
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
-    const existingIndex = await blueprintPhasePlanIndex({
+    let freshness;
+    const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
       cwd: projectRoot,
-      phase: resolved.phaseNumber
+      phase: initialResolved.phaseNumber
+    });
+    const resolved = lockedSnapshot.resolved;
+    if (!resolved) {
+      throw new Error(lockedSnapshot.located.reason ?? "Phase could not be resolved for plan writing.");
+    }
+    const existingIndex = await buildPhasePlanIndexFromResolved({
+      projectRoot,
+      resolved,
+      artifacts: lockedSnapshot.artifacts
     });
     const nextPlanNumber = existingIndex.plans.length === 0 ? 1 : Math.max(
       ...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))
@@ -35306,14 +35942,49 @@ async function blueprintPhasePlanWrite(args) {
         warnings: []
       };
     }
+    if (args.expectedReadSet && args.expectedReadSet.length > 0) {
+      const readiness = await blueprintPhasePlanReadiness({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId: planId2,
+        readMode: "hashes-only",
+        includeSavedPlanBodies: "target",
+        previousReadSet: args.expectedReadSet
+      });
+      freshness = readiness.freshness;
+      if (!readiness.freshness.fresh) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId: planId2,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: [
+              `Read-set freshness check failed for: ${readiness.freshness.stalePaths.join(", ")}.`
+            ],
+            warnings: readiness.warnings
+          },
+          completionReady: false,
+          incrementalCheckpoint: false,
+          freshness: readiness.freshness,
+          warnings: readiness.warnings
+        };
+      }
+    }
     let normalizedContent;
     let modelCoverageIssues = [];
     let modelWarnings = [];
     let modelValidation = null;
     if (hasModel) {
-      const authoringContext = await resolvePhasePlanAuthoringContextData({
-        cwd: projectRoot,
-        phase: resolved.phaseNumber,
+      const authoringContext = await buildPhasePlanAuthoringContextData({
+        snapshot: lockedSnapshot,
         planId: planId2
       });
       const modelRender = await phasePlanModelToContent(args.model, authoringContext);
@@ -35477,6 +36148,11 @@ async function blueprintPhasePlanWrite(args) {
           issues: blockingIssues,
           warnings: prospectiveValidation.warnings
         },
+        ...phasePlanWriteCompletionFields({
+          prospectiveValidation,
+          includeSummary: shouldReturnPlanSetValidation,
+          saved: false
+        }),
         warnings: [...warnings, ...prospectiveValidation.warnings]
       };
     }
@@ -35503,6 +36179,18 @@ async function blueprintPhasePlanWrite(args) {
             warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
           modelValidation,
+          ...phasePlanWriteCompletionFields({
+            prospectiveValidation,
+            includeSummary: shouldReturnPlanSetValidation,
+            saved: true
+          }),
+          ...freshness ? { freshness } : {},
+          ...args.returnNextAuthoringContext ? {
+            nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+              cwd: projectRoot,
+              phase: resolved.phaseNumber
+            })
+          } : {},
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -35537,6 +36225,18 @@ async function blueprintPhasePlanWrite(args) {
         warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
       modelValidation,
+      ...phasePlanWriteCompletionFields({
+        prospectiveValidation,
+        includeSummary: shouldReturnPlanSetValidation,
+        saved: true
+      }),
+      ...freshness ? { freshness } : {},
+      ...args.returnNextAuthoringContext ? {
+        nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+          cwd: projectRoot,
+          phase: resolved.phaseNumber
+        })
+      } : {},
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });
@@ -36874,7 +37574,7 @@ async function blueprintPhaseCheckpointDelete(args = {}) {
     reason: null
   };
 }
-var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseUiSkipWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
+var roadmapReadInputSchema, roadmapAddPhaseInputSchema, roadmapInsertPhaseInputSchema, roadmapRemovePhaseInputSchema, roadmapPromoteBacklogInputSchema, numericBlueprintInputSchema, phaseLookupInputSchema, phaseArtifactInputSchema, phaseArtifactScaffoldInputSchema, phaseValidationArtifactInputSchema, phaseValidationAuthoringContextInputSchema, phasePlanInputSchema, phaseExecutionTargetsInputSchema, phaseArtifactWriteInputSchema, phaseUiSkipWriteInputSchema, phaseValidationWriteInputSchema, phaseValidationValidateModelInputSchema, phaseValidationRenderInputSchema, phasePlanReadInputSchema, phasePlanValidateInputSchema, phasePlanAuthoringContextInputSchema, phasePlanReadinessInputSchema, phasePlanValidateModelInputSchema, phasePlanWriteInputSchema, phaseSummaryReadInputSchema, phaseSummaryAuthoringContextInputSchema, phaseSummaryValidateModelInputSchema, phaseSummaryWriteInputSchema, phaseCheckpointGetInputSchema, phaseCheckpointPutInputSchema, phaseCheckpointDeleteInputSchema, REQUIREMENTS_TABLE_SECTION_PATTERN, phaseToolDefinitions;
 var init_phase = __esm({
   "src/mcp/tools/phase.ts"() {
     "use strict";
@@ -37114,6 +37814,24 @@ var init_phase = __esm({
       phase: numericBlueprintInputSchema.optional(),
       planId: numericBlueprintInputSchema.optional()
     };
+    phasePlanReadinessInputSchema = {
+      cwd: string2().optional(),
+      phase: numericBlueprintInputSchema.optional(),
+      planId: numericBlueprintInputSchema.optional(),
+      readMode: _enum(["full", "hashes-only"]).optional(),
+      bodyMode: _enum(["summary", "bounded"]).optional(),
+      maxBodyBytes: number2().int().positive().max(128 * 1024).optional(),
+      includeSavedPlanBodies: _enum(["none", "target"]).optional(),
+      includeReviewFindings: boolean2().optional(),
+      includeValidationEvidence: boolean2().optional(),
+      previousReadSet: array(
+        object2({
+          path: string2(),
+          kind: string2(),
+          hash: string2()
+        })
+      ).optional()
+    };
     phasePlanValidateModelInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
@@ -37128,7 +37846,16 @@ var init_phase = __esm({
       model: unknown().optional(),
       authoringMode: _enum(["content-compatible", "model-only"]).optional(),
       overwrite: boolean2().optional(),
-      validationMode: _enum(["strict", "warn"]).optional()
+      validationMode: _enum(["strict", "warn"]).optional(),
+      returnPlanSetValidation: boolean2().optional(),
+      returnNextAuthoringContext: boolean2().optional(),
+      expectedReadSet: array(
+        object2({
+          path: string2(),
+          kind: string2(),
+          hash: string2()
+        })
+      ).optional()
     };
     phaseSummaryReadInputSchema = {
       cwd: string2().optional(),
@@ -37308,6 +38035,12 @@ var init_phase = __esm({
         description: "Return the schema-first phase.plan authoring context, including the base model schema and runtime-narrowed task schema for the selected phase and plan slot.",
         inputSchema: phasePlanAuthoringContextInputSchema,
         handler: async (args) => blueprintPhasePlanAuthoringContext(args)
+      },
+      {
+        name: "blueprint_phase_plan_readiness",
+        description: "Read a compact, read-only /blu-plan-phase readiness packet with phase context, config-aware gates, plan index, schema authority, evidence hashes, and read-set freshness metadata.",
+        inputSchema: phasePlanReadinessInputSchema,
+        handler: async (args) => blueprintPhasePlanReadiness(args)
       },
       {
         name: "blueprint_phase_plan_validate_model",
@@ -47842,7 +48575,7 @@ var init_artifacts = __esm({
 });
 
 // src/mcp/tools/review.ts
-import { createHash } from "node:crypto";
+import { createHash as createHash2 } from "node:crypto";
 import { promises as fs6 } from "node:fs";
 import path9 from "node:path";
 function createAjvValidator2() {
@@ -47983,7 +48716,7 @@ function stripVisibleReviewTargetId(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
-  const digest = createHash("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
+  const digest = createHash2("sha1").update(`${prefix}\0${sourceSection ?? ""}\0${value.trim()}`).digest("hex").slice(0, 10).toUpperCase();
   return `${prefix}-LEGACY-${digest}`;
 }
 function sanitizeMarkdownScalar(value) {
@@ -55626,7 +56359,7 @@ var init_update = __esm({
 
 // src/mcp/tools/workspace.ts
 import { execFile as execFile3 } from "node:child_process";
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 import { promises as fs8 } from "node:fs";
 import os2 from "node:os";
 import path11 from "node:path";
@@ -56576,7 +57309,7 @@ function patchAuditPath(registryPath, patchId) {
   return path11.join(registryPath, `${patchId}.audit.ndjson`);
 }
 function sha256(value) {
-  return createHash2("sha256").update(value).digest("hex");
+  return createHash3("sha256").update(value).digest("hex");
 }
 function normalizeTrackedFiles(repoRoot, trackedFiles) {
   const normalized = /* @__PURE__ */ new Set();
@@ -58044,13 +58777,13 @@ var init_workspace = __esm({
 
 // src/mcp/tools/impact.ts
 import { execFile as execFile4 } from "node:child_process";
-import { createHash as createHash3 } from "node:crypto";
+import { createHash as createHash4 } from "node:crypto";
 import { promises as fs9 } from "node:fs";
 import os3 from "node:os";
 import path12 from "node:path";
 import { promisify as promisify4 } from "node:util";
 function stableHash(value) {
-  return createHash3("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
+  return createHash4("sha256").update(stableStringify(value)).digest("hex").slice(0, 12);
 }
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -75803,6 +76536,53 @@ function trimEmptyTopLevelArrayFields(result, keys) {
   }
   return trimmedResult;
 }
+function trimReadinessArtifactBodies(value) {
+  const bodies = asRecord2(value);
+  if (!bodies) {
+    return void 0;
+  }
+  const trimmedBodies = {};
+  for (const [key, bodyValue] of Object.entries(bodies)) {
+    const body = asRecord2(bodyValue);
+    if (!body) {
+      trimmedBodies[key] = bodyValue;
+      continue;
+    }
+    if (body.omittedReason && typeof body.content === "string") {
+      const { content: _content, ...trimmedBody } = body;
+      trimmedBodies[key] = trimmedBody;
+      continue;
+    }
+    trimmedBodies[key] = body;
+  }
+  return trimmedBodies;
+}
+function trimPhasePlanReadinessPublicFields(result) {
+  const validationEvidence = asRecord2(result.validationEvidence);
+  const trimmedValidationEvidence = validationEvidence ? validationEvidence.found === true ? result.validationEvidence : (({
+    content: _content,
+    ...trimmed
+  }) => trimmed)(validationEvidence) : result.validationEvidence;
+  return trimEmptyTopLevelWarnings({
+    status: result.status,
+    phaseSelection: result.phaseSelection,
+    context: result.context,
+    researchStatus: result.researchStatus,
+    planIndex: result.planIndex,
+    authoringContext: result.authoringContext,
+    effectiveConfig: result.effectiveConfig,
+    stateSnapshot: result.stateSnapshot,
+    contract: result.contract,
+    artifactBodies: trimReadinessArtifactBodies(result.artifactBodies),
+    validationEvidence: trimmedValidationEvidence,
+    reviewFindings: result.reviewFindings,
+    savedPlanBodies: result.savedPlanBodies,
+    readSet: result.readSet,
+    freshness: result.freshness,
+    nextSafeAction: result.nextSafeAction,
+    warnings: result.warnings
+  });
+}
 function trimRoadmapReadPublicFields(result) {
   let trimmedResult = trimEmptyTopLevelArrayFields(result, [
     "warnings",
@@ -76318,6 +77098,9 @@ function sanitizeToolResultForPublicResponse(toolName, result) {
     const { waves: _waves, ...trimmedResult2 } = result;
     return trimmedResult2;
   }
+  if (toolName === "blueprint_phase_plan_readiness") {
+    return trimPhasePlanReadinessPublicFields(result);
+  }
   if (toolName === "blueprint_phase_execution_targets") {
     return trimPhaseExecutionTargetsPublicFields(result);
   }
@@ -76511,7 +77294,7 @@ init_artifacts();
 init_phase();
 init_review();
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash4, randomBytes } from "node:crypto";
+import { createHash as createHash5, randomBytes } from "node:crypto";
 import { promises as fs12 } from "node:fs";
 import path15 from "node:path";
 import { promisify as promisify5 } from "node:util";
@@ -76867,7 +77650,7 @@ function hashGodReviewFileSet(args) {
       (left, right) => left.path.localeCompare(right.path)
     )
   });
-  return `sha256:${createHash4("sha256").update(payload).digest("hex")}`;
+  return `sha256:${createHash5("sha256").update(payload).digest("hex")}`;
 }
 async function hashGodReviewResolvedFileSet(args) {
   const contentHashes = await Promise.all(
@@ -76875,7 +77658,7 @@ async function hashGodReviewResolvedFileSet(args) {
       const content = await fs12.readFile(resolveRepoRelativePath(args.projectRoot, file2));
       return {
         path: file2,
-        hash: `sha256:${createHash4("sha256").update(content).digest("hex")}`
+        hash: `sha256:${createHash5("sha256").update(content).digest("hex")}`
       };
     })
   );
@@ -76985,14 +77768,14 @@ function buildInitialGodReviewGroups() {
   }));
 }
 function stableHash2(value) {
-  return `sha256:${createHash4("sha256").update(value).digest("hex")}`;
+  return `sha256:${createHash5("sha256").update(value).digest("hex")}`;
 }
 function isValidRunId(value) {
   return /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..");
 }
 function generateGodReviewRunId(args) {
   const day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-  const scopeHash = createHash4("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
+  const scopeHash = createHash5("sha256").update(JSON.stringify({ scopeKind: args.scopeKind, files: args.files })).digest("hex").slice(0, 8);
   const entropy = randomBytes(3).toString("hex");
   return `god-${day}-${scopeHash}-${entropy}`;
 }

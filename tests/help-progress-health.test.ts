@@ -237,6 +237,12 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - [x] **Phase 2: Discovery**
 - [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Execute the prepared plans
+**Requirements**: EXEC-01
 `,
     "utf8"
   );
@@ -421,6 +427,12 @@ Exercise the execute-phase router.
 
 - Keep lifecycle routing limited to implemented commands.
 
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
+
 ## Requirement Coverage
 
 | Requirement | Status | Covered By Tasks | Evidence | Rationale |
@@ -517,6 +529,12 @@ Exercise the execute-phase router.
 ## Must Haves
 
 - Keep lifecycle routing limited to implemented commands.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Requirement Coverage
 
@@ -1930,6 +1948,39 @@ test("project status recommends execute-phase once plans exist and summaries are
   assert.equal(state.derivedStatus.currentPhase, "3");
   assert.match(status.nextAction, /\/blu-execute-phase 3/);
   assert.match(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
+});
+
+test("project status keeps plan-phase blocked when roadmap requirements are absent", async (t) => {
+  const repoPath = await createExecutionReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Execution Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 2: Discovery**
+- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "3");
+  assert.equal(state.derivedStatus.currentPhase, "3");
+  assert.match(status.nextAction, /\/blu-plan-phase 3/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-phase 3/);
+  assert.doesNotMatch(status.nextAction, /\/blu-execute-phase 3/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-execute-phase 3/);
 });
 
 test("project status stays on plan-phase until the saved plan set covers roadmap requirements, then advances to execute-phase", async (t) => {

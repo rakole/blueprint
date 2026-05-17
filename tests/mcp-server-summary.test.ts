@@ -3119,6 +3119,153 @@ test("phase plan model tools mirror rich schema details into MCP text", () => {
   assert.doesNotMatch(writeText, /taskSchema|normalizedModel|renderPreview/);
 });
 
+test("phase plan readiness mirrors compact schema authority and freshness metadata into MCP text", () => {
+  const result = {
+    status: "blocked",
+    phaseSelection: {
+      found: true,
+      phaseNumber: "3",
+      phasePrefix: "03",
+      phaseName: "Validation Engine",
+      phaseDir: ".blueprint/phases/03-validation-engine",
+      resolvedFrom: "explicit",
+      reason: null,
+      recovery: [],
+      warnings: []
+    },
+    context: {
+      phase: {
+        roadmap: { goal: "Ship validation engine." },
+        artifacts: { context: ".blueprint/phases/03-validation-engine/03-CONTEXT.md" }
+      },
+      requirements: ["REQ-1"],
+      warnings: []
+    },
+    researchStatus: {
+      planningReadiness: {
+        readyForPlanPhase: false,
+        blockers: ["Research is missing."],
+        nextSafeAction: "Run /blu-research-phase 3"
+      }
+    },
+    planIndex: {
+      plans: [
+        {
+          planId: "01",
+          path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+          valid: true
+        }
+      ],
+      warnings: []
+    },
+    effectiveConfig: {
+      workflow: {
+        research: true,
+        plan_check: true
+      }
+    },
+    contract: {
+      artifactId: "phase.plan",
+      modelContract: {
+        schemaPath: "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json",
+        jsonSchema: { type: "object", properties: { huge: "schema-body" } }
+      },
+      authoringTemplate: "large template body",
+      contractHash: "abc123"
+    },
+    authoringContext: {
+      status: "invalid",
+      schemaPath: "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json",
+      baseSchema: { type: "object" },
+      taskSchema: { type: "object", properties: { task: { type: "string" } } },
+      planningReadiness: {
+        readyForPlanPhase: false,
+        blockers: ["Research is missing."],
+        nextSafeAction: "Run /blu-research-phase 3"
+      }
+    },
+    readSet: [
+      {
+        path: ".blueprint/ROADMAP.md",
+        kind: "roadmap",
+        hash: "hash-roadmap",
+        sizeBytes: 42,
+        truncated: false,
+        included: false,
+        reason: "freshness-metadata"
+      }
+    ],
+    freshness: {
+      checked: true,
+      fresh: false,
+      stalePaths: [".blueprint/ROADMAP.md"]
+    },
+    artifactBodies: {
+      context: {
+        path: ".blueprint/phases/03-validation-engine/03-CONTEXT.md",
+        summary: "Context: saved",
+        hash: "hash-context",
+        sizeBytes: 50,
+        truncated: false,
+        content: "full context body should not be mirrored publicly",
+        omittedReason: "bodyMode summary",
+        warnings: []
+      }
+    },
+    validationEvidence: {
+      found: false,
+      reason: "No XX-VERIFICATION.md or XX-UAT.md artifact present.",
+      paths: [],
+      summaryPaths: [],
+      content: "full validation body should not be mirrored publicly"
+    },
+    reviewFindings: {
+      found: false,
+      reason: "No XX-REVIEW.md artifact present.",
+      path: null,
+      severityCounts: {},
+      findingIds: []
+    },
+    savedPlanBodies: [
+      {
+        planId: "01",
+        path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+        content: "full plan body should not be mirrored publicly",
+        hash: "hash-plan",
+        validation: {
+          valid: true,
+          issues: [],
+          warnings: []
+        }
+      }
+    ],
+    nextSafeAction: "Run /blu-research-phase 3",
+    warnings: ["Read-set freshness check failed for: .blueprint/ROADMAP.md."]
+  };
+  const text = createToolResponseContent("blueprint_phase_plan_readiness", result)[0].text;
+  const parsed = JSON.parse(text);
+
+  assert.equal(parsed.status, "blocked");
+  assert.deepEqual(parsed.context.requirements, ["REQ-1"]);
+  assert.equal(parsed.planIndex.plans[0].planId, "01");
+  assert.equal(parsed.effectiveConfig.workflow.research, true);
+  assert.equal(parsed.contract.modelContract.schemaPath, result.contract.modelContract.schemaPath);
+  assert.deepEqual(parsed.contract.modelContract.jsonSchema, result.contract.modelContract.jsonSchema);
+  assert.equal(parsed.contract.authoringTemplate, result.contract.authoringTemplate);
+  assert.deepEqual(parsed.authoringContext.baseSchema, result.authoringContext.baseSchema);
+  assert.deepEqual(parsed.authoringContext.taskSchema, result.authoringContext.taskSchema);
+  assert.ok(!("content" in parsed.artifactBodies.context));
+  assert.ok(!("content" in parsed.validationEvidence));
+  assert.equal(parsed.savedPlanBodies[0].content, "full plan body should not be mirrored publicly");
+  assert.deepEqual(parsed.authoringContext.planningReadiness.blockers, ["Research is missing."]);
+  assert.deepEqual(parsed.freshness.stalePaths, [".blueprint/ROADMAP.md"]);
+  assert.match(text, /phase\.plan|schema\.json|readSet|freshness|stalePaths/);
+  assert.match(text, /No XX-VERIFICATION\.md or XX-UAT\.md/);
+  assert.match(text, /No XX-REVIEW\.md/);
+  assert.match(text, /schema-body|full plan body/);
+  assert.doesNotMatch(text, /full context body|full validation body/);
+});
+
 test("public phase plan write success trims validation and empty warnings from MCP text while preserving non-empty warnings", () => {
   const writeResult = {
     phaseNumber: "3",
@@ -3136,6 +3283,23 @@ test("public phase plan write success trims validation and empty warnings from M
       issues: [],
       warnings: []
     },
+    planSetValidationSummary: {
+      status: "valid",
+      issueCount: 0,
+      warningCount: 1,
+      issues: [],
+      warnings: ["Final plan-set validation is still invalid: LIFE-02 is uncovered."],
+      planCount: 1,
+      planIds: ["01"],
+      roadmapRequirementIds: ["LIFE-01", "LIFE-02"],
+      coveredRequirementIds: ["LIFE-01"],
+      uncoveredRequirementIds: ["LIFE-02"],
+      unexpectedRequirementIds: [],
+      missingDependencyIds: [],
+      cyclicDependencyPlanIds: []
+    },
+    completionReady: false,
+    incrementalCheckpoint: true,
     warnings: []
   };
   const warnedResult = {
@@ -3150,10 +3314,12 @@ test("public phase plan write success trims validation and empty warnings from M
 
   assert.equal(parsed.status, "created");
   assert.equal(parsed.path, writeResult.path);
+  assert.equal(parsed.completionReady, false);
+  assert.equal(parsed.incrementalCheckpoint, true);
+  assert.deepEqual(parsed.planSetValidationSummary.uncoveredRequirementIds, ["LIFE-02"]);
   assert.ok(!("validation" in parsed));
   assert.ok(!("warnings" in parsed));
   assert.doesNotMatch(writeText, /"validation":/);
-  assert.doesNotMatch(writeText, /"warnings":/);
   assert.ok(!("validation" in warnedParsed));
   assert.deepEqual(warnedParsed.warnings, warnedResult.warnings);
   assert.match(warnedText, /"warnings":\[/);

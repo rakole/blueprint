@@ -1079,6 +1079,12 @@ async function inspectPhasePlanRoutingReadiness(args: {
   const cyclicDependencyPlanIds = detectRoutingPlanCycles(dependencyGraph);
   const warnings: string[] = [];
 
+  if (roadmapRequirementIds.length === 0) {
+    warnings.push(
+      `Phase ${args.currentPhase} has no roadmap requirements; plan set cannot be treated as execution-ready.`
+    );
+  }
+
   if (uncoveredRequirementIds.length > 0) {
     warnings.push(
       `Phase ${args.currentPhase} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`

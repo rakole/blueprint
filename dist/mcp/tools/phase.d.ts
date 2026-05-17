@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 import { type ArtifactContractReadResult } from "../artifact-contracts/index.js";
 import { type PhaseArtifactValidationDiagnostic } from "./artifacts.js";
+import { blueprintConfigGet } from "./config.js";
 import { type NumericInput } from "./phase-numbering.js";
 import { type PhaseCheckpointOwnerCommand, type PhaseCheckpointResumeMode, type PhaseCheckpointWriteRecord } from "./phase-checkpoint-records.js";
 import { type PhaseArtifactKind, type PhaseValidationArtifactKind } from "./phase-locations.js";
@@ -200,9 +201,30 @@ type PhasePlanWriteArgs = PhaseLookupArgs & {
     authoringMode?: "content-compatible" | "model-only";
     overwrite?: boolean;
     validationMode?: "strict" | "warn";
+    returnPlanSetValidation?: boolean;
+    returnNextAuthoringContext?: boolean;
+    expectedReadSet?: Array<{
+        path: string;
+        kind: string;
+        hash: string;
+    }>;
 };
 type PhasePlanAuthoringContextArgs = PhaseLookupArgs & {
     planId?: NumericInput;
+};
+type PhasePlanReadinessArgs = PhaseLookupArgs & {
+    planId?: NumericInput;
+    readMode?: "full" | "hashes-only";
+    bodyMode?: "summary" | "bounded";
+    maxBodyBytes?: number;
+    includeSavedPlanBodies?: "none" | "target";
+    includeReviewFindings?: boolean;
+    includeValidationEvidence?: boolean;
+    previousReadSet?: Array<{
+        path: string;
+        kind: string;
+        hash: string;
+    }>;
 };
 type PhasePlanValidateModelArgs = PhasePlanAuthoringContextArgs & {
     model: unknown;
@@ -643,6 +665,21 @@ type PhasePlanValidationResult = {
     missingDependencyIds: string[];
     cyclicDependencyPlanIds: string[][];
 };
+type PhasePlanSetValidationSummary = {
+    status: "valid" | "invalid";
+    issueCount: number;
+    warningCount: number;
+    issues: string[];
+    warnings: string[];
+    planCount: number;
+    planIds: string[];
+    roadmapRequirementIds: string[];
+    coveredRequirementIds: string[];
+    uncoveredRequirementIds: string[];
+    unexpectedRequirementIds: string[];
+    missingDependencyIds: string[];
+    cyclicDependencyPlanIds: string[][];
+};
 type PhasePlanWriteResult = {
     phaseNumber: string;
     phasePrefix: string;
@@ -660,6 +697,15 @@ type PhasePlanWriteResult = {
         warnings: string[];
     };
     modelValidation?: PhasePlanWriteModelValidationResult | null;
+    planSetValidationSummary?: PhasePlanSetValidationSummary | null;
+    completionReady?: boolean;
+    incrementalCheckpoint?: boolean;
+    freshness?: {
+        checked: boolean;
+        fresh: boolean;
+        stalePaths: string[];
+    };
+    nextAuthoringContext?: PhasePlanAuthoringContextResult | null;
     warnings: string[];
 };
 type PhasePlanAuthoringContextResult = {
@@ -676,6 +722,92 @@ type PhasePlanAuthoringContextResult = {
     planningReadiness: PhasePlanningReadiness;
     modelOnly: boolean;
     reason: string | null;
+    warnings: string[];
+};
+type PhasePlanReadSetEntry = {
+    path: string;
+    kind: string;
+    hash: string;
+    sizeBytes: number;
+    truncated: boolean;
+    included: boolean;
+    reason?: string;
+};
+type PhasePlanReadinessBody = {
+    path: string | null;
+    content?: string;
+    summary: string | null;
+    hash: string | null;
+    sizeBytes: number;
+    truncated: boolean;
+    omittedReason?: string;
+    warnings: string[];
+};
+type PhasePlanReadinessResult = {
+    status: "ready" | "blocked" | "invalid";
+    phaseSelection: PhaseSelectionResult;
+    context: PhaseContextResult | null;
+    researchStatus: PhaseResearchStatusResult | null;
+    planIndex: PhasePlanIndexResult | null;
+    authoringContext: PhasePlanAuthoringContextResult;
+    effectiveConfig: Awaited<ReturnType<typeof blueprintConfigGet>>["config"];
+    stateSnapshot: {
+        projectStatus: string | null;
+        currentMilestone: string | null;
+        currentPhase: string | null;
+        activeCommand: string | null;
+        nextAction: string | null;
+        blockers: string[];
+    };
+    contract: {
+        artifactId: "phase.plan";
+        schemaPath: string | null;
+        modelContract: {
+            schemaPath: string | null;
+            jsonSchema: Record<string, unknown> | null;
+        };
+        authoringTemplate?: string;
+        contractHash: string;
+    };
+    artifactBodies: {
+        context?: PhasePlanReadinessBody;
+        research?: PhasePlanReadinessBody;
+        uiSpec?: PhasePlanReadinessBody;
+    };
+    validationEvidence: {
+        found: boolean;
+        reason?: string;
+        paths: string[];
+        summaryPaths: string[];
+        contentHash?: string;
+        content?: string;
+    };
+    reviewFindings: {
+        found: boolean;
+        reason?: string;
+        path: string | null;
+        severityCounts: Record<string, number>;
+        findingIds: string[];
+        findings?: string[];
+    };
+    savedPlanBodies: Array<{
+        planId: string;
+        path: string;
+        content: string;
+        hash: string;
+        validation: PhasePlanRecord["valid"] extends boolean ? {
+            valid: boolean;
+            issues: string[];
+            warnings: string[];
+        } : never;
+    }>;
+    readSet: PhasePlanReadSetEntry[];
+    freshness: {
+        checked: boolean;
+        fresh: boolean;
+        stalePaths: string[];
+    };
+    nextSafeAction: string;
     warnings: string[];
 };
 type PhasePlanValidateModelTarget = {
@@ -928,6 +1060,7 @@ export declare function blueprintPhasePlanIndex(args?: PlanIndexArgs): Promise<P
 export declare function blueprintPhasePlanRead(args: PhasePlanReadArgs): Promise<PhasePlanReadResult>;
 export declare function blueprintPhasePlanValidate(args?: PhasePlanValidateArgs): Promise<PhasePlanValidationResult>;
 export declare function blueprintPhasePlanAuthoringContext(args?: PhasePlanAuthoringContextArgs): Promise<PhasePlanAuthoringContextResult>;
+export declare function blueprintPhasePlanReadiness(args?: PhasePlanReadinessArgs): Promise<PhasePlanReadinessResult>;
 export declare function blueprintPhasePlanValidateModel(args: PhasePlanValidateModelArgs): Promise<PhasePlanStandaloneValidateModelResult>;
 export declare function blueprintPhasePlanWrite(args: PhasePlanWriteArgs): Promise<PhasePlanWriteResult>;
 export declare function blueprintPhaseSummaryIndex(args?: PlanIndexArgs): Promise<PhaseSummaryIndexResult>;
@@ -1280,6 +1413,35 @@ export declare const phaseToolDefinitions: ({
         cwd: z.ZodOptional<z.ZodString>;
         phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        readMode: z.ZodOptional<z.ZodEnum<{
+            full: "full";
+            "hashes-only": "hashes-only";
+        }>>;
+        bodyMode: z.ZodOptional<z.ZodEnum<{
+            summary: "summary";
+            bounded: "bounded";
+        }>>;
+        maxBodyBytes: z.ZodOptional<z.ZodNumber>;
+        includeSavedPlanBodies: z.ZodOptional<z.ZodEnum<{
+            target: "target";
+            none: "none";
+        }>>;
+        includeReviewFindings: z.ZodOptional<z.ZodBoolean>;
+        includeValidationEvidence: z.ZodOptional<z.ZodBoolean>;
+        previousReadSet: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            path: z.ZodString;
+            kind: z.ZodString;
+            hash: z.ZodString;
+        }, z.core.$strip>>>;
+    };
+    handler: (args: Record<string, unknown>) => Promise<PhasePlanReadinessResult>;
+} | {
+    name: string;
+    description: string;
+    inputSchema: {
+        cwd: z.ZodOptional<z.ZodString>;
+        phase: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        planId: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         model: z.ZodUnknown;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanStandaloneValidateModelResult>;
@@ -1301,6 +1463,13 @@ export declare const phaseToolDefinitions: ({
             strict: "strict";
             warn: "warn";
         }>>;
+        returnPlanSetValidation: z.ZodOptional<z.ZodBoolean>;
+        returnNextAuthoringContext: z.ZodOptional<z.ZodBoolean>;
+        expectedReadSet: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            path: z.ZodString;
+            kind: z.ZodString;
+            hash: z.ZodString;
+        }, z.core.$strip>>>;
     };
     handler: (args: Record<string, unknown>) => Promise<PhasePlanWriteResult>;
 } | {

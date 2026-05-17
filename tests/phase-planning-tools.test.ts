@@ -11,6 +11,7 @@ import {
   blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex,
   blueprintPhasePlanRead,
+  blueprintPhasePlanReadiness,
   blueprintPhasePlanValidate,
   blueprintPhasePlanValidateModel,
   blueprintPhasePlanWrite
@@ -619,6 +620,7 @@ test("phase planning MCP tools are registered in the Blueprint server", () => {
     "blueprint_phase_plan_read",
     "blueprint_phase_plan_validate",
     "blueprint_phase_plan_authoring_context",
+    "blueprint_phase_plan_readiness",
     "blueprint_phase_plan_validate_model",
     "blueprint_phase_plan_write"
   ]) {
@@ -937,6 +939,489 @@ test("phase plan authoring context exposes a complete runtime-narrowed task sche
   assert.match(taskSchemaText, /x-blueprint-runtimeContext/);
 });
 
+test("phase plan readiness returns a compact read-only packet with freshness metadata", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const hashesOnly = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  const partialReadSet = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet
+      .slice(0, 1)
+      .map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, any>;
+  config.workflow.plan_check = false;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"),
+    "# Phase 03: Phase Discovery - Verification\n\n## Evidence\n\n- Newly saved verification evidence.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-REVIEW.md"),
+    "# Phase 03: Phase Discovery - Review\n\n## Findings\n\n- **Severity:** unknown\n- F-UNKNOWN-001: high-level prose should not count as high severity.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `${await readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"), "utf8")}\n## Added Detail\n\n- Freshness mutation.\n`,
+    "utf8"
+  );
+  const stale = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(readiness.status, "ready", JSON.stringify(readiness, null, 2));
+  assert.equal(readiness.authoringContext.status, "ready");
+  assert.equal(readiness.contract.artifactId, "phase.plan");
+  assert.equal(
+    readiness.contract.modelContract.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
+  );
+  assert.ok(readiness.contract.modelContract.jsonSchema);
+  assert.equal(readiness.artifactBodies.context?.content, undefined);
+  assert.equal(readiness.validationEvidence.found, false);
+  assert.match(readiness.validationEvidence.reason ?? "", /No XX-VERIFICATION\.md or XX-UAT\.md/);
+  assert.equal(readiness.reviewFindings.found, false);
+  assert.match(readiness.reviewFindings.reason ?? "", /No XX-REVIEW\.md/);
+  assert.ok(readiness.readSet.some((entry) => entry.path === ".blueprint/ROADMAP.md"));
+  assert.ok(readiness.readSet.some((entry) => entry.path === "effective-config"));
+  assert.ok(
+    readiness.readSet.some(
+      (entry) =>
+        entry.path === ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md" &&
+        entry.hash === "missing"
+    )
+  );
+  assert.ok(
+    readiness.readSet.some(
+      (entry) =>
+        entry.path === ".blueprint/phases/03-phase-discovery/03-REVIEW.md" &&
+        entry.hash === "missing"
+    )
+  );
+  assert.ok(
+    readiness.readSet.some(
+      (entry) =>
+        entry.path === ".blueprint/phases/03-phase-discovery/03-CONTEXT.md" &&
+        entry.included === false
+    )
+  );
+  assert.equal(readiness.freshness.checked, false);
+  assert.equal(hashesOnly.freshness.checked, true);
+  assert.equal(hashesOnly.freshness.fresh, true);
+  assert.equal(hashesOnly.context, null);
+  assert.equal(hashesOnly.researchStatus, null);
+  assert.equal(hashesOnly.planIndex, null);
+  assert.equal(hashesOnly.authoringContext.baseSchema, null);
+  assert.equal(hashesOnly.authoringContext.taskSchema, null);
+  assert.equal(hashesOnly.contract.modelContract.jsonSchema, null);
+  assert.deepEqual(hashesOnly.savedPlanBodies, []);
+  assert.equal(partialReadSet.freshness.checked, true);
+  assert.equal(partialReadSet.freshness.fresh, false);
+  assert.ok(partialReadSet.freshness.stalePaths.includes(".blueprint/ROADMAP.md"));
+  assert.equal(stale.freshness.checked, true);
+  assert.equal(stale.freshness.fresh, false);
+  assert.ok(
+    stale.freshness.stalePaths.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
+  );
+  assert.ok(stale.freshness.stalePaths.includes(".blueprint/config.json"));
+  assert.ok(stale.freshness.stalePaths.includes("effective-config"));
+  assert.ok(
+    stale.freshness.stalePaths.includes(
+      ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"
+    )
+  );
+  assert.ok(
+    stale.freshness.stalePaths.includes(".blueprint/phases/03-phase-discovery/03-REVIEW.md")
+  );
+  assert.deepEqual((await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" })).plans, []);
+});
+
+test("phase plan readiness includes bounded bodies and target saved plan body only on request", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true
+  });
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    bodyMode: "bounded",
+    maxBodyBytes: 200,
+    includeSavedPlanBodies: "target"
+  });
+
+  assert.equal(readiness.status, "ready");
+  assert.match(readiness.artifactBodies.context?.content ?? "", /Phase Boundary/);
+  assert.equal(readiness.artifactBodies.context?.truncated, true);
+  assert.equal(readiness.savedPlanBodies.length, 1);
+  assert.equal(readiness.savedPlanBodies[0]?.planId, "01");
+  assert.match(readiness.savedPlanBodies[0]?.content ?? "", /phase: 3/);
+  assert.equal(
+    readiness.readSet.find(
+      (entry) =>
+        entry.path === ".blueprint/phases/03-phase-discovery/03-01-PLAN.md" &&
+        entry.kind === "phase.plan.body"
+    )?.truncated,
+    true
+  );
+  assert.ok(readiness.savedPlanBodies[0]?.validation.valid);
+  assert.ok(
+    readiness.readSet.some(
+      (entry) =>
+        entry.path === ".blueprint/phases/03-phase-discovery/03-01-PLAN.md" &&
+        entry.kind === "phase.plan.body" &&
+        entry.included === true
+    )
+  );
+});
+
+test("phase plan write rejects stale expected read sets before persistence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `${await readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"), "utf8")}\n## Stale Detail\n\n- Changed after readiness.\n`,
+    "utf8"
+  );
+  const staleWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel(),
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(staleWrite.status, "invalid");
+  assert.equal(staleWrite.written, false);
+  assert.equal(staleWrite.freshness?.checked, true);
+  assert.equal(staleWrite.freshness?.fresh, false);
+  assert.ok(
+    staleWrite.freshness?.stalePaths.includes(
+      ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+    )
+  );
+  assert.match(staleWrite.validation.issues.join("\n"), /Read-set freshness check failed/);
+  assert.deepEqual((await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" })).plans, []);
+});
+
+test("phase plan write rejects stale target plan bodies before reuse", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = createStructuredPlanModel();
+  const firstWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true
+  });
+  assert.equal(firstWrite.status, "created", JSON.stringify(firstWrite, null, 2));
+
+  const planPath = ".blueprint/phases/03-phase-discovery/03-01-PLAN.md";
+  const normalReadiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    includeSavedPlanBodies: "target"
+  });
+  assert.ok(
+    normalReadiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan"
+    )
+  );
+  assert.equal(
+    normalReadiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan.body"
+    ),
+    false
+  );
+  assert.ok(
+    readiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan.body"
+    )
+  );
+  const freshReuseFromNormalReadiness = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: normalReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  assert.equal(
+    freshReuseFromNormalReadiness.status,
+    "reused",
+    JSON.stringify(freshReuseFromNormalReadiness, null, 2)
+  );
+  assert.deepEqual(freshReuseFromNormalReadiness.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+
+  await writeFile(
+    path.join(repoPath, planPath),
+    `${await readFile(path.join(repoPath, planPath), "utf8")}\n<!-- changed after readiness -->\n`,
+    "utf8"
+  );
+
+  const staleReuse = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(staleReuse.status, "invalid");
+  assert.equal(staleReuse.written, false);
+  assert.deepEqual(staleReuse.freshness, {
+    checked: true,
+    fresh: false,
+    stalePaths: [planPath]
+  });
+  assert.match(staleReuse.validation.issues.join("\n"), /Read-set freshness check failed/);
+  const staleReuseFromNormalReadiness = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: normalReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+  assert.equal(staleReuseFromNormalReadiness.status, "invalid");
+  assert.deepEqual(staleReuseFromNormalReadiness.freshness, {
+    checked: true,
+    fresh: false,
+    stalePaths: [planPath]
+  });
+  assert.match(await readFile(path.join(repoPath, planPath), "utf8"), /changed after readiness/);
+});
+
+test("phase plan write reports completion readiness for complete saved plan sets", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel({
+    requirements: ["LIFE-01", "LIFE-02"]
+  });
+  const [task] = model.tasks as Array<Record<string, unknown>>;
+  task.requirements = ["LIFE-01", "LIFE-02"];
+  const requirementCoverage = model.requirementCoverage as Array<Record<string, unknown>>;
+  requirementCoverage[1] = {
+    requirement: "LIFE-02",
+    status: "covered",
+    coveredByTasks: ["task-1"],
+    evidence: "src/mcp/tools/phase.ts",
+    rationale: "The same focused task completes the second roadmap requirement for this fixture."
+  };
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true,
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash })),
+    returnNextAuthoringContext: true
+  });
+  const reuseReadiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    includeSavedPlanBodies: "target"
+  });
+  const reused = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: reuseReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash })),
+    returnNextAuthoringContext: true
+  });
+  const finalValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(written.completionReady, true);
+  assert.equal(written.incrementalCheckpoint, false);
+  assert.equal(written.planSetValidationSummary?.status, "valid");
+  assert.deepEqual(written.planSetValidationSummary?.uncoveredRequirementIds, []);
+  assert.deepEqual(written.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+  assert.equal(written.nextAuthoringContext?.planId, "02");
+  assert.equal(reused.status, "reused", JSON.stringify(reused, null, 2));
+  assert.equal(reused.written, false);
+  assert.equal(reused.completionReady, true);
+  assert.deepEqual(reused.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+  assert.equal(reused.nextAuthoringContext?.planId, "02");
+  assert.equal(finalValidation.status, "valid", JSON.stringify(finalValidation, null, 2));
+});
+
+test("phase plan validation and writes see roadmap changes after an earlier authoring read", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const initialContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const roadmapContent = await readFile(roadmapPath, "utf8");
+
+  await writeFile(
+    roadmapPath,
+    roadmapContent.replace(
+      "**Requirements**: LIFE-01, LIFE-02",
+      "**Requirements**: LIFE-01, LIFE-02, LIFE-03"
+    ),
+    "utf8"
+  );
+
+  const refreshedContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const staleModelValidation = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: cloneStructuredPlanModel()
+  });
+  const incrementalWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true
+  });
+  const finalPlanSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(initialContext.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.deepEqual(refreshedContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+  assert.match(JSON.stringify(refreshedContext.taskSchema), /LIFE-03/);
+  assert.equal(staleModelValidation.status, "invalid");
+  assert.match(
+    staleModelValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /known roadmap requirement LIFE-03/
+  );
+  assert.equal(incrementalWrite.status, "created");
+  assert.match(incrementalWrite.warnings.join("\n"), /LIFE-03/);
+  assert.equal(finalPlanSetValidation.status, "invalid");
+  assert.deepEqual(finalPlanSetValidation.uncoveredRequirementIds, ["LIFE-02", "LIFE-03"]);
+});
+
+test("phase plan validation and writes see saved plan artifacts added after an earlier authoring read", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initialContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+
+  await writeFile(path.join(phaseDir, "03-01-PLAN.md"), validPlanContent("01", 1), "utf8");
+
+  const refreshedContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+  const dependentWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validPlanContent("02", 2, { dependsOn: ["01"] }),
+    overwrite: true
+  });
+  const finalPlanSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const finalIssues = finalPlanSetValidation.issues.join("\n");
+
+  assert.deepEqual(initialContext.allowedDependencyPlanIds, []);
+  assert.ok(refreshedContext.allowedDependencyPlanIds.includes("01"));
+  assert.ok(
+    refreshedContext.knownEvidenceArtifacts.includes(
+      ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+    )
+  );
+  assert.equal(dependentWrite.status, "created");
+  assert.doesNotMatch(dependentWrite.validation.issues.join("\n"), /missing plan "01"/);
+  assert.doesNotMatch(finalIssues, /missing plan "01"/);
+});
+
 test("phase plan authoring context keeps schemas inspectable when readiness blocks drafting", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1227,6 +1712,88 @@ test("phase plan authoring rejects invented requirement coverage when roadmap re
   assert.equal(written.written, false);
   assert.match(written.validation.issues.join("\n"), /no roadmap requirements|more than 0 items/i);
   assert.deepEqual(index.plans, []);
+});
+
+test("phase plan final validation rejects saved plans when roadmap requirements are absent", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+  await writeFile(path.join(phaseDir, "03-01-PLAN.md"), validPlanContent("01", 1), "utf8");
+
+  const validation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(validation.status, "invalid");
+  assert.deepEqual(validation.roadmapRequirementIds, []);
+  assert.match(validation.issues.join("\n"), /no roadmap requirements/i);
+});
+
+test("phase plan writes do not report completion readiness without roadmap requirements", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true,
+    validationMode: "warn",
+    returnPlanSetValidation: true
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(written.completionReady, false);
+  assert.equal(written.incrementalCheckpoint, true);
+  assert.equal(written.planSetValidationSummary?.roadmapRequirementIds.length, 0);
+  assert.match(written.warnings.join("\n"), /no roadmap requirements/i);
+  assert.match(written.validation.warnings.join("\n"), /Final plan-set validation is still invalid/i);
 });
 
 test("phase plan authoring accepts mapped requirements detail labels", async (t) => {
@@ -1657,7 +2224,8 @@ test("phase planning strict writes validate the prospective plan set but allow i
     phase: "3",
     planId: "01",
     content: validPlanContent("01", 1),
-    overwrite: true
+    overwrite: true,
+    returnPlanSetValidation: true
   });
   const firstPlanSetValidation = await blueprintPhasePlanValidate({
     cwd: repoPath,
@@ -1681,6 +2249,11 @@ test("phase planning strict writes validate the prospective plan set but allow i
 
   assert.equal(first.status, "created");
   assert.equal(first.validation.valid, true);
+  assert.equal(first.completionReady, false);
+  assert.equal(first.incrementalCheckpoint, true);
+  assert.equal(first.planSetValidationSummary?.status, "valid");
+  assert.deepEqual(first.planSetValidationSummary?.uncoveredRequirementIds, ["LIFE-02"]);
+  assert.equal(first.planSetValidationSummary?.planCount, 1);
   assert.deepEqual(first.validation.issues, []);
   assert.match(
     first.validation.warnings.join("\n"),

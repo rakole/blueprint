@@ -2,8 +2,7 @@
 
 This reference is the rich behavior contract for `/blu-plan-phase`. The command
 manifest should stay thin; the skill should load this file when planning a
-phase so plan authoring preserves GSD's retained quality bar while staying
-Blueprint-native.
+phase so plan authoring preserves Blueprint's retained quality bar.
 
 ## Stage Mapping
 
@@ -17,30 +16,35 @@ Blueprint-native.
 
 ### Read
 
-- Read `mcp_blueprint_blueprint_artifact_contract_read` with
-  `artifactId: "phase.plan"` and use `contract.modelContract.schemaPath` plus
-  the returned JSON Schema as the base model authority.
-- Read `mcp_blueprint_blueprint_phase_context` for roadmap, requirement, and
-  mapped codebase signals.
-- Read `mcp_blueprint_blueprint_phase_research_status` for context, research,
-  UI readiness, and the config-aware `planningReadiness` handoff gate.
-- Read `mcp_blueprint_blueprint_phase_artifact_read` for actual current
-  `XX-CONTEXT.md`, research, UI, and other relevant discovery artifact content that
-  exists. Status metadata alone is not enough.
-- Read `mcp_blueprint_blueprint_phase_validation_read` for saved verification
-  or UAT evidence when present.
-- Read `mcp_blueprint_blueprint_review_load_findings` for saved review findings
-  when present.
-- Read `mcp_blueprint_blueprint_phase_plan_index` and
-  `mcp_blueprint_blueprint_phase_plan_read` before any add, revision, or
-  replacement decision against saved plans.
-- Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` and
-  `mcp_blueprint_blueprint_state_load`.
+- Prefer one `mcp_blueprint_blueprint_phase_plan_readiness` call as the compact
+  Read-stage packet. Use summary/hash mode by default; request bounded bodies
+  only when drafting or a subagent handoff needs actual context, research, or UI
+  excerpts.
+- Use readiness `contract.modelContract.schemaPath` plus the returned JSON
+  Schema as the base model authority. Fall back to
+  `mcp_blueprint_blueprint_artifact_contract_read` only when the packet omitted
+  or truncated contract detail.
+- Use readiness `context`, `researchStatus`, `planIndex`, `effectiveConfig`,
+  `stateSnapshot`, evidence absence/presence signals, and `readSet` freshness
+  metadata as the normal source for Read-stage grounding.
+- Call `mcp_blueprint_blueprint_phase_context`,
+  `mcp_blueprint_blueprint_phase_research_status`,
+  `mcp_blueprint_blueprint_phase_artifact_read`,
+  `mcp_blueprint_blueprint_phase_validation_read`,
+  `mcp_blueprint_blueprint_review_load_findings`,
+  `mcp_blueprint_blueprint_phase_plan_index`,
+  `mcp_blueprint_blueprint_phase_plan_read`,
+  `mcp_blueprint_blueprint_config_get`, or
+  `mcp_blueprint_blueprint_state_load` only when readiness reports omitted,
+  truncated, stale, or user-requested detail. Status metadata alone is not
+  enough when the draft needs actual saved discovery content.
 - After `planningReadiness` allows drafting and any saved-plan add/revise/replace
-  choice is settled, read `mcp_blueprint_blueprint_phase_plan_authoring_context`
-  for the selected phase and plan slot. Use its `taskSchema` as the effective
-  authoring contract; it narrows roadmap requirement ids, saved evidence
-  artifact rows, and allowed dependency plan ids for this exact write.
+  choice is settled, use readiness `authoringContext` when it matches the
+  selected phase and plan slot and its read set is fresh; otherwise read
+  `mcp_blueprint_blueprint_phase_plan_authoring_context` for that slot. Use its
+  `taskSchema` as the effective authoring contract; it narrows roadmap
+  requirement ids, saved evidence artifact rows, and allowed dependency plan ids
+  for this exact write.
 - Prefer saved `.blueprint/codebase/` summaries exposed through phase context
   before broad repo rereads. Call out missing or invalid mapped codebase
   evidence as uncertainty.
@@ -51,6 +55,8 @@ Blueprint-native.
 #### Read-Set Staleness Check
 
 - Record the key Read-stage evidence set used for drafting:
+  - `blueprint_phase_plan_readiness.readSet` entries and freshness result when
+    readiness was used
   - `XX-CONTEXT.md` path and the substantive content relied on from its
     `mcp_blueprint_blueprint_phase_artifact_read` result
   - `XX-RESEARCH.md` path and relied-on content when research was read
@@ -64,9 +70,13 @@ Blueprint-native.
   - Any runtime-narrowed evidence rows or dependency-plan ids from
     `mcp_blueprint_blueprint_phase_plan_authoring_context.taskSchema` that
     materially constrained the draft
-- Immediately before final model validation/write and before claiming final
-  persistence, re-read the same MCP evidence surfaces and compare their current
-  content or inventory against the recorded read set.
+- Before persistence, if the command skips a duplicate pre-write re-read from an
+  uninterrupted readiness-backed flow, pass the recorded readiness `readSet` as
+  `expectedReadSet` to `mcp_blueprint_blueprint_phase_plan_write` so the server
+  checks freshness before saving. Otherwise call readiness with `readMode:
+  "hashes-only"` and `previousReadSet`, or re-read the same MCP evidence
+  surfaces, then compare their current content or inventory against the
+  recorded read set.
 - If the comparison shows drift, surface it as a warning, re-read the changed
   evidence before continuing, and repair the draft/checker context against the
   refreshed evidence before persistence.
@@ -104,6 +114,9 @@ Blueprint-native.
   `planId` is omitted, the first slot may auto-assign without that gate. If a
   specific saved `planId` was passed, treat that as a targeted revise flow and
   confirm before overwriting.
+- Explicit additive intent may proceed without an overwrite confirmation once
+  the new slot is selected. Revise, replace, overwrite, or deleting/replacing a
+  saved plan set always requires confirmation.
 - If the phase scope cannot be planned without reducing locked decisions or
   must-haves, recommend a split or prioritization before persistence.
 
@@ -115,30 +128,40 @@ Blueprint-native.
   review entirely and state that config disabled it.
 - The parent command owns MCP calls, user gates, persistence, validation, state
   updates, and final routing.
-- Planner input must include the resolved phase, live plan contract, roadmap
-  and requirements, `phase_plan_authoring_context.taskSchema`, actual context
-  text, actual research/UI/validation/review content when present, effective
-  config, mapped codebase summaries, existing plan contents when revising, and
-  the current checker findings during revision.
+- Planner input should be a compact packet by default: resolved phase and phase
+  dir, readiness summary, effective config, task schema path/hash plus task
+  schema only when needed, artifact paths plus read-set hashes, short excerpts
+  for context/research/UI/validation/review evidence, plan index summary,
+  existing plan bodies only when revising or replacing, and current checker
+  findings during revision. The planner may use read-only `read_file` for
+  supplied paths when it needs the full body.
 - Planner output must be a complete structured `phase.plan` JSON model, not
   Markdown, outlines, notes, or scaffold text.
-- Checker input must include the saved plan bodies plus the same phase evidence
-  used by the planner.
+- Checker input should be compact by default: saved plan paths/hashes, write and
+  validation result summaries, readiness/config summary, prior findings, and
+  evidence paths/excerpts. The checker may use read-only `read_file` for supplied plan paths
+  when exact body review is necessary.
 
 ### Persist
 
 - Do not seed `XX-YY-PLAN.md` with scaffold placeholders. Draft the finalized
-  structured model first, then validate and persist it directly.
-- Validate the model with `mcp_blueprint_blueprint_phase_plan_validate_model`
-  before persistence.
-- Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the same
-  validated `model` payload and `authoringMode: "model-only"`.
-- Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately
-  before each model validation/write, especially after any successful plan write;
-  saved `XX-YY-PLAN.md` files are intentional known evidence artifacts for later
-  plan slots and must be covered by the refreshed task schema.
-- Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
-  "warn"` is not part of this command's write contract.
+  structured model first, then persist it directly through MCP.
+- `mcp_blueprint_blueprint_phase_plan_validate_model` remains available for
+  dry-run previews, repair loops, and checker convergence, but it is not
+  mandatory before every write.
+- Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the
+  structured `model` payload, `authoringMode: "model-only"`,
+  `returnPlanSetValidation: true`, and `expectedReadSet` from the fresh
+  readiness `readSet` when skipping a duplicate pre-write re-read.
+- After any successful plan write, use `returnNextAuthoringContext: true` on the
+  write result or re-read readiness/`mcp_blueprint_blueprint_phase_plan_authoring_context`
+  before drafting another plan. Also refresh after a user pause or subagent
+  return, or whenever read-set freshness is absent or stale; saved
+  `XX-YY-PLAN.md` files are intentional known evidence artifacts for later plan
+  slots and must be covered by the refreshed task schema. `expectedReadSet` only
+  skips duplicate pre-write re-reads.
+- Use `validationMode: "strict"` for `/blu-plan-phase`; validationMode:
+  "warn" is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `model` as the complete
   structured phase.plan payload. Omit `planId` only for the first plan in an
   empty plan set or after an explicit `add` choice selected a new slot, or pass
@@ -156,7 +179,10 @@ Blueprint-native.
 - The final `mcp_blueprint_blueprint_phase_plan_validate` status must be
   `valid` before completion advances or `mcp_blueprint_blueprint_state_update`
   is allowed to run.
-- If `phase_plan_validate_model`, `phase_plan_write`, or scoped plan-validation
+- Do not infer completion from `phase_plan_write.validation.valid` alone; the
+  write result's `planSetValidationSummary` and `completionReady` are incremental
+  signals, and the separate final scoped validation remains authoritative.
+- If dry-run `phase_plan_validate_model`, `phase_plan_write`, or scoped plan-validation
   returns invalid diagnostics, do not present the plan as complete and do not
   fall back to Markdown. Repair all diagnostics together against the live task
   schema and contract, rerun the targeted planner/checker path if needed, then
@@ -402,13 +428,17 @@ When splitting, include in the planning decision record:
 Use this path only when suitable code/workflow analysis subagents are available:
 
 1. Parent reads all required MCP context and saved artifacts.
-2. Parent gives `blueprint-planner` the actual artifact contents, live
-   contract, config gates, mapped codebase summaries, and existing plans.
+2. Parent gives `blueprint-planner` a compact packet with readiness/config
+   summary, task schema authority, paths/hashes, short excerpts, plan index, and
+   existing plan bodies only when revising/replacing. Planner can use read-only
+   `read_file` for supplied paths when exact bodies are needed.
 3. Planner returns complete plan bodies, coverage mapping, dependency waves,
    split rationale, blockers, and assumptions.
 4. Parent writes through MCP.
-5. If `workflow.plan_check=true`, parent gives the saved plan bodies to
-   `blueprint-checker`.
+5. If `workflow.plan_check=true`, parent gives `blueprint-checker` saved plan
+   paths/hashes, write and validation summaries, readiness/config summary, prior
+   findings, and full plan bodies only when needed. Checker can use read-only
+   `read_file` for supplied plan paths.
 6. Checker returns `ACCEPT`, `REVISE`, or `BLOCK` with blockers, warnings,
    evidence, why each issue matters, and concrete fix hints.
 7. Parent performs targeted revisions, up to three checker passes. If issue
@@ -600,11 +630,12 @@ Correct: Repairing diagnostics against the live task schema, retrying through
 
 ### Anti-Example: Ignoring Evidence Coverage Refresh
 
-Bad: Writing plan 01 and then writing plan 02 without re-reading
-`blueprint_phase_plan_authoring_context`. Plan 02's `evidenceCoverage` misses
-the newly saved plan 01 file.
-Correct: Re-reading authoring context immediately before each model validation
-and write.
+Bad: Writing plan 01 and then writing plan 02 without using
+`returnNextAuthoringContext: true` or refreshing
+`blueprint_phase_plan_authoring_context`.
+Plan 02's `evidenceCoverage` misses the newly saved plan 01 file.
+Correct: Requesting `returnNextAuthoringContext: true` on the write or making a
+fresh readiness/authoring-context call before drafting the next plan.
 
 ### Anti-Example: Scope Reduction Language
 
