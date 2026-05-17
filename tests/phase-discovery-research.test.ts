@@ -16,9 +16,13 @@ import {
   blueprintPhaseArtifactRead,
   blueprintPhaseArtifactScaffold,
   blueprintPhaseArtifactWrite,
+  blueprintPhaseCheckpointDelete,
+  blueprintPhaseCheckpointGet,
+  blueprintPhaseCheckpointPut,
   blueprintPhaseContext,
   blueprintPhaseResearchStatus
 } from "../src/mcp/tools/phase.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintStateLoad,
   blueprintStateUpdate
@@ -27,6 +31,84 @@ import { validPhaseContextModel } from "./helpers/context-model.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+
+type ResearchSurfaceSizes = {
+  active: Record<string, number>;
+  inventoryOnly: Record<string, number>;
+};
+
+const RESEARCH_PHASE_ACTIVE_SURFACE_BASELINE_BYTES = {
+  // Captured 2026-05-17 before speed-killer prompt slimming.
+  "commands/blu-research-phase.toml": 11679,
+  "skills/blueprint-phase-discovery/SKILL.md": 26276,
+  "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md": 69743,
+  "src/mcp/command-runtime-metadata.ts#RESEARCH_PHASE_RUNTIME_METADATA.contractNotes": 4770
+} as const;
+
+const RESEARCH_PHASE_INVENTORY_SURFACE_BASELINE_BYTES = {
+  // Inventory-only surfaces are not part of the effective research skill bundle.
+  "agents/blueprint-researcher.md": 21770,
+  "docs/commands/research-phase.md": 21721,
+  "docs/MCP-TOOLS.md": 92831,
+  "docs/RUNTIME-REFERENCE.md": 84570
+} as const;
+
+function byteLength(content: string): number {
+  return Buffer.byteLength(content, "utf8");
+}
+
+function assertAllMatch(
+  surfaceName: string,
+  content: string,
+  patterns: readonly RegExp[]
+): void {
+  for (const pattern of patterns) {
+    assert.match(content, pattern, `${surfaceName} should match ${pattern}`);
+  }
+}
+
+function assertTextOrder(surfaceName: string, content: string, orderedNeedles: readonly string[]): void {
+  let previousIndex = -1;
+  for (const needle of orderedNeedles) {
+    const nextIndex = content.indexOf(needle);
+    assert.ok(nextIndex >= 0, `${surfaceName} should include ${needle}`);
+    assert.ok(
+      nextIndex > previousIndex,
+      `${surfaceName} should place ${needle} after ${orderedNeedles[Math.max(0, orderedNeedles.indexOf(needle) - 1)]}`
+    );
+    previousIndex = nextIndex;
+  }
+}
+
+async function readResearchSurfaceSizes(): Promise<ResearchSurfaceSizes> {
+  const active: Record<string, number> = {};
+  for (const filePath of [
+    "commands/blu-research-phase.toml",
+    "skills/blueprint-phase-discovery/SKILL.md",
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+  ]) {
+    active[filePath] = byteLength(await readFile(path.join(repoRoot, filePath), "utf8"));
+  }
+  const metadata = getRuntimeOwnedCommandMetadata("research-phase");
+  assert.ok(metadata);
+  active[
+    "src/mcp/command-runtime-metadata.ts#RESEARCH_PHASE_RUNTIME_METADATA.contractNotes"
+  ] = byteLength(metadata.runtimeReference.contractNotes);
+
+  const inventoryOnly: Record<string, number> = {};
+  for (const filePath of [
+    "agents/blueprint-researcher.md",
+    "docs/commands/research-phase.md",
+    "docs/MCP-TOOLS.md",
+    "docs/RUNTIME-REFERENCE.md"
+  ]) {
+    inventoryOnly[filePath] = byteLength(
+      await readFile(path.join(repoRoot, filePath), "utf8")
+    );
+  }
+
+  return { active, inventoryOnly };
+}
 
 async function createPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-research-phase-");
@@ -371,6 +453,47 @@ await blueprintPhaseArtifactWrite({ phase: "3", artifact: "research", content })
 `;
 }
 
+test("research-phase instruction surfaces expose measured active and inventory budgets", async () => {
+  const sizes = await readResearchSurfaceSizes();
+
+  assert.deepEqual(
+    Object.keys(sizes.active).sort(),
+    Object.keys(RESEARCH_PHASE_ACTIVE_SURFACE_BASELINE_BYTES).sort()
+  );
+  assert.deepEqual(
+    Object.keys(sizes.inventoryOnly).sort(),
+    Object.keys(RESEARCH_PHASE_INVENTORY_SURFACE_BASELINE_BYTES).sort()
+  );
+  assert.ok(Object.values(sizes.active).every((size) => size > 0));
+  assert.ok(Object.values(sizes.inventoryOnly).every((size) => size > 0));
+
+  const activeTotal = Object.values(sizes.active).reduce((total, size) => total + size, 0);
+  const activeBaselineTotal = Object.values(
+    RESEARCH_PHASE_ACTIVE_SURFACE_BASELINE_BYTES
+  ).reduce((total, size) => total + size, 0);
+  assert.ok(
+    activeTotal < activeBaselineTotal,
+    `active research bundle should shrink below ${activeBaselineTotal} bytes; got ${activeTotal}`
+  );
+  assert.ok(
+    sizes.active["commands/blu-research-phase.toml"] < 5000,
+    `research manifest should stay under 5 KB; got ${sizes.active["commands/blu-research-phase.toml"]}`
+  );
+  assert.ok(
+    sizes.active["skills/blueprint-phase-discovery/SKILL.md"] <
+      RESEARCH_PHASE_ACTIVE_SURFACE_BASELINE_BYTES[
+        "skills/blueprint-phase-discovery/SKILL.md"
+      ],
+    "shared discovery skill should shrink after research subsection deflation"
+  );
+  assert.ok(
+    sizes.active[
+      "src/mcp/command-runtime-metadata.ts#RESEARCH_PHASE_RUNTIME_METADATA.contractNotes"
+    ] < 1200,
+    "runtime metadata notes should stay pointer-level, not repeat the runtime contract"
+  );
+});
+
 test("research-phase command references only registered tool names and safe routing text", async () => {
   const commandFile = await readFile(
     path.join(repoRoot, "commands/blu-research-phase.toml"),
@@ -421,64 +544,34 @@ test("research-phase command references only registered tool names and safe rout
     assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn(toolName)));
   }
 
-  assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
-  assert.match(commandFile, /research-phase-runtime-contract\.md/);
-  assert.match(commandFile, /Use the `blueprint-researcher` subagent only when/i);
-  assert.match(commandFile, /`ask_user`/);
-  assert.match(commandFile, /view/);
-  assert.match(commandFile, /skip/);
-  assert.match(commandFile, /update/);
-  assert.match(commandFile, /choosing `update` is the overwrite gate/i);
+  assertAllMatch("command manifest", commandFile, [
+    /Use `blueprint-phase-discovery`/,
+    /research-phase-runtime-contract\.md/,
+    /Use `blueprint-researcher` only when/i,
+    /long-running-mutation/,
+    /current `context` artifact or `XX-CONTEXT\.md` is missing/i,
+    /route back to `\/blu-discuss-phase <phase>`/i,
+    /research\.external_sources/i,
+    /`off`, `ask`, or `auto`/i,
+    /view/,
+    /skip/,
+    /update/,
+    /`update` is the overwrite gate/i,
+    /artifactId: "phase\.research"/,
+    /contract\.authoringTemplate/,
+    /repair or update is the only successful path/i,
+    /state_update` with `base: "synced"`/i,
+    /patch\.currentPhase/i,
+    /state_load/i,
+    /command_catalog/i,
+    /checkpoint/i,
+    /checkpoint_delete/i,
+    /STATE\.md/
+  ]);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_artifact_contract_read")));
-  assert.match(commandFile, /artifactId: "phase\.research"/);
-  assert.match(commandFile, /contract\.authoringTemplate/);
-  assert.match(commandFile, /current `context` artifact is missing or unreadable/i);
-  assert.match(commandFile, /route back to `\/blu-discuss-phase <phase>`/i);
-  assert.match(commandFile, /repair or update as the only successful path/i);
-  assert.match(commandFile, /state_update` with `base: "synced"`/i);
-  assert.match(commandFile, /patch\.currentPhase/i);
-  assert.match(commandFile, /state_load/i);
-  assert.match(commandFile, /command_catalog/i);
-  assert.match(commandFile, /research-owned checkpoint/i);
-  assert.match(commandFile, /long-running-mutation/);
-  assert.match(commandFile, /inconclusive/i);
-  assert.match(commandFile, /research\.external_sources/i);
-  assert.match(commandFile, /`off`, `ask`, or `auto`/i);
-  assert.match(commandFile, /official docs or explicitly supplied external references/i);
-  assert.match(commandFile, /Keep repo-derived evidence distinct/i);
-  assert.match(commandFile, /avoid implying live external verification happened/i);
-  assert.match(commandFile, /claim-addressable provenance packet/i);
-  assert.match(commandFile, /Source-Support Self-Check/i);
-  assert.match(commandFile, /Claim Support Ledger/i);
-  assert.match(commandFile, /Source Register/i);
-  assert.match(commandFile, /Recommendation Handoff/i);
-  assert.match(commandFile, /repo-runtime claims cite local repo evidence/i);
-  assert.match(commandFile, /\*\*Confidence:\*\*\s+HIGH/i);
-  assert.match(commandFile, /investigation trace/i);
-  assert.match(commandFile, /navigation evidence packet/i);
-  assert.match(commandFile, /retrieval boundaries|query or navigation method/i);
-  assert.match(commandFile, /planning handoff/i);
-  assert.match(commandFile, /dependency\/tool evaluation/i);
-  assert.match(commandFile, /no-new-dependency/i);
-  assert.match(commandFile, /standard-library\/platform/i);
-  assert.match(commandFile, /transitive-footprint/i);
-  assert.match(commandFile, /external-source policy/i);
-  assert.match(commandFile, /bounded evidence question/i);
-  assert.match(commandFile, /failed\/noisy\/no-hit searches|failed or limited searches/i);
-  assert.match(commandFile, /rg --files/i);
-  assert.match(commandFile, /whole-repo browsing/i);
-  assert.match(commandFile, /remote code-search/i);
-  assert.match(commandFile, /semantic navigation it was not given/i);
-  assert.match(commandFile, /single-agent fallback/i);
-  assert.match(commandFile, /validation-failing research content/i);
-  assert.match(commandFile, /parent-owned research strand ledger/i);
-  assert.match(commandFile, /child-agent transcripts/i);
-  assert.match(commandFile, /sidecar-failure|sidecar-assisted/i);
-  assert.match(commandFile, /post-write routing-failure|implemented-command routing receipt/i);
-  assert.match(commandFile, /STATE\.md/);
-  assert.match(commandFile, /\/blu-discuss-phase/);
   assert.doesNotMatch(commandFile, /Follow this flow exactly/i);
   assert.doesNotMatch(commandFile, /update_topic|write_todos/);
+  assert.doesNotMatch(commandFile, /Source-Support Self-Check|Claim Support Ledger|Source Register|Recommendation Handoff/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
   assert.ok(docFile.includes("`blueprint_artifact_contract_read` -> `{artifactId, contract}`"));
   assert.ok(docFile.includes("contract.authoringTemplate"));
@@ -518,37 +611,14 @@ test("research-phase command references only registered tool names and safe rout
   assert.doesNotMatch(docFile, /update_topic|write_todos/);
 
   assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
-  assert.match(runtimeReference, /Long-running-mutation profile for topic-strand phase research/i);
-  assert.match(runtimeReference, /update_topic/);
-  assert.match(runtimeReference, /write_todos/);
-  assert.match(runtimeReference, /blueprint_config_get/);
-  assert.match(runtimeReference, /research\.external_sources/);
-  assert.match(runtimeReference, /runtime-contract guidance rather than an MCP validation gate/i);
-  assert.match(runtimeReference, /repo truth/i);
-  assert.match(runtimeReference, /external truth/i);
-  assert.match(runtimeReference, /initial assessment/i);
-  assert.match(runtimeReference, /navigation evidence packet/i);
-  assert.match(runtimeReference, /rg --files plus path filters/i);
-  assert.match(runtimeReference, /scoped content searches/i);
-  assert.match(runtimeReference, /targeted file\/test\/contract\/runtime reads/i);
-  assert.match(runtimeReference, /remote code-search results as discovery hints/i);
-  assert.match(runtimeReference, /planning handoff/i);
-  assert.match(runtimeReference, /parent-owned research strand ledger/i);
-  assert.match(runtimeReference, /researchLedger/i);
-  assert.match(runtimeReference, /research-ledger\/v1/i);
-  assert.match(runtimeReference, /not child-agent transcripts/i);
-  assert.match(runtimeReference, /resume safe research checkpoints by default/i);
-  assert.match(runtimeReference, /guarded delete/i);
-  assert.match(runtimeReference, /implemented-command routing receipt/i);
-  assert.match(runtimeReference, /bounded sidecar packets/i);
-  assert.match(runtimeReference, /termination or blocking reason/i);
-  assert.match(runtimeReference, /dependency\/tool strands/i);
-  assert.match(runtimeReference, /version, maintenance, vulnerability, license, provenance/i);
-  assert.match(runtimeReference, /bounded sidecar findings/i);
-  assert.match(runtimeReference, /stop on missing `XX-CONTEXT\.md`/i);
-  assert.match(runtimeReference, /reserve `blueprint_phase_artifact_scaffold` for deliberate placeholder creation only/i);
-  assert.match(runtimeReference, /force repair when existing research is invalid/i);
-  assert.match(runtimeReference, /sync `STATE\.md` even on valid non-writing reuse paths/i);
+  assertAllMatch("runtime reference row", runtimeReference, [
+    /research-phase-runtime-contract\.md/i,
+    /phase\.research|contract\.authoringTemplate/i,
+    /implemented-command routing/i,
+    /checkpoint/i,
+    /parent/i,
+    /sidecar/i
+  ]);
   assert.match(
     mcpToolsDoc,
     /`research-phase` uses phase location\/context, research status, discovery artifact read\/scaffold\/write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate phase-scoped scaffolding, `blueprint_config_get`, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
@@ -574,48 +644,22 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(mcpToolsDoc, /force repair when existing research is invalid/i);
   assert.match(mcpToolsDoc, /sync `STATE\.md` even on valid non-writing reuse paths/i);
 
-  assert.match(skillFile, /Execution profile for `\/blu-research-phase`: `long-running-mutation`/);
-  assert.match(skillFile, /Load only the active command's `input_bundles\.commands\[\.\.\.\]` inputs/i);
-  assert.match(skillFile, /research-phase-runtime-contract\.md/);
-  assert.match(skillFile, /update_topic/);
-  assert.match(skillFile, /write_todos/);
-  assert.match(skillFile, /blueprint_config_get/);
-  assert.match(skillFile, /research\.external_sources/);
-  assert.match(
-    skillFile,
-    /official-doc or external verification|official reference or supplied reference/i
-  );
-  assert.match(skillFile, /Repository docs are not active runtime inputs/i);
-  assert.match(skillFile, /active command's\s+skill-local runtime reference/i);
-  assert.match(skillFile, /claim-addressable provenance/i);
-  assert.match(skillFile, /Source-Support Self-Check/i);
-  assert.match(skillFile, /Source Register/i);
-  assert.match(skillFile, /Recommendation Handoff/i);
-  assert.match(skillFile, /research evidence warning diagnostic/i);
-  assert.match(skillFile, /evidence ID, lane, claim ID, claim text/i);
-  assert.match(skillFile, /avoid\s+implying live verification happened/i);
-  assert.match(skillFile, /investigation trace/i);
-  assert.match(skillFile, /repository evidence ladder/i);
-  assert.match(skillFile, /search-note fields/i);
-  assert.match(skillFile, /dependency\/tool evaluation lane/i);
-  assert.match(skillFile, /lockfile/i);
-  assert.match(skillFile, /semantic navigation it was not given/i);
-  assert.match(skillFile, /planning handoff/i);
-  assert.match(skillFile, /research strand ledger/i);
-  assert.match(skillFile, /researchLedger/i);
-  assert.match(skillFile, /child-agent transcripts/i);
-  assert.match(skillFile, /post-write-routing-failed/i);
-  assert.match(skillFile, /bounded evidence question/i);
-  assert.match(skillFile, /single-agent fallback/i);
-  assert.match(skillFile, /browser-only, web-search-only, shell-only, or generic agents/i);
-  assert.match(skillFile, /repair the same normalized draft/i);
-  assert.match(skillFile, /If that read reports `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
-  assert.match(skillFile, /Force repair when saved research is invalid/i);
-  assert.match(skillFile, /Draft directly from `contract\.authoringTemplate`/i);
-  assert.match(skillFile, /Use `blueprint_phase_artifact_scaffold` only for deliberate placeholder creation/i);
-  assert.match(skillFile, /choosing `update` is the overwrite gate/i);
-  assert.match(skillFile, /Use `blueprint-researcher` only when a suitable Blueprint research or code-analysis agent is available/i);
-  assert.match(skillFile, /valid `view`\/`skip`\/`reuse` exit, call `blueprint_state_update` with `base: "synced"`/i);
+  assertAllMatch("shared discovery skill", skillFile, [
+    /Execution profile for `\/blu-research-phase`: `long-running-mutation`/,
+    /Load only the active command's `input_bundles\.commands\[\.\.\.\]` inputs/i,
+    /Repository docs are not active runtime inputs/i,
+    /active command's\s+skill-local runtime reference/i,
+    /research-phase-runtime-contract\.md/,
+    /Phase Context Ownership/,
+    /\/blu-research-phase` and `\/blu-ui-phase` read phase context and route back/i,
+    /Command-Scoped Required MCP Tools/,
+    /blueprint_phase_checkpoint_get/,
+    /blueprint_phase_checkpoint_put/,
+    /blueprint_phase_checkpoint_delete/,
+    /blueprint_state_update/,
+    /blueprint_state_load/
+  ]);
+  assert.doesNotMatch(skillFile, /Source-Support Self-Check|Claim Support Ledger|Source Register|Recommendation Handoff|researchLedger|rg --files|semantic navigation/);
   assert.doesNotMatch(skillFile, /Require explicit overwrite confirmation before replacing existing research/i);
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
   const metadata = getRuntimeOwnedCommandMetadata("research-phase");
@@ -747,6 +791,95 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
+});
+
+test("research-phase surface responsibility matrix preserves no-dilution owners", async () => {
+  const commandFile = await readFile(
+    path.join(repoRoot, "commands/blu-research-phase.toml"),
+    "utf8"
+  );
+  const skillFile = await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
+    "utf8"
+  );
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
+  const researcherAgent = await readFile(
+    path.join(repoRoot, "agents/blueprint-researcher.md"),
+    "utf8"
+  );
+  const artifactContract = await blueprintArtifactContractRead({
+    cwd: repoRoot,
+    artifactId: "phase.research"
+  });
+
+  assertAllMatch("manifest owns command-local gates", commandFile, [
+    /Execution profile: `long-running-mutation`/,
+    /Use only the MCP tools listed below/i,
+    /phase cannot be resolved/i,
+    /context` artifact or `XX-CONTEXT\.md` is missing/i,
+    /research\.external_sources/i,
+    /If saved research is invalid/i,
+    /state_update` with `base: "synced"`/i,
+    /implemented-command routing proof/i
+  ]);
+  assert.doesNotMatch(commandFile, /update_topic|write_todos/);
+  assert.doesNotMatch(commandFile, /Source-Support Self-Check/);
+
+  assertAllMatch("shared skill owns input and MCP boundaries", skillFile, [
+    /input_bundles:/,
+    /"\/blu-research-phase":/,
+    /research-phase-runtime-contract\.md/,
+    /Repository docs are not active runtime inputs/i,
+    /Use only the MCP tools allowed by the active command contract/i,
+    /Phase Context Ownership/
+  ]);
+  assert.doesNotMatch(skillFile, /Source-Support Self-Check/);
+
+  assertAllMatch("runtime contract owns research behavior", runtimeContract, [
+    /phase validation before research/i,
+    /explicit reuse, view, or update handling/i,
+    /research\.external_sources/,
+    /Source-Support Self-Check/i,
+    /dependency\/tool decisions/i,
+    /Research Strand Ledger And Checkpoint Semantics/i,
+    /Capability-Gated Subagent Path/i,
+    /parent-owned synthesis/i,
+    /blueprint_state_update` with `base: "synced"`/i,
+    /blueprint_command_catalog/i,
+    /blueprint_phase_checkpoint_delete/i
+  ]);
+  assert.equal(
+    [commandFile, skillFile, runtimeContract].filter((surface) =>
+      /Source-Support Self-Check/.test(surface)
+    ).length,
+    1
+  );
+
+  assertAllMatch("artifact contract owns table shapes", artifactContract.contract.authoringTemplate, [
+    /## Claim Support Ledger/,
+    /### Recommendation Handoff/,
+    /### Source Register/,
+    /### Repo Evidence/,
+    /### External Sources/,
+    /### Inference Notes/,
+    /### Dependency \/ Tool Evaluation/,
+    /### Dependency Alternatives/,
+    /### Library Vs Custom Decision/
+  ]);
+
+  assertAllMatch("sidecar agent owns sidecar packet detail", researcherAgent, [
+    /Research Sidecar Packet Semantics/i,
+    /packetVersion: research-sidecar\.v1/i,
+    /Do not present a sidecar packet as final persisted research/i,
+    /does not fetch official docs itself/i,
+    /Do not substitute browser-only, web-search-only, shell-only, or generic-agent/i
+  ]);
 });
 
 test("phase context surfaces the effective external-source policy for research", async (t) => {
@@ -1824,6 +1957,143 @@ test("missing context keeps research routing pointed at discuss-phase", async (t
   assert.match(loadedState.derivedStatus.nextAction, /\/blu-discuss-phase 3/);
   assert.match(stateBody, /Run \/blu-progress/);
   assert.doesNotMatch(stateBody, /\/blu-research-phase/);
+});
+
+test("research finalization writes, syncs, proves route, then deletes checkpoint last", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const commandFile = await readFile(
+    path.join(repoRoot, "commands/blu-research-phase.toml"),
+    "utf8"
+  );
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
+  const finalizationLoop = runtimeContract.match(
+    /Recommended parent command loop:[\s\S]*?blueprint_phase_checkpoint_delete[\s\S]*?```/
+  )?.[0];
+
+  assert.match(
+    commandFile,
+    /Delete[\s\S]*only after[\s\S]*final research write or valid reuse[\s\S]*synced state update[\s\S]*refreshed state load[\s\S]*implemented-command routing proof/i
+  );
+  assert.ok(finalizationLoop);
+  assertTextOrder("runtime contract finalization loop", finalizationLoop, [
+    "blueprint_phase_artifact_write",
+    "blueprint_state_update",
+    "blueprint_state_load",
+    "blueprint_command_catalog",
+    "blueprint_phase_checkpoint_delete"
+  ]);
+
+  await blueprintArtifactScaffold({
+    cwd: repoPath,
+    artifacts: [".blueprint/phases/03-phase-discovery/03-CONTEXT.md"]
+  });
+  await blueprintPhaseCheckpointPut({
+    cwd: repoPath,
+    phase: "3",
+    checkpoint: {
+      schemaVersion: 2,
+      ownerCommand: "/blu-research-phase",
+      mode: "research",
+      researchLedger: {
+        schemaVersion: "research-ledger/v1",
+        strands: [
+          {
+            id: "S1",
+            type: "planner-handoff",
+            status: "complete",
+            stoppingReason: "evidence-sufficient",
+            nextAction: "route"
+          }
+        ],
+        nextAction: {
+          stage: "Route",
+          pendingGate: "none",
+          safeCommand: "/blu-plan-phase 3"
+        }
+      }
+    }
+  });
+
+  const checkpointBefore = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+  const finalizationSteps: string[] = [];
+
+  const researchWrite = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "research",
+    content: validResearchContent(
+      "Finalize research only after preserving the route-proof and checkpoint-delete order."
+    ),
+    overwrite: true
+  });
+  finalizationSteps.push("research_write");
+
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "3",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  finalizationSteps.push("state_update");
+
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  finalizationSteps.push("state_load");
+
+  const catalog = await blueprintCommandCatalog();
+  finalizationSteps.push("command_catalog");
+  const nextCommand = loadedState.derivedStatus.nextAction.match(/\/blu-([a-z-]+)/)?.[1];
+  assert.ok(nextCommand, loadedState.derivedStatus.nextAction);
+  assert.equal(catalog.commands[nextCommand]?.implemented, true);
+
+  const checkpointDelete = await blueprintPhaseCheckpointDelete({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+  finalizationSteps.push("checkpoint_delete");
+  const checkpointAfter = await blueprintPhaseCheckpointGet({
+    cwd: repoPath,
+    phase: "3",
+    expectedOwnerCommand: "/blu-research-phase",
+    expectedMode: "research"
+  });
+
+  assert.equal(checkpointBefore.safeToResume, true);
+  assert.equal(researchWrite.status, "created");
+  assert.equal(researchWrite.validation.valid, true, researchWrite.validation.issues.join("\n"));
+  assert.deepEqual(stateUpdate.updatedFields.sort(), [
+    "activeCommand",
+    "lastUpdated"
+  ].sort());
+  assert.equal(loadedState.derivedStatus.currentPhase, "3");
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-research-phase 3/);
+  assert.equal(checkpointDelete.deleted, true);
+  assert.equal(checkpointAfter.found, false);
+  assert.deepEqual(finalizationSteps, [
+    "research_write",
+    "state_update",
+    "state_load",
+    "command_catalog",
+    "checkpoint_delete"
+  ]);
 });
 
 test("valid existing research can sync STATE without mutating the research artifact", async (t) => {
