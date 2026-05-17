@@ -10,7 +10,7 @@
 
 - Shared profile reference: `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
 - Command behavior reference: `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`
-- Saved artifact schema authority: the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`; any scaffold output is starter-only seed material and is never the final saved contract body
+- Saved artifact schema authority: for `phase.context`, the live `contract.modelContract` returned by `blueprint_artifact_contract_read`; for `phase.discussion-log`, the live `contract.authoringTemplate`; any scaffold output is starter-only seed material and is never the final saved contract body
 
 ## Purpose
 
@@ -39,7 +39,7 @@
 - Repo side effects: Writes only declared `.blueprint/` phase artifacts, checkpoints, and `STATE.md` through MCP tools.
 - Blueprint does not create or manage repo-root `CONTEXT.md`; this command authors or repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
 - In-flight discovery follows the shared profile until the run concludes or stops on a checkpoint or overwrite decision.
-- The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved artifact schema remains the live `contract.authoringTemplate` returned by `blueprint_artifact_contract_read`, while scaffold output remains starter-only and must not survive verbatim into saved artifacts.
+- The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved `phase.context` schema authority remains the live `contract.modelContract` returned by `blueprint_artifact_contract_read`, the saved `phase.discussion-log` authority remains the live `contract.authoringTemplate`, and scaffold output remains starter-only and must not survive verbatim into saved artifacts.
 
 
 ## Behavior Stages

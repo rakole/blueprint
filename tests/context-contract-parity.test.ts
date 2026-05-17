@@ -1,15 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import {
+  readArtifactContract,
+  renderArtifactAuthoringTemplate
+} from "../src/mcp/artifact-contracts/index.js";
 
-test("phase.context exposes a schema-backed model contract matching the Markdown contract", () => {
+test("phase.context exposes a schema-backed model contract without a read-time authoring template", () => {
   const contract = readArtifactContract("phase.context", {
     phaseLabel: "Phase 07: Context Contract Parity"
   });
   const modelContract = contract.modelContract;
+  const authoringTemplate = renderArtifactAuthoringTemplate("phase.context", {
+    phaseLabel: "Phase 07: Context Contract Parity"
+  });
 
   assert.ok(modelContract);
+  assert.equal("authoringTemplate" in contract, false);
   assert.equal(modelContract.schemaId, "blueprint.phase.context.model");
   assert.equal(modelContract.schemaVersion, "1.0.0");
   assert.equal(
@@ -19,7 +26,7 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   assert.deepEqual(modelContract.renderedHeadings, contract.requiredHeadings);
 
   for (const heading of contract.requiredHeadings) {
-    assert.match(contract.authoringTemplate, new RegExp(`## ${heading}`));
+    assert.match(authoringTemplate, new RegExp(`## ${heading}`));
   }
 
   assert.equal(
@@ -55,7 +62,11 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   assert.ok("canonicalReferences" in properties);
   assert.match(
     String((properties.openQuestions as { description?: string }).description),
-    /empty array or the exact string none/i
+    /use an empty array when no open questions remain/i
+  );
+  assert.match(
+    String((properties.openQuestions as { description?: string }).description),
+    /\["none"\].*older saved model inputs/i
   );
   assert.match(
     String((properties.deferredIdeas as { description?: string }).description),
@@ -74,7 +85,7 @@ test("phase.context exposes a schema-backed model contract matching the Markdown
   );
   assert.ok(
     modelContract.qualityRules.some((rule) =>
-      /no unresolved questions left/i.test(rule)
+      /openQuestions: \[\].*no unresolved questions left/i.test(rule)
     )
   );
   assert.ok(

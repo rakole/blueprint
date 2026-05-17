@@ -262,12 +262,16 @@ function phaseContextModelSchemaRepair(
   }
 
   if (keyword === "type") {
+    if (pathValue === "model.openQuestions") {
+      return "Set model.openQuestions to an array. Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: [\"none\"] only as compatibility for older saved model inputs.";
+    }
+
     return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
   }
 
   if (keyword === "minItems") {
     if (pathValue === "model.openQuestions") {
-      return "Use openQuestions: [\"none\"] or openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel.";
+      return "Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: [\"none\"] only as compatibility for older saved model inputs.";
     }
 
     if (pathValue === "model.deferredIdeas") {

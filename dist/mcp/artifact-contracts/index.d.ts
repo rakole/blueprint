@@ -46,12 +46,18 @@ export type ArtifactContractDefinition = {
     renderScaffoldTemplate: (context?: ArtifactTemplateContext) => string;
     renderAuthoringTemplate: (context?: ArtifactTemplateContext) => string;
 };
-export type ArtifactContractReadResult = Omit<ArtifactContractDefinition, "renderScaffoldTemplate" | "renderAuthoringTemplate"> & {
+export type ArtifactContractReadResultBase = Omit<ArtifactContractDefinition, "renderScaffoldTemplate" | "renderAuthoringTemplate"> & {
     scaffoldTemplate: string;
+};
+export type ArtifactContractReadResultWithAuthoringTemplate = ArtifactContractReadResultBase & {
     authoringTemplate: string;
 };
+export type ArtifactContractReadResultWithoutAuthoringTemplate = ArtifactContractReadResultBase;
+export type ArtifactContractReadResult = ArtifactContractReadResultWithAuthoringTemplate | ArtifactContractReadResultWithoutAuthoringTemplate;
 export declare const artifactContractIds: ArtifactContractId[];
 export declare function getArtifactContract(contractId: ArtifactContractId): ArtifactContractDefinition;
+export declare function readArtifactContract(contractId: "phase.context", context?: ArtifactTemplateContext): ArtifactContractReadResultWithoutAuthoringTemplate;
+export declare function readArtifactContract(contractId: Exclude<ArtifactContractId, "phase.context">, context?: ArtifactTemplateContext): ArtifactContractReadResultWithAuthoringTemplate;
 export declare function readArtifactContract(contractId: ArtifactContractId, context?: ArtifactTemplateContext): ArtifactContractReadResult;
 export declare function listArtifactContracts(): ArtifactContractReadResult[];
 export declare function renderArtifactAuthoringTemplate(contractId: ArtifactContractId, context?: ArtifactTemplateContext): string;

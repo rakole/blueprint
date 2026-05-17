@@ -157,6 +157,31 @@ test("phase context model diagnostics include field-aware repair guidance", asyn
   assert.match(invalid.suggestedRepairs?.join("\n") ?? "", /Set model\.specificIdeas to the type required/i);
 });
 
+test("phase context model diagnostics reject scalar openQuestions none", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  const model = validPhaseContextModel() as Record<string, unknown>;
+
+  model.openQuestions = "none";
+
+  const invalid = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model
+  });
+
+  assert.equal(invalid.status, "invalid");
+  assert.ok(invalid.diagnostics?.some((diagnostic) => diagnostic.path === "model.openQuestions"));
+  assert.match(
+    invalid.suggestedRepairs?.join("\n") ?? "",
+    /Use openQuestions: \[\] when no open questions remain/i
+  );
+  assert.doesNotMatch(invalid.suggestedRepairs?.join("\n") ?? "", /scalar openQuestions: "none"/i);
+});
+
 test("phase context model diagnostics keep nested required-field repair paths intact", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -279,6 +304,14 @@ test("global artifact validation includes phase context discussion and UI spec a
   assert.match(validation.issues.join("\n"), /03-CONTEXT\.md/);
   assert.match(validation.issues.join("\n"), /03-DISCUSSION-LOG\.md/);
   assert.match(validation.issues.join("\n"), /03-UI-SPEC\.md/);
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.artifactId === "phase.context" &&
+        diagnostic.path === "content.sections.Discovery Grounding" &&
+        diagnostic.code === "context.missing_required_section"
+    )
+  );
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-discuss-phase/);
   assert.match(validation.suggestedRepairs.join("\n"), /\/blu-ui-phase/);
 });

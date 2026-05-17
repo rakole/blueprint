@@ -55,7 +55,7 @@
     },
     "openQuestions": {
       "type": "array",
-      "description": "Open questions rendered under Open Questions. Use an empty array or the exact string none only when no open questions remain; MCP renders the canonical - none sentinel.",
+      "description": "Open questions rendered under Open Questions. Use an empty array when no open questions remain; MCP renders the canonical - none sentinel. The legacy compatibility alias [\"none\"] may still appear in older saved model inputs.",
       "items": {
         "$ref": "#/$defs/nonEmptyString"
       }
