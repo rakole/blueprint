@@ -163,6 +163,7 @@ test("plan-phase runtime contract owns detailed behavior and fresh-read semantic
     "Downstream Execution Handoff",
     "expectedReadSet` from the fresh\n  readiness `readSet`",
     "not\n  mandatory before every write",
+    "returnNextAuthoringContext: true",
     "Explicit additive intent may proceed without an overwrite confirmation",
     "Do not write raw `.blueprint/` files",
     "validationMode:\n  \"warn\" is not part of this command's write contract",
@@ -219,6 +220,7 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
   assert.match(metadata.runtimeReference.contractNotes, /blueprint_phase_plan_readiness/i);
   assert.match(metadata.runtimeReference.contractNotes, /read-set freshness metadata/i);
   assert.match(metadata.runtimeReference.contractNotes, /expectedReadSet from the readiness readSet/i);
+  assert.match(metadata.runtimeReference.contractNotes, /returnNextAuthoringContext: true/i);
   assert.match(metadata.runtimeReference.contractNotes, /dry-run preview, repair loops, or checker convergence/i);
   assert.match(metadata.runtimeReference.contractNotes, /Existing saved plans plus omitted planId require an add\/revise\/replace decision/i);
   assert.match(metadata.runtimeReference.contractNotes, /validationMode: "strict"/);

@@ -263,66 +263,43 @@ function trimReadinessArtifactBodies(value: unknown): Record<string, unknown> | 
       continue;
     }
 
-    const { content: _content, ...trimmedBody } = body;
-    trimmedBodies[key] = trimmedBody;
+    if (body.omittedReason && typeof body.content === "string") {
+      const { content: _content, ...trimmedBody } = body;
+      trimmedBodies[key] = trimmedBody;
+      continue;
+    }
+
+    trimmedBodies[key] = body;
   }
 
   return trimmedBodies;
 }
 
 function trimPhasePlanReadinessPublicFields(result: ToolResult): ToolResult {
-  const contract = asRecord(result.contract);
-  const modelContract = asRecord(contract?.modelContract);
-  const authoringContext = asRecord(result.authoringContext);
   const validationEvidence = asRecord(result.validationEvidence);
-  const savedPlanBodies = Array.isArray(result.savedPlanBodies)
-    ? result.savedPlanBodies.map((savedPlanBody) => {
-        const body = asRecord(savedPlanBody);
-
-        if (!body) {
-          return savedPlanBody;
-        }
-
-        const { content: _content, ...trimmedBody } = body;
-
-        return trimmedBody;
-      })
-    : result.savedPlanBodies;
   const trimmedValidationEvidence = validationEvidence
-    ? (({
-        content: _content,
-        ...trimmed
-      }) => trimmed)(validationEvidence)
+    ? validationEvidence.found === true
+      ? result.validationEvidence
+      : (({
+          content: _content,
+          ...trimmed
+        }) => trimmed)(validationEvidence)
     : result.validationEvidence;
 
   return trimEmptyTopLevelWarnings({
     status: result.status,
     phaseSelection: result.phaseSelection,
+    context: result.context,
     researchStatus: result.researchStatus,
-    authoringContext: authoringContext
-      ? (({
-          baseSchema: _baseSchema,
-          taskSchema: _taskSchema,
-          ...trimmedAuthoringContext
-        }) => trimmedAuthoringContext)(authoringContext)
-      : result.authoringContext,
+    planIndex: result.planIndex,
+    authoringContext: result.authoringContext,
+    effectiveConfig: result.effectiveConfig,
     stateSnapshot: result.stateSnapshot,
-    contract: contract
-      ? {
-          ...contract,
-          modelContract: modelContract
-            ? {
-                ...modelContract,
-                jsonSchema: undefined
-              }
-            : contract.modelContract,
-          authoringTemplate: undefined
-        }
-      : result.contract,
+    contract: result.contract,
     artifactBodies: trimReadinessArtifactBodies(result.artifactBodies),
     validationEvidence: trimmedValidationEvidence,
     reviewFindings: result.reviewFindings,
-    savedPlanBodies,
+    savedPlanBodies: result.savedPlanBodies,
     readSet: result.readSet,
     freshness: result.freshness,
     nextSafeAction: result.nextSafeAction,

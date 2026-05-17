@@ -955,6 +955,14 @@ test("phase plan readiness returns a compact read-only packet with freshness met
     readMode: "hashes-only",
     previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
   });
+  const partialReadSet = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet
+      .slice(0, 1)
+      .map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
   const configPath = path.join(repoPath, ".blueprint/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, any>;
   config.workflow.plan_check = false;
@@ -1027,6 +1035,9 @@ test("phase plan readiness returns a compact read-only packet with freshness met
   assert.equal(hashesOnly.authoringContext.taskSchema, null);
   assert.equal(hashesOnly.contract.modelContract.jsonSchema, null);
   assert.deepEqual(hashesOnly.savedPlanBodies, []);
+  assert.equal(partialReadSet.freshness.checked, true);
+  assert.equal(partialReadSet.freshness.fresh, false);
+  assert.ok(partialReadSet.freshness.stalePaths.includes(".blueprint/ROADMAP.md"));
   assert.equal(stale.freshness.checked, true);
   assert.equal(stale.freshness.fresh, false);
   assert.ok(
@@ -1691,6 +1702,50 @@ test("phase plan final validation rejects saved plans when roadmap requirements 
   assert.equal(validation.status, "invalid");
   assert.deepEqual(validation.roadmapRequirementIds, []);
   assert.match(validation.issues.join("\n"), /no roadmap requirements/i);
+});
+
+test("phase plan writes do not report completion readiness without roadmap requirements", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true,
+    validationMode: "warn",
+    returnPlanSetValidation: true
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(written.completionReady, false);
+  assert.equal(written.incrementalCheckpoint, true);
+  assert.equal(written.planSetValidationSummary?.roadmapRequirementIds.length, 0);
+  assert.match(written.warnings.join("\n"), /no roadmap requirements/i);
+  assert.match(written.validation.warnings.join("\n"), /Final plan-set validation is still invalid/i);
 });
 
 test("phase plan authoring accepts mapped requirements detail labels", async (t) => {

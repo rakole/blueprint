@@ -3133,6 +3133,37 @@ test("phase plan readiness mirrors compact schema authority and freshness metada
       recovery: [],
       warnings: []
     },
+    context: {
+      phase: {
+        roadmap: { goal: "Ship validation engine." },
+        artifacts: { context: ".blueprint/phases/03-validation-engine/03-CONTEXT.md" }
+      },
+      requirements: ["REQ-1"],
+      warnings: []
+    },
+    researchStatus: {
+      planningReadiness: {
+        readyForPlanPhase: false,
+        blockers: ["Research is missing."],
+        nextSafeAction: "Run /blu-research-phase 3"
+      }
+    },
+    planIndex: {
+      plans: [
+        {
+          planId: "01",
+          path: ".blueprint/phases/03-validation-engine/03-01-PLAN.md",
+          valid: true
+        }
+      ],
+      warnings: []
+    },
+    effectiveConfig: {
+      workflow: {
+        research: true,
+        plan_check: true
+      }
+    },
     contract: {
       artifactId: "phase.plan",
       modelContract: {
@@ -3215,20 +3246,24 @@ test("phase plan readiness mirrors compact schema authority and freshness metada
   const parsed = JSON.parse(text);
 
   assert.equal(parsed.status, "blocked");
+  assert.deepEqual(parsed.context.requirements, ["REQ-1"]);
+  assert.equal(parsed.planIndex.plans[0].planId, "01");
+  assert.equal(parsed.effectiveConfig.workflow.research, true);
   assert.equal(parsed.contract.modelContract.schemaPath, result.contract.modelContract.schemaPath);
-  assert.ok(!("jsonSchema" in parsed.contract.modelContract));
-  assert.ok(!("authoringTemplate" in parsed.contract));
-  assert.ok(!("baseSchema" in parsed.authoringContext));
-  assert.ok(!("taskSchema" in parsed.authoringContext));
+  assert.deepEqual(parsed.contract.modelContract.jsonSchema, result.contract.modelContract.jsonSchema);
+  assert.equal(parsed.contract.authoringTemplate, result.contract.authoringTemplate);
+  assert.deepEqual(parsed.authoringContext.baseSchema, result.authoringContext.baseSchema);
+  assert.deepEqual(parsed.authoringContext.taskSchema, result.authoringContext.taskSchema);
   assert.ok(!("content" in parsed.artifactBodies.context));
   assert.ok(!("content" in parsed.validationEvidence));
-  assert.ok(!("content" in parsed.savedPlanBodies[0]));
+  assert.equal(parsed.savedPlanBodies[0].content, "full plan body should not be mirrored publicly");
   assert.deepEqual(parsed.authoringContext.planningReadiness.blockers, ["Research is missing."]);
   assert.deepEqual(parsed.freshness.stalePaths, [".blueprint/ROADMAP.md"]);
   assert.match(text, /phase\.plan|schema\.json|readSet|freshness|stalePaths/);
   assert.match(text, /No XX-VERIFICATION\.md or XX-UAT\.md/);
   assert.match(text, /No XX-REVIEW\.md/);
-  assert.doesNotMatch(text, /full context body|full validation body|full plan body|schema-body/);
+  assert.match(text, /schema-body|full plan body/);
+  assert.doesNotMatch(text, /full context body|full validation body/);
 });
 
 test("public phase plan write success trims validation and empty warnings from MCP text while preserving non-empty warnings", () => {

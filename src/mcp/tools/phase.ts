@@ -4120,6 +4120,7 @@ function summarizePhasePlanSetValidation(
 function isPhasePlanSetCompletionReady(validation: PhasePlanValidationResult): boolean {
   return (
     validation.issues.length === 0 &&
+    validation.roadmapRequirementIds.length > 0 &&
     validation.uncoveredRequirementIds.length === 0 &&
     validation.missingDependencyIds.length === 0 &&
     validation.cyclicDependencyPlanIds.length === 0
@@ -4863,16 +4864,26 @@ function compareReadSetFreshness(
   const currentByKey = new Map(
     currentReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
   );
+  const previousByKey = new Map(
+    previousReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
+  );
   const stalePaths = previousReadSet.flatMap((entry) => {
     const current = currentByKey.get(`${entry.kind}:${entry.path}`);
 
     return current && current.hash === entry.hash ? [] : [entry.path];
   });
+  const missingPreviousPaths = currentReadSet.flatMap((entry) =>
+    previousByKey.has(`${entry.kind}:${entry.path}`) || entry.hash === "missing"
+      ? []
+      : [entry.path]
+  );
 
   return {
     checked: true,
-    fresh: stalePaths.length === 0,
-    stalePaths: [...new Set(stalePaths)].sort((left, right) => left.localeCompare(right))
+    fresh: stalePaths.length === 0 && missingPreviousPaths.length === 0,
+    stalePaths: [...new Set([...stalePaths, ...missingPreviousPaths])].sort((left, right) =>
+      left.localeCompare(right)
+    )
   };
 }
 

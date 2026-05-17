@@ -15629,7 +15629,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write refresh, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, refresh blueprint_phase_plan_authoring_context after successful writes, user pauses, subagent returns, or stale/missing read-set freshness, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
+        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -31762,7 +31762,7 @@ function summarizePhasePlanSetValidation(validation) {
   };
 }
 function isPhasePlanSetCompletionReady(validation) {
-  return validation.issues.length === 0 && validation.uncoveredRequirementIds.length === 0 && validation.missingDependencyIds.length === 0 && validation.cyclicDependencyPlanIds.length === 0;
+  return validation.issues.length === 0 && validation.roadmapRequirementIds.length > 0 && validation.uncoveredRequirementIds.length === 0 && validation.missingDependencyIds.length === 0 && validation.cyclicDependencyPlanIds.length === 0;
 }
 function phasePlanWriteCompletionFields(args) {
   const completionReady = isPhasePlanSetCompletionReady(args.prospectiveValidation);
@@ -32245,14 +32245,22 @@ function compareReadSetFreshness(currentReadSet, previousReadSet) {
   const currentByKey = new Map(
     currentReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
   );
+  const previousByKey = new Map(
+    previousReadSet.map((entry) => [`${entry.kind}:${entry.path}`, entry])
+  );
   const stalePaths = previousReadSet.flatMap((entry) => {
     const current = currentByKey.get(`${entry.kind}:${entry.path}`);
     return current && current.hash === entry.hash ? [] : [entry.path];
   });
+  const missingPreviousPaths = currentReadSet.flatMap(
+    (entry) => previousByKey.has(`${entry.kind}:${entry.path}`) || entry.hash === "missing" ? [] : [entry.path]
+  );
   return {
     checked: true,
-    fresh: stalePaths.length === 0,
-    stalePaths: [...new Set(stalePaths)].sort((left, right) => left.localeCompare(right))
+    fresh: stalePaths.length === 0 && missingPreviousPaths.length === 0,
+    stalePaths: [.../* @__PURE__ */ new Set([...stalePaths, ...missingPreviousPaths])].sort(
+      (left, right) => left.localeCompare(right)
+    )
   };
 }
 function phasePlanAuthoringContextFromData(args) {
@@ -76537,50 +76545,35 @@ function trimReadinessArtifactBodies(value) {
       trimmedBodies[key] = bodyValue;
       continue;
     }
-    const { content: _content, ...trimmedBody } = body;
-    trimmedBodies[key] = trimmedBody;
+    if (body.omittedReason && typeof body.content === "string") {
+      const { content: _content, ...trimmedBody } = body;
+      trimmedBodies[key] = trimmedBody;
+      continue;
+    }
+    trimmedBodies[key] = body;
   }
   return trimmedBodies;
 }
 function trimPhasePlanReadinessPublicFields(result) {
-  const contract = asRecord2(result.contract);
-  const modelContract = asRecord2(contract?.modelContract);
-  const authoringContext = asRecord2(result.authoringContext);
   const validationEvidence = asRecord2(result.validationEvidence);
-  const savedPlanBodies = Array.isArray(result.savedPlanBodies) ? result.savedPlanBodies.map((savedPlanBody) => {
-    const body = asRecord2(savedPlanBody);
-    if (!body) {
-      return savedPlanBody;
-    }
-    const { content: _content, ...trimmedBody } = body;
-    return trimmedBody;
-  }) : result.savedPlanBodies;
-  const trimmedValidationEvidence = validationEvidence ? (({
+  const trimmedValidationEvidence = validationEvidence ? validationEvidence.found === true ? result.validationEvidence : (({
     content: _content,
     ...trimmed
   }) => trimmed)(validationEvidence) : result.validationEvidence;
   return trimEmptyTopLevelWarnings({
     status: result.status,
     phaseSelection: result.phaseSelection,
+    context: result.context,
     researchStatus: result.researchStatus,
-    authoringContext: authoringContext ? (({
-      baseSchema: _baseSchema,
-      taskSchema: _taskSchema,
-      ...trimmedAuthoringContext
-    }) => trimmedAuthoringContext)(authoringContext) : result.authoringContext,
+    planIndex: result.planIndex,
+    authoringContext: result.authoringContext,
+    effectiveConfig: result.effectiveConfig,
     stateSnapshot: result.stateSnapshot,
-    contract: contract ? {
-      ...contract,
-      modelContract: modelContract ? {
-        ...modelContract,
-        jsonSchema: void 0
-      } : contract.modelContract,
-      authoringTemplate: void 0
-    } : result.contract,
+    contract: result.contract,
     artifactBodies: trimReadinessArtifactBodies(result.artifactBodies),
     validationEvidence: trimmedValidationEvidence,
     reviewFindings: result.reviewFindings,
-    savedPlanBodies,
+    savedPlanBodies: result.savedPlanBodies,
     readSet: result.readSet,
     freshness: result.freshness,
     nextSafeAction: result.nextSafeAction,

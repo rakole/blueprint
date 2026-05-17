@@ -100,9 +100,9 @@ body review; they must not write files or call MCP persistence.
   and `expectedReadSet` when skipping duplicate pre-write re-read.
 - Use `blueprint_phase_plan_validate_model` only for dry-run preview, repair
   loops, and checker convergence.
-- Refresh authoring context after successful writes, user pauses, subagent
-  returns, or stale/missing read-set freshness. Do not skip refresh unless the
-  write checked `expectedReadSet` server-side.
+- After successful writes, use `returnNextAuthoringContext: true` or make a
+  fresh readiness/authoring-context call before drafting another plan.
+  `expectedReadSet` only skips duplicate pre-write re-reads.
 - Run final `blueprint_phase_plan_validate` before synced state update or
   completion claims. Do not infer completion from write-scope signals alone.
 - Route only to implemented Blueprint commands; use `/blu-progress` when the

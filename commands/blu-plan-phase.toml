@@ -36,7 +36,7 @@ Hard invariants:
 - Draft structured `phase.plan` JSON against the selected runtime task schema. Do not seed scaffold placeholders, write Markdown fallback, or pass `content` from this command.
 - Persist only through `mcp_blueprint_blueprint_phase_plan_write` with `authoringMode: "model-only"` and `validationMode: "strict"`. Normal happy-path writes may skip standalone dry-run validation only when the server checks `expectedReadSet` freshness.
 - `mcp_blueprint_blueprint_phase_plan_validate_model` remains available for dry-run previews, repair loops, and checker convergence; it is not mandatory before every write.
-- Refresh authoring context after successful writes, user pauses, subagent returns, or stale/missing read-set freshness. Do not skip duplicate refresh unless the server checked `expectedReadSet`.
+- After successful writes, use `returnNextAuthoringContext: true` or make a fresh readiness/authoring-context call before drafting another plan. `expectedReadSet` only skips duplicate pre-write re-reads.
 - Treat `phase_plan_write.validation.valid`, `planSetValidationSummary`, `completionReady`, and `incrementalCheckpoint` as write-scope signals only. Final completion still requires `mcp_blueprint_blueprint_phase_plan_validate` status `valid`.
 - Call `mcp_blueprint_blueprint_state_update` with `base: "synced"` only after final scoped validation is valid.
 - No raw `.blueprint/` writes, installed extension directory mutations, `validationMode: "warn"` writes, or planned-only command recommendations.

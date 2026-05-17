@@ -153,12 +153,13 @@ phase so plan authoring preserves Blueprint's retained quality bar.
   structured `model` payload, `authoringMode: "model-only"`,
   `returnPlanSetValidation: true`, and `expectedReadSet` from the fresh
   readiness `readSet` when skipping a duplicate pre-write re-read.
-- Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` after any
-  successful plan write, after a user pause or subagent return, or whenever
-  read-set freshness is absent or stale; saved `XX-YY-PLAN.md` files are
-  intentional known evidence artifacts for later plan slots and must be covered
-  by the refreshed task schema. Do not skip the refresh unless the server checked
-  `expectedReadSet` for the write.
+- After any successful plan write, use `returnNextAuthoringContext: true` on the
+  write result or re-read readiness/`mcp_blueprint_blueprint_phase_plan_authoring_context`
+  before drafting another plan. Also refresh after a user pause or subagent
+  return, or whenever read-set freshness is absent or stale; saved
+  `XX-YY-PLAN.md` files are intentional known evidence artifacts for later plan
+  slots and must be covered by the refreshed task schema. `expectedReadSet` only
+  skips duplicate pre-write re-reads.
 - Use `validationMode: "strict"` for `/blu-plan-phase`; validationMode:
   "warn" is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `model` as the complete
@@ -629,11 +630,12 @@ Correct: Repairing diagnostics against the live task schema, retrying through
 
 ### Anti-Example: Ignoring Evidence Coverage Refresh
 
-Bad: Writing plan 01 and then writing plan 02 without refreshing
-`blueprint_phase_plan_authoring_context` or checking a fresh `expectedReadSet`.
+Bad: Writing plan 01 and then writing plan 02 without using
+`returnNextAuthoringContext: true` or refreshing
+`blueprint_phase_plan_authoring_context`.
 Plan 02's `evidenceCoverage` misses the newly saved plan 01 file.
-Correct: Refreshing authoring context after successful writes or relying only on
-a server-checked `expectedReadSet` for an uninterrupted write.
+Correct: Requesting `returnNextAuthoringContext: true` on the write or making a
+fresh readiness/authoring-context call before drafting the next plan.
 
 ### Anti-Example: Scope Reduction Language
 
