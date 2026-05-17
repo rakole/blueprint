@@ -109,6 +109,12 @@ export type ArtifactContractReadResultWithAuthoringTemplate = ArtifactContractRe
 
 export type ArtifactContractReadResultWithoutAuthoringTemplate = ArtifactContractReadResultBase;
 
+type ModelOnlyArtifactContractId =
+  | "phase.context"
+  | "phase.verification"
+  | "phase.uat"
+  | "report.add-tests";
+
 export type ArtifactContractReadResult =
   | ArtifactContractReadResultWithAuthoringTemplate
   | ArtifactContractReadResultWithoutAuthoringTemplate;
@@ -5197,11 +5203,11 @@ export function getArtifactContract(
 }
 
 export function readArtifactContract(
-  contractId: "phase.context",
+  contractId: ModelOnlyArtifactContractId,
   context?: ArtifactTemplateContext
 ): ArtifactContractReadResultWithoutAuthoringTemplate;
 export function readArtifactContract(
-  contractId: Exclude<ArtifactContractId, "phase.context">,
+  contractId: Exclude<ArtifactContractId, ModelOnlyArtifactContractId>,
   context?: ArtifactTemplateContext
 ): ArtifactContractReadResultWithAuthoringTemplate;
 export function readArtifactContract(
@@ -5243,7 +5249,12 @@ export function readArtifactContract(
     scaffoldTemplate: contract.renderScaffoldTemplate(context),
   };
 
-  if (contractId === "phase.context") {
+  if (
+    contractId === "phase.context" ||
+    contractId === "phase.verification" ||
+    contractId === "phase.uat" ||
+    contractId === "report.add-tests"
+  ) {
     return baseContract;
   }
 

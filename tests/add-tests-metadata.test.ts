@@ -144,6 +144,7 @@ test("phase-validation skill captures the shipped add-tests contract", async () 
   assert.match(skillFile, /repair the model against the canonical contract and retry once/i);
   assert.match(skillFile, /add-tests-<phase>/);
   assert.match(skillFile, /\/blu-code-review <phase>/);
+  assert.match(skillFile, /report\.add-tests.*without a public `authoringTemplate`/i);
 });
 
 test("add-tests runtime contract preserves GSD-inspired richness without script-owned persistence", async () => {
@@ -192,6 +193,7 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
   assert.match(runtimeContract, /implementation bug/i);
   assert.match(runtimeContract, /blueprint-executor/);
   assert.match(runtimeContract, /blueprint-verifier/);
+  assert.match(runtimeContract, /instead of a public `contract\.authoringTemplate`/i);
   assert.match(runtimeContract, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
   assert.match(runtimeContract, /No-Subagent Fallback/);
   assert.match(runtimeContract, /one approved test file or scenario group at a time/i);

@@ -134,6 +134,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /workflow\.nyquist_validation/);
   assert.match(skillFile, /artifactId: "phase\.verification"/);
   assert.match(skillFile, /locked markers and required section names unchanged/i);
+  assert.match(skillFile, /phase\.verification.*expose `modelContract` without a public `authoringTemplate`/i);
   assert.match(skillFile, /references\/validate-phase-runtime-contract\.md/);
   assert.match(requiredInputs, /Runtime input resolution is structured and command-scoped/i);
   assert.match(requiredInputs, /input_bundles\.commands/);
@@ -168,6 +169,10 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(validateReference, /blueprint_phase_validation_validate_model/);
   assert.match(validateReference, /status: "valid"/);
   assert.match(validateReference, /Keep every completed saved summary path or filename under `## Evidence Reviewed`/i);
+  assert.match(
+    validateReference,
+    /taskSchema[\s\S]*schema authority[\s\S]*renderPreview[\s\S]*canonical rendered preview/i
+  );
   assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(validateReference, /## Pre-Write Routing Shorthand/);
   assert.match(validateReference, /if gateState == PASS[\s\S]*\/blu-verify-work <phase>/i);

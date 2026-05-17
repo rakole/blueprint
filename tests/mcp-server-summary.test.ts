@@ -8576,7 +8576,6 @@ test("schema-first validation tools mirror task schemas, previews, and evidence 
   const contractResult = {
     artifactId: "phase.verification",
     contract: {
-      authoringTemplate: "# Phase {{phasePrefix}}: {{phaseName}} - Verification\n",
       modelContract: {
         schemaVersion: "1.1.0",
         schemaId: "blueprint.phase.verification.model",
@@ -8655,7 +8654,7 @@ test("schema-first validation tools mirror task schemas, previews, and evidence 
     contractText,
     expectedStructuredContentJson(contractResult)
   );
-  assert.match(contractText, /authoringTemplate/);
+  assert.doesNotMatch(contractText, /authoringTemplate/);
   assert.match(contractText, /modelContract/);
   assert.match(contractText, /jsonSchema/);
   assert.equal(
@@ -8670,6 +8669,34 @@ test("schema-first validation tools mirror task schemas, previews, and evidence 
   assert.match(validateText, /diagnostics|diagnosticCounts/);
   assert.doesNotMatch(validateText, /taskSchema/);
   assert.doesNotMatch(validateText, /normalizedModel|renderPreview/);
+});
+
+test("schema-first add-tests contract read mirrors model-only structured content into MCP text", () => {
+  const contractResult = {
+    artifactId: "report.add-tests",
+    contract: {
+      modelContract: {
+        schemaVersion: "1.0.0",
+        schemaId: "blueprint.report.add-tests.model",
+        jsonSchema: {
+          required: ["status", "readiness", "completionState", "coverageGoal"]
+        }
+      }
+    }
+  };
+
+  const contractText = createToolResponseContent(
+    "blueprint_artifact_contract_read",
+    contractResult
+  )[0].text;
+
+  assert.equal(
+    contractText,
+    expectedStructuredContentJson(contractResult)
+  );
+  assert.doesNotMatch(contractText, /authoringTemplate/);
+  assert.match(contractText, /modelContract/);
+  assert.match(contractText, /jsonSchema/);
 });
 
 test("public phase validation validate tool trims taskSchema, normalized model, and render preview", async () => {

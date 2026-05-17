@@ -89,7 +89,7 @@
 - `blueprint_phase_validation_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, summaryPaths, reason}`
 - `blueprint_phase_validation_authoring_context` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, contract, summaryPaths, summaryEvidence, existing, verification, prerequisiteBlockers, readyForDraft, allowedValues, routingRules, warnings, reason}`
 - `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
-- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate?, requiredHeadings, lockedMarkers, freehandPolicy, modelContract?, notes}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
@@ -110,6 +110,7 @@
 - Keep the reported verification status aligned with the returned `written` and `status` fields instead of claiming a save from command progress alone.
 - Read the canonical add-tests report contract through `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` before final report authoring.
 - Read `blueprint_artifact_report_authoring_context` for the bare report name `add-tests-<phase>`, author the durable report as structured `report.add-tests` JSON against the returned `taskSchema`, and validate it with `blueprint_artifact_report_validate_model`.
+- For `report.add-tests`, treat `contract.modelContract` plus `blueprint_artifact_report_authoring_context.taskSchema` as the authoring authority, and use `blueprint_artifact_report_validate_model.renderPreview` as the canonical preview instead of relying on a public `contract.authoringTemplate`.
 - Persist the durable add-tests report through `blueprint_artifact_report_write` with the same validated `model` and bare report name `add-tests-<phase>`, not Markdown `content` and not a `.blueprint/reports/...` path.
 - The structured report must include the approved classification, selected scope, test plan, tests added or updated, generated/passing/failing/blocked counts, bugs or blockers discovered, verification write status, report write status, remaining gaps, and next safe action.
 - Treat the returned report `path`, `written`, and `status` as authoritative, and keep the reported report status explicit even when targeted test execution or verification persistence fails.
@@ -184,7 +185,7 @@
 - Keeps test-generation stages, pending gates, targeted test results, verification status, report status, and the next safe action explicit while add-tests is in flight.
 - Persists updated verification notes through `blueprint_phase_validation_write` rather than direct file edits.
 - Uses `blueprint_phase_validation_authoring_context` plus `blueprint_phase_validation_render` so updated verification notes are rendered canonically or passed as the same ready structured model before the writer runs.
-- Persists the durable report through `blueprint_artifact_report_write` after normalizing it to the `report.add-tests` authoring template.
+- Persists the durable report through `blueprint_artifact_report_write` after validating the structured model against the live `report.add-tests` task schema.
 - Reports verification and report persistence outcomes from MCP return values instead of assuming they succeeded.
 - Distinguishes passing tests, implementation bugs, test-authoring errors, and blocked checks in the final report.
 - Updates `STATE.md` whenever the next-step signal changes.

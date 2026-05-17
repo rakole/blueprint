@@ -33,7 +33,7 @@ the authority for control flow.
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style gap expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical heading, marker, authoring-template, and structured `modelContract` authority. |
+| `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` | Canonical headings, locked markers, and structured `modelContract` authority for the model-only public UAT contract read. |
 | `blueprint_phase_validation_authoring_context` with `artifact: "uat"` | Mandatory summary evidence, ready-verification prerequisite status, existing UAT baseline, allowed values, and routing rules. |
 | `blueprint_phase_validation_validate_model` with `artifact: "uat"` | Canonical UAT schema validation, narrowed runtime checks, diagnostics, and render preview from the structured UAT payload. |
 | `blueprint_phase_validation_render` with `artifact: "uat"` | Compatibility canonical UAT markdown rendering for lower-level repair paths. |
@@ -127,8 +127,9 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 2. Read `blueprint_phase_validation_authoring_context` before authoring so ready
    verification, mandatory summary evidence, existing UAT state, allowed values,
    narrowed `taskSchema`, and routing rules are explicit.
-3. Treat `contract.authoringTemplate`, `modelContract`, `requiredHeadings`,
-   `lockedMarkers`, and `freehandPolicy` as schema authority.
+3. Treat `modelContract` plus the narrowed `taskSchema` as the structured
+   authoring authority, and use `requiredHeadings`, `lockedMarkers`, and
+   `freehandPolicy` from the contract read as the rendered-shape guardrails.
 4. Preserve all locked markers exactly, including `**Status:**`,
    `**Resume State:**`, and `**Checkpoint:**`.
 5. Treat `**Checkpoint:**` as the current in-artifact checkpoint label or
@@ -153,7 +154,9 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
     persisting or acting on them.
 13. Call `blueprint_phase_validation_validate_model` with the structured UAT
     payload shaped by `phase.uat.modelContract` and the returned `taskSchema`;
-    treat `status: "valid"` plus `renderPreview` as the pre-write self-check.
+    treat `status: "valid"` plus `renderPreview` as the pre-write self-check
+    and canonical preview. Do not expect a public `contract.authoringTemplate`
+    from the `phase.uat` contract read.
 14. Call `blueprint_phase_validation_write` only with the same structured
     `model` and `authoringMode: "model-only"`; do not hand-build the final
     markdown body or pass Markdown fallback from `/blu-verify-work`.

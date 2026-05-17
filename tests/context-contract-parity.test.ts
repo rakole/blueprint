@@ -94,3 +94,151 @@ test("phase.context exposes a schema-backed model contract without a read-time a
     )
   );
 });
+
+test("phase.verification exposes a schema-backed model contract without a read-time authoring template", () => {
+  const contract = readArtifactContract("phase.verification", {
+    phaseLabel: "Phase 07: Verification Contract Parity"
+  });
+  const modelContract = contract.modelContract;
+  const authoringTemplate = renderArtifactAuthoringTemplate("phase.verification", {
+    phaseLabel: "Phase 07: Verification Contract Parity"
+  });
+
+  assert.ok(modelContract);
+  assert.equal("authoringTemplate" in contract, false);
+  assert.equal(modelContract.schemaId, "blueprint.phase.verification.model");
+  assert.equal(modelContract.schemaVersion, "1.1.0");
+  assert.equal(
+    modelContract.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.verification.model.schema.json"
+  );
+  assert.deepEqual(contract.requiredHeadings, [
+    "Validation Summary",
+    "Requirement / Task Coverage",
+    "Evidence Reviewed",
+    "Test Infrastructure / Evidence Metadata",
+    "Manual-Only or Deferred Coverage",
+    "Gate State",
+    "Gap Classification",
+    "Gaps Found",
+    "Suggested Repairs",
+    "Next Safe Action"
+  ]);
+  assert.ok(modelContract.renderedHeadings.includes("Validation Test Matrix"));
+
+  for (const heading of contract.requiredHeadings) {
+    assert.match(authoringTemplate, new RegExp(`## ${heading}`));
+  }
+
+  assert.match(authoringTemplate, /\*\*Gate State:\*\*/);
+  assert.match(authoringTemplate, /\*\*Sign-off:\*\*/);
+  assert.ok(
+    modelContract.contextBindings.some((binding) =>
+      /context\.summaryPaths and context\.summaryEvidence/i.test(binding)
+    )
+  );
+  assert.ok(
+    modelContract.qualityRules.some((rule) =>
+      /allowed coverage states.*allowedValues/i.test(rule)
+    )
+  );
+});
+
+test("phase.uat exposes a schema-backed model contract without a read-time authoring template", () => {
+  const contract = readArtifactContract("phase.uat", {
+    phaseLabel: "Phase 07: UAT Contract Parity"
+  });
+  const modelContract = contract.modelContract;
+  const authoringTemplate = renderArtifactAuthoringTemplate("phase.uat", {
+    phaseLabel: "Phase 07: UAT Contract Parity"
+  });
+
+  assert.ok(modelContract);
+  assert.equal("authoringTemplate" in contract, false);
+  assert.equal(modelContract.schemaId, "blueprint.phase.uat.model");
+  assert.equal(modelContract.schemaVersion, "1.0.0");
+  assert.equal(
+    modelContract.schemaPath,
+    "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json"
+  );
+  assert.deepEqual(contract.requiredHeadings, [
+    "UAT Summary",
+    "Session State",
+    "Current Test",
+    "Test Matrix",
+    "Result Summary",
+    "Questions Asked",
+    "Observed Behavior",
+    "Unresolved Gaps",
+    "Structured Gaps",
+    "Follow-Up Fixes",
+    "Next Safe Action"
+  ]);
+  assert.ok(modelContract.renderedHeadings.includes("Test Matrix"));
+  assert.ok(modelContract.renderedHeadings.includes("Structured Gaps"));
+
+  for (const heading of contract.requiredHeadings) {
+    assert.match(authoringTemplate, new RegExp(`## ${heading}`));
+  }
+
+  assert.match(authoringTemplate, /\*\*Status:\*\*/);
+  assert.match(authoringTemplate, /\*\*Resume State:\*\*/);
+  assert.match(authoringTemplate, /\*\*Checkpoint:\*\*/);
+  assert.ok(
+    modelContract.contextBindings.some((binding) =>
+      /ready verification content/i.test(binding)
+    )
+  );
+  assert.ok(
+    modelContract.qualityRules.some((rule) =>
+      /Ground UAT summary, session state, test matrix, and observed behavior/i.test(rule)
+    )
+  );
+});
+
+test("report.add-tests exposes a schema-backed model contract without a read-time authoring template", () => {
+  const contract = readArtifactContract("report.add-tests", {
+    phaseLabel: "Phase 07: Add Tests Contract Parity"
+  });
+  const modelContract = contract.modelContract;
+  const authoringTemplate = renderArtifactAuthoringTemplate("report.add-tests", {
+    phaseLabel: "Phase 07: Add Tests Contract Parity"
+  });
+
+  assert.ok(modelContract);
+  assert.equal("authoringTemplate" in contract, false);
+  assert.equal(modelContract.schemaId, "blueprint.report.add-tests.model");
+  assert.equal(modelContract.schemaVersion, "1.0.0");
+  assert.equal(
+    modelContract.schemaPath,
+    "src/mcp/artifact-contracts/schemas/report.add-tests.model.schema.json"
+  );
+  assert.deepEqual(contract.requiredHeadings, [
+    "Coverage Goal",
+    "Evidence Used",
+    "Classification And Test Plan",
+    "Tests Added Or Updated",
+    "Remaining Gaps",
+    "Next Safe Action"
+  ]);
+  assert.ok(modelContract.renderedHeadings.includes("Classification And Test Plan"));
+  assert.ok(modelContract.renderedHeadings.includes("Tests Added Or Updated"));
+
+  for (const heading of contract.requiredHeadings) {
+    assert.match(authoringTemplate, new RegExp(`## ${heading}`));
+  }
+
+  assert.match(authoringTemplate, /Result counts: generated <N>, passing <N>, failing <N>, blocked <N>/);
+  assert.match(authoringTemplate, /Verification write status: <created, updated, reused, invalid, or blocked>\./);
+  assert.match(authoringTemplate, /Report write status: <created, updated, reused, invalid, or blocked>\./);
+  assert.ok(
+    modelContract.contextBindings.some((binding) =>
+      /validation or UAT artifact is required upstream context/i.test(binding)
+    )
+  );
+  assert.ok(
+    modelContract.qualityRules.some((rule) =>
+      /Do not include MCP-owned identity or provenance keys/i.test(rule)
+    )
+  );
+});
