@@ -969,8 +969,8 @@ export declare const artifactToolDefinitions: ({
             }>;
             severity: z.ZodEnum<{
                 high: "high";
-                all: "all";
                 medium: "medium";
+                all: "all";
             }>;
             maxAttempts: z.ZodNumber;
             dryRun: z.ZodBoolean;
@@ -995,8 +995,8 @@ export declare const artifactToolDefinitions: ({
             }>;
             severity: z.ZodEnum<{
                 high: "high";
-                all: "all";
                 medium: "medium";
+                all: "all";
             }>;
             maxAttempts: z.ZodNumber;
             dryRun: z.ZodBoolean;
@@ -1023,8 +1023,8 @@ export declare const artifactToolDefinitions: ({
             }>;
             severity: z.ZodEnum<{
                 high: "high";
-                all: "all";
                 medium: "medium";
+                all: "all";
             }>;
             maxAttempts: z.ZodNumber;
             dryRun: z.ZodBoolean;

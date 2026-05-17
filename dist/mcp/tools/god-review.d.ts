@@ -85,8 +85,8 @@ export declare const godReviewSeveritySchema: z.ZodEnum<{
     unknown: "unknown";
     high: "high";
     low: "low";
-    medium: "medium";
     critical: "critical";
+    medium: "medium";
 }>;
 export declare const godReviewDispositionSchema: z.ZodEnum<{
     blocked: "blocked";
