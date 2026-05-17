@@ -3740,6 +3740,19 @@ async function validatePhasePlanSet(
     (requirementId) => !coveredRequirementIds.has(requirementId)
   );
 
+  if (roadmapRequirementIds.length === 0) {
+    const message =
+      coverageSeverity === "warning"
+        ? `Final plan-set validation is still invalid: Phase ${resolved.phaseNumber} has no roadmap requirements. Add roadmap requirement grounding before treating /blu-plan-phase as complete.`
+        : `Phase ${resolved.phaseNumber} has no roadmap requirements; phase plan set cannot be final-valid without requirement grounding.`;
+
+    if (coverageSeverity === "issue") {
+      issues.push(message);
+    } else if (coverageSeverity === "warning") {
+      warnings.push(message);
+    }
+  }
+
   if (uncoveredRequirementIds.length > 0) {
     const message =
       coverageSeverity === "warning"

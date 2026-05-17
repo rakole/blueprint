@@ -937,6 +937,111 @@ test("phase plan authoring context exposes a complete runtime-narrowed task sche
   assert.match(taskSchemaText, /x-blueprint-runtimeContext/);
 });
 
+test("phase plan validation and writes see roadmap changes after an earlier authoring read", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  const initialContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const roadmapContent = await readFile(roadmapPath, "utf8");
+
+  await writeFile(
+    roadmapPath,
+    roadmapContent.replace(
+      "**Requirements**: LIFE-01, LIFE-02",
+      "**Requirements**: LIFE-01, LIFE-02, LIFE-03"
+    ),
+    "utf8"
+  );
+
+  const refreshedContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const staleModelValidation = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: cloneStructuredPlanModel()
+  });
+  const incrementalWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1),
+    overwrite: true
+  });
+  const finalPlanSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(initialContext.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.deepEqual(refreshedContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+  assert.match(JSON.stringify(refreshedContext.taskSchema), /LIFE-03/);
+  assert.equal(staleModelValidation.status, "invalid");
+  assert.match(
+    staleModelValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /known roadmap requirement LIFE-03/
+  );
+  assert.equal(incrementalWrite.status, "created");
+  assert.match(incrementalWrite.warnings.join("\n"), /LIFE-03/);
+  assert.equal(finalPlanSetValidation.status, "invalid");
+  assert.deepEqual(finalPlanSetValidation.uncoveredRequirementIds, ["LIFE-02", "LIFE-03"]);
+});
+
+test("phase plan validation and writes see saved plan artifacts added after an earlier authoring read", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const initialContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+
+  await writeFile(path.join(phaseDir, "03-01-PLAN.md"), validPlanContent("01", 1), "utf8");
+
+  const refreshedContext = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02"
+  });
+  const dependentWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    content: validPlanContent("02", 2, { dependsOn: ["01"] }),
+    overwrite: true
+  });
+  const finalPlanSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const finalIssues = finalPlanSetValidation.issues.join("\n");
+
+  assert.deepEqual(initialContext.allowedDependencyPlanIds, []);
+  assert.ok(refreshedContext.allowedDependencyPlanIds.includes("01"));
+  assert.ok(
+    refreshedContext.knownEvidenceArtifacts.includes(
+      ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+    )
+  );
+  assert.equal(dependentWrite.status, "created");
+  assert.doesNotMatch(dependentWrite.validation.issues.join("\n"), /missing plan "01"/);
+  assert.doesNotMatch(finalIssues, /missing plan "01"/);
+});
+
 test("phase plan authoring context keeps schemas inspectable when readiness blocks drafting", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1227,6 +1332,44 @@ test("phase plan authoring rejects invented requirement coverage when roadmap re
   assert.equal(written.written, false);
   assert.match(written.validation.issues.join("\n"), /no roadmap requirements|more than 0 items/i);
   assert.deepEqual(index.plans, []);
+});
+
+test("phase plan final validation rejects saved plans when roadmap requirements are absent", async (t) => {
+  const repoPath = await createPhaseRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/03-phase-discovery");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+`,
+    "utf8"
+  );
+  await writeFile(path.join(phaseDir, "03-01-PLAN.md"), validPlanContent("01", 1), "utf8");
+
+  const validation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(validation.status, "invalid");
+  assert.deepEqual(validation.roadmapRequirementIds, []);
+  assert.match(validation.issues.join("\n"), /no roadmap requirements/i);
 });
 
 test("phase plan authoring accepts mapped requirements detail labels", async (t) => {
