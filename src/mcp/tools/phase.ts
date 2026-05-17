@@ -443,6 +443,13 @@ type PhasePlanWriteArgs = PhaseLookupArgs & {
   authoringMode?: "content-compatible" | "model-only";
   overwrite?: boolean;
   validationMode?: "strict" | "warn";
+  returnPlanSetValidation?: boolean;
+  returnNextAuthoringContext?: boolean;
+  expectedReadSet?: Array<{
+    path: string;
+    kind: string;
+    hash: string;
+  }>;
 };
 
 type PhasePlanAuthoringContextArgs = PhaseLookupArgs & {
@@ -970,6 +977,22 @@ type PhasePlanValidationResult = {
   cyclicDependencyPlanIds: string[][];
 };
 
+type PhasePlanSetValidationSummary = {
+  status: "valid" | "invalid";
+  issueCount: number;
+  warningCount: number;
+  issues: string[];
+  warnings: string[];
+  planCount: number;
+  planIds: string[];
+  roadmapRequirementIds: string[];
+  coveredRequirementIds: string[];
+  uncoveredRequirementIds: string[];
+  unexpectedRequirementIds: string[];
+  missingDependencyIds: string[];
+  cyclicDependencyPlanIds: string[][];
+};
+
 type PhasePlanWriteResult = {
   phaseNumber: string;
   phasePrefix: string;
@@ -987,6 +1010,15 @@ type PhasePlanWriteResult = {
     warnings: string[];
   };
   modelValidation?: PhasePlanWriteModelValidationResult | null;
+  planSetValidationSummary?: PhasePlanSetValidationSummary | null;
+  completionReady?: boolean;
+  incrementalCheckpoint?: boolean;
+  freshness?: {
+    checked: boolean;
+    fresh: boolean;
+    stalePaths: string[];
+  };
+  nextAuthoringContext?: PhasePlanAuthoringContextResult | null;
   warnings: string[];
 };
 
@@ -1625,7 +1657,18 @@ const phasePlanWriteInputSchema = {
   model: z.unknown().optional(),
   authoringMode: z.enum(["content-compatible", "model-only"]).optional(),
   overwrite: z.boolean().optional(),
-  validationMode: z.enum(["strict", "warn"]).optional()
+  validationMode: z.enum(["strict", "warn"]).optional(),
+  returnPlanSetValidation: z.boolean().optional(),
+  returnNextAuthoringContext: z.boolean().optional(),
+  expectedReadSet: z
+    .array(
+      z.object({
+        path: z.string(),
+        kind: z.string(),
+        hash: z.string()
+      })
+    )
+    .optional()
 };
 const phaseSummaryReadInputSchema = {
   cwd: z.string().optional(),
@@ -4051,6 +4094,54 @@ async function validateProspectivePhasePlanSetForPath(
       planId
     ),
     warnings: prospectiveValidation.warnings
+  };
+}
+
+function summarizePhasePlanSetValidation(
+  validation: PhasePlanValidationResult
+): PhasePlanSetValidationSummary {
+  return {
+    status: validation.status,
+    issueCount: validation.issues.length,
+    warningCount: validation.warnings.length,
+    issues: validation.issues,
+    warnings: validation.warnings,
+    planCount: validation.planCount,
+    planIds: validation.planIds,
+    roadmapRequirementIds: validation.roadmapRequirementIds,
+    coveredRequirementIds: validation.coveredRequirementIds,
+    uncoveredRequirementIds: validation.uncoveredRequirementIds,
+    unexpectedRequirementIds: validation.unexpectedRequirementIds,
+    missingDependencyIds: validation.missingDependencyIds,
+    cyclicDependencyPlanIds: validation.cyclicDependencyPlanIds
+  };
+}
+
+function isPhasePlanSetCompletionReady(validation: PhasePlanValidationResult): boolean {
+  return (
+    validation.issues.length === 0 &&
+    validation.uncoveredRequirementIds.length === 0 &&
+    validation.missingDependencyIds.length === 0 &&
+    validation.cyclicDependencyPlanIds.length === 0
+  );
+}
+
+function phasePlanWriteCompletionFields(args: {
+  prospectiveValidation: PhasePlanValidationResult;
+  includeSummary: boolean;
+  saved: boolean;
+}): Pick<
+  PhasePlanWriteResult,
+  "planSetValidationSummary" | "completionReady" | "incrementalCheckpoint"
+> {
+  const completionReady = isPhasePlanSetCompletionReady(args.prospectiveValidation);
+
+  return {
+    planSetValidationSummary: args.includeSummary
+      ? summarizePhasePlanSetValidation(args.prospectiveValidation)
+      : null,
+    completionReady,
+    incrementalCheckpoint: args.saved && !completionReady
   };
 }
 
@@ -9315,7 +9406,9 @@ export async function blueprintPhasePlanWrite(
   const hasModel = args.model !== undefined;
   const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
+  const shouldReturnPlanSetValidation = args.returnPlanSetValidation ?? hasModel;
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
+    let freshness: PhasePlanWriteResult["freshness"];
     const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
       cwd: projectRoot,
       phase: initialResolved.phaseNumber
@@ -9385,6 +9478,44 @@ export async function blueprintPhasePlanWrite(
         },
         warnings: []
       };
+    }
+
+    if (args.expectedReadSet && args.expectedReadSet.length > 0) {
+      const readiness = await blueprintPhasePlanReadiness({
+        cwd: projectRoot,
+        phase: resolved.phaseNumber,
+        planId,
+        readMode: "hashes-only",
+        includeSavedPlanBodies: "target",
+        previousReadSet: args.expectedReadSet
+      });
+      freshness = readiness.freshness;
+
+      if (!readiness.freshness.fresh) {
+        return {
+          phaseNumber: resolved.phaseNumber,
+          phasePrefix: resolved.phasePrefix,
+          phaseName: resolved.phaseName,
+          phaseDir: resolved.phaseDir,
+          planId,
+          path: pathValue,
+          written: false,
+          created: false,
+          overwritten: false,
+          status: "invalid",
+          validation: {
+            valid: false,
+            issues: [
+              `Read-set freshness check failed for: ${readiness.freshness.stalePaths.join(", ")}.`
+            ],
+            warnings: readiness.warnings
+          },
+          completionReady: false,
+          incrementalCheckpoint: false,
+          freshness: readiness.freshness,
+          warnings: readiness.warnings
+        };
+      }
     }
 
     let normalizedContent: string;
@@ -9574,6 +9705,11 @@ export async function blueprintPhasePlanWrite(
           issues: blockingIssues,
           warnings: prospectiveValidation.warnings
         },
+        ...phasePlanWriteCompletionFields({
+          prospectiveValidation,
+          includeSummary: shouldReturnPlanSetValidation,
+          saved: false
+        }),
         warnings: [...warnings, ...prospectiveValidation.warnings]
       };
     }
@@ -9605,6 +9741,20 @@ export async function blueprintPhasePlanWrite(
             warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
           },
           modelValidation,
+          ...phasePlanWriteCompletionFields({
+            prospectiveValidation,
+            includeSummary: shouldReturnPlanSetValidation,
+            saved: true
+          }),
+          ...(freshness ? { freshness } : {}),
+          ...(args.returnNextAuthoringContext
+            ? {
+                nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+                  cwd: projectRoot,
+                  phase: resolved.phaseNumber
+                })
+              }
+            : {}),
           warnings: [...warnings, ...prospectiveValidation.warnings]
         };
       }
@@ -9643,6 +9793,20 @@ export async function blueprintPhasePlanWrite(
         warnings: [...contentValidationIssues.warningIssues, ...prospectiveValidation.warnings]
       },
       modelValidation,
+      ...phasePlanWriteCompletionFields({
+        prospectiveValidation,
+        includeSummary: shouldReturnPlanSetValidation,
+        saved: true
+      }),
+      ...(freshness ? { freshness } : {}),
+      ...(args.returnNextAuthoringContext
+        ? {
+            nextAuthoringContext: await blueprintPhasePlanAuthoringContext({
+              cwd: projectRoot,
+              phase: resolved.phaseNumber
+            })
+          }
+        : {}),
       warnings: [...warnings, ...prospectiveValidation.warnings]
     };
   });

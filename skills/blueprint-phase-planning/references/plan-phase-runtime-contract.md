@@ -136,15 +136,20 @@ Blueprint-native.
 ### Persist
 
 - Do not seed `XX-YY-PLAN.md` with scaffold placeholders. Draft the finalized
-  structured model first, then validate and persist it directly.
-- Validate the model with `mcp_blueprint_blueprint_phase_plan_validate_model`
-  before persistence.
-- Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the same
-  validated `model` payload and `authoringMode: "model-only"`.
-- Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately
-  before each model validation/write, especially after any successful plan write;
-  saved `XX-YY-PLAN.md` files are intentional known evidence artifacts for later
-  plan slots and must be covered by the refreshed task schema.
+  structured model first, then persist it directly through MCP.
+- `mcp_blueprint_blueprint_phase_plan_validate_model` remains available for
+  dry-run previews, repair loops, and checker convergence, but it is not
+  mandatory before every write.
+- Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the
+  structured `model` payload, `authoringMode: "model-only"`,
+  `returnPlanSetValidation: true`, and `expectedReadSet` from the fresh
+  readiness or authoring packet when skipping a duplicate pre-write re-read.
+- Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` after any
+  successful plan write, after a user pause or subagent return, or whenever
+  read-set freshness is absent or stale; saved `XX-YY-PLAN.md` files are
+  intentional known evidence artifacts for later plan slots and must be covered
+  by the refreshed task schema. Do not skip the refresh unless the server checked
+  `expectedReadSet` for the write.
 - Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
   "warn"` is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `model` as the complete
@@ -164,7 +169,10 @@ Blueprint-native.
 - The final `mcp_blueprint_blueprint_phase_plan_validate` status must be
   `valid` before completion advances or `mcp_blueprint_blueprint_state_update`
   is allowed to run.
-- If `phase_plan_validate_model`, `phase_plan_write`, or scoped plan-validation
+- Do not infer completion from `phase_plan_write.validation.valid` alone; the
+  write result's `planSetValidationSummary` and `completionReady` are incremental
+  signals, and the separate final scoped validation remains authoritative.
+- If dry-run `phase_plan_validate_model`, `phase_plan_write`, or scoped plan-validation
   returns invalid diagnostics, do not present the plan as complete and do not
   fall back to Markdown. Repair all diagnostics together against the live task
   schema and contract, rerun the targeted planner/checker path if needed, then
@@ -608,11 +616,11 @@ Correct: Repairing diagnostics against the live task schema, retrying through
 
 ### Anti-Example: Ignoring Evidence Coverage Refresh
 
-Bad: Writing plan 01 and then writing plan 02 without re-reading
-`blueprint_phase_plan_authoring_context`. Plan 02's `evidenceCoverage` misses
-the newly saved plan 01 file.
-Correct: Re-reading authoring context immediately before each model validation
-and write.
+Bad: Writing plan 01 and then writing plan 02 without refreshing
+`blueprint_phase_plan_authoring_context` or checking a fresh `expectedReadSet`.
+Plan 02's `evidenceCoverage` misses the newly saved plan 01 file.
+Correct: Refreshing authoring context after successful writes or relying only on
+a server-checked `expectedReadSet` for an uninterrupted write.
 
 ### Anti-Example: Scope Reduction Language
 

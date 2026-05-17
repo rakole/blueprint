@@ -1093,6 +1093,116 @@ test("phase plan readiness includes bounded bodies and target saved plan body on
   );
 });
 
+test("phase plan write rejects stale expected read sets before persistence", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    `${await readFile(path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"), "utf8")}\n## Stale Detail\n\n- Changed after readiness.\n`,
+    "utf8"
+  );
+  const staleWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel(),
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(staleWrite.status, "invalid");
+  assert.equal(staleWrite.written, false);
+  assert.equal(staleWrite.freshness?.checked, true);
+  assert.equal(staleWrite.freshness?.fresh, false);
+  assert.ok(
+    staleWrite.freshness?.stalePaths.includes(
+      ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+    )
+  );
+  assert.match(staleWrite.validation.issues.join("\n"), /Read-set freshness check failed/);
+  assert.deepEqual((await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" })).plans, []);
+});
+
+test("phase plan write reports completion readiness for complete saved plan sets", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = cloneStructuredPlanModel({
+    requirements: ["LIFE-01", "LIFE-02"]
+  });
+  const [task] = model.tasks as Array<Record<string, unknown>>;
+  task.requirements = ["LIFE-01", "LIFE-02"];
+  const requirementCoverage = model.requirementCoverage as Array<Record<string, unknown>>;
+  requirementCoverage[1] = {
+    requirement: "LIFE-02",
+    status: "covered",
+    coveredByTasks: ["task-1"],
+    evidence: "src/mcp/tools/phase.ts",
+    rationale: "The same focused task completes the second roadmap requirement for this fixture."
+  };
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model,
+    overwrite: true,
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash })),
+    returnNextAuthoringContext: true
+  });
+  const reuseReadiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    includeSavedPlanBodies: "target"
+  });
+  const reused = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: reuseReadiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash })),
+    returnNextAuthoringContext: true
+  });
+  const finalValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(written.completionReady, true);
+  assert.equal(written.incrementalCheckpoint, false);
+  assert.equal(written.planSetValidationSummary?.status, "valid");
+  assert.deepEqual(written.planSetValidationSummary?.uncoveredRequirementIds, []);
+  assert.deepEqual(written.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+  assert.equal(written.nextAuthoringContext?.planId, "02");
+  assert.equal(reused.status, "reused", JSON.stringify(reused, null, 2));
+  assert.equal(reused.written, false);
+  assert.equal(reused.completionReady, true);
+  assert.deepEqual(reused.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+  assert.equal(reused.nextAuthoringContext?.planId, "02");
+  assert.equal(finalValidation.status, "valid", JSON.stringify(finalValidation, null, 2));
+});
+
 test("phase plan validation and writes see roadmap changes after an earlier authoring read", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1956,7 +2066,8 @@ test("phase planning strict writes validate the prospective plan set but allow i
     phase: "3",
     planId: "01",
     content: validPlanContent("01", 1),
-    overwrite: true
+    overwrite: true,
+    returnPlanSetValidation: true
   });
   const firstPlanSetValidation = await blueprintPhasePlanValidate({
     cwd: repoPath,
@@ -1980,6 +2091,11 @@ test("phase planning strict writes validate the prospective plan set but allow i
 
   assert.equal(first.status, "created");
   assert.equal(first.validation.valid, true);
+  assert.equal(first.completionReady, false);
+  assert.equal(first.incrementalCheckpoint, true);
+  assert.equal(first.planSetValidationSummary?.status, "valid");
+  assert.deepEqual(first.planSetValidationSummary?.uncoveredRequirementIds, ["LIFE-02"]);
+  assert.equal(first.planSetValidationSummary?.planCount, 1);
   assert.deepEqual(first.validation.issues, []);
   assert.match(
     first.validation.warnings.join("\n"),

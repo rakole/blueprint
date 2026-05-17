@@ -3248,6 +3248,23 @@ test("public phase plan write success trims validation and empty warnings from M
       issues: [],
       warnings: []
     },
+    planSetValidationSummary: {
+      status: "valid",
+      issueCount: 0,
+      warningCount: 1,
+      issues: [],
+      warnings: ["Final plan-set validation is still invalid: LIFE-02 is uncovered."],
+      planCount: 1,
+      planIds: ["01"],
+      roadmapRequirementIds: ["LIFE-01", "LIFE-02"],
+      coveredRequirementIds: ["LIFE-01"],
+      uncoveredRequirementIds: ["LIFE-02"],
+      unexpectedRequirementIds: [],
+      missingDependencyIds: [],
+      cyclicDependencyPlanIds: []
+    },
+    completionReady: false,
+    incrementalCheckpoint: true,
     warnings: []
   };
   const warnedResult = {
@@ -3262,10 +3279,12 @@ test("public phase plan write success trims validation and empty warnings from M
 
   assert.equal(parsed.status, "created");
   assert.equal(parsed.path, writeResult.path);
+  assert.equal(parsed.completionReady, false);
+  assert.equal(parsed.incrementalCheckpoint, true);
+  assert.deepEqual(parsed.planSetValidationSummary.uncoveredRequirementIds, ["LIFE-02"]);
   assert.ok(!("validation" in parsed));
   assert.ok(!("warnings" in parsed));
   assert.doesNotMatch(writeText, /"validation":/);
-  assert.doesNotMatch(writeText, /"warnings":/);
   assert.ok(!("validation" in warnedParsed));
   assert.deepEqual(warnedParsed.warnings, warnedResult.warnings);
   assert.match(warnedText, /"warnings":\[/);

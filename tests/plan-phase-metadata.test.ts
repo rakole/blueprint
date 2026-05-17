@@ -74,7 +74,10 @@ test("plan-phase manifest references the config gates, planner/checker loop, and
   assert.match(commandFile, /Use saved research for unstable technical decisions/i);
   assert.match(commandFile, /route to `\/blu-research-phase` instead of browsing live web docs/i);
   assert.match(commandFile, /repair all diagnostics against the live task schema and contract/i);
-  assert.match(commandFile, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
+  assert.match(commandFile, /persist it directly through `mcp_blueprint_blueprint_phase_plan_write`/i);
+  assert.match(commandFile, /expectedReadSet/);
+  assert.match(commandFile, /phase_plan_validate_model` for dry-run previews, repair loops, or checker convergence rather than as a mandatory pre-write step/i);
+  assert.match(commandFile, /Refresh `mcp_blueprint_blueprint_phase_plan_authoring_context` after any successful plan write/i);
   assert.match(commandFile, /previously saved plan files become intentional known evidence artifacts/i);
   assert.match(commandFile, /final `blueprint_phase_plan_validate` status must be `valid` before `mcp_blueprint_blueprint_state_update` or completion advances/i);
   assert.match(commandFile, /Incomplete roadmap coverage may still be saved incrementally, but it is not final completion/i);
@@ -145,7 +148,10 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(skillFile, /saved research for unstable technical decisions instead of browsing live web docs/i);
   assert.match(skillFile, /workflow\.plan_check=true[\s\S]*blueprint-checker[\s\S]*workflow\.plan_check=false[\s\S]*skip checker review entirely/i);
   assert.match(skillFile, /raw `\.blueprint\/` edits/i);
-  assert.match(skillFile, /Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation\/write/i);
+  assert.match(skillFile, /persist it through `blueprint_phase_plan_write`/i);
+  assert.match(skillFile, /expectedReadSet/);
+  assert.match(skillFile, /blueprint_phase_plan_validate_model` for dry-run previews, repair loops, or checker convergence rather than as a mandatory pre-write step/i);
+  assert.match(skillFile, /Refresh `blueprint_phase_plan_authoring_context` after any successful plan write/i);
   assert.match(skillFile, /previously saved plan files become intentional known evidence artifacts/i);
   assert.match(skillFile, /saved plans may land as incremental checkpoints, but completion advances only after final plan-set validation is truly valid/i);
   assert.match(skillFile, /saved plans already exist and `planId` is omitted[\s\S]*explicit `add`, `revise`, or `replace` choice before drafting/i);
@@ -188,8 +194,11 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_plan_validate/);
   assert.match(runtimeContract, /validationMode:\s+"strict"/);
   assert.match(runtimeContract, /authoringMode:\s+"model-only"/);
-  assert.match(runtimeContract, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` immediately/i);
-  assert.match(runtimeContract, /saved `XX-YY-PLAN\.md` files are intentional known evidence artifacts/i);
+  assert.match(runtimeContract, /not\s+mandatory before every write/i);
+  assert.match(runtimeContract, /`returnPlanSetValidation: true`, and `expectedReadSet`/i);
+  assert.match(runtimeContract, /Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` after any\s+successful plan write/i);
+  assert.match(runtimeContract, /server checked\s+`expectedReadSet`/i);
+  assert.match(runtimeContract, /saved `XX-YY-PLAN\.md` files are\s+intentional known evidence artifacts/i);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
   assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
   assert.match(runtimeContract, /taskSchema/);
@@ -314,8 +323,9 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
   assert.match(metadata.runtimeReference.contractNotes, /read-set freshness metadata/i);
   assert.match(metadata.runtimeReference.contractNotes, /planningReadiness/i);
   assert.match(metadata.runtimeReference.contractNotes, /taskSchema/i);
-  assert.match(metadata.runtimeReference.contractNotes, /re-read blueprint_phase_plan_authoring_context immediately before each model validation\/write/i);
-  assert.match(metadata.runtimeReference.contractNotes, /saved plan files are intentional later-slot evidence artifacts/i);
+  assert.match(metadata.runtimeReference.contractNotes, /expectedReadSet when skipping a duplicate pre-write refresh/i);
+  assert.match(metadata.runtimeReference.contractNotes, /refresh blueprint_phase_plan_authoring_context after successful writes/i);
+  assert.match(metadata.runtimeReference.contractNotes, /dry-run preview, repair loops, or checker convergence/i);
   assert.match(metadata.runtimeReference.contractNotes, /validationMode: "strict"/);
   assert.match(metadata.runtimeReference.contractNotes, /authoringMode: "model-only"/);
   assert.match(metadata.runtimeReference.contractNotes, /additive new plan ids/i);
@@ -427,7 +437,8 @@ test("plan-phase planner and checker guidance stays tied to the live contract an
   assert.match(mcpToolsDoc, /gates reuse\/revise\/replace only for writes that would overwrite saved plans/i);
   assert.match(mcpToolsDoc, /treats checker review as config-gated/i);
   assert.match(mcpToolsDoc, /repairs model-validation\/write\/scoped-validation diagnostics through MCP/i);
-  assert.match(mcpToolsDoc, /re-reads that authoring context immediately before each model validation\/write/i);
+  assert.match(mcpToolsDoc, /expectedReadSet` when skipping a duplicate pre-write re-read/i);
+  assert.match(mcpToolsDoc, /Refresh authoring context after successful writes/i);
   assert.match(mcpToolsDoc, /saved plan files are intentional later-slot evidence artifacts/i);
   assert.match(mcpToolsDoc, /synced state recomputation/i);
 
