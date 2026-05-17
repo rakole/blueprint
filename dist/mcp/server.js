@@ -31620,7 +31620,7 @@ async function validatePhasePlanSet(projectRoot, resolved, options = {}) {
     (requirementId) => !coveredRequirementIds.has(requirementId)
   );
   if (uncoveredRequirementIds.length > 0) {
-    const message = `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
+    const message = coverageSeverity === "warning" ? `Final plan-set validation is still invalid: Phase ${resolved.phaseNumber} plan set does not yet cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}. Add or revise plans before treating /blu-plan-phase as complete.` : `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
     if (coverageSeverity === "issue") {
       issues.push(message);
     } else if (coverageSeverity === "warning") {
@@ -31666,6 +31666,20 @@ function selectRelevantPlanValidationIssues(validation, pathValue, planId2) {
     }
     return issue2.includes(`dependency ${planId2} `) || issue2.includes(`plan "${planId2}"`) || issue2.includes(`plan ${planId2}`) || issue2.includes(`plan_id "${planId2}"`) || issue2.includes(`path plan id "${planId2}"`);
   });
+}
+async function validateProspectivePhasePlanSetForPath(projectRoot, resolved, pathValue, planId2, renderedContent) {
+  const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
+    overrides: /* @__PURE__ */ new Map([[pathValue, renderedContent]]),
+    roadmapCoverageSeverity: "warning"
+  });
+  return {
+    blockingIssues: selectRelevantPlanValidationIssues(
+      prospectiveValidation,
+      pathValue,
+      planId2
+    ),
+    warnings: prospectiveValidation.warnings
+  };
 }
 function toPhasePlanRecord(planId2, pathValue, content, expectedPhase) {
   const validation = validatePlanArtifactContent(content, expectedPhase);
@@ -32018,6 +32032,25 @@ function phasePlanAuthoringContextBlockers(context) {
   return context.knownRequirements.length === 0 ? [
     `Phase ${context.resolved.phaseNumber} has no roadmap requirements; phase.plan model authoring cannot invent requirement coverage.`
   ] : [];
+}
+function invalidPhasePlanningReadiness(blocker) {
+  return {
+    workflowResearchRequired: false,
+    workflowUiPhaseRequired: false,
+    workflowUiSafetyGateEnabled: false,
+    readyForPlanPhase: false,
+    nextSafeAction: "Run /blu-progress to review the next safe Blueprint action",
+    blockers: [blocker]
+  };
+}
+function buildPhasePlanAuthoringReadinessReason(planningReadiness) {
+  const detail = planningReadiness.blockers.length > 0 ? planningReadiness.blockers.join(" ") : (planningReadiness.diagnostics ?? []).map((diagnostic) => diagnostic.message).join(" ");
+  const detailWithPunctuation = detail.length === 0 ? "Phase planning is not ready for /blu-plan-phase." : /[.!?]$/.test(detail) ? detail : `${detail}.`;
+  const action = planningReadiness.nextSafeAction.trim();
+  if (action.length === 0) {
+    return detailWithPunctuation;
+  }
+  return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
 function normalizePhasePlanModelSurface(value) {
   return normalizeExecutionSurfacePath(value);
@@ -32436,6 +32469,18 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     context: {},
     repairAction: "replace",
     suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage named in the diagnostic."
+  });
+}
+function phasePlanPreflightDiagnosticFromIssue(issue2) {
+  const dependencyRelated = issue2.startsWith("Plan dependency cycle detected:") || issue2.includes("depends_on references missing plan") || issue2.includes(" must come after dependency ");
+  return phasePlanDiagnostic({
+    source: "residual",
+    path: dependencyRelated ? "model.dependsOn" : "model",
+    code: "plan_set.invalid",
+    message: issue2,
+    context: { stage: "prospective-plan-set-preflight" },
+    repairAction: "replace",
+    suggestion: dependencyRelated ? "Repair model.dependsOn so the rendered preview fits the saved plan set without missing dependencies, cycles, or invalid wave ordering." : "Repair the structured model so its rendered preview remains coherent with the saved phase plan set before writing."
   });
 }
 async function validatePhasePlanModelWithContext(args) {
@@ -34991,9 +35036,14 @@ async function blueprintPhasePlanValidate(args = {}) {
 async function blueprintPhasePlanAuthoringContext(args = {}) {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
-    const blockers = phasePlanAuthoringContextBlockers(context);
+    const planningReadiness = (await blueprintPhaseResearchStatus({
+      cwd: context.projectRoot,
+      phase: context.resolved.phaseNumber
+    })).planningReadiness;
+    const authoringBlockers = phasePlanAuthoringContextBlockers(context);
+    const ready = authoringBlockers.length === 0 && planningReadiness.readyForPlanPhase;
     return {
-      status: blockers.length === 0 ? "ready" : "invalid",
+      status: ready ? "ready" : "invalid",
       phase: context.resolved,
       planId: context.planId,
       path: context.pathValue,
@@ -35003,11 +35053,13 @@ async function blueprintPhasePlanAuthoringContext(args = {}) {
       knownRequirements: context.knownRequirements,
       knownEvidenceArtifacts: context.knownEvidenceArtifacts,
       allowedDependencyPlanIds: context.allowedDependencyPlanIds,
+      planningReadiness,
       modelOnly: true,
-      reason: blockers.length === 0 ? null : blockers.join(" "),
+      reason: authoringBlockers.length > 0 ? authoringBlockers.join(" ") : planningReadiness.readyForPlanPhase ? null : buildPhasePlanAuthoringReadinessReason(planningReadiness),
       warnings: []
     };
   } catch (error2) {
+    const reason = error2 instanceof Error ? error2.message : String(error2);
     return {
       status: "invalid",
       phase: null,
@@ -35019,8 +35071,9 @@ async function blueprintPhasePlanAuthoringContext(args = {}) {
       knownRequirements: [],
       knownEvidenceArtifacts: [],
       allowedDependencyPlanIds: [],
+      planningReadiness: invalidPhasePlanningReadiness(reason),
       modelOnly: true,
-      reason: error2 instanceof Error ? error2.message : String(error2),
+      reason,
       warnings: []
     };
   }
@@ -35030,7 +35083,7 @@ async function blueprintPhasePlanValidateModel(args) {
   try {
     context = await resolvePhasePlanAuthoringContextData(args);
   } catch (error2) {
-    const diagnostics = [
+    const diagnostics2 = [
       phasePlanDiagnostic({
         source: "scope",
         path: "phase",
@@ -35053,14 +35106,14 @@ async function blueprintPhasePlanValidateModel(args) {
         maxAttempts: 2,
         recommendedStrategy: "repair-all-diagnostics-before-retry"
       },
-      repairSummary: summarizePhasePlanRepairs(diagnostics),
+      repairSummary: summarizePhasePlanRepairs(diagnostics2),
       phase: null,
       planId: null,
       path: null,
       schemaPath: null,
       taskSchema: null,
-      diagnostics,
-      diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+      diagnostics: diagnostics2,
+      diagnosticCounts: countPhasePlanDiagnostics(diagnostics2),
       normalizedModel: null,
       renderPreview: null,
       warnings: []
@@ -35070,7 +35123,32 @@ async function blueprintPhasePlanValidateModel(args) {
     model: args.model,
     context
   });
-  return trimPhasePlanStandaloneValidateModelResult(validation);
+  const diagnostics = [...validation.diagnostics];
+  const warnings = [...validation.warnings];
+  if (validation.renderPreview) {
+    const prospectiveValidation = await validateProspectivePhasePlanSetForPath(
+      context.projectRoot,
+      context.resolved,
+      context.pathValue,
+      context.planId,
+      validation.renderPreview
+    );
+    diagnostics.push(
+      ...prospectiveValidation.blockingIssues.map(phasePlanPreflightDiagnosticFromIssue)
+    );
+    warnings.push(...prospectiveValidation.warnings);
+  }
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
+  const enhancedValidation = {
+    ...validation,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
+    repairSummary: summarizePhasePlanRepairs(diagnostics),
+    diagnostics,
+    diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+    warnings
+  };
+  return trimPhasePlanStandaloneValidateModelResult(enhancedValidation);
 }
 async function blueprintPhasePlanWrite(args) {
   const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);

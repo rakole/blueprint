@@ -950,6 +950,7 @@ type PhasePlanAuthoringContextResult = {
   knownRequirements: string[];
   knownEvidenceArtifacts: string[];
   allowedDependencyPlanIds: string[];
+  planningReadiness: PhasePlanningReadiness;
   modelOnly: boolean;
   reason: string | null;
   warnings: string[];
@@ -3721,7 +3722,10 @@ async function validatePhasePlanSet(
   );
 
   if (uncoveredRequirementIds.length > 0) {
-    const message = `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
+    const message =
+      coverageSeverity === "warning"
+        ? `Final plan-set validation is still invalid: Phase ${resolved.phaseNumber} plan set does not yet cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}. Add or revise plans before treating /blu-plan-phase as complete.`
+        : `Phase ${resolved.phaseNumber} plan set does not cover roadmap requirements: ${uncoveredRequirementIds.join(", ")}.`;
 
     if (coverageSeverity === "issue") {
       issues.push(message);
@@ -3791,6 +3795,31 @@ function selectRelevantPlanValidationIssues(
       issue.includes(`path plan id "${planId}"`)
     );
   });
+}
+
+async function validateProspectivePhasePlanSetForPath(
+  projectRoot: string,
+  resolved: ResolvedPhaseLocation,
+  pathValue: string,
+  planId: string,
+  renderedContent: string
+): Promise<{
+  blockingIssues: string[];
+  warnings: string[];
+}> {
+  const prospectiveValidation = await validatePhasePlanSet(projectRoot, resolved, {
+    overrides: new Map([[pathValue, renderedContent]]),
+    roadmapCoverageSeverity: "warning"
+  });
+
+  return {
+    blockingIssues: selectRelevantPlanValidationIssues(
+      prospectiveValidation,
+      pathValue,
+      planId
+    ),
+    warnings: prospectiveValidation.warnings
+  };
 }
 
 function toPhasePlanRecord(
@@ -4334,6 +4363,39 @@ function phasePlanAuthoringContextBlockers(
         `Phase ${context.resolved.phaseNumber} has no roadmap requirements; phase.plan model authoring cannot invent requirement coverage.`
       ]
     : [];
+}
+
+function invalidPhasePlanningReadiness(blocker: string): PhasePlanningReadiness {
+  return {
+    workflowResearchRequired: false,
+    workflowUiPhaseRequired: false,
+    workflowUiSafetyGateEnabled: false,
+    readyForPlanPhase: false,
+    nextSafeAction: "Run /blu-progress to review the next safe Blueprint action",
+    blockers: [blocker]
+  };
+}
+
+function buildPhasePlanAuthoringReadinessReason(
+  planningReadiness: PhasePlanningReadiness
+): string {
+  const detail =
+    planningReadiness.blockers.length > 0
+      ? planningReadiness.blockers.join(" ")
+      : (planningReadiness.diagnostics ?? []).map((diagnostic) => diagnostic.message).join(" ");
+  const detailWithPunctuation =
+    detail.length === 0
+      ? "Phase planning is not ready for /blu-plan-phase."
+      : /[.!?]$/.test(detail)
+        ? detail
+        : `${detail}.`;
+  const action = planningReadiness.nextSafeAction.trim();
+
+  if (action.length === 0) {
+    return detailWithPunctuation;
+  }
+
+  return `${detailWithPunctuation} Next safe action: ${action}${/[.!?]$/.test(action) ? "" : "."}`;
 }
 
 function normalizePhasePlanModelSurface(value: string): string {
@@ -4896,6 +4958,25 @@ function phasePlanCoverageDiagnosticFromIssue(
     repairAction: "replace",
     suggestion:
       "Repair the cross-field requirement, task, file, verification, or deferral coverage named in the diagnostic."
+  });
+}
+
+function phasePlanPreflightDiagnosticFromIssue(issue: string): PhasePlanModelDiagnostic {
+  const dependencyRelated =
+    issue.startsWith("Plan dependency cycle detected:") ||
+    issue.includes("depends_on references missing plan") ||
+    issue.includes(" must come after dependency ");
+
+  return phasePlanDiagnostic({
+    source: "residual",
+    path: dependencyRelated ? "model.dependsOn" : "model",
+    code: "plan_set.invalid",
+    message: issue,
+    context: { stage: "prospective-plan-set-preflight" },
+    repairAction: "replace",
+    suggestion: dependencyRelated
+      ? "Repair model.dependsOn so the rendered preview fits the saved plan set without missing dependencies, cycles, or invalid wave ordering."
+      : "Repair the structured model so its rendered preview remains coherent with the saved phase plan set before writing."
   });
 }
 
@@ -8065,10 +8146,17 @@ export async function blueprintPhasePlanAuthoringContext(
 ): Promise<PhasePlanAuthoringContextResult> {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
-    const blockers = phasePlanAuthoringContextBlockers(context);
+    const planningReadiness = (
+      await blueprintPhaseResearchStatus({
+        cwd: context.projectRoot,
+        phase: context.resolved.phaseNumber
+      })
+    ).planningReadiness;
+    const authoringBlockers = phasePlanAuthoringContextBlockers(context);
+    const ready = authoringBlockers.length === 0 && planningReadiness.readyForPlanPhase;
 
     return {
-      status: blockers.length === 0 ? "ready" : "invalid",
+      status: ready ? "ready" : "invalid",
       phase: context.resolved,
       planId: context.planId,
       path: context.pathValue,
@@ -8078,11 +8166,19 @@ export async function blueprintPhasePlanAuthoringContext(
       knownRequirements: context.knownRequirements,
       knownEvidenceArtifacts: context.knownEvidenceArtifacts,
       allowedDependencyPlanIds: context.allowedDependencyPlanIds,
+      planningReadiness,
       modelOnly: true,
-      reason: blockers.length === 0 ? null : blockers.join(" "),
+      reason:
+        authoringBlockers.length > 0
+          ? authoringBlockers.join(" ")
+          : planningReadiness.readyForPlanPhase
+            ? null
+            : buildPhasePlanAuthoringReadinessReason(planningReadiness),
       warnings: []
     };
   } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+
     return {
       status: "invalid",
       phase: null,
@@ -8094,8 +8190,9 @@ export async function blueprintPhasePlanAuthoringContext(
       knownRequirements: [],
       knownEvidenceArtifacts: [],
       allowedDependencyPlanIds: [],
+      planningReadiness: invalidPhasePlanningReadiness(reason),
       modelOnly: true,
-      reason: error instanceof Error ? error.message : String(error),
+      reason,
       warnings: []
     };
   }
@@ -8152,7 +8249,36 @@ export async function blueprintPhasePlanValidateModel(
     context
   });
 
-  return trimPhasePlanStandaloneValidateModelResult(validation);
+  const diagnostics = [...validation.diagnostics];
+  const warnings = [...validation.warnings];
+
+  if (validation.renderPreview) {
+    const prospectiveValidation = await validateProspectivePhasePlanSetForPath(
+      context.projectRoot,
+      context.resolved,
+      context.pathValue,
+      context.planId,
+      validation.renderPreview
+    );
+
+    diagnostics.push(
+      ...prospectiveValidation.blockingIssues.map(phasePlanPreflightDiagnosticFromIssue)
+    );
+    warnings.push(...prospectiveValidation.warnings);
+  }
+
+  const blockingDiagnostics = diagnostics.filter(isBlockingPhasePlanDiagnostic);
+  const enhancedValidation: PhasePlanValidateModelResult = {
+    ...validation,
+    status: blockingDiagnostics.length === 0 ? "valid" : "invalid",
+    valid: blockingDiagnostics.length === 0,
+    repairSummary: summarizePhasePlanRepairs(diagnostics),
+    diagnostics,
+    diagnosticCounts: countPhasePlanDiagnostics(diagnostics),
+    warnings
+  };
+
+  return trimPhasePlanStandaloneValidateModelResult(enhancedValidation);
 }
 
 export async function blueprintPhasePlanWrite(

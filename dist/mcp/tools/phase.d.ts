@@ -671,6 +671,7 @@ type PhasePlanAuthoringContextResult = {
     knownRequirements: string[];
     knownEvidenceArtifacts: string[];
     allowedDependencyPlanIds: string[];
+    planningReadiness: PhasePlanningReadiness;
     modelOnly: boolean;
     reason: string | null;
     warnings: string[];

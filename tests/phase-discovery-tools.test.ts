@@ -761,8 +761,10 @@ test("phase tools resolve list-only roadmap requirements and child details", asy
     goal: "Add discovery tooling from inline roadmap.",
     successCriteria: "Planner sees inline criteria before writing.; Requirements parse without Phase Details."
   });
-  assert.equal(authoringContext.status, "ready");
+  assert.equal(authoringContext.status, "invalid");
   assert.deepEqual(authoringContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+  assert.equal(authoringContext.planningReadiness.readyForPlanPhase, false);
+  assert.match(authoringContext.reason ?? "", /XX-CONTEXT\.md|\/blu-discuss-phase/i);
 });
 
 test("phase detail blocks override list-format roadmap fallbacks", async (t) => {
@@ -813,8 +815,10 @@ test("phase detail blocks override list-format roadmap fallbacks", async (t) => 
     goal: "Add discovery tooling.",
     successCriteria: "Planner sees roadmap goal and readiness gates before writing."
   });
-  assert.equal(authoringContext.status, "ready");
+  assert.equal(authoringContext.status, "invalid");
   assert.deepEqual(authoringContext.knownRequirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
+  assert.equal(authoringContext.planningReadiness.readyForPlanPhase, false);
+  assert.match(authoringContext.reason ?? "", /XX-CONTEXT\.md|\/blu-discuss-phase/i);
 });
 
 test("phase locate reports missing roadmap phases without escaping the Blueprint root", async (t) => {

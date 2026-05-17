@@ -1040,6 +1040,59 @@ async function createPhasePlanWriteRepo(): Promise<string> {
 ## User Experience Goals
 
 - No user-facing UI changes are in scope for this phase.
+
+## Rationale
+
+- This fixture exercises backend-only plan-write payload trimming.
+`,
+    "utf8"
+  );
+
+  return repoPath;
+}
+
+async function createPhasePlanWriteRepoWithUncoveredRoadmapRequirements(): Promise<string> {
+  const repoPath = await createPhasePlanWriteRepo();
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Add a plan-phase runtime.
+**Requirements**: LIFE-01, LIFE-02
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    `# Phase 03: Phase Discovery - Research
+
+**Researched:** 2026-04-11
+**Domain:** plan-phase runtime
+**Confidence:** HIGH
+
+## Phase Requirements
+
+| ID | Description | Research Support |
+|----|-------------|------------------|
+| LIFE-01 | Implement plan tooling. | Use MCP-owned plan indexing and validation. |
+| LIFE-02 | Keep final plan-set validation explicit before planning completes. | Surface incomplete roadmap coverage as a final-validation gap until remaining plans land. |
+
+## Summary
+
+- The plan-phase command needs first-class plan artifact tooling.
+- Final plan-set validation still has to pass before planning is complete.
 `,
     "utf8"
   );
@@ -1788,6 +1841,12 @@ Ship the plan-phase runtime.
 ## Scope
 
 - Add phase plan writing support.
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Requirement Coverage
 
@@ -2934,6 +2993,14 @@ test("phase plan model tools mirror rich schema details into MCP text", () => {
       ".blueprint/phases/03-validation-engine/03-RESEARCH.md"
     ],
     allowedDependencyPlanIds: ["02"],
+    planningReadiness: {
+      workflowResearchRequired: true,
+      workflowUiPhaseRequired: false,
+      workflowUiSafetyGateEnabled: false,
+      readyForPlanPhase: false,
+      nextSafeAction: "Run /blu-research-phase 3 to repair invalid phase research",
+      blockers: ["workflow.research=true but the saved XX-RESEARCH.md artifact is not usable."]
+    },
     baseSchema: { $id: "blueprint.phase.plan.model" },
     taskSchema,
     reason: "Phase plan authoring requires at least one roadmap requirement."
@@ -3029,7 +3096,7 @@ test("phase plan model tools mirror rich schema details into MCP text", () => {
     authoringText,
     expectedStructuredContentJson(authoringResult)
   );
-  assert.match(authoringText, /knownRequirements|taskSchema|baseSchema/);
+  assert.match(authoringText, /knownRequirements|taskSchema|baseSchema|planningReadiness/);
   assert.equal(
     validateText,
     expectedStructuredContentJson(validateResult)
@@ -6506,6 +6573,63 @@ test("public phase plan write tool trims validation on success and preserves non
   }
 });
 
+test("public phase plan write tool preserves top-level final-validation warnings on successful incremental writes", async () => {
+  const repoPath = await createPhasePlanWriteRepoWithUncoveredRoadmapRequirements();
+  const directResult = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    content: validPhasePlanWriteContent("01"),
+    overwrite: true
+  });
+
+  assert.equal(directResult.status, "created");
+  assert.equal(directResult.validation.valid, true);
+  assert.match(
+    directResult.warnings.join("\n"),
+    /Final plan-set validation is still invalid: Phase 3 plan set does not yet cover roadmap requirements: LIFE-02/
+  );
+  assert.ok("validation" in directResult);
+
+  const server = createBlueprintServer();
+  const client = new Client(
+    { name: "blueprint-phase-plan-write-public-warning-test-client", version: "1.0.0" },
+    { capabilities: {} }
+  );
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  try {
+    const response = await client.callTool({
+      name: "blueprint_phase_plan_write",
+      arguments: {
+        cwd: repoPath,
+        phase: "3",
+        content: validPhasePlanWriteContent("02"),
+        overwrite: true
+      }
+    });
+    const structuredContent = response.structuredContent as Record<string, unknown>;
+
+    assert.equal(response.content[0]?.type, "text");
+    assert.ok(structuredContent);
+    assert.equal(response.content[0]?.text, JSON.stringify(structuredContent));
+    assert.equal(structuredContent.status, "created");
+    assert.ok(!("validation" in structuredContent));
+    assert.ok(Array.isArray(structuredContent.warnings));
+    assert.match(
+      (structuredContent.warnings as string[]).join("\n"),
+      /Final plan-set validation is still invalid: Phase 3 plan set does not yet cover roadmap requirements: LIFE-02/
+    );
+    assert.doesNotMatch(response.content[0]?.text ?? "", /"validation":/);
+    assert.match(response.content[0]?.text ?? "", /"warnings":\[/);
+  } finally {
+    await client.close();
+    await server.close();
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  }
+});
+
 test("public config set tool trims config and provenance on successful MCP responses", async () => {
   const directRepoPath = await createConfigSetRepo();
   const repoPath = await createConfigSetRepo();
@@ -7360,7 +7484,7 @@ test("public codebase artifact write tool preserves non-empty warnings while tri
   }
 });
 
-test("public phase validation write tool omits empty warnings and preserves non-empty warnings on successful results", async () => {
+test("public phase validation write tool omits empty warnings from successful verification results", async () => {
   const repoPath = await createPhasePlanWriteRepo();
 
   const server = createBlueprintServer();
@@ -7443,10 +7567,9 @@ test("public phase validation write tool omits empty warnings and preserves non-
       ".blueprint/phases/03-phase-discovery/03-VERIFICATION.md"
     );
     assert.ok(!("issues" in reusedResponse.structuredContent));
-    assert.ok(Array.isArray(reusedResponse.structuredContent.warnings));
-    assert.ok((reusedResponse.structuredContent.warnings?.length ?? 0) > 0);
+    assert.ok(!("warnings" in reusedResponse.structuredContent));
     assert.doesNotMatch(reusedResponse.content[0]?.text ?? "", /"issues":/);
-    assert.match(reusedResponse.content[0]?.text ?? "", /"warnings":\[/);
+    assert.doesNotMatch(reusedResponse.content[0]?.text ?? "", /"warnings":/);
   } finally {
     await client.close();
     await server.close();
@@ -10047,6 +10170,7 @@ test("phase plan read live MCP response mirrors structuredContent and keeps the 
           "acceptanceCriteria",
           "autonomous",
           "dependsOn",
+          "externalServicePrerequisites",
           "filesModified",
           "gapClosure",
           "objective",
