@@ -1485,7 +1485,8 @@ test("research contract accepts table-only claim-addressable source evidence", (
   assert.equal(validation.valid, true, validation.issues.join("\n"));
 });
 
-test("research contract emits dependency/tool warnings without invalidating the artifact", () => {
+test("research contract keeps dependency/tool guidance authoring-time without validator warnings", () => {
+  const authoringTemplate = readArtifactContract("phase.research").authoringTemplate;
   const research = canonicalResearchContent(
     "Add a package dependency for artifact validation without enough supply-chain detail.",
     "| LIFE-01 | Keep endpoint research grounded. | Add a package dependency for validation. |"
@@ -1498,9 +1499,12 @@ test("research contract emits dependency/tool warnings without invalidating the 
 
   const validation = validateResearchArtifactContent(research);
 
+  assert.match(authoringTemplate, /### Dependency \/ Tool Evaluation/i);
+  assert.match(authoringTemplate, /No New Dependency/i);
+  assert.match(authoringTemplate, /Supply Chain Evidence/i);
   assert.equal(validation.valid, true, validation.issues.join("\n"));
-  assert.match(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
-  assert.match(validation.warnings.join("\n"), /no-new-dependency/i);
+  assert.doesNotMatch(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
+  assert.doesNotMatch(validation.warnings.join("\n"), /no-new-dependency/i);
 });
 
 test("research contract does not treat generic npm install setup text as a dependency choice", () => {
@@ -1549,7 +1553,7 @@ test("research contract does not treat generic npm install setup text as a depen
   assert.doesNotMatch(validation.warnings.join("\n"), /no-new-dependency/i);
 });
 
-test("research contract warns when a later real install command follows generic setup text", () => {
+test("research contract leaves later real install command dependency guidance out of validator warnings", () => {
   const research = canonicalResearchContent(
     "Run npm install before local verification. If DOM parsing is needed later, npm install jsdom.",
     "| LIFE-01 | Keep endpoint research grounded. | Repo-default setup stays first, but later DOM parsing may need jsdom. |"
@@ -1592,8 +1596,8 @@ test("research contract warns when a later real install command follows generic 
   const validation = validateResearchArtifactContent(research);
 
   assert.equal(validation.valid, true, validation.issues.join("\n"));
-  assert.match(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
-  assert.match(validation.warnings.join("\n"), /no-new-dependency/i);
+  assert.doesNotMatch(validation.warnings.join("\n"), /Dependency \/ Tool Evaluation/i);
+  assert.doesNotMatch(validation.warnings.join("\n"), /no-new-dependency/i);
 });
 
 test("review and report contracts validate canonical sections while keeping extra headings compatible", () => {
