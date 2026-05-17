@@ -480,6 +480,27 @@ type ResolvedPhaseLocation = {
   phaseDir: string;
 };
 
+type ResolvedPhaseRuntimeSnapshot = {
+  projectRoot: string;
+  roadmap: ParsedRoadmap | null;
+  located: PhaseLocateResult;
+  resolved: ResolvedPhaseLocation | null;
+  matchedPhase: ParsedRoadmapPhase | null;
+  artifacts: string[];
+};
+
+type PhasePlanIndexBuildInput = {
+  projectRoot: string;
+  resolved: ResolvedPhaseLocation;
+  artifacts: string[];
+  warnings?: string[];
+};
+
+type PhasePlanAuthoringContextBuildInput = {
+  snapshot: ResolvedPhaseRuntimeSnapshot;
+  planId?: NumericInput;
+};
+
 type RoadmapAddPhaseRequirementValidationStatus =
   | "declared"
   | "traceability-repaired";
@@ -3431,6 +3452,58 @@ function toResolvedPhaseLocation(
   };
 }
 
+function findRoadmapPhase(
+  roadmap: ParsedRoadmap | null,
+  phaseNumber: string | null
+): ParsedRoadmapPhase | null {
+  if (!roadmap || !phaseNumber) {
+    return null;
+  }
+
+  const normalizedPhaseNumber = normalizePhaseNumber(phaseNumber);
+
+  return roadmap.phases.find(
+    (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizedPhaseNumber
+  ) ?? null;
+}
+
+async function resolvePhaseRuntimeSnapshot(
+  args: PhaseLookupArgs = {},
+  options: {
+    stateCurrentPhase?: string | null;
+  } = {}
+): Promise<ResolvedPhaseRuntimeSnapshot> {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  let roadmap: ParsedRoadmap;
+
+  try {
+    roadmap = await readRoadmap(projectRoot);
+  } catch (error) {
+    const located = phaseLocateFailureFromError(error);
+
+    return {
+      projectRoot,
+      roadmap: null,
+      located,
+      resolved: null,
+      matchedPhase: null,
+      artifacts: []
+    };
+  }
+
+  const located = await locatePhaseFromRoadmap(projectRoot, args, roadmap, options);
+  const resolved = toResolvedPhaseLocation(located);
+
+  return {
+    projectRoot,
+    roadmap,
+    located,
+    resolved,
+    matchedPhase: findRoadmapPhase(roadmap, located.phaseNumber),
+    artifacts: located.artifacts
+  };
+}
+
 function extractHeadingPhaseDetails(
   heading: string | null
 ): {
@@ -4514,18 +4587,30 @@ function phasePlanMarkdownDiagnosticFromIssue(issue: string): PhasePlanModelDiag
 async function collectKnownPhasePlanEvidenceArtifacts(
   projectRoot: string,
   resolved: ResolvedPhaseLocation,
-  targetPath: string
+  targetPath: string,
+  artifacts?: string[]
 ): Promise<string[]> {
-  const located = await blueprintPhaseLocate({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
+  const phaseArtifacts =
+    artifacts ??
+    (await resolvePhaseRuntimeSnapshot({
+      cwd: projectRoot,
+      phase: resolved.phaseNumber
+    })).artifacts;
 
-  return located.artifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
+  return phaseArtifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
 }
 
 async function resolvePhasePlanAuthoringContextData(
   args: PhasePlanAuthoringContextArgs
+): Promise<Awaited<ReturnType<typeof buildPhasePlanAuthoringContextData>>> {
+  return buildPhasePlanAuthoringContextData({
+    snapshot: await resolvePhaseRuntimeSnapshot(args),
+    planId: args.planId
+  });
+}
+
+async function buildPhasePlanAuthoringContextData(
+  input: PhasePlanAuthoringContextBuildInput
 ): Promise<{
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
@@ -4538,17 +4623,24 @@ async function resolvePhasePlanAuthoringContextData(
   knownEvidenceArtifacts: string[];
   allowedDependencyPlanIds: string[];
 }> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const existingIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
+  const { snapshot } = input;
+  const { projectRoot, resolved } = snapshot;
+
+  if (!resolved) {
+    throw new Error(snapshot.located.reason ?? "Phase could not be resolved for plan authoring.");
+  }
+
+  const existingIndex = await buildPhasePlanIndexFromResolved({
+    projectRoot,
+    resolved,
+    artifacts: snapshot.artifacts
   });
   const nextPlanNumber =
     existingIndex.plans.length === 0
       ? 1
       : Math.max(...existingIndex.plans.map((plan) => Number.parseInt(plan.planId, 10))) + 1;
-  const planId = args.planId
-    ? normalizePlanId(args.planId)
+  const planId = input.planId
+    ? normalizePlanId(input.planId)
     : normalizePlanId(String(nextPlanNumber));
   const pathValue = planPathFor(resolved, planId);
   const modelContract = readArtifactContract("phase.plan").modelContract;
@@ -4560,11 +4652,12 @@ async function resolvePhasePlanAuthoringContextData(
     throw new Error("phase.plan modelContract does not expose a schemaPath.");
   }
 
-  const knownRequirements = await readPhaseRoadmapRequirements(projectRoot, resolved.phaseNumber);
+  const knownRequirements = snapshot.matchedPhase?.requirements ?? [];
   const knownEvidenceArtifacts = await collectKnownPhasePlanEvidenceArtifacts(
     projectRoot,
     resolved,
-    pathValue
+    pathValue,
+    snapshot.artifacts
   );
   const allowedDependencyPlanIds = existingIndex.plans
     .map((plan) => plan.planId)
@@ -5819,18 +5912,23 @@ async function resolveLocatedPhaseForMutation(
 ): Promise<{
   projectRoot: string;
   resolved: ResolvedPhaseLocation;
+  located: PhaseLocateResult;
+  artifacts: string[];
+  matchedPhase: ParsedRoadmapPhase | null;
 }> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const resolved = snapshot.resolved;
 
   if (!resolved) {
-    throw new Error(located.reason ?? "Phase could not be resolved for a deterministic write.");
+    throw new Error(snapshot.located.reason ?? "Phase could not be resolved for a deterministic write.");
   }
 
   return {
-    projectRoot,
-    resolved
+    projectRoot: snapshot.projectRoot,
+    resolved,
+    located: snapshot.located,
+    artifacts: snapshot.artifacts,
+    matchedPhase: snapshot.matchedPhase
   };
 }
 
@@ -6828,15 +6926,7 @@ export async function blueprintRoadmapPromoteBacklog(
 export async function blueprintPhaseLocate(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseLocateResult> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  let roadmap;
-
-  try {
-    roadmap = await readRoadmap(projectRoot);
-  } catch (error) {
-    return phaseLocateFailureFromError(error);
-  }
-  return locatePhaseFromRoadmap(projectRoot, args, roadmap);
+  return (await resolvePhaseRuntimeSnapshot(args)).located;
 }
 
 function phaseLocateFailureFromError(error: unknown): PhaseLocateResult {
@@ -7013,6 +7103,14 @@ export async function blueprintPhaseContext(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseContextResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
+
+  return buildPhaseContext(projectRoot, args);
+}
+
+async function buildPhaseContext(
+  projectRoot: string,
+  args: PhaseLookupArgs = {}
+): Promise<PhaseContextResult> {
   const roadmapResultPromise: Promise<
     { ok: true; roadmap: ParsedRoadmap } | { ok: false; failure: PhaseLocateResult }
   > = readRoadmap(projectRoot)
@@ -7149,7 +7247,15 @@ export async function blueprintPhaseResearchStatus(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseResearchStatusResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const context = await blueprintPhaseContext(args);
+  const context = await buildPhaseContext(projectRoot, args);
+
+  return buildPhaseResearchStatusFromContext(projectRoot, context);
+}
+
+async function buildPhaseResearchStatusFromContext(
+  projectRoot: string,
+  context: PhaseContextResult
+): Promise<PhaseResearchStatusResult> {
   const artifacts = context.phase?.artifacts;
   const contextStatus = await evaluatePhaseArtifactUsability(
     projectRoot,
@@ -8085,34 +8191,16 @@ export async function blueprintPhaseValidationWrite(
   };
 }
 
-export async function blueprintPhasePlanIndex(
-  args: PlanIndexArgs = {}
+async function buildPhasePlanIndexFromResolved(
+  input: PhasePlanIndexBuildInput
 ): Promise<PhasePlanIndexResult> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
-
-  if (!resolved) {
-    return {
-      phaseFound: false,
-      phaseNumber: located.phaseNumber,
-      phasePrefix: located.phasePrefix,
-      phaseName: located.phaseName,
-      phaseDir: located.phaseDir,
-      plans: [],
-      waves: {},
-      missingPlans: [],
-      gapClosurePlans: [],
-      warnings: located.reason ? [located.reason] : []
-    };
-  }
-
-  const planPaths = located.artifacts
+  const { projectRoot, resolved } = input;
+  const planPaths = input.artifacts
     .filter((artifact) => artifact.endsWith("-PLAN.md"))
     .sort((left, right) => left.localeCompare(right));
   const plans: PhasePlanRecord[] = [];
   const waves: Record<string, string[]> = {};
-  const warnings: string[] = [];
+  const warnings: string[] = [...(input.warnings ?? [])];
   const knownPlanIds = new Set<string>();
   const gapClosurePlans = new Set<string>();
 
@@ -8175,12 +8263,40 @@ export async function blueprintPhasePlanIndex(
   };
 }
 
+export async function blueprintPhasePlanIndex(
+  args: PlanIndexArgs = {}
+): Promise<PhasePlanIndexResult> {
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { located, resolved } = snapshot;
+
+  if (!resolved) {
+    return {
+      phaseFound: false,
+      phaseNumber: located.phaseNumber,
+      phasePrefix: located.phasePrefix,
+      phaseName: located.phaseName,
+      phaseDir: located.phaseDir,
+      plans: [],
+      waves: {},
+      missingPlans: [],
+      gapClosurePlans: [],
+      warnings: located.reason ? [located.reason] : []
+    };
+  }
+
+  return buildPhasePlanIndexFromResolved({
+    projectRoot: snapshot.projectRoot,
+    resolved,
+    artifacts: snapshot.artifacts,
+    warnings: located.reason ? [located.reason] : []
+  });
+}
+
 export async function blueprintPhasePlanRead(
   args: PhasePlanReadArgs
 ): Promise<PhasePlanReadResult> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot;
 
   if (!resolved) {
     return {
@@ -8263,9 +8379,8 @@ export async function blueprintPhasePlanRead(
 export async function blueprintPhasePlanValidate(
   args: PhasePlanValidateArgs = {}
 ): Promise<PhasePlanValidationResult> {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const { projectRoot, located, resolved } = snapshot;
 
   if (!resolved) {
     return {
@@ -8299,11 +8414,12 @@ export async function blueprintPhasePlanAuthoringContext(
 ): Promise<PhasePlanAuthoringContextResult> {
   try {
     const context = await resolvePhasePlanAuthoringContextData(args);
+    const phaseContext = await buildPhaseContext(context.projectRoot, {
+      cwd: context.projectRoot,
+      phase: context.resolved.phaseNumber
+    });
     const planningReadiness = (
-      await blueprintPhaseResearchStatus({
-        cwd: context.projectRoot,
-        phase: context.resolved.phaseNumber
-      })
+      await buildPhaseResearchStatusFromContext(context.projectRoot, phaseContext)
     ).planningReadiness;
     const authoringBlockers = phasePlanAuthoringContextBlockers(context);
     const ready = authoringBlockers.length === 0 && planningReadiness.readyForPlanPhase;
@@ -8437,15 +8553,26 @@ export async function blueprintPhasePlanValidateModel(
 export async function blueprintPhasePlanWrite(
   args: PhasePlanWriteArgs
 ): Promise<PhasePlanWriteResult> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const { projectRoot, resolved: initialResolved } = await resolveLocatedPhaseForMutation(args);
   const hasContent = args.content !== undefined;
   const hasModel = args.model !== undefined;
   const modelOnly = args.authoringMode === "model-only";
   const strictValidation = (args.validationMode ?? "strict") === "strict";
   return withBlueprintRepoLock(projectRoot, "phase-plan-write", async () => {
-    const existingIndex = await blueprintPhasePlanIndex({
+    const lockedSnapshot = await resolvePhaseRuntimeSnapshot({
       cwd: projectRoot,
-      phase: resolved.phaseNumber
+      phase: initialResolved.phaseNumber
+    });
+    const resolved = lockedSnapshot.resolved;
+
+    if (!resolved) {
+      throw new Error(lockedSnapshot.located.reason ?? "Phase could not be resolved for plan writing.");
+    }
+
+    const existingIndex = await buildPhasePlanIndexFromResolved({
+      projectRoot,
+      resolved,
+      artifacts: lockedSnapshot.artifacts
     });
     const nextPlanNumber =
       existingIndex.plans.length === 0
@@ -8509,9 +8636,8 @@ export async function blueprintPhasePlanWrite(
     let modelValidation: PhasePlanWriteModelValidationResult | null = null;
 
     if (hasModel) {
-      const authoringContext = await resolvePhasePlanAuthoringContextData({
-        cwd: projectRoot,
-        phase: resolved.phaseNumber,
+      const authoringContext = await buildPhasePlanAuthoringContextData({
+        snapshot: lockedSnapshot,
         planId
       });
       const modelRender = await phasePlanModelToContent(args.model, authoringContext);
