@@ -276,6 +276,22 @@ async function writeMappedCodebaseBundle(repoPath: string): Promise<void> {
   }
 }
 
+function phaseSelectionFromLocate(
+  located: Awaited<ReturnType<typeof blueprintPhaseLocate>>
+): NonNullable<Awaited<ReturnType<typeof blueprintPhaseContext>>["phaseSelection"]> {
+  return {
+    found: located.found,
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom,
+    reason: located.reason,
+    recovery: located.recovery,
+    warnings: located.warnings
+  };
+}
+
 function validContextContent(): string {
   return `# Phase 03: Phase Discovery - Context
 
@@ -656,6 +672,7 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
   assert.equal(located.found, true);
   assert.equal(located.phaseName, "Phase Discovery");
   assert.equal(located.phaseDir, ".blueprint/phases/03-phase-discovery");
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
   assert.ok(
     located.artifacts.includes(".blueprint/phases/03-phase-discovery/03-CONTEXT.md")
   );
@@ -704,6 +721,54 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
     /MCP tools and command manifests anchor the runtime layout/i
   );
   assert.match(context.warnings.join("\n"), /Mapped codebase summaries are available/i);
+});
+
+test("phase context phaseSelection matches phase locate for state-derived selection", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const located = await blueprintPhaseLocate({ cwd: repoPath });
+  const context = await blueprintPhaseContext({ cwd: repoPath });
+
+  assert.equal(located.resolvedFrom, "state");
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
+  assert.equal(context.phase?.phaseNumber, located.phaseNumber);
+  assert.equal(context.phase?.phaseDir, located.phaseDir);
+});
+
+test("phase context phaseSelection matches phase locate for roadmap-derived selection", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase:
+- Active command: /blu-progress
+- Next action: Run /blu-progress to review the next safe Blueprint action
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const located = await blueprintPhaseLocate({ cwd: repoPath });
+  const context = await blueprintPhaseContext({ cwd: repoPath });
+
+  assert.equal(located.resolvedFrom, "roadmap");
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
+  assert.equal(context.phase?.phaseNumber, located.phaseNumber);
+  assert.equal(context.phase?.phaseDir, located.phaseDir);
 });
 
 test("phase tools resolve list-only roadmap requirements and child details", async (t) => {
@@ -1662,10 +1727,14 @@ test("phase locate returns structured recovery when ROADMAP.md is missing", asyn
   await rm(path.join(repoPath, ".blueprint/ROADMAP.md"));
 
   const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
 
   assert.equal(located.found, false);
   assert.match(located.reason ?? "", /Missing prerequisite artifact/);
   assert.ok(located.recovery.length > 0);
+  assert.equal(context.phase, null);
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
+  assert.match(context.warnings.join("\n"), /Missing prerequisite artifact/);
 });
 
 test("phase locate returns structured recovery when the roadmap phase directory is missing", async (t) => {
@@ -1680,11 +1749,15 @@ test("phase locate returns structured recovery when the roadmap phase directory 
   });
 
   const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
 
   assert.equal(located.found, false);
   assert.match(located.reason ?? "", /no matching directory/i);
   assert.ok(located.recovery.length > 0);
   assert.match(located.recovery.join("\n"), /restore the numbered phase directory|rebuild missing discovery artifacts/i);
+  assert.equal(context.phase, null);
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
+  assert.match(context.warnings.join("\n"), /no matching directory/i);
 });
 
 test("phase locate returns structured recovery when multiple phase directories match", async (t) => {
@@ -1698,9 +1771,13 @@ test("phase locate returns structured recovery when multiple phase directories m
   });
 
   const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "03" });
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "03" });
 
   assert.equal(located.found, false);
   assert.match(located.reason ?? "", /multiple matching directories/i);
   assert.ok(located.recovery.length > 0);
   assert.match(located.recovery.join("\n"), /rename duplicate phase directories|phase tree is normalized/i);
+  assert.equal(context.phase, null);
+  assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
+  assert.match(context.warnings.join("\n"), /multiple matching directories/i);
 });

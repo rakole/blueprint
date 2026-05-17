@@ -202,6 +202,18 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussCommand, /referenced runtime contract as the source of truth/i);
   assert.match(
     discussCommand,
+    /`mcp_blueprint_blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i
+  );
+  assert.match(
+    discussCommand,
+    /independent read-only MCP calls[\s\S]*same model response\/tool-call turn/i
+  );
+  assert.match(
+    discussCommand,
+    /Do not batch mutating writes, confirmation prompts, validation repair[\s\S]*checkpoint deletion/i
+  );
+  assert.match(
+    discussCommand,
     /`phase\.context`[\s\S]*`modelContract`[\s\S]*`phase\.discussion-log`[\s\S]*`contract\.authoringTemplate`[\s\S]*schema authorities/i
   );
   assert.match(discussCommand, /substantive user-authored artifacts/i);
@@ -212,8 +224,8 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     /`schemaVersion: 2`[\s\S]*`ownerCommand: "\/blu-discuss-phase"`[\s\S]*`mode: "discuss"`[\s\S]*`areaQueue`/i
   );
   assert.match(discussRuntimeContract, /legacy compatibility summary fields are non-resumable\s+evidence/i);
-  assert.match(discussRuntimeContract, /returned `path` as the authoritative saved filename/i);
-  assert.match(discussRuntimeContract, /Normalize the draft to the live `authoringTemplate`/i);
+  assert.match(discussRuntimeContract, /Treat returned\s+`path` as the authoritative saved filename/i);
+  assert.match(discussRuntimeContract, /normalize\s+any discussion log to the live `authoringTemplate`/i);
   assert.match(discussRuntimeContract, /Self-check for placeholder text/i);
   assert.match(discussRuntimeContract, /Capability-Gated Agent Use/i);
   assert.match(discussRuntimeContract, /Single-Agent Fallback/i);
@@ -243,7 +255,19 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussDoc, /repair.*validation issues/i);
   assert.match(
     discussDoc,
-    /blueprint_phase_context[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
+    /blueprint_phase_context[\s\S]*phaseSelection[\s\S]*projectBrief[\s\S]*requirementsGrounding[\s\S]*workflowPosture[\s\S]*codebase[\s\S]*requirements[\s\S]*missingArtifacts[\s\S]*warnings/i
+  );
+  assert.match(
+    discussDoc,
+    /call `blueprint_phase_context` first[\s\S]*recovery` diagnostics directly[\s\S]*call `blueprint_phase_locate` only as fallback recovery/i
+  );
+  assert.match(
+    discussDoc,
+    /same-turn read batching applies only to independent read-only calls/i
+  );
+  assert.match(
+    discussDoc,
+    /Mutating writes are not batched together unless one MCP tool is explicitly atomic/i
   );
   assert.match(discussDoc, /prior-context sweeps/i);
   assert.match(discussDoc, /assumptions-mode analysis/i);
@@ -291,7 +315,11 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussMigration, /validation repair/i);
   assert.match(
     mcpToolsDoc,
-    /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
+    /`discuss-phase` uses `blueprint_phase_context` as the first selected-phase read[\s\S]*reports `phase_context\.phaseSelection` recovery diagnostics directly[\s\S]*keeps `blueprint_phase_locate` available as fallback-only recovery/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Independent read-only calls[\s\S]*same model response\/tool-call turn[\s\S]*mutating writes, confirmation prompts, validation repair, state update, final state load, and checkpoint deletion stay sequenced/i
   );
   assert.match(
     mcpToolsDoc,
@@ -370,20 +398,35 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(uiDoc, /six dimensions/i);
   assert.match(uiDoc, /retry through MCP once/i);
 
-  assert.match(discoverySkill, /checkpoint v2/i);
   assert.match(discoverySkill, /discuss-phase-runtime-contract\.md/i);
   assert.match(discoverySkill, /single-agent fallback/i);
+  assert.match(discoverySkill, /active command's runtime-contract checkpoint shape/i);
+  assert.match(discussRuntimeContract, /checkpoint v2/i);
   assert.match(
-    discoverySkill,
-    /`schemaVersion: 2`, `ownerCommand`, and top-level `mode`/i
+    discussRuntimeContract,
+    /`schemaVersion: 2`[\s\S]*`ownerCommand: "\/blu-discuss-phase"`[\s\S]*`mode: "discuss"`[\s\S]*`areaQueue`/i
   );
-  assert.match(discoverySkill, /areaQueue[\s\S]*researchLedger/i);
+  assert.match(discussRuntimeContract, /Same-Turn Read Batching/);
+  assert.match(discussRuntimeContract, /independent read-only calls[\s\S]*same model response\/tool-call turn/i);
+  assert.match(
+    discussRuntimeContract,
+    /call `blueprint_phase_context` first[\s\S]*Use\s+`phaseSelection` as the selected-phase authority/i
+  );
+  assert.match(
+    discussRuntimeContract,
+    /Use `blueprint_phase_locate` when `phaseSelection`[\s\S]*reason` plus `recovery`[\s\S]*Keep locate available/i
+  );
+  assert.match(
+    discussRuntimeContract,
+    /Dependent reads stay in later turns[\s\S]*Do not batch writes, user\s+confirmations, validation\s+repair, state updates, or checkpoint deletion/i
+  );
+  assert.match(researchRuntimeContract, /researchLedger/i);
   assert.match(discoverySkill, /The tool owns the final artifact `path`; use the returned `path` as authoritative/i);
   assert.match(discoverySkill, /Canonical Research Contract/);
   assert.match(discoverySkill, /research-phase-runtime-contract\.md/);
   assert.match(discoverySkill, /single-agent fallback/i);
   assert.match(discoverySkill, /research strand ledger/i);
-  assert.match(discoverySkill, /researchLedger/i);
+  assert.match(researchRuntimeContract, /researchLedger/i);
   assert.match(discoverySkill, /repair the same normalized draft/i);
   assert.match(discoverySkill, /artifactId: "phase\.research"/);
   assert.match(discoverySkill, /artifactId: "phase\.ui-spec"/);

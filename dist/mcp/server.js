@@ -15571,7 +15571,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
         reads: [
-          "Phase resolution, roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP."
+          "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
         ],
         writes: [
           "phase XX-CONTEXT.md",
@@ -15588,7 +15588,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15776,7 +15776,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`list-phase-assumptions` surfaces read-only pre-planning assumptions about a phase so users can correct misunderstandings before discovery or planning.",
         reads: [
-          "Phase resolution, phase context, roadmap state, and project status through MCP."
+          "Phase resolution, phase context, roadmap state, project status, and effective config through MCP."
         ],
         writes: []
       },
@@ -15788,7 +15788,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: [],
-        contractNotes: "Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.",
+        contractNotes: 'Interactive-read profile for read-only pre-planning synthesis: load skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md, keep the response grounded in saved phase and roadmap state, read blueprint_config_get with scope: "effective" before optional researcher decisions, preserve the five explicit assumption areas plus uncertainty language, surface missing or blocked phase resolution as a waiting state with valid roadmap phases and the next safe implemented follow-up, and do not widen into writes, hidden planning, or tracker-backed progress behavior.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -27126,11 +27126,13 @@ async function blueprintStateUpdate(args = {}) {
     ...patch,
     currentPhase: normalizedPatchCurrentPhase
   };
-  const syncedBase = useSyncedBase ? await buildSyncedState(projectRoot) : null;
-  const synced = useSyncedBase ? await buildSyncedState(projectRoot, {
+  const routePatch = {
     activeCommand: normalizedPatch.activeCommand,
     currentPhase: normalizedPatch.currentPhase
-  }) : null;
+  };
+  const routePatchChangesSync = routePatch.activeCommand !== void 0 || routePatch.currentPhase !== void 0;
+  const syncedBase = useSyncedBase ? await buildSyncedState(projectRoot) : null;
+  const synced = useSyncedBase && routePatchChangesSync ? await buildSyncedState(projectRoot, routePatch) : syncedBase;
   const currentState = synced?.state ?? syncedBase?.state ?? await loadBlueprintState(projectRoot);
   const comparisonState = syncedBase?.state ?? currentState;
   const sanitizedPatch = useSyncedBase && normalizedPatch.currentPhase !== void 0 && normalizedPatch.nextAction === void 0 && currentState.currentPhase !== normalizedPatch.currentPhase ? {
@@ -31015,15 +31017,15 @@ async function readBacklogPromotionCandidates(projectRoot) {
 function extractRequirementIdsFromRequirementsTable(section) {
   return extractMarkdownTableRows(section).map((row) => row[0]?.trim() ?? "").filter((id) => DURABLE_REQUIREMENT_ID_PATTERN.test(id));
 }
-async function readPhaseContextGrounding(projectRoot, matchedPhase) {
+async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}) {
   const projectPath = `${BLUEPRINT_DIR}/PROJECT.md`;
   const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
   const statePath = `${BLUEPRINT_DIR}/STATE.md`;
   const [projectContent, requirementsContent, stateResult, configResult] = await Promise.all([
     readMarkdownDocument(projectRoot, projectPath),
     readMarkdownDocument(projectRoot, requirementsPath),
-    blueprintStateLoad({ cwd: projectRoot }),
-    blueprintConfigGet({
+    options.stateResult ?? blueprintStateLoad({ cwd: projectRoot }),
+    options.configResult ?? blueprintConfigGet({
       cwd: projectRoot,
       scope: "effective"
     })
@@ -33919,25 +33921,32 @@ async function blueprintPhaseLocate(args = {}) {
   try {
     roadmap = await readRoadmap(projectRoot);
   } catch (error2) {
-    const reason = error2 instanceof Error ? error2.message : String(error2);
-    return {
-      found: false,
-      phaseNumber: null,
-      phasePrefix: null,
-      phaseName: null,
-      phaseDir: null,
-      artifacts: [],
-      milestone: null,
-      resolvedFrom: "roadmap",
-      reason,
-      recovery: buildLocateRecovery(reason),
-      warnings: []
-    };
+    return phaseLocateFailureFromError(error2);
   }
-  const { phaseNumber, resolvedFrom } = await resolveRequestedPhase(
+  return locatePhaseFromRoadmap(projectRoot, args, roadmap);
+}
+function phaseLocateFailureFromError(error2) {
+  const reason = error2 instanceof Error ? error2.message : String(error2);
+  return {
+    found: false,
+    phaseNumber: null,
+    phasePrefix: null,
+    phaseName: null,
+    phaseDir: null,
+    artifacts: [],
+    milestone: null,
+    resolvedFrom: "roadmap",
+    reason,
+    recovery: buildLocateRecovery(reason),
+    warnings: []
+  };
+}
+async function locatePhaseFromRoadmap(projectRoot, args, roadmap, options = {}) {
+  const { phaseNumber, resolvedFrom } = await resolveRequestedPhaseForRoadmap(
     projectRoot,
     args.phase,
-    roadmap.phases
+    roadmap.phases,
+    options
   );
   if (!phaseNumber) {
     return {
@@ -34010,18 +34019,96 @@ async function blueprintPhaseLocate(args = {}) {
     warnings: []
   };
 }
+async function resolveRequestedPhaseForRoadmap(projectRoot, requestedPhase, phases, options = {}) {
+  if (options.stateCurrentPhase === void 0) {
+    return await resolveRequestedPhase(projectRoot, requestedPhase, phases);
+  }
+  const explicit = requestedPhase === void 0 ? void 0 : normalizeBlueprintInput(requestedPhase).trim();
+  if (explicit) {
+    return {
+      phaseNumber: extractPhaseNumberToken(explicit),
+      resolvedFrom: "explicit"
+    };
+  }
+  const fromState = extractPhaseNumberToken(options.stateCurrentPhase ?? "");
+  if (fromState) {
+    return {
+      phaseNumber: fromState,
+      resolvedFrom: "state"
+    };
+  }
+  const nextPhase = phases.find((phase) => !phase.completed) ?? phases[0];
+  return {
+    phaseNumber: nextPhase?.phaseNumber ?? null,
+    resolvedFrom: "roadmap"
+  };
+}
+function phaseSelectionFromLocate(located) {
+  return {
+    found: located.found,
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom,
+    reason: located.reason,
+    recovery: located.recovery,
+    warnings: located.warnings
+  };
+}
 async function blueprintPhaseContext(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
-  const state = await blueprintStateLoad({ cwd: projectRoot });
-  const located = await blueprintPhaseLocate(args);
-  const codebase = await readMappedCodebaseContext(projectRoot);
+  const roadmapResultPromise = readRoadmap(projectRoot).then((roadmap2) => ({
+    ok: true,
+    roadmap: roadmap2
+  })).catch((error2) => ({
+    ok: false,
+    failure: phaseLocateFailureFromError(error2)
+  }));
+  const [roadmapResult, state, rawState, config2, codebase] = await Promise.all([
+    roadmapResultPromise,
+    blueprintStateLoad({ cwd: projectRoot }),
+    loadBlueprintState(projectRoot),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    }),
+    readMappedCodebaseContext(projectRoot)
+  ]);
+  if (!roadmapResult.ok) {
+    const phaseSelection2 = phaseSelectionFromLocate(roadmapResult.failure);
+    const grounding2 = await readPhaseContextGrounding(projectRoot, void 0, {
+      stateResult: state,
+      configResult: config2
+    });
+    return {
+      phaseSelection: phaseSelection2,
+      phase: null,
+      projectBrief: grounding2.projectBrief,
+      requirementsGrounding: grounding2.requirementsGrounding,
+      workflowPosture: grounding2.workflowPosture,
+      codebase,
+      requirements: [],
+      missingArtifacts: [],
+      warnings: roadmapResult.failure.reason ? [roadmapResult.failure.reason] : []
+    };
+  }
+  const roadmap = roadmapResult.roadmap;
+  const located = await locatePhaseFromRoadmap(projectRoot, args, roadmap, {
+    stateCurrentPhase: rawState.currentPhase
+  });
+  const phaseSelection = phaseSelectionFromLocate(located);
+  const locatedPhaseNumber = located.phaseNumber === null ? null : normalizePhaseNumber(located.phaseNumber);
   const matchedPhase = roadmap.phases.find(
-    (phase) => phase.phaseNumber === located.phaseNumber
+    (phase) => locatedPhaseNumber !== null && normalizePhaseNumber(phase.phaseNumber) === locatedPhaseNumber
   );
-  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase);
+  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase, {
+    stateResult: state,
+    configResult: config2
+  });
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
+      phaseSelection,
       phase: null,
       projectBrief: grounding.projectBrief,
       requirementsGrounding: grounding.requirementsGrounding,
@@ -34037,6 +34124,7 @@ async function blueprintPhaseContext(args = {}) {
   const researchPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-RESEARCH.md");
   const uiSpecPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-UI-SPEC.md");
   return {
+    phaseSelection,
     phase: {
       phaseNumber: located.phaseNumber,
       phasePrefix: located.phasePrefix,

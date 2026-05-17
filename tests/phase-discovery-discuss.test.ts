@@ -29,8 +29,77 @@ const repoRoot = process.cwd();
 const discussRuntimeContractPath =
   "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md";
 const discussCommandPath = "commands/blu-discuss-phase.toml";
+const discussSkillPath = "skills/blueprint-phase-discovery/SKILL.md";
 const longRunningProfilePath =
   "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md";
+const wave0RuntimeBundleByteBaseline = [
+  {
+    path: discussCommandPath,
+    observedBytes: 6204,
+    maxBytes: 10000,
+    role: "command manifest prompt and tool allowlist"
+  },
+  {
+    path: discussSkillPath,
+    observedBytes: 32481,
+    maxBytes: 40000,
+    role: "shared phase-discovery skill body"
+  },
+  {
+    path: discussRuntimeContractPath,
+    observedBytes: 37574,
+    maxBytes: 45000,
+    role: "discuss-specific runtime contract"
+  },
+  {
+    path: longRunningProfilePath,
+    observedBytes: 3522,
+    maxBytes: 6000,
+    role: "shared long-running discovery profile"
+  }
+] as const;
+const wave0RuntimeBundleObservedTotal = 79781;
+const wave0RuntimeBundleMaxTotal = 101000;
+const discussRuntimeBundleCurrentBudget = {
+  // Includes the deliberate list-phase-assumptions config parity line in the shared skill.
+  skillBytes: 26276,
+  // Includes explicit phaseSelection recovery wording to avoid redundant locate fallback calls.
+  runtimeContractBytes: 37567,
+  // Includes runtime-FQN manifest wording required by extension prompt guards.
+  totalBytes: 74743
+} as const;
+const discussPhaseNoDilutionMatrix = [
+  {
+    invariant: "selected phase distinct from ambient state phase",
+    guardFile: "tests/phase-discovery-discuss.test.ts",
+    guardTest: "discuss-phase synced state update stays on an explicitly selected earlier phase"
+  },
+  {
+    invariant: "docs-free discuss input bundle",
+    guardFile: "tests/skill-metadata.test.ts",
+    guardTest: "structured input bundles resolve command-specific discovery inputs"
+  },
+  {
+    invariant: "context model-only write",
+    guardFile: "tests/phase-discovery-discuss.test.ts",
+    guardTest: "discuss-phase context write preserves the exact Open Questions none sentinel"
+  },
+  {
+    invariant: "checkpoint v2 owner/mode safety",
+    guardFile: "tests/phase-discovery-discuss.test.ts",
+    guardTest: "checkpoint persistence rejects unknown resume modes and owner-mode mismatches"
+  },
+  {
+    invariant: "starter handoff seed-only",
+    guardFile: "tests/phase-discovery-discuss.test.ts",
+    guardTest: "discuss-phase context write replaces starter handoff packet with carried-forward model content"
+  },
+  {
+    invariant: "final route copied from refreshed state",
+    guardFile: "tests/phase-discovery-discuss.test.ts",
+    guardTest: "final routing copies refreshed state and forbids alternate routes"
+  }
+] as const;
 
 function readRepoText(relativePath: string): string {
   return readFileSync(path.join(repoRoot, relativePath), "utf8");
@@ -56,6 +125,150 @@ function assertOrdered(content: string, orderedParts: readonly string[]) {
     previousIndex = currentIndex;
   }
 }
+
+test("discuss-phase runtime bundle records Wave 0 byte baseline without enforcing shrink yet", () => {
+  const actualContributors = wave0RuntimeBundleByteBaseline.map((entry) => ({
+    ...entry,
+    actualBytes: Buffer.byteLength(readRepoText(entry.path), "utf8")
+  }));
+  const actualTotal = actualContributors.reduce(
+    (total, contributor) => total + contributor.actualBytes,
+    0
+  );
+
+  assert.equal(wave0RuntimeBundleObservedTotal, 79781);
+  assert.deepEqual(
+    wave0RuntimeBundleByteBaseline.map(({ path, observedBytes, role }) => ({
+      path,
+      observedBytes,
+      role
+    })),
+    [
+      {
+        path: "commands/blu-discuss-phase.toml",
+        observedBytes: 6204,
+        role: "command manifest prompt and tool allowlist"
+      },
+      {
+        path: "skills/blueprint-phase-discovery/SKILL.md",
+        observedBytes: 32481,
+        role: "shared phase-discovery skill body"
+      },
+      {
+        path: "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
+        observedBytes: 37574,
+        role: "discuss-specific runtime contract"
+      },
+      {
+        path: "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md",
+        observedBytes: 3522,
+        role: "shared long-running discovery profile"
+      }
+    ]
+  );
+  for (const contributor of actualContributors) {
+    assert.ok(
+      contributor.actualBytes <= contributor.maxBytes,
+      `${contributor.path} is ${contributor.actualBytes} bytes; Wave 0 ceiling is ${contributor.maxBytes}`
+    );
+  }
+  assert.ok(
+    actualTotal <= wave0RuntimeBundleMaxTotal,
+    `discuss runtime bundle is ${actualTotal} bytes; Wave 0 ceiling is ${wave0RuntimeBundleMaxTotal}`
+  );
+});
+
+test("shared phase-discovery skill is deflated while discuss runtime contract keeps rich details", () => {
+  const skill = readRepoText(discussSkillPath);
+  const contract = readRepoText(discussRuntimeContractPath);
+  const skillBytes = Buffer.byteLength(skill, "utf8");
+  const discussSection = skill.match(
+    /### `discuss-phase`\n([\s\S]*?)(?=\n### `research-phase`)/
+  )?.[1] ?? "";
+
+  assert.ok(
+    skillBytes < 28000,
+    `shared phase-discovery skill should stay materially below the Wave 0 baseline; got ${skillBytes} bytes`
+  );
+  assert.ok(
+    skillBytes < wave0RuntimeBundleByteBaseline[1].observedBytes,
+    `shared phase-discovery skill should shrink below ${wave0RuntimeBundleByteBaseline[1].observedBytes} bytes`
+  );
+  assert.equal(
+    skillBytes,
+    discussRuntimeBundleCurrentBudget.skillBytes,
+    "shared skill size changed; update the current budget only with an intentional shrink/growth rationale"
+  );
+
+  assert.match(discussSection, new RegExp(discussRuntimeContractPath));
+  assert.match(discussSection, new RegExp(longRunningProfilePath));
+  assert.match(discussSection, /selected phase from the runtime contract/i);
+  assert.match(discussSection, /persistent writes MCP-owned and phase-scoped/i);
+  assert.match(discussSection, /blueprint_state_load\.derivedStatus\.nextAction/);
+  assert.match(discussSection, /no-subagent fallback[\s\S]*artifact quality/i);
+
+  assert.doesNotMatch(
+    skill,
+    /"ownerCommand":\s*"\/blu-discuss-phase"[\s\S]*"areaQueue":\s*\[/i
+  );
+  assert.doesNotMatch(
+    skill,
+    /`areaId`[\s\S]*`slot`[\s\S]*`defect`[\s\S]*`lens`[\s\S]*`evidence`[\s\S]*`downstreamImpact`[\s\S]*`decisionValue`[\s\S]*`resolutionCriterion`[\s\S]*`candidateQuestion`/i
+  );
+  assert.doesNotMatch(
+    discussSection,
+    /Do not infer a direct `\/blu-plan-phase` handoff[\s\S]*enabled research or UI gates/i
+  );
+
+  assert.ok(
+    Buffer.byteLength(contract, "utf8") < wave0RuntimeBundleByteBaseline[2].observedBytes,
+    "discuss runtime contract should shrink below the Wave 0 byte baseline"
+  );
+  assert.equal(
+    Buffer.byteLength(contract, "utf8"),
+    discussRuntimeBundleCurrentBudget.runtimeContractBytes,
+    "runtime contract size changed; update the current budget only with an intentional shrink/growth rationale"
+  );
+  assert.equal(
+    wave0RuntimeBundleByteBaseline.reduce(
+      (total, contributor) => total + Buffer.byteLength(readRepoText(contributor.path), "utf8"),
+      0
+    ),
+    discussRuntimeBundleCurrentBudget.totalBytes,
+    "discuss runtime bundle total changed; update the current budget only with an intentional shrink/growth rationale"
+  );
+  assert.match(contract, /Required checkpoint fields:/);
+  assert.match(contract, /Tiny schematic:/);
+  assert.doesNotMatch(contract, /Sample v2 checkpoint:/);
+  assert.match(
+    contract,
+    /`areaId`[\s\S]*`slot`[\s\S]*`defect`[\s\S]*`lens`[\s\S]*`evidence`[\s\S]*`downstreamImpact`[\s\S]*`decisionValue`[\s\S]*`resolutionCriterion`[\s\S]*`candidateQuestion`/i
+  );
+  assert.match(
+    contract,
+    /Do not infer `\/blu-plan-phase`[\s\S]*Route only from the post-write/i
+  );
+});
+
+test("discuss-phase no-dilution matrix points at existing behavior guards", () => {
+  for (const row of discussPhaseNoDilutionMatrix) {
+    const testFile = readRepoText(row.guardFile);
+    const escapedGuardName = row.guardTest.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    assert.match(testFile, new RegExp(`test\\("${escapedGuardName}`));
+  }
+  assert.deepEqual(
+    discussPhaseNoDilutionMatrix.map(({ invariant }) => invariant),
+    [
+      "selected phase distinct from ambient state phase",
+      "docs-free discuss input bundle",
+      "context model-only write",
+      "checkpoint v2 owner/mode safety",
+      "starter handoff seed-only",
+      "final route copied from refreshed state"
+    ]
+  );
+});
 
 function discussCheckpoint(areaQueue: Array<Record<string, unknown>>): Record<string, unknown> {
   return {
@@ -405,6 +618,22 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /Ask only for missing, contradictory, uncertain, or high-impact details/i);
   assert.match(
     commandFile,
+    /mcp_blueprint_blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i
+  );
+  assert.match(
+    commandFile,
+    /mcp_blueprint_blueprint_phase_context` first[\s\S]*`phaseSelection` fields[\s\S]*phaseSelection\.found` is false[\s\S]*mcp_blueprint_blueprint_phase_locate` only when `phaseSelection` is missing, ambiguous, incomplete, or lacks explicit recovery diagnostics/i
+  );
+  assert.match(
+    commandFile,
+    /request independent read-only MCP calls together in the same model response\/tool-call turn/i
+  );
+  assert.match(
+    commandFile,
+    /Do not batch mutating writes, confirmation prompts, validation repair[\s\S]*checkpoint deletion/i
+  );
+  assert.match(
+    commandFile,
     /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text verbatim/i
   );
   assert.match(commandFile, /Do not infer a direct `\/blu-plan-phase` handoff/i);
@@ -429,11 +658,19 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, new RegExp(sharedProfilePath));
   assert.match(skillFile, /phase\.context\.modelContract.*schema authority/i);
   assert.match(skillFile, /contract\.authoringTemplate.*freehand discovery artifacts/i);
-  assert.match(skillFile, /derivedStatus\.nextAction/);
-  assert.match(skillFile, /starter handoff inside the starter context/i);
-  assert.match(skillFile, /source refs, deferred risks, and open gray areas/i);
-  assert.match(skillFile, /missing, contradictory, uncertain, or high-impact details/i);
+  assert.match(skillFile, /selected phase from the runtime contract/i);
+  assert.match(skillFile, /persistent writes MCP-owned and phase-scoped/i);
+  assert.match(skillFile, /blueprint_state_load\.derivedStatus\.nextAction/);
+  assert.match(skillFile, /long-running profile/i);
+  assert.match(skillFile, /no-subagent fallback[\s\S]*artifact quality/i);
+  assert.doesNotMatch(skillFile, /starter handoff inside the starter context/i);
+  assert.doesNotMatch(skillFile, /source refs, deferred risks, and open gray areas/i);
+  assert.doesNotMatch(skillFile, /missing, contradictory, uncertain, or high-impact details/i);
   assert.match(
+    skillFile,
+    /active command's runtime-contract checkpoint shape/i
+  );
+  assert.doesNotMatch(
     skillFile,
     /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text/i
   );
@@ -456,15 +693,15 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /`derivedStatus\.nextAction`/);
   assert.match(discussReference, /openQuestions: \[\][\s\S]*exactly `- none`/i);
   assert.match(discussReference, /\["none"\].*compatibility-only/i);
-  assert.match(discussReference, /do not pass scalar `openQuestions: "none"`/i);
+  assert.match(discussReference, /do\s+not pass scalar `openQuestions: "none"`/i);
   assert.match(discussReference, /Starter Handoff Intake/);
   assert.match(
     discussReference,
     /selected phase was just scaffolded by `\/blu-new-project`,[\s\S]*`\/blu-add-phase`, or `\/blu-insert-phase`/i
   );
-  assert.match(discussReference, /source refs into `canonicalReferences`/i);
-  assert.match(discussReference, /deferred risks or consequence-if-wrong notes/i);
-  assert.match(discussReference, /open gray areas into `openQuestions`/i);
+  assert.match(discussReference, /Map source refs[\s\S]*`canonicalReferences`/i);
+  assert.match(discussReference, /deferred\s+risks, consequence-if-wrong notes/i);
+  assert.match(discussReference, /open gray areas[\s\S]*`openQuestions`/i);
   assert.match(discussReference, /missing, contradictory, uncertain, or high-impact details/i);
   assert.match(discussReference, /starter packet heading/i);
   assert.match(discussReference, /scaffold footer/i);
@@ -536,7 +773,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /schema authority/i);
   assert.match(discussReference, /Capability-Gated Agent Use/);
   assert.match(discussReference, /gray-area memo mode/i);
-  assert.match(discussReference, /Do not ask it to populate `phase\.research` or draft\s+`XX-RESEARCH\.md`/i);
+  assert.match(discussReference, /Ask for gray-area memo mode,\s+not `phase\.research` or an `XX-RESEARCH\.md` draft/i);
   assert.match(discussReference, /Single-Agent Fallback/);
   assert.match(discussReference, /compress carry-forward context/i);
   assert.match(discussReference, /Assumptions Mode/);
@@ -547,7 +784,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /Artifact Authoring/);
   assert.match(discussReference, /Validation And Repair/);
   assert.match(discussReference, /status: "invalid"/);
-  assert.match(discussReference, /Do not claim unshipped power, batch, chain, auto, or auto-advance behavior/i);
+  assert.match(discussReference, /Do not describe same-turn read batching as a power, chain, auto, or\s+auto-advance mode/i);
   assert.match(researcherAgent, /Output Mode Selection/);
   assert.match(researcherAgent, /gray-area memo mode/);
   assert.match(researcherAgent, /not a populated `phase\.research` or\s+`XX-RESEARCH\.md` body/i);
@@ -558,6 +795,7 @@ test("discuss runtime contract defines selected phase read packet", () => {
 
   assertIncludesAll(contract, [
     "Selected Phase Read Packet",
+    "phaseSelection",
     "selectedPhase",
     "stateCurrentPhase",
     "selectedPhaseResolvedFrom",
@@ -595,6 +833,65 @@ test("discuss runtime contract requires artifact status classification", () => {
     "foreign-checkpoint",
     "stale-plan-inventory"
   ]);
+});
+
+test("discuss runtime contract allows only same-turn independent read batching", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assertIncludesAll(contract, [
+    "Same-Turn Read Batching",
+    "same model response/tool-call turn",
+    "independent read-only calls",
+    "using runtime FQNs",
+    "Before selected phase is known",
+    "After `phase_context.phaseSelection` is usable",
+    "If the host cannot batch tool calls",
+    "Dependent reads stay in later turns"
+  ]);
+  assert.match(contract, /Do not narrate\s+between independent read calls/i);
+  assert.match(
+    contract,
+    /Do not batch writes, user\s+confirmations, validation\s+repair, state updates, or checkpoint deletion/i
+  );
+  assert.match(contract, /Minimum Read Order[\s\S]*Call `blueprint_phase_context` first/i);
+  assert.match(
+    contract,
+    /phaseSelection` is not usable but includes `reason` plus `recovery`[\s\S]*Otherwise call `blueprint_phase_locate` as the\s+fallback[\s\S]*stop when locate cannot identify one phase/i
+  );
+  assert.match(contract, /same model response\/tool-call\s+turn[\s\S]*Using `selectedPhase`/i);
+  assert.match(
+    contract,
+    /prior result chooses[\s\S]*selected\s+phase[\s\S]*write\s+payload[\s\S]*routing state/i
+  );
+  assert.doesNotMatch(contract, /Call `blueprint_phase_locate`\.\n2\./i);
+  assert.doesNotMatch(contract, /batch writes as independent/i);
+  assert.doesNotMatch(contract, /batch dependent reads/i);
+});
+
+test("discuss runtime contract replaces vague speed-killer phrases with concrete rules", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.doesNotMatch(contract, /materially relevant prior context/i);
+  assert.doesNotMatch(contract, /materially relevant earlier/i);
+  assert.doesNotMatch(contract, /minimum useful packet/i);
+  assert.doesNotMatch(contract, /when likely/i);
+  assert.doesNotMatch(contract, /materially improve the options/i);
+  assert.match(
+    contract,
+    /shared roadmap requirement id[\s\S]*Default maximum: the nearest prior\s+matching phase plus any phase explicitly named by ROADMAP or saved context/i
+  );
+  assert.match(
+    contract,
+    /Minimum Evidence Packet[\s\S]*selected phase[\s\S]*artifact inventory status[\s\S]*artifact-contract status/i
+  );
+  assert.match(
+    contract,
+    /phase\.discussion-log` contract only after a trigger in\s+Discussion Log Triggers is present or the user requests a durable log/i
+  );
+  assert.match(
+    contract,
+    /at least two viable options remain[\s\S]*an option changes scope\s+or downstream\s+routing[\s\S]*add citations\s+before the next user question/i
+  );
 });
 
 test("discuss runtime contract defines gray area queue", () => {
@@ -754,7 +1051,7 @@ test("allowlist remains stable", () => {
   assert.doesNotMatch(commandFile, /blueprint_command_catalog/);
   assert.match(
     commandFile,
-    /Before any user question or sidecar decision, resolve the phase and build the selected-phase read packet/i
+    /Before any user question or sidecar decision, resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection` first and build the selected-phase read packet/i
   );
 });
 

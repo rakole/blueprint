@@ -327,8 +327,10 @@ type PhaseLocateResult = {
     recovery: string[];
     warnings: string[];
 };
+type PhaseSelectionResult = Pick<PhaseLocateResult, "found" | "phaseNumber" | "phasePrefix" | "phaseName" | "phaseDir" | "resolvedFrom" | "reason" | "recovery" | "warnings">;
 type ResearchExternalSourcesMode = "off" | "ask" | "auto";
 type PhaseContextResult = {
+    phaseSelection: PhaseSelectionResult;
     phase: {
         phaseNumber: string;
         phasePrefix: string;

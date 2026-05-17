@@ -61,6 +61,7 @@
 - `blueprint_phase_context` -> `{phase, codebase, requirements, missingArtifacts}`
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_project_status` -> `{initialized, currentPhase, currentMilestone, nextAction, health}`
+- `blueprint_config_get` -> effective config for optional agent policy
 
 
 ## Skills And Subagents

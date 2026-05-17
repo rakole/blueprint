@@ -19,23 +19,43 @@ async function readRelativePath(relativePath: string): Promise<string | null> {
 }
 
 test("structured input bundles resolve command-specific discovery inputs", async () => {
-  const inputs = await loadBlueprintSkillInputs(
-    "blueprint-phase-discovery",
-    "/blu-discuss-phase",
-    readRelativePath
-  );
+  const expectations = [
+    [
+      "/blu-discuss-phase",
+      [
+        "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
+        "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
+      ]
+    ],
+    [
+      "/blu-research-phase",
+      ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"]
+    ],
+    [
+      "/blu-ui-phase",
+      ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"]
+    ],
+    [
+      "/blu-list-phase-assumptions",
+      [
+        "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
+      ]
+    ]
+  ] as const;
 
-  assert.equal(inputs.skill, "blueprint-phase-discovery");
-  assert.deepEqual(inputs.shared, []);
-  assert.deepEqual(inputs.commandSpecific, [
-    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
-    "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
-  ]);
-  assert.deepEqual(inputs.effective, [
-    "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
-    "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
-  ]);
-  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  for (const [commandName, commandSpecificInputs] of expectations) {
+    const inputs = await loadBlueprintSkillInputs(
+      "blueprint-phase-discovery",
+      commandName,
+      readRelativePath
+    );
+
+    assert.equal(inputs.skill, "blueprint-phase-discovery");
+    assert.deepEqual(inputs.shared, []);
+    assert.deepEqual(inputs.commandSpecific, commandSpecificInputs);
+    assert.deepEqual(inputs.effective, commandSpecificInputs);
+    assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+  }
 });
 
 test("structured multi-command skills return shared-only inputs for unknown commands", async () => {

@@ -17,6 +17,7 @@ Use only the command-scoped read tools:
 - `blueprint_project_status`
 - `blueprint_roadmap_read`
 - `blueprint_phase_context`
+- `blueprint_config_get`
 
 Do not call write-capable MCP tools, task tracker helpers, `update_topic`, or
 `write_todos`. Do not create hidden plans, staged long-running progress, or
@@ -43,6 +44,8 @@ After resolution, read:
   phase context
 - `blueprint_phase_context` for saved discovery, research, UI, codebase, and
   requirement evidence surfaced by the runtime
+- `blueprint_config_get` with `scope: "effective"` before optional researcher
+  decisions, so agent usage follows normalized project policy
 
 ## Five Assumption Areas
 

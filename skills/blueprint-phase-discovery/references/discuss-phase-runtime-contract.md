@@ -35,19 +35,20 @@ The retained behaviors that matter are:
 
 ## Required MCP Read Sequence
 
-Before asking fresh questions, resolve the selected phase and build a compact
-evidence packet from:
+Before asking fresh questions, call `blueprint_phase_context` first. Use
+`phaseSelection` as the selected-phase authority when it is found and includes
+phase number, prefix, and dir. Build a compact evidence packet from:
 
 - `blueprint_phase_context`: phase boundary, project brief, requirements
-  grounding, workflow posture, mapped codebase summaries, and existing artifact
-  signals
+  grounding, workflow posture, mapped codebase summaries, existing artifact
+  signals, and `phaseSelection`
 - `blueprint_roadmap_read`: phase title, objective, success criteria,
   requirement links, and any canonical refs already written into the roadmap
 - `blueprint_artifact_list`: current artifact inventory
 - `blueprint_config_get`: `workflow.discuss_mode`,
   `workflow.skip_discuss`, and `workflow.research_before_questions`
 - `blueprint_phase_artifact_read`: current context, discussion log, and
-  materially relevant earlier phase context artifacts
+  earlier phase context artifacts that match the Prior-Context Relevance Rule
 - when the current context is a fresh starter seeded by `/blu-new-project`,
   `/blu-add-phase`, or `/blu-insert-phase`, read the starter handoff packet
   inside that starter context as seed evidence before asking new questions
@@ -57,56 +58,92 @@ evidence packet from:
 - `blueprint_artifact_contract_read`: `phase.context` before context model
   authoring and `phase.discussion-log` before discussion-log drafting
 
+Use `blueprint_phase_locate` when `phaseSelection` is missing, ambiguous,
+lacks number/prefix/dir, or lacks `reason` plus `recovery`. If
+`phaseSelection.found` is false with those diagnostics, report them without
+another locate call. Keep locate available; do not guess phase directories,
+slugs, or paths.
+
 Read saved `.blueprint/codebase/` summaries before broad repo rereads. If the
 bundle is missing or thin, say so and do targeted local reading only where it
 sharpens the current phase discussion.
 
+### Same-Turn Read Batching
+
+At each Resolve or Read stage, identify Blueprint MCP reads whose arguments are
+already known and whose results do not choose another call's arguments. Request
+those independent read-only calls together in the same model response/tool-call
+turn, using runtime FQNs, before analyzing results or drafting. Do not narrate
+between independent read calls.
+
+| Boundary | Rule |
+|----------|------|
+| Before selected phase is known | Do not batch reads that require phase id/path, artifact id, checkpoint owner/mode, or recovery data. |
+| After `phase_context.phaseSelection` is usable | Batch independent reads whose arguments are known: effective config, roadmap read, artifact inventory, current context/log reads, discuss checkpoint status, plan inventory, and `phase.context` contract read. |
+| After a user answer or before persistence | Do not batch checkpoint writes, context writes, discussion-log writes, validation repair, state updates, final route load, checkpoint deletion, or confirmation prompts. |
+
+Dependent reads stay in later turns when a prior result chooses the selected
+phase, artifact id, plan id, overwrite/reuse decision, validation repair, write
+payload, or routing state. If the host cannot batch tool calls, proceed with the
+same dependency order one call at a time. Do not batch writes, user
+confirmations, validation repair, state updates, or checkpoint deletion.
+
 ## Selected Phase Read Packet
 
-After `blueprint_phase_locate` succeeds, create a run-local selected-phase
-register:
+After `blueprint_phase_context.phaseSelection` succeeds, create a run-local
+selected-phase register:
 
-- `selectedPhase`: `String(result.phaseNumber)`
-- `selectedPhasePrefix`: `result.phasePrefix`
-- `selectedPhaseDir`: `result.phaseDir`
-- `selectedPhaseResolvedFrom`: `result.resolvedFrom`
+- `selectedPhase`: `String(phaseSelection.phaseNumber)`
+- `selectedPhasePrefix`: `phaseSelection.phasePrefix`
+- `selectedPhaseDir`: `phaseSelection.phaseDir`
+- `selectedPhaseResolvedFrom`: `phaseSelection.resolvedFrom`
 
 Use `selectedPhase` for every phase-scoped read, checkpoint read/write/delete,
 scaffold path, artifact write, and final `patch.currentPhase`. Treat any
 state-derived current phase returned by later reads as `stateCurrentPhase`, an
 ambient routing signal, not a replacement for `selectedPhase`.
 
-If `blueprint_phase_locate` returns `found: false`, stop before artifact reads
-or writes and report `reason` plus `recovery`.
+If `phaseSelection` is not usable but includes `reason` plus `recovery`, stop
+before artifact reads/writes and report them. Call `blueprint_phase_locate` once
+only when context lacks recovery detail. If locate returns `found: false`, stop
+before artifact reads/writes and report `reason` plus `recovery`.
 
 ### Minimum Read Order
 
-1. Call `blueprint_phase_locate`.
-2. In parallel, call `blueprint_phase_context`, `blueprint_roadmap_read`,
-   `blueprint_artifact_list`, and `blueprint_config_get`.
-3. Using `selectedPhase`, read current `context`, current `discussion-log`,
-   the discuss checkpoint with owner/mode guards, plan inventory, and the
-   `phase.context` artifact contract.
-4. Read the `phase.discussion-log` contract only when a durable discussion log
-   is likely.
+1. Call `blueprint_phase_context` first.
+2. If `phaseSelection` is not usable but includes `reason` plus `recovery`, stop
+   with those diagnostics. Otherwise call `blueprint_phase_locate` as the
+   fallback and stop when locate cannot identify one phase.
+3. Using `selectedPhase`, request the independent reads still needed before the
+   first question in the same model response/tool-call turn when the host
+   supports it: `blueprint_roadmap_read`, `blueprint_artifact_list`,
+   `blueprint_config_get`, current `context`, current `discussion-log`, the
+   discuss checkpoint with owner/mode guards, plan inventory, and the
+   `phase.context` artifact contract. Include only calls whose arguments are
+   already known.
+4. Read the `phase.discussion-log` contract only after a trigger in
+   Discussion Log Triggers is present or the user requests a durable log.
 5. Read earlier phase context only when the relevance rule below matches.
 
 ### Prior-Context Relevance Rule
 
-Earlier phase context is materially relevant when it shares roadmap
-requirement ids, canonical references, deferred ideas, codebase surfaces, MCP
-tool families, command lifecycle gates, or explicit dependency language with
-the selected phase. Prefer the nearest prior matching phase plus any phase
-explicitly referenced by ROADMAP or saved context. If no rule matches, say no
+Read prior context only when one of these criteria matches the selected phase:
+shared roadmap requirement id, shared canonical reference, deferred idea carried
+into this phase, same codebase surface, same MCP tool family, same lifecycle
+gate, or explicit dependency language. Default maximum: the nearest prior
+matching phase plus any phase explicitly named by ROADMAP or saved context.
+Read more only when a unique high-impact dependency would otherwise be hidden
+or the user asks for a broader comparison. If no criterion matches, say no
 earlier context was reused instead of doing a broad sweep.
 
-### Compact Read-Packet Summary
+### Minimum Evidence Packet
 
-Before the first fresh user question, summarize: selected phase, phase
-resolution source, `stateCurrentPhase` if different, config mode (`discuss`,
-`assumptions`, or `skip_discuss`), context status, discussion-log status,
-checkpoint status, prior context reused/skipped, codebase-summary status, and
-plan-inventory warning.
+Before the first fresh user question, summarize these fields and no extra
+inventory dump: selected phase, phase resolution source, `stateCurrentPhase` if
+different, config mode (`discuss`, `assumptions`, or `skip_discuss`), context
+status, discussion-log status, checkpoint status, prior context reused/skipped,
+codebase-summary status, artifact inventory status, plan-inventory warning, and
+artifact-contract status.
 
 ### Starter Handoff Intake
 
@@ -115,16 +152,12 @@ When the selected phase was just scaffolded by `/blu-new-project`,
 contains starter-only material, treat its starter handoff as disposable seed
 evidence:
 
-- read the packet before asking fresh questions
-- carry forward its source refs into `canonicalReferences` and, when useful,
-  `dependencies.requiredFollowUpReads`
-- carry forward deferred risks or consequence-if-wrong notes into
-  `openQuestions`, `deferredIdeas`, or an evidence-backed
-  `implementationDecisions` entry
-- carry forward open gray areas into `openQuestions` or resolved
-  `implementationDecisions`
-- ask only for missing, contradictory, uncertain, or high-impact details that
-  still change the implementation result
+Read the packet before fresh questions. Map source refs to
+`canonicalReferences` or `dependencies.requiredFollowUpReads`; map deferred
+risks, consequence-if-wrong notes, and open gray areas to `openQuestions`,
+`deferredIdeas`, or evidence-backed `implementationDecisions`. Ask only for
+missing, contradictory, uncertain, or high-impact details that still change the
+implementation result.
 
 Do not preserve the starter packet heading, scaffold footer, placeholder
 labels, unsupported claims, or raw handoff text verbatim in the final saved
@@ -157,7 +190,7 @@ The classification controls the next gate:
 
 ## Checkpoint And Resume
 
-6. Write or refresh the structured checkpoint with
+6. Write or refresh the structured checkpoint with the v2 checkpoint fields:
    `schemaVersion: 2`, `ownerCommand: "/blu-discuss-phase"`, top-level
    `mode: "discuss"`, `progress`, `areaQueue`, `carryForward`, and `readSet`.
    Do not write compatibility summary fields such as `completedAreas`,
@@ -186,51 +219,28 @@ The MCP checkpoint schema is v2-only for new writes. The `areaQueue` is the
 semantic source of truth; legacy compatibility summary fields are non-resumable
 evidence and must not be written.
 
-Sample v2 checkpoint:
+Required checkpoint fields:
 
-```json
-{
-  "ownerCommand": "/blu-discuss-phase",
-  "schemaVersion": 2,
-  "mode": "discuss",
-  "phaseKey": "03-phase-discovery",
-  "progress": {
-    "activeStage": "Execute",
-    "pendingGate": "gray-area-question",
-    "executionMode": "discuss/resumed",
-    "areasDecided": 1,
-    "areasTotal": 4,
-    "nextActionPreview": "Ask the current UI expectations follow-up"
-  },
-  "areaQueue": [
-    {
-      "areaId": "scope-boundary",
-      "title": "Scope boundaries",
-      "state": "decided",
-      "decisionIds": ["D-scope-001"],
-      "evidenceRefs": [".blueprint/ROADMAP.md"],
-      "downstreamConsumers": ["/blu-research-phase", "/blu-plan-phase"]
-    },
-    {
-      "areaId": "ui-expectations",
-      "title": "UI expectations",
-      "state": "questioning",
-      "currentQuestion": "Does this phase author a real UI surface or only a no-UI rationale?",
-      "questionWhyItMatters": "Controls whether /blu-ui-phase should produce UI work or an explicit skip rationale.",
-      "lastUserAnswer": null
-    }
-  ],
-  "carryForward": {
-    "phaseBoundary": [],
-    "completedDecisions": [],
-    "openQuestions": [],
-    "deferredIdeas": [],
-    "canonicalReferences": [],
-    "contradictions": [],
-    "doNotInferBeyond": []
-  },
-  "readSet": []
-}
+- identity: `schemaVersion: 2`, `ownerCommand: "/blu-discuss-phase"`,
+  top-level `mode: "discuss"`, and selected phase key or number
+- `progress`: active stage, pending gate, execution mode, decided/total counts,
+  and next action preview
+- `areaQueue`: ordered gray-area entries with `areaId`, `title`, `state`,
+  evidence refs, downstream consumers, and either a decision/assumption,
+  current question, blocking reason, or revisit trigger
+- `carryForward`: compact handoff context with phase boundary, active area,
+  completed decisions, open questions, deferred ideas, canonical references,
+  evidence refs, contradictions, omitted details, and do-not-infer-beyond notes
+- `readSet`: roadmap/context/config/plan-index/artifact-contract inputs with
+  path plus fingerprint or `updatedAt` when available
+
+Tiny schematic:
+
+```text
+checkpoint v2 -> identity + progress
+  areaQueue[areaId,state,evidenceRefs,currentQuestion|decision|blockingReason]
+  carryForward[phaseBoundary,completedDecisions,openQuestions,deferredIdeas]
+  readSet[path,fingerprint|updatedAt]
 ```
 
 ### Carry-Forward Packet
@@ -280,15 +290,8 @@ in `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md`.
 Generate gray areas from the phase, not from generic categories. Each gray area
 should name a decision that would change the implementation result.
 
-Useful lenses:
-
-- scope boundary: what is in this phase versus a later phase
-- user-visible behavior: modes, states, ordering, errors, empty states
-- interface contract: flags, routes, payloads, outputs, compatibility
-- reuse: existing components, MCP tools, skills, agents, docs, and tests
-- dependencies: prerequisite artifacts, data, integrations, or command states
-- risk and failure handling: rollback, partial completion, validation, security
-- methodology: active project lenses or saved constraints that affect choices
+Useful lenses: scope boundary, user-visible behavior, interface contract,
+reuse, dependencies, risk/failure handling, methodology, and routing.
 
 Skip areas already locked by prior context unless the current phase introduces a
 real conflict. When reusing a prior decision, cite the artifact that locked it.
@@ -354,22 +357,6 @@ Do not ask checklist or atmosphere questions such as "Any other requirements?",
 is tied to a named `grayAreaQueue` entry, cites the evidence gap, and states
 what downstream decision the answer will change.
 
-### Gray Area Example
-
-- `areaId`: auth-error-contract
-- `slot`: exception
-- `defect`: incomplete
-- `lens`: interface-contract
-- `evidence`: `.blueprint/ROADMAP.md` says "handle auth failures"; current
-  context names no error payload.
-- `downstreamImpact`: plan, validation
-- `decisionValue`: high
-- `candidateQuestion`: "For auth failures, should this phase standardize a
-  machine-readable error code now, reuse the existing generic failure shape,
-  or defer payload shape to a later API-contract phase?"
-- `resolved`: selected generic failure shape; record rationale and validation
-  expectation in `implementationDecisions`.
-
 ## Questioning Rules
 
 Use `ask_user` for structured tradeoffs, overwrite confirmation,
@@ -390,8 +377,9 @@ then dig into the area that actually changes the implementation.
 Ask only for missing, contradictory, uncertain, or high-impact details once the
 read packet and any starter handoff evidence are in hand.
 
-Do not claim unshipped power, batch, chain, auto, or auto-advance behavior in
-this runtime.
+Do not describe same-turn read batching as a power, chain, auto, or
+auto-advance mode. It is only a request shape for independent read-only MCP
+calls whose arguments are already known.
 
 ### Decision-Value Ranking
 
@@ -507,20 +495,18 @@ correctness.
 
 Suitable uses:
 
-- `blueprint-researcher` as a bounded read-only sidecar for one gray area when
-  codebase or official-reference reading would materially improve the options
-- `blueprint-researcher` in assumptions mode when evidence-backed assumptions
-  need a deeper repo pass than the main session should carry
+Use `blueprint-researcher` only for one gray area or one assumptions pass when:
+at least two viable options remain, an option changes scope or downstream
+routing, and isolated repo or supplied-reference reading can add citations
+before the next user question. It must return defaults or options grouped by
+gray area, citations, confidence labels, contradictions or missing evidence, and
+the smallest question that would change each default.
 
-Agent prompts must be bounded to one area or one assumptions pass and must pass
-the compact phase boundary, relevant saved context, and canonical references
-needed for that area. Ask `blueprint-researcher` for gray-area memo mode: a
-lightweight read-only options and tradeoffs memo with concrete options,
-complexity or impact surface, recommendation rationale, confidence, and
-citations or repo paths. Do not ask it to populate `phase.research` or draft
-`XX-RESEARCH.md` for `/blu-discuss-phase`; artifact-grade research belongs to
-`/blu-research-phase`. The parent command owns synthesis, user-facing
-questions, checkpoints, artifact writes, and state updates.
+Agent prompts must pass only the compact phase boundary, relevant saved
+context, and canonical references for that area. Ask for gray-area memo mode,
+not `phase.research` or an `XX-RESEARCH.md` draft. The parent command owns
+synthesis, user-facing questions, checkpoints, artifact writes, and state
+updates.
 
 If no suitable subagent exists, or if the host disallows subagents, use the
 single-agent fallback below without lowering artifact quality.
@@ -531,9 +517,11 @@ The main agent must be able to complete the whole workflow one discussion area
 at a time:
 
 1. Pick the next selected gray area.
-2. Compress carry-forward context to the minimum useful packet: phase boundary,
-   applicable prior decisions, codebase evidence, canonical refs, completed
-   decisions, deferred ideas, and the current unanswered question.
+2. Compress carry-forward context to these packet fields: selected phase and
+   phase boundary, active area id/title/state, applicable prior decisions,
+   codebase evidence, canonical refs, completed decisions, open questions,
+   deferred ideas, contradictions, do-not-infer-beyond notes, and the current
+   unanswered question or blocker.
 3. Ask one focused `ask_user` choice or freeform follow-up.
 4. Validate the answer. If it is empty, vague, or conflicts with saved context,
    retry once with a narrower question or ask a focused follow-up.
@@ -594,23 +582,14 @@ with model-rendered Markdown, not as text to preserve:
 
 The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
 
-- `Phase Boundary`: fixed phase scope, in-scope and out-of-scope boundaries,
-  success criteria
-- `Discovery Grounding`: project brief, requirements grounding, workflow
-  posture, prior decisions, plan-inventory warning when applicable
-- `Implementation Decisions`: locked decisions grouped by the phase-specific
-  areas actually discussed, including rationale and evidence when useful
-- `Specific Ideas`: user examples, references, desired feel, constraints, or
-  "like X" moments
-- `Existing Code Insights`: reusable assets, established patterns, integration
-  points, known gaps
-- `Dependencies`: prior artifacts, MCP tools, command surfaces, docs, external
-  constraints, required follow-up reads
-- `Open Questions`: only unresolved questions that must remain explicit; when none remain, save `openQuestions: []` so MCP renders exactly `- none` in Markdown. `openQuestions: ["none"]` remains compatibility-only for older model inputs; do not pass scalar `openQuestions: "none"`
-- `Deferred Ideas`: scope-creep or later-phase ideas with why they are out of
-  this phase
-- `Canonical References`: full relative paths plus what each source controls;
-  if no external specs exist, say that explicitly
+Use the live `modelContract` field names and required sections. Preserve these
+semantics without restating the full schema: phase boundary, discovery
+grounding, implementation decisions with rationale/evidence, specific ideas,
+existing code insights, dependencies and follow-up reads, open questions,
+deferred ideas, and canonical references. When no open questions remain, save
+`openQuestions: []` so MCP renders exactly `- none` in Markdown.
+`openQuestions: ["none"]` remains compatibility-only for older model inputs; do
+not pass scalar `openQuestions: "none"`.
 
 Prefer rich model values over terse labels. A downstream researcher or planner
 should understand what was decided, why, what evidence supports it, and where to
@@ -648,21 +627,17 @@ Skip the log only when one straightforward area was resolved and the final
 
 The log complements, not duplicates, `XX-CONTEXT.md`:
 
-- `Summary`: the decision arc and session outcome
-- `Notes`: user corrections, options rejected, evidence snippets, and
-  assumptions corrections and review results
-- `Follow-Ups`: only concrete later actions, or exact rationale that no
-  follow-up remains
+- `Summary`: decision arc and outcome
+- `Notes`: corrections, rejected options, evidence snippets, assumptions
+  corrections, and review results; preserve assumptions corrections explicitly
+- `Follow-Ups`: concrete later actions or the reason none remain
 
 ### Assumptions Review Block
 
 When assumptions mode was used, include:
 
-- Presented: assumption text
-- User correction: what changed
-- Evidence changed: new evidence surfaced
-- Final disposition: accepted / corrected / rejected
-- Downstream impact: which command or artifact is affected
+Presented assumption, user correction, evidence changed, final disposition
+(`accepted`, `corrected`, or `rejected`), and downstream impact.
 
 ## Downstream Handoff Packet
 
@@ -674,23 +649,17 @@ transcript downstream.
 
 ### Required Packet Fields
 
-- `researchBrief`: known unknowns, evidence needed, source policy from
-  effective config, decision each research item unblocks, stop condition,
-  evidence refs, and unresolved questions that must route to
-  `/blu-research-phase`.
-- `uiBrief`: UI applicability, users, critical journeys, interaction
-  surfaces, accessibility/privacy/safety constraints, and any no-UI skip-
-  rationale candidate. A candidate is not a completed `XX-UI-SPEC.md` skip
-  rationale.
-- `planBrief`: initial state, desired end state, dependencies, forbidden
-  moves, validation oracle, non-goals, repo constraints, accepted assumptions,
-  rejected options, and open planning risks.
-- `planInventory`: existing plan IDs and paths, dependency gaps, warnings,
-  and whether refreshed discovery leaves saved plans stale until
-  `/blu-plan-phase` is rerun.
-- `routingGates`: selected phase, workflow research/UI booleans, context
-  path, research path/status, UI-spec path/status, refreshed next safe
-  action, and fallback action when routing is unavailable.
+- `researchBrief`: known unknowns, evidence needed, source policy, unblocked
+  decision, stop condition, evidence refs, and unresolved research questions.
+- `uiBrief`: UI applicability, users/journeys/surfaces, constraints, and any
+  no-UI skip-rationale candidate. This is not a completed `XX-UI-SPEC.md`.
+- `planBrief`: initial/desired state, dependencies, forbidden moves,
+  validation oracle, non-goals, constraints, accepted assumptions, rejected
+  options, and planning risks.
+- `planInventory`: plan IDs/paths, dependency gaps, stale-plan warning, and
+  whether `/blu-plan-phase` must be rerun.
+- `routingGates`: selected phase, research/UI booleans, artifact statuses,
+  refreshed next safe action, and `/blu-progress` fallback.
 
 ### Stale-Plan Warning
 
@@ -701,12 +670,6 @@ in the handoff and the final response:
 > rerun `/blu-plan-phase <selectedPhase>` before trusting plan content that
 > depends on the new context.
 
-### Research Handoff Stop Condition
-
-Give research a concrete stop: "enough evidence to choose between the listed
-options or confirm that repo evidence is insufficient and an assumption must
-remain open."
-
 ### UI Handoff Applicability
 
 `uiBrief.applicability` should be one of:
@@ -715,18 +678,15 @@ remain open."
   but `/blu-ui-phase` must still confirm or formalize it
 - `unknown` - UI applicability not yet determined
 
-### Plan Handoff Shape
-
-Keep `planBrief` planning-oriented: acceptance/verification hooks,
-dependencies, non-goals, constraints, rejected options, and assumptions
-safe for planning. Any unresolved high-impact ambiguity should stay in
-`openQuestions` or `researchBrief`, not silently become a plan premise.
+Keep `planBrief` planning-oriented. Unresolved high-impact ambiguity stays in
+`openQuestions` or `researchBrief`, not as a silent plan premise.
 
 ## Validation And Repair
 
 Before treating the discussion as complete:
 
-1. Build a `phase.context` model against the live `modelContract`; for discussion logs, normalize the draft to the live `authoringTemplate`.
+1. Build a `phase.context` model against the live `modelContract`; normalize
+   any discussion log to the live `authoringTemplate`.
 2. Self-check for placeholder text, empty required sections, contradiction with
    prior saved context, missing canonical references, unsupported mode claims,
    dropped deferred ideas, dropped deferred risks, preserved scaffold literals,
@@ -735,12 +695,11 @@ Before treating the discussion as complete:
    Questions` has no unresolved items, save `openQuestions: []` so MCP renders
    the canonical `- none` line instead of expanding it into filler prose.
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
-   `status: "invalid"` or validation issues, repair the same model or discussion
-   draft from the returned issues and retry before claiming success.
-   Treat the returned `path` as the authoritative saved filename instead of
-   rebuilding it from the phase slug or scaffold result.
-4. If a discussion log is written, apply the same contract-read,
-   normalize, write, and repair loop for `phase.discussion-log`.
+   `status: "invalid"` or validation issues, repair the same model or draft
+   from returned issues and retry before claiming success. Treat returned
+   `path` as the authoritative saved filename.
+4. If a discussion log is written, apply the same read, normalize, write, and
+   repair loop for `phase.discussion-log`.
 5. After the final context artifact and any optional discussion log write
    successfully, call `blueprint_state_update` with `base: "synced"` and keep
    the already resolved selected phase in `patch.currentPhase` together with

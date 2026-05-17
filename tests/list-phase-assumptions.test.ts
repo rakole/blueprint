@@ -41,7 +41,8 @@ test("list-phase-assumptions manifest references only registered read-oriented d
     "blueprint_phase_locate",
     "blueprint_phase_context",
     "blueprint_roadmap_read",
-    "blueprint_project_status"
+    "blueprint_project_status",
+    "blueprint_config_get"
   ] as const;
 
   for (const toolName of expectedTools) {
@@ -124,6 +125,14 @@ test("list-phase-assumptions runtime contract preserves the locked five assumpti
   ]);
 });
 
+test("list-phase-assumptions runtime contract includes effective config for optional agent policy", async () => {
+  const contract = await readFile(assumptionsRuntimeContractPath, "utf8");
+
+  assert.match(contract, /`blueprint_config_get`/);
+  assert.match(contract, /scope: "effective"/);
+  assert.match(contract, /optional researcher/i);
+});
+
 test("list-phase-assumptions remains implemented in the live command catalog", async () => {
   const [catalogDoc, catalog, manifestExists, commandDocExists, skillExists, skillResolution] =
     await Promise.all([
@@ -162,6 +171,15 @@ test("list-phase-assumptions remains implemented in the live command catalog", a
   ]);
   assert.deepEqual(entry.availableOptionalAgents, ["blueprint-researcher"]);
   assert.deepEqual(entry.blockedBy, []);
+});
+
+test("list-phase-assumptions runtime metadata keeps effective config in the read contract", () => {
+  const metadata = getRuntimeOwnedCommandMetadata("list-phase-assumptions");
+
+  assert.ok(metadata);
+  assert.match(metadata.spec.reads.join("\n"), /effective config/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_config_get/);
+  assert.match(metadata.runtimeReference.contractNotes, /scope: "effective"/);
 });
 
 test("list-phase-assumptions docs and runtime reference align to the interactive-read discovery contract", async () => {
