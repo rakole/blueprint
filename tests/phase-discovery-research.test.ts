@@ -492,6 +492,12 @@ test("research-phase instruction surfaces expose measured active and inventory b
     ] < 1200,
     "runtime metadata notes should stay pointer-level, not repeat the runtime contract"
   );
+  assert.ok(
+    sizes.inventoryOnly["agents/blueprint-researcher.md"] < 17000,
+    `researcher sidecar contract should stay compact after Wave 3; got ${
+      sizes.inventoryOnly["agents/blueprint-researcher.md"]
+    }`
+  );
 });
 
 test("research-phase command references only registered tool names and safe routing text", async () => {
