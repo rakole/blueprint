@@ -22,19 +22,22 @@ helper guidance.
 
 ### Read
 
-- Read `mcp_blueprint_blueprint_phase_plan_index`,
-  `mcp_blueprint_blueprint_phase_summary_index`, and
-  `mcp_blueprint_blueprint_phase_execution_targets` before any mutation.
-- Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"`,
-  `mcp_blueprint_blueprint_artifact_validate`, and
-  `mcp_blueprint_blueprint_state_load` so execution knows the normalized
-  execution config, artifact health, and current routing truth before
-  persistence.
+- Read `mcp_blueprint_blueprint_phase_execution_targets` before any mutation.
+- Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` so
+  execution knows the normalized execution config before persistence.
+- Treat `mcp_blueprint_blueprint_phase_execution_targets` as the common
+  pre-write metadata authority for selected plans, existing summaries,
+  blockers, conflicts, overlap detection, and gap-only routing.
 - Read every selected plan through
   `mcp_blueprint_blueprint_phase_plan_read`.
 - Read existing summaries for selected or overlapping plan ids through
-  `mcp_blueprint_blueprint_phase_summary_read` before deciding whether to
-  reuse, replace, or carry forward prior evidence.
+  `mcp_blueprint_blueprint_phase_summary_read` only when existing summary body
+  text is needed to decide whether to overwrite, repair, or carry forward
+  prior evidence.
+- Do not make pre-write `mcp_blueprint_blueprint_artifact_validate` or
+  `mcp_blueprint_blueprint_state_load` part of the common read path. Keep the
+  post-write `summary_index -> artifact_validate -> state_update(base:
+  "synced")` sequence unchanged.
 
 ### Decide
 
@@ -42,11 +45,13 @@ helper guidance.
   selection helper for default runs, `--wave`, and `--gaps-only`.
 - Treat `mcp_blueprint_blueprint_phase_execution_targets.externalServicePreflight`
   as the deterministic packet for saved external service prerequisites.
+- Treat the returned selected plan set, existing summary metadata, blockers,
+  and conflicts as the default public metadata authority instead of rereading
+  plan or summary indexes on the common path; do not widen the common path with
+  separate `gapClosurePlans` rereads.
 - Treat any lower-wave pending plan in `lowerWavePendingPlans` as an absolute
   blocker for later-wave work, including combined `--gaps-only --wave` runs.
-- Treat `gapClosurePlans` from `mcp_blueprint_blueprint_phase_plan_index` as
-  the source of truth for `--gaps-only`; do not infer gap closure from missing
-  summaries alone.
+- Do not infer gap closure from missing summaries alone.
 - Existing valid summaries require explicit overwrite confirmation before
   replacement. Reuse is the default only when the summary is valid and marked
   `COMPLETED`.
@@ -99,6 +104,9 @@ helper guidance.
   selected `planId` before final drafting. If it returns `status: "invalid"`,
   stop with the prerequisite blockers instead of inventing acceptance checks,
   dependency rows, plan provenance, or next actions.
+- The public `phase.summary` authoring template is a safe `PARTIAL`
+  carry-forward seed, not a completed-evidence claim. Switch it to `COMPLETED`
+  only after execution evidence and targeted verification pass.
 - Draft Markdown `phase.summary` content against the returned contract and
   authoring context, then call
   `mcp_blueprint_blueprint_phase_summary_validate_model` with `content` and
@@ -107,6 +115,8 @@ helper guidance.
   quality warnings, while missing linkage, missing/invalid status on new
   writes, dependency completion for `COMPLETED`, and explicit failed
   verification remain blockers.
+- Warning-only Markdown shape, exact sentinel, or style advice should not start
+  another repair loop when summary truth is otherwise valid.
 - Persist one `XX-YY-SUMMARY.md` artifact per executed plan through
   `mcp_blueprint_blueprint_phase_summary_write`.
 - Pass the resolved numeric `phase`, the numeric `planId` for the matching
@@ -124,7 +134,8 @@ helper guidance.
 
 - Before any summary write, confirm the selected goal, acceptance criteria,
   dependency order, and any code-review, regression, or schema-drift warnings
-  surfaced by validation or state reads. These are pre-persistence gates.
+  surfaced during execution or summary validation. These are pre-persistence
+  gates.
 - Run the target plan's required checks before claiming completion. Repair only
   issues caused by the current changes, cap repeated repair attempts, and write
   `PARTIAL` or `BLOCKED` summaries when verification cannot pass honestly.
@@ -136,8 +147,9 @@ helper guidance.
 - If a dependency plan summary is still missing or not yet `COMPLETED`, do not
   persist `COMPLETED` for the dependent plan. Downgrade to `PARTIAL` or
   `BLOCKED`, update `Completion State`, `Readiness`, and `Next Safe Action` to
-  match that status, and keep the dependency blocker explicit in `Gap / Repair
-  Routes` until the dependency summary exists.
+  match that status, update Verification, Gap / Repair Routes, and Follow-Ups
+  to match the open blocker, and keep the dependency blocker explicit until the
+  dependency summary exists.
 - Do not persist `COMPLETED` summaries while required tests fail, lower-wave
   blockers remain, or acceptance criteria are unverified. A `COMPLETED`
   summary closes only the selected plan's execution debt; route it back to
@@ -201,7 +213,7 @@ same evidence depth and output quality bar:
 ## Completion Criteria
 
 - `blueprint_phase_execution_targets` was used for deterministic plan
-  selection.
+  selection and as the common pre-write metadata authority.
 - Lower-wave blockers remained absolute.
 - Selected plans were read before execution, and stale or invalid plans were
   not executed.

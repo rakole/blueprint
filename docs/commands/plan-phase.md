@@ -72,6 +72,10 @@ completion still depends on `blueprint_phase_plan_validate` returning
   gate decisions, checker behavior, final validation result, warnings or
   blockers, next safe implemented action, and the Downstream Execution Handoff.
 
+## Skills And Subagents
+
+- Primary skill: `blueprint-phase-planning`
+
 ## Required MCP Tools
 
 - `blueprint_phase_locate`

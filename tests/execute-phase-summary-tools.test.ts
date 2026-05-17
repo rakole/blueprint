@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   blueprintArtifactList,
@@ -44,7 +46,7 @@ async function createExecutionRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [ ] **Phase 3: Phase Discovery (Requirements: LIFE-01)** - Execute the prepared plans
 `,
     "utf8"
   );
@@ -181,6 +183,128 @@ await blueprintPhaseSummaryWrite({ cwd: repoPath, phase: "3", planId: "01", cont
   );
 
   return repoPath;
+}
+
+type RepoFsReadTraceCounts = {
+  readFile: number;
+  readdir: number;
+  roadmapReads: number;
+  phasesRootScans: number;
+  phaseDirScans: number;
+  planReads: number;
+  summaryReads: number;
+};
+
+type RepoFsReadTrace = {
+  counts: RepoFsReadTraceCounts;
+  operations: string[];
+};
+
+function emptyRepoFsReadTraceCounts(): RepoFsReadTraceCounts {
+  return {
+    readFile: 0,
+    readdir: 0,
+    roadmapReads: 0,
+    phasesRootScans: 0,
+    phaseDirScans: 0,
+    planReads: 0,
+    summaryReads: 0
+  };
+}
+
+function formatRepoFsTraceOperation(method: "readFile" | "readdir", targetPath: string): string {
+  return `${method}:${targetPath}`;
+}
+
+async function traceRepoFsReads<T>(
+  repoPath: string,
+  operation: () => Promise<T>
+): Promise<{ result: T; trace: RepoFsReadTrace }> {
+  const repoRoot = path.resolve(repoPath);
+  const trace: RepoFsReadTrace = {
+    counts: emptyRepoFsReadTraceCounts(),
+    operations: []
+  };
+  const originalReadFile = fs.readFile;
+  const originalReaddir = fs.readdir;
+  const record = (method: "readFile" | "readdir", target: unknown): void => {
+    if (typeof target !== "string") {
+      return;
+    }
+
+    const absoluteTarget = path.resolve(target);
+
+    if (
+      absoluteTarget !== repoRoot &&
+      !absoluteTarget.startsWith(`${repoRoot}${path.sep}`)
+    ) {
+      return;
+    }
+
+    const relativeTarget = path.relative(repoRoot, absoluteTarget) || ".";
+    trace.operations.push(formatRepoFsTraceOperation(method, relativeTarget));
+    trace.counts[method] += 1;
+
+    if (method === "readFile") {
+      if (relativeTarget === ".blueprint/ROADMAP.md") {
+        trace.counts.roadmapReads += 1;
+      }
+
+      if (/-PLAN\.md$/i.test(relativeTarget)) {
+        trace.counts.planReads += 1;
+      }
+
+      if (/-SUMMARY\.md$/i.test(relativeTarget)) {
+        trace.counts.summaryReads += 1;
+      }
+
+      return;
+    }
+
+    if (relativeTarget === ".blueprint/phases") {
+      trace.counts.phasesRootScans += 1;
+      return;
+    }
+
+    if (/^\.blueprint\/phases\/[^/]+$/i.test(relativeTarget)) {
+      trace.counts.phaseDirScans += 1;
+    }
+  };
+
+  fs.readFile = async function tracedReadFile(...args) {
+    record("readFile", args[0]);
+    return await originalReadFile.apply(this, args);
+  };
+  fs.readdir = async function tracedReaddir(...args) {
+    record("readdir", args[0]);
+    return await originalReaddir.apply(this, args);
+  };
+
+  try {
+    const result = await operation();
+    return { result, trace };
+  } finally {
+    fs.readFile = originalReadFile;
+    fs.readdir = originalReaddir;
+  }
+}
+
+function assertSinglePhaseResolutionPass(
+  trace: RepoFsReadTrace,
+  label: string
+): void {
+  assert.ok(
+    trace.counts.roadmapReads <= 1,
+    `${label} reread ROADMAP.md ${trace.counts.roadmapReads} times: ${trace.operations.join(", ")}`
+  );
+  assert.ok(
+    trace.counts.phasesRootScans <= 1,
+    `${label} rescanned .blueprint/phases ${trace.counts.phasesRootScans} times: ${trace.operations.join(", ")}`
+  );
+  assert.ok(
+    trace.counts.phaseDirScans <= 1,
+    `${label} rescanned the selected phase directory ${trace.counts.phaseDirScans} times: ${trace.operations.join(", ")}`
+  );
 }
 
 function validSummaryContent(
@@ -1536,6 +1660,89 @@ test("phase summary writer accepts Markdown but rejects placeholder summaries as
   assert.match(rejected.issues.join("\n"), /Status marker|placeholder scaffold text/i);
 });
 
+test("phase summary authoring template is a valid partial seed instead of an invalid status scaffold", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const contract = readArtifactContract("phase.summary");
+  const validation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: contract.authoringTemplate
+  });
+
+  assert.match(contract.scaffoldTemplate, /COMPLETED\|PARTIAL\|BLOCKED/);
+  assert.doesNotMatch(contract.authoringTemplate, /COMPLETED\|PARTIAL\|BLOCKED/);
+  assert.match(contract.authoringTemplate, /\*\*Status:\*\* PARTIAL/);
+  assert.match(contract.authoringTemplate, /\|\s*Targeted verification for the selected plan\s*\|\s*not-run\s*\|\s*not-run\s*\|/);
+  assert.equal(validation.status, "valid", validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
+  assert.equal(validation.diagnostics.length, 0);
+  assert.match(validation.renderPreview ?? "", /\*\*Completion State:\*\* pending/);
+});
+
+test("phase summary writes preserve existing valid summaries until overwrite is explicit", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const originalContent = validSummaryContent("01");
+  const replacementContent = validSummaryContent("01").replace(
+    "Added summary indexing coverage for execute-phase.",
+    "Replaced the existing summary only after explicit overwrite confirmation."
+  );
+  const summaryPath = path.join(
+    repoPath,
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  );
+
+  const created = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: originalContent
+  });
+  const reused = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: originalContent
+  });
+
+  await assert.rejects(
+    () =>
+      blueprintPhaseSummaryWrite({
+        cwd: repoPath,
+        phase: "3",
+        planId: "01",
+        content: replacementContent
+      }),
+    /already exists.*explicit overwrite confirmation/i
+  );
+
+  const preservedContent = await readFile(summaryPath, "utf8");
+  const overwritten = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: replacementContent,
+    overwrite: true
+  });
+  const updatedContent = await readFile(summaryPath, "utf8");
+
+  assert.equal(created.status, "created");
+  assert.equal(reused.status, "reused");
+  assert.equal(reused.written, false);
+  assert.equal(preservedContent, originalContent);
+  assert.equal(overwritten.status, "updated");
+  assert.equal(overwritten.written, true);
+  assert.equal(overwritten.overwritten, true);
+  assert.equal(updatedContent, replacementContent);
+});
+
 test("add-tests report authoring blocks missing required upstream validation context early", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -2846,6 +3053,42 @@ test("phase summary reads reject raw markdown that contradicts lifecycle truth t
   assert.deepEqual(index.pendingPlans, ["01"]);
 });
 
+test("warning-only summary formatting advice does not block persistence", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const nonCanonicalSummary = validSummaryContent("01")
+    .replace(
+      "| none | none | none | NONE |",
+      "| No manual work remains | Completed during this run. | none | NONE |"
+    )
+    .replace(
+      "| none | none | none | NONE |",
+      "| No repair gap remains | Passing verification is recorded above. | none | NONE |"
+    );
+  const validation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: nonCanonicalSummary
+  });
+  const written = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: nonCanonicalSummary
+  });
+
+  assert.equal(validation.status, "valid", validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"));
+  assert.match(validation.warnings.join("\n"), /Manual \/ Deferred Work none sentinel/i);
+  assert.match(validation.warnings.join("\n"), /Gap \/ Repair Routes none sentinel/i);
+  assert.equal(written.status, "created");
+  assert.equal(written.written, true);
+  assert.match(written.warnings.join("\n"), /none sentinel/i);
+});
+
 test("partial and blocked summaries are valid evidence but do not close execution debt", async (t) => {
   const repoPath = await createExecutionRepo();
   t.after(async () => {
@@ -2984,7 +3227,10 @@ test("dependency plans must have completed summaries before dependent summaries 
 
   assert.equal(context.status, "ready");
   assert.match(context.warnings.join("\n"), /dependency plan summaries are completed/i);
-  assert.match(context.warnings.join("\n"), /Use Status: PARTIAL or BLOCKED until those dependency summaries exist/i);
+  assert.match(
+    context.warnings.join("\n"),
+    /Use Status: PARTIAL or BLOCKED[\s\S]*Readiness[\s\S]*Gap \/ Repair Routes[\s\S]*dependency blocker/i
+  );
   assert.equal(validation.status, "invalid");
   assert.match(
     validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
@@ -3008,6 +3254,222 @@ test("dependency plans must have completed summaries before dependent summaries 
   assert.match(index.warnings.join("\n"), /depends on incomplete execution plan\(s\): 01/i);
   assert.equal(read.validation?.valid, false);
   assert.match(read.validation?.issues.join("\n") ?? "", /depends on incomplete execution plan/i);
+});
+
+test("phase summary authoring, model validation, and write reuse a single phase resolution pass", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const { result: context, trace: contextTrace } = await traceRepoFsReads(repoPath, async () =>
+    await blueprintPhaseSummaryAuthoringContext({
+      cwd: repoPath,
+      phase: "3",
+      planId: "01"
+    })
+  );
+  const { result: validation, trace: validationTrace } = await traceRepoFsReads(
+    repoPath,
+    async () =>
+      await blueprintPhaseSummaryValidateModel({
+        cwd: repoPath,
+        phase: "3",
+        planId: "01",
+        model: validSummaryModel("01")
+      })
+  );
+  const { result: write, trace: writeTrace } = await traceRepoFsReads(repoPath, async () =>
+    await blueprintPhaseSummaryWrite({
+      cwd: repoPath,
+      phase: "3",
+      planId: "01",
+      model: validSummaryModel("01")
+    })
+  );
+
+  assert.equal(context.status, "ready");
+  assert.equal(context.planId, "01");
+  assert.equal(
+    context.linkedPlanPath,
+    ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+  );
+  assertSinglePhaseResolutionPass(
+    contextTrace,
+    "blueprintPhaseSummaryAuthoringContext"
+  );
+
+  assert.equal(validation.status, "valid");
+  assert.equal(validation.valid, true);
+  assert.equal(validation.planId, "01");
+  assert.equal(
+    validation.linkedPlanPath,
+    ".blueprint/phases/03-phase-discovery/03-01-PLAN.md"
+  );
+  assert.match(validation.renderPreview ?? "", /# Phase 03: Phase Discovery - Summary 01/);
+  assertSinglePhaseResolutionPass(
+    validationTrace,
+    "blueprintPhaseSummaryValidateModel"
+  );
+
+  assert.equal(write.status, "created");
+  assert.equal(write.written, true);
+  assert.equal(write.planId, "01");
+  assert.equal(write.path, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md");
+  assertSinglePhaseResolutionPass(writeTrace, "blueprintPhaseSummaryWrite");
+});
+
+test("phase summary index and read avoid nested phase re-resolution for missing and existing summaries", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const { result: missingIndex, trace: missingIndexTrace } = await traceRepoFsReads(
+    repoPath,
+    async () => await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" })
+  );
+  const { result: missingRead, trace: missingReadTrace } = await traceRepoFsReads(
+    repoPath,
+    async () =>
+      await blueprintPhaseSummaryRead({
+        cwd: repoPath,
+        phase: "3",
+        planId: "01"
+      })
+  );
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"),
+    validSummaryContent("01"),
+    "utf8"
+  );
+
+  const { result: existingIndex, trace: existingIndexTrace } = await traceRepoFsReads(
+    repoPath,
+    async () => await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" })
+  );
+  const { result: existingRead, trace: existingReadTrace } = await traceRepoFsReads(
+    repoPath,
+    async () =>
+      await blueprintPhaseSummaryRead({
+        cwd: repoPath,
+        phase: "3",
+        planId: "01"
+      })
+  );
+
+  assert.deepEqual(missingIndex.completedPlans, []);
+  assert.deepEqual(missingIndex.pendingPlans, ["01"]);
+  assertSinglePhaseResolutionPass(missingIndexTrace, "blueprintPhaseSummaryIndex (missing)");
+
+  assert.equal(missingRead.phaseFound, true);
+  assert.equal(missingRead.found, false);
+  assert.equal(missingRead.planId, "01");
+  assert.match(missingRead.reason ?? "", /does not exist yet/i);
+  assertSinglePhaseResolutionPass(missingReadTrace, "blueprintPhaseSummaryRead (missing)");
+
+  assert.deepEqual(existingIndex.completedPlans, ["01"]);
+  assert.deepEqual(existingIndex.pendingPlans, []);
+  assert.equal(existingIndex.summaries.length, 1);
+  assertSinglePhaseResolutionPass(existingIndexTrace, "blueprintPhaseSummaryIndex (existing)");
+
+  assert.equal(existingRead.phaseFound, true);
+  assert.equal(existingRead.found, true);
+  assert.equal(existingRead.planId, "01");
+  assert.equal(existingRead.metadata?.status, "COMPLETED");
+  assert.equal(existingRead.validation?.valid, true);
+  assertSinglePhaseResolutionPass(existingReadTrace, "blueprintPhaseSummaryRead (existing)");
+});
+
+test("phase execution targets avoid nested phase re-resolution while mixing existing and missing summaries", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-02-PLAN.md"),
+    executionPlanContent("02", 1),
+    "utf8"
+  );
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01", "COMPLETED", {
+      readiness: "not-ready-for-validation",
+      nextSafeAction: "/blu-execute-phase 3"
+    })
+  });
+
+  const { result: targets, trace } = await traceRepoFsReads(repoPath, async () =>
+    await blueprintPhaseExecutionTargets({
+      cwd: repoPath,
+      phase: "3"
+    })
+  );
+
+  assert.deepEqual(targets.pendingPlanIds, ["02"]);
+  assert.deepEqual(targets.candidatePlanIds, ["02"]);
+  assert.deepEqual(targets.selectedPlanIds, ["02"]);
+  assert.equal(targets.selectedWave, 1);
+  assert.deepEqual(targets.overlapPlanIds, ["01"]);
+  assert.equal(targets.blockers.executionBlocked, false);
+  assert.deepEqual(
+    targets.existingSummaries.map((summary) => summary.planId),
+    ["01"]
+  );
+  assert.equal(targets.existingSummaries[0]?.status, "COMPLETED");
+  assertSinglePhaseResolutionPass(trace, "blueprintPhaseExecutionTargets");
+});
+
+test("completed summary repair guidance bundles lifecycle marker downgrades", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const failedCompletedSummary = validSummaryContent("01").replace(
+    "| tests/phase-planning-tools.test.ts exits 0 | npm test -- tests/phase-planning-tools.test.ts | pass | Focused plan tooling tests passed. | The selected acceptance criterion passed. |",
+    "| tests/phase-planning-tools.test.ts exits 0 | npm test -- tests/phase-planning-tools.test.ts | fail | Focused plan tooling tests failed. | Repair remains open. |"
+  );
+  const validation = await blueprintPhaseSummaryValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: failedCompletedSummary
+  });
+  const rejected = await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: failedCompletedSummary
+  });
+  const validationSuggestions = validation.diagnostics
+    .map((diagnostic) => diagnostic.suggestion)
+    .join("\n");
+  const writeIssues = rejected.issues.join("\n");
+
+  assert.equal(validation.status, "invalid");
+  assert.match(
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /cannot include explicit fail/i
+  );
+  for (const expected of [
+    /Use Status: PARTIAL or Status: BLOCKED/i,
+    /Readiness/i,
+    /Completion State/i,
+    /Next Safe Action/i,
+    /Verification/i,
+    /Gap \/ Repair Routes/i,
+    /Follow-Ups/i
+  ]) {
+    assert.match(validationSuggestions, expected);
+    assert.match(writeIssues, expected);
+  }
+  assert.equal(rejected.status, "invalid");
+  assert.equal(rejected.written, false);
 });
 
 test("phase summary schema rejects invalid summary statuses", async (t) => {
@@ -3172,6 +3634,60 @@ test("phase summary indexing ignores malformed summaries when computing completi
     index.warnings.join("\n"),
     /invalid and does not count as completed execution evidence|missing required section/i
   );
+});
+
+test("phase summary inventory keeps canonical summaries authoritative when duplicate non-canonical filenames exist", async (t) => {
+  const repoPath = await createExecutionRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintPhaseSummaryWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: validSummaryModel("01", "COMPLETED")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-1-SUMMARY.md"),
+    validSummaryContent("01", "PARTIAL"),
+    "utf8"
+  );
+
+  const index = await blueprintPhaseSummaryIndex({ cwd: repoPath, phase: "3" });
+  const read = await blueprintPhaseSummaryRead({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01"
+  });
+  const targets = await blueprintPhaseExecutionTargets({
+    cwd: repoPath,
+    phase: "3"
+  });
+
+  assert.deepEqual(index.completedPlans, ["01"]);
+  assert.deepEqual(index.pendingPlans, []);
+  assert.equal(index.summaries.length, 2);
+  assert.match(
+    index.warnings.join("\n"),
+    /03-1-SUMMARY\.md: ignoring non-canonical duplicate summary for plan 01/i
+  );
+
+  assert.equal(read.found, true);
+  assert.equal(
+    read.path,
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md"
+  );
+  assert.equal(read.metadata?.status, "COMPLETED");
+  assert.equal(read.validation?.valid, true);
+  assert.match(read.content ?? "", /\*\*Status:\*\* COMPLETED/i);
+  assert.doesNotMatch(read.content ?? "", /\*\*Status:\*\* PARTIAL/i);
+
+  assert.deepEqual(targets.pendingPlanIds, []);
+  assert.deepEqual(targets.candidatePlanIds, []);
+  assert.deepEqual(targets.selectedPlanIds, []);
+  assert.deepEqual(targets.overwriteCandidatePlanIds, []);
+  assert.deepEqual(targets.existingSummaries, []);
 });
 
 test("phase execution targets select the earliest runnable wave, expose overlap summaries, and block later gap-only work behind lower-wave debt", async (t) => {

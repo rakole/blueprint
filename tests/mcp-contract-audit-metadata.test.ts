@@ -518,7 +518,7 @@ test("execution and validation contracts stay explicit across manifests, docs, s
   assert.match(executeDoc, /Verifier handoff/i);
   assert.match(executionSkill, /references\/execute-phase-runtime-contract\.md/);
   assert.match(executeRuntimeContract, /matching plan must already exist/i);
-  assert.match(executeRuntimeContract, /pre-persistence gates/i);
+  assert.match(executeRuntimeContract, /pre-persistence\s+gates/i);
   assert.match(executeRuntimeContract, /post-execution checks/i);
   assert.match(executeRuntimeContract, /phase-level completion claim/i);
   assert.match(
