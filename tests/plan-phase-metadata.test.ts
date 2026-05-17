@@ -186,6 +186,7 @@ test("plan-phase skill captures the revision loop and safe follow-up rules", asy
   assert.match(runtimeContract, /mcp_blueprint_blueprint_state_update/);
   assert.match(runtimeContract, /contract\.modelContract\.schemaPath/);
   assert.match(runtimeContract, /taskSchema/);
+  assert.match(runtimeContract, /contract\.authoringTemplate[\s\S]*compatibility\/rendered-shape preview only/i);
   assert.match(runtimeContract, /Use saved research for freshness-sensitive or unstable technical decisions/i);
   assert.match(runtimeContract, /planningReadiness/);
   assert.match(runtimeContract, /readyForPlanPhase=false[\s\S]*nextSafeAction/);

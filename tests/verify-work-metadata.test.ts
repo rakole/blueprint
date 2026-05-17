@@ -132,8 +132,10 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeContractFile, /use `ask_user` for the first-pass result on each test/i);
   assert.match(runtimeContractFile, /structured `modelContract` authority/);
   assert.match(runtimeContractFile, /phase\.uat\.modelContract/);
+  assert.match(runtimeContractFile, /Do not expect a public `contract\.authoringTemplate`/);
   assert.match(runtimeContractFile, /blueprint_phase_validation_validate_model/);
   assert.match(runtimeContractFile, /status: "valid"/i);
+  assert.doesNotMatch(runtimeContractFile, /authoring-template, and structured `modelContract` authority/);
 });
 
 test("verify-work artifact and agent contracts keep resumable UAT behavior explicit", async () => {

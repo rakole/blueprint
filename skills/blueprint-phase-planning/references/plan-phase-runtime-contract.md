@@ -282,8 +282,11 @@ when they clarify what the plan intentionally excludes.
 
 ## Artifact Authoring Rules
 
-- Every plan must follow the live `phase.plan` authoring template and preserve
-  required frontmatter keys and headings.
+- Every plan must preserve the live `phase.plan` rendered shape, required
+  frontmatter keys, and headings. Treat the public `contract.authoringTemplate`
+  as a Markdown compatibility/rendered-shape preview only; `/blu-plan-phase`
+  authoring authority is `contract.modelContract` plus the narrowed
+  `blueprint_phase_plan_authoring_context.taskSchema`.
 - Preserve the exact frontmatter keys `phase`, `plan_id`, `title`, `wave`,
   `status`, `objective`, `depends_on`, `requirements`, `files_modified`,
   `read_first`, `acceptance_criteria`, and `autonomous`.

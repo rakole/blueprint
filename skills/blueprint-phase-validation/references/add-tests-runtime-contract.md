@@ -33,8 +33,8 @@ the authority for control flow.
 | `blueprint_phase_validation_read` with `artifact: "uat"` | User-observable evidence, UAT gaps, and additional scenario source. |
 | `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, allowed values, and routing rules for the verification update. |
 | `blueprint_phase_validation_render` with `artifact: "verification"` | Canonical verification markdown rendering and pre-write validation from the structured verification payload. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical heading, marker, and authoring-template authority for the verification update. |
-| `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` | Canonical heading and authoring-template authority for the durable add-tests report. |
+| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical markers, required headings, and model-contract metadata for the verification update. |
+| `blueprint_artifact_contract_read` with `artifactId: "report.add-tests"` | Canonical markers, required headings, and model-contract metadata for the durable add-tests report. |
 | `blueprint_artifact_report_authoring_context` | Schema-first report authoring authority for exact completed summaries, pending plans, dependency plans, validation/UAT evidence, and allowed next actions. |
 | `blueprint_artifact_report_validate_model` | AJV validation and render preview for the structured add-tests report model before persistence. |
 | `blueprint_artifact_list` | Existing phase and report inventory, including whether review evidence already exists. |
@@ -105,8 +105,13 @@ Before writing tests:
 1. Read `phase.verification` and `blueprint_phase_validation_authoring_context`
    before drafting updated verification notes.
 2. Read `report.add-tests` and `blueprint_artifact_report_authoring_context` before drafting the durable report.
-3. Treat each returned `contract.authoringTemplate`, `requiredHeadings`,
-   `lockedMarkers`, and `freehandPolicy` as heading and schema authority.
+3. For the verification update, treat the returned `requiredHeadings`,
+   `lockedMarkers`, and model-contract metadata as the canonical structure.
+   For the add-tests report, treat the returned `requiredHeadings`,
+   `lockedMarkers`, and `contract.modelContract` plus the narrowed `taskSchema`
+   as the canonical structure, and use
+   `blueprint_artifact_report_validate_model.renderPreview` as the preview
+   authority instead of a public `contract.authoringTemplate`.
 4. Preserve existing verification content as the baseline and append or update
    explicit test-coverage notes instead of casually replacing it.
 5. The verification update must cite saved summaries, validation or UAT evidence,

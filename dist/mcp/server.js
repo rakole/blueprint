@@ -19922,7 +19922,7 @@ function readArtifactContract(contractId, context) {
     } : void 0,
     scaffoldTemplate: contract.renderScaffoldTemplate(context)
   };
-  if (contractId === "phase.context") {
+  if (contractId === "phase.context" || contractId === "phase.verification" || contractId === "phase.uat" || contractId === "report.add-tests") {
     return baseContract;
   }
   return {

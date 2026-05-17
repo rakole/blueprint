@@ -75,7 +75,7 @@
 - selected phase `XX-YY-SUMMARY.md` artifacts through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation and UAT artifacts through `blueprint_phase_validation_read`
 - schema-ready UAT authoring inputs through `blueprint_phase_validation_authoring_context`
-- canonical authoring templates and required-tool derivation through `blueprint_artifact_contract_read`
+- canonical UAT contract metadata and structured model authority through `blueprint_artifact_contract_read`
 - post-write artifact validation through `blueprint_artifact_validate`
 
 
@@ -97,7 +97,7 @@
 - `blueprint_phase_validation_validate_model` -> `{status, valid, phase, artifact, path, schemaPath, taskSchema, diagnostics, diagnosticCounts, normalizedModel, renderPreview, warnings}`
 - `blueprint_phase_validation_render` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, validation, summaryPaths, referencedSummaryPaths, prerequisiteBlockers, readyToWrite, issues, warnings}`
 - `blueprint_phase_validation_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, summaryPaths, written, created, overwritten, status, issues, warnings}`
-- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, authoringTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes, modelContract}`
+- `blueprint_artifact_contract_read` -> `{id, canonicalName, scaffoldTemplate, requiredHeadings, lockedMarkers, freehandPolicy, notes, modelContract}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
@@ -108,12 +108,12 @@
 - Persist conversational UAT through `blueprint_phase_validation_write`; do not write raw `XX-UAT.md` files directly, and require the verification artifact to be both valid and ready for UAT before persisting UAT.
 - Pass `phase` as the resolved numeric phase reference and `artifact: "uat"`.
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact that is valid and ready for UAT.
-- Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring; treat the returned `modelContract` JSON Schema, quality rules, context bindings, rendered headings, and example leakage signals as the structured payload authority.
+- Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring; treat the returned `modelContract` JSON Schema, quality rules, context bindings, rendered headings, example leakage signals, and the narrowed `taskSchema` as the structured payload authority. The public `phase.uat` contract read does not expose `authoringTemplate`.
 - Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
 - Build a structured UAT evidence payload against the returned `taskSchema`, call `blueprint_phase_validation_validate_model`, and call `blueprint_phase_validation_write` only when model validation returns `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 - Treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume inside `XX-UAT.md` without inventing a second checkpoint file.
-- New or updated UAT artifacts must preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the canonical authoring template before the artifact can count as completion evidence.
+- New or updated UAT artifacts must preserve the current test, test matrix, result counts, blocked prerequisites, structured gaps, and follow-up fix candidates from the model-backed contract plus validation preview before the artifact can count as completion evidence.
 - If the verification artifact is valid but not ready for UAT, follow its saved implemented repair route, such as `/blu-audit-fix <phase>` or `/blu-add-tests <phase>`, before attempting UAT persistence.
 - Keep user-reported issues and remaining gaps inside the saved UAT content by default. Confirm follow-up-fix capture before persistence or later explicit state updates, and do not invent separate tool-owned artifacts.
 - Keep the next safe action on `/blu-verify-work <phase>` while the saved UAT artifact still reflects an in-progress or intentionally stopped checkpoint; route onward only when the saved evidence and current prerequisites support that follow-up.

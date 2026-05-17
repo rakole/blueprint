@@ -221,6 +221,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
 
   assert.equal(uatContract.contract.modelContract?.schemaId, "blueprint.phase.uat.model");
   assert.equal(uatContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal("authoringTemplate" in uatContract.contract, false);
   assert.equal(
     uatContract.contract.modelContract?.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.uat.model.schema.json"
@@ -264,6 +265,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
 
   assert.equal(listedPlanContract?.modelContract?.schemaId, "blueprint.phase.plan.model");
   assert.equal(listedUatContract?.modelContract?.schemaId, "blueprint.phase.uat.model");
+  assert.equal(Boolean(listedUatContract && "authoringTemplate" in listedUatContract), false);
   assert.equal(listedSummaryContract?.modelContract, undefined);
   assert.equal(
     listedQuickRunContract?.modelContract?.schemaId,
@@ -275,6 +277,7 @@ test("artifact contract read exposes structured model contracts for phase plan, 
     "blueprint.report.add-tests.model"
   );
   assert.equal(addTestsContract.contract.modelContract?.schemaVersion, "1.0.0");
+  assert.equal("authoringTemplate" in addTestsContract.contract, false);
   assert.equal(
     addTestsContract.contract.modelContract?.schemaPath,
     "src/mcp/artifact-contracts/schemas/report.add-tests.model.schema.json"
@@ -307,6 +310,10 @@ test("artifact contract read exposes structured model contracts for phase plan, 
   assert.equal(
     listedAddTestsContract?.modelContract?.schemaId,
     "blueprint.report.add-tests.model"
+  );
+  assert.equal(
+    Boolean(listedAddTestsContract && "authoringTemplate" in listedAddTestsContract),
+    false
   );
 
   assert.equal(
@@ -401,7 +408,11 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   const reviewFixContract = readArtifactContract("review.review-fix");
   const securityContract = readArtifactContract("review.security");
   const verificationContract = readArtifactContract("phase.verification");
+  const verificationAuthoringTemplate = renderArtifactAuthoringTemplate("phase.verification");
   const uatContract = readArtifactContract("phase.uat");
+  const uatAuthoringTemplate = renderArtifactAuthoringTemplate("phase.uat");
+  const addTestsReportContract = readArtifactContract("report.add-tests");
+  const addTestsReportAuthoringTemplate = renderArtifactAuthoringTemplate("report.add-tests");
   const milestoneAuditContract = readArtifactContract("report.milestone-audit");
   const milestoneCompleteContract = readArtifactContract("report.milestone-complete");
   const milestoneSummaryContract = readArtifactContract("report.milestone-summary");
@@ -715,25 +726,26 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "Suggested Repairs",
     "Next Safe Action"
   ]);
+  assert.equal("authoringTemplate" in verificationContract, false);
   assert.match(
-    verificationContract.authoringTemplate,
+    verificationAuthoringTemplate,
     /## Requirement \/ Task Coverage/
   );
   assert.match(
-    verificationContract.authoringTemplate,
+    verificationAuthoringTemplate,
     /## Test Infrastructure \/ Evidence Metadata/
   );
   assert.match(
-    verificationContract.authoringTemplate,
+    verificationAuthoringTemplate,
     /## Manual-Only or Deferred Coverage/
   );
-  assert.match(verificationContract.authoringTemplate, /## Gate State/);
+  assert.match(verificationAuthoringTemplate, /## Gate State/);
   assert.match(
-    verificationContract.authoringTemplate,
+    verificationAuthoringTemplate,
     /## Gap Classification/
   );
-  assert.match(verificationContract.authoringTemplate, /\*\*Gate State:\*\*/);
-  assert.match(verificationContract.authoringTemplate, /\*\*Sign-off:\*\*/);
+  assert.match(verificationAuthoringTemplate, /\*\*Gate State:\*\*/);
+  assert.match(verificationAuthoringTemplate, /\*\*Sign-off:\*\*/);
   assert.equal(verificationContract.modelContract?.schemaId, "blueprint.phase.verification.model");
   assert.equal(verificationContract.modelContract?.schemaVersion, "1.1.0");
   assert.equal(
@@ -782,12 +794,17 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     "**Resume State:**",
     "**Checkpoint:**"
   ]);
+  assert.equal("authoringTemplate" in uatContract, false);
   assert.equal(uatContract.modelContract?.schemaId, "blueprint.phase.uat.model");
   assert.equal(uatContract.modelContract?.schemaVersion, "1.0.0");
   assert.deepEqual(
     (uatContract.modelContract?.jsonSchema.required as string[]).slice(0, 4),
     ["status", "resumeState", "checkpoint", "uatSummary"]
   );
+  assert.match(uatAuthoringTemplate, /## UAT Summary/);
+  assert.match(uatAuthoringTemplate, /## Test Matrix/);
+  assert.match(uatAuthoringTemplate, /\*\*Resume State:\*\*/);
+  assert.match(uatAuthoringTemplate, /\*\*Checkpoint:\*\*/);
   assert.ok(uatContract.modelContract?.renderedHeadings.includes("Structured Gaps"));
   assert.ok(
     uatContract.modelContract?.qualityRules.some((rule) =>
@@ -799,6 +816,14 @@ test("artifact contract registry exposes canonical contract ids and templates", 
       /ready verification content/i.test(binding)
     )
   );
+  assert.equal("authoringTemplate" in addTestsReportContract, false);
+  assert.equal(addTestsReportContract.modelContract?.schemaId, "blueprint.report.add-tests.model");
+  assert.equal(addTestsReportContract.modelContract?.schemaVersion, "1.0.0");
+  assert.match(addTestsReportAuthoringTemplate, /## Classification And Test Plan/);
+  assert.match(addTestsReportAuthoringTemplate, /## Evidence Used/);
+  assert.match(addTestsReportAuthoringTemplate, /## Tests Added Or Updated/);
+  assert.match(addTestsReportAuthoringTemplate, /Result counts: generated <N>, passing <N>, failing <N>, blocked <N>/);
+  assert.match(addTestsReportAuthoringTemplate, /Verification write status: <created, updated, reused, invalid, or blocked>\./);
   const uatModelSchema = uatContract.modelContract?.jsonSchema as
     | {
         properties?: Record<string, Record<string, unknown>>;
@@ -877,15 +902,15 @@ test("artifact contract registry exposes canonical contract ids and templates", 
     /<saved audit report, completion report, and roadmap evidence>/
   );
   assert.match(milestoneSummaryContract.authoringTemplate, /\/blu-new-milestone/);
-  assert.match(uatContract.authoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
-  assert.match(uatContract.authoringTemplate, /\*\*Checkpoint:\*\* <current checkpoint label or none>/);
-  assert.match(uatContract.authoringTemplate, /## Session State/);
+  assert.match(uatAuthoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
+  assert.match(uatAuthoringTemplate, /\*\*Checkpoint:\*\* <current checkpoint label or none>/);
+  assert.match(uatAuthoringTemplate, /## Session State/);
   assert.match(
-    uatContract.authoringTemplate,
+    uatAuthoringTemplate,
     /Resume source: <saved summary path, in-artifact checkpoint, or none>/
   );
   assert.match(
-    uatContract.authoringTemplate,
+    uatAuthoringTemplate,
     /Continuity notes: <what must remain stable between sessions>/
   );
   assert.match(uatContract.notes.join("\n"), /resumable across sessions/i);
