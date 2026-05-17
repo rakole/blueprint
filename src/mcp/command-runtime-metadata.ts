@@ -1522,7 +1522,7 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     purpose:
       "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
     reads: [
-      "Phase resolution, context, research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state through MCP."
+      "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
     ],
     writes: [
       "phase XX-RESEARCH.md",
@@ -1539,7 +1539,7 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as the behavior authority and blueprint_artifact_contract_read with artifactId phase.research plus contract.authoringTemplate as schema authority. Routing remains implemented-only through refreshed state plus blueprint_command_catalog proof. Research checkpoints are owner/mode guarded with expectedOwnerCommand /blu-research-phase and expectedMode research, and checkpoint delete stays after write or reuse, synced state update, state load, and route proof. Default execution is parent-only; blueprint-researcher is optional only when workflow.subagents is enabled and runtime sidecar criteria show material help, while the parent owns synthesis, persistence, checkpoints, state, user gates, and routing.",
+      "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as behavior authority. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus non-null phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. Independent read-only calls with known args may share one tool-call turn, while confirmations, writes, validation repair, state update, post-write state load, route proof, and checkpoint deletion stay sequenced. blueprint_artifact_contract_read with artifactId phase.research plus contract.authoringTemplate is schema authority. Routing remains implemented-only through refreshed state plus blueprint_command_catalog implemented-command routing proof. Research checkpoints are owner/mode guarded with /blu-research-phase and research. Default execution is parent-only; blueprint-researcher is optional only when workflow.subagents is enabled and sidecar criteria show material help, while the parent owns synthesis, persistence, checkpoints, state, user gates, and routing.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

@@ -555,6 +555,12 @@ test("research-phase command references only registered tool names and safe rout
     /research-phase-runtime-contract\.md/,
     /Use `blueprint-researcher` only when/i,
     /long-running-mutation/,
+    /`mcp_blueprint_blueprint_phase_context` as the first selected-phase read/i,
+    /phase_context\.phaseSelection[\s\S]*phase_context\.phase[\s\S]*authority[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase\.artifacts/i,
+    /fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i,
+    /independent read-only MCP calls[\s\S]*same model response\/tool-call turn/i,
+    /Do not batch confirmation prompts[\s\S]*validation repair[\s\S]*state update[\s\S]*post-write state load[\s\S]*checkpoint deletion/i,
+    /context body before drafting[\s\S]*research body only for view\/update\/repair[\s\S]*artifact contract before drafting\/revising/i,
     /current `context` artifact or `XX-CONTEXT\.md` is missing/i,
     /route back to `\/blu-discuss-phase <phase>`/i,
     /research\.external_sources/i,
@@ -619,6 +625,9 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
   assertAllMatch("runtime reference row", runtimeReference, [
     /research-phase-runtime-contract\.md/i,
+    /blueprint_phase_context\.phaseSelection[\s\S]*phase_context\.phase/i,
+    /blueprint_phase_locate` is fallback-only recovery/i,
+    /Independent read-only calls[\s\S]*one tool-call turn/i,
     /phase\.research|contract\.authoringTemplate/i,
     /implemented-command routing/i,
     /checkpoint/i,
@@ -627,7 +636,11 @@ test("research-phase command references only registered tool names and safe rout
   ]);
   assert.match(
     mcpToolsDoc,
-    /`research-phase` uses phase location\/context, research status, discovery artifact read\/scaffold\/write tools, research checkpoint tools, `blueprint_artifact_contract_read`, optional deliberate phase-scoped scaffolding, `blueprint_config_get`, `blueprint_state_load`, `blueprint_command_catalog`, and `blueprint_state_update`/i
+    /`research-phase` uses `blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only recovery[\s\S]*research status, discovery artifact read\/scaffold\/write tools/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Independent read-only calls[\s\S]*same model response\/tool-call turn[\s\S]*user confirmations, writes, validation repair, state update, post-write refreshed state load, command-catalog proof, and checkpoint deletion stay sequenced/i
   );
   assert.match(mcpToolsDoc, /research-phase-runtime-contract\.md/);
   assert.match(mcpToolsDoc, /workflowPosture\.research\.externalSources/);
@@ -694,6 +707,47 @@ test("research-phase command references only registered tool names and safe rout
   assert.equal(
     contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
     false
+  );
+  assert.match(
+    contract.spec?.reads?.join(" ") ?? "",
+    /Phase selection starts with blueprint_phase_context\.phaseSelection[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase_context\.phase\.artifacts inventory[\s\S]*blueprint_phase_locate stays fallback-only recovery/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Selected-phase resolution starts with blueprint_phase_context\.phaseSelection[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase_context\.phase\.artifacts inventory[\s\S]*blueprint_phase_locate is fallback-only recovery/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Independent read-only calls with known args may share one tool-call turn[\s\S]*checkpoint deletion stay sequenced/i
+  );
+  assert.match(
+    runtimeContract,
+    /`blueprint_phase_context`: call this first as the selected-phase read[\s\S]*selected-phase authority/i
+  );
+  assert.match(
+    runtimeContract,
+    /`blueprint_phase_locate`: fallback-only recovery[\s\S]*phase_context\.phaseSelection\.found[\s\S]*phase_context\.phase[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase_context\.phase\.artifacts[\s\S]*locate-level recovery evidence/i
+  );
+  assert.match(runtimeContract, /### Same-Turn Read Batching/);
+  assert.match(
+    runtimeContract,
+    /independent read-only MCP calls[\s\S]*same model response\/tool-call turn/i
+  );
+  assert.match(
+    runtimeContract,
+    /Dependent reads stay sequenced[\s\S]*context artifact body before drafting[\s\S]*existing research body only for view\/update\/repair[\s\S]*artifact contract before drafting or revising/i
+  );
+  assert.match(
+    runtimeContract,
+    /Do not batch user confirmations[\s\S]*state update[\s\S]*post-write refreshed state load[\s\S]*checkpoint deletion/i
+  );
+  assert.match(
+    runtimeContract,
+    /`artifact: "research"`[\s\S]*only for view, update, or repair branches[\s\S]*valid[\s\S]*skip path uses `blueprint_phase_research_status`/i
+  );
+  assert.match(
+    runtimeContract,
+    /pre-write[\s\S]*state load[\s\S]*post-write refreshed state load/i
   );
 
   assert.match(researcherAgent, /parent-supplied official-doc evidence/i);
@@ -899,8 +953,9 @@ test("research-phase surface responsibility matrix preserves no-dilution owners"
 
   assertAllMatch("manifest owns command-local gates", commandFile, [
     /Execution profile: `long-running-mutation`/,
-    /Use only the MCP tools listed below/i,
-    /phase cannot be resolved/i,
+    /Use only these Blueprint MCP tools/i,
+    /first selected-phase read/i,
+    /fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i,
     /context` artifact or `XX-CONTEXT\.md` is missing/i,
     /research\.external_sources/i,
     /If saved research is invalid/i,
