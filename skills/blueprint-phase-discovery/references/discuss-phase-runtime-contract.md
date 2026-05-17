@@ -4,10 +4,10 @@ This reference is the rich behavior contract for `/blu-discuss-phase`. The
 canonical artifact schema still comes from `blueprint_artifact_contract_read`
 with `artifactId: "phase.context"` and, when used, `artifactId:
 "phase.discussion-log"`. Treat this file as orchestration and evidence-density
-guidance, not a competing markdown schema. If the runtime exposes scaffold
-starter material separately from the authoring template, keep that split
-explicit: scaffold output seeds a missing file, while `authoringTemplate`
-governs the final saved markdown.
+guidance, not a competing markdown schema. Keep the split explicit: scaffold
+output seeds a missing file, `phase.context.modelContract` governs the saved
+context artifact, and `authoringTemplate` governs saved freehand artifacts such
+as `phase.discussion-log`.
 
 Use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`
 for the shared `long-running-mutation` stage vocabulary, in-flight status
@@ -606,7 +606,7 @@ The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
   points, known gaps
 - `Dependencies`: prior artifacts, MCP tools, command surfaces, docs, external
   constraints, required follow-up reads
-- `Open Questions`: only unresolved questions that must remain explicit; when none remain, save the model value as `none` so the renderer emits exactly `- none`
+- `Open Questions`: only unresolved questions that must remain explicit; when none remain, save `openQuestions: []` so MCP renders exactly `- none` in Markdown. `openQuestions: ["none"]` remains compatibility-only for older model inputs; do not pass scalar `openQuestions: "none"`
 - `Deferred Ideas`: scope-creep or later-phase ideas with why they are out of
   this phase
 - `Canonical References`: full relative paths plus what each source controls;
@@ -732,8 +732,8 @@ Before treating the discussion as complete:
    dropped deferred ideas, dropped deferred risks, preserved scaffold literals,
    preserved packet headings or placeholder labels, verbatim handoff packet
    text, and plan-inventory warnings that were not carried forward. If `Open
-   Questions` has no unresolved items, preserve the exact `none` model value so
-   the renderer emits `- none` instead of expanding it into filler prose.
+   Questions` has no unresolved items, save `openQuestions: []` so MCP renders
+   the canonical `- none` line instead of expanding it into filler prose.
 3. Call `blueprint_phase_artifact_write` in strict mode. If it returns
    `status: "invalid"` or validation issues, repair the same model or discussion
    draft from the returned issues and retry before claiming success.

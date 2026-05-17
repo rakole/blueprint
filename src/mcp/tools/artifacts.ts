@@ -6135,12 +6135,13 @@ const UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS: Array<{
 ];
 
 const UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN =
-  /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
+  /\b(?:supports?|supported|ships?|shipped|available|enabled|routable|provides?|offers?|runs?|implements|implemented)\b/i;
 
 const UNSUPPORTED_MODE_NEGATION_PATTERN =
   /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
 
 type DiscussPhaseAntiPatternDiagnostic = {
+  path: string;
   code: string;
   message: string;
   repair: string;
@@ -6165,6 +6166,7 @@ function validateUnsupportedDiscussModeClaims(
     for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !flaggedModes.has(mode)) {
         diagnostics.push({
+          path: "content.unsupportedModeClaims",
           code: "discuss.unsupported_mode_claim",
           message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
           repair:
@@ -6291,6 +6293,7 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
 
   if (containsRawHandoffPacketLabel(content)) {
     diagnostics.push({
+      path: "content.rawHandoffLabels",
       code: "context.raw_handoff_label",
       message:
         "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
@@ -6301,6 +6304,7 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
 
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
     diagnostics.push({
+      path: "content.sections.Canonical References",
       code: "context.missing_canonical_reference",
       message:
         "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
@@ -6311,6 +6315,7 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
 
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
     diagnostics.push({
+      path: "content.sections.Deferred Ideas",
       code: "context.dropped_deferred_ideas",
       message:
         "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
@@ -6325,6 +6330,7 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
     !hasConcreteRiskCarryForward(openQuestions)
   ) {
     diagnostics.push({
+      path: "content.sections.Open Questions",
       code: "context.dropped_risk_carry_forward",
       message:
         "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
@@ -6335,6 +6341,7 @@ function validateDiscussPhaseContextAntiPatterns(content: string): {
 
   if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
     diagnostics.push({
+      path: "content.sections.Open Questions",
       code: "context.dropped_open_questions",
       message:
         "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
@@ -6367,6 +6374,7 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content: string): {
 
   if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
     diagnostics.push({
+      path: "content.sections.Follow-Ups",
       code: "discussion-log.dropped_follow_ups",
       message:
         "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
@@ -6637,7 +6645,7 @@ export function validatePhaseArtifactContent(
       ...discussValidation.diagnostics.map((diagnostic) =>
         phaseArtifactDiagnostic({
           artifact,
-          path: "content",
+          path: diagnostic.path,
           code: diagnostic.code,
           message: diagnostic.message,
           repair: diagnostic.repair
@@ -6654,7 +6662,7 @@ export function validatePhaseArtifactContent(
       ...discussValidation.diagnostics.map((diagnostic) =>
         phaseArtifactDiagnostic({
           artifact,
-          path: "content",
+          path: diagnostic.path,
           code: diagnostic.code,
           message: diagnostic.message,
           repair: diagnostic.repair
@@ -10455,6 +10463,21 @@ export async function blueprintArtifactValidate(
       for (const warning of validation.warnings) {
         warnings.push(`${artifact}: ${warning}`);
       }
+
+      diagnostics.push(
+        ...validation.diagnostics.map((diagnostic) =>
+          createArtifactValidationDiagnostic({
+            artifactId: resolvePhaseArtifactContractId(target.kind),
+            path: diagnostic.path,
+            section: diagnostic.heading ?? artifact,
+            code: diagnostic.code,
+            message: diagnostic.message,
+            allowedValues: diagnostic.allowedValues,
+            repair: diagnostic.repair,
+            retryable: diagnostic.retryable
+          })
+        )
+      );
 
       if (!validation.valid) {
         suggestedRepairs.add(target.repair);

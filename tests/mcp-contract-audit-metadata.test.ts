@@ -200,7 +200,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussCommand, /discuss-phase-runtime-contract\.md/i);
   assert.match(discussCommand, /long-running-phase-discovery-profile\.md/i);
   assert.match(discussCommand, /referenced runtime contract as the source of truth/i);
-  assert.match(discussCommand, /contract\.authoringTemplate[\s\S]*schema authority/i);
+  assert.match(
+    discussCommand,
+    /`phase\.context`[\s\S]*`modelContract`[\s\S]*`phase\.discussion-log`[\s\S]*`contract\.authoringTemplate`[\s\S]*schema authorities/i
+  );
   assert.match(discussCommand, /substantive user-authored artifacts/i);
   assert.doesNotMatch(discussCommand, /Follow this flow exactly/i);
   assert.match(discussRuntimeContract, /structured checkpoint/i);
@@ -228,6 +231,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
     /`schemaVersion: 2`[\s\S]*`ownerCommand: "\/blu-discuss-phase"`[\s\S]*top-level `mode: "discuss"`[\s\S]*`areaQueue`/i
   );
   assert.match(discussDoc, /Do not write compatibility summary fields/i);
+  assert.match(
+    discussDoc,
+    /Saved artifact schema authority:[\s\S]*`phase\.context`[\s\S]*`contract\.modelContract`[\s\S]*`phase\.discussion-log`[\s\S]*`contract\.authoringTemplate`/i
+  );
   assert.match(discussDoc, /normalized to the canonical `authoringTemplate` before write/i);
   assert.match(discussDoc, /self-checked against that contract/i);
   assert.match(discussDoc, /discuss-phase-runtime-contract\.md/i);
@@ -285,6 +292,10 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(
     mcpToolsDoc,
     /`discuss-phase` uses phase location\/context, `blueprint_phase_plan_index`, `blueprint_artifact_contract_read`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /final saved `phase\.context` body against the live `contract\.modelContract`[\s\S]*discussion log against the live `contract\.authoringTemplate`/i
   );
   assert.match(mcpToolsDoc, /discuss-phase-runtime-contract\.md/i);
   assert.match(mcpToolsDoc, /long-running-phase-discovery-profile\.md/i);

@@ -15588,7 +15588,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps contract.authoringTemplate as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -19896,7 +19896,7 @@ function getArtifactContract(contractId) {
 }
 function readArtifactContract(contractId, context) {
   const contract = getArtifactContract(contractId);
-  return {
+  const baseContract = {
     id: contract.id,
     scope: contract.scope,
     ownerTool: contract.ownerTool,
@@ -19920,7 +19920,13 @@ function readArtifactContract(contractId, context) {
       minimalValidExample: cloneJsonObject(contract.modelContract.minimalValidExample),
       exampleLeakageSignals: [...contract.modelContract.exampleLeakageSignals]
     } : void 0,
-    scaffoldTemplate: contract.renderScaffoldTemplate(context),
+    scaffoldTemplate: contract.renderScaffoldTemplate(context)
+  };
+  if (contractId === "phase.context") {
+    return baseContract;
+  }
+  return {
+    ...baseContract,
     authoringTemplate: contract.renderAuthoringTemplate(context)
   };
 }
@@ -20116,7 +20122,7 @@ var init_artifact_contracts = __esm({
         "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
         "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
         "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-        "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+        'Open questions must list concrete unresolved questions when any remain; use `openQuestions: []` when the section has no unresolved questions left so MCP can render the canonical `- none` Markdown row. Keep `["none"]` as compatibility-only input when encountered in older saved models.',
         "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
         "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
         "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
@@ -20169,7 +20175,7 @@ var init_artifact_contracts = __esm({
           externalConstraints: ["No docs or phase/artifacts tool changes in this slice."],
           requiredFollowUpReads: ["src/mcp/artifact-contracts/index.ts"]
         },
-        openQuestions: ["none"],
+        openQuestions: [],
         deferredIdeas: ["Renderer-specific model persistence can be handled by a later slice."],
         canonicalReferences: [
           {
@@ -29778,11 +29784,14 @@ function phaseContextModelSchemaRepair(keyword, pathValue, missingProperty) {
     return `Add ${pathValue} using the phase.context model contract before retrying.`;
   }
   if (keyword === "type") {
+    if (pathValue === "model.openQuestions") {
+      return 'Set model.openQuestions to an array. Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: ["none"] only as compatibility for older saved model inputs.';
+    }
     return `Set ${pathValue} to the type required by phase.context.modelContract; use arrays for list fields and objects for grouped sections.`;
   }
   if (keyword === "minItems") {
     if (pathValue === "model.openQuestions") {
-      return 'Use openQuestions: ["none"] or openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel.';
+      return 'Use openQuestions: [] when no open questions remain; MCP renders the canonical - none sentinel. Keep openQuestions: ["none"] only as compatibility for older saved model inputs.';
     }
     if (pathValue === "model.deferredIdeas") {
       return "Use deferredIdeas: [] when nothing is deferred; MCP renders the canonical - none sentinel.";
@@ -40529,6 +40538,7 @@ function validateUnsupportedDiscussModeClaims(content, artifactLabel) {
     for (const { mode, pattern } of UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS) {
       if (pattern.test(line) && !flaggedModes.has(mode)) {
         diagnostics.push({
+          path: "content.unsupportedModeClaims",
           code: "discuss.unsupported_mode_claim",
           message: `${artifactLabel} claims unsupported discuss-phase behavior is shipped or available: ${mode}.`,
           repair: "Remove shipped/available claims for unsupported discuss-phase modes, or restate them as explicit non-goals or unavailable behavior."
@@ -40606,6 +40616,7 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Context artifact"));
   if (containsRawHandoffPacketLabel(content)) {
     diagnostics.push({
+      path: "content.rawHandoffLabels",
       code: "context.raw_handoff_label",
       message: "Context artifact preserves raw starter or handoff packet headings/labels instead of mapping their substance into canonical phase.context sections.",
       repair: "Map starter or handoff packet substance into canonical phase.context sections and remove raw packet labels before retrying."
@@ -40613,6 +40624,7 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   }
   if (!hasConcreteCanonicalReference(canonicalReferences)) {
     diagnostics.push({
+      path: "content.sections.Canonical References",
       code: "context.missing_canonical_reference",
       message: "Context artifact section Canonical References must include at least one named source, saved artifact, repo path, or URL.",
       repair: "Add a concrete Canonical References entry naming the saved artifact, repo path, command output, URL, or source used to ground the context."
@@ -40620,6 +40632,7 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   }
   if (hasDeferredIdeaSignal(deferredSourceSections) && !hasConcreteDeferredIdeas(deferredIdeas)) {
     diagnostics.push({
+      path: "content.sections.Deferred Ideas",
       code: "context.dropped_deferred_ideas",
       message: "Context artifact mentions deferred or later follow-up ideas but does not preserve them in the Deferred Ideas section.",
       repair: "Move each deferred or later follow-up idea into ## Deferred Ideas, or use exactly `- none` only when no deferred ideas exist."
@@ -40627,6 +40640,7 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   }
   if (hasCarryForwardRiskSignal(deferredSourceSections) && !hasConcreteRiskCarryForward(deferredIdeas) && !hasConcreteRiskCarryForward(openQuestions)) {
     diagnostics.push({
+      path: "content.sections.Open Questions",
       code: "context.dropped_risk_carry_forward",
       message: "Context artifact mentions starter-handoff deferred risks or consequence-if-wrong notes but does not preserve them in Open Questions or Deferred Ideas.",
       repair: "Preserve each deferred risk or consequence-if-wrong note as a concrete Open Questions or Deferred Ideas bullet before retrying."
@@ -40634,6 +40648,7 @@ function validateDiscussPhaseContextAntiPatterns(content) {
   }
   if (hasOpenGrayAreaSignal(deferredSourceSections) && !hasConcreteOpenQuestions(openQuestions)) {
     diagnostics.push({
+      path: "content.sections.Open Questions",
       code: "context.dropped_open_questions",
       message: "Context artifact mentions open gray areas from starter evidence but does not preserve them as concrete Open Questions.",
       repair: "Move open gray areas into ## Open Questions as concrete questions, or use exactly `- none` only when no open questions remain."
@@ -40654,6 +40669,7 @@ function validateDiscussPhaseDiscussionLogAntiPatterns(content) {
   diagnostics.push(...validateUnsupportedDiscussModeClaims(content, "Discussion log artifact"));
   if (hasDeferredIdeaSignal(discussionSections) && !hasConcreteDeferredIdeas(followUps)) {
     diagnostics.push({
+      path: "content.sections.Follow-Ups",
       code: "discussion-log.dropped_follow_ups",
       message: "Discussion log artifact mentions deferred or later follow-up ideas but does not preserve them in the Follow-Ups section.",
       repair: "Move deferred or later follow-up ideas into ## Follow-Ups, or avoid mentioning them in Summary/Notes when none exist."
@@ -40866,7 +40882,7 @@ function validatePhaseArtifactContent(content, artifact) {
       ...discussValidation.diagnostics.map(
         (diagnostic) => phaseArtifactDiagnostic({
           artifact,
-          path: "content",
+          path: diagnostic.path,
           code: diagnostic.code,
           message: diagnostic.message,
           repair: diagnostic.repair
@@ -40882,7 +40898,7 @@ function validatePhaseArtifactContent(content, artifact) {
       ...discussValidation.diagnostics.map(
         (diagnostic) => phaseArtifactDiagnostic({
           artifact,
-          path: "content",
+          path: diagnostic.path,
           code: diagnostic.code,
           message: diagnostic.message,
           repair: diagnostic.repair
@@ -43569,6 +43585,20 @@ async function blueprintArtifactValidate(args = {}) {
       for (const warning of validation.warnings) {
         warnings.push(`${artifact}: ${warning}`);
       }
+      diagnostics.push(
+        ...validation.diagnostics.map(
+          (diagnostic) => createArtifactValidationDiagnostic({
+            artifactId: resolvePhaseArtifactContractId(target.kind),
+            path: diagnostic.path,
+            section: diagnostic.heading ?? artifact,
+            code: diagnostic.code,
+            message: diagnostic.message,
+            allowedValues: diagnostic.allowedValues,
+            repair: diagnostic.repair,
+            retryable: diagnostic.retryable
+          })
+        )
+      );
       if (!validation.valid) {
         suggestedRepairs.add(target.repair);
       }
@@ -47567,7 +47597,7 @@ var init_artifacts = __esm({
       { mode: "batch mode", pattern: /\bbatch[\s-]?mode\b/i },
       { mode: "auto-advance", pattern: /\bauto[\s-]?advance(?:ment|s|d)?\b/i }
     ];
-    UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|implements?|implemented|ships?|shipped|available|enabled|routable|provides?|offers?|runs?)\b/i;
+    UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN = /\b(?:supports?|supported|ships?|shipped|available|enabled|routable|provides?|offers?|runs?|implements|implemented)\b/i;
     UNSUPPORTED_MODE_NEGATION_PATTERN = /\b(?:do not|must not|should not|cannot|can't|does not|doesn't|is not|isn't|are not|aren't|not|no|without|defer|deferred|unsupported|unavailable|unimplemented)\b/i;
     RAW_HANDOFF_PACKET_LABEL_PATTERNS = [
       /^starter(?:[-\s]+(?:seed|phase|context))?\s+handoff(?:\s+packet)?\b:?/i,

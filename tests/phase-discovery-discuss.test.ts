@@ -391,7 +391,9 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
   assert.match(commandFile, new RegExp(runtimeContractPath));
   assert.match(commandFile, new RegExp(sharedProfilePath));
-  assert.match(commandFile, /contract\.authoringTemplate.*schema authority/i);
+  assert.match(commandFile, /phase\.context` `modelContract`/i);
+  assert.match(commandFile, /phase\.discussion-log` `contract\.authoringTemplate`/i);
+  assert.match(commandFile, /schema authorities/i);
   assert.match(commandFile, /referenced runtime contract as the source of truth/i);
   assert.match(commandFile, /substantive user-authored artifacts/i);
   assert.match(commandFile, /host-supported structured choices/i);
@@ -425,7 +427,8 @@ test("discuss-phase command references only registered phase-discovery tool name
 
   assert.match(skillFile, new RegExp(runtimeContractPath));
   assert.match(skillFile, new RegExp(sharedProfilePath));
-  assert.match(skillFile, /contract\.authoringTemplate.*schema authority/i);
+  assert.match(skillFile, /phase\.context\.modelContract.*schema authority/i);
+  assert.match(skillFile, /contract\.authoringTemplate.*freehand discovery artifacts/i);
   assert.match(skillFile, /derivedStatus\.nextAction/);
   assert.match(skillFile, /starter handoff inside the starter context/i);
   assert.match(skillFile, /source refs, deferred risks, and open gray areas/i);
@@ -451,7 +454,9 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(discussReference, /blueprint_state_load[\s\S]*refreshed\s+next safe action/i);
   assert.match(discussReference, /Do not infer `\/blu-plan-phase`/i);
   assert.match(discussReference, /`derivedStatus\.nextAction`/);
-  assert.match(discussReference, /exactly `- none`/i);
+  assert.match(discussReference, /openQuestions: \[\][\s\S]*exactly `- none`/i);
+  assert.match(discussReference, /\["none"\].*compatibility-only/i);
+  assert.match(discussReference, /do not pass scalar `openQuestions: "none"`/i);
   assert.match(discussReference, /Starter Handoff Intake/);
   assert.match(
     discussReference,
@@ -514,7 +519,10 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.ok(discussRuntimeRow, "runtime reference should include the discuss-phase row");
   assert.match(discussRuntimeRow, new RegExp(sharedProfilePath));
   assert.match(discussRuntimeRow, new RegExp(runtimeContractPath));
-  assert.match(discussRuntimeRow, /contract\.authoringTemplate/i);
+  assert.match(
+    discussRuntimeRow,
+    /`phase\.context` model contract as context schema authority[\s\S]*`phase\.discussion-log` `contract\.authoringTemplate` as discussion-log authority/i
+  );
   assert.match(discussRuntimeRow, /`blueprint_state_load`/);
   assert.match(discussRuntimeRow, /lightweight gray-area memo mode/i);
   assert.match(discussRuntimeRow, /single-agent fallback/i);
@@ -1319,12 +1327,101 @@ test("discuss-phase context validation blocks runtime anti-patterns and preserve
   assert.match(invalidContext.validation.issues.join("\n"), /unsupported discuss-phase behavior/i);
   assert.ok(
     invalidContext.validation.diagnostics.some(
-      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+      (diagnostic) =>
+        diagnostic.code === "discuss.unsupported_mode_claim" &&
+        diagnostic.path === "content.unsupportedModeClaims"
     )
   );
   assert.equal(retained.found, true);
   const validationAreas = retained.checkpoint?.areaQueue as Array<Record<string, unknown>>;
   assert.equal(validationAreas[1]?.title, "Plan inventory warning");
+});
+
+test("discuss-phase context validation allows future implementation planning text", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision: "Implement auto mode later after this phase.",
+      openQuestions: ["Which validation repair should happen before finalization?"]
+    }),
+    overwrite: true
+  });
+
+  assert.equal(result.status, "created");
+  assert.equal(result.written, true);
+  assert.ok(
+    !result.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
+});
+
+test("discuss-phase context validation blocks implemented-mode claims but not bare future planning verbs", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const implementedToday = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision: "Auto mode is implemented today.",
+      openQuestions: ["Which validation repair should happen before finalization?"]
+    }),
+    overwrite: true
+  });
+
+  assert.equal(implementedToday.status, "invalid");
+  assert.ok(
+    implementedToday.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
+
+  const implementsClaim = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision: "Discuss-phase implements auto mode for this command.",
+      openQuestions: ["Which validation repair should happen before finalization?"]
+    }),
+    overwrite: true
+  });
+
+  assert.equal(implementsClaim.status, "invalid");
+  assert.ok(
+    implementsClaim.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
+
+  const futurePlanning = await blueprintPhaseArtifactWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context",
+    model: validPhaseContextModel({
+      decision: "Implement auto mode later after this phase.",
+      openQuestions: ["Which validation repair should happen before finalization?"]
+    }),
+    overwrite: true
+  });
+
+  assert.equal(futurePlanning.status, "created");
+  assert.ok(
+    !futurePlanning.validation.diagnostics.some(
+      (diagnostic) => diagnostic.code === "discuss.unsupported_mode_claim"
+    )
+  );
 });
 
 test("discuss-phase context validation blocks dropped deferred risks from starter handoff", () => {
@@ -1344,7 +1441,9 @@ test("discuss-phase context validation blocks dropped deferred risks from starte
   assert.equal(validation.valid, false);
   assert.ok(
     validation.diagnostics.some(
-      (diagnostic) => diagnostic.code === "context.dropped_risk_carry_forward"
+      (diagnostic) =>
+        diagnostic.code === "context.dropped_risk_carry_forward" &&
+        diagnostic.path === "content.sections.Open Questions"
     )
   );
   assert.match(
@@ -1364,11 +1463,46 @@ test("discuss-phase context validation blocks verbatim starter handoff packet co
 
   assert.equal(validation.valid, false);
   assert.ok(
-    validation.diagnostics.some((diagnostic) => diagnostic.code === "context.raw_handoff_label")
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "context.raw_handoff_label" &&
+        diagnostic.path === "content.rawHandoffLabels"
+    )
   );
   assert.match(
     validation.issues.join("\n"),
     /raw starter or handoff packet headings\/labels/i
+  );
+});
+
+test("discuss-phase context validation points dropped follow-up signals at canonical sections", () => {
+  const validation = validatePhaseArtifactContent(
+    buildValidDiscussContext("- none")
+      .replace(
+        "## Dependencies\n- Prior phase artifacts: .blueprint/phases/03-phase-discovery/03-CONTEXT.md when it already exists.\n- External constraints: Discuss-phase must not weaken downstream planning detail requirements.\n- Required follow-up reads: src/mcp/artifact-contracts/index.ts and src/mcp/tools/artifacts.ts.",
+        "## Dependencies\n- Prior phase artifacts: .blueprint/phases/03-phase-discovery/03-CONTEXT.md when it already exists.\n- External constraints: Open gray areas from starter evidence still include research-before-questions ordering.\n- Required follow-up reads: src/mcp/artifact-contracts/index.ts and src/mcp/tools/artifacts.ts."
+      )
+      .replace(
+        "## Deferred Ideas\n- Scope creep or later follow-up: Apply the same sentinel pattern to other artifacts only after a concrete need appears.\n- Ideas to revisit after this phase: Evaluate whether model-backed phase.context writes should also enforce the same sentinel semantics.",
+        "## Deferred Ideas\n- none"
+      ),
+    "context"
+  );
+
+  assert.equal(validation.valid, false);
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "context.dropped_deferred_ideas" &&
+        diagnostic.path === "content.sections.Deferred Ideas"
+    )
+  );
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "context.dropped_open_questions" &&
+        diagnostic.path === "content.sections.Open Questions"
+    )
   );
 });
 

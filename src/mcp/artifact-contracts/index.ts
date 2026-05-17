@@ -96,13 +96,22 @@ export type ArtifactContractDefinition = {
   renderAuthoringTemplate: (context?: ArtifactTemplateContext) => string;
 };
 
-export type ArtifactContractReadResult = Omit<
+export type ArtifactContractReadResultBase = Omit<
   ArtifactContractDefinition,
   "renderScaffoldTemplate" | "renderAuthoringTemplate"
 > & {
   scaffoldTemplate: string;
+};
+
+export type ArtifactContractReadResultWithAuthoringTemplate = ArtifactContractReadResultBase & {
   authoringTemplate: string;
 };
+
+export type ArtifactContractReadResultWithoutAuthoringTemplate = ArtifactContractReadResultBase;
+
+export type ArtifactContractReadResult =
+  | ArtifactContractReadResultWithAuthoringTemplate
+  | ArtifactContractReadResultWithoutAuthoringTemplate;
 
 function phaseLabel(context?: ArtifactTemplateContext): string {
   return context?.phaseLabel?.trim() || "Phase XX: <Phase Name>";
@@ -825,7 +834,7 @@ const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
     "Implementation decisions must capture both the decision and the relevant tradeoff, constraint, or rationale that makes the decision durable.",
     "Existing code insights should name concrete files, modules, patterns, gaps, or cautions when known; uncertainty must be explicit instead of omitted.",
     "Dependencies must distinguish prior phase artifacts, external constraints, and required follow-up reads.",
-    "Open questions must list concrete unresolved questions when any remain; use an empty array or the exact string `none` only when the section has no unresolved questions left.",
+    "Open questions must list concrete unresolved questions when any remain; use `openQuestions: []` when the section has no unresolved questions left so MCP can render the canonical `- none` Markdown row. Keep `[\"none\"]` as compatibility-only input when encountered in older saved models.",
     "Deferred ideas must list concrete carry-forward ideas when any remain; use an empty array only when nothing is deferred.",
     "The rendered context must preserve the exact headings in renderedHeadings so existing Markdown authoring and scaffold validation remain compatible.",
     "Do not copy minimal example wording, scaffold placeholders, or generic none rows where real phase context exists."
@@ -878,7 +887,7 @@ const PHASE_CONTEXT_MODEL_CONTRACT: ArtifactModelContract = {
       externalConstraints: ["No docs or phase/artifacts tool changes in this slice."],
       requiredFollowUpReads: ["src/mcp/artifact-contracts/index.ts"]
     },
-    openQuestions: ["none"],
+    openQuestions: [],
     deferredIdeas: ["Renderer-specific model persistence can be handled by a later slice."],
     canonicalReferences: [
       {
@@ -5188,12 +5197,24 @@ export function getArtifactContract(
 }
 
 export function readArtifactContract(
+  contractId: "phase.context",
+  context?: ArtifactTemplateContext
+): ArtifactContractReadResultWithoutAuthoringTemplate;
+export function readArtifactContract(
+  contractId: Exclude<ArtifactContractId, "phase.context">,
+  context?: ArtifactTemplateContext
+): ArtifactContractReadResultWithAuthoringTemplate;
+export function readArtifactContract(
+  contractId: ArtifactContractId,
+  context?: ArtifactTemplateContext
+): ArtifactContractReadResult;
+export function readArtifactContract(
   contractId: ArtifactContractId,
   context?: ArtifactTemplateContext
 ): ArtifactContractReadResult {
   const contract = getArtifactContract(contractId);
 
-  return {
+  const baseContract = {
     id: contract.id,
     scope: contract.scope,
     ownerTool: contract.ownerTool,
@@ -5220,6 +5241,14 @@ export function readArtifactContract(
         }
       : undefined,
     scaffoldTemplate: contract.renderScaffoldTemplate(context),
+  };
+
+  if (contractId === "phase.context") {
+    return baseContract;
+  }
+
+  return {
+    ...baseContract,
     authoringTemplate: contract.renderAuthoringTemplate(context)
   };
 }
