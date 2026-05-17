@@ -54,6 +54,12 @@ const promptSurfaces: PromptSurface[] = [
   }
 ];
 
+const promptBudgetThresholds = {
+  commandManifestBytes: 9000,
+  primarySkillBytes: 9000,
+  activeRuntimeBundleBytes: 52000
+} as const;
+
 function countMatches(source: string, pattern: RegExp): number {
   return [...source.matchAll(pattern)].length;
 }
@@ -368,6 +374,23 @@ test("plan-phase prompt and relay surfaces expose an informational size baseline
   assert.equal(rows.length, promptSurfaces.length);
   assert.ok(activeRuntimeBundleBytes > 0);
   assert.ok(allMeasuredBytes >= activeRuntimeBundleBytes);
+  const commandManifestRow = rows.find((row) => row.id === "command-manifest");
+  const primarySkillRow = rows.find((row) => row.id === "primary-skill");
+
+  assert.ok(commandManifestRow);
+  assert.ok(primarySkillRow);
+  assert.ok(
+    commandManifestRow.sizeBytes <= promptBudgetThresholds.commandManifestBytes,
+    "command manifest should stay materially below the pre-deflation 12.9 KB baseline"
+  );
+  assert.ok(
+    primarySkillRow.sizeBytes <= promptBudgetThresholds.primarySkillBytes,
+    "primary skill should stay materially below the pre-deflation 13.2 KB baseline"
+  );
+  assert.ok(
+    activeRuntimeBundleBytes <= promptBudgetThresholds.activeRuntimeBundleBytes,
+    "active runtime bundle should stay below the Wave 4 deflation budget"
+  );
   for (const row of rows) {
     assert.ok(
       row.sizeBytes <= Math.ceil(row.baselineBytes * 1.25),

@@ -1128,6 +1128,61 @@ test("phase plan write rejects stale expected read sets before persistence", asy
   assert.deepEqual((await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" })).plans, []);
 });
 
+test("phase plan write rejects stale target plan bodies before reuse", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const model = createStructuredPlanModel();
+  const firstWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true
+  });
+  assert.equal(firstWrite.status, "created", JSON.stringify(firstWrite, null, 2));
+
+  const planPath = ".blueprint/phases/03-phase-discovery/03-01-PLAN.md";
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    includeSavedPlanBodies: "target"
+  });
+  assert.ok(
+    readiness.readSet.some(
+      (entry) => entry.path === planPath && entry.kind === "phase.plan.body"
+    )
+  );
+
+  await writeFile(
+    path.join(repoPath, planPath),
+    `${await readFile(path.join(repoPath, planPath), "utf8")}\n<!-- changed after readiness -->\n`,
+    "utf8"
+  );
+
+  const staleReuse = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model,
+    overwrite: true,
+    expectedReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(staleReuse.status, "invalid");
+  assert.equal(staleReuse.written, false);
+  assert.deepEqual(staleReuse.freshness, {
+    checked: true,
+    fresh: false,
+    stalePaths: [planPath]
+  });
+  assert.match(staleReuse.validation.issues.join("\n"), /Read-set freshness check failed/);
+  assert.match(await readFile(path.join(repoPath, planPath), "utf8"), /changed after readiness/);
+});
+
 test("phase plan write reports completion readiness for complete saved plan sets", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

@@ -2,8 +2,7 @@
 
 This reference is the rich behavior contract for `/blu-plan-phase`. The command
 manifest should stay thin; the skill should load this file when planning a
-phase so plan authoring preserves GSD's retained quality bar while staying
-Blueprint-native.
+phase so plan authoring preserves Blueprint's retained quality bar.
 
 ## Stage Mapping
 
@@ -71,10 +70,13 @@ Blueprint-native.
   - Any runtime-narrowed evidence rows or dependency-plan ids from
     `mcp_blueprint_blueprint_phase_plan_authoring_context.taskSchema` that
     materially constrained the draft
-- Immediately before final model validation/write and before claiming final
-  persistence, call readiness with `readMode: "hashes-only"` and
-  `previousReadSet` or re-read the same MCP evidence surfaces, then compare
-  their current content or inventory against the recorded read set.
+- Before persistence, if the command skips a duplicate pre-write re-read from an
+  uninterrupted readiness-backed flow, pass the recorded readiness `readSet` as
+  `expectedReadSet` to `mcp_blueprint_blueprint_phase_plan_write` so the server
+  checks freshness before saving. Otherwise call readiness with `readMode:
+  "hashes-only"` and `previousReadSet`, or re-read the same MCP evidence
+  surfaces, then compare their current content or inventory against the
+  recorded read set.
 - If the comparison shows drift, surface it as a warning, re-read the changed
   evidence before continuing, and repair the draft/checker context against the
   refreshed evidence before persistence.
@@ -112,6 +114,9 @@ Blueprint-native.
   `planId` is omitted, the first slot may auto-assign without that gate. If a
   specific saved `planId` was passed, treat that as a targeted revise flow and
   confirm before overwriting.
+- Explicit additive intent may proceed without an overwrite confirmation once
+  the new slot is selected. Revise, replace, overwrite, or deleting/replacing a
+  saved plan set always requires confirmation.
 - If the phase scope cannot be planned without reducing locked decisions or
   must-haves, recommend a split or prioritization before persistence.
 
@@ -143,15 +148,15 @@ Blueprint-native.
 - Persist only through `mcp_blueprint_blueprint_phase_plan_write` using the
   structured `model` payload, `authoringMode: "model-only"`,
   `returnPlanSetValidation: true`, and `expectedReadSet` from the fresh
-  readiness or authoring packet when skipping a duplicate pre-write re-read.
+  readiness `readSet` when skipping a duplicate pre-write re-read.
 - Re-read `mcp_blueprint_blueprint_phase_plan_authoring_context` after any
   successful plan write, after a user pause or subagent return, or whenever
   read-set freshness is absent or stale; saved `XX-YY-PLAN.md` files are
   intentional known evidence artifacts for later plan slots and must be covered
   by the refreshed task schema. Do not skip the refresh unless the server checked
   `expectedReadSet` for the write.
-- Use `validationMode: "strict"` for `/blu-plan-phase`; `validationMode:
-  "warn"` is not part of this command's write contract.
+- Use `validationMode: "strict"` for `/blu-plan-phase`; validationMode:
+  "warn" is not part of this command's write contract.
 - Pass `phase` as the resolved numeric phase and `model` as the complete
   structured phase.plan payload. Omit `planId` only for the first plan in an
   empty plan set or after an explicit `add` choice selected a new slot, or pass

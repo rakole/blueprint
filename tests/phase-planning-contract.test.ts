@@ -218,7 +218,8 @@ test("planning contract defines Wave 3 staleness and downstream handoff", () => 
     "## Downstream Execution Handoff",
     "Any saved plan bodies or excerpts from",
     "that were relied on during `add`,",
-    "Immediately before final model validation/write and before claiming final",
+    "pass the recorded readiness `readSet` as",
+    "`expectedReadSet` to `mcp_blueprint_blueprint_phase_plan_write`",
     "`verificationPriorities`",
   ]);
 });
@@ -249,12 +250,13 @@ test("planning contract strengthens no-subagent fallback", () => {
   ]);
 });
 
-test("skill, manifest, and command spec reference Wave 3 planning checks", () => {
+test("runtime contract owns Wave 3 planning checks while prompt surfaces stay thin", () => {
   const skill = readRepoText(skillPath);
   const manifest = readRepoText(manifestPath);
   const commandSpec = readRepoText(commandSpecPath);
+  const runtimeContract = readRepoText(runtimeContractPath);
 
-  assertIncludesAll(skill, [
+  assertIncludesAll(runtimeContract, [
     "Planning Investigation Trace",
     "Planning Decision Record",
     "Post-Draft Semantic Self-Check",
@@ -262,19 +264,28 @@ test("skill, manifest, and command spec reference Wave 3 planning checks", () =>
   ]);
 
   assertIncludesAll(manifest, [
-    "Planning Investigation Trace and Pre-Draft Readiness Assessment",
-    "Post-Draft Semantic Self-Check",
-    "if any answer is `no`, repair the plan before persistence or final completion",
-    "Do not claim completion until the final response includes the Downstream Execution Handoff",
+    "plan-phase-runtime-contract.md",
+    "Keep this manifest thin",
+    "Downstream Execution Handoff",
+  ]);
+
+  assertIncludesAll(skill, [
+    "plan-phase-runtime-contract.md",
+    "Completion Criteria",
+    "Downstream Execution Handoff",
   ]);
 
   assertIncludesAll(commandSpec, [
-    "Planning Investigation Trace",
-    "Post-Draft Semantic Self-Check",
+    "user-facing documentation",
     "Downstream Execution Handoff",
-    "External Service Prerequisites",
-    "When saved plans already exist and `planId` is omitted",
-    "Only an empty saved plan set may auto-assign the first slot without that gate.",
-    "Omit `planId` only when writing the first plan in an empty saved plan set",
+    "expectedReadSet",
+    "Final\ncompletion still depends on `blueprint_phase_plan_validate`",
   ]);
+
+  assert.ok(manifest.length < 9000, `expected thin command manifest, got ${manifest.length} bytes`);
+  assert.ok(skill.length < 9000, `expected compact primary skill, got ${skill.length} bytes`);
+  assert.ok(
+    manifest.length + skill.length < runtimeContract.length,
+    "expected command plus skill to stay smaller than the runtime contract"
+  );
 });
