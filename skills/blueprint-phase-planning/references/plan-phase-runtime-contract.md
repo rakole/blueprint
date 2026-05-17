@@ -128,15 +128,19 @@ phase so plan authoring preserves Blueprint's retained quality bar.
   review entirely and state that config disabled it.
 - The parent command owns MCP calls, user gates, persistence, validation, state
   updates, and final routing.
-- Planner input must include the resolved phase, live plan contract, roadmap
-  and requirements, `phase_plan_authoring_context.taskSchema`, actual context
-  text, actual research/UI/validation/review content when present, effective
-  config, mapped codebase summaries, existing plan contents when revising, and
-  the current checker findings during revision.
+- Planner input should be a compact packet by default: resolved phase and phase
+  dir, readiness summary, effective config, task schema path/hash plus task
+  schema only when needed, artifact paths plus read-set hashes, short excerpts
+  for context/research/UI/validation/review evidence, plan index summary,
+  existing plan bodies only when revising or replacing, and current checker
+  findings during revision. The planner may use read-only `read_file` for
+  supplied paths when it needs the full body.
 - Planner output must be a complete structured `phase.plan` JSON model, not
   Markdown, outlines, notes, or scaffold text.
-- Checker input must include the saved plan bodies plus the same phase evidence
-  used by the planner.
+- Checker input should be compact by default: saved plan paths/hashes, write and
+  validation result summaries, readiness/config summary, prior findings, and
+  evidence paths/excerpts. The checker may use read-only `read_file` for supplied plan paths
+  when exact body review is necessary.
 
 ### Persist
 
@@ -423,13 +427,17 @@ When splitting, include in the planning decision record:
 Use this path only when suitable code/workflow analysis subagents are available:
 
 1. Parent reads all required MCP context and saved artifacts.
-2. Parent gives `blueprint-planner` the actual artifact contents, live
-   contract, config gates, mapped codebase summaries, and existing plans.
+2. Parent gives `blueprint-planner` a compact packet with readiness/config
+   summary, task schema authority, paths/hashes, short excerpts, plan index, and
+   existing plan bodies only when revising/replacing. Planner can use read-only
+   `read_file` for supplied paths when exact bodies are needed.
 3. Planner returns complete plan bodies, coverage mapping, dependency waves,
    split rationale, blockers, and assumptions.
 4. Parent writes through MCP.
-5. If `workflow.plan_check=true`, parent gives the saved plan bodies to
-   `blueprint-checker`.
+5. If `workflow.plan_check=true`, parent gives `blueprint-checker` saved plan
+   paths/hashes, write and validation summaries, readiness/config summary, prior
+   findings, and full plan bodies only when needed. Checker can use read-only
+   `read_file` for supplied plan paths.
 6. Checker returns `ACCEPT`, `REVISE`, or `BLOCK` with blockers, warnings,
    evidence, why each issue matters, and concrete fix hints.
 7. Parent performs targeted revisions, up to three checker passes. If issue

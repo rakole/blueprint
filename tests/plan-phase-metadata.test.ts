@@ -39,6 +39,30 @@ function assertIncludesAll(content: string, expected: readonly string[]): void {
   }
 }
 
+function assertAgentToolsReadOnly(content: string, agentPath: string): void {
+  const frontmatterMatch = /^---\n([\s\S]*?)\n---/.exec(content);
+  assert.ok(frontmatterMatch, `${agentPath} should have frontmatter`);
+
+  const toolsBlockMatch = /^tools:\n((?:  - .+\n)+)/m.exec(frontmatterMatch[1]);
+  assert.ok(toolsBlockMatch, `${agentPath} should declare tools in frontmatter`);
+
+  const tools = toolsBlockMatch[1]
+    .trim()
+    .split("\n")
+    .map((line) => line.replace(/^\s*-\s*/, "").trim());
+
+  assert.deepEqual(
+    tools,
+    ["list_directory", "read_file", "glob", "grep_search"],
+    `${agentPath} must keep read-only tools only`
+  );
+  assert.deepEqual(
+    tools.filter((tool) => /(?:write|replace|edit|delete|mcp_|blueprint_)/i.test(tool)),
+    [],
+    `${agentPath} must not gain write or MCP persistence tools`
+  );
+}
+
 test("plan-phase manifest is a thin runtime-contract entrypoint with hard safety rules", async () => {
   const commandFile = await readRepoFile("commands/blu-plan-phase.toml");
   const commandSize = (await stat(path.join(repoRoot, "commands/blu-plan-phase.toml"))).size;
@@ -98,7 +122,11 @@ test("plan-phase skill is compact and delegates detailed behavior to the runtime
     "No raw `.blueprint/` writes",
     "No `validationMode: \"warn\"`",
     "Completion Criteria",
-    "Downstream Execution Handoff"
+    "Downstream Execution Handoff",
+    "Give planner/checker agents compact packets by",
+    "full bodies only",
+    "read-only `read_file` on supplied paths",
+    "must not write files or call MCP persistence"
   ]);
 
   for (const tool of planPhaseTools) {
@@ -138,7 +166,13 @@ test("plan-phase runtime contract owns detailed behavior and fresh-read semantic
     "Explicit additive intent may proceed without an overwrite confirmation",
     "Do not write raw `.blueprint/` files",
     "validationMode:\n  \"warn\" is not part of this command's write contract",
-    "separate final scoped validation remains authoritative"
+    "separate final scoped validation remains authoritative",
+    "Planner input should be a compact packet by default",
+    "task schema path/hash",
+    "existing plan bodies only when revising or replacing",
+    "Checker input should be compact by default",
+    "saved plan paths/hashes",
+    "read-only `read_file` for supplied plan paths"
   ]);
 
   assert.doesNotMatch(runtimeContract, /fresh readiness or authoring packet/);
@@ -259,12 +293,17 @@ test("planner and checker guidance stays bounded and parent-owned", async () => 
   ]);
 
   assertIncludesAll(plannerFile, [
-    "live phase.plan contract",
     "taskSchema",
     "parent command owns orchestration",
     "Do not persist plan files",
-    "update Blueprint state"
+    "update Blueprint state",
+    "compact structured planning packet",
+    "schema path/hash",
+    "paths, kinds, hashes, and short excerpts",
+    "read-only `read_file` on supplied paths"
   ]);
+  assert.match(plannerFile, /live\s+phase\.plan contract/i);
+  assert.match(plannerFile, /plan bodies only\s+when revising or replacing/i);
   assert.match(
     plannerFile,
     /ready for\s+`blueprint_phase_plan_validate_model` and `blueprint_phase_plan_write` by the\s+parent command/i
@@ -273,7 +312,14 @@ test("planner and checker guidance stays bounded and parent-owned", async () => 
     "live phase.plan contract",
     "parent command owns all persistence",
     "Do not persist verdicts",
-    "update Blueprint state"
+    "update Blueprint state",
+    "compact checker packet",
+    "saved plan paths, hashes, validation status",
+    "completionReady",
+    "incrementalCheckpoint",
+    "read-only `read_file` on supplied paths"
   ]);
   assert.match(checkerFile, /MCP\s+persistence/i);
+  assertAgentToolsReadOnly(plannerFile, "agents/blueprint-planner.md");
+  assertAgentToolsReadOnly(checkerFile, "agents/blueprint-checker.md");
 });

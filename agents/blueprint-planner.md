@@ -37,37 +37,40 @@ content through MCP without guessing plan structure or dependency order.
 
 ## Required Reads
 
-- resolved phase context, roadmap slice, requirements, live phase.plan contract,
-  `phase_plan_authoring_context.taskSchema`, active-state summary, and any
-  current revision-checkpoint notes supplied by the parent command
-- any mapped `.blueprint/codebase/` summaries the parent command supplies for
+- resolved phase and phase directory, roadmap slice, requirements, live
+  phase.plan contract, `phase_plan_authoring_context.taskSchema` when supplied,
+  active-state summary, and current revision-checkpoint notes from the parent
+- any mapped `.blueprint/codebase/` summaries or supplied read-only paths for
   brownfield grounding
-- existing plan inventory plus any current `-PLAN.md` artifacts when the parent
-  is updating rather than creating
-- research and UI-spec artifacts when normalized config says those gates are
-  enabled
+- existing plan inventory plus current `-PLAN.md` paths and hashes; full plan
+  bodies are required only when revising or replacing
+- context, research, UI-spec, validation, and review summaries or excerpts when
+  normalized config says those gates matter
 - locked Blueprint docs or schema rules that materially constrain the phase
 
 ## Expected Handoff Packet From Parent
 
-The parent command should supply a structured planning packet:
+The parent command should supply a compact structured planning packet:
 
-- `phase`: resolved phase number and directory
-- `contract`: live `phase.plan` JSON schema and authoring template
-- `taskSchema`: runtime-narrowed task schema from authoring context
-- `context`: actual `XX-CONTEXT.md` content (not status metadata)
-- `research`: actual research content when `workflow.research=true`
-- `uiSpec`: actual UI spec content when `workflow.ui_phase=true`
-- `validation`: saved verification evidence when present
-- `reviewFindings`: saved review findings when present
+- `phase`: resolved phase number and phase directory
+- `readiness`: readiness summary, blocker state, next safe action, plan index
+  summary, and read-set freshness result
 - `config`: normalized effective config with gate states
+- `taskSchema`: schema path/hash plus the task schema only when the planner needs
+  exact allowed values
+- `artifacts`: paths, kinds, hashes, and short excerpts for context, research,
+  UI, validation, and review evidence
 - `codebase`: mapped codebase summaries when present
-- `existingPlans`: plan index + plan bodies when revising
+- `existingPlans`: plan index summary plus paths/hashes; include plan bodies only
+  when revising or replacing
 - `checkerFindings`: current checker findings during revision pass
 - `investigationTrace`: the parent's planning evidence summary
 - `decisionRecord`: the parent's planning decision record (revision passes)
 
-The planner should cite which packet fields shaped each plan decision.
+The planner may use read-only `read_file` on supplied paths when the compact
+packet is not enough to decide exact behavior. Cite which packet fields or file
+paths shaped each plan decision, and ask the parent for refreshed evidence when
+the supplied read-set hashes are stale or inconsistent.
 
 ## Planning Rules
 
@@ -89,7 +92,8 @@ The planner should cite which packet fields shaped each plan decision.
    instead of forcing a monolith.
 6. Use the live `phase.plan` JSON Schema and runtime-narrowed task schema
    returned by the parent command as the structural source of truth; do not rely
-   on copied local template text alone.
+   on copied local template text alone. If the packet omits a full body but
+   provides a path/hash, read that path before making body-sensitive claims.
 7. Prefer targeted revision of existing plans over full replanning when only
    part of the plan set is stale.
 8. Keep every plan's write scope concrete and repo-specific so downstream

@@ -75,7 +75,11 @@ Use only tools allowed by the active command contract:
 
 Use optional agents only when suitable and enabled by effective config. The
 parent command owns user gates, MCP reads, validation, persistence, state
-update, and final routing.
+update, and final routing. Give planner/checker agents compact packets by
+default: phase identity, readiness/config summaries, schema path/hash, read-set
+hashes, artifact paths, short excerpts, plan index summary, and full bodies only
+when needed. Agents may use read-only `read_file` on supplied paths for exact
+body review; they must not write files or call MCP persistence.
 
 ## Orchestration Rules
 
