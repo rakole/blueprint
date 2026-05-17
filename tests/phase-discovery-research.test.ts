@@ -736,6 +736,7 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(researcherAgent, /Inference/);
   assert.match(researcherAgent, /Do not substitute browser-only, web-search-only, shell-only, or generic-agent/i);
   assert.match(runtimeContract, /Shared Stage Mapping/);
+  assert.match(runtimeContract, /Branch Classification And Fast Path/);
   assert.match(runtimeContract, /Required MCP Calls/);
   assert.match(runtimeContract, /Artifact Authoring Rules/);
   assert.match(runtimeContract, /Capability-Gated Subagent Path/);
@@ -761,6 +762,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /source type, authority tier, support span/i);
   assert.match(runtimeContract, /Strand Planning Handoff/i);
   assert.match(runtimeContract, /Research Strand Ledger And Checkpoint Semantics/i);
+  assert.match(runtimeContract, /classify the run as `simple` or `non-trivial`/i);
+  assert.match(runtimeContract, /Simple runs may skip the formal strand ledger and research checkpoint/i);
+  assert.match(runtimeContract, /`planner-critical` claim or recommendation/i);
+  assert.match(runtimeContract, /sidecar material help/i);
   assert.match(runtimeContract, /context-lock/i);
   assert.match(runtimeContract, /repo-map/i);
   assert.match(runtimeContract, /planner-handoff/i);
@@ -791,6 +796,74 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /blueprint_phase_artifact_write` returns `status: "invalid"`/);
   assert.match(runtimeContract, /repair[\s\S]*same normalized draft/i);
   assert.match(runtimeContract, /browser-only, web-search-only, shell-only, or\s+generic agents/i);
+});
+
+test("research runtime contract defines branch thresholds without diluting fast-path obligations", async () => {
+  const runtimeContract = await readFile(
+    path.join(
+      repoRoot,
+      "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+    ),
+    "utf8"
+  );
+  const branchSection = runtimeContract.match(
+    /## Branch Classification And Fast Path[\s\S]*?## Visible Research Progress/
+  )?.[0];
+
+  assert.ok(branchSection);
+  assertTextOrder("research branch classification", branchSection, [
+    "Use the `simple` path only when all of these are true:",
+    "Simple runs may skip the formal strand ledger and research checkpoint.",
+    "Use the `non-trivial` path when any of these are true:",
+    "A `planner-critical` claim or recommendation",
+    "Use `sidecar material help` only when"
+  ]);
+  assertAllMatch("simple fast path criteria", branchSection, [
+    /one coherent research question/i,
+    /repo-only evidence is enough/i,
+    /no saved research is invalid/i,
+    /no research checkpoint exists, whether safe, unsafe, foreign-owned, legacy, or\s+invalid/i,
+    /no external-source confirmation gate is pending/i,
+    /no dependency\/tool decision[\s\S]*affects planning/i,
+    /no validation repair is required/i,
+    /no contradictory or missing planner-critical evidence/i
+  ]);
+  assertAllMatch("simple fast path obligations", branchSection, [
+    /read actual saved `XX-CONTEXT\.md` content/i,
+    /honor the effective\s+external-source policy/i,
+    /draft or revise from `contract\.authoringTemplate`/i,
+    /Source-Support Self-Check/i,
+    /`blueprint_phase_artifact_write` in strict mode/i,
+    /sync route state/i,
+    /prove the next\s+implemented command/i,
+    /produce every required `phase\.research` section/i,
+    /planner-critical claims[\s\S]*source\/provenance\s+rows/i
+  ]);
+  assertAllMatch("non-trivial branch triggers", branchSection, [
+    /multiple independent research questions/i,
+    /evidence is contradictory/i,
+    /dependency\/tool decision/i,
+    /external-source policy blocks or gates/i,
+    /sidecar is dispatched/i,
+    /research checkpoint exists/i,
+    /existing research is invalid/i,
+    /validation repair is required/i,
+    /post-write state sync or route proof fails/i,
+    /planner-critical uncertainty changes implementation scope/i
+  ]);
+  assertAllMatch("planner-critical and sidecar thresholds", branchSection, [
+    /changes implementation\s+files/i,
+    /dependency\/tool choices/i,
+    /validation strategy/i,
+    /lifecycle routing/i,
+    /state\/schema behavior/i,
+    /security posture/i,
+    /user-facing product behavior/i,
+    /parallel bounded reading reduces total\s+time without widening scope/i,
+    /dependency\/tool comparison that needs a separate\s+evidence packet/i,
+    /disjoint evidence packets/i,
+    /do not load\s+or inspect the agent contract solely to decide that no sidecar is needed/i
+  ]);
 });
 
 test("research-phase surface responsibility matrix preserves no-dilution owners", async () => {
