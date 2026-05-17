@@ -3222,15 +3222,19 @@ export async function blueprintStateUpdate(
           ...patch,
           currentPhase: normalizedPatchCurrentPhase
         };
+  const routePatch = {
+    activeCommand: normalizedPatch.activeCommand,
+    currentPhase: normalizedPatch.currentPhase
+  };
+  const routePatchChangesSync =
+    routePatch.activeCommand !== undefined || routePatch.currentPhase !== undefined;
   const syncedBase = useSyncedBase
     ? await buildSyncedState(projectRoot)
     : null;
-  const synced = useSyncedBase
-    ? await buildSyncedState(projectRoot, {
-        activeCommand: normalizedPatch.activeCommand,
-        currentPhase: normalizedPatch.currentPhase
-      })
-    : null;
+  const synced =
+    useSyncedBase && routePatchChangesSync
+      ? await buildSyncedState(projectRoot, routePatch)
+      : syncedBase;
   const currentState =
     synced?.state ?? syncedBase?.state ?? (await loadBlueprintState(projectRoot));
   const comparisonState = syncedBase?.state ?? currentState;

@@ -109,7 +109,7 @@
 - Pass `phase` as the resolved numeric phase reference and `artifact: "uat"`.
 - UAT persistence requires both saved execution summaries and an existing `XX-VERIFICATION.md` artifact that is valid and ready for UAT.
 - Read `blueprint_phase_validation_authoring_context` and the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.uat"` before final authoring; treat the returned `modelContract` JSON Schema, quality rules, context bindings, rendered headings, example leakage signals, and the narrowed `taskSchema` as the structured payload authority. The public `phase.uat` contract read does not expose `authoringTemplate`.
-- Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract.
+- Keep the live `blueprint_artifact_contract_read` dependency explicit anywhere the required UAT-tool shape or heading structure is derived from the contract; this is the required-tool derivation through `blueprint_artifact_contract_read`, not a copied static schema.
 - Build a structured UAT evidence payload against the returned `taskSchema`, call `blueprint_phase_validation_validate_model`, and call `blueprint_phase_validation_write` only when model validation returns `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 - Treat the returned `path` plus `summaryPaths` as authoritative instead of rebuilding filenames or summary links manually.
 - Keep resumability explicit in the saved body: preserve the contract-owned `**Resume State:**` and `**Checkpoint:**` markers so a bounded UAT pass can pause and resume inside `XX-UAT.md` without inventing a second checkpoint file.

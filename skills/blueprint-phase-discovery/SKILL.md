@@ -56,7 +56,7 @@ Keep the useful discovery intent while preserving Blueprint deltas:
 - commands stay thin and user-facing
 - MCP tools own state mutation
 - later chaining and power-mode variants stay deferred until the downstream lifecycle substrate exists
-- keep the GSD-inspired discovery staples Blueprint actually ships: prior-context sweeps, deferred-idea folding, methodology lenses, codebase-scout reuse, stronger assumptions-mode analysis, progress recaps, checkpoint-per-area persistence, and end-of-run `STATE.md` updates
+- keep command-specific discovery behavior in the active runtime contract instead of duplicating the full workflow in this shared skill
 - use `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` as the rich behavior contract for `/blu-discuss-phase`
 - use `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` as the shared long-running profile for `/blu-discuss-phase`
 - use `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as the rich behavior contract for `/blu-research-phase`
@@ -134,6 +134,7 @@ does not grant broader tool scope to a command.
 - `blueprint_project_status`
 - `blueprint_roadmap_read`
 - `blueprint_phase_context`
+- `blueprint_config_get`
 
 ## Optional Agents
 
@@ -150,7 +151,7 @@ does not grant broader tool scope to a command.
 - `blueprint_artifact_contract_read`: read canonical model contracts, authoring templates, and validation metadata by contract id instead of relying on copied prompt-local templates. `phase.context` is model-only at read time; freehand artifacts such as `phase.discussion-log`, `phase.research`, and `phase.ui-spec` still expose `authoringTemplate`. If runtime contracts later expose a separate scaffold template, keep that scaffold shape starter-only.
 - `blueprint_artifact_scaffold`: use it only with supported repo-relative artifact paths when a command contract explicitly allows path-based scaffolding. Do not treat scaffold text as completed context, research, or UI-spec content, and do not preserve literal scaffold placeholders, example bullets, or fill-in cues in the final write.
 - `blueprint_phase_checkpoint_get`: pass the command's expected owner and mode when resuming saved state, then honor `safeToResume` and `warnings` before using the checkpoint.
-- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using checkpoint v2: `schemaVersion: 2`, `ownerCommand`, and top-level `mode`. Discuss checkpoints use `areaQueue`, `carryForward`, `readSet`, and `progress` as the resumability source of truth. Research checkpoints use `researchLedger` with `schemaVersion: "research-ledger/v1"`, compact strand state, accepted packet references, draft state, and next action. The tool owns the shared checkpoint filename and location, rejects foreign-owner or legacy overwrites, and pairs with `blueprint_phase_checkpoint_delete` owner/mode guards when commands clean up checkpoint state.
+- `blueprint_phase_checkpoint_put`: `checkpoint` must be a JSON object using the active command's runtime-contract checkpoint shape, including owner and mode guards. The tool owns the shared checkpoint filename and location, rejects foreign-owner or legacy overwrites, and pairs with `blueprint_phase_checkpoint_delete` owner/mode guards when commands clean up checkpoint state.
 - `blueprint_config_get`: use `scope: "effective"` when command behavior depends on normalized config such as `research.external_sources`. Treat it as the source of truth even when another MCP result mirrors the same setting for convenience.
 
 ## Phase Context Ownership
@@ -179,28 +180,13 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 ### `discuss-phase`
 
-Before running the command flow, read `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`. It locks the retained discuss-phase behavior that is easy to dilute: phase-specific gray-area discovery, evidence-backed assumptions, capability-gated sidecar research, single-agent fallback, rich context authoring, and validation/repair before completion.
+Before running `/blu-discuss-phase`, load `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` and `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`. The runtime contract is the behavior authority for the selected-phase register, read packet, gray-area discovery, checkpoint shape, assumptions mode, starter handoff handling, artifact authoring, validation repair, and finalization sequence.
 
-0. Keep the resolved scope explicit as the selected phase, prior-context bundle, artifact reuse-versus-replace posture, and current gray area.
-1. Resolve the phase through MCP tools before asking the user to confirm any write path.
-2. Ground the flow in actual repo context before questioning: read the substantive project brief, requirements, and workflow posture already surfaced through `blueprint_phase_context`, then read the current `XX-CONTEXT.md`, `XX-DISCUSSION-LOG.md`, and earlier phase context artifacts when they materially reduce duplicate questions. When the selected phase was just scaffolded by `/blu-new-project`, `/blu-add-phase`, or `/blu-insert-phase`, read the starter handoff inside the starter context first and treat it as seed evidence rather than as completed context.
-3. Read `blueprint_phase_plan_index` before refreshing context so the command can warn that saved plans do not change automatically; users must re-run `/blu-plan-phase` if refreshed discovery should affect planning.
-4. Read the canonical contracts through `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before authoring the context model and `artifactId: "phase.discussion-log"` before drafting any durable discussion log.
-5. Build the final context as a structured `phase.context` model, carry starter-handoff source refs, deferred risks, and open gray areas into its canonical sections, and normalize any final discussion draft to the returned `authoringTemplate` before write. Run a blocking anti-pattern check for placeholders, contradictions, missing canonical references, unsupported mode claims, dropped deferred ideas, dropped deferred risks, or preserved packet headings, scaffold footers, placeholder labels, or raw handoff text before saving.
-6. During interactive discovery, prefer one-question `ask_user` dialogs for concrete tradeoffs, overwrite confirmation, resume-versus-discard choices, and gray-area selection instead of plain-text menus. Ask only for missing, contradictory, uncertain, or high-impact details. If an answer is vague, incomplete, or conflicts with saved context, ask a focused follow-up or retry the question with a narrower prompt before treating it as final.
-7. Treat pending gates explicitly as phase ambiguity, resume-versus-discard checkpoint choice, gray-area selection, overwrite confirmation, or validation blockers instead of burying them in recap prose.
-8. Keep execution mode explicit as interactive `workflow.discuss_mode="discuss"`, stronger assumptions-mode analysis, or repo-evidence-driven `workflow.skip_discuss=true`, plus fresh versus resumed checkpoint posture.
-9. Follow `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for stage visibility, next-safe-action visibility, and session-local helper fallback behavior.
-10. Identify gray areas first, let the user choose which area to discuss, support iterative `next area` and `more questions` loops, capture canonical references behind decisions, fold deferred ideas into the saved context or discussion log instead of dropping them, checkpoint each major area as it closes with the discuss checkpoint v2 `areaQueue` shape, emit short progress recaps so the session stays legible, and analyze the branch with Blueprint-friendly lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology.
-11. Use capability-gated subagents only when suitable Blueprint discovery or research agents are available and bounded evidence work materially improves a single gray area or assumptions pass. `blueprint-researcher` may return options, tradeoffs, rationale, complexity or impact surface, and cited evidence for one area, but the parent command owns synthesis, questions, persistence, and routing. If no suitable subagent is available, use the single-agent fallback from the runtime contract: handle one area at a time, compress carry-forward context, checkpoint it, then move on without reducing output richness.
-12. Use `blueprint_artifact_scaffold` only to seed a missing `XX-CONTEXT.md`, then persist the actual finished context as a structured `phase.context` model through `blueprint_phase_artifact_write`. If the starter came from `/blu-new-project`, `/blu-add-phase`, or `/blu-insert-phase`, treat its handoff packet as disposable seed evidence: carry forward source refs, deferred risks, and open gray areas, but do not preserve packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text verbatim.
-13. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same context model or normalized discussion draft using the returned issues and retry once before treating `/blu-discuss-phase` as complete. If the same diagnostics repeat or repair cannot finish safely, leave the checkpoint intact, report the exact validation blocker and next safe action, and do not inspect MCP source files as a repair strategy.
-14. Write `XX-DISCUSSION-LOG.md` only when durable notes add value beyond the main context artifact.
-15. Require explicit overwrite confirmation before replacing existing context artifacts.
-16. Before asking the user anything, build the `grayAreaQueue` from the read packet using the runtime contract's taxonomy-driven gray-area discovery. Use the ask-versus-assume threshold from the runtime contract to decide which areas need user input versus evidence-backed defaults.
-17. When using assumptions mode, follow the runtime contract's assumption record shape, confidence label definitions, and ask-versus-assume threshold. Do not lock `Unclear` defaults as plan-safe decisions. If a starter handoff or evidence packet marks an assumption with a consequence-if-wrong, either confirm it with the user, convert it into an evidence-backed implementation decision, or keep it explicit in Open Questions or Deferred Ideas.
-18. Before final state sync, derive the downstream handoff packet and fold it into the saved context model: `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, and `routingGates`. Keep it filtered and artifact-oriented; do not carry the full discussion transcript forward.
-19. End with the next safe action loaded from `blueprint_state_load.derivedStatus.nextAction` after a synced `blueprint_state_update` that preserves the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, and leave `STATE.md` legible about that next step. Do not infer a direct `/blu-plan-phase` handoff from successful context capture when enabled research or UI gates still route through `/blu-research-phase` or `/blu-ui-phase`.
+- Use the selected phase from the runtime contract for every phase-scoped read, write, checkpoint operation, and final `patch.currentPhase`.
+- Keep persistent writes MCP-owned and phase-scoped: context, optional discussion log, checkpoints, and state updates must use only the command-scoped MCP tools.
+- Preserve the final route from refreshed state: after synced state update, report `blueprint_state_load.derivedStatus.nextAction` instead of inferring a direct downstream command from a successful write.
+- Follow the long-running profile for visible stage, pending-gate, and next-safe-action posture.
+- If no suitable subagent is available or enabled, use the runtime contract's no-subagent fallback while preserving final artifact quality.
 
 ### `research-phase`
 

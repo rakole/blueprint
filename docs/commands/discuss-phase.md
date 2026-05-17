@@ -44,8 +44,8 @@
 
 ## Behavior Stages
 
-1. `Resolve`: resolve the target phase and stop early when the phase is ambiguous or Blueprint prerequisites are missing.
-2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail.
+1. `Resolve`: call `blueprint_phase_context` first, use its `phaseSelection` fields as the selected-phase authority when complete, report any `phaseSelection` `reason` plus `recovery` diagnostics directly, and call `blueprint_phase_locate` only as fallback recovery when phase identity is missing, ambiguous, incomplete, or lacks diagnostics.
+2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail. When the host supports multiple tool calls in one turn, request independent read-only MCP calls together after the selected phase is known.
 3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching, and select from the `grayAreaQueue` by decision value.
 4. `Execute`: run one-question `ask_user` branching, use the one-question format with decision-value ranking and stop criteria, optionally use capability-gated sidecar research for one gray area, and capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
 5. `Persist`: scaffold only missing discovery artifacts, treat scaffold text as disposable starter seed, persist substantive context as a structured `phase.context` model, persist optional discussion content as Markdown, refresh checkpoints per area, and update `STATE.md` through MCP only.
@@ -57,6 +57,7 @@
 
 - effective Blueprint config through `blueprint_config_get`
 - current phase plan inventory through `blueprint_phase_plan_index`
+- same-turn read batching applies only to independent read-only calls whose arguments are already known; if the host cannot batch, use the same dependency order one call at a time
 
 
 ## Blueprint And Global State Writes
@@ -65,6 +66,7 @@
 - `optional phase XX-DISCUSSION-LOG.md`
 - `optional shared phase XX-DISCUSS-CHECKPOINT.json`
 - `.blueprint/STATE.md`
+- Mutating writes are not batched together unless one MCP tool is explicitly atomic for the entire update. Keep checkpoint writes, context writes, discussion-log writes, validation repair, state update, final state load, and checkpoint deletion sequenced by the runtime contract.
 - The final context payload must be a structured `phase.context` model that MCP renders to canonical Markdown; do not pass hand-written context Markdown. Discussion bodies remain Markdown and must be normalized to the canonical `authoringTemplate` before write, then self-checked against that contract and blocked until any anti-patterns, contradictions, dropped deferred ideas, or preserved scaffold literals are corrected before save. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same model or normalized discussion draft from those returned issues and retry before treating the discussion as complete.
 - Retry validation repair at most once for the same draft. If the same diagnostics repeat, stop, preserve the discuss checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source as the repair strategy.
 
@@ -72,8 +74,8 @@
 ## Required MCP Tools
 
 
-- `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
-- `blueprint_phase_context` -> `{phase, projectBrief, requirementsGrounding, workflowPosture, codebase, requirements, missingArtifacts, warnings}`
+- `blueprint_phase_context` -> `{phaseSelection, phase, projectBrief, requirementsGrounding, workflowPosture, codebase, requirements, missingArtifacts, warnings}`
+- `blueprint_phase_locate` -> fallback-only recovery `{found, phaseNumber, phaseName, phaseDir, artifacts, reason, recovery}` when `phase_context.phaseSelection` is missing, ambiguous, incomplete, or lacks recovery diagnostics
 - `blueprint_roadmap_read` -> `{roadmap, milestone, phases}`
 - `blueprint_artifact_list` -> `{artifacts, reports, missing}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`

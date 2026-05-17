@@ -588,9 +588,23 @@ type PhaseLocateResult = {
   warnings: string[];
 };
 
+type PhaseSelectionResult = Pick<
+  PhaseLocateResult,
+  | "found"
+  | "phaseNumber"
+  | "phasePrefix"
+  | "phaseName"
+  | "phaseDir"
+  | "resolvedFrom"
+  | "reason"
+  | "recovery"
+  | "warnings"
+>;
+
 type ResearchExternalSourcesMode = "off" | "ask" | "auto";
 
 type PhaseContextResult = {
+  phaseSelection: PhaseSelectionResult;
   phase: {
     phaseNumber: string;
     phasePrefix: string;
@@ -2866,7 +2880,11 @@ function extractRequirementIdsFromRequirementsTable(section: string): string[] {
 
 async function readPhaseContextGrounding(
   projectRoot: string,
-  matchedPhase: ParsedRoadmapPhase | undefined
+  matchedPhase: ParsedRoadmapPhase | undefined,
+  options: {
+    stateResult?: Awaited<ReturnType<typeof blueprintStateLoad>>;
+    configResult?: Awaited<ReturnType<typeof blueprintConfigGet>>;
+  } = {}
 ): Promise<{
   projectBrief: PhaseContextResult["projectBrief"];
   requirementsGrounding: PhaseContextResult["requirementsGrounding"];
@@ -2878,11 +2896,12 @@ async function readPhaseContextGrounding(
   const [projectContent, requirementsContent, stateResult, configResult] = await Promise.all([
     readMarkdownDocument(projectRoot, projectPath),
     readMarkdownDocument(projectRoot, requirementsPath),
-    blueprintStateLoad({ cwd: projectRoot }),
-    blueprintConfigGet({
-      cwd: projectRoot,
-      scope: "effective"
-    })
+    options.stateResult ?? blueprintStateLoad({ cwd: projectRoot }),
+    options.configResult ??
+      blueprintConfigGet({
+        cwd: projectRoot,
+        scope: "effective"
+      })
   ]);
   const projectWarnings: string[] = [];
   const requirementsWarnings: string[] = [];
@@ -6802,26 +6821,42 @@ export async function blueprintPhaseLocate(
   try {
     roadmap = await readRoadmap(projectRoot);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-
-    return {
-      found: false,
-      phaseNumber: null,
-      phasePrefix: null,
-      phaseName: null,
-      phaseDir: null,
-      artifacts: [],
-      milestone: null,
-      resolvedFrom: "roadmap",
-      reason,
-      recovery: buildLocateRecovery(reason),
-      warnings: []
-    };
+    return phaseLocateFailureFromError(error);
   }
-  const { phaseNumber, resolvedFrom } = await resolveRequestedPhase(
+  return locatePhaseFromRoadmap(projectRoot, args, roadmap);
+}
+
+function phaseLocateFailureFromError(error: unknown): PhaseLocateResult {
+  const reason = error instanceof Error ? error.message : String(error);
+
+  return {
+    found: false,
+    phaseNumber: null,
+    phasePrefix: null,
+    phaseName: null,
+    phaseDir: null,
+    artifacts: [],
+    milestone: null,
+    resolvedFrom: "roadmap",
+    reason,
+    recovery: buildLocateRecovery(reason),
+    warnings: []
+  };
+}
+
+async function locatePhaseFromRoadmap(
+  projectRoot: string,
+  args: PhaseLookupArgs,
+  roadmap: ParsedRoadmap,
+  options: {
+    stateCurrentPhase?: string | null;
+  } = {}
+): Promise<PhaseLocateResult> {
+  const { phaseNumber, resolvedFrom } = await resolveRequestedPhaseForRoadmap(
     projectRoot,
     args.phase,
-    roadmap.phases
+    roadmap.phases,
+    options
   );
 
   if (!phaseNumber) {
@@ -6906,21 +6941,125 @@ export async function blueprintPhaseLocate(
   };
 }
 
+async function resolveRequestedPhaseForRoadmap(
+  projectRoot: string,
+  requestedPhase: NumericInput | undefined,
+  phases: ParsedRoadmapPhase[],
+  options: {
+    stateCurrentPhase?: string | null;
+  } = {}
+): Promise<{
+  phaseNumber: string | null;
+  resolvedFrom: "explicit" | "state" | "roadmap";
+}> {
+  if (options.stateCurrentPhase === undefined) {
+    return await resolveRequestedPhase(projectRoot, requestedPhase, phases);
+  }
+
+  const explicit = requestedPhase === undefined ? undefined : normalizeBlueprintInput(requestedPhase).trim();
+
+  if (explicit) {
+    return {
+      phaseNumber: extractPhaseNumberToken(explicit),
+      resolvedFrom: "explicit"
+    };
+  }
+
+  const fromState = extractPhaseNumberToken(options.stateCurrentPhase ?? "");
+
+  if (fromState) {
+    return {
+      phaseNumber: fromState,
+      resolvedFrom: "state"
+    };
+  }
+
+  const nextPhase = phases.find((phase) => !phase.completed) ?? phases[0];
+
+  return {
+    phaseNumber: nextPhase?.phaseNumber ?? null,
+    resolvedFrom: "roadmap"
+  };
+}
+
+function phaseSelectionFromLocate(located: PhaseLocateResult): PhaseSelectionResult {
+  return {
+    found: located.found,
+    phaseNumber: located.phaseNumber,
+    phasePrefix: located.phasePrefix,
+    phaseName: located.phaseName,
+    phaseDir: located.phaseDir,
+    resolvedFrom: located.resolvedFrom,
+    reason: located.reason,
+    recovery: located.recovery,
+    warnings: located.warnings
+  };
+}
+
 export async function blueprintPhaseContext(
   args: PhaseLookupArgs = {}
 ): Promise<PhaseContextResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const roadmap = await readRoadmap(projectRoot);
-  const state = await blueprintStateLoad({ cwd: projectRoot });
-  const located = await blueprintPhaseLocate(args);
-  const codebase = await readMappedCodebaseContext(projectRoot);
+  const roadmapResultPromise: Promise<
+    { ok: true; roadmap: ParsedRoadmap } | { ok: false; failure: PhaseLocateResult }
+  > = readRoadmap(projectRoot)
+    .then((roadmap) => ({
+      ok: true as const,
+      roadmap
+    }))
+    .catch((error) => ({
+      ok: false as const,
+      failure: phaseLocateFailureFromError(error)
+    }));
+  const [roadmapResult, state, rawState, config, codebase] = await Promise.all([
+    roadmapResultPromise,
+    blueprintStateLoad({ cwd: projectRoot }),
+    loadBlueprintState(projectRoot),
+    blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    }),
+    readMappedCodebaseContext(projectRoot)
+  ]);
+  if (!roadmapResult.ok) {
+    const phaseSelection = phaseSelectionFromLocate(roadmapResult.failure);
+    const grounding = await readPhaseContextGrounding(projectRoot, undefined, {
+      stateResult: state,
+      configResult: config
+    });
+
+    return {
+      phaseSelection,
+      phase: null,
+      projectBrief: grounding.projectBrief,
+      requirementsGrounding: grounding.requirementsGrounding,
+      workflowPosture: grounding.workflowPosture,
+      codebase,
+      requirements: [],
+      missingArtifacts: [],
+      warnings: roadmapResult.failure.reason ? [roadmapResult.failure.reason] : []
+    };
+  }
+  const roadmap = roadmapResult.roadmap;
+  const located = await locatePhaseFromRoadmap(projectRoot, args, roadmap, {
+    stateCurrentPhase: rawState.currentPhase
+  });
+  const phaseSelection = phaseSelectionFromLocate(located);
+  const locatedPhaseNumber =
+    located.phaseNumber === null ? null : normalizePhaseNumber(located.phaseNumber);
   const matchedPhase = roadmap.phases.find(
-    (phase) => phase.phaseNumber === located.phaseNumber
+    (phase) =>
+      locatedPhaseNumber !== null &&
+      normalizePhaseNumber(phase.phaseNumber) === locatedPhaseNumber
   );
-  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase);
+  const grounding = await readPhaseContextGrounding(projectRoot, matchedPhase, {
+    stateResult: state,
+    configResult: config
+  });
 
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
     return {
+      phaseSelection,
       phase: null,
       projectBrief: grounding.projectBrief,
       requirementsGrounding: grounding.requirementsGrounding,
@@ -6938,6 +7077,7 @@ export async function blueprintPhaseContext(
   const uiSpecPath = buildArtifactPath(located.phaseDir, located.phasePrefix, "-UI-SPEC.md");
 
   return {
+    phaseSelection,
     phase: {
       phaseNumber: located.phaseNumber,
       phasePrefix: located.phasePrefix,
