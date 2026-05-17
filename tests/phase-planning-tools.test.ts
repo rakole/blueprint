@@ -134,8 +134,42 @@ async function createPhaseRepo(): Promise<string> {
     path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
     `# Phase 03: Phase Discovery - Context
 
-## Decisions
-- Planning should write execution-ready plan artifacts through MCP.
+## Phase Boundary
+- Keep discovery scoped to phase 3 and the saved artifacts in .blueprint/phases/03-phase-discovery/.
+- Capture durable context before planning begins.
+- Preserve implemented-only routing for the next lifecycle step.
+
+## Discovery Grounding
+- Project brief - discovery should stay phase-scoped and resumable.
+- Requirements grounding - keep LIFE-01 and LIFE-02 visible to downstream planning.
+- Workflow posture - route through enabled research and UI gates before planning.
+- Prior-context sweep - review existing artifacts before asking fresh questions.
+
+## Implementation Decisions
+- Use MCP-owned plan writes for execution-ready plan artifacts.
+- Do not infer a direct plan-phase route when enabled gates still require research or UI artifacts.
+- Keep MCP tools responsible for durable state updates and routing.
+
+## Specific Ideas
+- Make planning readiness explicit so command prompts do not guess from schema availability alone.
+
+## Existing Code Insights
+- The phase plan authoring context already narrows requirement and evidence inventories.
+- The research-status tool exposes the same gate used by plan-phase readiness.
+
+## Dependencies
+- .blueprint/STATE.md controls the final handoff after discuss-phase.
+- .blueprint/config.json controls whether research and UI artifacts are required before planning.
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Broader lifecycle routing cleanup can happen outside this regression.
+
+## Canonical References
+- .blueprint/ROADMAP.md defines phase 3.
+- .blueprint/config.json defines workflow gates.
 `,
     "utf8"
   );
@@ -886,6 +920,7 @@ test("phase plan authoring context exposes a complete runtime-narrowed task sche
 
   assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
   assert.equal(context.modelOnly, true);
+  assert.equal(context.planningReadiness.readyForPlanPhase, true);
   assert.equal(
     context.schemaPath,
     "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
@@ -900,6 +935,54 @@ test("phase plan authoring context exposes a complete runtime-narrowed task sche
   assert.match(taskSchemaText, /LIFE-01/);
   assert.match(taskSchemaText, /03-CONTEXT\.md/);
   assert.match(taskSchemaText, /x-blueprint-runtimeContext/);
+});
+
+test("phase plan authoring context keeps schemas inspectable when readiness blocks drafting", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-RESEARCH.md"),
+    `# Phase 03: Phase Discovery - Research
+
+## Summary
+
+- Missing the required research sections on purpose for readiness coverage.
+`,
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel()
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel(),
+    overwrite: true
+  });
+
+  assert.equal(context.status, "invalid");
+  assert.equal(context.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    context.planningReadiness.nextSafeAction,
+    "Run /blu-research-phase 3 to repair invalid phase research"
+  );
+  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
+  assert.ok(context.baseSchema);
+  assert.ok(context.taskSchema);
+  assert.match(context.reason ?? "", /Next safe action: Run \/blu-research-phase 3/i);
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.equal(written.validation.valid, true, JSON.stringify(written.validation, null, 2));
 });
 
 test("phase plan model schema rejects unsupported, missing, and out-of-scope values", async (t) => {
@@ -1287,8 +1370,9 @@ test("phase plan task schema permits empty evidence coverage only when no saved 
     model: createStructuredPlanModel()
   });
 
-  assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
+  assert.equal(context.status, "invalid", JSON.stringify(context, null, 2));
   assert.deepEqual(context.knownEvidenceArtifacts, []);
+  assert.equal(context.planningReadiness.readyForPlanPhase, false);
   assert.match(JSON.stringify(context.taskSchema), /"evidenceCoverage".*"maxItems":0/s);
   assert.equal(emptyEvidence.status, "valid", JSON.stringify(emptyEvidence.diagnostics, null, 2));
   assert.equal(inventedEvidence.status, "invalid");
@@ -1575,6 +1659,10 @@ test("phase planning strict writes validate the prospective plan set but allow i
     content: validPlanContent("01", 1),
     overwrite: true
   });
+  const firstPlanSetValidation = await blueprintPhasePlanValidate({
+    cwd: repoPath,
+    phase: "3"
+  });
   const seededInvalid = await blueprintPhasePlanWrite({
     cwd: repoPath,
     phase: "3",
@@ -1594,7 +1682,20 @@ test("phase planning strict writes validate the prospective plan set but allow i
   assert.equal(first.status, "created");
   assert.equal(first.validation.valid, true);
   assert.deepEqual(first.validation.issues, []);
-  assert.match(first.validation.warnings.join("\n"), /does not cover roadmap requirements: LIFE-02/);
+  assert.match(
+    first.validation.warnings.join("\n"),
+    /Final plan-set validation is still invalid: Phase 3 plan set does not yet cover roadmap requirements: LIFE-02/
+  );
+  assert.match(first.validation.warnings.join("\n"), /Add or revise plans before treating \/blu-plan-phase as complete/);
+  assert.match(first.warnings.join("\n"), /Final plan-set validation is still invalid/);
+  assert.match(first.warnings.join("\n"), /LIFE-02/);
+  assert.equal(firstPlanSetValidation.status, "invalid");
+  assert.deepEqual(firstPlanSetValidation.uncoveredRequirementIds, ["LIFE-02"]);
+  assert.match(
+    firstPlanSetValidation.issues.join("\n"),
+    /Phase 3 plan set does not cover roadmap requirements: LIFE-02/
+  );
+  assert.doesNotMatch(firstPlanSetValidation.issues.join("\n"), /Final plan-set validation is still invalid/);
   assert.equal(seededInvalid.status, "updated");
   assert.equal(seededInvalid.validation.valid, false);
   assert.match(seededInvalid.validation.issues.join("\n"), /depends_on references missing plan "02"/);
@@ -1602,6 +1703,65 @@ test("phase planning strict writes validate the prospective plan set but allow i
   assert.equal(rejected.written, false);
   assert.match(rejected.validation.issues.join("\n"), /Plan dependency cycle detected: 01 -> 02 -> 01/);
   assert.match(rejected.validation.issues.join("\n"), /wave 1 must come after dependency 01 in wave 1/);
+});
+
+test("phase plan validate_model adds prospective plan-set diagnostics without hard-gating roadmap coverage", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const seededInvalid = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    content: validPlanContent("01", 1, { dependsOn: ["02"] }),
+    overwrite: true,
+    validationMode: "warn"
+  });
+  const model = cloneStructuredPlanModel({
+    title: "Plan 02",
+    dependsOn: ["01"]
+  });
+  (model.evidenceCoverage as Array<Record<string, unknown>>).push({
+    artifact: ".blueprint/phases/03-phase-discovery/03-01-PLAN.md",
+    status: "used",
+    rationale: "Plan 02 depends on the saved Plan 01 artifact."
+  });
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model
+  });
+  const written = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "02",
+    model,
+    overwrite: true
+  });
+  const blockingMessages = validated.diagnostics
+    .filter((diagnostic) => diagnostic.severity !== "warning")
+    .map((diagnostic) => diagnostic.message)
+    .join("\n");
+
+  assert.equal(seededInvalid.status, "created");
+  assert.equal(seededInvalid.validation.valid, false);
+  assert.equal(validated.status, "invalid");
+  assert.equal(validated.valid, false);
+  assert.ok(validated.diagnostics.some((diagnostic) => diagnostic.code === "plan_set.invalid"));
+  assert.match(blockingMessages, /Plan dependency cycle detected: 01 -> 02 -> 01/);
+  assert.match(blockingMessages, /wave 1 must come after dependency 01 in wave 1/);
+  assert.doesNotMatch(blockingMessages, /roadmap requirements/i);
+  assert.match(
+    validated.warnings.join("\n"),
+    /Final plan-set validation is still invalid: Phase 3 plan set does not yet cover roadmap requirements: LIFE-02/
+  );
+  assert.equal(written.status, "invalid");
+  assert.equal(written.written, false);
+  assert.match(written.validation.issues.join("\n"), /Plan dependency cycle detected: 01 -> 02 -> 01/);
+  assert.match(written.validation.issues.join("\n"), /wave 1 must come after dependency 01 in wave 1/);
 });
 
 test("phase planning auto-assignment replaces YY in plan_id, title, and heading", async (t) => {

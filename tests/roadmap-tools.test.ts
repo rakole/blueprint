@@ -1510,8 +1510,10 @@ test("blueprint_roadmap_insert_phase inserts the first decimal phase after an in
     requirementsBody,
     /\| RQ-03 \| Add the inserted API stabilization slice\. \| Pending \| Reserved for inserted decimal phase\. Mapped to inserted Phase 2\.1 \(API Stabilization\)\. \|/
   );
-  assert.equal(planContext.status, "ready", planContext.reason ?? "");
+  assert.equal(planContext.status, "invalid", planContext.reason ?? "");
   assert.deepEqual(planContext.knownRequirements, ["RQ-03"]);
+  assert.equal(planContext.planningReadiness.readyForPlanPhase, false);
+  assert.ok(planContext.taskSchema);
   assert.match(
     roadmapBody,
     /Phase 2: Core Runtime[\s\S]*Phase 2\.1: API Stabilization[\s\S]*Phase 4: Release Hardening/
