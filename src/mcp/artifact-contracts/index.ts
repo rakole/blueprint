@@ -1393,7 +1393,7 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
   ]
 };
 
-function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
+function renderSummaryScaffoldTemplate(context?: ArtifactTemplateContext): string {
   return `# ${phaseLabel(context)} - Summary ${planId(context)}
 
 **Plan:** \`${phasePrefix(context)}-${planId(context)}-PLAN.md\`
@@ -1441,6 +1441,58 @@ function renderSummaryTemplate(context?: ArtifactTemplateContext): string {
 ## Evidence
 
 - \`${summaryPath(context)}\` or other saved repo evidence if helpful.`;
+}
+
+function renderSummaryAuthoringTemplate(context?: ArtifactTemplateContext): string {
+  return `# ${phaseLabel(context)} - Summary ${planId(context)}
+
+**Plan:** \`${phasePrefix(context)}-${planId(context)}-PLAN.md\`
+**Status:** PARTIAL
+**Readiness:** not-ready-for-validation
+**Completion State:** pending
+**Next Safe Action:** /blu-execute-phase ${phasePrefix(context)}
+
+## Outcome
+
+- Execution has not been marked complete yet; keep this as carry-forward evidence until targeted checks pass.
+
+## Changes Made
+
+- No completed implementation has been recorded in this seed.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| Targeted verification for the selected plan | not-run | not-run | Execution has not reached verification yet. | Complete the selected plan work, then rerun the targeted check. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| Completion evidence pending | The selected plan has not been verified yet. | Finish execution and rerun /blu-execute-phase ${phasePrefix(context)}. | DEFERRED |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| Execution evidence incomplete | Targeted verification has not run yet. | Finish the selected plan and write a concrete summary. | OPEN |
+
+## Follow-Ups
+
+- Finish the selected plan execution and replace this seed with concrete evidence.
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${summaryPath(context)} | Canonical summary path supplied by MCP. |`;
 }
 
 function renderVerificationTemplate(context?: ArtifactTemplateContext): string {
@@ -4418,10 +4470,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "New summaries should include `Plan` and `Status` markers; readers tolerate marker casing and legacy summaries without using heading shape as a blocker.",
       "Summary authoring is Markdown-first: use the runtime contract for structure, while MCP hard-blocks only missing linkage, missing status on new writes, invalid status, and semantic completion contradictions.",
       "`COMPLETED` is the only status that closes execution debt; `PARTIAL` and `BLOCKED` are truthful carry-forward evidence and remain pending.",
+      "The public authoring template is a truthful `PARTIAL` carry-forward seed; only switch it to `COMPLETED` after execution evidence and targeted verification pass.",
       "Preferred sections, scaffold prose, and marker shape are quality warnings rather than validation/verification blockers."
     ],
-    renderScaffoldTemplate: renderSummaryTemplate,
-    renderAuthoringTemplate: renderSummaryTemplate
+    renderScaffoldTemplate: renderSummaryScaffoldTemplate,
+    renderAuthoringTemplate: renderSummaryAuthoringTemplate
   },
   "phase.verification": {
     id: "phase.verification",

@@ -369,6 +369,10 @@ await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
 ## Outcome Mode
 
 - Explicit skip rationale
+
+## Rationale
+
+- This fixture has no user-facing UI surface, so execution routing can proceed without UI design work.
 `,
     "utf8"
   );
@@ -418,6 +422,12 @@ Exercise the execute-phase router.
 #### Acceptance Criteria
 
 - tests/help-progress-health.test.ts exits 0
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -521,6 +531,12 @@ Exercise the execute-phase router.
 #### Acceptance Criteria
 
 - tests/help-progress-health.test.ts exits 0
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 
@@ -2186,6 +2202,12 @@ Exercise the execute-phase router.
 #### Acceptance Criteria
 
 - tests/help-progress-health.test.ts exits 0
+
+## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |
 
 ## Verification
 

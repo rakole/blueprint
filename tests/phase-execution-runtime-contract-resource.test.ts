@@ -82,6 +82,25 @@ test("phase-execution runtime contracts do not read bundled docs command specs o
       contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
       false
     );
+
+    if (commandName === "execute-phase") {
+      assert.match(
+        contract.runtimeReference.contractNotes ?? "",
+        /use blueprint_phase_execution_targets as the common read authority/i
+      );
+      assert.match(
+        contract.runtimeReference.contractNotes ?? "",
+        /read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text/i
+      );
+      assert.match(
+        contract.runtimeReference.contractNotes ?? "",
+        /do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path/i
+      );
+      assert.match(
+        contract.runtimeReference.contractNotes ?? "",
+        /blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced"/i
+      );
+    }
   }
 
   assert.deepEqual(attemptedDocs.filter(isDisallowedDocsRead), []);

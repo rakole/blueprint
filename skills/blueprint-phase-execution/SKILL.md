@@ -95,7 +95,8 @@ contracts from manifests, local references, and MCP/artifact contract reads.
   Never pass phase directories, slugs, or filenames.
 - `blueprint_phase_execution_targets`: use it as the deterministic read path
   for execute-phase target selection, lower-wave blockers, overwrite
-  candidates, and overlap warnings.
+  candidates, overlap warnings, selected plan metadata, existing summary
+  metadata, blocker packets, and gap-only routing on the common pre-write path.
 - `blueprint_phase_summary_authoring_context`: read it before summary drafting
   so Markdown summary content is grounded in the selected saved plan's
   acceptance criteria, dependency plan inventory, linked plan path, summary
@@ -167,6 +168,10 @@ does not use subagents.
 - Follow-up routing stays inside the implemented Blueprint surface.
 - State updates happen after artifact truth is refreshed, not before.
 - `/blu-execute-phase` keeps saved plans as the execution scope authority.
+- `/blu-execute-phase` keeps `blueprint_phase_execution_targets` as the common
+  pre-write metadata authority; `blueprint_phase_plan_read` stays for selected
+  plan bodies, and `blueprint_phase_summary_read` stays conditional on needing
+  existing summary body text for overwrite or repair reasoning.
 - `/blu-quick` stays bounded and report-backed rather than impersonating saved
   planning or broad lifecycle execution.
 - `/blu-fast` stays trivial and does not create durable reports or phase
@@ -199,10 +204,20 @@ handoff, and no report persistence.
   `blueprint_phase_execution_targets.externalServicePreflight` to stop for
   readiness confirmation before meaningful execution when the plan depends on
   runtime services the agent cannot safely assume are ready.
+- Keep the default pre-write read path trimmed to
+  `blueprint_phase_execution_targets`, effective `blueprint_config_get`, and
+  `blueprint_phase_plan_read` for selected plan bodies. Do not treat
+  pre-write `blueprint_artifact_validate` or `blueprint_state_load` as common
+  required reads, and use `blueprint_phase_summary_read` only when existing
+  summary body text is needed for overwrite or repair reasoning.
 - If a selected plan depends on another plan whose summary is not yet
   `COMPLETED`, do not write `COMPLETED` for the dependent plan. Use `PARTIAL`
-  or `BLOCKED`, update the status markers to match, and keep the dependency
-  blocker in `Gap / Repair Routes` until the dependency summary exists.
+  or `BLOCKED`, update Readiness, Completion State, Next Safe Action,
+  Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the
+  dependency blocker explicit until the dependency summary exists.
+- Warning-only Markdown shape, exact sentinel, or style advice does not require
+  another repair loop when linkage, status, dependency order, verification truth,
+  and external-service readiness are otherwise valid.
 - Do not make a phase-level completion claim from execute-phase itself; that
   waits for `/blu-validate-phase`, and `/blu-verify-work` remains the verifier
   follow-up once validation evidence exists.

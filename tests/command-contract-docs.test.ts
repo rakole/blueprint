@@ -4,7 +4,10 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
-import { MAP_CODEBASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  MAP_CODEBASE_RUNTIME_METADATA
+} from "../src/mcp/command-runtime-metadata.js";
 
 const repoRoot = process.cwd();
 const commandDocsRoot = path.join(repoRoot, "docs/commands");
@@ -632,31 +635,61 @@ test("phase execution skill and bounded execution agent are marked implemented i
   );
 });
 
-test("execute-phase runtime references keep the topic/todo contract, summary draft tools, and lower-wave gating explicit", async () => {
-  const [runtimeReference, migrationMarkdown] = await Promise.all([
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
-    readRepoFile("docs/GSD-RUNTIME-MIGRATION.md")
-  ]);
+test("execute-phase source-owned runtime metadata keeps the trimmed common read path and hard lifecycle gates explicit", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("execute-phase");
+  const contract = await buildBlueprintCommandRuntimeContractResource("execute-phase");
 
+  assert.ok(metadata);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.deepEqual(contract.spec.requiredTools, [...metadata.requiredTools]);
   assert.match(
-    runtimeReference,
-    /\| `execute-phase` \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_phase_summary_authoring_context`<br>`blueprint_phase_summary_validate_model`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
-  );
-  assert.match(runtimeReference, /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i);
-  assert.match(runtimeReference, /pair Gemini-native `update_topic` and `write_todos` for long execution runs without turning them into persistence/i);
-  assert.match(runtimeReference, /read the canonical `phase\.summary` contract plus the Markdown-first summary authoring context before any summary write or replacement/i);
-  assert.match(runtimeReference, /validate Markdown summary drafts before persistence/i);
-  assert.match(runtimeReference, /keep later-wave work blocked until any lower-wave pending plan is closed/i);
-  assert.match(
-    runtimeReference,
-    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile; keep Resolve\/Read\/Decide\/Execute\/Persist\/Validate\/Route narration/i
   );
   assert.match(
-    migrationMarkdown,
-    /\| `execute-phase` \| `commands\/gsd\/execute-phase\.md` \| GSD has an upstream workflow file \| `docs\/commands\/execute-phase\.md` \| `blueprint-phase-execution` \| `blueprint_phase_locate`<br>`blueprint_phase_plan_index`<br>`blueprint_phase_summary_index`<br>`blueprint_phase_execution_targets`<br>`blueprint_phase_plan_read`<br>`blueprint_phase_summary_read`<br>`blueprint_artifact_contract_read`<br>`blueprint_phase_summary_write`<br>`blueprint_config_get`<br>`blueprint_artifact_validate`<br>`blueprint_state_load`<br>`blueprint_state_update` \|/
+    contract.runtimeReference?.contractNotes ?? "",
+    /pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence/i
   );
-  assert.match(migrationMarkdown, /reads the canonical `phase\.summary` contract before summary writes/i);
-  assert.match(migrationMarkdown, /keeps later-wave work blocked until any lower-wave pending plans are closed/i);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /use blueprint_phase_execution_targets as the common read authority/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /read plan bodies through blueprint_phase_plan_read only for the selected plans/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /keep blueprint_artifact_contract_read with artifactId: "phase\.summary"/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced"/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /never persist execute-phase reports/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /never claim phase completion before validation and verification evidence exists/i
+  );
 });
 
 test("quick command docs keep the bounded report-backed execution contract explicit", async () => {

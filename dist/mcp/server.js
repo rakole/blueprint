@@ -15753,7 +15753,7 @@ var init_command_runtime_metadata = __esm({
           ".blueprint write guard",
           "workflow advisory"
         ],
-        contractNotes: "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, read the canonical phase.summary contract plus the Markdown-first summary authoring context before any summary write or replacement, use blueprint_phase_execution_targets for deterministic target selection plus overwrite and overlap warnings, refuse stale or invalid saved plans, preserve wave order and lower-wave blockers, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, rerun the summary index before synced state update, never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.",
+        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, pair Gemini-native update_topic and write_todos for long execution runs without turning them into persistence, use blueprint_phase_execution_targets as the common read authority for deterministic target selection plus overwrite and overlap warnings with selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source, keep blueprint_config_get with scope: "effective" on the common path for execution mode and safety explanation, read plan bodies through blueprint_phase_plan_read only for the selected plans, read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text, keep blueprint_artifact_contract_read with artifactId: "phase.summary" plus the Markdown-first summary authoring context before any summary write or replacement, do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path, refuse stale or invalid saved plans, preserve wave order, lower-wave blockers, gap-only routing, overlap detection, and external-service confirmation through execution_targets, use bounded blueprint-executor agents only with explicit disjoint write ownership, fall back to one-plan-at-a-time inline execution when agents are unavailable or unsafe, persist PARTIAL or BLOCKED summaries as durable carry-forward evidence, run targeted verification plus bounded repair before COMPLETED summaries, keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced", never persist execute-phase reports, and never claim phase completion before validation and verification evidence exists. The rich command-local contract lives in skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -18814,7 +18814,7 @@ Replace with a concrete, execution-ready goal.
 |------|-------------|-----------|-----------|
 | Replace with a real unknown, deferral, blocker, or no-open-items row. | none | Replace with concrete rationale. | Replace with the next action or no follow-up required. |`;
 }
-function renderSummaryTemplate(context) {
+function renderSummaryScaffoldTemplate(context) {
   return `# ${phaseLabel(context)} - Summary ${planId(context)}
 
 **Plan:** \`${phasePrefix(context)}-${planId(context)}-PLAN.md\`
@@ -18862,6 +18862,57 @@ function renderSummaryTemplate(context) {
 ## Evidence
 
 - \`${summaryPath(context)}\` or other saved repo evidence if helpful.`;
+}
+function renderSummaryAuthoringTemplate(context) {
+  return `# ${phaseLabel(context)} - Summary ${planId(context)}
+
+**Plan:** \`${phasePrefix(context)}-${planId(context)}-PLAN.md\`
+**Status:** PARTIAL
+**Readiness:** not-ready-for-validation
+**Completion State:** pending
+**Next Safe Action:** /blu-execute-phase ${phasePrefix(context)}
+
+## Outcome
+
+- Execution has not been marked complete yet; keep this as carry-forward evidence until targeted checks pass.
+
+## Changes Made
+
+- No completed implementation has been recorded in this seed.
+
+## Verification
+
+| Check | Command | Result | Evidence | Notes |
+|-------|---------|--------|----------|-------|
+| Targeted verification for the selected plan | not-run | not-run | Execution has not reached verification yet. | Complete the selected plan work, then rerun the targeted check. |
+
+## Dependency Plans
+
+| Plan | Status | Evidence |
+|------|--------|----------|
+| none | none | none |
+
+## Manual / Deferred Work
+
+| Item | Reason | Follow-Up | Status |
+|------|--------|-----------|--------|
+| Completion evidence pending | The selected plan has not been verified yet. | Finish execution and rerun /blu-execute-phase ${phasePrefix(context)}. | DEFERRED |
+
+## Gap / Repair Routes
+
+| Gap | Evidence | Repair | Status |
+|-----|----------|--------|--------|
+| Execution evidence incomplete | Targeted verification has not run yet. | Finish the selected plan and write a concrete summary. | OPEN |
+
+## Follow-Ups
+
+- Finish the selected plan execution and replace this seed with concrete evidence.
+
+## Evidence
+
+| Kind | Source | Summary |
+|------|--------|---------|
+| artifact | ${summaryPath(context)} | Canonical summary path supplied by MCP. |`;
 }
 function renderVerificationTemplate(context) {
   return `# ${phaseLabel(context)} - Verification
@@ -22198,10 +22249,11 @@ var init_artifact_contracts = __esm({
           "New summaries should include `Plan` and `Status` markers; readers tolerate marker casing and legacy summaries without using heading shape as a blocker.",
           "Summary authoring is Markdown-first: use the runtime contract for structure, while MCP hard-blocks only missing linkage, missing status on new writes, invalid status, and semantic completion contradictions.",
           "`COMPLETED` is the only status that closes execution debt; `PARTIAL` and `BLOCKED` are truthful carry-forward evidence and remain pending.",
+          "The public authoring template is a truthful `PARTIAL` carry-forward seed; only switch it to `COMPLETED` after execution evidence and targeted verification pass.",
           "Preferred sections, scaffold prose, and marker shape are quality warnings rather than validation/verification blockers."
         ],
-        renderScaffoldTemplate: renderSummaryTemplate,
-        renderAuthoringTemplate: renderSummaryTemplate
+        renderScaffoldTemplate: renderSummaryScaffoldTemplate,
+        renderAuthoringTemplate: renderSummaryAuthoringTemplate
       },
       "phase.verification": {
         id: "phase.verification",
@@ -31979,11 +32031,25 @@ function validateSummaryAgainstLivePlanInventory(content, args) {
     warnings
   };
 }
-function phaseSummaryMarkdownIssueSuggestion(issue2) {
+function phaseSummaryLifecycleRepairSuggestion(issue2) {
   if (/depends on incomplete execution plan\(s\):/i.test(issue2) || /linked dependency plan summaries are not completed yet:/i.test(issue2)) {
-    return "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Completion State, Readiness, and Next Safe Action to match, and keep the dependency blocker in Gap / Repair Routes until the dependency summary exists.";
+    return "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until the dependency summary exists.";
+  }
+  if (/COMPLETED status cannot include explicit fail, blocked, or not-run Verification results/i.test(issue2) || /COMPLETED status cannot declare blocked Readiness/i.test(issue2) || /COMPLETED status cannot declare a non-complete Completion State/i.test(issue2)) {
+    return "Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match the remaining blocker, and keep the open repair route explicit.";
+  }
+  return null;
+}
+function phaseSummaryMarkdownIssueSuggestion(issue2) {
+  const lifecycleRepair = phaseSummaryLifecycleRepairSuggestion(issue2);
+  if (lifecycleRepair) {
+    return lifecycleRepair;
   }
   return "Repair the summary so semantic completion evidence is truthful.";
+}
+function formatPhaseSummaryWriteIssue(issue2) {
+  const lifecycleRepair = phaseSummaryLifecycleRepairSuggestion(issue2);
+  return lifecycleRepair && !issue2.includes(lifecycleRepair) ? `${issue2} ${lifecycleRepair}` : issue2;
 }
 function summarizeMarkdownContent(content) {
   const title = content.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? null;
@@ -32005,6 +32071,227 @@ function toPhaseSummaryRecord(planId2, pathValue, content, linkedPlanPath) {
     status,
     title: metadata.title,
     summary: metadata.summary
+  };
+}
+async function loadPhaseSummaryInventory(args) {
+  const { projectRoot, located, resolved, planIndex } = args;
+  const summaryPaths = located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
+  const summaries = [];
+  let completedPlans = /* @__PURE__ */ new Set();
+  const warnings = [...planIndex.warnings];
+  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
+  const knownPlanPaths = new Map(planIndex.plans.map((plan) => [plan.planId, plan.path]));
+  const planRecordsById = new Map(planIndex.plans.map((plan) => [plan.planId, plan]));
+  const loadedSummaries = [];
+  for (const summaryPath2 of summaryPaths) {
+    const planId2 = parseSummaryArtifactPath(summaryPath2, resolved.phasePrefix);
+    if (!planId2) {
+      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
+      continue;
+    }
+    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
+    const linkedPlanPath = extractSummaryPlanReference(content);
+    const strictValidation = validateStrictSummaryArtifactContent(content, {
+      linkedPlanPath: knownPlanPaths.get(planId2) ?? null
+    });
+    const linkedPlan = planRecordsById.get(planId2) ?? null;
+    const livePlanValidation = validateSummaryAgainstLivePlanInventory(content, {
+      resolved,
+      planId: planId2,
+      plan: linkedPlan,
+      knownPlanIds,
+      completedRouteValidation: { mode: "skip" }
+    });
+    const validation = {
+      valid: strictValidation.valid && livePlanValidation.valid,
+      issues: [...strictValidation.issues, ...livePlanValidation.issues],
+      warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
+    };
+    const record2 = toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath);
+    const summaryStatus = extractSummaryStatus(content);
+    const completedEvidence = summaryCountsAsCompleted(summaryStatus, content);
+    const legacyCompletedEvidence = completedEvidence && summaryStatus === null;
+    summaries.push(record2);
+    loadedSummaries.push({
+      planId: planId2,
+      path: summaryPath2,
+      content,
+      record: record2,
+      status: summaryStatus,
+      completedEvidence,
+      legacyCompletedEvidence,
+      strictValidation,
+      validation,
+      linkedPlan,
+      dependencyPlanIds: linkedPlan ? normalizeDependencyPlanIds(linkedPlan.dependsOn) : []
+    });
+  }
+  const authoritativeSummariesByPlanId = /* @__PURE__ */ new Map();
+  for (const loaded of loadedSummaries) {
+    const canonicalSummaryPath = summaryPathFor(resolved, loaded.planId);
+    if (loaded.path !== canonicalSummaryPath) {
+      warnings.push(
+        `${loaded.path}: ignoring non-canonical duplicate summary for plan ${loaded.planId}; canonical summary path is ${canonicalSummaryPath}.`
+      );
+      continue;
+    }
+    authoritativeSummariesByPlanId.set(loaded.planId, loaded);
+  }
+  const authoritativeLoadedSummaries = [...authoritativeSummariesByPlanId.values()];
+  const deriveCompletedPlans = () => {
+    const derivedCompletedPlans = /* @__PURE__ */ new Set();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const loaded of authoritativeLoadedSummaries) {
+        if (derivedCompletedPlans.has(loaded.planId) || !loaded.completedEvidence || !loaded.validation.valid || !loaded.linkedPlan) {
+          continue;
+        }
+        if (loaded.dependencyPlanIds.every(
+          (dependencyPlanId) => derivedCompletedPlans.has(dependencyPlanId)
+        )) {
+          derivedCompletedPlans.add(loaded.planId);
+          changed = true;
+        }
+      }
+    }
+    return derivedCompletedPlans;
+  };
+  completedPlans = deriveCompletedPlans();
+  for (let attempt = 0; attempt < authoritativeLoadedSummaries.length + 1; attempt += 1) {
+    for (const loaded of authoritativeLoadedSummaries) {
+      const livePlanValidation = validateSummaryAgainstLivePlanInventory(loaded.content, {
+        resolved,
+        planId: loaded.planId,
+        plan: loaded.linkedPlan,
+        knownPlanIds,
+        completedDependencyPlanIds: completedPlans,
+        completedRouteValidation: { mode: "indexed" }
+      });
+      loaded.validation = {
+        valid: loaded.strictValidation.valid && livePlanValidation.valid,
+        issues: [...loaded.strictValidation.issues, ...livePlanValidation.issues],
+        warnings: [...loaded.strictValidation.warnings, ...livePlanValidation.warnings]
+      };
+    }
+    const nextCompletedPlans = deriveCompletedPlans();
+    if (nextCompletedPlans.size === completedPlans.size && [...nextCompletedPlans].every((planId2) => completedPlans.has(planId2))) {
+      completedPlans = nextCompletedPlans;
+      break;
+    }
+    completedPlans = nextCompletedPlans;
+  }
+  for (const loaded of authoritativeLoadedSummaries) {
+    if (loaded.validation.valid && loaded.completedEvidence) {
+      if (!completedPlans.has(loaded.planId)) {
+        warnings.push(
+          `${loaded.path}: linked plan ${loaded.linkedPlan?.path ?? loaded.planId} depends on incomplete execution plan(s): ${loaded.dependencyPlanIds.filter((dependencyPlanId) => !completedPlans.has(dependencyPlanId)).join(", ")}, so this summary does not close execution coverage.`
+        );
+      } else if (loaded.legacyCompletedEvidence) {
+        warnings.push(
+          `${loaded.path}: legacy summary has no Status marker; treating it as completed execution evidence because the canonical plan link and semantic checks passed.`
+        );
+      }
+    } else if (loaded.validation.valid && loaded.status) {
+      warnings.push(
+        `${loaded.path}: summary status is ${loaded.status}, so it remains pending execution debt.`
+      );
+    } else {
+      warnings.push(
+        `${loaded.path}: summary artifact is invalid and does not count as completed execution evidence.`
+      );
+      warnings.push(...loaded.validation.issues.map((issue2) => `${loaded.path}: ${issue2}`));
+      warnings.push(...loaded.validation.warnings.map((warning) => `${loaded.path}: ${warning}`));
+    }
+  }
+  const pendingPlans = planIndex.plans.map((plan) => plan.planId).filter((planId2) => !completedPlans.has(planId2));
+  return {
+    summaryIndex: {
+      phaseFound: true,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      summaries,
+      completedPlans: [...completedPlans].sort(),
+      pendingPlans,
+      warnings
+    },
+    summariesByPlanId: authoritativeSummariesByPlanId
+  };
+}
+function phaseSummaryReadFromInventory(args) {
+  const { resolved, planId: planId2, inventory } = args;
+  const pathValue = summaryPathFor(resolved, planId2);
+  const loaded = inventory.summariesByPlanId.get(planId2);
+  if (!loaded) {
+    return {
+      phaseFound: true,
+      found: false,
+      phaseNumber: resolved.phaseNumber,
+      phasePrefix: resolved.phasePrefix,
+      phaseName: resolved.phaseName,
+      phaseDir: resolved.phaseDir,
+      planId: planId2,
+      path: pathValue,
+      content: null,
+      metadata: null,
+      validation: null,
+      reason: `${pathValue} does not exist yet.`
+    };
+  }
+  const strictValidation = validateStrictSummaryArtifactContent(loaded.content, {
+    linkedPlanPath: planPathFor(resolved, planId2),
+    requirePlanMarker: true
+  });
+  const knownPlanIds = new Set(
+    [
+      ...inventory.summaryIndex.completedPlans,
+      ...inventory.summaryIndex.pendingPlans
+    ].sort()
+  );
+  const livePlanValidation = validateSummaryAgainstLivePlanInventory(loaded.content, {
+    resolved,
+    planId: planId2,
+    plan: loaded.linkedPlan,
+    knownPlanIds,
+    completedDependencyPlanIds: new Set(inventory.summaryIndex.completedPlans),
+    completedRouteValidation: { mode: "indexed" }
+  });
+  const validation = {
+    valid: strictValidation.valid && livePlanValidation.valid,
+    issues: [...strictValidation.issues, ...livePlanValidation.issues],
+    warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
+  };
+  return {
+    phaseFound: true,
+    found: true,
+    phaseNumber: resolved.phaseNumber,
+    phasePrefix: resolved.phasePrefix,
+    phaseName: resolved.phaseName,
+    phaseDir: resolved.phaseDir,
+    planId: planId2,
+    path: pathValue,
+    content: loaded.content,
+    metadata: {
+      linkedPlanPath: loaded.record.linkedPlanPath,
+      status: loaded.record.status,
+      title: loaded.record.title,
+      summary: loaded.record.summary
+    },
+    validation,
+    reason: null
+  };
+}
+async function loadResolvedPhaseSummaryContext(args) {
+  const planIndex = await buildPhasePlanIndexFromLocated(args);
+  const summaryInventory = await loadPhaseSummaryInventory({
+    ...args,
+    planIndex
+  });
+  return {
+    planIndex,
+    summaryInventory
   };
 }
 function isLegacySummaryWithoutStatus(content) {
@@ -32052,21 +32339,6 @@ function collectReferencedValidatedSummaryPaths(content, summaries, completedPla
     references.set(summary.path, firstMatch);
   }
   return [...references.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0])).map(([summaryPath2]) => summaryPath2);
-}
-function phaseSummaryContractContext(resolved, planId2) {
-  if (!resolved) {
-    return {};
-  }
-  const normalizedPlanId = planId2 ? normalizePlanId(planId2) : "01";
-  return {
-    phaseLabel: `Phase ${resolved.phasePrefix}: ${resolved.phaseName}`,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    planId: normalizedPlanId,
-    summaryFile: `${resolved.phasePrefix}-${normalizedPlanId}-SUMMARY.md`,
-    summaryPath: summaryPathFor(resolved, normalizedPlanId)
-  };
 }
 async function buildPhaseSummaryAllowedNextActions(phaseNumber) {
   const readyAction = `/blu-validate-phase ${phaseNumber}`;
@@ -33419,6 +33691,15 @@ async function resolveLocatedPhaseForMutation(args) {
     located: snapshot.located,
     artifacts: snapshot.artifacts,
     matchedPhase: snapshot.matchedPhase
+  };
+}
+async function resolveLocatedPhaseForRead(args) {
+  const projectRoot = await ensureRepoRoot(args.cwd);
+  const located = await blueprintPhaseLocate(args);
+  return {
+    projectRoot,
+    located,
+    resolved: toResolvedPhaseLocation(located)
   };
 }
 async function blueprintRoadmapRead(args = {}) {
@@ -35297,6 +35578,15 @@ async function buildPhasePlanIndexFromResolved(input) {
     warnings
   };
 }
+async function buildPhasePlanIndexFromLocated(args) {
+  const { projectRoot, located, resolved } = args;
+  return buildPhasePlanIndexFromResolved({
+    projectRoot,
+    resolved,
+    artifacts: located.artifacts,
+    warnings: located.reason ? [located.reason] : []
+  });
+}
 async function blueprintPhasePlanIndex(args = {}) {
   const snapshot = await resolvePhaseRuntimeSnapshot(args);
   const { located, resolved } = snapshot;
@@ -35340,7 +35630,14 @@ async function blueprintPhasePlanRead(args) {
       reason: located.reason
     };
   }
-  const planId2 = normalizePlanId(args.planId);
+  return readPhasePlanFromResolved({
+    projectRoot,
+    resolved,
+    planId: normalizePlanId(args.planId)
+  });
+}
+async function readPhasePlanFromResolved(args) {
+  const { projectRoot, resolved, planId: planId2 } = args;
   const pathValue = planPathFor(resolved, planId2);
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   if (!await pathExists(absolutePath)) {
@@ -35360,11 +35657,8 @@ async function blueprintPhasePlanRead(args) {
     };
   }
   const content = await fs4.readFile(absolutePath, "utf8");
-  const validation = validatePlanArtifactContent(content, resolved.phaseNumber);
-  const dependencyIssues = collectInvalidPlanDependencyIssues(
-    pathValue,
-    validation.metadata.dependsOn
-  );
+  const record2 = toPhasePlanRecord(planId2, pathValue, content, resolved.phaseNumber);
+  const dependencyIssues = collectInvalidPlanDependencyIssues(pathValue, record2.dependsOn);
   return {
     phaseFound: true,
     found: true,
@@ -35376,23 +35670,23 @@ async function blueprintPhasePlanRead(args) {
     path: pathValue,
     content,
     metadata: {
-      title: validation.metadata.title,
-      wave: validation.metadata.wave,
-      gapClosure: validation.metadata.gapClosure,
-      status: validation.metadata.status,
-      objective: validation.metadata.objective,
-      dependsOn: validation.metadata.dependsOn,
-      requirements: validation.metadata.requirements,
-      filesModified: validation.metadata.filesModified,
-      readFirst: validation.metadata.readFirst,
-      acceptanceCriteria: validation.metadata.acceptanceCriteria,
-      externalServicePrerequisites: validation.metadata.externalServicePrerequisites,
-      autonomous: validation.metadata.autonomous
+      title: record2.title,
+      wave: record2.wave,
+      gapClosure: record2.gapClosure,
+      status: record2.status,
+      objective: record2.objective,
+      dependsOn: record2.dependsOn,
+      requirements: record2.requirements,
+      filesModified: record2.filesModified,
+      readFirst: record2.readFirst,
+      acceptanceCriteria: record2.acceptanceCriteria,
+      externalServicePrerequisites: record2.externalServicePrerequisites,
+      autonomous: record2.autonomous
     },
     validation: {
-      valid: validation.valid && dependencyIssues.length === 0,
-      issues: [...validation.issues, ...dependencyIssues],
-      warnings: validation.warnings
+      valid: record2.valid && dependencyIssues.length === 0,
+      issues: [...record2.issues, ...dependencyIssues],
+      warnings: record2.warnings
     },
     reason: null
   };
@@ -36242,8 +36536,7 @@ async function blueprintPhasePlanWrite(args) {
   });
 }
 async function blueprintPhaseSummaryIndex(args = {}) {
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
   if (!resolved) {
     return {
       phaseFound: false,
@@ -36257,145 +36550,128 @@ async function blueprintPhaseSummaryIndex(args = {}) {
       warnings: located.reason ? [located.reason] : []
     };
   }
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const planIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
+  const { summaryInventory } = await loadResolvedPhaseSummaryContext({
+    projectRoot,
+    located,
+    resolved
   });
-  const summaryPaths = located.artifacts.filter((artifact) => artifact.endsWith("-SUMMARY.md")).sort((left, right) => left.localeCompare(right));
-  const summaries = [];
-  let completedPlans = /* @__PURE__ */ new Set();
-  const warnings = [...planIndex.warnings];
-  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
-  const knownPlanPaths = new Map(planIndex.plans.map((plan) => [plan.planId, plan.path]));
-  const planRecordsById = new Map(planIndex.plans.map((plan) => [plan.planId, plan]));
-  const loadedSummaries = [];
-  for (const summaryPath2 of summaryPaths) {
-    const planId2 = parseSummaryArtifactPath(summaryPath2, resolved.phasePrefix);
-    if (!planId2) {
-      warnings.push(`Ignoring non-canonical summary artifact name: ${summaryPath2}`);
-      continue;
-    }
-    const content = await fs4.readFile(resolveBlueprintPath(projectRoot, summaryPath2), "utf8");
-    const linkedPlanPath = extractSummaryPlanReference(content);
-    const strictValidation = validateStrictSummaryArtifactContent(content, {
-      linkedPlanPath: knownPlanPaths.get(planId2) ?? null
-    });
-    const linkedPlan = planRecordsById.get(planId2) ?? null;
-    const livePlanValidation = validateSummaryAgainstLivePlanInventory(content, {
+  return summaryInventory.summaryIndex;
+}
+async function resolvePhaseSummaryAuthoringData(args) {
+  const planId2 = normalizePlanId(args.planId);
+  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
+  if (!resolved) {
+    return {
+      projectRoot,
+      located,
+      resolved: null,
+      planId: planId2,
+      summaryPath: null,
+      planRead: null,
+      planIndex: null,
+      summaryInventory: null,
+      existingSummary: null,
+      indexedPlan: null,
+      knownPlanIds: /* @__PURE__ */ new Set(),
+      dependencyPlans: [],
+      missingDependencyPlans: [],
+      acceptanceCriteria: []
+    };
+  }
+  const [planRead, summaryContext] = await Promise.all([
+    readPhasePlanFromResolved({
+      projectRoot,
+      resolved,
+      planId: planId2
+    }),
+    loadResolvedPhaseSummaryContext({
+      projectRoot,
+      located,
+      resolved
+    })
+  ]);
+  const { planIndex, summaryInventory } = summaryContext;
+  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
+  const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
+  const dependsOn = indexedPlan?.dependsOn ?? planRead.metadata?.dependsOn ?? [];
+  return {
+    projectRoot,
+    located,
+    resolved,
+    planId: planId2,
+    summaryPath: summaryPathFor(resolved, planId2),
+    planRead,
+    planIndex,
+    summaryInventory,
+    existingSummary: phaseSummaryReadFromInventory({
       resolved,
       planId: planId2,
-      plan: linkedPlan,
-      knownPlanIds,
-      completedRouteValidation: { mode: "skip" }
-    });
-    const validation = {
-      valid: strictValidation.valid && livePlanValidation.valid,
-      issues: [...strictValidation.issues, ...livePlanValidation.issues],
-      warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
-    };
-    summaries.push(toPhaseSummaryRecord(planId2, summaryPath2, content, linkedPlanPath));
-    const summaryStatus = extractSummaryStatus(content);
-    const completedEvidence = summaryCountsAsCompleted(summaryStatus, content);
-    const legacyCompletedEvidence = completedEvidence && summaryStatus === null;
-    loadedSummaries.push({
-      planId: planId2,
-      path: summaryPath2,
-      content,
-      status: summaryStatus,
-      completedEvidence,
-      legacyCompletedEvidence,
-      strictValidation,
-      validation,
-      linkedPlan,
-      dependencyPlanIds: linkedPlan ? normalizeDependencyPlanIds(linkedPlan.dependsOn) : []
-    });
-  }
-  const deriveCompletedPlans = () => {
-    const derivedCompletedPlans = /* @__PURE__ */ new Set();
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const loaded of loadedSummaries) {
-        if (derivedCompletedPlans.has(loaded.planId) || !loaded.completedEvidence || !loaded.validation.valid || !loaded.linkedPlan) {
-          continue;
-        }
-        if (loaded.dependencyPlanIds.every(
-          (dependencyPlanId) => derivedCompletedPlans.has(dependencyPlanId)
-        )) {
-          derivedCompletedPlans.add(loaded.planId);
-          changed = true;
-        }
-      }
-    }
-    return derivedCompletedPlans;
+      inventory: summaryInventory
+    }),
+    indexedPlan,
+    knownPlanIds,
+    dependencyPlans: dependencyPlanRowsForPlan(dependsOn, knownPlanIds, resolved),
+    missingDependencyPlans: collectMissingDependencyPlanPaths(dependsOn, knownPlanIds, resolved),
+    acceptanceCriteria: indexedPlan?.acceptanceCriteria ?? planRead.metadata?.acceptanceCriteria ?? []
   };
-  completedPlans = deriveCompletedPlans();
-  for (let attempt = 0; attempt < loadedSummaries.length + 1; attempt += 1) {
-    for (const loaded of loadedSummaries) {
-      const livePlanValidation = validateSummaryAgainstLivePlanInventory(loaded.content, {
-        resolved,
-        planId: loaded.planId,
-        plan: loaded.linkedPlan,
-        knownPlanIds,
-        completedDependencyPlanIds: completedPlans,
-        completedRouteValidation: { mode: "indexed" }
-      });
-      loaded.validation = {
-        valid: loaded.strictValidation.valid && livePlanValidation.valid,
-        issues: [...loaded.strictValidation.issues, ...livePlanValidation.issues],
-        warnings: [...loaded.strictValidation.warnings, ...livePlanValidation.warnings]
-      };
-    }
-    const nextCompletedPlans = deriveCompletedPlans();
-    if (nextCompletedPlans.size === completedPlans.size && [...nextCompletedPlans].every((planId2) => completedPlans.has(planId2))) {
-      completedPlans = nextCompletedPlans;
-      break;
-    }
-    completedPlans = nextCompletedPlans;
+}
+function buildPhaseSummaryAuthoringPrerequisites(args) {
+  const linkedPlanPath = args.planRead?.path ?? args.indexedPlan?.path ?? planPathFor(args.resolved, args.planId);
+  const completedDependencyPlanIds = new Set(
+    args.summaryInventory?.summaryIndex.completedPlans ?? []
+  );
+  const unsatisfiedDependencyPlans = args.dependencyPlans.filter(
+    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
+  );
+  const blockers = [];
+  const warnings = [
+    ...args.planIndex?.warnings ?? [],
+    ...args.summaryInventory?.summaryIndex.warnings ?? []
+  ];
+  if (!args.planRead) {
+    blockers.push("Phase summary authoring prerequisites could not be loaded.");
+  } else if (!args.planRead.found || !args.planRead.path) {
+    blockers.push(
+      `${linkedPlanPath} does not exist yet. Create the matching plan before authoring a summary.`
+    );
+  } else if (!args.planRead.validation?.valid) {
+    const planIssues = args.planRead.validation?.issues.length ? args.planRead.validation.issues : ["Linked plan artifact is invalid and must be repaired before execution can be summarized."];
+    blockers.push(...planIssues.map((issue2) => `${args.planRead?.path}: ${issue2}`));
   }
-  for (const loaded of loadedSummaries) {
-    if (loaded.validation.valid && loaded.completedEvidence) {
-      if (!completedPlans.has(loaded.planId)) {
-        warnings.push(
-          `${loaded.path}: linked plan ${loaded.linkedPlan?.path ?? loaded.planId} depends on incomplete execution plan(s): ${loaded.dependencyPlanIds.filter((dependencyPlanId) => !completedPlans.has(dependencyPlanId)).join(", ")}, so this summary does not close execution coverage.`
-        );
-      } else if (loaded.legacyCompletedEvidence) {
-        warnings.push(
-          `${loaded.path}: legacy summary has no Status marker; treating it as completed execution evidence because the canonical plan link and semantic checks passed.`
-        );
-      }
-    } else if (loaded.validation.valid && loaded.status) {
-      warnings.push(
-        `${loaded.path}: summary status is ${loaded.status}, so it remains pending execution debt.`
-      );
-    } else {
-      warnings.push(
-        `${loaded.path}: summary artifact is invalid and does not count as completed execution evidence.`
-      );
-      warnings.push(...loaded.validation.issues.map((issue2) => `${loaded.path}: ${issue2}`));
-      warnings.push(...loaded.validation.warnings.map((warning) => `${loaded.path}: ${warning}`));
-    }
+  if (args.missingDependencyPlans.length > 0) {
+    blockers.push(
+      `${linkedPlanPath}: linked plan is missing dependency plan artifacts: ${args.missingDependencyPlans.join(", ")}`
+    );
   }
-  const pendingPlans = planIndex.plans.map((plan) => plan.planId).filter((planId2) => !completedPlans.has(planId2));
+  if (unsatisfiedDependencyPlans.length > 0) {
+    warnings.push(
+      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until those dependency summaries exist.`
+    );
+  }
   return {
-    phaseFound: true,
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    summaries,
-    completedPlans: [...completedPlans].sort(),
-    pendingPlans,
-    warnings
+    linkedPlanPath,
+    blockers,
+    warnings,
+    unsatisfiedDependencyPlans,
+    completedDependencyPlanIds
   };
 }
 async function blueprintPhaseSummaryAuthoringContext(args) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
-  const planId2 = normalizePlanId(args.planId);
-  const contract = readArtifactContract("phase.summary", phaseSummaryContractContext(resolved ?? void 0, planId2));
+  const data = await resolvePhaseSummaryAuthoringData(args);
+  const {
+    located,
+    resolved,
+    planId: planId2,
+    summaryPath: summaryPath2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    existingSummary,
+    indexedPlan,
+    dependencyPlans,
+    missingDependencyPlans,
+    acceptanceCriteria
+  } = data;
   if (!resolved) {
     const reason = located.reason ?? "Phase could not be resolved for summary authoring.";
     return {
@@ -36418,75 +36694,16 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
       warnings: []
     };
   }
-  const summaryPath2 = summaryPathFor(resolved, planId2);
-  const planRead = await blueprintPhasePlanRead({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber,
-    planId: planId2
+  const { linkedPlanPath, blockers, warnings } = buildPhaseSummaryAuthoringPrerequisites({
+    resolved,
+    planId: planId2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    indexedPlan,
+    dependencyPlans,
+    missingDependencyPlans
   });
-  const planIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const existing = await blueprintPhaseSummaryRead({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber,
-    planId: planId2
-  });
-  const summaryIndex = await blueprintPhaseSummaryIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
-  const linkedPlanPath = planRead.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2);
-  const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
-  const dependsOn = indexedPlan?.dependsOn ?? planRead.metadata?.dependsOn ?? [];
-  const missingDependencyPlans = collectMissingDependencyPlanPaths(dependsOn, knownPlanIds, resolved);
-  const dependencyPlans = dependsOn.flatMap((dependency) => {
-    try {
-      const normalizedDependency = normalizePlanId(dependency);
-      return knownPlanIds.has(normalizedDependency) ? [
-        {
-          planId: normalizedDependency,
-          path: planPathFor(resolved, normalizedDependency)
-        }
-      ] : [];
-    } catch {
-      return [];
-    }
-  });
-  const acceptanceCriteria = indexedPlan?.acceptanceCriteria ?? planRead.metadata?.acceptanceCriteria ?? [];
-  const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
-  const planIds = planIndex.plans.map((candidate) => candidate.planId);
-  const completedRoute = completedRouteAfterSelectedCompletion({
-    phaseNumber: resolved.phaseNumber,
-    planIds,
-    completedPlanIds: completedDependencyPlanIds,
-    selectedPlanId: planId2
-  });
-  const unsatisfiedDependencyPlans = dependencyPlans.filter(
-    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
-  );
-  const blockers = [];
-  const warnings = [...planIndex.warnings, ...summaryIndex.warnings];
-  if (!planRead.found || !planRead.path) {
-    blockers.push(
-      `${linkedPlanPath} does not exist yet. Create the matching plan before authoring a summary.`
-    );
-  } else if (!planRead.validation?.valid) {
-    const planIssues = planRead.validation?.issues.length ? planRead.validation.issues : ["Linked plan artifact is invalid and must be repaired before execution can be summarized."];
-    blockers.push(...planIssues.map((issue2) => `${planRead.path}: ${issue2}`));
-  }
-  if (missingDependencyPlans.length > 0) {
-    blockers.push(
-      `${linkedPlanPath}: linked plan is missing dependency plan artifacts: ${missingDependencyPlans.join(", ")}`
-    );
-  }
-  if (unsatisfiedDependencyPlans.length > 0) {
-    warnings.push(
-      `${linkedPlanPath}: a COMPLETED summary cannot close until linked dependency plan summaries are completed: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
-    );
-  }
   const allowedNextActions = await buildPhaseSummaryAllowedNextActions(resolved.phaseNumber);
   return {
     status: blockers.length === 0 ? "ready" : "invalid",
@@ -36495,7 +36712,7 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
     path: summaryPath2,
     linkedPlanPath,
     plan: indexedPlan,
-    existing,
+    existing: existingSummary,
     dependencyPlans,
     acceptanceCriteria,
     allowedNextActions: allowedNextActions.allowedActions,
@@ -36509,18 +36726,43 @@ async function blueprintPhaseSummaryAuthoringContext(args) {
   };
 }
 async function blueprintPhaseSummaryValidateModel(args) {
-  const context = await blueprintPhaseSummaryAuthoringContext({
+  const data = await resolvePhaseSummaryAuthoringData({
     cwd: args.cwd,
     phase: args.phase,
     planId: args.planId
   });
-  const diagnostics = context.prerequisiteBlockers.map(
+  const {
+    located,
+    resolved,
+    planId: planId2,
+    summaryPath: summaryPath2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    indexedPlan,
+    dependencyPlans,
+    missingDependencyPlans
+  } = data;
+  const prerequisiteData = resolved ? buildPhaseSummaryAuthoringPrerequisites({
+    resolved,
+    planId: planId2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    indexedPlan,
+    dependencyPlans,
+    missingDependencyPlans
+  }) : null;
+  const prerequisiteBlockers = prerequisiteData?.blockers ?? [
+    located.reason ?? "Phase could not be resolved for summary authoring."
+  ];
+  const diagnostics = prerequisiteBlockers.map(
     (message) => phaseSummaryDiagnostic({
       source: "scope",
       path: "phase.plan",
       code: "scope.prerequisite_blocker",
       message,
-      context: { phase: context.phase?.phaseNumber ?? null, planId: context.planId },
+      context: { phase: resolved?.phaseNumber ?? null, planId: planId2 },
       suggestion: "Repair the selected saved plan and dependency inventory before authoring phase.summary evidence."
     })
   );
@@ -36569,18 +36811,33 @@ async function blueprintPhaseSummaryValidateModel(args) {
             suggestion: "Pass Markdown content, or provide the legacy model fields needed for rendering."
           })
         );
-      } else if (context.phase && context.planId && context.path && context.linkedPlanPath) {
+      } else if (resolved && summaryPath2) {
+        const linkedPlanPath = planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2);
         renderPreview = renderPhaseSummaryModelContent({
           model: normalizedModel,
-          resolved: context.phase,
-          planId: context.planId,
-          linkedPlanPath: context.linkedPlanPath,
-          summaryPath: context.path
+          resolved,
+          planId: planId2,
+          linkedPlanPath,
+          summaryPath: summaryPath2
         });
       }
     }
   }
-  if (renderPreview && context.phase && context.planId && context.path && context.linkedPlanPath) {
+  if (renderPreview && resolved && summaryPath2) {
+    const {
+      linkedPlanPath,
+      warnings: prerequisiteWarnings,
+      completedDependencyPlanIds
+    } = prerequisiteData ?? buildPhaseSummaryAuthoringPrerequisites({
+      resolved,
+      planId: planId2,
+      planRead,
+      planIndex,
+      summaryInventory,
+      indexedPlan,
+      dependencyPlans,
+      missingDependencyPlans
+    });
     const statusMarker = extractSummaryMarkerValue(renderPreview, "Status");
     const status = extractSummaryStatus(renderPreview);
     if (!statusMarker) {
@@ -36607,36 +36864,32 @@ async function blueprintPhaseSummaryValidateModel(args) {
       );
     }
     const validation = validateStrictSummaryArtifactContent(renderPreview, {
-      linkedPlanPath: context.linkedPlanPath,
+      linkedPlanPath,
       requirePlanMarker: true
     });
-    const planIndex = await blueprintPhasePlanIndex({
-      cwd: args.cwd,
-      phase: context.phase.phaseNumber
-    });
-    const summaryIndex = await blueprintPhaseSummaryIndex({
-      cwd: args.cwd,
-      phase: context.phase.phaseNumber
-    });
     const completedRoute = completedRouteAfterSelectedCompletion({
-      phaseNumber: context.phase.phaseNumber,
-      planIds: planIndex.plans.map((plan) => plan.planId),
-      completedPlanIds: new Set(summaryIndex.completedPlans),
-      selectedPlanId: context.planId
+      phaseNumber: resolved.phaseNumber,
+      planIds: planIndex?.plans.map((plan) => plan.planId) ?? [],
+      completedPlanIds: completedDependencyPlanIds,
+      selectedPlanId: planId2
     });
     const livePlanValidation = validateSummaryAgainstLivePlanInventory(renderPreview, {
-      resolved: context.phase,
-      planId: context.planId,
-      plan: context.plan,
-      knownPlanIds: new Set(planIndex.plans.map((plan) => plan.planId)),
-      completedDependencyPlanIds: new Set(summaryIndex.completedPlans),
+      resolved,
+      planId: planId2,
+      plan: indexedPlan,
+      knownPlanIds: new Set(planIndex?.plans.map((plan) => plan.planId) ?? []),
+      completedDependencyPlanIds,
       completedRouteValidation: {
         mode: "exact",
         route: completedRoute
       }
     });
     const markdownIssues = [...validation.issues, ...livePlanValidation.issues];
-    draftWarnings.push(...validation.warnings, ...livePlanValidation.warnings);
+    draftWarnings.push(
+      ...prerequisiteWarnings,
+      ...validation.warnings,
+      ...livePlanValidation.warnings
+    );
     for (const issue2 of markdownIssues) {
       diagnostics.push(
         phaseSummaryDiagnostic({
@@ -36653,27 +36906,25 @@ async function blueprintPhaseSummaryValidateModel(args) {
   return {
     status: diagnostics.length === 0 ? "valid" : "invalid",
     valid: diagnostics.length === 0,
-    phase: context.phase,
-    planId: context.planId,
-    path: context.path,
-    linkedPlanPath: context.linkedPlanPath,
-    schemaPath: context.schemaPath,
-    taskSchema: context.taskSchema,
+    phase: resolved,
+    planId: planId2,
+    path: summaryPath2,
+    linkedPlanPath: resolved ? planRead?.path ?? indexedPlan?.path ?? planPathFor(resolved, planId2) : null,
+    schemaPath: null,
+    taskSchema: null,
     diagnostics,
     diagnosticCounts: countPhaseSummaryDiagnostics(diagnostics),
     normalizedModel,
     renderPreview: diagnostics.length === 0 ? renderPreview : null,
     warnings: hasModel ? [
-      ...context.warnings,
+      ...prerequisiteData?.warnings ?? [],
       ...draftWarnings,
       "phase.summary structured models are deprecated; Markdown content is now the primary summary authoring path."
-    ] : [...context.warnings, ...draftWarnings]
+    ] : [...prerequisiteData?.warnings ?? [], ...draftWarnings]
   };
 }
 async function blueprintPhaseSummaryRead(args) {
-  const projectRoot = await ensureRepoRoot(args.cwd);
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
   if (!resolved) {
     return {
       phaseFound: false,
@@ -36709,55 +36960,16 @@ async function blueprintPhaseSummaryRead(args) {
       reason: `${pathValue} does not exist yet.`
     };
   }
-  const content = await fs4.readFile(absolutePath, "utf8");
-  const metadata = summarizeMarkdownContent(content);
-  const linkedPlanPath = extractSummaryPlanReference(content);
-  const strictValidation = validateStrictSummaryArtifactContent(content, {
-    linkedPlanPath: planPathFor(resolved, planId2),
-    requirePlanMarker: true
+  const { summaryInventory } = await loadResolvedPhaseSummaryContext({
+    projectRoot,
+    located,
+    resolved
   });
-  const planIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const summaryIndex = await blueprintPhaseSummaryIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
-  const linkedPlan = planIndex.plans.find((plan) => plan.planId === planId2) ?? null;
-  const livePlanValidation = validateSummaryAgainstLivePlanInventory(content, {
+  return phaseSummaryReadFromInventory({
     resolved,
     planId: planId2,
-    plan: linkedPlan,
-    knownPlanIds,
-    completedDependencyPlanIds: new Set(summaryIndex.completedPlans),
-    completedRouteValidation: { mode: "indexed" }
+    inventory: summaryInventory
   });
-  const validation = {
-    valid: strictValidation.valid && livePlanValidation.valid,
-    issues: [...strictValidation.issues, ...livePlanValidation.issues],
-    warnings: [...strictValidation.warnings, ...livePlanValidation.warnings]
-  };
-  return {
-    phaseFound: true,
-    found: true,
-    phaseNumber: resolved.phaseNumber,
-    phasePrefix: resolved.phasePrefix,
-    phaseName: resolved.phaseName,
-    phaseDir: resolved.phaseDir,
-    planId: planId2,
-    path: pathValue,
-    content,
-    metadata: {
-      linkedPlanPath,
-      status: extractSummaryStatus(content),
-      title: metadata.title,
-      summary: metadata.summary
-    },
-    validation,
-    reason: null
-  };
 }
 function formatExternalServicePrerequisiteReason(prerequisite) {
   return `${prerequisite.planId} (${prerequisite.planPath}) requires external service "${prerequisite.service}" [${prerequisite.category}] for ${prerequisite.purpose}. User setup/startup: ${prerequisite.userSetup}. Readiness check: ${prerequisite.readinessCheck}.`;
@@ -36776,8 +36988,7 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   if (args.wave !== void 0 && (!Number.isInteger(args.wave) || args.wave < 1)) {
     throw new Error("Wave must be a positive integer.");
   }
-  const located = await blueprintPhaseLocate(args);
-  const resolved = toResolvedPhaseLocation(located);
+  const { projectRoot, located, resolved } = await resolveLocatedPhaseForRead(args);
   if (!resolved) {
     return {
       phaseFound: false,
@@ -36824,41 +37035,34 @@ async function blueprintPhaseExecutionTargets(args = {}) {
       warnings: located.reason ? [located.reason] : []
     };
   }
-  const projectRoot = await ensureRepoRoot(args.cwd);
   const requestedWave = args.wave ?? null;
   const gapsOnly = args.gapsOnly ?? false;
   const includeConflicts = args.includeConflicts ?? true;
   const externalServiceConfirmed = args.externalServiceConfirmed ?? false;
-  const [planIndex, summaryIndex, effectiveConfig] = await Promise.all([
-    blueprintPhasePlanIndex({
-      cwd: projectRoot,
-      phase: resolved.phaseNumber
-    }),
-    blueprintPhaseSummaryIndex({
-      cwd: projectRoot,
-      phase: resolved.phaseNumber
+  const [summaryContext, effectiveConfig] = await Promise.all([
+    loadResolvedPhaseSummaryContext({
+      projectRoot,
+      located,
+      resolved
     }),
     blueprintConfigGet({
       cwd: projectRoot,
       scope: "effective"
     })
   ]);
+  const { planIndex, summaryInventory } = summaryContext;
+  const summaryIndex = summaryInventory.summaryIndex;
   const alwaysConfirmExternalServices = effectiveConfig.config?.safety?.always_confirm_external_services === true;
   const pendingPlanIds = summaryIndex.pendingPlans;
   const pendingPlanIdSet = new Set(pendingPlanIds);
   const gapClosurePlanIdSet = new Set(planIndex.gapClosurePlans);
   const knownPlanIds = new Set(planIndex.plans.map((plan) => plan.planId));
-  const summaryReads = await Promise.all(
-    planIndex.plans.map(
-      (plan) => blueprintPhaseSummaryRead({
-        cwd: projectRoot,
-        phase: resolved.phaseNumber,
-        planId: plan.planId
-      })
-    )
-  );
-  const executionPlans = planIndex.plans.map((plan, index) => {
-    const summaryRead = summaryReads[index];
+  const executionPlans = planIndex.plans.map((plan) => {
+    const summaryRead = phaseSummaryReadFromInventory({
+      resolved,
+      planId: plan.planId,
+      inventory: summaryInventory
+    });
     const summary = {
       found: summaryRead.found,
       path: summaryRead.path ?? summaryPathFor(resolved, plan.planId),
@@ -37111,17 +37315,37 @@ async function blueprintPhaseExecutionTargets(args = {}) {
   };
 }
 async function blueprintPhaseSummaryWrite(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
-  const planId2 = normalizePlanId(args.planId);
-  const pathValue = summaryPathFor(resolved, planId2);
-  const plan = await blueprintPhasePlanRead({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber,
-    planId: planId2
+  const data = await resolvePhaseSummaryAuthoringData(args);
+  if (!data.resolved) {
+    throw new Error(data.located.reason ?? "Phase could not be resolved for a deterministic write.");
+  }
+  const { projectRoot, resolved } = data;
+  const {
+    planId: planId2,
+    summaryPath: summaryPath2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    indexedPlan,
+    knownPlanIds,
+    dependencyPlans,
+    missingDependencyPlans
+  } = data;
+  const pathValue = summaryPath2 ?? summaryPathFor(resolved, planId2);
+  const prerequisites = buildPhaseSummaryAuthoringPrerequisites({
+    resolved,
+    planId: planId2,
+    planRead,
+    planIndex,
+    summaryInventory,
+    indexedPlan,
+    dependencyPlans,
+    missingDependencyPlans
   });
-  if (!plan.found || !plan.path) {
+  const plan = planRead;
+  if (!plan || !plan.found || !plan.path) {
     throw new Error(
-      `${plan.path ?? planPathFor(resolved, planId2)} does not exist yet. Create the matching plan before writing a summary.`
+      `${plan?.path ?? prerequisites.linkedPlanPath} does not exist yet. Create the matching plan before writing a summary.`
     );
   }
   if (!plan.validation?.valid) {
@@ -37142,18 +37366,6 @@ async function blueprintPhaseSummaryWrite(args) {
       warnings: plan.validation?.warnings ?? []
     };
   }
-  const planIndex = await blueprintPhasePlanIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const indexedPlan = planIndex.plans.find((candidate) => candidate.planId === planId2) ?? null;
-  const knownPlanIds = new Set(planIndex.plans.map((candidate) => candidate.planId));
-  const dependsOn = indexedPlan?.dependsOn ?? plan.metadata?.dependsOn ?? [];
-  const missingDependencyPlans = collectMissingDependencyPlanPaths(
-    dependsOn,
-    knownPlanIds,
-    resolved
-  );
   if (missingDependencyPlans.length > 0) {
     return {
       phaseNumber: resolved.phaseNumber,
@@ -37173,15 +37385,6 @@ async function blueprintPhaseSummaryWrite(args) {
       warnings: plan.validation?.warnings ?? []
     };
   }
-  const summaryIndex = await blueprintPhaseSummaryIndex({
-    cwd: projectRoot,
-    phase: resolved.phaseNumber
-  });
-  const dependencyPlans = dependencyPlanRowsForPlan(dependsOn, knownPlanIds, resolved);
-  const completedDependencyPlanIds = new Set(summaryIndex.completedPlans);
-  const unsatisfiedDependencyPlans = dependencyPlans.filter(
-    (dependency) => !completedDependencyPlanIds.has(dependency.planId)
-  );
   const absolutePath = resolveBlueprintPath(projectRoot, pathValue);
   const hasContent = args.content !== void 0;
   const hasModel = args.model !== void 0;
@@ -37209,13 +37412,8 @@ async function blueprintPhaseSummaryWrite(args) {
   if (hasContent && typeof args.content === "string") {
     normalizedContent = normalizeTextContent(args.content);
   } else {
-    const modelValidation = await blueprintPhaseSummaryValidateModel({
-      cwd: projectRoot,
-      phase: resolved.phaseNumber,
-      planId: planId2,
-      model: args.model
-    });
-    if (!modelValidation.valid || !modelValidation.renderPreview) {
+    const modelObject = asJsonObject(args.model);
+    if (!modelObject) {
       return {
         phaseNumber: resolved.phaseNumber,
         phasePrefix: resolved.phasePrefix,
@@ -37228,12 +37426,71 @@ async function blueprintPhaseSummaryWrite(args) {
         created: false,
         overwritten: false,
         status: "invalid",
-        issues: modelValidation.diagnostics.map(formatPhaseSummaryDiagnostic),
-        warnings: modelValidation.warnings
+        issues: [
+          formatPhaseSummaryDiagnostic(
+            phaseSummaryDiagnostic({
+              source: "schema",
+              path: "model",
+              code: "schema.type",
+              message: "Legacy phase summary model must be a JSON object.",
+              context: {
+                receivedType: Array.isArray(args.model) ? "array" : typeof args.model
+              },
+              suggestion: "Pass Markdown content instead of a structured summary model."
+            })
+          )
+        ],
+        warnings: [
+          ...prerequisites.warnings,
+          "phase.summary structured models are deprecated; Markdown content is now the primary summary authoring path."
+        ]
       };
     }
-    normalizedContent = normalizeTextContent(modelValidation.renderPreview);
-    modelWarnings.push(...modelValidation.warnings);
+    const normalizedModel = normalizePhaseSummaryModel(modelObject);
+    if (!normalizedModel) {
+      return {
+        phaseNumber: resolved.phaseNumber,
+        phasePrefix: resolved.phasePrefix,
+        phaseName: resolved.phaseName,
+        phaseDir: resolved.phaseDir,
+        planId: planId2,
+        path: pathValue,
+        linkedPlanPath: plan.path,
+        written: false,
+        created: false,
+        overwritten: false,
+        status: "invalid",
+        issues: [
+          formatPhaseSummaryDiagnostic(
+            phaseSummaryDiagnostic({
+              source: "schema",
+              path: "model",
+              code: "schema.legacy_shape",
+              message: "Legacy phase summary model cannot be rendered as Markdown.",
+              context: {},
+              suggestion: "Pass Markdown content, or provide the legacy model fields needed for rendering."
+            })
+          )
+        ],
+        warnings: [
+          ...prerequisites.warnings,
+          "phase.summary structured models are deprecated; Markdown content is now the primary summary authoring path."
+        ]
+      };
+    }
+    normalizedContent = normalizeTextContent(
+      renderPhaseSummaryModelContent({
+        model: normalizedModel,
+        resolved,
+        planId: planId2,
+        linkedPlanPath: plan.path,
+        summaryPath: pathValue
+      })
+    );
+    modelWarnings.push(
+      ...prerequisites.warnings,
+      "phase.summary structured models are deprecated; Markdown content is now the primary summary authoring path."
+    );
   }
   const statusMarker = extractSummaryMarkerValue(normalizedContent, "Status");
   const summaryStatus = extractSummaryStatus(normalizedContent);
@@ -37243,9 +37500,9 @@ async function blueprintPhaseSummaryWrite(args) {
   } else if (!summaryStatus) {
     writeModeIssues.push("Phase summary Status marker must be COMPLETED, PARTIAL, or BLOCKED.");
   }
-  if (summaryStatus === "COMPLETED" && unsatisfiedDependencyPlans.length > 0) {
+  if (summaryStatus === "COMPLETED" && prerequisites.unsatisfiedDependencyPlans.length > 0) {
     writeModeIssues.push(
-      `${plan.path}: linked dependency plan summaries are not completed yet: ${unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Use Status: PARTIAL or BLOCKED until those dependency summaries exist.`
+      `${plan.path}: depends on incomplete execution plan(s): ${prerequisites.unsatisfiedDependencyPlans.map((dependency) => `${dependency.planId} (${dependency.path})`).join(", ")}. Do not use Status: COMPLETED yet. Use Status: PARTIAL or Status: BLOCKED, update Readiness, Completion State, Next Safe Action, Verification, Gap / Repair Routes, and Follow-Ups to match, and keep the dependency blocker explicit until those dependency summaries exist.`
     );
   }
   if (writeModeIssues.length > 0) {
@@ -37262,7 +37519,11 @@ async function blueprintPhaseSummaryWrite(args) {
       overwritten: false,
       status: "invalid",
       issues: writeModeIssues,
-      warnings: [...modelWarnings, ...plan.validation?.warnings ?? [], ...summaryIndex.warnings]
+      warnings: [
+        ...modelWarnings,
+        ...plan.validation?.warnings ?? [],
+        ...summaryInventory?.summaryIndex.warnings ?? []
+      ]
     };
   }
   const strictValidation = validateStrictSummaryArtifactContent(normalizedContent, {
@@ -37271,8 +37532,8 @@ async function blueprintPhaseSummaryWrite(args) {
   });
   const completedRoute = completedRouteAfterSelectedCompletion({
     phaseNumber: resolved.phaseNumber,
-    planIds: planIndex.plans.map((candidate) => candidate.planId),
-    completedPlanIds: completedDependencyPlanIds,
+    planIds: planIndex?.plans.map((candidate) => candidate.planId) ?? [],
+    completedPlanIds: prerequisites.completedDependencyPlanIds,
     selectedPlanId: planId2
   });
   const livePlanValidation = validateSummaryAgainstLivePlanInventory(normalizedContent, {
@@ -37280,7 +37541,7 @@ async function blueprintPhaseSummaryWrite(args) {
     planId: planId2,
     plan: indexedPlan,
     knownPlanIds,
-    completedDependencyPlanIds,
+    completedDependencyPlanIds: prerequisites.completedDependencyPlanIds,
     completedRouteValidation: {
       mode: "exact",
       route: completedRoute
@@ -37307,7 +37568,7 @@ async function blueprintPhaseSummaryWrite(args) {
       created: false,
       overwritten: false,
       status: "invalid",
-      issues,
+      issues: issues.map(formatPhaseSummaryWriteIssue),
       warnings: [...modelWarnings, ...warnings]
     };
   }

@@ -98,6 +98,10 @@ test("execute-phase skill bundle points the command at execute-specific referenc
     skillFile,
     /If a selected plan depends on another plan whose summary is not yet[\s\S]*Use `PARTIAL`[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i
   );
+  assert.match(
+    skillFile,
+    /Warning-only Markdown shape[\s\S]*does not require[\s\S]*another repair loop/i
+  );
   assert.match(skillFile, /externalServicePreflight/i);
 });
 
@@ -113,6 +117,7 @@ test("execute-phase command docs point at the rich runtime contract and keep the
   assertMatchesAll(docsFile, [
     /blueprint_phase_execution_targets/i,
     /gapClosurePlans/,
+    /common metadata and[\s\S]*target-selection authority[\s\S]*default runs[\s\S]*`--wave`[\s\S]*`--gaps-only`/i,
     /lowerWavePendingPlans/,
     /externalServicePreflight/,
     /Pre-persistence gates/i,
@@ -126,8 +131,19 @@ test("execute-phase command docs point at the rich runtime contract and keep the
     /explicit `Status`/,
     /Do not pass summary filenames, phase slugs, phase directories/i,
     /`COMPLETED` is the only summary status that closes execution debt/i,
+    /authoring template is a safe `PARTIAL` carry-forward seed/i,
+    /warning-only Markdown shape[\s\S]*does not require another repair loop/i,
+    /downgrade to `PARTIAL` or `BLOCKED`[\s\S]*Readiness[\s\S]*Completion State[\s\S]*Next Safe Action[\s\S]*Gap \/ Repair Routes[\s\S]*Follow-Ups/i,
     /base: "synced"/
   ]);
+  assert.doesNotMatch(
+    docsFile,
+    /gapClosurePlans` from `blueprint_phase_plan_index` is the source of truth[\s\S]*`--gaps-only`/i
+  );
+  assert.doesNotMatch(
+    docsFile,
+    /Pre-persistence gates:[\s\S]*selected plan index, summary index[\s\S]*before any summary write/i
+  );
 });
 
 test("execute-phase runtime contract carries the rich execution sequencing and carry-forward rules", async () => {
@@ -144,6 +160,8 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
     /absolute\s+blocker/i,
     /PARTIAL` and `BLOCKED` summaries/i,
     /If a dependency plan summary is still missing or not yet `COMPLETED`[\s\S]*Downgrade to `PARTIAL` or[\s\S]*`BLOCKED`[\s\S]*dependency summary exists/i,
+    /authoring template is a safe `PARTIAL`[\s\S]*Switch it to `COMPLETED`[\s\S]*only after execution evidence/i,
+    /Warning-only Markdown shape[\s\S]*should not start[\s\S]*another repair loop/i,
     /carry-forward evidence/i,
     /one `XX-YY-SUMMARY\.md` artifact per executed plan/i,
     /phase_summary_authoring_context/,
@@ -191,7 +209,35 @@ test("execute-phase runtime contract resource is owned by runtime metadata, not 
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",
+    /use blueprint_phase_execution_targets as the common read authority/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /selectedPlans, existingSummaries, blockers, and conflicts as the default public metadata source/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /read plan bodies through blueprint_phase_plan_read only for the selected plans/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /read blueprint_phase_summary_read only when overwrite or repair reasoning truly needs existing summary body text/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /do not treat blueprint_artifact_validate or blueprint_state_load as default pre-write gates on the common path/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /keep the post-write sequence as blueprint_phase_summary_index followed by blueprint_artifact_validate and blueprint_state_update with base: "synced"/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
     /never persist execute-phase reports/i
+  );
+  assert.match(
+    contract.runtimeReference.contractNotes ?? "",
+    /never claim phase completion before validation and verification evidence exists/i
   );
   assert.match(
     contract.runtimeReference.contractNotes ?? "",

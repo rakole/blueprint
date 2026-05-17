@@ -43,8 +43,9 @@ state without claiming phase completion on its own.
   safely assume are ready, such as container runtimes, databases, queues,
   emulators, local API servers, search services, caches, brokers, auth
   sandboxes, or third-party SaaS test tenants.
-- `gapClosurePlans` from `blueprint_phase_plan_index` is the source of truth
-  for `--gaps-only`.
+- `blueprint_phase_execution_targets` is the common-path authority for default
+  runs, `--wave`, and `--gaps-only`; `--gaps-only` uses that helper's selected
+  target set instead of a separate `gapClosurePlans` reread.
 - Any lower-wave pending plan in `lowerWavePendingPlans` blocks later-wave
   work, including combined `--gaps-only --wave` requests.
 - Existing summary files only count as completed evidence when validation
@@ -54,9 +55,19 @@ state without claiming phase completion on its own.
 
 ## Execution Gates
 
-- Pre-persistence gates: read the selected plan index, summary index,
-  execution-target helper, effective config, canonical summary contract,
-  artifact validation state, and phase state before any summary write.
+- Pre-persistence gates: read `blueprint_phase_execution_targets`, effective
+  config, and the canonical `phase.summary` contract before any summary write.
+  Treat `blueprint_phase_execution_targets` as the common metadata and
+  target-selection authority for default runs plus `--wave` and `--gaps-only`;
+  selected plan bodies are read only after target selection.
+- Conditional body inspection: call `blueprint_phase_summary_read` only when
+  selected or overlapping plan ids need existing summary-body inspection to
+  decide reuse, replacement, or carry-forward handling.
+- Non-default pre-write reads: `blueprint_artifact_validate` and
+  `blueprint_state_load` stay in the allowlist for conditional health or
+  routing inspection, but they are not default pre-write reads for summary
+  authoring; `blueprint_phase_summary_index` belongs to the post-write
+  sequence.
 - External-service gates: when selected plans declare blocking external-service
   prerequisites and `safety.always_confirm_external_services` is enabled,
   confirm readiness before meaningful execution. If confirmation is granted,
@@ -90,11 +101,13 @@ and no-subagent fallback behavior, read the rich runtime contract in
 ## Blueprint And Global State Reads
 
 - `.blueprint/config.json`
-- `.blueprint/STATE.md`
 - selected phase plan files through MCP reads
-- selected phase summary files through MCP reads
+- selected phase summary files through MCP reads only when existing summary
+  bodies need inspection for reuse, replacement, or carry-forward decisions
 - `phase.summary` canonical authoring contract through MCP reads before summary
   creation or replacement
+- `.blueprint/STATE.md` only when conditional routing inspection needs
+  `blueprint_state_load`
 
 ## Blueprint And Global State Writes
 
@@ -105,18 +118,17 @@ and no-subagent fallback behavior, read the rich runtime contract in
 
 - `blueprint_phase_locate` -> `{found, phaseNumber, phaseName, phaseDir, artifacts}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans, gapClosurePlans}`
-- `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, blockers, conflicts, warnings}`
 - `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, externalServicePreflight, blockers, conflicts, warnings}`
 - `blueprint_phase_plan_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_summary_index` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, summaries, completedPlans, pendingPlans, warnings}`
-- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
+- `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}` (conditional existing-summary body inspection only)
 - `blueprint_phase_summary_authoring_context` -> `{status, phase, planId, path, linkedPlanPath, plan, existing, dependencyPlans, acceptanceCriteria, allowedNextActions, schemaPath, baseSchema, taskSchema, prerequisiteBlockers, warnings}`
 - `blueprint_phase_summary_validate_model` -> `{status, valid, phase, planId, path, linkedPlanPath, schemaPath, taskSchema, diagnostics, diagnosticCounts, normalizedModel, renderPreview, warnings}`
 - `blueprint_phase_summary_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, linkedPlanPath, written, created, overwritten, status, issues, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract}` or `{artifactId: null, contracts}`
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
-- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}`
-- `blueprint_state_load` -> `{state, blockers, derivedStatus}`
+- `blueprint_artifact_validate` -> `{valid, issues, suggestedRepairs, warnings}` (allowlisted for conditional inspection and post-write validation; not a default pre-write read)
+- `blueprint_state_load` -> `{state, blockers, derivedStatus}` (allowlisted for conditional routing inspection; not a default pre-write read)
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 
 ## Summary Persistence Contract
@@ -128,13 +140,17 @@ and no-subagent fallback behavior, read the rich runtime contract in
 - Read `blueprint_phase_summary_authoring_context` before final summary
   drafting so acceptance criteria, dependency plan rows, linked plan
   provenance, summary path, and allowed next actions are explicit.
+- The `phase.summary` authoring template is a safe `PARTIAL` carry-forward seed;
+  switch it to `COMPLETED` only after concrete execution evidence and targeted
+  verification pass.
 - Validate Markdown summary `content` through
   `blueprint_phase_summary_validate_model`; repair semantic diagnostics
   together and persist the same Markdown content through
   `blueprint_phase_summary_write`.
 - New summary writes are Markdown-first and must include an explicit `Status`
   marker. Heading shape, casing, and optional section drift are warnings, not
-  validation blockers.
+  validation blockers; warning-only Markdown shape, sentinel, or style advice
+  does not require another repair loop when summary truth is otherwise valid.
 - The matching `XX-YY-PLAN.md` must already exist before a summary can be
   written.
 - Treat the returned `path` plus `linkedPlanPath` as authoritative instead of
@@ -155,6 +171,10 @@ and no-subagent fallback behavior, read the rich runtime contract in
   route, and `/blu-execute-phase <phase>`. `BLOCKED` requires `blocked`,
   completion state `blocked`, at least one blocked repair route, and
   `/blu-progress`.
+- If dependency summaries, failed verification, or blocked prerequisites prevent
+  `COMPLETED`, downgrade to `PARTIAL` or `BLOCKED`, update Readiness,
+  Completion State, Next Safe Action, Verification, Gap / Repair Routes, and
+  Follow-Ups together, and keep the open repair route explicit.
 
 ## Skills And Subagents
 
@@ -230,8 +250,9 @@ and no-subagent fallback behavior, read the rich runtime contract in
   warnings.
 - Honors normalized `parallelization.*`, `workflow.use_worktrees`, and
   `git.branching_strategy` from effective config.
-- Treats `gaps-only` as a real gap-closure mode backed by `gapClosurePlans`
-  metadata rather than a synonym for "plans without summaries".
+- Treats `gaps-only` as a real gap-closure mode selected through
+  `blueprint_phase_execution_targets`, preserving saved gap-closure intent
+  rather than treating it as a synonym for "plans without summaries".
 - Uses `blueprint_state_update` with `base: "synced"` after summary
   persistence so `STATE.md` follows refreshed summary truth instead of stale
   stored state.
