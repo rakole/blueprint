@@ -2048,16 +2048,16 @@ test("research finalization writes, syncs, proves route, then deletes checkpoint
     ),
     "utf8"
   );
-  const finalizationLoop = runtimeContract.match(
-    /Recommended parent command loop:[\s\S]*?blueprint_phase_checkpoint_delete[\s\S]*?```/
+  const finalizationOrder = runtimeContract.match(
+    /Finalization order stays separate and guarded:[\s\S]*?blueprint_phase_checkpoint_delete[\s\S]*?expectedMode: "research"/
   )?.[0];
 
   assert.match(
     commandFile,
     /Delete[\s\S]*only after[\s\S]*final research write or valid reuse[\s\S]*synced state update[\s\S]*refreshed state load[\s\S]*implemented-command routing proof/i
   );
-  assert.ok(finalizationLoop);
-  assertTextOrder("runtime contract finalization loop", finalizationLoop, [
+  assert.ok(finalizationOrder);
+  assertTextOrder("runtime contract finalization order", finalizationOrder, [
     "blueprint_phase_artifact_write",
     "blueprint_state_update",
     "blueprint_state_load",
