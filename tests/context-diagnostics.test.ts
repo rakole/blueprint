@@ -29,7 +29,7 @@ async function createPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery**
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );

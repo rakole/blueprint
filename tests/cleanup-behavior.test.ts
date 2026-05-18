@@ -97,8 +97,8 @@ async function createCleanupBehaviorFixture(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 4: Active Roadmap** - Current milestone work stays in the active roadmap
-- [ ] **Phase 5: Current Maintenance** - Current cleanup execution focus
+- [ ] Phase 4: Active Roadmap
+- [ ] Phase 5: Current Maintenance
 
 ## Phase Details
 

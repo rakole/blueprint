@@ -41,7 +41,7 @@ async function createPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Harden plan validation
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 

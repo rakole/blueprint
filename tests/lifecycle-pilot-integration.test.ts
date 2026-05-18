@@ -42,7 +42,7 @@ async function createLifecyclePilotRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Lifecycle Pilot** - Prove lifecycle pilot coherence
+- [ ] Phase 3: Lifecycle Pilot
 
 ## Phase Details
 

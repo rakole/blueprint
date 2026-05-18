@@ -253,7 +253,7 @@ test("normal review finding loading does not bridge to god-review reports", asyn
 
 ## Phases
 
-- [x] **Phase 5: Load** - Complete
+- [x] Phase 5: Load
 
 ## Phase Details
 

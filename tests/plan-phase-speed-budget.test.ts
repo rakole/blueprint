@@ -82,7 +82,7 @@ async function createMeasuredPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Measure plan-phase reads
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 

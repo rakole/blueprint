@@ -34,8 +34,8 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Discovery**
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [x] Phase 2: Discovery
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );

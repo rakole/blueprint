@@ -29,7 +29,14 @@ import {
 } from "../../shared/security.js";
 import { blueprintConfigGet } from "./config.js";
 import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
-import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import {
+  formatRoadmapPhaseListLine,
+  parseRoadmapDocument,
+  parseRoadmapPhaseDetailHeading,
+  parseRoadmapPhaseListLine,
+  splitRoadmapPhaseDetailBlocks as splitCanonicalRoadmapPhaseDetailBlocks,
+  splitRoadmapPhaseListBlocks as splitCanonicalRoadmapPhaseListBlocks
+} from "./phase-roadmap-parser.js";
 import {
   computeNextWholePhaseNumber,
   normalizePhaseNumber as normalizePhaseNumberToken,
@@ -2080,20 +2087,20 @@ function renderRoadmapArtifact(context: BootstrapRenderContext): string {
   const groupedRequirements = groupBootstrapRequirements(requirements);
   const phases = seed.roadmapPhases
     .map((phase) => {
-      const normalizedPhaseNumber = normalizePhaseNumber(phase.phase);
-      const marker = phase.status === "done" ? "x" : " ";
-      const requirementClause =
-        phase.requirementIds && phase.requirementIds.length > 0
-          ? ` (Requirements: ${phase.requirementIds.join(", ")})`
-          : "";
       const successCriteria = normalizeList(phase.successCriteria, []);
       const successCriteriaBlock =
         successCriteria.length > 0
           ? `  - Success Criteria:\n${successCriteria.map((value) => `    - ${value}`).join("\n")}`
           : "";
       const notes = normalizeList(phase.notes, []).map((value) => `  - ${value}`).join("\n");
+      const phaseLine = formatRoadmapPhaseListLine({
+        completed: phase.status === "done",
+        phaseNumber: normalizePhaseNumber(phase.phase),
+        phaseName: phase.title,
+        requirementIds: normalizeList(phase.requirementIds, [])
+      });
 
-      return `- [${marker}] Phase ${normalizedPhaseNumber}: ${phase.title}${requirementClause}
+      return `${phaseLine}
   - Objective: ${phase.objective}${successCriteriaBlock ? `\n${successCriteriaBlock}` : ""}${notes ? `\n${notes}` : ""}`;
     })
     .join("\n");
@@ -5534,61 +5541,13 @@ function validateBootstrapRequirementsArtifact(
   };
 }
 
-function extractBootstrapRoadmapPhaseBlocks(content: string): string[] {
-  const phasesSection = extractMarkdownSection(content, "Phases");
-  const blocks: string[] = [];
-  let currentBlock: string[] = [];
-
-  for (const line of phasesSection.replace(/\r\n/g, "\n").split("\n")) {
-    if (/^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+\d+(?:\.\d+)?:\s+\S/.test(line)) {
-      if (currentBlock.length > 0) {
-        blocks.push(currentBlock.join("\n").trim());
-      }
-
-      currentBlock = [line];
-      continue;
-    }
-
-    if (currentBlock.length > 0) {
-      currentBlock.push(line);
-    }
-  }
-
-  if (currentBlock.length > 0) {
-    blocks.push(currentBlock.join("\n").trim());
-  }
-
-  return blocks;
-}
-
 type BootstrapRoadmapPhaseValidationBlock = {
   phaseNumber: string;
   phaseName: string;
   requirementIds: string[];
   successCriteria: string[];
+  goal: string | null;
 };
-
-function parseBootstrapRoadmapPhaseBlock(
-  phaseBlock: string
-): BootstrapRoadmapPhaseValidationBlock | null {
-  const line = phaseBlock.split("\n")[0] ?? "";
-  const match = line.match(
-    /^\s*-\s*\[[ xX]\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?):\s+(.+?)(?:\*\*)?(?:\s+-\s+.+)?\s*$/
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  const rawPhaseName = (match[2] ?? "").replace(/\s*\(\s*Requirements:\s*[^)]+\)\s*$/i, "").trim();
-
-  return {
-    phaseNumber: match[1] ?? "",
-    phaseName: rawPhaseName,
-    requirementIds: extractBootstrapRoadmapPhaseRequirementIds(phaseBlock),
-    successCriteria: extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock)
-  };
-}
 
 function extractBootstrapRoadmapScopedRequirementIds(
   section: string,
@@ -5628,6 +5587,84 @@ function normalizeRoadmapPhaseDetailStatus(value: string): string {
   return value.trim().toLowerCase().replace(/-/g, "_");
 }
 
+function buildSyntheticRoadmapDocument({
+  phasesSection,
+  phaseDetailsSection
+}: {
+  phasesSection?: string;
+  phaseDetailsSection?: string;
+}): string {
+  const sections = [
+    "# Roadmap: Synthetic",
+    "",
+    "## Milestone",
+    "",
+    "- Active milestone: Synthetic milestone"
+  ];
+
+  if (phasesSection && phasesSection.trim().length > 0) {
+    sections.push("", "## Phases", "", phasesSection.trimEnd());
+  }
+
+  if (phaseDetailsSection && phaseDetailsSection.trim().length > 0) {
+    sections.push("", "## Phase Details", "", phaseDetailsSection.trimEnd());
+  }
+
+  sections.push("");
+  return sections.join("\n");
+}
+
+function splitRoadmapBlock(block: string): {
+  heading: string;
+  body: string;
+} {
+  const normalizedBlock = block.trim();
+  const newlineIndex = normalizedBlock.indexOf("\n");
+
+  return {
+    heading:
+      newlineIndex === -1
+        ? normalizedBlock
+        : normalizedBlock.slice(0, newlineIndex).trim(),
+    body: newlineIndex === -1 ? "" : normalizedBlock.slice(newlineIndex + 1)
+  };
+}
+
+function splitRoadmapPhaseListBlocks(content: string): string[] {
+  const phasesSection = extractMarkdownSection(content, "Phases");
+
+  if (phasesSection.trim().length === 0) {
+    return [];
+  }
+
+  return splitCanonicalRoadmapPhaseListBlocks(phasesSection);
+}
+
+function parseBootstrapRoadmapPhaseBlock(
+  phaseBlock: string
+): BootstrapRoadmapPhaseValidationBlock | null {
+  const line = phaseBlock.split("\n")[0] ?? "";
+  const parsedLine = parseRoadmapPhaseListLine(line);
+
+  if (!parsedLine) {
+    return null;
+  }
+
+  const parsedPhase = parseRoadmapDocument(
+    buildSyntheticRoadmapDocument({
+      phasesSection: phaseBlock
+    })
+  ).phases[0];
+
+  return {
+    phaseNumber: parsedLine.phaseNumber,
+    phaseName: parsedLine.phaseName,
+    requirementIds: parsedPhase?.requirements ?? parsedLine.requirements,
+    successCriteria: parseRoadmapDetailSuccessCriteria(parsedPhase?.successCriteria ?? null),
+    goal: parsedPhase?.goal ?? null
+  };
+}
+
 function extractBoldFieldValue(block: string, field: string): string | null {
   const match = block.match(new RegExp(`^\\*\\*${field}\\*\\*:\\s*(.+)$`, "im"));
   return match ? (match[1]?.trim() ?? null) : null;
@@ -5644,23 +5681,23 @@ function parseRoadmapDetailSuccessCriteria(value: string | null): string[] {
     .filter((criterion) => criterion.length > 0 && !/^none(?:\s+yet)?$/i.test(criterion));
 }
 
-function extractBootstrapRoadmapPhaseDetails(content: string): BootstrapRoadmapPhaseDetailBlock[] {
+function splitRoadmapPhaseDetailBlocks(content: string): string[] {
   const phaseDetails = extractMarkdownSection(content, "Phase Details");
 
   if (phaseDetails.trim().length === 0) {
     return [];
   }
 
-  return phaseDetails
-    .split(/^### Phase /gm)
-    .slice(1)
-    .map((rawBlock) => {
-      const newlineIndex = rawBlock.indexOf("\n");
-      const header = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
-      const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
-      const headerMatch = header.match(/^(\d+(?:\.\d+)?):\s+(.+)$/);
+  return splitCanonicalRoadmapPhaseDetailBlocks(phaseDetails);
+}
 
-      if (!headerMatch) {
+function extractBootstrapRoadmapPhaseDetails(content: string): BootstrapRoadmapPhaseDetailBlock[] {
+  return splitRoadmapPhaseDetailBlocks(content)
+    .map((detailBlock) => {
+      const { heading, body } = splitRoadmapBlock(detailBlock);
+      const parsedHeading = parseRoadmapPhaseDetailHeading(heading);
+
+      if (!parsedHeading) {
         return null;
       }
 
@@ -5668,7 +5705,7 @@ function extractBootstrapRoadmapPhaseDetails(content: string): BootstrapRoadmapP
       const status = extractBoldFieldValue(body, "Status");
 
       return {
-        phaseNumber: headerMatch[1] ?? "",
+        phaseNumber: parsedHeading.phaseNumber,
         goal: extractBoldFieldValue(body, "Goal"),
         requirementIds: requirements ? extractRequirementIdsFromMarkdownAll(requirements) : [],
         successCriteria: parseRoadmapDetailSuccessCriteria(
@@ -5703,11 +5740,21 @@ function validateBootstrapRoadmapArtifact(
   const bootstrapStatus = extractMarkdownSection(content, "Bootstrap Status");
   const requirementCoverage = extractMarkdownSection(content, "Requirement Coverage");
   const notes = extractMarkdownSection(content, "Notes");
-  const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+  let phaseBlocks: string[] = [];
+  try {
+    phaseBlocks = splitRoadmapPhaseListBlocks(content);
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
   const parsedPhaseBlocks = phaseBlocks
     .map((phaseBlock) => parseBootstrapRoadmapPhaseBlock(phaseBlock))
     .filter((phaseBlock): phaseBlock is BootstrapRoadmapPhaseValidationBlock => phaseBlock !== null);
-  const phaseDetails = extractBootstrapRoadmapPhaseDetails(content);
+  let phaseDetails: BootstrapRoadmapPhaseDetailBlock[] = [];
+  try {
+    phaseDetails = extractBootstrapRoadmapPhaseDetails(content);
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
   const phaseDetailByNumber = new Map(
     phaseDetails.map((detail) => [detail.phaseNumber, detail])
   );
@@ -5760,18 +5807,18 @@ function validateBootstrapRoadmapArtifact(
 
       if (!parsedPhaseBlock) {
         issues.push(
-          "Roadmap artifact field Phases contains a malformed phase checkbox line. Repair by using `- [ ] Phase N: Title (Requirements: REQ-01)` or `- [ ] **Phase N: Title** (Requirements: REQ-01)`."
+          "Roadmap artifact field Phases contains a malformed phase checkbox line. Repair by using `- [ ] Phase N: Title (Requirements: REQ-01)`."
         );
       }
 
       const detail = parsedPhaseBlock
         ? phaseDetailByNumber.get(parsedPhaseBlock.phaseNumber)
         : undefined;
-      const objective = phaseBlock.match(/Objective:\s*(\S.+)$/im)?.[1]?.trim() ?? detail?.goal ?? "";
+      const objective = parsedPhaseBlock?.goal ?? detail?.goal ?? "";
 
       if (objective.length === 0) {
         issues.push(
-          `Roadmap artifact ${phaseLabel} field Objective is missing or empty. Repair by adding an Objective child bullet under ${phaseLabel} or \`**Goal**: <phase goal>\` in ${phaseLabel}'s Phase Details block.`
+          `Roadmap artifact ${phaseLabel} field Objective is missing or empty. Repair by adding an Objective child bullet under ${phaseLabel} or a Goal entry in ${phaseLabel}'s Phase Details block.`
         );
       }
 
@@ -5871,7 +5918,7 @@ function validateBootstrapRoadmapArtifact(
 
       if (detail.goal === null || detail.goal.length === 0) {
         issues.push(
-          `Roadmap artifact ${detailLabel} field Goal is missing or empty. Repair by adding \`**Goal**: <phase goal>\` to the Phase Details block.`
+          `Roadmap artifact ${detailLabel} field Goal is missing or empty. Repair by adding a Goal entry to the Phase Details block.`
         );
       }
 
@@ -5890,7 +5937,7 @@ function validateBootstrapRoadmapArtifact(
 
       if (missingDetailIds.length > 0 || extraDetailIds.length > 0) {
         issues.push(
-          `Roadmap artifact ${detailLabel} field Phase Details Requirements does not match Phases. Offending IDs: missing ${missingDetailIds.join(", ") || "none"}; extra ${extraDetailIds.join(", ") || "none"}. Repair by making \`**Requirements**\` match ${detailLabel}'s Requirements clause exactly.`
+          `Roadmap artifact ${detailLabel} field Phase Details Requirements does not match Phases. Offending IDs: missing ${missingDetailIds.join(", ") || "none"}; extra ${extraDetailIds.join(", ") || "none"}. Repair by making the Phase Details requirements match ${detailLabel}'s Requirements clause exactly.`
         );
       }
 
@@ -9130,66 +9177,30 @@ function extractBootstrapScopedRequirementIds(section: string): string[] {
   return [...new Set(ids)];
 }
 
-function extractBootstrapRoadmapPhaseRequirementIds(phaseBlock: string): string[] {
-  const requirementClause =
-    phaseBlock.match(/\(\s*Requirements:\s*([^)]+)\)/i)?.[1] ??
-    phaseBlock.match(/\bRequirements:\s*([^\n)]+)\s*$/im)?.[1] ??
-    "";
-
-  if (requirementClause.trim().length === 0) {
-    return [];
-  }
-
-  return extractRequirementIdsFromMarkdownAll(requirementClause);
-}
-
-function extractBootstrapRoadmapPhaseSuccessCriteria(phaseBlock: string): string[] {
-  const lines = phaseBlock.replace(/\r\n/g, "\n").split("\n");
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const match = lines[index].match(/^(\s*)-\s*Success Criteria:\s*$/i);
-
-    if (!match) {
-      continue;
-    }
-
-    const labelIndent = match[1].length;
-    const items: string[] = [];
-
-    for (let lineIndex = index + 1; lineIndex < lines.length; lineIndex += 1) {
-      const line = lines[lineIndex];
-
-      if (line.trim().length === 0) {
-        continue;
-      }
-
-      const lineIndent = line.match(/^(\s*)/)?.[1].length ?? 0;
-
-      if (lineIndent <= labelIndent && /^\s*-\s+/.test(line)) {
-        break;
-      }
-
-      if (lineIndent > labelIndent && /^\s*-\s+\S/.test(line)) {
-        items.push(line.trim().replace(/^\s*-\s+/, ""));
-      }
-    }
-
-    return items;
-  }
-
-  return [];
-}
-
-function extractRoadmapRequirementRefs(content: string): string[] {
+function extractRoadmapRequirementRefs(content: string): {
+  refs: string[];
+  issues: string[];
+} {
   const requirementCoverage = extractMarkdownSection(content, "Requirement Coverage");
-  const phaseBlocks = extractBootstrapRoadmapPhaseBlocks(content);
+  const issues: string[] = [];
+  let roadmapPhaseRequirementRefs: string[] = [];
 
-  return [
-    ...new Set([
-      ...extractBootstrapScopedRequirementIds(requirementCoverage),
-      ...phaseBlocks.flatMap((phaseBlock) => extractBootstrapRoadmapPhaseRequirementIds(phaseBlock))
-    ])
-  ];
+  try {
+    const roadmap = parseRoadmapDocument(content);
+    roadmapPhaseRequirementRefs = roadmap.phases.flatMap((phase) => phase.requirements);
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
+  }
+
+  return {
+    refs: [
+      ...new Set([
+        ...extractBootstrapScopedRequirementIds(requirementCoverage),
+        ...roadmapPhaseRequirementRefs
+      ])
+    ],
+    issues
+  };
 }
 
 function validateBootstrapRequirementTraceability(
@@ -9210,7 +9221,9 @@ function validateBootstrapRequirementTraceability(
   }
 
   const requirementIds = extractRequirementIds(requirementsContent);
-  const roadmapRequirementRefs = extractRoadmapRequirementRefs(roadmapContent);
+  const roadmapRequirementRefsResult = extractRoadmapRequirementRefs(roadmapContent);
+  issues.push(...roadmapRequirementRefsResult.issues);
+  const roadmapRequirementRefs = roadmapRequirementRefsResult.refs;
 
   if (requirementsContent.length > 0 && requirementIds.length === 0) {
     issues.push("REQUIREMENTS.md does not yet contain durable requirement IDs.");

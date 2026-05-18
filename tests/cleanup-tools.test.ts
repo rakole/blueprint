@@ -58,8 +58,8 @@ async function createCleanupFixtureRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 5: Review Quality Impact Shipping Audit**
-- [ ] **Phase 6: Workspace Maintenance Audit**
+- [x] Phase 5: Review Quality Impact Shipping Audit
+- [ ] Phase 6: Workspace Maintenance Audit
 `,
     "utf8"
   );

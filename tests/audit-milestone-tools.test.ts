@@ -382,8 +382,8 @@ async function createMilestoneAuditRepo(args?: {
 
 ## Phases
 
-- [x] **Phase 3: Execution**
-- [x] **Phase 4: Release Readiness**
+- [x] Phase 3: Execution
+- [x] Phase 4: Release Readiness
 
 ## Phase Details
 

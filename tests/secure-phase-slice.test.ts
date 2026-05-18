@@ -222,7 +222,7 @@ async function createSecurePhaseRepo(
 
 ## Phases
 
-- [x] **Phase 5: Security Audit** - Review threat mitigations for the delivered phase
+- [x] Phase 5: Security Audit
 
 ## Phase Details
 

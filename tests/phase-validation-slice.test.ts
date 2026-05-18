@@ -102,8 +102,8 @@ async function createValidationRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 3: Execution** - Produce summaries for the completed plans
-- [ ] **Phase 4: Validation** - Persist verification and UAT evidence
+- [x] Phase 3: Execution
+- [ ] Phase 4: Validation
 
 ## Phase Details
 
