@@ -337,7 +337,9 @@ Quality rules for `XX-RESEARCH.md`:
 - `## Common Pitfalls` describes failure modes, why they happen, and how a plan
   should prevent them.
 - `## Open Questions` lists only unresolved questions that matter downstream,
-  with a recommended handling path.
+  with a recommended handling path. When no unresolved downstream question
+  remains, use exactly `- none`; do not write `null`, `[]`, or prose variants
+  such as `- no open questions`.
 - `## Confidence Breakdown` assigns honest confidence by topic and explains the
   evidence behind each level.
 - `## Code Examples` includes fenced code, pseudocode, config, command examples,
