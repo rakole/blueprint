@@ -2807,7 +2807,7 @@ function replacePhaseLineCompletionMarker(
 } {
   const marker = completed ? "x" : " ";
   const pattern = new RegExp(
-    `^(- \\[)([ xX])(\\]\\s+(?:\\*\\*)?Phase ${escapeForRegex(phaseNumber)}: [^\\n]+)$`,
+    `^(- \\[)([ xX])(\\]\\s+(?:\\*\\*)?Phase\\s+${escapeForRegex(phaseNumber)}(?:\\*\\*)?\\s*:\\s+[^\\n]+)$`,
     "m"
   );
   const match = raw.match(pattern);
@@ -2855,7 +2855,7 @@ function replacePhaseDetailStatus(
     (_full, header: string, body: string) => {
       const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.map((block) => {
-        const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
+        const match = block.match(/^### Phase (\d+(?:\.\d+)?)\s*(?::|-)\s+/m);
 
         if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
           return block;

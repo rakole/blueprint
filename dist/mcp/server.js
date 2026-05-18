@@ -30880,7 +30880,7 @@ function removePhaseDetailsFromRoadmap(raw, phaseNumber) {
 function replacePhaseLineCompletionMarker(raw, phaseNumber, completed) {
   const marker = completed ? "x" : " ";
   const pattern = new RegExp(
-    `^(- \\[)([ xX])(\\]\\s+(?:\\*\\*)?Phase ${escapeForRegex2(phaseNumber)}: [^\\n]+)$`,
+    `^(- \\[)([ xX])(\\]\\s+(?:\\*\\*)?Phase\\s+${escapeForRegex2(phaseNumber)}(?:\\*\\*)?\\s*:\\s+[^\\n]+)$`,
     "m"
   );
   const match = raw.match(pattern);
@@ -30914,7 +30914,7 @@ function replacePhaseDetailStatus(raw, phaseNumber, nextStatus) {
     (_full, header, body) => {
       const blocks = splitRoadmapPhaseDetailBlocks(body);
       const nextBlocks = blocks.map((block) => {
-        const match = block.match(/^### Phase (\d+(?:\.\d+)?): /m);
+        const match = block.match(/^### Phase (\d+(?:\.\d+)?)\s*(?::|-)\s+/m);
         if (!match || normalizePhaseNumber(match[1]) !== phaseNumber) {
           return block;
         }
