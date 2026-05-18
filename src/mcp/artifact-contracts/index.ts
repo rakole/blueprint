@@ -951,6 +951,7 @@ function renderResearchTemplate(context?: ArtifactTemplateContext): string {
 **Domain:** ${domain(context)}
 **Confidence:** LOW|MEDIUM|HIGH
 Keep the canonical ## headings exactly as written below.
+<!-- When no unresolved downstream question remains, use exactly \`- none\` under \`## Open Questions\`; do not write \`null\`, \`[]\`, or prose variants such as \`- no open questions\`. -->
 
 ## Phase Requirements
 
@@ -1063,7 +1064,7 @@ Use \`EVID-*\` when a claim is supported by evidence rows under \`Repo Evidence\
 
 ## Open Questions
 
-- <open question that still needs an answer>
+- <open question that still needs an answer, or use exact - none when nothing remains open>
 
 ## Confidence Breakdown
 
@@ -4192,6 +4193,11 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Recommendations",
       "Sources"
     ],
+    sectionValidations: {
+      "Open Questions": {
+        exactEmptySentinel: "- none"
+      }
+    },
     lockedMarkers: ["**Confidence:**"],
     placeholderSignals: [
       "Phase XX:",
@@ -4263,7 +4269,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "<anti-pattern detail or implementation to avoid>",
       "<current ecosystem or repo update relevant to this phase>",
       "<failure mode or regression risk>",
-      "<open question that still needs an answer>",
+      "<open question that still needs an answer, or use exact - none when nothing remains open>",
       "<topic>",
       "<evidence-backed confidence explanation>",
       "<short code or pseudocode example>",
@@ -4313,6 +4319,7 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
       "Research writes validate in strict mode by default.",
       "Additional top-level headings are allowed, but required headings and the confidence marker stay locked.",
       "Drafting should use the canonical authoring template from blueprint_artifact_contract_read before any rewrite or persistence step.",
+      "Open Questions may use the exact `- none` sentinel only when no unresolved downstream question remains; do not use `null`, `[]`, or prose variants such as `- no open questions`.",
       "Optional Investigation Trace content should record initial assessment, per-strand search notes, navigation evidence, and strand planning handoffs for non-trivial research without becoming a new required heading.",
       "Research should preserve planner-grade evidence density: mapped requirements, prescriptive recommendations, repo evidence roles and retrieval methods, repo-versus-external provenance, confidence by topic, and explicit open questions when evidence is incomplete.",
       "Planner-critical claims should use claim-addressable provenance with evidence IDs, claim IDs, repo/external/inference lanes, support classes, source type, authority tier, support span, retrieval context, limitations, and downstream-use notes; validation warns instead of rejecting older valid artifacts that lack this richer source register.",

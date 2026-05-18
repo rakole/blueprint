@@ -1967,6 +1967,9 @@ const REQUIRED_RESEARCH_SECTIONS = readArtifactContract(
   "phase.research"
 ).requiredHeadings;
 const RESEARCH_CONFIDENCE_VALUES = ["LOW", "MEDIUM", "HIGH"] as const;
+const RESEARCH_SECTION_VALIDATIONS = readArtifactContract(
+  "phase.research"
+).sectionValidations;
 const RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS = readArtifactContract(
   "phase.research"
 ).placeholderSignals;
@@ -3981,6 +3984,7 @@ export function validateResearchArtifactContent(content: string): {
     const hasHeading = new RegExp(`(?:^|\\n)## ${escapeRegex(heading)}\\s*$`, "m").test(
       normalizedContent
     );
+    const exactEmptySentinel = RESEARCH_SECTION_VALIDATIONS?.[heading]?.exactEmptySentinel;
 
     if (!hasHeading) {
       const closeVariant = findCloseResearchHeadingVariant(
@@ -4028,8 +4032,32 @@ export function validateResearchArtifactContent(content: string): {
       continue;
     }
 
+    if (matchesExactEmptySentinel(section, exactEmptySentinel)) {
+      continue;
+    }
+
+    if (matchesFuzzyEmptySentinel(section, exactEmptySentinel)) {
+      const fuzzySentinel = exactEmptySentinel ?? "- none";
+      const message = `Research artifact section ${heading} must use exactly \`${fuzzySentinel}\` for the empty state instead of a prose variant.`;
+
+      pushResearchIssue(
+        message,
+        phaseArtifactDiagnostic({
+          artifact: "research",
+          path: `content.sections.${heading}`,
+          code: "research.inexact_empty_sentinel",
+          message,
+          heading,
+          repair: exactEmptySentinelRepairInstruction(heading, fuzzySentinel)
+        })
+      );
+      continue;
+    }
+
     if (!hasSubstantiveResearchSection(section, heading)) {
-      const message = `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
+      const message = exactEmptySentinel
+        ? `Research artifact section ${heading} must contain substantive content after placeholders are removed or use exactly \`${exactEmptySentinel}\`.`
+        : `Research artifact section ${heading} must contain substantive content after placeholders are removed.`;
 
       pushResearchIssue(
         message,
@@ -4039,7 +4067,9 @@ export function validateResearchArtifactContent(content: string): {
           code: "research.section_non_substantive",
           message,
           heading,
-          repair: `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
+          repair: exactEmptySentinel
+            ? exactEmptySentinelRepairInstruction(heading, exactEmptySentinel)
+            : `Rewrite the exact canonical heading \`## ${heading}\` with substantive research content, then retry blueprint_phase_artifact_write.`
         })
       );
     }

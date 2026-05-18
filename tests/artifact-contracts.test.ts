@@ -427,6 +427,14 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(researchContract.authoringTemplate, /### Dependency Alternatives/);
   assert.match(researchContract.authoringTemplate, /### Library Vs Custom Decision/);
   assert.match(researchContract.authoringTemplate, /### Supply Chain Evidence/);
+  assert.match(
+    researchContract.authoringTemplate,
+    /use exactly `- none` under `## Open Questions`; do not write `null`, `\[\]`, or prose variants/i
+  );
+  assert.equal(
+    researchContract.sectionValidations?.["Open Questions"]?.exactEmptySentinel,
+    "- none"
+  );
   assert.deepEqual(projectContract.requiredHeadings, [
     "Vision",
     "Audience",
@@ -1319,6 +1327,66 @@ why it matters.
   assert.equal(diagnostic?.path, "content.sections.Summary");
   assert.equal(diagnostic?.code, "research.section_non_substantive");
   assert.match(diagnostic?.repair ?? "", /## Summary/);
+});
+
+test("research contract accepts the exact none sentinel for empty open questions", () => {
+  const research = canonicalResearchContent(
+    "Use a canonical sentinel instead of invented filler when no research questions remain.",
+    "| LIFE-01 | Keep endpoint research grounded. | Empty open-question state stays honest and retry-safe. |"
+  ).replace(
+    /## Open Questions\s+[\s\S]*?\n## Confidence Breakdown/,
+    `## Open Questions
+
+- none
+
+## Confidence Breakdown`
+  );
+
+  const validation = validateResearchArtifactContent(research);
+
+  assert.equal(validation.valid, true, validation.issues.join("\n"));
+});
+
+test("research contract rejects fuzzy empty open-question prose and points to the exact sentinel", () => {
+  const research = canonicalResearchContent(
+    "Reject prose empty-state variants so the writer converges on one stable sentinel.",
+    "| LIFE-01 | Keep endpoint research grounded. | The exact empty sentinel should be the only empty-state encoding. |"
+  ).replace(
+    /## Open Questions\s+[\s\S]*?\n## Confidence Breakdown/,
+    `## Open Questions
+
+- no open questions
+
+## Confidence Breakdown`
+  );
+  const validation = validateResearchArtifactContent(research);
+  const diagnostic = validation.diagnostics.find((entry) => entry.heading === "Open Questions");
+
+  assert.equal(validation.valid, false, validation.issues.join("\n"));
+  assert.match(validation.issues.join("\n"), /must use exactly `- none`/i);
+  assert.equal(diagnostic?.code, "research.inexact_empty_sentinel");
+  assert.match(diagnostic?.repair ?? "", /use exactly `- none`/i);
+});
+
+test("research contract rejects null-style open-question placeholders", () => {
+  const research = canonicalResearchContent(
+    "Reject null-style placeholders so the model does not swap one invalid empty marker for another.",
+    "| LIFE-01 | Keep endpoint research grounded. | Null is not a valid Markdown empty-state encoding. |"
+  ).replace(
+    /## Open Questions\s+[\s\S]*?\n## Confidence Breakdown/,
+    `## Open Questions
+
+- null
+
+## Confidence Breakdown`
+  );
+  const validation = validateResearchArtifactContent(research);
+  const diagnostic = validation.diagnostics.find((entry) => entry.heading === "Open Questions");
+
+  assert.equal(validation.valid, false, validation.issues.join("\n"));
+  assert.match(validation.issues.join("\n"), /must contain substantive content[\s\S]*or use exactly `- none`/i);
+  assert.equal(diagnostic?.code, "research.section_non_substantive");
+  assert.match(diagnostic?.repair ?? "", /use exactly `- none`/i);
 });
 
 test("research contract accepts format-only required heading variants", () => {

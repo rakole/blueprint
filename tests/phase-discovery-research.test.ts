@@ -847,6 +847,10 @@ test("research-phase command references only registered tool names and safe rout
   assert.match(runtimeContract, /`ask` means confirm[\s\S]*first/i);
   assert.match(runtimeContract, /explicit source dates/i);
   assert.match(runtimeContract, /live external checking did not happen|absence of a date or unchecked marker/i);
+  assert.match(
+    runtimeContract,
+    /no unresolved downstream question[\s\S]*remains[\s\S]*use exactly `- none`[\s\S]*do not write `null`, `\[\]`, or prose variants/i
+  );
   assert.match(runtimeContract, /stop and route back to\s+`\/blu-discuss-phase <phase>`/i);
   assert.match(runtimeContract, /Default drafting should start from\s+`contract\.authoringTemplate`/i);
   assert.match(runtimeContract, /do not allow skip, default reuse, or an\s+unchanged invalid write result/i);
@@ -1860,6 +1864,11 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(contract.contract.authoringTemplate, /### Source Register/);
   assert.match(contract.contract.authoringTemplate, /Evidence ID/);
   assert.match(contract.contract.authoringTemplate, /Claim ID/);
+  assert.match(
+    contract.contract.authoringTemplate,
+    /use exactly `- none` under `## Open Questions`; do not write `null`, `\[\]`, or prose variants/i
+  );
+  assert.equal(contract.contract.sectionValidations?.["Open Questions"]?.exactEmptySentinel, "- none");
   assert.equal(contract.contract.freehandPolicy, "additional-top-level-headings");
   assert.match(contract.contract.notes.join("\n"), /Investigation Trace/i);
   assert.match(contract.contract.notes.join("\n"), /planner-grade evidence density/i);
@@ -1867,6 +1876,7 @@ test("phase artifact write creates, reuses, updates, and validates research cont
   assert.match(contract.contract.notes.join("\n"), /retrieval methods/i);
   assert.match(contract.contract.notes.join("\n"), /repo-versus-external provenance/i);
   assert.match(contract.contract.notes.join("\n"), /warning-grade evidence diagnostics/i);
+  assert.match(contract.contract.notes.join("\n"), /Open Questions may use the exact `- none` sentinel/i);
   assert.equal(reused.status, "reused");
   assert.equal(updated.status, "updated");
   assert.equal(invalid.status, "invalid");

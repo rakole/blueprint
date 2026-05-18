@@ -415,6 +415,7 @@ Validation expectations:
 - sources must include a URL, repo path, or cited file reference
 - dependency/tool recommendations should compare no-new-dependency, existing dependency, standard-library/platform API, candidate package/tool, and custom implementation before recommending a new package or custom code
 - supply-chain evidence should record version, maintenance, vulnerability, license, provenance/signature, transitive footprint, install scope, lockfile impact, update posture, residual risk, and verification signals where available; missing live upstream evidence should be labeled unchecked, not treated as approval
+- `## Open Questions` should list only unresolved downstream questions; when none remain, use exactly `- none` rather than `null`, `[]`, or prose variants such as `- no open questions`
 - scaffold-only placeholders are not considered valid completed research
 - scaffold starters, when used, are first-write seed material only and must not survive verbatim into the final saved artifact
 - the canonical authoring template is MCP-owned and should be supplied to drafting before the final write step so the research body is shaped from the same contract throughout
@@ -544,7 +545,7 @@ Use `EVID-*` when a claim is supported by evidence rows under `Repo Evidence`, `
 
 ## Open Questions
 
-- <open question that still needs an answer>
+- <open question that still needs an answer, or use exact - none when nothing remains open>
 
 ## Confidence Breakdown
 
