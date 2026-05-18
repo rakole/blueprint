@@ -534,6 +534,55 @@ test("reused UAT sync tolerates extra spacing in roadmap checklist lines", async
   }
 });
 
+test("reused UAT sync closes a plain roadmap checklist and dash-form detail heading", async () => {
+  const repoPath = await createRepoFixture({
+    verificationContent: validVerification,
+    uatContent: validUat
+  });
+
+  try {
+    await writeFile(
+      path.join(repoPath, ".blueprint/ROADMAP.md"),
+      `# Roadmap: Verification Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [ ] Phase 4: Validation - Persist verification and UAT evidence
+
+## Phase Details
+
+### Phase 4 - Validation
+**Goal**: Persist verification and UAT evidence.
+**Requirements**: EXEC-01
+**Status**: in_progress
+`,
+      "utf8"
+    );
+
+    const result = await blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "4",
+      artifact: "uat",
+      content: validUat
+    });
+    const roadmap = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+    assert.equal(result.status, "reused");
+    assert.doesNotMatch(
+      result.warnings.join("\n"),
+      /ROADMAP completion sync could not find Phase 4/
+    );
+    assert.match(roadmap, /- \[x\] Phase 4: Validation - Persist verification and UAT evidence/);
+    assert.match(roadmap, /### Phase 4 - Validation[\s\S]*\*\*Status\*\*: completed/);
+  } finally {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  }
+});
+
 test("resuming a valid incomplete UAT persists without overwrite confirmation", async () => {
   const repoPath = await createRepoFixture({
     verificationContent: validVerification,
