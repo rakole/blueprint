@@ -199,16 +199,18 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussCommand, /repo-relative Blueprint artifact paths such as `?\.blueprint\/phases\//i);
   assert.match(discussCommand, /discuss-phase-runtime-contract\.md/i);
   assert.match(discussCommand, /long-running-phase-discovery-profile\.md/i);
-  assert.match(discussCommand, /referenced runtime contract as the source of truth/i);
-  assert.match(
+  assert.match(discussCommand, /runtime contract as the behavior authority/i);
+  assert.match(discussCommand, /selected-phase read packets/i);
+  assert.match(discussCommand, /resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection`/i);
+  assert.doesNotMatch(
     discussCommand,
     /`mcp_blueprint_blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i
   );
-  assert.match(
+  assert.doesNotMatch(
     discussCommand,
     /independent read-only MCP calls[\s\S]*same model response\/tool-call turn/i
   );
-  assert.match(
+  assert.doesNotMatch(
     discussCommand,
     /Do not batch mutating writes, confirmation prompts, validation repair[\s\S]*checkpoint deletion/i
   );
