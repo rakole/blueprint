@@ -62,11 +62,11 @@ const wave0RuntimeBundleObservedTotal = 79781;
 const wave0RuntimeBundleMaxTotal = 101000;
 const discussRuntimeBundleCurrentBudget = {
   // Includes the deliberate list-phase-assumptions config parity line in the shared skill.
-  skillBytes: 26276,
+  skillBytes: 21077,
   // Includes explicit phaseSelection recovery wording to avoid redundant locate fallback calls.
   runtimeContractBytes: 37567,
-  // Includes runtime-FQN manifest wording required by extension prompt guards.
-  totalBytes: 74743
+  // Includes the first-pass compact discuss launcher while keeping the runtime contract rich.
+  totalBytes: 66647
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -202,9 +202,9 @@ test("shared phase-discovery skill is deflated while discuss runtime contract ke
 
   assert.match(discussSection, new RegExp(discussRuntimeContractPath));
   assert.match(discussSection, new RegExp(longRunningProfilePath));
-  assert.match(discussSection, /selected phase from the runtime contract/i);
-  assert.match(discussSection, /persistent writes MCP-owned and phase-scoped/i);
-  assert.match(discussSection, /blueprint_state_load\.derivedStatus\.nextAction/);
+  assert.match(discussSection, /runtime contract owns the discuss-specific behavior/i);
+  assert.match(discussSection, /persistent writes MCP-owned, phase-scoped/i);
+  assert.match(discussSection, /command-scoped MCP tools/i);
   assert.match(discussSection, /no-subagent fallback[\s\S]*artifact quality/i);
 
   assert.doesNotMatch(
@@ -607,37 +607,28 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(commandFile, /phase\.context` `modelContract`/i);
   assert.match(commandFile, /phase\.discussion-log` `contract\.authoringTemplate`/i);
   assert.match(commandFile, /schema authorities/i);
-  assert.match(commandFile, /referenced runtime contract as the source of truth/i);
+  assert.match(commandFile, /runtime contract as the behavior authority/i);
   assert.match(commandFile, /substantive user-authored artifacts/i);
   assert.match(commandFile, /host-supported structured choices/i);
   assert.match(
     commandFile,
-    /just scaffolded by `\/blu-new-project`, `\/blu-add-phase`, `\/blu-insert-phase`[\s\S]*starter handoff[\s\S]*seed evidence/i
+    /phase resolution, selected-phase read packets, checkpointing, starter handoff intake, authoring, validation repair, state refresh, cleanup, and routing/i
   );
-  assert.match(commandFile, /source refs, deferred risks, and open gray areas/i);
+  assert.match(commandFile, /resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection`/i);
+  assert.match(commandFile, /Keep the selected phase distinct from ambient state phase/i);
   assert.match(commandFile, /Ask only for missing, contradictory, uncertain, or high-impact details/i);
+  assert.doesNotMatch(commandFile, /just scaffolded by `\/blu-new-project`, `\/blu-add-phase`, `\/blu-insert-phase`/i);
+  assert.doesNotMatch(commandFile, /source refs, deferred risks, and open gray areas/i);
   assert.match(
     commandFile,
-    /mcp_blueprint_blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only `mcp_blueprint_blueprint_phase_locate` recovery/i
+    /Use only the MCP tools listed in the response requirements/i
   );
-  assert.match(
-    commandFile,
-    /mcp_blueprint_blueprint_phase_context` first[\s\S]*`phaseSelection` fields[\s\S]*phaseSelection\.found` is false[\s\S]*mcp_blueprint_blueprint_phase_locate` only when `phaseSelection` is missing, ambiguous, incomplete, or lacks explicit recovery diagnostics/i
-  );
-  assert.match(
-    commandFile,
-    /request independent read-only MCP calls together in the same model response\/tool-call turn/i
-  );
-  assert.match(
-    commandFile,
-    /Do not batch mutating writes, confirmation prompts, validation repair[\s\S]*checkpoint deletion/i
-  );
-  assert.match(
-    commandFile,
-    /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text verbatim/i
-  );
-  assert.match(commandFile, /Do not infer a direct `\/blu-plan-phase` handoff/i);
-  assert.match(commandFile, /derivedStatus\.nextAction/);
+  assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_phase_context` first[\s\S]*`phaseSelection` fields[\s\S]*phaseSelection\.found` is false/i);
+  assert.doesNotMatch(commandFile, /request independent read-only MCP calls together in the same model response\/tool-call turn/i);
+  assert.doesNotMatch(commandFile, /Do not batch mutating writes, confirmation prompts, validation repair[\s\S]*checkpoint deletion/i);
+  assert.doesNotMatch(commandFile, /packet headings, scaffold footers, placeholder labels, unsupported claims, or raw handoff text verbatim/i);
+  assert.doesNotMatch(commandFile, /Do not infer a direct `\/blu-plan-phase` handoff/i);
+  assert.doesNotMatch(commandFile, /derivedStatus\.nextAction/);
   assert.doesNotMatch(commandFile, /type:\s*"choice"|2-4 labeled options|Type your own answer/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly/i);
   assert.doesNotMatch(commandFile, /\n1\. Resolve the target phase/i);
@@ -658,11 +649,17 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, new RegExp(sharedProfilePath));
   assert.match(skillFile, /phase\.context\.modelContract.*schema authority/i);
   assert.match(skillFile, /contract\.authoringTemplate.*freehand discovery artifacts/i);
-  assert.match(skillFile, /selected phase from the runtime contract/i);
-  assert.match(skillFile, /persistent writes MCP-owned and phase-scoped/i);
-  assert.match(skillFile, /blueprint_state_load\.derivedStatus\.nextAction/);
+  assert.match(skillFile, /runtime contract owns the discuss-specific behavior/i);
+  assert.match(skillFile, /persistent writes MCP-owned, phase-scoped/i);
   assert.match(skillFile, /long-running profile/i);
   assert.match(skillFile, /no-subagent fallback[\s\S]*artifact quality/i);
+  const skillDiscussSection = skillFile.match(
+    /### `discuss-phase`\n([\s\S]*?)(?=\n### `research-phase`)/
+  )?.[1] ?? "";
+  assert.match(skillDiscussSection, /runtime contract owns the discuss-specific behavior/i);
+  assert.match(skillDiscussSection, /long-running profile owns visible stage/i);
+  assert.match(skillDiscussSection, /command-scoped MCP tools/i);
+  assert.doesNotMatch(skillDiscussSection, /blueprint_state_load\.derivedStatus\.nextAction/);
   assert.doesNotMatch(skillFile, /starter handoff inside the starter context/i);
   assert.doesNotMatch(skillFile, /source refs, deferred risks, and open gray areas/i);
   assert.doesNotMatch(skillFile, /missing, contradictory, uncertain, or high-impact details/i);
@@ -1051,7 +1048,11 @@ test("allowlist remains stable", () => {
   assert.doesNotMatch(commandFile, /blueprint_command_catalog/);
   assert.match(
     commandFile,
-    /Before any user question or sidecar decision, resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection` first and build the selected-phase read packet/i
+    /Treat the runtime contract as the behavior authority[\s\S]*selected-phase read packets/i
+  );
+  assert.match(
+    commandFile,
+    /resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection`/i
   );
 });
 

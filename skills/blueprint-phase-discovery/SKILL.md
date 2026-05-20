@@ -180,13 +180,9 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 ### `discuss-phase`
 
-Before running `/blu-discuss-phase`, load `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` and `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`. The runtime contract is the behavior authority for the selected-phase register, read packet, gray-area discovery, checkpoint shape, assumptions mode, starter handoff handling, artifact authoring, validation repair, and finalization sequence.
+Before running `/blu-discuss-phase`, load `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` and `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`. The runtime contract owns the discuss-specific behavior; the long-running profile owns visible stage, pending-gate, and next-safe-action posture.
 
-- Use the selected phase from the runtime contract for every phase-scoped read, write, checkpoint operation, and final `patch.currentPhase`.
-- Keep persistent writes MCP-owned and phase-scoped: context, optional discussion log, checkpoints, and state updates must use only the command-scoped MCP tools.
-- Preserve the final route from refreshed state: after synced state update, report `blueprint_state_load.derivedStatus.nextAction` instead of inferring a direct downstream command from a successful write.
-- Follow the long-running profile for visible stage, pending-gate, and next-safe-action posture.
-- If no suitable subagent is available or enabled, use the runtime contract's no-subagent fallback while preserving final artifact quality.
+Keep persistent writes MCP-owned, phase-scoped, and limited to the command-scoped MCP tools. If no suitable subagent is available or enabled, use the runtime contract's no-subagent fallback while preserving final artifact quality.
 
 ### `research-phase`
 
