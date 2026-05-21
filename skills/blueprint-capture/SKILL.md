@@ -39,7 +39,13 @@ Keep notes, todos, backlog entries, and ideation handoffs project-local, determi
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Delegate to
+  optional agents by calling the same-named Gemini CLI agent tool only when the
+  current command contract explicitly allows that agent, effective config does
+  not disable `workflow.subagents`, the same-named tool is available in the
+  current host session, and the task benefits from bounded sidecar analysis;
+  otherwise use the command's no-subagent fallback and state the fallback
+  reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - Load only the active command's structured `input_bundles.commands[...]` inputs for that invocation.
 
@@ -65,6 +71,24 @@ Keep the useful capture behavior while preserving Blueprint's host-native bounda
 ## Optional Agents
 
 - `blueprint-researcher`
+
+Before any `/blu-explore` delegation decision, read effective config with
+`mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+same-named Gemini CLI agent tool `blueprint-researcher` with a bounded idea
+classification packet. Do not read, inline, or load any separate agent source
+before delegation.
+
+Use `blueprint-researcher` only when all gates pass:
+
+1. The active `/blu-explore` command contract permits `blueprint-researcher`.
+2. `workflow.subagents` is not `false`.
+3. The same-named Gemini agent tool is available in the current host session.
+4. The idea needs bounded sidecar analysis before the parent selects `note`,
+   `todo`, `backlog`, `roadmap`, or `no-write`.
+
+If the command contract does not permit delegation, config disables subagents,
+the same-named tool is unavailable, or sidecar analysis is unnecessary, keep the
+run inline and follow the no-subagent fallback below.
 
 ## Shared MCP Contracts
 

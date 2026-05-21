@@ -53,6 +53,14 @@ test("blueprint-capture skill captures explore classification and confirmation b
   assert.match(skillFile, /\/blu-check-todos/);
   assert.match(skillFile, /\/blu-review-backlog/);
   assert.match(skillFile, /\/blu-discuss-phase <phase>/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool `blueprint-researcher`/);
+  assert.match(skillFile, /active `\/blu-explore` command contract permits `blueprint-researcher`/);
+  assert.match(skillFile, /same-named Gemini agent tool is available/i);
+  assert.match(skillFile, /bounded idea\s+classification packet/i);
+  assert.match(skillFile, /no-subagent fallback below/i);
+  assert.doesNotMatch(skillFile, /subagent_type/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
+  assert.doesNotMatch(skillFile, /agents\/blueprint-researcher/i);
   assert.doesNotMatch(skillFile, /explore stays documented until its own manifest/i);
 });
 
