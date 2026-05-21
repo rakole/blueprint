@@ -282,7 +282,7 @@ real conflict. When reusing a prior decision, cite the artifact that locked it.
 Before asking the user anything, build a compact `grayAreaQueue`. It is working
 state and checkpoint context, not a competing artifact schema.
 
-For 1-2 obvious low-risk areas, use the simple gray-area fast path: `areaId`,
+For obvious low-risk areas, use the simple gray-area fast path: `areaId`,
 `title`, `state`, `candidateQuestion`, `decisionValue`, `downstreamImpact` or
 `resolutionCriterion` when useful, and `evidence` only when actual source
 exposed the gap. Do not require `slot`, `defect`, or `lens` classification for
