@@ -35,7 +35,13 @@ and bounded to `.blueprint/impact/<impact-id>/` when writing is enabled.
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. `/blu-impact`
+  has no optional-agent path in V1; keep impact analysis inline and MCP-owned.
+  If a future impact command contract adds an optional agent, delegate only by
+  calling the same-named Gemini CLI agent tool when the contract permits it,
+  effective config allows optional agents, and that same-named tool is
+  available in the current host session. Do not read, inline, or load any
+  separate agent source for current impact analysis.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Runtime Inputs

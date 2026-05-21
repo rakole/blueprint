@@ -103,6 +103,13 @@ test("impact skill uses docs-free input bundles and local runtime contract rules
   assert.match(skillFile, /Description-only runs are allowed, but they stay low confidence/);
   assert.match(skillFile, /Missing metadata is surfaced as unknown or warning, not as safety/);
   assert.match(skillFile, /Do not use subagents for V1 impact analysis/);
+  assert.match(skillFile, /no optional-agent path in V1/i);
+  assert.match(skillFile, /same-named Gemini CLI agent tool/i);
+  assert.match(skillFile, /same-named tool is\s+available in the current host session/i);
+  assert.match(skillFile, /Do not read, inline, or load any\s+separate agent source/i);
+  assert.doesNotMatch(skillFile, /subagent_type/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
+  assert.doesNotMatch(skillFile, /agents\/blueprint-/i);
   assert.match(skillFile, /## Self-Check/);
 
   for (const heading of [
