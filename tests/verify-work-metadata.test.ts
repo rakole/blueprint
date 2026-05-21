@@ -22,7 +22,8 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-phase-validation` skill/);
-  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-verifier`/);
+  assert.match(commandFile, /bounded UAT-prep task packet/);
   assert.match(commandFile, /verify-work-runtime-contract\.md/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_phase_locate")));

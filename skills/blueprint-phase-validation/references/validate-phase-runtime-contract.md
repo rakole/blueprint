@@ -157,10 +157,13 @@ signal.
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-verifier` only when the host provides that suitable
-code/workflow-analysis agent and `workflow.verifier=true`.
+Gemini CLI exposes an enabled delegated verifier as the same-named
+`blueprint-verifier` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-verifier` with a bounded validation task
+packet only when the host provides that suitable code/workflow-analysis tool,
+`workflow.verifier=true`, and `workflow.subagents` is not `false`.
 
-Pass the verifier:
+Pass the verifier task packet:
 
 - resolved phase number, name, and phase directory
 - summary index metadata and every completed summary body
@@ -176,12 +179,12 @@ for explicit test gaps or `/blu-audit-fix <phase>` for implementation/behavior
 gaps, but it must not create or modify files during `/blu-validate-phase`.
 
 Do not substitute browser, web-search-only, shell-only, or generic agents for
-`blueprint-verifier`. If the suitable verifier is unavailable, use the
+the `blueprint-verifier` tool. If the suitable verifier is unavailable, use the
 fallback below.
 
 ## No-Subagent Fallback
 
-When a suitable verifier is unavailable or disabled, perform the same analysis
+When `blueprint-verifier` is unavailable, disabled, unnecessary, or unsafe, perform the same analysis
 sequentially in the parent command:
 
 1. Read one completed summary at a time.
@@ -192,7 +195,7 @@ sequentially in the parent command:
 5. Classify gaps and decide gate state.
 6. Draft the canonical verification artifact from the final map.
 
-This fallback must preserve the same output quality bar as the subagent path.
+This fallback must preserve the same output quality bar as the agent-tool path.
 
 ## Retry And Repair Behavior
 
