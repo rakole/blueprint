@@ -482,12 +482,12 @@ user; if it changes technical feasibility or external correctness, route to a
 
 ### Sidecar Bounds For Assumptions
 
-Ask `blueprint-researcher` for one assumptions pass only when configured and
-useful. It must return defaults grouped by gray area, direct repo paths or
-supplied official references, confidence labels using this contract,
-contradictions or missing evidence, and the smallest question that would
-change each default. It must not draft `phase.context` or mark `Unclear`
-defaults as decisions.
+Call the same-named `blueprint-researcher` Gemini agent tool for one assumptions
+pass only when configured, available, and useful. It must return defaults
+grouped by gray area, direct repo paths or supplied official references,
+confidence labels using this contract, contradictions or missing evidence, and
+the smallest question that would change each default. It must not draft
+`phase.context` or mark `Unclear` defaults as decisions.
 
 ### Skip-Discuss Safety
 
@@ -498,27 +498,31 @@ must not silently convert thin evidence into saved context.
 
 ## Capability-Gated Agent Use
 
-Use subagents only when the host exposes suitable Blueprint agents and the work
-benefits from isolated reading or comparison. Never require a subagent for
-correctness.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Call optional
+agents only when the active command contract permits the agent,
+`workflow.subagents` is enabled, the same-named tool is available in the
+current host session, and the work benefits from isolated reading or
+comparison. Never require an agent for correctness.
 
 Suitable uses:
 
-Use `blueprint-researcher` only for one gray area or one assumptions pass when:
+Call `blueprint-researcher` with a bounded gray-area task packet only for one
+gray area or one assumptions pass when:
 at least two viable options remain, an option changes scope or downstream
 routing, and isolated repo or supplied-reference reading can add citations
 before the next user question. It must return defaults or options grouped by
 gray area, citations, confidence labels, contradictions or missing evidence, and
 the smallest question that would change each default.
 
-Agent prompts must pass only the compact phase boundary, relevant saved
+Agent task packets must pass only the compact phase boundary, relevant saved
 context, and canonical references for that area. Ask for gray-area memo mode,
 not `phase.research` or an `XX-RESEARCH.md` draft. The parent command owns
 synthesis, user-facing questions, checkpoints, artifact writes, and state
 updates.
 
-If no suitable subagent exists, or if the host disallows subagents, use the
-single-agent fallback below without lowering artifact quality.
+If `blueprint-researcher` is unavailable, disabled, unnecessary, or unsafe, use
+the single-agent fallback below without lowering artifact quality.
 
 ## Single-Agent Fallback
 

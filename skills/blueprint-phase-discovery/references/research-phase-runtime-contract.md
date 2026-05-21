@@ -927,12 +927,16 @@ must name the tests or validation that make the custom path safe.
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-researcher` only when the host exposes a suitable Blueprint
-research or code-analysis agent and the work benefits from isolated reading or
-comparison. Do not substitute browser-only, web-search-only, shell-only, or
-generic agents for codebase and workflow analysis.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Call
+`blueprint-researcher` with a bounded research task packet only when the active
+`/blu-research-phase` command contract permits it, `workflow.subagents` is
+enabled, the same-named tool is available in the current host session, and the
+work benefits from isolated reading or comparison. Do not substitute
+browser-only, web-search-only, shell-only, or generic agents for codebase and
+workflow analysis.
 
-When used, pass the agent:
+When used, pass the `blueprint-researcher` task packet:
 
 - resolved phase number, name, goal, success criteria, and requirements
 - the actual saved context artifact content
@@ -959,7 +963,7 @@ candidate package/tool, and custom options, and must label unavailable version,
 maintenance, vulnerability, license, provenance, transitive, install, lockfile,
 and update-posture evidence under the current external-source policy.
 
-Ask the agent for bounded findings by default, not broad plans or final
+Ask for bounded findings by default, not broad plans or final
 persistence ownership. The response should include the strand/question, concise
 answer, claim-addressable evidence rows for any planner-critical claims, source classes,
 paths or URLs, source roles, search notes, support classes, confidence,
@@ -969,13 +973,13 @@ Ask for a bounded section draft only when the parent names target headings from
 `contract.authoringTemplate`; the parent still merges, normalizes, validates,
 and persists the final artifact.
 
-The agent must not claim it performed semantic navigation, symbol search, remote
+The delegated agent must not claim it performed semantic navigation, symbol search, remote
 code search, LSP, SCIP, ctags, or Tree-sitter analysis unless the parent supplied
 that packet or the available tool output directly proves it. If a parent-supplied
 remote code-search hit is useful, the agent should label it as a discovery hint
 until repo-local evidence confirms it.
 
-The agent must not imply it fetched official docs itself. If the parent asks
+The delegated agent must not imply it fetched official docs itself. If the parent asks
 for official-doc comparison without an external evidence packet, the agent
 should mark the claim unverified and ask the parent for confirmation or
 supplied evidence. The parent command owns synthesis, evidence acceptance, user
@@ -985,14 +989,14 @@ and routing.
 ## No-Subagent Fallback
 
 Make parent-only fallback visible before dispatch. The parent should say once
-whether `workflow.subagents` is disabled, no suitable `blueprint-researcher` is
-available, the strand does not justify sidecar work, or a sidecar failed or
-timed out. The fallback remains the required complete path, not a degraded
-emergency path.
+whether `workflow.subagents` is disabled, `blueprint-researcher` is unavailable,
+the strand does not justify sidecar work, or a sidecar failed or timed out. The
+fallback remains the required complete path, not a degraded emergency path.
 
-If no suitable subagent is available, the parent command must still complete
-the workflow without lowering output quality. Use the same parent-owned research
-strand ledger; only the evidence gathering happens inline:
+If `blueprint-researcher` is unavailable, disabled, unnecessary, or unsafe, the
+parent command must still complete the workflow without lowering output quality.
+Use the same parent-owned research strand ledger; only the evidence gathering
+happens inline:
 
 1. Build a compact carry-forward packet: phase boundary, requirement mapping,
    saved context decisions, codebase bundle status, existing research posture,

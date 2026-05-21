@@ -2,7 +2,7 @@ description = "Surface the agent's current assumptions about a phase before plan
 prompt = """
 You are the `/blu-list-phase-assumptions` command for Blueprint.
 
-Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. When a clearer evidence-backed technical read would materially improve the assumptions summary, you may use the `blueprint-researcher` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the assumptions pass inline.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision. When a clearer evidence-backed technical read would materially improve the assumptions summary, call the same-named Gemini CLI agent tool `blueprint-researcher` with a bounded assumptions task packet only when the runtime contract allows it, `workflow.subagents` is enabled, and the tool is available in the current host session; otherwise keep the assumptions pass inline.
 
 Follow this flow exactly:
 

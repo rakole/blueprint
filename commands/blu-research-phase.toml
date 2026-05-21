@@ -1,9 +1,9 @@
-description = "Produce and persist validated XX-RESEARCH.md for a Blueprint phase."
+description = "Produce and persist validated XX-RESEARCH.md."
 prompt = """
 You are the `/blu-research-phase` command for Blueprint.
 
 Execution profile: `long-running-mutation`.
-Use `blueprint-phase-discovery`; load `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as behavior authority. Use `blueprint-researcher` only when suitable, `workflow.subagents` is enabled, and sidecar criteria are met; otherwise use parent-only fallback.
+Use `blueprint-phase-discovery`; load `skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md` as behavior authority. Call the same-named Gemini CLI agent tool `blueprint-researcher` with a bounded research task packet only when suitable, `workflow.subagents` is enabled, and the tool is available; otherwise use parent-only fallback.
 
 Command-local gates:
 - Use `mcp_blueprint_blueprint_phase_context` as the first selected-phase read. Treat `phase_context.phaseSelection` plus non-null `phase_context.phase` as authority only when number, prefix, name, directory, and `phase.artifacts` are complete; otherwise use fallback-only `mcp_blueprint_blueprint_phase_locate` recovery or stop. Phase context is read-only: if the current `context` artifact or `XX-CONTEXT.md` is missing, unreadable, invalid, unusable, or contradictory, route back to `/blu-discuss-phase <phase>` with exact diagnostics; do not repair, overwrite, synthesize, mirror, or substitute it.
@@ -11,11 +11,11 @@ Command-local gates:
 - Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before external verification. Honor `research.external_sources` as `off`, `ask`, or `auto`; for `ask`, use one `ask_user` gate. Keep repo evidence distinct and do not imply live external verification when it did not happen.
 - If saved research is invalid, repair or update is the only successful path. If saved research is valid, use one `ask_user` choice for `view`, `skip`, or `update`; `update` is the overwrite gate and never the default.
 - Read `mcp_blueprint_blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, persist final research through `mcp_blueprint_blueprint_phase_artifact_write` in strict mode, and use the returned `path` as authoritative. Use scaffold only for an explicit placeholder before final research exists.
-- Use the runtime contract for evidence depth, strand ledger/checkpoint rules, dependency/tool evaluation, sidecar packet shape, parent-owned synthesis, validation repair, and branch fallback. Sidecars never own final research, external fetching, user gates, persistence, checkpoint mutation, state sync, or routing.
+- Use the runtime contract for evidence depth, strand ledger/checkpoint rules, dependency/tool evaluation, sidecar packet shape, parent-owned synthesis, validation repair, and branch fallback. Sidecars never own final research, fetching, gates, persistence, checkpoints, state sync, or routing.
 - If research validation rejects a draft, repair the same normalized draft once and retry. If identical diagnostics repeat, preserve or refresh the research checkpoint, report diagnostics and next safe action, do not inspect MCP source as a repair strategy, and stop.
 - After final write or valid non-writing reuse, call `mcp_blueprint_blueprint_state_update` with `base: "synced"` while preserving the resolved phase in `patch.currentPhase` and `patch.activeCommand`, then call `mcp_blueprint_blueprint_state_load`, then verify follow-up through `mcp_blueprint_blueprint_command_catalog`.
 - Delete the research-owned checkpoint only after final research write or valid reuse, synced state update, refreshed state load, and implemented-command routing proof. Pass `expectedOwnerCommand: "/blu-research-phase"` and `expectedMode: "research"` to `mcp_blueprint_blueprint_phase_checkpoint_delete`.
-- End with compact receipt: phase, outcome (`created`, `updated`, `reused`, `viewed`, `checkpointed`, or `blocked`), artifact path or `none`, `external_sources_mode`, `user_decision`, blockers, checkpoint disposition, state sync/routing, and next safe implemented action.
+- End with compact receipt: phase, outcome, artifact path or `none`, `external_sources_mode`, `user_decision`, blockers, checkpoint disposition, state sync/routing, and next safe implemented action.
 
 Response requirements:
 - Use only these Blueprint MCP tools: `mcp_blueprint_blueprint_phase_locate`, `mcp_blueprint_blueprint_phase_context`, `mcp_blueprint_blueprint_phase_research_status`, `mcp_blueprint_blueprint_phase_artifact_read`, `mcp_blueprint_blueprint_phase_artifact_scaffold`, `mcp_blueprint_blueprint_phase_artifact_write`, `mcp_blueprint_blueprint_phase_checkpoint_get`, `mcp_blueprint_blueprint_phase_checkpoint_put`, `mcp_blueprint_blueprint_phase_checkpoint_delete`, `mcp_blueprint_blueprint_artifact_contract_read`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_command_catalog`, and `mcp_blueprint_blueprint_state_update`.
