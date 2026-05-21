@@ -12,7 +12,9 @@ test("debug manifest references the debug skill, debugger agent, and report-back
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-debug.toml"), "utf8");
 
   assert.match(commandFile, /Use the `blueprint-debug` skill/);
-  assert.match(commandFile, /`blueprint-debugger` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-debugger`/);
+  assert.match(commandFile, /bounded diagnosis packet/);
+  assert.match(commandFile, /Do not read, inline, or load separate agent source/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-debug\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-debugger\.md/);
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_project_status")));
