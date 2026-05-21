@@ -102,7 +102,7 @@ export const SUPPORTED_SCAFFOLD_ARTIFACTS = [
   ...CODEBASE_ARTIFACTS
 ] as const;
 const SCAFFOLD_PHASE_ARTIFACT_PATTERN =
-  /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/;
+  /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|SPEC|UI-SPEC))\.md)$/;
 const SCAFFOLD_ARTIFACT_PATH_GUIDANCE =
   "Use repo-relative Blueprint artifact paths such as `.blueprint/codebase/STACK.md` or `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names like `STACK` and absolute filesystem paths are not supported.";
 
@@ -770,9 +770,11 @@ type PhaseArtifactRequest = {
   phaseDir: string;
   phaseName: string;
   phasePrefix: string;
-  kind: "CONTEXT" | "DISCUSSION-LOG" | "RESEARCH" | "UI-SPEC" | "PLAN";
+  kind: "CONTEXT" | "DISCUSSION-LOG" | "RESEARCH" | "SPEC" | "UI-SPEC" | "PLAN";
   planId: string | null;
 };
+
+type ContractPhaseArtifactKind = "context" | "discussion-log" | "research" | "spec" | "ui-spec";
 
 const BOOTSTRAP_SOURCE_DIRECTORIES = new Set([
   "src",
@@ -2464,6 +2466,8 @@ function renderPhaseArtifact(request: PhaseArtifactRequest): string {
       return renderArtifactScaffoldTemplate("phase.discussion-log", context);
     case "RESEARCH":
       return renderArtifactScaffoldTemplate("phase.research", context);
+    case "SPEC":
+      return renderArtifactScaffoldTemplate("phase.spec", context);
     case "UI-SPEC":
       return renderArtifactScaffoldTemplate("phase.ui-spec", context);
     case "PLAN":
@@ -6002,7 +6006,7 @@ function detectUiSpecAuthoringMode(
 }
 
 function phaseArtifactRepairInstruction(args: {
-  artifact: "context" | "discussion-log" | "research" | "ui-spec";
+  artifact: ContractPhaseArtifactKind;
   heading?: string;
   uiSpecMode?: UiSpecAuthoringMode;
 }): string {
@@ -6036,11 +6040,17 @@ function phaseArtifactRepairInstruction(args: {
       : "Read the phase.discussion-log contract, repair the discussion log, then retry blueprint_phase_artifact_write.";
   }
 
+  if (args.artifact === "spec") {
+    return args.heading
+      ? `Populate ## ${args.heading} with Blueprint-native spec detail, or regenerate the draft through /blu-spec-phase, then retry blueprint_phase_artifact_write.`
+      : "Read the phase.spec contract or regenerate the canonical draft through /blu-spec-phase, repair the specification, then retry blueprint_phase_artifact_write.";
+  }
+
   return "Read the phase.research contract, repair the research artifact, then retry blueprint_phase_artifact_write.";
 }
 
 function phaseArtifactDiagnostic(args: {
-  artifact: "context" | "discussion-log" | "research" | "ui-spec";
+  artifact: ContractPhaseArtifactKind;
   path: string;
   code: string;
   message: string;
@@ -6067,6 +6077,256 @@ function phaseArtifactDiagnostic(args: {
       }),
     retryable: true,
     nextTool: "blueprint_phase_artifact_write"
+  };
+}
+
+function phaseArtifactLabel(artifact: ContractPhaseArtifactKind): string {
+  switch (artifact) {
+    case "context":
+      return "Context artifact";
+    case "discussion-log":
+      return "Discussion log artifact";
+    case "research":
+      return "Research artifact";
+    case "spec":
+      return "Spec artifact";
+    case "ui-spec":
+      return "UI spec artifact";
+  }
+}
+
+function extractMarkdownNumberedItems(section: string): string[] {
+  return Array.from(
+    section.replace(/\r\n/g, "\n").matchAll(/(?:^|\n)\d+\.\s+([\s\S]*?)(?=\n\d+\.\s+|$)/g)
+  ).map((match) => match[0].replace(/^\n/, "").trim());
+}
+
+function hasMarkdownSubsectionLabel(section: string, label: string): boolean {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const labelLinePattern = new RegExp(
+    [
+      "(?:^|\\n)\\s*",
+      "(?:",
+      `#{3,6}\\s+${escapedLabel}:?`,
+      "|",
+      `(?:[-*+]\\s*)?(?:\\*\\*${escapedLabel}:?\\*\\*|\\*\\*${escapedLabel}\\*\\*:?|${escapedLabel}:?)`,
+      ")\\s*(?:\\n|$)"
+    ].join(""),
+    "i"
+  );
+
+  return labelLinePattern.test(section);
+}
+
+function validateSpecArtifactContent(content: string): {
+  valid: boolean;
+  issues: string[];
+  warnings: string[];
+  diagnostics: PhaseArtifactValidationDiagnostic[];
+} {
+  const artifact: ContractPhaseArtifactKind = "spec";
+  const contract = readArtifactContract("phase.spec");
+  const artifactLabel = phaseArtifactLabel(artifact);
+  const issues: string[] = [];
+  const warnings: string[] = [];
+  const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
+
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
+    const issue = `${artifactLabel} must start with a markdown H1 title.`;
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.title",
+        code: "markdown.missing_h1",
+        message: issue
+      })
+    );
+  }
+
+  const placeholderSignals = uniqueStrings([
+    ...(content.includes(SCAFFOLD_GENERATED_MARKER) ? [SCAFFOLD_GENERATED_MARKER] : []),
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal))
+  ]);
+
+  for (const signal of placeholderSignals) {
+    const issue = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content",
+        code: "markdown.placeholder_text",
+        message: issue
+      })
+    );
+  }
+
+  const missingRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection(content, heading).trim().length === 0
+  );
+
+  if (missingRequiredSections.length > 0) {
+    const issue = `Spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue);
+    diagnostics.push(
+      ...missingRequiredSections.map((heading) =>
+        phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "spec.missing_required_section",
+          message: `Spec artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
+    );
+  }
+
+  const requirementsSection = extractMarkdownSection(content, "Requirements");
+  if (requirementsSection.trim().length > 0) {
+    const requirementItems = extractMarkdownNumberedItems(requirementsSection);
+
+    if (requirementItems.length === 0) {
+      const issue =
+        "Spec artifact section Requirements must include at least one numbered requirement.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Requirements",
+          code: "spec.requirements_missing_numbered_items",
+          message: issue,
+          heading: "Requirements",
+          repair:
+            "Add at least one numbered requirement with Current, Target, and Acceptance bullets, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+
+    for (const requirementItem of requirementItems) {
+      for (const field of ["Current", "Target", "Acceptance"] as const) {
+        if (!new RegExp(`^\\s*[-*+]\\s+${field}:`, "mi").test(requirementItem)) {
+          const issue = `Spec artifact requirement is missing the ${field} bullet.`;
+          issues.push(issue);
+          diagnostics.push(
+            phaseArtifactDiagnostic({
+              artifact,
+              path: "content.sections.Requirements",
+              code: "spec.requirement_missing_field",
+              message: issue,
+              heading: "Requirements",
+              missing: [field],
+              repair:
+                `Update every numbered requirement so it includes \`- Current:\`, \`- Target:\`, and \`- Acceptance:\`, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write.`
+            })
+          );
+        }
+      }
+    }
+  }
+
+  const boundariesSection = extractMarkdownSection(content, "Boundaries");
+  if (boundariesSection.trim().length > 0) {
+    if (!hasMarkdownSubsectionLabel(boundariesSection, "In scope")) {
+      const issue = "Spec artifact section Boundaries must include an In scope subsection.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Boundaries",
+          code: "spec.boundaries_missing_in_scope",
+          message: issue,
+          heading: "Boundaries",
+          repair:
+            "Add an explicit `**In scope:**` subsection with concrete in-scope deliverables, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+
+    if (!hasMarkdownSubsectionLabel(boundariesSection, "Out of scope")) {
+      const issue = "Spec artifact section Boundaries must include an Out of scope subsection.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Boundaries",
+          code: "spec.boundaries_missing_out_of_scope",
+          message: issue,
+          heading: "Boundaries",
+          repair:
+            "Add an explicit `**Out of scope:**` subsection naming adjacent work that stays out of this phase, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+  }
+
+  const acceptanceSection = extractMarkdownSection(content, "Acceptance Criteria");
+  if (acceptanceSection.trim().length > 0) {
+    const acceptanceLines = acceptanceSection
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const bulletLines = acceptanceLines.filter((line) => /^[-*+]\s+/.test(line));
+    const checkboxLines = bulletLines.filter((line) => /^[-*+]\s+\[[ xX]\]\s+/.test(line));
+
+    if (checkboxLines.length === 0) {
+      const issue = "Spec artifact section Acceptance Criteria must include checkbox bullets.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Acceptance Criteria",
+          code: "spec.acceptance_missing_checkboxes",
+          message: issue,
+          heading: "Acceptance Criteria",
+          repair:
+            "Rewrite Acceptance Criteria as `- [ ]` checkbox bullets with pass/fail wording, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+
+    if (bulletLines.some((line) => !/^[-*+]\s+\[[ xX]\]\s+/.test(line))) {
+      const issue =
+        "Spec artifact section Acceptance Criteria must use checkbox bullets for every listed criterion.";
+      issues.push(issue);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Acceptance Criteria",
+          code: "spec.acceptance_non_checkbox_bullet",
+          message: issue,
+          heading: "Acceptance Criteria",
+          repair:
+            "Convert each Acceptance Criteria bullet into a `- [ ]` checkbox, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+  }
+
+  const ambiguitySection = extractMarkdownSection(content, "Ambiguity Report");
+  if (ambiguitySection.trim().length > 0 && extractMarkdownTableRows(ambiguitySection).length === 0) {
+    const issue = "Spec artifact section Ambiguity Report must include a Markdown table.";
+    issues.push(issue);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections.Ambiguity Report",
+        code: "spec.ambiguity_report_missing_table",
+        message: issue,
+        heading: "Ambiguity Report",
+        repair:
+          "Add the Ambiguity Report Markdown table with scored dimensions, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+      })
+    );
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings,
+    diagnostics
   };
 }
 
@@ -6444,7 +6704,7 @@ function isLegacyPhaseContextShell(content: string): boolean {
 
 export function validatePhaseArtifactContent(
   content: string,
-  artifact: "context" | "discussion-log" | "research" | "ui-spec"
+  artifact: ContractPhaseArtifactKind
 ): {
   valid: boolean;
   issues: string[];
@@ -6457,14 +6717,13 @@ export function validatePhaseArtifactContent(
     return validation;
   }
 
+  if (artifact === "spec") {
+    return validateSpecArtifactContent(content);
+  }
+
   const contractId = resolvePhaseArtifactContractId(artifact);
   const contract = readArtifactContract(contractId);
-  const artifactLabel =
-    artifact === "context"
-      ? "Context artifact"
-      : artifact === "discussion-log"
-        ? "Discussion log artifact"
-        : "UI spec artifact";
+  const artifactLabel = phaseArtifactLabel(artifact);
   const issues: string[] = [];
   const warnings: string[] = [];
   const diagnostics: PhaseArtifactValidationDiagnostic[] = [];
@@ -10222,6 +10481,25 @@ async function isActiveDiscussPhaseDraft(
   }
 }
 
+function isCanonicalPhaseSpecArtifactPath(artifactPath: string): boolean {
+  const match = artifactPath.match(
+    /^\.blueprint\/phases\/([^/]+)\/(\d+(?:\.\d+)?)-SPEC\.md$/
+  );
+
+  if (!match) {
+    return false;
+  }
+
+  const [, phaseDir, filePrefix] = match;
+  const directoryPrefix = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+
+  if (!directoryPrefix) {
+    return false;
+  }
+
+  return formatPhasePrefix(normalizePhaseNumber(directoryPrefix)) === filePrefix;
+}
+
 const BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
   ".blueprint/PROJECT.md": "bootstrap.project",
   ".blueprint/REQUIREMENTS.md": "bootstrap.requirements",
@@ -10465,6 +10743,12 @@ export async function blueprintArtifactValidate(
       repair: "Regenerate or update malformed phase research through /blu-research-phase before planning."
     },
     {
+      suffix: "-SPEC.md",
+      kind: "spec",
+      repair: "Regenerate or update malformed phase specs through /blu-spec-phase before planning.",
+      matches: (artifact: string) => isCanonicalPhaseSpecArtifactPath(artifact)
+    },
+    {
       suffix: "-UI-SPEC.md",
       kind: "ui-spec",
       repair: "Regenerate or update malformed phase UI specs through /blu-ui-phase before planning."
@@ -10472,7 +10756,9 @@ export async function blueprintArtifactValidate(
   ] as const;
 
   for (const target of phaseArtifactValidationTargets) {
-    for (const artifact of inspection.phases.filter((value) => value.endsWith(target.suffix))) {
+    for (const artifact of inspection.phases.filter((value) =>
+      "matches" in target ? target.matches(value) : value.endsWith(target.suffix)
+    )) {
       if (activeDiscussPhaseDraft && target.kind === "context") {
         continue;
       }

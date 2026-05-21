@@ -18,6 +18,10 @@ import {
 } from "../src/mcp/tools/phase.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
+const SPEC_PATH = ".blueprint/phases/03-phase-discovery/03-SPEC.md";
+const AI_SPEC_PATH = ".blueprint/phases/03-phase-discovery/03-AI-SPEC.md";
+const NESTED_SPEC_PATH = ".blueprint/phases/03-phase-discovery/archive/03-SPEC.md";
+
 async function createPhaseRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-plan-phase-");
 
@@ -199,6 +203,57 @@ async function createPhaseRepo(): Promise<string> {
   );
 
   return repoPath;
+}
+
+function validSpecContent(): string {
+  return `# Phase 03: Phase Discovery - Specification
+
+**Created:** 2026-05-21
+**Ambiguity score:** 0.12 (gate: <= 0.20)
+**Requirements:** 3 locked
+
+## Goal
+
+Blueprint can persist and reuse a canonical phase spec artifact for /blu-spec-phase without treating a missing spec as a lifecycle blocker.
+
+## Background
+
+The phase artifact substrate already persists context, discussion log, research, and UI spec documents under .blueprint/phases/. This slice adds a Blueprint-native spec artifact so later lifecycle steps can read a locked WHAT and WHY contract from the canonical phase directory.
+
+## Requirements
+
+1. **Canonical spec persistence**: Blueprint writes and reads one canonical phase spec artifact.
+   - Target: blueprint_phase_artifact_write and blueprint_phase_artifact_read support artifact: "spec" at the phase-scoped canonical path.
+   - Acceptance: Writing a valid spec for phase 3 produces .blueprint/phases/03-phase-discovery/03-SPEC.md and reading artifact: "spec" returns that saved Markdown.
+
+2. **Optional missing state**: Missing phase specs remain optional.
+   - Target: A missing spec returns found: false while phase context keeps lifecycle blocking semantics unchanged.
+   - Acceptance: A missing spec read returns found: false and phase context does not list 03-SPEC.md in missingArtifacts.
+
+## Boundaries
+
+**In scope:**
+- Canonical XX-SPEC.md read and write support
+- Phase context reporting for the canonical spec artifact
+
+**Out of scope:**
+- Adding lifecycle blockers for a missing spec - the thin substrate keeps missing specs optional
+
+## Constraints
+
+- Keep the artifact Blueprint-native and phase-scoped under .blueprint/phases/.
+- Reuse existing MCP phase artifact helpers instead of introducing a parallel persistence path.
+
+## Acceptance Criteria
+
+- [ ] blueprint_phase_artifact_write persists a valid spec to the canonical XX-SPEC.md path
+- [ ] blueprint_phase_artifact_read returns the saved canonical spec content
+- [ ] blueprintPhaseContext reports XX-SPEC.md only when the canonical file is present
+`;
+}
+
+async function writePhaseSpec(repoPath: string, content = validSpecContent()): Promise<void> {
+  await writeFile(path.join(repoPath, SPEC_PATH), content, "utf8");
 }
 
 function validResearchContent(): string {
@@ -1054,6 +1109,70 @@ test("phase plan readiness returns a compact read-only packet with freshness met
     stale.freshness.stalePaths.includes(".blueprint/phases/03-phase-discovery/03-REVIEW.md")
   );
   assert.deepEqual((await blueprintPhasePlanIndex({ cwd: repoPath, phase: "3" })).plans, []);
+});
+
+test("phase plan readiness treats saved spec evidence as optional but freshness-tracked when present", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writePhaseSpec(repoPath);
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const specBody = (readiness.artifactBodies as Record<string, unknown>).spec as
+    | {
+        path?: string | null;
+        summary?: string | null;
+        hash?: string | null;
+      }
+    | undefined;
+  const specRead = readiness.readSet.find(
+    (entry) => entry.path === SPEC_PATH && entry.kind === "phase.spec"
+  );
+  const hashesOnly = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  await writePhaseSpec(
+    repoPath,
+    `${validSpecContent()}\n## Planning Notes\n\n- Tighten the out-of-scope boundary before downstream planning.\n`
+  );
+  const stale = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(readiness.status, "ready", JSON.stringify(readiness, null, 2));
+  assert.equal(specBody?.path, SPEC_PATH);
+  assert.match(specBody?.summary ?? "", /Specification|canonical phase spec artifact/i);
+  assert.ok(specBody?.hash);
+  assert.ok(specRead);
+  assert.equal(specRead?.included, false);
+  assert.equal(specRead?.hash, specBody?.hash);
+  assert.deepEqual(hashesOnly.freshness, {
+    checked: true,
+    fresh: true,
+    stalePaths: []
+  });
+  assert.equal(stale.freshness.checked, true);
+  assert.equal(stale.freshness.fresh, false);
+  assert.ok(stale.freshness.stalePaths.includes(SPEC_PATH));
+  assert.ok(
+    stale.readSet.some(
+      (entry) =>
+        entry.path === SPEC_PATH &&
+        entry.kind === "phase.spec" &&
+        entry.hash !== specRead?.hash
+    )
+  );
 });
 
 test("phase plan readiness includes bounded bodies and target saved plan body only on request", async (t) => {
@@ -1912,6 +2031,92 @@ test("phase plan authoring accepts list-only roadmap requirement clauses", async
   assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
 });
 
+test("phase plan authoring context requires evidence coverage for a known saved spec artifact", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writePhaseSpec(repoPath);
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const taskSchema = context.taskSchema as {
+    required?: string[];
+    properties?: {
+      evidenceCoverage?: {
+        allOf?: Array<unknown>;
+      };
+    };
+    $defs?: {
+      evidenceCoverageRow?: {
+        properties?: {
+          artifact?: {
+            enum?: string[];
+          };
+        };
+      };
+    };
+  };
+
+  assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
+  assert.ok(context.knownEvidenceArtifacts.includes(SPEC_PATH));
+  assert.ok(taskSchema.required?.includes("evidenceCoverage"));
+  assert.ok(taskSchema.$defs?.evidenceCoverageRow?.properties?.artifact?.enum?.includes(SPEC_PATH));
+  assert.ok(
+    taskSchema.properties?.evidenceCoverage?.allOf?.some((clause) =>
+      JSON.stringify(clause).includes(SPEC_PATH)
+    )
+  );
+});
+
+test("phase plan authoring context excludes noncanonical spec lookalikes from evidence coverage", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writePhaseSpec(repoPath);
+  await mkdir(path.join(repoPath, ".blueprint/phases/03-phase-discovery/archive"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, AI_SPEC_PATH),
+    "# Phase 03: Phase Discovery - AI Spec\n\nThis adjacent AI-specific artifact is not the phase spec.\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, NESTED_SPEC_PATH),
+    "# Phase 03: Archived Specification\n\nThis nested artifact is not the canonical phase spec.\n",
+    "utf8"
+  );
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const taskSchema = context.taskSchema as {
+    $defs?: {
+      evidenceCoverageRow?: {
+        properties?: {
+          artifact?: {
+            enum?: string[];
+          };
+        };
+      };
+    };
+  };
+  const allowedEvidence = taskSchema.$defs?.evidenceCoverageRow?.properties?.artifact?.enum ?? [];
+
+  assert.equal(context.status, "ready", JSON.stringify(context, null, 2));
+  assert.ok(context.knownEvidenceArtifacts.includes(SPEC_PATH));
+  assert.equal(context.knownEvidenceArtifacts.includes(AI_SPEC_PATH), false);
+  assert.equal(context.knownEvidenceArtifacts.includes(NESTED_SPEC_PATH), false);
+  assert.ok(allowedEvidence.includes(SPEC_PATH));
+  assert.equal(allowedEvidence.includes(AI_SPEC_PATH), false);
+  assert.equal(allowedEvidence.includes(NESTED_SPEC_PATH), false);
+});
+
 test("phase plan task schema permits empty evidence coverage only when no saved evidence exists", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
@@ -1947,6 +2152,131 @@ test("phase plan task schema permits empty evidence coverage only when no saved 
     inventedEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
     /more than 0 items/i
   );
+});
+
+test("phase plan structured model rejects omitted saved spec evidence coverage", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writePhaseSpec(repoPath);
+
+  const context = await blueprintPhasePlanAuthoringContext({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const omittedSpecEvidence = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: createStructuredPlanModel()
+  });
+  const rejectedWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: createStructuredPlanModel(),
+    overwrite: true
+  });
+
+  assert.ok(context.knownEvidenceArtifacts.includes(SPEC_PATH));
+  assert.equal(omittedSpecEvidence.status, "invalid");
+  assert.match(
+    omittedSpecEvidence.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /03-SPEC\.md/
+  );
+  assert.equal(rejectedWrite.status, "invalid");
+  assert.equal(rejectedWrite.written, false);
+  assert.equal(rejectedWrite.modelValidation?.status, "invalid");
+  assert.match(rejectedWrite.validation.issues.join("\n"), /03-SPEC\.md/);
+  assert.match(rejectedWrite.validation.issues.join("\n"), /evidenceCoverage|schema\.exactCoverage/i);
+});
+
+test("phase plan structured model rejects saved spec out-of-scope conflicts", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writePhaseSpec(repoPath);
+
+  const conflictingModel = cloneStructuredPlanModel({
+    scope: [
+      "Adding lifecycle blockers for a missing spec"
+    ],
+    evidenceCoverage: [
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-CONTEXT.md",
+        status: "used",
+        rationale: "Context records the MCP-owned planning persistence decision."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-RESEARCH.md",
+        status: "used",
+        rationale: "Research supplies the plan-phase runtime contract."
+      },
+      {
+        artifact: SPEC_PATH,
+        status: "used",
+        rationale: "The saved spec defines the phase boundaries."
+      },
+      {
+        artifact: ".blueprint/phases/03-phase-discovery/03-UI-SPEC.md",
+        status: "irrelevant",
+        rationale: "The phase plan writer is a non-UI MCP persistence change."
+      }
+    ]
+  });
+  const validated = await blueprintPhasePlanValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    model: conflictingModel
+  });
+  const rejectedWrite = await blueprintPhasePlanWrite({
+    cwd: repoPath,
+    phase: "3",
+    planId: "01",
+    model: conflictingModel,
+    overwrite: true
+  });
+
+  assert.equal(validated.status, "invalid");
+  assert.equal(validated.valid, false);
+  assert.match(
+    validated.diagnostics.map((diagnostic) => diagnostic.code).join("\n"),
+    /scope\.spec_out_of_scope_conflict/
+  );
+  assert.equal(rejectedWrite.status, "invalid");
+  assert.equal(rejectedWrite.written, false);
+  assert.equal(rejectedWrite.modelValidation?.status, "invalid");
+  assert.match(rejectedWrite.validation.issues.join("\n"), /scope\.spec_out_of_scope_conflict/);
+  assert.match(rejectedWrite.validation.issues.join("\n"), /out of scope/i);
+});
+
+test("phase plan readiness keeps missing spec nonblocking under the standard planning fixture", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const readiness = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3"
+  });
+  const hashesOnly = await blueprintPhasePlanReadiness({
+    cwd: repoPath,
+    phase: "3",
+    readMode: "hashes-only",
+    previousReadSet: readiness.readSet.map(({ path, kind, hash }) => ({ path, kind, hash }))
+  });
+
+  assert.equal(readiness.status, "ready", JSON.stringify(readiness, null, 2));
+  assert.equal(readiness.authoringContext.status, "ready");
+  assert.equal(
+    readiness.readSet.some((entry) => entry.path === SPEC_PATH),
+    false
+  );
+  assert.equal(hashesOnly.freshness.checked, true);
+  assert.equal(hashesOnly.freshness.fresh, true);
+  assert.equal(hashesOnly.freshness.stalePaths.includes(SPEC_PATH), false);
 });
 
 test("phase plan model writes preserve MCP-owned phase and plan provenance", async (t) => {

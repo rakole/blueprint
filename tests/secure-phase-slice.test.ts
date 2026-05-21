@@ -16,6 +16,11 @@ import {
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
 
 type SecurePhaseRepoOptions = {
   withPlan?: boolean;
@@ -102,6 +107,8 @@ ${threatModel}
 #### Acceptance Criteria
 
 - npm test -- tests/security.test.ts exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 

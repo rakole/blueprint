@@ -15,6 +15,11 @@ import {
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
 
 async function createResumeWorkFixtureRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-resume-work-");
@@ -36,6 +41,12 @@ async function createResumeWorkFixtureRepo(): Promise<string> {
 
 - [x] **Phase 2: Discovery**
 - [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Execute the prepared plans.
+**Requirements**: RW-01
 `,
     "utf8"
   );
@@ -81,10 +92,13 @@ wave: 1
 status: planned
 objective: "Exercise the pause/resume handoff flow."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements: ["RW-01"]
+files_modified:
+  - .blueprint/STATE.md
+read_first:
+  - .blueprint/phases/03-phase-discovery/03-CONTEXT.md
+acceptance_criteria:
+  - tests/resume-work.test.ts exits 0
 autonomous: true
 ---
 
@@ -113,6 +127,8 @@ Exercise the pause/resume handoff flow.
 #### Acceptance Criteria
 
 - tests/resume-work.test.ts exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 

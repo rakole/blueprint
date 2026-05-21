@@ -6,7 +6,8 @@ import path from "node:path";
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import {
   getRuntimeOwnedCommandMetadata,
-  MAP_CODEBASE_RUNTIME_METADATA
+  MAP_CODEBASE_RUNTIME_METADATA,
+  SPEC_PHASE_RUNTIME_METADATA
 } from "../src/mcp/command-runtime-metadata.js";
 
 const repoRoot = process.cwd();
@@ -17,6 +18,7 @@ type CatalogEntry = {
   wave: string;
   family: string;
   primarySkill: string;
+  risk: string;
 };
 
 type CommandSpecEntry = {
@@ -47,14 +49,58 @@ async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function parseCatalog(markdown: string): Map<string, CatalogEntry> {
   const entries = new Map<string, CatalogEntry>();
 
-  for (const match of markdown.matchAll(
-    /^\| `([^`]+)` \| ([0-9]+) \| `([^`]+)` \| `([^`]+)` \| `(planned|implemented|blocked|repairing)` \|/gm
-  )) {
-    const [, command, wave, family, primarySkill] = match;
-    entries.set(command, { command, wave, family, primarySkill });
+  for (const line of markdown.split("\n")) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine.startsWith("| `") || !trimmedLine.endsWith("|")) {
+      continue;
+    }
+
+    const cells = trimmedLine
+      .slice(1, -1)
+      .split(" | ")
+      .map((cell) => cell.trim());
+
+    if (cells.length !== 7) {
+      continue;
+    }
+
+    const commandMatch = cells[0].match(/^`([^`]+)`$/);
+    const waveMatch = cells[1].match(/^([0-9]+)$/);
+    const familyMatch = cells[2].match(/^`([^`]+)`$/);
+    const primarySkillMatch = cells[3].match(/^`([^`]+)`$/);
+    const statusMatch = cells[4].match(/^`(planned|implemented|blocked|repairing)`$/);
+    const riskMatch = cells[6].match(/^`(.+)`$/);
+
+    if (
+      !commandMatch ||
+      !waveMatch ||
+      !familyMatch ||
+      !primarySkillMatch ||
+      !statusMatch ||
+      !riskMatch
+    ) {
+      continue;
+    }
+
+    entries.set(commandMatch[1], {
+      command: commandMatch[1],
+      wave: waveMatch[1],
+      family: familyMatch[1],
+      primarySkill: primarySkillMatch[1],
+      risk: riskMatch[1]
+    });
   }
 
   return entries;
@@ -172,7 +218,6 @@ test("command catalog entries match per-command specs for wave, family, and prim
     loadCommandSpecs()
   ]);
   const catalog = parseCatalog(catalogMarkdown);
-
   assert.deepEqual([...catalog.keys()].sort(), [...commandSpecs.keys()].sort());
 
   for (const [command, entry] of catalog) {
@@ -182,6 +227,15 @@ test("command catalog entries match per-command specs for wave, family, and prim
     assert.equal(spec.family, entry.family, `Family mismatch for ${command}`);
     assert.equal(spec.primarySkill, entry.primarySkill, `Primary skill mismatch for ${command}`);
   }
+});
+
+test("spec-phase runtime risk matches the command catalog row", async () => {
+  const catalogMarkdown = await readRepoFile("docs/COMMAND-CATALOG.md");
+  const catalog = parseCatalog(catalogMarkdown);
+  const entry = catalog.get("spec-phase");
+
+  assert.ok(entry);
+  assert.equal(SPEC_PHASE_RUNTIME_METADATA.catalog.risk, entry.risk);
 });
 
 test("skill inventory and migration matrix agree with canonical primary skill ownership", async () => {
@@ -272,12 +326,143 @@ test("resource contract docs keep live command exposure scoped and read-only", a
   );
 });
 
+test("spec-phase docs keep the command implemented, optional, and on the shared phase artifact substrate", async () => {
+  const [catalogMarkdown, runtimeReference, lifecycleDoc, implementationOrder, mcpToolsDoc, skillsMarkdown, commandDoc] = await Promise.all([
+    readRepoFile("docs/COMMAND-CATALOG.md"),
+    readRepoFile("docs/RUNTIME-REFERENCE.md"),
+    readRepoFile("docs/PHASE-LIFECYCLE.md"),
+    readRepoFile("docs/IMPLEMENTATION-ORDER.md"),
+    readRepoFile("docs/MCP-TOOLS.md"),
+    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
+    readRepoFile("docs/commands/spec-phase.md")
+  ]);
+
+  assert.match(
+    catalogMarkdown,
+    /\| `spec-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-discovery` \| `implemented` \| `phase XX-SPEC\.md; \.blueprint\/STATE\.md` \|/
+  );
+  assert.match(
+    runtimeReference,
+    /\| `spec-phase` \| `src\/mcp\/command-runtime-metadata\.ts#spec-phase` \| `blueprint-phase-discovery` \| `blueprint_phase_locate`<br>`blueprint_phase_context`<br>`blueprint_roadmap_read`<br>`blueprint_artifact_list`<br>`blueprint_config_get`<br>`blueprint_phase_artifact_read`<br>`blueprint_phase_artifact_write`<br>`blueprint_artifact_contract_read`<br>`blueprint_state_load`<br>`blueprint_state_update`<br>`blueprint_command_catalog` \| none \| `read-before-edit`; `\.blueprint` write guard \|/
+  );
+  assert.match(runtimeReference, /\| `spec-phase` [^\n]+ \| `locked`; `runtime-owned`; `needs-behavior-audit` \|/);
+  assert.doesNotMatch(runtimeReference, /remains non-routable|Planned optional pre-discussion/i);
+  assert.match(
+    runtimeReference,
+    /keeps missing spec nonblocking for discuss\/research\/plan/i
+  );
+  assert.match(
+    lifecycleDoc,
+    /1\. Optional `spec-phase`[\s\S]*This pre-discussion step remains optional, and `discuss-phase` must still work when no spec artifact exists\./
+  );
+  assert.match(implementationOrder, /### Wave 1: Core lifecycle[\s\S]*- `spec-phase`[\s\S]*- `discuss-phase`/);
+  assert.match(implementationOrder, /\| `spec-phase` \| 1 \| `new-project` \|/);
+  assert.match(
+    implementationOrder,
+    /`spec-phase` is an optional pre-discussion slice\. It may run before `discuss-phase`[\s\S]*must not require a saved spec artifact\./
+  );
+  assert.match(
+    mcpToolsDoc,
+    /`\/blu-spec-phase` stays on the existing discovery substrate[\s\S]*read and write `XX-SPEC\.md` through `blueprint_phase_artifact_read`, `blueprint_phase_artifact_write`, `blueprint_artifact_contract_read`/i
+  );
+  assert.match(
+    mcpToolsDoc,
+    /Do not add a separate spec-only read or write MCP family for that command\./
+  );
+  assert.match(skillsMarkdown, /`spec-phase`, `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions`/);
+  assert.match(skillsMarkdown, /`spec-phase` remains an optional pre-discussion discovery flow under `blueprint-phase-discovery`/);
+  assert.match(commandDoc, /\| Root-routable \| Yes \|/);
+  assert.doesNotMatch(commandDoc, /Not yet|does not by itself make `\/blu-spec-phase` implemented/i);
+});
+
+test("spec-phase runtime contract carries the wave-3 Socratic spec behavior without upstream leakage", async () => {
+  const [runtimeContract, specTemplate] = await Promise.all([
+    readRepoFile("skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"),
+    readRepoFile("skills/blueprint-phase-discovery/references/spec-template.md")
+  ]);
+  const normalizedContract = normalizeWhitespace(runtimeContract);
+
+  assert.match(
+    normalizedContract,
+    /ambiguity\s*=\s*1\s*-\s*\(\s*0\.35\s*\*\s*goal\s*\+\s*0\.25\s*\*\s*boundary\s*\+\s*0\.20\s*\*\s*constraint\s*\+\s*0\.20\s*\*\s*acceptance\s*\)/i
+  );
+  assert.match(normalizedContract, /ambiguity\s*(?:<=|≤)\s*0\.20/i);
+  assert.match(normalizedContract, /goal\s*(?:>=|≥)\s*0\.75/i);
+  assert.match(normalizedContract, /boundary\s*(?:>=|≥)\s*0\.70/i);
+  assert.match(normalizedContract, /constraint\s*(?:>=|≥)\s*0\.65/i);
+  assert.match(normalizedContract, /acceptance\s*(?:>=|≥)\s*0\.70/i);
+  assert.match(normalizedContract, /--auto/i);
+  assert.match(normalizedContract, /\[auto\]\s*SPEC\.md exists - updating\./i);
+  assert.match(normalizedContract, /\bUpdate\b/i);
+  assert.match(normalizedContract, /\bView\b/i);
+  assert.match(normalizedContract, /\bSkip\b/i);
+  assert.match(
+    normalizedContract,
+    /skip[\s\S]*exit without writing[\s\S]*\/blu-discuss-phase <phase>[\s\S]*\/blu-progress/i
+  );
+  assert.match(normalizedContract, /(?:max(?:imum)?|at most)\s*six(?:\s+normal)?\s+rounds/i);
+  assert.match(
+    normalizedContract,
+    /`?2(?:\s*-\s*|\s+to\s+)3`?\s+questions per round/i
+  );
+  assert.match(normalizedContract, /\bResearcher\b/i);
+  assert.match(normalizedContract, /Researcher\s*\+\s*Simplifier/i);
+  assert.match(normalizedContract, /\bBoundary Keeper\b/i);
+  assert.match(normalizedContract, /\bFailure Analyst\b/i);
+  assert.match(normalizedContract, /\bSeed Closer\b/i);
+  assert.match(normalizedContract, /blueprint_phase_artifact_write/i);
+  assert.match(normalizedContract, /artifact:\s*"spec"/i);
+  assert.match(normalizedContract, /do not commit/i);
+  assert.match(
+    normalizedContract,
+    /do not (?:raw-write|write raw files under) `?\.blueprint/i
+  );
+  assert.match(normalizedContract, /(?:final|completion) receipt[\s\S]*\bphase\b/i);
+  assert.match(normalizedContract, /\bartifact path\b/i);
+  assert.match(normalizedContract, /\bambiguity score\b/i);
+  assert.match(normalizedContract, /\blocked requirement count\b/i);
+  assert.match(normalizedContract, /\bunresolved dimensions\b/i);
+  assert.match(normalizedContract, /\bstate(?:\/| and )routing status\b/i);
+  assert.match(normalizedContract, /\bnext safe implemented action\b/i);
+  assert.match(specTemplate, /\*Phase: \[XX-phase-slug\]\*/);
+  assert.doesNotMatch(specTemplate, /\*Next step:/i);
+
+  for (const text of [runtimeContract, specTemplate]) {
+    for (const bannedToken of [
+      "AskUserQuestion",
+      ".planning",
+      "gsd-tools.cjs",
+      "/gsd:",
+      "Claude",
+      "Codex"
+    ]) {
+      assert.doesNotMatch(text, new RegExp(escapeRegExp(bannedToken), "i"));
+    }
+  }
+});
+
+test("spec-phase command and skill use phase.spec as the drafting authority", async () => {
+  const [manifest, skill] = await Promise.all([
+    readRepoFile("commands/blu-spec-phase.toml"),
+    readRepoFile("skills/blueprint-phase-discovery/SKILL.md")
+  ]);
+
+  assert.doesNotMatch(manifest, /spec-template\.md/);
+  assert.doesNotMatch(skill, /spec-template\.md/);
+  assert.match(manifest, /live `phase\.spec` contract and authoring template as the drafting authority/);
+  assert.match(skill, /live `phase\.spec` contract and authoring template as the drafting\s+authority/);
+  assert.match(
+    skill,
+    /`phase\.context`, `phase\.discussion-log`, `phase\.research`, `phase\.spec`, or `phase\.ui-spec`/
+  );
+});
+
 test("phase discovery skill and bounded agent contracts are marked implemented in docs", async () => {
   const skillsMarkdown = await readRepoFile("docs/SKILLS-AND-AGENTS.md");
 
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \|/
+    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \| `spec-phase`, `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` \|/
   );
   assert.match(
     skillsMarkdown,
@@ -601,7 +786,7 @@ test("list-phase-assumptions docs stay read-only and use the discovery MCP tools
   assert.match(commandDoc, /Shell Risk Profile[\s\S]*Low: read-only analysis\./);
   assert.match(
     skillsMarkdown,
-    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \| `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` \|/
+    /\| `blueprint-phase-discovery` \| `implemented` \| Pre-planning discovery and requirements shaping \| `spec-phase`, `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` \|/
   );
 });
 

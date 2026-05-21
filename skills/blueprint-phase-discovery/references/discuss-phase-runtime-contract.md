@@ -51,6 +51,8 @@ without asking the user to repeat themselves.
 The retained behaviors that matter are:
 
 - prior-context sweep before fresh questions
+- saved spec intake before fresh implementation questions when `XX-SPEC.md`
+  exists
 - phase-specific gray-area discovery
 - evidence-backed assumptions when the repo can answer part of the question
 - user choice over which gray areas to discuss
@@ -59,6 +61,12 @@ The retained behaviors that matter are:
 - checkpoint-per-area resumability
 - canonical reference accumulation
 - validation and repair before the discussion is treated as complete
+
+When phase-local `XX-SPEC.md` exists, treat it as authoritative WHAT/WHY input
+for goal, locked requirements, scope boundaries, constraints, and acceptance
+criteria. `/blu-discuss-phase` still owns only `XX-CONTEXT.md`: it maps the
+spec's substance into the saved context model, but it does not silently revise,
+supersede, or overwrite the spec artifact.
 
 ## Required MCP Read Sequence
 
@@ -74,8 +82,11 @@ phase number, prefix, and dir. Build a compact evidence packet from:
 - `blueprint_artifact_list`: current artifact inventory
 - `blueprint_config_get`: `workflow.discuss_mode`,
   `workflow.skip_discuss`, and `workflow.research_before_questions`
-- `blueprint_phase_artifact_read`: current context, discussion log, and
-  earlier phase context artifacts that match the Prior-Context Relevance Rule
+- `blueprint_phase_artifact_read`: current context, discussion log, current
+  spec when `phase.artifacts.spec` exists for the selected phase, and earlier
+  phase context artifacts that match the Prior-Context Relevance Rule; missing
+  or unreadable spec stays nonblocking evidence unless another command contract
+  explicitly upgrades it
 - when the current context is a fresh starter seeded by `/blu-new-project`,
   `/blu-add-phase`, or `/blu-insert-phase`, read the starter handoff packet
   inside that starter context as seed evidence before asking new questions
@@ -106,7 +117,7 @@ between independent read calls.
 | Boundary | Rule |
 |----------|------|
 | Before selected phase is known | Do not batch reads that require phase id/path, artifact id, checkpoint owner/mode, or recovery data. |
-| After `phase_context.phaseSelection` is usable | Batch independent reads whose arguments are known: effective config, roadmap read, artifact inventory, current context/log reads, discuss checkpoint status, plan inventory, and `phase.context` contract read. |
+| After `phase_context.phaseSelection` is usable | Batch independent reads whose arguments are known: effective config, roadmap read, artifact inventory, current context/log reads, current spec read when present, discuss checkpoint status, plan inventory, and `phase.context` contract read. |
 | After a user answer or before persistence | Do not batch checkpoint writes, context writes, discussion-log writes, validation repair, state updates, final route load, checkpoint deletion, or confirmation prompts. |
 
 Dependent reads stay in later turns when a prior result chooses the selected
@@ -145,9 +156,9 @@ before artifact reads/writes and report `reason` plus `recovery`.
    first question in the same model response/tool-call turn when the host
    supports it: `blueprint_roadmap_read`, `blueprint_artifact_list`,
    `blueprint_config_get`, current `context`, current `discussion-log`, the
-   discuss checkpoint with owner/mode guards, plan inventory, and the
-   `phase.context` artifact contract. Include only calls whose arguments are
-   already known.
+   discuss checkpoint with owner/mode guards, plan inventory, the current
+   `spec` when `phase.artifacts.spec` exists, and the `phase.context` artifact
+   contract. Include only calls whose arguments are already known.
 4. Read the `phase.discussion-log` contract only after a trigger in
    Discussion Log Triggers is present or the user requests a durable log.
 5. Read earlier phase context only when the relevance rule below matches.
@@ -169,8 +180,10 @@ Before the first fresh user question, summarize these fields and no extra
 inventory dump: selected phase, phase resolution source, `stateCurrentPhase` if
 different, config mode (`discuss`, `assumptions`, or `skip_discuss`), context
 status, discussion-log status, checkpoint status, prior context reused/skipped,
-codebase-summary status, artifact inventory status, plan-inventory warning, and
-artifact-contract status.
+codebase-summary status, artifact inventory status, plan-inventory warning,
+artifact-contract status, and spec status when present, including spec path,
+locked numbered requirement count, ambiguity score, notable out-of-scope
+boundaries, and unresolved dimensions.
 
 ### Starter Handoff Intake
 
@@ -189,6 +202,50 @@ implementation result.
 Do not preserve the starter packet heading, scaffold footer, placeholder
 labels, unsupported claims, or raw handoff text verbatim in the final saved
 `XX-CONTEXT.md`.
+
+### Spec Intake
+
+When the selected phase already has `XX-SPEC.md`, treat it as a locked
+requirements packet for WHAT/WHY, not as a suggestion to re-interview from
+scratch.
+
+Before the first fresh deliverable question, if present:
+
+- read the spec through `blueprint_phase_artifact_read({ artifact: "spec" })`
+  when `phase.artifacts.spec` exists
+- count the locked numbered requirements from the saved spec
+- extract `Goal`, `Requirements`, `Boundaries`, `Constraints`, and
+  `Acceptance Criteria` as locked WHAT/WHY input
+- extract the saved `Ambiguity score`, notable `Out of scope` boundaries, and
+  any unresolved dimensions called out by the spec
+
+Use that intake to build a run-local spec basis:
+
+- spec path
+- locked numbered requirement count
+- ambiguity score
+- notable out-of-scope boundaries
+- unresolved dimensions
+
+Use existing `phase.context` fields only for carry-forward. At minimum:
+
+- add the spec path to `canonicalReferences`
+- map Goal, `In scope`, `Out of scope`, and acceptance criteria into
+  `phaseBoundary`
+- map locked requirements and constraints into
+  `discoveryGrounding.requirementsGrounding`,
+  `implementationDecisions`, and `dependencies.externalConstraints`
+- map requirements and constraints with goal context into decisions and risks
+  when they affect implementation posture
+- map boundaries, scope, and out-of-scope items into deferred ideas when they
+  represent intentionally excluded follow-up work
+- map unresolved dimensions or below-minimum ambiguity gaps into
+  `openQuestions` or `dependencies.requiredFollowUpReads`
+
+Do not create a separate spec-basis schema field, artifact, or freeform
+appendix; use no new schema for spec carry-forward. A missing spec is
+nonblocking, so continue normally without treating the absence as a lifecycle
+blocker.
 
 ## Artifact Status Classification
 
@@ -255,8 +312,8 @@ Required checkpoint fields:
 - `carryForward`: compact handoff context with phase boundary, active area,
   completed decisions, open questions, deferred ideas, canonical references,
   evidence refs, contradictions, omitted details, and do-not-infer-beyond notes
-- `readSet`: roadmap/context/config/plan-index/artifact-contract inputs with
-  path plus fingerprint or `updatedAt` when available
+- `readSet`: roadmap/context/config/spec/plan-index/artifact-contract inputs
+  with path plus fingerprint or `updatedAt` when available
 
 Tiny schematic:
 
@@ -279,9 +336,9 @@ discard using the warnings. If true, pick the first area in this order:
 `questioning`, `blocked`, `needs-revisit`, then `unseen`. Never reconstruct
 the queue from legacy summary prose.
 
-`readSet` lists roadmap/context/config/plan-index/artifact-contract inputs
-with path plus fingerprint or `updatedAt` when available. Changed inputs route
-affected areas to `needs-revisit`.
+`readSet` lists roadmap/context/config/spec/plan-index/artifact-contract
+inputs with path plus fingerprint or `updatedAt` when available. Changed inputs
+route affected areas to `needs-revisit`.
 
 Delete the checkpoint only after context write, optional discussion-log write,
 synced state update, and follow-up state load all succeed. Pass
@@ -303,6 +360,10 @@ reuse, dependencies, risk/failure handling, methodology, and routing.
 
 Skip areas already locked by prior context unless the current phase introduces a
 real conflict. When reusing a prior decision, cite the artifact that locked it.
+When spec already locks the deliverable definition, bias gray areas toward
+reuse, approach, tradeoffs, sequencing, safety posture, deferred ideas,
+research handoff, and plan handoff. Do not reopen "what should this phase
+deliver?" unless the spec is missing, contradictory, or still visibly ambiguous.
 
 ## Gray Area Queue
 
@@ -366,6 +427,11 @@ Do not ask checklist or atmosphere questions such as "Any other requirements?",
 is tied to a named `grayAreaQueue` entry, cites the evidence gap, and states
 what downstream decision the answer will change.
 
+If a saved spec already answers Goal, Requirements, Boundaries, Constraints, or
+Acceptance Criteria, questions such as "what should this phase deliver?" or
+"what are the requirements?" are forbidden. Ask only for implementation detail
+that the spec does not lock.
+
 ## Questioning Rules
 
 Use `ask_user` for structured tradeoffs, overwrite confirmation,
@@ -385,6 +451,9 @@ then dig into the area that actually changes the implementation.
 
 Ask only for missing, contradictory, uncertain, or high-impact details once the
 read packet and any starter handoff evidence are in hand.
+
+Preferred post-spec question lanes are: reuse, approach, tradeoffs,
+sequencing, safety posture, deferred ideas, research handoff, and plan handoff.
 
 Do not describe same-turn read batching as a power, chain, auto, or
 auto-advance mode. It is only a request shape for independent read-only MCP
@@ -479,6 +548,14 @@ over saved docs. For desired product intent, prefer the user's current answer
 over older artifacts. If the conflict changes implementation shape, ask the
 user; if it changes technical feasibility or external correctness, route to a
 `research-needed` assumption.
+
+When the conflict shows that saved `XX-SPEC.md` is stale or wrong about the
+phase WHAT/WHY, do not silently absorb the new answer into `XX-CONTEXT.md` as
+if the spec never existed, and do not silently override SPEC intent. Use
+`ask_user` to route the user back to `/blu-spec-phase <phase>` for a spec
+update, keep the contradiction visible in checkpoint carry-forward when the run
+pauses, and stop short of treating the contradicted spec as freshly confirmed
+context.
 
 ### Sidecar Bounds For Assumptions
 
@@ -612,6 +689,14 @@ gray areas`, `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, or
 headings. Map their substance into existing `phase.context` fields and reject
 verbatim packet copy.
 
+When spec exists, record the spec basis inside existing fields only. Use
+`canonicalReferences` for the spec path, `phaseBoundary` for goal plus in-scope
+plus out-of-scope plus success-criteria carry-forward, and one or more
+`discoveryGrounding.confirmedDecisions`, `existingCodeInsights`, or
+`implementationDecisions` entries to preserve locked requirement count,
+ambiguity score, notable out-of-scope boundaries, and unresolved dimensions.
+Do not add a dedicated "Spec Basis" section or schema field.
+
 Write `XX-DISCUSSION-LOG.md` when it adds durable value beyond the context,
 especially for multi-area sessions, assumptions-mode corrections, advisor-style
 comparison tables, or compliance/audit needs.
@@ -658,6 +743,16 @@ handoff schema field, new artifact, runtime behavior, or pass the raw
 conversation transcript downstream.
 
 Use this mapping:
+
+- spec path, locked requirement count, ambiguity score, notable out-of-scope
+  boundaries, and unresolved dimensions -> existing `phase.context` fields
+  only: `canonicalReferences`, `phaseBoundary`, `discoveryGrounding`,
+  `existingCodeInsights`, `openQuestions`, or
+  `dependencies.requiredFollowUpReads`
+- spec Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria ->
+  locked WHAT/WHY input for `phaseBoundary`, `discoveryGrounding`,
+  `implementationDecisions`, `dependencies.externalConstraints`, and
+  `openQuestions`
 
 - research unknowns, evidence needs, source policy, stop conditions, and
   unresolved research questions -> `openQuestions`, `dependencies`, and

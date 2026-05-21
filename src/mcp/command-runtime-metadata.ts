@@ -262,6 +262,20 @@ const RESEARCH_PHASE_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const SPEC_PHASE_REQUIRED_TOOLS = [
+  "blueprint_phase_locate",
+  "blueprint_phase_context",
+  "blueprint_roadmap_read",
+  "blueprint_artifact_list",
+  "blueprint_config_get",
+  "blueprint_phase_artifact_read",
+  "blueprint_phase_artifact_write",
+  "blueprint_artifact_contract_read",
+  "blueprint_state_load",
+  "blueprint_state_update",
+  "blueprint_command_catalog"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const UI_PHASE_REQUIRED_TOOLS = [
   "blueprint_phase_locate",
   "blueprint_phase_research_status",
@@ -682,6 +696,8 @@ const PLAN_PHASE_SPEC_PATH =
   "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
 const RESEARCH_PHASE_SPEC_PATH =
   "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md";
+const SPEC_PHASE_SPEC_PATH =
+  "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md";
 const UI_PHASE_SPEC_PATH =
   "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md";
 const LIST_PHASE_ASSUMPTIONS_SPEC_PATH =
@@ -1160,7 +1176,7 @@ export const HELP_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project.",
+      "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1199,7 +1215,7 @@ export const PROGRESS_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable.",
+      "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1239,7 +1255,7 @@ export const NEXT_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable.",
+      "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1434,7 +1450,7 @@ export const DISCUSS_PHASE_RUNTIME_METADATA = {
     purpose:
       "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
     reads: [
-      "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
+      "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
     ],
     writes: [
       "phase XX-CONTEXT.md",
@@ -1452,7 +1468,7 @@ export const DISCUSS_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+      "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1479,7 +1495,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     purpose:
       "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.",
     reads: [
-      "Phase resolution, context, planning readiness, saved discovery artifacts, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
+      "Phase resolution, context, planning readiness, saved discovery artifacts including optional phase-local XX-SPEC.md when present, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
     ],
     writes: [
       "structured phase.plan JSON through blueprint_phase_plan_write",
@@ -1496,7 +1512,7 @@ export const PLAN_PHASE_RUNTIME_METADATA = {
     optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: \"strict\", authoringMode: \"model-only\", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.",
+      "Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals including optional XX-SPEC.md when present, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Treat missing XX-SPEC.md as nonblocking by default, but when phase.artifacts.spec exists include it in the Planning Investigation Trace, the readiness read set, and runtime-narrowed evidenceCoverage, and repair or warn on draft contradictions against explicit spec out-of-scope boundaries. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: \"strict\", authoringMode: \"model-only\", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: \"synced\" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1520,9 +1536,9 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     executionProfile: "long-running-mutation",
     rootRoutable: true,
     purpose:
-      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+      "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
     reads: [
-      "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
+      "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts including optional spec when phase.artifacts.spec exists, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
     ],
     writes: [
       "phase XX-RESEARCH.md",
@@ -1539,7 +1555,50 @@ export const RESEARCH_PHASE_RUNTIME_METADATA = {
     optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as behavior authority. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus non-null phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. Independent read-only calls with known args may share one tool-call turn, while confirmations, writes, validation repair, state update, post-write state load, route proof, and checkpoint deletion stay sequenced. blueprint_artifact_contract_read with artifactId phase.research plus contract.authoringTemplate is schema authority. Routing remains implemented-only through refreshed state plus blueprint_command_catalog implemented-command routing proof. Research checkpoints are owner/mode guarded with /blu-research-phase and research. Default execution is parent-only; blueprint-researcher is optional only when workflow.subagents is enabled and sidecar criteria show material help, while the parent owns synthesis, persistence, checkpoints, state, user gates, and routing.",
+      "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. After usable context is confirmed, read phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists and treat missing spec as nonblocking. It ties research strands and dependency/tool choices to spec requirements or constraints, includes spec path and requirement labels in Recommendation Handoff, routes stale context to /blu-discuss-phase <phase>, and routes stale or wrong spec to /blu-spec-phase <phase>. Independent read-only calls with known args may share one tool-call turn; writes/repair/state/routing/checkpoint deletion stay sequenced. phase.research contract.authoringTemplate is schema authority.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
+export const SPEC_PHASE_RUNTIME_METADATA = {
+  commandName: "spec-phase",
+  sourceId: runtimeMetadataSourceId("spec-phase"),
+  catalog: {
+    wave: 1,
+    family: "Core Lifecycle",
+    primarySkill: "blueprint-phase-discovery",
+    declaredStatus: "implemented",
+    risk:
+      "Low: optional pre-discussion requirements clarification writes one phase-scoped spec artifact and synced state only."
+  },
+  requiredTools: SPEC_PHASE_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [SPEC_PHASE_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("spec-phase"),
+    title: "`/blu-spec-phase`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.",
+    reads: [
+      "Phase resolution, roadmap requirements, state, codebase summaries, artifact inventory, effective config, any existing spec, phase.spec contract inputs, refreshed command catalog state, and synced state through MCP."
+    ],
+    writes: [
+      "canonical phase XX-SPEC.md artifact through blueprint_phase_artifact_write with artifact spec",
+      ".blueprint/STATE.md through synced state update after a valid write or no-write route"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("spec-phase"),
+    waveTitle: "Core Lifecycle",
+    command: "spec-phase",
+    primarySkill: "blueprint-phase-discovery",
+    exactMcpDestination: SPEC_PHASE_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Implemented runtime-owned behavior: load skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md as the active behavior contract, resolve through blueprint_phase_context before fallback locate, read existing spec and the live phase.spec contract before drafting, run the existing-spec update/view/skip gate, use the quantitative ambiguity formula and six-round Socratic loop, persist only through blueprint_phase_artifact_write with artifact spec, then sync state and prove the next safe implemented action through blueprint_command_catalog. Treat missing spec as nonblocking for normal discuss/research/plan lifecycle; recommend /blu-spec-phase only when the catalog proves it implemented for spec-first planning, ambiguous roadmap or context gaps, or stale/contradictory saved spec evidence.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2970,6 +3029,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [DISCUSS_PHASE_RUNTIME_METADATA.commandName]: DISCUSS_PHASE_RUNTIME_METADATA,
   [PLAN_PHASE_RUNTIME_METADATA.commandName]: PLAN_PHASE_RUNTIME_METADATA,
   [RESEARCH_PHASE_RUNTIME_METADATA.commandName]: RESEARCH_PHASE_RUNTIME_METADATA,
+  [SPEC_PHASE_RUNTIME_METADATA.commandName]: SPEC_PHASE_RUNTIME_METADATA,
   [UI_PHASE_RUNTIME_METADATA.commandName]: UI_PHASE_RUNTIME_METADATA,
   [EXECUTE_PHASE_RUNTIME_METADATA.commandName]: EXECUTE_PHASE_RUNTIME_METADATA,
   [LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA.commandName]:

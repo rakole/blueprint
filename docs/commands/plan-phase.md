@@ -21,8 +21,18 @@ command manifest, `blueprint-phase-planning` skill, and
 ## User Flow
 
 - Resolve the target phase from the argument, state, or roadmap.
-- Read a compact readiness packet for context, research/UI readiness, plan
-  inventory, effective config, state, authoring schema, and read-set freshness.
+- Read a compact readiness packet for phase context, research/UI readiness,
+  plan inventory, optional XX-SPEC.md evidence when
+  `phase.artifacts.spec exists`, effective config, state, authoring schema, and
+  read-set freshness.
+- Treat the canonical `XX-CONTEXT.md` artifact in
+  `.blueprint/phases/<phase>/` as read-only planning evidence. If it is
+  missing, invalid, contradictory, or unusable, route back to
+  `/blu-discuss-phase <phase>` with diagnostics instead of repairing or
+  replacing it.
+- Treat missing spec evidence as nonblocking by default; when a spec is present,
+  account for its requirements and boundaries in evidence coverage and avoid
+  draft contradictions against explicit out-of-scope items.
 - Stop before drafting when readiness blocks planning, and route to the returned
   next safe action.
 - Ask for `add`, `revise`, or `replace` when saved plans exist and `planId` was
@@ -30,6 +40,9 @@ command manifest, `blueprint-phase-planning` skill, and
   overwrite paths require confirmation.
 - Draft structured `phase.plan` JSON, optionally run a dry-run model validation
   or checker loop, then persist through `blueprint_phase_plan_write`.
+- If validation fails, repair the same structured draft once. If identical
+  diagnostics or the same diagnostics repeat, stop, report the diagnostics, and
+  do not inspect MCP source files as a repair strategy.
 - Run final `blueprint_phase_plan_validate` before state update or completion.
 - Return a concise result plus the Downstream Execution Handoff for execution.
 

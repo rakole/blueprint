@@ -23,5 +23,7 @@ Response requirements:
 - If the repo is waiting on a prerequisite, name the waiting state plainly: missing artifact, partial repo repair, verification debt, or blocked substrate.
 - Also name mapping prerequisite when an unmapped brownfield repo or `mapping-incomplete` codebase-only state is the blocker.
 - Use the exact next-step guidance from `derivedStatus` and `mcp_blueprint_blueprint_project_status` when they materially differ.
+- Recommend `/blu-spec-phase <phase>` only when its catalog entry is `implemented: true` and the phase needs spec-first planning, requirements clarification before discuss, WHAT/WHY clarification because context is missing or ambiguous, or a saved spec refresh because the current spec is stale or contradictory.
+- Do not frame a missing spec by itself as a normal lifecycle blocker when discuss, research, or plan can still proceed under the other gates.
 - If the natural next command is blocked, explain why and keep the recommendation inside the implemented Wave 0 surface.
 """

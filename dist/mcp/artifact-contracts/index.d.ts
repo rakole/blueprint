@@ -14,7 +14,7 @@ export type ArtifactModelContract = {
 export type ArtifactContractSectionValidation = {
     exactEmptySentinel?: string;
 };
-export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "codebase.stack" | "codebase.architecture" | "codebase.structure" | "codebase.conventions" | "codebase.testing" | "codebase.integrations" | "codebase.concerns" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix" | "report.impact";
+export type ArtifactContractId = "bootstrap.project" | "bootstrap.requirements" | "bootstrap.roadmap" | "codebase.stack" | "codebase.architecture" | "codebase.structure" | "codebase.conventions" | "codebase.testing" | "codebase.integrations" | "codebase.concerns" | "phase.context" | "phase.discussion-log" | "phase.research" | "phase.spec" | "phase.ui-spec" | "phase.plan" | "phase.summary" | "phase.verification" | "phase.uat" | "review.code-review" | "review.review-fix" | "review.peer-review" | "review.security" | "review.ui-review" | "report.pause-work" | "report.milestone-audit" | "report.milestone-complete" | "report.milestone-summary" | "report.debug" | "report.quick-run" | "report.docs-update" | "report.pr-branch" | "report.ship" | "report.undo" | "report.cleanup" | "report.add-tests" | "report.audit-fix" | "report.impact";
 export type ArtifactTemplateContext = {
     phaseLabel?: string;
     phasePrefix?: string;
@@ -63,7 +63,7 @@ export declare function readArtifactContract(contractId: ArtifactContractId, con
 export declare function listArtifactContracts(): ArtifactContractReadResult[];
 export declare function renderArtifactAuthoringTemplate(contractId: ArtifactContractId, context?: ArtifactTemplateContext): string;
 export declare function renderArtifactScaffoldTemplate(contractId: ArtifactContractId, context?: ArtifactTemplateContext): string;
-export declare function resolvePhaseArtifactContractId(artifact: "context" | "discussion-log" | "research" | "ui-spec"): ArtifactContractId;
+export declare function resolvePhaseArtifactContractId(artifact: "context" | "discussion-log" | "research" | "spec" | "ui-spec"): ArtifactContractId;
 export declare function resolveValidationArtifactContractId(artifact: "verification" | "uat"): ArtifactContractId;
 export declare function resolveReviewArtifactContractId(artifact: "code-review" | "peer-review" | "review-fix" | "security" | "ui-review"): ArtifactContractId;
 export declare function resolveCodebaseArtifactContractId(artifact: "stack" | "architecture" | "structure" | "conventions" | "testing" | "integrations" | "concerns"): ArtifactContractId;

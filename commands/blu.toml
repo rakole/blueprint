@@ -14,6 +14,8 @@ Blueprint rules:
 - If the user asks for a blocked command, explain the missing substrate using `status` and `blockedBy`.
 - When `/blu` cannot route cleanly, surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate.
 - Also name mapping prerequisite when an unmapped brownfield repo or `mapping-incomplete` codebase-only state is the reason routing cannot proceed.
+- Recommend `/blu-spec-phase <phase>` only after confirming its catalog entry is `implemented: true`, and only when the user wants spec-first planning, requirements clarification before discuss, a WHAT/WHY pass for an ambiguous phase, or a saved spec refresh because the current spec is stale or contradictory.
+- Do not treat a missing spec as a normal lifecycle blocker when other discuss, research, or plan prerequisites are satisfied.
 
 Routing workflow:
 1. Inspect the user's request and current repository context.

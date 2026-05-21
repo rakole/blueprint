@@ -34,10 +34,12 @@ and Downstream Execution Handoff.
 ## Runtime Call Rules
 
 - Call Blueprint MCP tools only through runtime FQNs such as
+  `mcp_blueprint_blueprint_project_status` and
   `mcp_blueprint_blueprint_phase_plan_readiness`.
-- Translate older shorthand ids such as `blueprint_phase_plan_readiness` into
-  runtime FQNs before calling.
-- Never run `/blu-*` commands in the shell.
+- Translate any shorthand tool ids like `blueprint_project_status` or
+  `blueprint_phase_plan_readiness` into runtime FQNs before calling.
+- Treat Blueprint skills as loaded guidance, not callable tools.
+- Never run `/blu-*` in the shell.
 - Treat docs under `docs/commands/` as user-facing documentation, not runtime
   prompt authority.
 
@@ -87,6 +89,11 @@ body review; they must not write files or call MCP persistence.
   phase context, readiness gates, plan inventory, effective config, state,
   selected-slot authoring context, model contract authority, evidence signals,
   and read-set freshness.
+- Treat optional XX-SPEC.md when present as saved evidence for the Planning
+  Investigation Trace, read-set freshness, and runtime-narrowed
+  `evidenceCoverage`. Treat missing XX-SPEC.md as nonblocking by default.
+- Repair or defer plan items that contradict explicit spec out-of-scope
+  boundaries before persistence.
 - Stop before drafting when readiness blocks planning. Report the blocker and
   route to the returned next safe action.
 - existing saved plans plus omitted `planId` require an explicit `add`,

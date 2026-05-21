@@ -105,6 +105,7 @@ import {
   buildArtifactPath,
   checkpointPathFor,
   findArtifact,
+  findPhaseSpecArtifact,
   findPhaseDirectory,
   listPhaseArtifacts,
   materializePhaseDirectory,
@@ -665,6 +666,7 @@ type PhaseContextResult = {
       context: string | null;
       discussionLog: string | null;
       research: string | null;
+      spec: string | null;
       uiSpec: string | null;
       verification: string | null;
       uat: string | null;
@@ -1089,6 +1091,7 @@ type PhasePlanReadinessResult = {
   artifactBodies: {
     context?: PhasePlanReadinessBody;
     research?: PhasePlanReadinessBody;
+    spec?: PhasePlanReadinessBody;
     uiSpec?: PhasePlanReadinessBody;
   };
   validationEvidence: {
@@ -1477,7 +1480,7 @@ const phaseLookupInputSchema = {
 const phaseArtifactInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"])
+  artifact: z.enum(["context", "discussion-log", "research", "spec", "ui-spec"])
 };
 const phaseArtifactScaffoldInputSchema = {
   ...phaseArtifactInputSchema,
@@ -1505,7 +1508,7 @@ const phaseExecutionTargetsInputSchema = {
 const phaseArtifactWriteInputSchema = {
   cwd: z.string().optional(),
   phase: numericBlueprintInputSchema.optional(),
-  artifact: z.enum(["context", "discussion-log", "research", "ui-spec"]),
+  artifact: z.enum(["context", "discussion-log", "research", "spec", "ui-spec"]),
   content: z.string().optional(),
   model: z.record(z.string(), z.unknown()).optional(),
   overwrite: z.boolean().optional(),
@@ -5325,6 +5328,35 @@ function isPhasePlanEvidenceArtifact(artifactPath: string, targetPath: string): 
   return normalized.startsWith(`${BLUEPRINT_PHASES_PATH}/`) && normalized.endsWith(".md");
 }
 
+function isCanonicalPhaseSpecArtifactPath(
+  artifactPath: string,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): boolean {
+  return artifactPath === artifactPathFor(resolved, "spec");
+}
+
+function isNoncanonicalPhaseSpecLookalikePath(
+  artifactPath: string,
+  resolved: Pick<ResolvedPhaseLocation, "phaseDir" | "phasePrefix">
+): boolean {
+  const basename = path.posix.basename(artifactPath);
+  const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
+  const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
+
+  if (isCanonicalPhaseSpecArtifactPath(artifactPath, resolved)) {
+    return false;
+  }
+
+  if (basename === uiSpecFileName) {
+    return false;
+  }
+
+  return (
+    basename === canonicalSpecFileName ||
+    (basename.startsWith(`${resolved.phasePrefix}-`) && basename.endsWith("-SPEC.md"))
+  );
+}
+
 function isPhasePlanAcceptanceCriterionVerifiable(value: string): boolean {
   return (
     /\b(?:test|tests|grep|rg|command|file-read|artifact-validation|validate|validation|typecheck|build)\b/i.test(
@@ -5391,8 +5423,28 @@ async function collectKnownPhasePlanEvidenceArtifacts(
       cwd: projectRoot,
       phase: resolved.phaseNumber
     })).artifacts;
+  const canonicalSpecPath = findPhaseSpecArtifact(
+    phaseArtifacts,
+    resolved.phaseDir,
+    resolved.phasePrefix
+  );
+  const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
 
-  return phaseArtifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
+  return phaseArtifacts.filter((artifact) => {
+    if (!isPhasePlanEvidenceArtifact(artifact, targetPath)) {
+      return false;
+    }
+
+    if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
+      return false;
+    }
+
+    if (path.posix.basename(artifact) === canonicalSpecFileName) {
+      return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
+    }
+
+    return true;
+  });
 }
 
 async function resolvePhasePlanAuthoringContextData(
@@ -5881,6 +5933,275 @@ function phasePlanCoverageDiagnosticFromIssue(
   });
 }
 
+function normalizeSpecBoundaryComparisonValue(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[`*_]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractMarkdownSubsection(markdown: string, heading: string): string {
+  const expectedHeading = normalizeSpecBoundaryComparisonValue(heading);
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let startIndex = -1;
+  let startLevel = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
+
+    if (match && normalizeSpecBoundaryComparisonValue(match[2] ?? "") === expectedHeading) {
+      startIndex = index + 1;
+      startLevel = match[1].length;
+      break;
+    }
+  }
+
+  if (startIndex < 0) {
+    return "";
+  }
+
+  let endIndex = lines.length;
+
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{2,6})\s+/);
+
+    if (match && match[1].length <= startLevel) {
+      endIndex = index;
+      break;
+    }
+  }
+
+  return lines.slice(startIndex, endIndex).join("\n").trim();
+}
+
+function extractBoldLabelSection(markdown: string, label: string): string {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(
+      `(?:^|\\n)\\*\\*${escapedLabel}:\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+:\\*\\*|\\n#{2,6}\\s+|$)`,
+      "i"
+    )
+  );
+
+  return match?.[1]?.trim() ?? "";
+}
+
+function extractPhaseSpecOutOfScopeItems(specContent: string): string[] {
+  const boundariesSection = extractMarkdownSection(specContent, "Boundaries");
+  const boundedContent = boundariesSection || specContent;
+  const subsection =
+    extractMarkdownSubsection(boundedContent, "Out of scope") ||
+    extractBoldLabelSection(boundedContent, "Out of scope");
+
+  return subsection ? uniqueSortedStrings(sectionToList(subsection)) : [];
+}
+
+type PhasePlanSpecBoundarySignal = {
+  display: string;
+  normalized: string;
+  sourceItem: string;
+};
+
+type PhasePlanComparableString = {
+  path: string;
+  value: string;
+  normalized: string;
+};
+
+function buildPhasePlanSpecBoundarySignals(items: string[]): PhasePlanSpecBoundarySignal[] {
+  const signals = new Map<string, PhasePlanSpecBoundarySignal>();
+
+  const addSignal = (candidate: string, sourceItem: string): void => {
+    const display = candidate.trim();
+    const normalized = normalizeSpecBoundaryComparisonValue(display);
+
+    if (!normalized) {
+      return;
+    }
+
+    const wordCount = normalized.split(" ").filter((word) => word.length > 0).length;
+    const isPreciseToken =
+      /\/blu-[a-z0-9-]+/i.test(display) ||
+      /(?:^|\/)[^/\s]+\.(?:md|ts|tsx|js|jsx|mjs|json|toml)$/i.test(display);
+
+    if (!isPreciseToken && (wordCount < 4 || normalized.length < 20)) {
+      return;
+    }
+
+    if (!signals.has(normalized)) {
+      signals.set(normalized, {
+        display,
+        normalized,
+        sourceItem
+      });
+    }
+  };
+
+  for (const item of items) {
+    const trimmed = item.trim();
+
+    if (!trimmed) {
+      continue;
+    }
+
+    addSignal(trimmed.split(/\s[-–—]\s/, 1)[0] ?? trimmed, trimmed);
+
+    for (const match of trimmed.matchAll(
+      /(?:^|[\s`(])((?:\/blu-[a-z0-9-]+)|(?:\.?[\w./-]+?\.(?:md|ts|tsx|js|jsx|mjs|json|toml)))/gi
+    )) {
+      addSignal(match[1] ?? "", trimmed);
+    }
+  }
+
+  return [...signals.values()];
+}
+
+function collectPhasePlanComparableStrings(
+  model: PhasePlanStructuredModel
+): PhasePlanComparableString[] {
+  const strings: PhasePlanComparableString[] = [];
+  const push = (pathValue: string, value: string | undefined): void => {
+    if (typeof value !== "string") {
+      return;
+    }
+
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    strings.push({
+      path: pathValue,
+      value: trimmed,
+      normalized: normalizeSpecBoundaryComparisonValue(trimmed)
+    });
+  };
+
+  push("model.title", model.title);
+  push("model.objective", model.objective);
+  push("model.goal", model.goal);
+  model.scope.forEach((value, index) => push(`model.scope[${index}]`, value));
+  model.filesModified.forEach((value, index) => push(`model.filesModified[${index}]`, value));
+  model.readFirst.forEach((value, index) => push(`model.readFirst[${index}]`, value));
+  model.mustHaves.forEach((value, index) => push(`model.mustHaves[${index}]`, value));
+  model.tasks.forEach((task, taskIndex) => {
+    push(`model.tasks[${taskIndex}].title`, task.title);
+    task.readFirst.forEach((value, index) =>
+      push(`model.tasks[${taskIndex}].readFirst[${index}]`, value)
+    );
+    task.action.forEach((value, index) =>
+      push(`model.tasks[${taskIndex}].action[${index}]`, value)
+    );
+    task.acceptanceCriteria.forEach((value, index) =>
+      push(`model.tasks[${taskIndex}].acceptanceCriteria[${index}]`, value)
+    );
+    task.filesModified.forEach((value, index) =>
+      push(`model.tasks[${taskIndex}].filesModified[${index}]`, value)
+    );
+  });
+  model.verification.forEach((row, index) => {
+    push(`model.verification[${index}].item`, row.item);
+    push(`model.verification[${index}].evidence`, row.evidence);
+  });
+  model.evidenceCoverage.forEach((row, index) => {
+    push(`model.evidenceCoverage[${index}].artifact`, row.artifact);
+    push(`model.evidenceCoverage[${index}].rationale`, row.rationale);
+  });
+  model.fileSurfaceCoverage.forEach((row, index) => {
+    push(`model.fileSurfaceCoverage[${index}].surface`, row.surface);
+    push(`model.fileSurfaceCoverage[${index}].verification`, row.verification);
+    push(`model.fileSurfaceCoverage[${index}].rationale`, row.rationale);
+  });
+  model.unknownsAndDeferrals.forEach((row, index) => {
+    push(`model.unknownsAndDeferrals[${index}].item`, row.item);
+    push(`model.unknownsAndDeferrals[${index}].rationale`, row.rationale);
+    push(`model.unknownsAndDeferrals[${index}].followUp`, row.followUp);
+  });
+
+  return strings;
+}
+
+function phasePlanSpecBoundaryDiagnostics(args: {
+  model: PhasePlanStructuredModel;
+  specContent: string;
+  specPath: string;
+}): PhasePlanModelDiagnostic[] {
+  const signals = buildPhasePlanSpecBoundarySignals(
+    extractPhaseSpecOutOfScopeItems(args.specContent)
+  );
+
+  if (signals.length === 0) {
+    return [];
+  }
+
+  const diagnostics: PhasePlanModelDiagnostic[] = [];
+  const seen = new Set<string>();
+  const comparableStrings = collectPhasePlanComparableStrings(args.model);
+
+  for (const candidate of comparableStrings) {
+    for (const signal of signals) {
+      if (!candidate.normalized.includes(signal.normalized)) {
+        continue;
+      }
+
+      const key = `${candidate.path}:${signal.normalized}`;
+
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "scope",
+          path: candidate.path,
+          code: "scope.spec_out_of_scope_conflict",
+          message:
+            `Saved phase spec ${args.specPath} marks "${signal.sourceItem}" as out of scope, ` +
+            `but ${candidate.path} includes "${candidate.value}".`,
+          context: {
+            specPath: args.specPath,
+            outOfScope: signal.sourceItem,
+            modelValue: candidate.value
+          },
+          actual: candidate.value,
+          expected: `Avoid planned work that conflicts with saved out-of-scope spec boundary: ${signal.display}`,
+          repairAction: "replace",
+          suggestion:
+            "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan."
+        })
+      );
+
+      if (diagnostics.length >= 5) {
+        return diagnostics;
+      }
+    }
+  }
+
+  return diagnostics;
+}
+
+async function validatePhasePlanModelAgainstSavedSpec(args: {
+  projectRoot: string;
+  resolved: ResolvedPhaseLocation;
+  model: PhasePlanStructuredModel;
+}): Promise<PhasePlanModelDiagnostic[]> {
+  const specPath = artifactPathFor(args.resolved, "spec");
+  const specContent = await readMarkdownDocument(args.projectRoot, specPath);
+
+  if (!specContent) {
+    return [];
+  }
+
+  return phasePlanSpecBoundaryDiagnostics({
+    model: args.model,
+    specContent,
+    specPath
+  });
+}
+
 function phasePlanPreflightDiagnosticFromIssue(issue: string): PhasePlanModelDiagnostic {
   const dependencyRelated =
     issue.startsWith("Plan dependency cycle detected:") ||
@@ -5990,6 +6311,14 @@ async function validatePhasePlanModelWithContext(args: {
       for (const warning of coverage.warnings) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
       }
+
+      diagnostics.push(
+        ...(await validatePhasePlanModelAgainstSavedSpec({
+          projectRoot: args.context.projectRoot,
+          resolved: args.context.resolved,
+          model: normalizedModel
+        }))
+      );
     }
   }
 
@@ -8017,6 +8346,7 @@ async function buildPhaseContext(
         context: findArtifact(artifacts, "-CONTEXT.md"),
         discussionLog: findArtifact(artifacts, "-DISCUSSION-LOG.md"),
         research: findArtifact(artifacts, "-RESEARCH.md"),
+        spec: findPhaseSpecArtifact(artifacts, located.phaseDir, located.phasePrefix),
         uiSpec: findArtifact(artifacts, "-UI-SPEC.md"),
         verification: findArtifact(artifacts, "-VERIFICATION.md"),
         uat: findArtifact(artifacts, "-UAT.md"),
@@ -8311,6 +8641,8 @@ function phaseArtifactRetryPlan(
       ? "/blu-discuss-phase"
       : artifact === "research"
         ? "/blu-research-phase"
+        : artifact === "spec"
+          ? "/blu-spec-phase"
         : "/blu-ui-phase";
 
   return {
@@ -9398,11 +9730,13 @@ export async function blueprintPhasePlanReadiness(
   const artifactBodies: PhasePlanReadinessResult["artifactBodies"] = {};
   const contextPath = context.phase?.artifacts.context ?? null;
   const researchPath = context.phase?.artifacts.research ?? null;
+  const specPath = context.phase?.artifacts.spec ?? null;
   const uiSpecPath = context.phase?.artifacts.uiSpec ?? null;
   const expectedArtifactPaths = resolved
     ? {
         context: artifactPathFor(resolved, "context"),
         research: artifactPathFor(resolved, "research"),
+        spec: artifactPathFor(resolved, "spec"),
         uiSpec: artifactPathFor(resolved, "ui-spec"),
         verification: validationArtifactPathFor(resolved, "verification"),
         uat: validationArtifactPathFor(resolved, "uat"),
@@ -9413,6 +9747,7 @@ export async function blueprintPhasePlanReadiness(
   for (const [key, pathValue, kind, relevant] of [
     ["context", contextPath, "phase.context", true],
     ["research", researchPath, "phase.research", config.config.workflow.research],
+    ["spec", specPath, "phase.spec", true],
     ["uiSpec", uiSpecPath, "phase.uiSpec", config.config.workflow.ui_phase]
   ] as const) {
     const expectedPath = expectedArtifactPaths?.[key] ?? null;
@@ -9421,6 +9756,10 @@ export async function blueprintPhasePlanReadiness(
       : "disabled or not relevant under effective config";
 
     if (!pathValue) {
+      if (key === "spec") {
+        continue;
+      }
+
       if (expectedPath) {
         const missingRead = await readReadinessPath({
           projectRoot,
@@ -11822,7 +12161,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_read",
     description:
-      "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
+      "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, SPEC, or UI-SPEC.",
     inputSchema: phaseArtifactInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactRead(args as PhaseArtifactReadArgs)
@@ -11830,7 +12169,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_scaffold",
     description:
-      "Seed a phase-scoped discovery artifact placeholder from the resolved numeric phase and artifact enum.",
+      "Seed a phase-scoped discovery artifact placeholder, including SPEC, from the resolved numeric phase and artifact enum.",
     inputSchema: phaseArtifactScaffoldInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactScaffold(args as PhaseArtifactScaffoldArgs)
@@ -11838,7 +12177,7 @@ export const phaseToolDefinitions = [
   {
     name: "blueprint_phase_artifact_write",
     description:
-      "Persist substantive phase-scoped discovery artifacts with overwrite protection; phase.context is model-only and rendered by MCP.",
+      "Persist substantive phase-scoped discovery artifacts, including SPEC, with overwrite protection; phase.context is model-only and rendered by MCP.",
     inputSchema: phaseArtifactWriteInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintPhaseArtifactWrite(args as PhaseArtifactWriteArgs)

@@ -35,6 +35,7 @@ import {
   REAPPLY_PATCHES_RUNTIME_METADATA,
   REMOVE_WORKSPACE_RUNTIME_METADATA,
   SHIP_RUNTIME_METADATA,
+  SPEC_PHASE_RUNTIME_METADATA,
   UNDO_RUNTIME_METADATA,
   UPDATE_RUNTIME_METADATA,
   WORKSTREAMS_RUNTIME_METADATA
@@ -56,6 +57,7 @@ const IMPLEMENTED_COMMANDS = [
   "progress",
   "health",
   "map-codebase",
+  "spec-phase",
   "discuss-phase",
   "research-phase",
   "ui-phase",
@@ -183,6 +185,14 @@ function catalogDocsPath(value: unknown): string | null {
     : null;
 }
 
+function bundledRelativePath(value: unknown): string | null {
+  const normalized =
+    value instanceof URL ? value.pathname : path.resolve(String(value));
+  const relativePath = path.relative(process.cwd(), normalized).split(path.sep).join("/");
+
+  return relativePath.startsWith("../") ? null : relativePath;
+}
+
 test("runtime command catalog marks shipped commands as implemented once manifest, skill, and tools exist", async () => {
   const catalog = await blueprintCommandCatalog();
   const listPhaseAssumptionsManifestExists = await pathExists(
@@ -302,6 +312,7 @@ test("command runtime contract resource stays anchored to live catalog, command 
   assert.ok(advertisedCommands.includes("help"));
   assert.ok(advertisedCommands.includes("impact"));
   assert.ok(advertisedCommands.includes("add-phase"));
+  assert.ok(advertisedCommands.includes("spec-phase"));
   assert.ok(advertisedCommands.includes("review"));
   assert.ok(!advertisedCommands.includes("do"));
 
@@ -446,6 +457,14 @@ test("router commands resolve catalog and runtime contract truth from runtime me
     assert.match(
       contract.runtimeReference?.contractNotes ?? "",
       /planned or blocked commands are not runnable|never present planned or blocked commands as runnable/i
+    );
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /\/blu-spec-phase <phase>[\s\S]*blueprint_command_catalog[\s\S]*implemented/i
+    );
+    assert.match(
+      contract.runtimeReference?.contractNotes ?? "",
+      /missing XX-SPEC\.md alone as a normal lifecycle blocker/i
     );
   }
 });
@@ -595,6 +614,12 @@ test("discovery runtime contracts expose runtime-owned metadata and docs-free sk
       ]
     },
     {
+      command: "spec-phase",
+      inputs: [
+        "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+      ]
+    },
+    {
       command: "ui-phase",
       inputs: [
         "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
@@ -642,6 +667,157 @@ test("discovery runtime contracts expose runtime-owned metadata and docs-free sk
       false
     );
   }
+});
+
+test("spec-phase is implemented and runtime-contract discoverable only after its substrates exist", async () => {
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["spec-phase"];
+  const contract = await buildBlueprintCommandRuntimeContractResource("spec-phase");
+  const metadata = getRuntimeOwnedCommandMetadata("spec-phase");
+
+  assert.ok(entry);
+  assert.ok(metadata);
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.manifestPath, "commands/blu-spec-phase.toml");
+  assert.equal(
+    entry.skillPath,
+    await expectedDiscoverableSkillPath("blueprint-phase-discovery")
+  );
+  assert.equal(entry.specPath, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(entry.requiredToolsSatisfied, true);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_phase_locate",
+    "blueprint_phase_context",
+    "blueprint_roadmap_read",
+    "blueprint_artifact_list",
+    "blueprint_config_get",
+    "blueprint_phase_artifact_read",
+    "blueprint_phase_artifact_write",
+    "blueprint_artifact_contract_read",
+    "blueprint_state_load",
+    "blueprint_state_update",
+    "blueprint_command_catalog"
+  ]);
+  assert.deepEqual(entry.availableOptionalAgents, []);
+  assert.deepEqual(entry.blockedBy, []);
+  assert.ok(catalog.waves["1"]?.includes("spec-phase"));
+
+  const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+
+  assert.equal(advertisedCommands.includes("spec-phase"), true);
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.implemented, true);
+  assert.equal(contract.spec?.path, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.rootRoutable, true);
+  assert.equal(contract.runtimeReference?.path, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    SPEC_PHASE_RUNTIME_METADATA.sourceId
+  );
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+  ]);
+});
+
+test("spec-phase stays non-implemented when locked docs drift", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const relativePath = bundledRelativePath(filePath);
+
+    if (relativePath === "docs/commands/spec-phase.md") {
+      const error = new Error("simulated spec command doc absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    if (relativePath === "docs/RUNTIME-REFERENCE.md") {
+      const original = await realReadFile(
+        filePath as Parameters<typeof fs.readFile>[0],
+        options as Parameters<typeof fs.readFile>[1]
+      );
+
+      return String(original)
+        .split("\n")
+        .filter((line) => !line.startsWith("| `spec-phase` |"))
+        .join("\n");
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["spec-phase"];
+
+  assert.ok(entry);
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.specPath, null);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing locked command spec: docs\/commands\/spec-phase\.md/
+  );
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing runtime reference row: docs\/RUNTIME-REFERENCE\.md#spec-phase/
+  );
+
+  const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+
+  assert.equal(advertisedCommands.includes("spec-phase"), false);
+  await assert.rejects(
+    buildBlueprintCommandRuntimeContractResource("spec-phase"),
+    /Blueprint runtime-contract resources are available only for implemented commands: spec-phase/
+  );
+});
+
+test("spec-phase stays non-implemented when the command catalog row drifts", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const relativePath = bundledRelativePath(filePath);
+
+    if (relativePath === "docs/COMMAND-CATALOG.md") {
+      const original = await realReadFile(
+        filePath as Parameters<typeof fs.readFile>[0],
+        options as Parameters<typeof fs.readFile>[1]
+      );
+
+      return String(original).replace(
+        "| `spec-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` |",
+        "| `spec-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` |"
+      );
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["spec-phase"];
+
+  assert.ok(entry);
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Command catalog declared status mismatch: expected implemented but found planned/
+  );
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
@@ -1324,12 +1500,12 @@ test("plan-phase is implemented once manifest, skill, and plan MCP tools exist",
   const entry = catalog.commands["plan-phase"];
   const expectedRequiredTools = [
     "blueprint_phase_locate",
+    "blueprint_artifact_contract_read",
     "blueprint_phase_context",
     "blueprint_phase_research_status",
     "blueprint_phase_artifact_read",
     "blueprint_phase_validation_read",
     "blueprint_review_load_findings",
-    "blueprint_artifact_contract_read",
     "blueprint_phase_plan_index",
     "blueprint_phase_plan_read",
     "blueprint_phase_plan_readiness",

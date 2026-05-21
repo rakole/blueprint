@@ -51,8 +51,13 @@ failure, state-sync failure, ambiguous routing, and completion.
   `mcp_blueprint_blueprint_artifact_contract_read` only when the packet omitted
   or truncated contract detail.
 - Use readiness `context`, `researchStatus`, `planIndex`, `effectiveConfig`,
-  `stateSnapshot`, evidence absence/presence signals, and `readSet` freshness
-  metadata as the normal source for Read-stage grounding.
+  `stateSnapshot`, evidence absence/presence signals including optional
+  `XX-SPEC.md` when present, and `readSet` freshness metadata as the normal
+  source for Read-stage grounding.
+- When `phase.artifacts.spec exists`, read the saved phase spec as optional
+  upstream evidence, include it in the readiness read set and runtime-narrowed
+  evidenceCoverage, and carry its requirements and boundaries into the Planning
+  Investigation Trace. Treat missing XX-SPEC.md as nonblocking by default.
 - Call `mcp_blueprint_blueprint_phase_context`,
   `mcp_blueprint_blueprint_phase_research_status`,
   `mcp_blueprint_blueprint_phase_artifact_read`,
@@ -85,6 +90,8 @@ failure, state-sync failure, ambiguous routing, and completion.
     readiness was used
   - `XX-CONTEXT.md` path and the substantive content relied on from its
     `mcp_blueprint_blueprint_phase_artifact_read` result
+  - `XX-SPEC.md` path and relied-on requirements, constraints, or boundaries
+    when `phase.artifacts.spec exists`
   - `XX-RESEARCH.md` path and relied-on content when research was read
   - `XX-UI-SPEC.md` path and relied-on content when a UI contract was read
   - Plan index state from `mcp_blueprint_blueprint_phase_plan_index`,
@@ -106,6 +113,9 @@ failure, state-sync failure, ambiguous routing, and completion.
 - If the comparison shows drift, surface it as a warning, re-read the changed
   evidence before continuing, and repair the draft/checker context against the
   refreshed evidence before persistence.
+- If refreshed spec evidence contradicts the draft through explicit out-of-scope
+  boundaries, repair the plan item, defer it, or route to `/blu-spec-phase
+  <phase>` for a spec update before persistence.
 - This is a warning-only MCP re-read/content-comparison guard. Do not rely on
   filesystem mtime/stat checks, hidden host metadata, or non-MCP freshness
   signals.
@@ -273,6 +283,9 @@ Classify each source as one of:
 Required sources to classify:
 
 - Phase context (`XX-CONTEXT.md`)
+- Phase spec (`XX-SPEC.md`) when present; if missing, classify it as
+  `missing` and mark missing XX-SPEC.md as nonblocking unless the user made spec
+  evidence mandatory for this planning pass
 - Research (`XX-RESEARCH.md`) only when `workflow.research=true`
 - UI spec (`XX-UI-SPEC.md`) only when `workflow.ui_phase=true`
 - Validation evidence when present
@@ -288,11 +301,14 @@ Before drafting, extract and list:
    plan and must not be reduced.
 2. Requirement mapping: which phase requirements map to which implementation
    areas and what evidence supports each mapping.
-3. Evidence gaps: where saved evidence is missing, stale, or insufficient for
+3. Spec usage: whether saved spec requirements or boundaries shaped the draft,
+   which explicit out-of-scope boundaries were deferred, and whether any
+   apparent contradiction requires repair before persistence.
+4. Evidence gaps: where saved evidence is missing, stale, or insufficient for
    confident planning.
-4. Split signals: early indicators that the phase needs multiple plans, such
+5. Split signals: early indicators that the phase needs multiple plans, such
    as broad scope, independent features, or dependency layers.
-5. Risk factors: security exposure, external dependencies, validation
+6. Risk factors: security exposure, external dependencies, validation
    complexity, or areas where research flagged uncertainty.
 
 ### Compact Summary

@@ -34,6 +34,7 @@ state paths.
 - The target phase must exist.
 - Saved `XX-CONTEXT.md` content is required before drafting research.
 - Phase context is read-only for this command. If `XX-CONTEXT.md` is missing, invalid, or unusable, route back to `/blu-discuss-phase <phase>`; do not repair, overwrite, synthesize, or mirror context, and never use repo-root `CONTEXT.md` as Blueprint state.
+- Saved `XX-SPEC.md` is optional intent and constraint evidence. After usable context is confirmed, read it through `blueprint_phase_artifact_read` with `artifact: "spec"` only when the selected phase exposes `phase.artifacts.spec`; Missing spec is nonblocking and does not change research readiness.
 - The effective `research.external_sources` policy controls whether official-doc or other external verification is allowed.
 
 ## Outputs
@@ -44,9 +45,9 @@ state paths.
 ## Behavior Stages
 
 1. `Resolve`: resolve the target phase and stop early on missing Blueprint prerequisites.
-2. `Read`: inspect phase context, the actual saved `XX-CONTEXT.md`, existing `XX-RESEARCH.md`, checkpoint state, effective config, and canonical research contract before drafting.
-3. `Decide`: keep valid-reuse versus `view`/`skip`/`update`, invalid-research repair, checkpoint resume posture, and `research.external_sources` policy explicit before branching.
-4. `Execute`: build an initial assessment, follow the repository evidence ladder, classify non-trivial work into a parent-owned research strand ledger, record per-strand search notes and navigation evidence, research one runnable strand at a time, grounding repo truth first, evaluating dependency/tool choices when they affect recommendations, accepting or rejecting sidecar packets before synthesis, keeping external evidence distinct when policy allows it, then assigning evidence IDs, claim IDs, lane labels, support classes, and limitations before final synthesis.
+2. `Read`: inspect phase context, the actual saved `XX-CONTEXT.md`, optional saved `XX-SPEC.md` when present, existing `XX-RESEARCH.md`, checkpoint state, effective config, and canonical research contract before drafting.
+3. `Decide`: keep valid reuse versus explicit `view` or `update`, invalid-research repair, checkpoint resume posture, `research.external_sources` policy, and any context-versus-spec contradiction route explicit before branching.
+4. `Execute`: build an initial assessment, follow the repository evidence ladder, classify non-trivial work into a parent-owned research strand ledger, record per-strand search notes and navigation evidence, research one runnable strand at a time, grounding repo truth first, tying strands to spec requirements and constraints when relevant, evaluating dependency/tool choices when they affect recommendations, accepting or rejecting sidecar packets before synthesis, keeping external evidence distinct when policy allows it, then assigning evidence IDs, claim IDs, lane labels, support classes, and limitations before final synthesis.
 5. `Persist`: draft directly from the canonical template, checkpoint only useful continuation state, preserve compact `researchLedger` state for paused, blocked, sidecar-failed, validation-repair, or post-write-routing-failed work, and persist final research through MCP only.
 6. `Validate`: normalize the draft to the canonical `phase.research` template and block on placeholders, missing sections, missing evidence, or other MCP-owned structural issues.
 7. `Route`: sync `STATE.md`, reload refreshed state, and report only implemented follow-up commands.
@@ -55,6 +56,7 @@ state paths.
 
 - `.blueprint/STATE.md`
 - Current phase `XX-CONTEXT.md` content through `blueprint_phase_artifact_read`
+- Current phase `XX-SPEC.md` content through `blueprint_phase_artifact_read` when `phase.artifacts.spec` is present
 - Existing `XX-RESEARCH.md` content, when present
 
 ## Blueprint And Global State Writes
@@ -85,14 +87,17 @@ state paths.
 - Read `blueprint_config_get` with `scope: "effective"` before any external verification decision. Treat `config.research.external_sources` as the source of truth and `workflowPosture.research.externalSources` as the mirrored convenience field.
 - Read the actual current `XX-CONTEXT.md` content before drafting. If the context read returns `found: false`, stop and route back to `/blu-discuss-phase <phase>` instead of drafting from status-only signals.
 - Treat invalid or unusable context the same as missing context: stop and route to `/blu-discuss-phase <phase>` with the precise diagnostics. `/blu-research-phase` owns `XX-RESEARCH.md` only and must not rewrite `XX-CONTEXT.md`.
-- When saved research is already valid, prefer `ask_user` for an explicit `view`/`skip`/`update` choice. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `skip`, `view`, default reuse, or unchanged invalid writes are not successful exits.
+- After usable context is confirmed, use `blueprint_phase_artifact_read` with `artifact: "spec"` to read phase-local spec only when `phase.artifacts.spec` is present. If that read returns `found: false` or the spec is otherwise unavailable, continue normal research readiness without substituting missing spec intent from external sources. Missing spec is nonblocking.
+- If spec and context contradict, stop; when the context is stale relative to spec, route to `/blu-discuss-phase <phase>`, or when the spec is stale or wrong, route to `/blu-spec-phase <phase>`. Do not silently resolve the contradiction inside research.
+- When saved research is already valid, default to reuse unless the user chooses `view` or `update`. Choosing `update` is the overwrite gate. Invalid existing research must go through repair or a reported blocker; `view`, default reuse, or unchanged invalid writes are not successful exits for invalid research.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.research"` before drafting or revising. Draft from `contract.authoringTemplate`, treat `contract.freehandPolicy` as authoritative for extra top-level headings, and use `blueprint_phase_artifact_scaffold` only for a deliberate placeholder the user explicitly wants before final research exists.
 - Keep repo evidence distinct from official docs or explicitly supplied external references. The runtime contract may suggest source dates or an explicit unchecked marker for freshness-sensitive `## State Of The Art` claims, but MCP validation does not require either marker; the post-write validator emits a validation warning rather than rejects when those optional freshness cues are absent.
 - For planner-critical claims, use claim-addressable provenance: evidence IDs, claim IDs, repo/external/inference lanes, support class, source type, authority tier, support span, retrieval context, limitations, and downstream use. `## Sources` should split into `Repo Evidence`, `External Sources`, and `Inference Notes`. The preferred saved shape includes a Claim Support Ledger for planner-critical claims, a Source Register under `## Sources`, a Recommendation Handoff table under `## Recommendations`, and a Source-Support Self-Check before persistence. MCP validation keeps only a small set of post-write honesty and planner-handoff warnings rather than enforcing every quality nudge after generation.
 - Build an investigation trace for non-trivial research: saved artifacts inspected, relevant repo files or symbols, retrieval modes, per-strand search notes, key findings, implementation questions, and confidence.
 - Prefer the runtime contract's repository evidence ladder over broad crawls: saved context, existing research, saved codebase summaries, `rg --files` plus path filters, scoped content searches, optional parent-supplied navigation packets, then targeted file/test/contract/runtime reads. Treat remote code-search results as discovery hints until local worktree or saved Blueprint artifacts confirm them.
+- Tie relevant research strands to spec requirements and constraints when spec evidence exists.
 - Close each non-trivial topic strand with a planning handoff: recommendation, affected files or modules, validation or test implications, unresolved blockers, evidence basis, and confidence.
-- When a recommendation adds, adopts, replaces, upgrades, installs, vendors, forks, code-generates, or hand-rolls a package, library, CLI, framework, service, or tool, record a dependency/tool evaluation covering no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options; version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, verification, and supply-chain evidence; and mark unavailable live evidence as unchecked under the configured external-source policy.
+- When a recommendation adds, adopts, replaces, upgrades, installs, vendors, forks, code-generates, or hand-rolls a package, library, CLI, framework, service, or tool, record a dependency/tool evaluation covering no-new-dependency, existing dependency, standard-library/platform, candidate, and custom options; version, maintenance, vulnerability, license, provenance/signature, transitive-footprint, install-scope, lockfile, update-posture, residual-risk, verification, and supply-chain evidence; cite the spec requirement or spec constraint that makes the choice planner-critical when relevant; include Recommendation Handoff spec path plus requirement labels when they materially shape a recommendation; and mark unavailable live evidence as unchecked under the configured external-source policy.
 - `blueprint-researcher` is optional and capability-gated. Use it only when a suitable Blueprint research or code-analysis agent is available and a bounded sidecar pass materially helps; otherwise use the runtime contract's single-agent topic-strand fallback. Any official-doc, external evidence, or semantic/navigation packet must come from the parent command or user, not from the subagent fetching or inventing it on its own. The parent sends one bounded evidence question plus allowed source classes and expects bounded findings with source classes, source roles, paths or URLs, search notes, confidence, failed/noisy/no-hit or limited searches, unanswered questions, and planning handoff fields.
 - Use `blueprint_phase_checkpoint_get`, `blueprint_phase_checkpoint_put`, and `blueprint_phase_checkpoint_delete` only as resumability aids for `/blu-research-phase`, respecting checkpoint ownership and mode guards.
 - For non-trivial, resumed, blocked, or sidecar-assisted runs, maintain a parent-owned research strand ledger with strand ids, questions, dependencies, source policy, budgets, statuses, accepted evidence ids, rejected or low-quality sources, stopping reasons, draft state, and next action.
@@ -140,7 +145,7 @@ state paths.
 
 ## User Prompts And Confirmation Gates
 
-- Prefer Gemini CLI's built-in `ask_user` dialog for the valid-research `view`/`skip`/`update` choice.
+- Prefer Gemini CLI's built-in `ask_user` dialog only when the user asks to view or update valid research; otherwise valid saved research can reuse by default.
 - Choosing `update` is the overwrite gate for valid existing research; no default overwrite path exists.
 - Treat missing `XX-CONTEXT.md` as a blocking gate before drafting research.
 - Treat invalid existing research as repair-only until it validates again.

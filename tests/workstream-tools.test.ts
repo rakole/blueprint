@@ -31,6 +31,8 @@ async function initializeGitRepo(repoPath: string): Promise<void> {
 
 async function createBlueprintRepo(tempRoot: string, name: string): Promise<string> {
   const repoPath = path.join(tempRoot, name);
+  const phaseDir = path.join(repoPath, ".blueprint/phases/01-workstream-bootstrap");
+  const phaseTwoDir = path.join(repoPath, ".blueprint/phases/02-workstream-handoff");
 
   await fs.mkdir(repoPath, { recursive: true });
   await initializeGitRepo(repoPath);
@@ -40,6 +42,28 @@ async function createBlueprintRepo(tempRoot: string, name: string): Promise<stri
   await runGit(["add", "README.md"], repoPath);
   await runGit(["commit", "-m", "init"], repoPath);
   await fs.mkdir(path.join(repoPath, ".blueprint"), { recursive: true });
+  await fs.mkdir(phaseDir, { recursive: true });
+  await fs.mkdir(phaseTwoDir, { recursive: true });
+  await fs.writeFile(
+    path.join(phaseDir, "01-CONTEXT.md"),
+    `# Phase 01: Workstream Bootstrap - Context
+
+## Decisions
+
+- Seed the repo with a valid current-phase context before exercising workstream state transitions.
+`,
+    "utf8"
+  );
+  await fs.writeFile(
+    path.join(phaseTwoDir, "02-CONTEXT.md"),
+    `# Phase 02: Workstream Handoff - Context
+
+## Decisions
+
+- Allow tests to advance the saved state to Phase 2 without production code changes.
+`,
+    "utf8"
+  );
   await blueprintStateUpdate({
     cwd: repoPath,
     patch: {
@@ -50,6 +74,8 @@ async function createBlueprintRepo(tempRoot: string, name: string): Promise<stri
       nextAction: "Run /blu-execute-phase 1"
     }
   });
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "baseline fixture"], repoPath);
 
   return repoPath;
 }
@@ -339,6 +365,8 @@ test("switching away from an active workstream blocks when the current STATE.md 
     operation: "create",
     workstream: "Beta Stream"
   });
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "snapshot workstreams"], repoPath);
   await fs.rm(path.join(repoPath, ".blueprint/STATE.md"), { force: true });
 
   const blocked = await blueprintWorkstreamMutate({
@@ -473,6 +501,8 @@ test("switching away from an active workstream blocks when the current STATE.md 
     operation: "create",
     workstream: "Beta Stream"
   });
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "snapshot workstreams"], repoPath);
   await fs.writeFile(
     path.join(repoPath, ".blueprint/STATE.md"),
     "# Blueprint State\n\n- Project status: active\n",
@@ -516,6 +546,8 @@ test("completing the active workstream blocks cleanly when the current STATE.md 
     operation: "create",
     workstream: "Alpha Stream"
   });
+  await runGit(["add", "."], repoPath);
+  await runGit(["commit", "-m", "snapshot alpha workstream"], repoPath);
   const mutableFs = fs as typeof fs & {
     readFile: typeof fs.readFile;
   };

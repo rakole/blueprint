@@ -25,6 +25,12 @@ import {
 import { blueprintStateLoad } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
+
 async function createLifecyclePilotRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-lifecycle-pilot-");
   const phaseDir = path.join(repoPath, ".blueprint/phases/03-lifecycle-pilot");
@@ -267,6 +273,8 @@ Ship the lifecycle pilot integration coverage.
 #### Acceptance Criteria
 
 - src/mcp/tools/phase.ts contains blueprintPhasePlanWrite
+
+${noExternalServicesSection}
 
 ## Verification
 

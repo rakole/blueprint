@@ -39,6 +39,12 @@ function assertIncludesAll(content: string, expected: readonly string[]): void {
   }
 }
 
+function assertMatchesAll(content: string, expected: readonly RegExp[]): void {
+  for (const pattern of expected) {
+    assert.match(content, pattern);
+  }
+}
+
 function assertAgentToolsReadOnly(content: string, agentPath: string): void {
   const frontmatterMatch = /^---\n([\s\S]*?)\n---/.exec(content);
   assert.ok(frontmatterMatch, `${agentPath} should have frontmatter`);
@@ -301,6 +307,55 @@ test("plan-phase docs and MCP notes are user-facing and aligned to the runtime c
   assert.match(runtimeReferenceDoc, /existing saved plans plus omitted `planId` require an explicit add\/revise\/replace decision/);
   assert.match(runtimeReferenceDoc, /explicit additive new plan ids may proceed without an overwrite gate/);
   assert.match(runtimeReferenceDoc, /never infer completion from `blueprint_phase_plan_write\.validation\.valid`, `completionReady`, or `incrementalCheckpoint` alone/);
+});
+
+test("plan-phase metadata surfaces keep optional spec evidence and trace semantics aligned", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("plan-phase");
+  const [commandFile, skillFile, commandDoc, runtimeContract, mcpToolsDoc, runtimeReferenceDoc] =
+    await Promise.all([
+      readRepoFile("commands/blu-plan-phase.toml"),
+      readRepoFile("skills/blueprint-phase-planning/SKILL.md"),
+      readRepoFile("docs/commands/plan-phase.md"),
+      readRepoFile("skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"),
+      readRepoFile("docs/MCP-TOOLS.md"),
+      readRepoFile("docs/RUNTIME-REFERENCE.md")
+    ]);
+
+  assertMatchesAll(commandFile, [
+    /optional\s+XX-SPEC\.md\s+when present/i,
+    /missing\s+XX-SPEC\.md\s+as nonblocking/i
+  ]);
+  assertMatchesAll(skillFile, [
+    /optional\s+XX-SPEC\.md\s+when present/i,
+    /missing\s+XX-SPEC\.md\s+as nonblocking/i
+  ]);
+  assertMatchesAll(commandDoc, [
+    /optional\s+XX-SPEC\.md/i,
+    /phase\.artifacts\.spec exists/i,
+    /nonblocking/i
+  ]);
+  assertMatchesAll(runtimeContract, [
+    /Planning Investigation Trace/i,
+    /missing\s+XX-SPEC\.md\s+as nonblocking/i,
+    /phase\.artifacts\.spec exists[\s\S]*readiness read set[\s\S]*evidenceCoverage/i
+  ]);
+  assertMatchesAll(mcpToolsDoc, [
+    /blueprint_phase_plan_readiness[\s\S]*optional\s+XX-SPEC\.md/i,
+    /blueprint_phase_plan_readiness[\s\S]*read-set/i
+  ]);
+  assertMatchesAll(runtimeReferenceDoc, [
+    /plan-phase[\s\S]*optional\s+XX-SPEC\.md/i,
+    /plan-phase[\s\S]*Planning Investigation Trace/i,
+    /plan-phase[\s\S]*readiness read set[\s\S]*evidenceCoverage/i
+  ]);
+  assert.match(
+    metadata.spec.reads.join("\n"),
+    /optional phase-local XX-SPEC\.md when present/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /Treat missing XX-SPEC\.md as nonblocking/i);
+  assert.match(metadata.runtimeReference.contractNotes, /Planning Investigation Trace/i);
+  assert.match(metadata.runtimeReference.contractNotes, /readiness read set/i);
+  assert.match(metadata.runtimeReference.contractNotes, /runtime-narrowed evidenceCoverage/i);
 });
 
 test("planner and checker guidance stays bounded and parent-owned", async () => {

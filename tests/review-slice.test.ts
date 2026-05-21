@@ -18,6 +18,11 @@ import { createGitRepo } from "./helpers/git-fixtures.js";
 const repoRoot = process.cwd();
 const peerReviewPlanPath = ".blueprint/phases/03-review-phase/03-01-PLAN.md";
 const peerReviewPath = ".blueprint/phases/03-review-phase/03-REVIEWS.md";
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
 
 function peerReviewEvidenceCoverage(
   extra: Record<string, { status: string; rationale: string }> = {}
@@ -126,6 +131,8 @@ Capture cross-CLI peer review for the saved plan.
 #### Acceptance Criteria
 
 - npm test -- tests/review-slice.test.ts exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 

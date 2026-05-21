@@ -21,6 +21,8 @@ Response requirements:
 - Prefer the exact next-step guidance from `mcp_blueprint_blueprint_project_status.nextAction` and `mcp_blueprint_blueprint_state_load.derivedStatus.nextAction`.
 - If those signals diverge, explain the difference and choose the safer implemented command.
 - When waiting state is present, keep the pending gate explicit and prefer the safest implemented follow-up command.
+- Recommend `/blu-spec-phase <phase>` only when its catalog entry is `implemented: true` and the next safe step is spec-first planning, requirements clarification before discuss, WHAT/WHY clarification for an ambiguous phase, or a saved spec refresh because the current spec is stale or contradictory.
+- Do not turn a missing spec alone into a normal lifecycle blocker when discuss, research, or plan can still proceed safely.
 - Never recommend commands whose catalog entry is not `implemented: true`.
 - Never rely on slash-command chaining, hidden aliases, or implicit destructive behavior.
 """

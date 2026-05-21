@@ -15,7 +15,7 @@
 ## Purpose
 
 
-`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. It preserves the thinking-partner discovery loop while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps, answer validation and retry, assumptions-mode analysis, capability-gated sidecar research for one gray area, single-agent fallback, deferred-idea capture, checkpoint-per-area resumability, and validation/repair before completion. It uses taxonomy-driven gray-area discovery and evidence-graded assumptions so the saved context stays decision-relevant without over-questioning. The detailed behavior lives in the runtime contract reference instead of being repeated here.
+`discuss-phase` is Blueprint's command for gathering phase context through adaptive questioning before planning. It preserves the thinking-partner discovery loop while translating persistence and routing into Blueprint-native MCP tools: prior-context sweeps, answer validation and retry, assumptions-mode analysis, capability-gated sidecar research for one gray area, single-agent fallback, deferred-idea capture, checkpoint-per-area resumability, and validation/repair before completion. When a phase-local `XX-SPEC.md` exists, `discuss-phase` treats it as authoritative WHAT/WHY input and shifts the conversation toward implementation decisions and downstream handoffs instead of re-asking generic deliverable questions. It uses taxonomy-driven gray-area discovery and evidence-graded assumptions so the saved context stays decision-relevant without over-questioning. The detailed behavior lives in the runtime contract reference instead of being repeated here.
 
 
 ## Command Path And Examples
@@ -45,9 +45,9 @@
 ## Behavior Stages
 
 1. `Resolve`: call `blueprint_phase_context` first, use its `phaseSelection` fields as the selected-phase authority when complete, report any `phaseSelection` `reason` plus `recovery` diagnostics directly, and call `blueprint_phase_locate` only as fallback recovery when phase identity is missing, ambiguous, incomplete, or lacks diagnostics.
-2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail. When the host supports multiple tool calls in one turn, request independent read-only MCP calls together after the selected phase is known.
+2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail. If the selected phase exposes `phase.artifacts.spec`, read it through `blueprint_phase_artifact_read`, treat Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, count the locked numbered requirements, and keep missing spec nonblocking. When the host supports multiple tool calls in one turn, request independent read-only MCP calls together after the selected phase is known.
 3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching, and select from the `grayAreaQueue` by decision value.
-4. `Execute`: run one-question `ask_user` branching, use the one-question format with decision-value ranking and stop criteria, optionally use capability-gated sidecar research for one gray area, and capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time.
+4. `Execute`: run one-question `ask_user` branching, use the one-question format with decision-value ranking and stop criteria, optionally use capability-gated sidecar research for one gray area, and capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time. When a saved spec already answers the deliverable definition, focus questions on reuse, approach, tradeoffs, sequencing, safety posture, deferred ideas, research handoff, and plan handoff; if discussion shows the spec is stale or wrong, route back to `/blu-spec-phase <phase>` instead of silently overriding the contradicted WHAT/WHY in context.
 5. `Persist`: scaffold only missing discovery artifacts, treat scaffold text as disposable starter seed, persist substantive context as a structured `phase.context` model, persist optional discussion content as Markdown, refresh checkpoints per area, and update `STATE.md` through MCP only.
 6. `Validate`: validate context through the structured model schema and MCP renderer, normalize discussion drafts to the canonical `authoringTemplate`, strip scaffold literals and other placeholders from final discussion content, run the blocking anti-pattern check, repair any `blueprint_phase_artifact_write` validation issues, and keep plan-inventory warnings explicit before conclusion.
 7. `Route`: summarize reused versus replaced artifacts, checkpoint disposition, deferred follow-ups, and the next safe implemented action loaded from refreshed state, without inferring a direct `/blu-plan-phase` handoff while research or UI gates still route elsewhere.
@@ -81,7 +81,7 @@
 - `blueprint_config_get` -> `{scope, config, provenance, sourcePath, warnings}`
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
-- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}`
+- `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` for `context`, `discussion-log`, optional `spec`, and any reused prior-context reads allowed by the runtime contract
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, ownerCommand, resumeMode, safeToResume, warnings, reason}`
 - `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
@@ -195,6 +195,9 @@
 - Uses only documented MCP tools for persistent state changes.
 - Final routing copies `derivedStatus.nextAction` exactly and does not include secondary runnable routes.
 - Leaves unrelated repo files untouched.
+- When a saved `XX-SPEC.md` exists, treat it as authoritative WHAT/WHY input without making spec presence a blocker.
+- Maps spec path, locked requirement count, ambiguity posture, out-of-scope edges, and unresolved dimensions into existing `phase.context` fields only; no separate spec-basis schema is created.
+- If discussion reveals the saved spec is stale or wrong, routes back to `/blu-spec-phase <phase>` instead of silently overriding contradicted WHAT/WHY inside `XX-CONTEXT.md`.
 
 
 ## Test Cases

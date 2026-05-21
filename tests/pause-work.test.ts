@@ -15,6 +15,11 @@ import {
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
 
 async function createExecutionReadyRepo(): Promise<string> {
   const repoPath = await createGitRepo("blueprint-pause-work-");
@@ -36,6 +41,12 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 - [x] **Phase 2: Discovery**
 - [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+
+## Phase Details
+
+### Phase 3: Phase Discovery
+**Goal**: Execute the prepared plans.
+**Requirements**: PW-01
 `,
     "utf8"
   );
@@ -176,10 +187,13 @@ wave: 1
 status: planned
 objective: "Exercise the pause-work router."
 depends_on: []
-requirements: []
-files_modified: []
-read_first: []
-acceptance_criteria: []
+requirements: ["PW-01"]
+files_modified:
+  - .blueprint/reports/pause-work-latest.md
+read_first:
+  - .blueprint/phases/03-phase-discovery/03-CONTEXT.md
+acceptance_criteria:
+  - tests/pause-work.test.ts exits 0
 autonomous: true
 ---
 
@@ -195,7 +209,21 @@ Exercise the pause-work router.
 
 ## Tasks
 
+### Task 1: Persist the pause handoff
+
+#### Read First
+
+- .blueprint/phases/03-phase-discovery/03-CONTEXT.md
+
+#### Action
+
 - Write the pause report.
+
+#### Acceptance Criteria
+
+- tests/pause-work.test.ts exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 

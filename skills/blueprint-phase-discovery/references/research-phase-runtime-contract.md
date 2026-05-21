@@ -19,6 +19,8 @@ The retained behaviors that matter are:
 - phase validation before research
 - explicit reuse, view, or update handling for existing research
 - actual saved `XX-CONTEXT.md` content and requirement mapping before drafting
+- optional `XX-SPEC.md` intent and constraint evidence after usable context is
+  confirmed, without making spec a hard prerequisite
 - visible initial assessment before deep research: relevant saved artifacts,
   repo files or symbols, key findings, implementation questions, and confidence
 - a repository evidence ladder before broad reads: saved context, existing
@@ -48,7 +50,8 @@ The retained behaviors that matter are:
   tracked by id, type, question, requirement IDs, repo anchors, source policy,
   dependencies, expected packet shape, budget, status, evidence IDs, accepted
   claims, rejected or low-quality sources, search notes, uncertainty, stopping
-  reason, and next action
+  reason, next action, and spec requirement labels or constraints when spec
+  evidence materially shapes the strand
 - checkpointed resumability for pauses, inconclusive evidence, blocked source
   policy, sidecar failures, budget or timeout limits, validation repair, and
   post-write state-sync or route-refresh failures
@@ -59,6 +62,10 @@ The retained behaviors that matter are:
   `XX-RESEARCH.md` authoring; child transcripts are never copied into the final
   artifact or checkpoint
 - dependency/tool decisions treated as first-class research when a phase may add, adopt, replace, or hand-roll a package, library, CLI, framework, service, code generator, package-manager behavior, or other tool
+- contradiction handling that routes back to `/blu-discuss-phase <phase>` when
+  context is stale relative to spec, or to `/blu-spec-phase <phase>` when the
+  spec is stale or wrong, instead of silently resolving the mismatch inside
+  research
 - validation repair before completion
 - routing only to implemented commands after refreshed state is loaded
 
@@ -67,21 +74,24 @@ The retained behaviors that matter are:
 Use the shared long-running-mutation stages:
 
 - `Resolve`: resolve the phase and current roadmap boundary.
-- `Read`: load phase context, current context artifact, existing research,
-  checkpoint state, effective external-source policy, state, catalog, and the
-  canonical research contract.
+- `Read`: load phase context, current context artifact, optional current spec
+  artifact when present after context is usable, existing research, checkpoint
+  state, effective external-source policy, state, catalog, and the canonical
+  research contract.
 - `Decide`: choose reuse, view, update, resume, discard, repo-only, or
   repo-plus-external verification posture based on
-  `research.external_sources`.
+  `research.external_sources`, and route context-versus-spec contradictions to
+  the owning earlier command instead of repairing them inside research.
 - `Execute`: build the initial assessment, follow the repository evidence
   ladder, classify the run as `simple` or `non-trivial`, use the parent-owned
   research strand ledger only when the branch requires it, record per-strand
   search notes and navigation evidence for non-trivial strands, research one
-  runnable strand at a time, evaluate dependency/tool choices when they affect
-  a recommendation, accept or reject sidecar packets before synthesis, close
-  each non-trivial strand with a planning handoff, keep evidence provenance
-  visible, and construct the claim-addressable evidence packet before writing
-  final recommendations.
+  runnable strand at a time, tie strands to spec requirements and constraints
+  when relevant, evaluate dependency/tool choices when they affect a
+  recommendation, accept or reject sidecar packets before synthesis, close each
+  non-trivial strand with a planning handoff, keep evidence provenance visible,
+  and construct the claim-addressable evidence packet before writing final
+  recommendations.
 - `Persist`: scaffold only a missing file, write checkpoints when there is
   useful resumable strand state, checkpoint before blocked waits or repair
   retries, and write final research through MCP only.
@@ -235,6 +245,16 @@ baseline.
 - If the `context` read returns `found: false`, stop and route back to
   `/blu-discuss-phase <phase>` before drafting research. Do not continue from
   status-only signals.
+- After usable context is confirmed, call `blueprint_phase_artifact_read` with
+  `artifact: "spec"` only when `phase.artifacts.spec` is present, then use the
+  result as optional intent and constraint evidence. Missing spec is nonblocking
+  even when the artifact inventory exposed it.
+- If spec and context contradict, stop; when the context is stale relative to spec, route to `/blu-discuss-phase <phase>`, or when the spec is stale or wrong, route to `/blu-spec-phase <phase>`. Do not silently reconcile the mismatch inside research.
+- When spec exists, tie research strands to spec requirements or constraints
+  when relevant; for a dependency/tool choice, cite the spec requirement or
+  spec constraint that makes it planner-critical and preserve Recommendation
+  Handoff spec path and requirement labels when the recommendation depends on
+  spec evidence.
 - `blueprint_phase_artifact_read` with `artifact: "research"`: load the
   existing research body only for view, update, or repair branches. A valid
   skip path uses `blueprint_phase_research_status` validity and metadata unless
@@ -265,11 +285,12 @@ state load, research status, checkpoint get, artifact contract read, and
 artifact reads when the branch already knows it needs those bodies.
 
 Dependent reads stay sequenced: read the context artifact body before drafting,
-read the existing research body only for view/update/repair branches that need
-it, and read the artifact contract before drafting or revising rather than for a
-valid skip path. Do not batch user confirmations, mutating writes, validation
-repair, state update, post-write refreshed state load, command-catalog routing proof, or
-checkpoint deletion.
+read the optional spec artifact only after the context is usable, read the
+existing research body only for view/update/repair branches that need it, and
+read the artifact contract before drafting or revising rather than for a valid
+skip path. Do not batch user confirmations, mutating writes, validation repair,
+state update, post-write refreshed state load, command-catalog routing proof,
+or checkpoint deletion.
 
 - `blueprint_phase_checkpoint_put`: persists useful continuation state using
   checkpoint v2 with `schemaVersion: 2`, `ownerCommand: "/blu-research-phase"`,
@@ -347,7 +368,7 @@ Quality rules for `XX-RESEARCH.md`:
 - `## Recommendations` is prescriptive enough for `/blu-plan-phase` to turn
   into tasks.
 - `## Claim Support Ledger`, when present, is the planner-critical claim ledger. Use columns `Claim ID`, `Claim`, `Claim Type`, `Evidence IDs`, `Support Status`, `Confidence`, and `Plan Impact`. Valid claim types are `repo_runtime`, `external_practice`, `dependency_tool`, `inference`, and `open_question`. Valid support statuses are `directly_supported`, `partially_supported`, `inferred_from_supported`, `contradicted`, `conflicting_sources`, `not_enough_evidence`, and `out_of_scope`.
-- `## Recommendations` should include a `Recommendation Handoff` table for planner-critical recommendations. Use columns `Recommendation ID`, `Recommendation`, `Supporting Claim IDs`, `Evidence IDs`, `Affected Surfaces`, `Tests / Checks`, and `Status`. A recommendation is planner-ready only when it cites supporting claim IDs or evidence IDs, names affected repo or contract surfaces, and names tests/checks, or when `Status` says `blocked` and points to a named open question.
+- `## Recommendations` should include a `Recommendation Handoff` table for planner-critical recommendations. Use columns `Recommendation ID`, `Recommendation`, `Supporting Claim IDs`, `Evidence IDs`, `Affected Surfaces`, `Tests / Checks`, and `Status`. A recommendation is planner-ready only when it cites supporting claim IDs or evidence IDs, names affected repo or contract surfaces, and names tests/checks, or when `Status` says `blocked` and points to a named open question. When spec evidence materially shapes the recommendation, preserve the spec path and requirement labels in the handoff row or directly adjacent recommendation prose while keeping the live table columns unchanged.
 - Legacy non-table claim-addressable provenance remains valid for existing or
   previously authored artifacts when the artifact otherwise satisfies the current
   contract. New writes must follow `contract.authoringTemplate` table shapes.
@@ -580,13 +601,17 @@ repository still agrees before presenting them as planner-grade truth.
 Each non-trivial topic strand must close with a Strand Planning Handoff that
 names the strand, planner-ready recommendation or "no safe recommendation",
 affected files/modules, validation or test implications, unresolved blockers,
-evidence basis, and confidence with rationale.
+evidence basis, confidence with rationale, and any spec requirement labels or
+constraints that materially shaped the recommendation.
 
 Tie recommendations to evidence roles. API-usage recommendations should cite
 definitions and references. Regression-risk recommendations should cite tests,
 validation paths, or prior failure evidence. Runtime-behavior recommendations
 should cite command manifests, MCP handlers, artifact contracts, runtime
-contracts, tests, or built/runtime entrypoints when those surfaces are relevant.
+contracts, tests, or built/runtime entrypoints when those surfaces are
+relevant. When spec evidence materially shapes a recommendation, also cite the
+spec requirement or constraint and preserve Recommendation Handoff spec path
+plus requirement labels.
 
 When evidence is partial, inconclusive, stale, or blocked by source policy,
 lower confidence and preserve the uncertainty in `## Open Questions`, the
@@ -871,6 +896,9 @@ new top-level required heading:
   vulnerability/license/provenance, AST/indexing, or edge-case-heavy behavior.
 - `## Recommendations`: cite the dependency/tool evaluation row when a
   recommendation adds, adopts, rejects, defers, upgrades, or hand-rolls a tool.
+- `## Recommendations`: when a framework, library, service, or tool choice is
+  planner-critical because of spec intent or constraints, cite the relevant
+  spec requirement or constraint alongside the dependency/tool evaluation row.
 - `## Sources`: cite repo, official, supplied, or unchecked `Supply Chain Evidence`
   rows for each planner-critical dependency/tool claim.
 
@@ -1030,7 +1058,8 @@ Before calling `blueprint_phase_artifact_write`, run this deterministic self-che
 4. Every `repo_runtime` claim cites at least one repo-lane source before using external practice evidence.
 5. Every `repo_runtime` claim cites a runtime-adequate source role when the claim is about command behavior or persistence: command manifest, skill contract, runtime contract, artifact contract, MCP handler, test, built entrypoint, or saved Blueprint artifact. Search hits, summaries, and external docs alone are partial retrieval.
 6. Every Recommendation Handoff row cites supporting claim IDs or evidence IDs, affected surfaces, and tests/checks, or is marked `blocked` by a named open question.
-7. `**Confidence:** HIGH` is allowed only when planner-critical claims are directly supported or bounded inferred support, no high-impact recommendation has unresolved blockers, and the artifact does not contain unsupported, contradicted, conflicting, unchecked, or unverified planner-critical claims.
+7. When spec evidence materially shapes a planner-critical recommendation, the Recommendation Handoff preserves the spec path and requirement labels in the row or directly adjacent recommendation prose.
+8. `**Confidence:** HIGH` is allowed only when planner-critical claims are directly supported or bounded inferred support, no high-impact recommendation has unresolved blockers, and the artifact does not contain unsupported, contradicted, conflicting, unchecked, or unverified planner-critical claims.
 
 These checks prove traceability shape and planner handoff completeness. They do not prove semantic citation precision; if semantic support is uncertain, lower confidence, add an open question, or use a later optional advisory review.
 
@@ -1208,5 +1237,10 @@ Use explicit incomplete states:
 - Brownfield mapping writes repo context only to `.blueprint/codebase/*.md`.
 - `/blu-research-phase` reads phase context only from `.blueprint/phases/<phase>/<XX>-CONTEXT.md` and must not repair, overwrite, synthesize, or mirror it.
 - Missing, invalid, contradictory, or unusable context routes to `/blu-discuss-phase <phase>` with exact diagnostics before any research drafting.
+- Missing spec never blocks normal research readiness, and external evidence
+  must not be used to invent missing spec intent or constraints.
+- If spec and context contradict, route to `/blu-discuss-phase <phase>` when
+  context is stale relative to spec, or to `/blu-spec-phase <phase>` when spec
+  is stale or wrong.
 - If research validation returns diagnostics, repair the same normalized research draft once and retry the same MCP write path.
 - If the retry returns identical diagnostics, stop, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.

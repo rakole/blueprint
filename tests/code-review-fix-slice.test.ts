@@ -18,6 +18,11 @@ import {
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const repoRoot = process.cwd();
+const noExternalServicesSection = `## External Service Prerequisites
+
+| Service | Category | Purpose | User Setup / Startup | Readiness Check | Can Agent Proceed Without It |
+|---------|----------|---------|----------------------|-----------------|------------------------------|
+| none | none | No external services are required for this plan. | No user setup required. | Repo-local execution only. | yes |`;
 
 async function readSchemaFile(relativePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(path.join(repoRoot, relativePath), "utf8")) as Record<string, unknown>;
@@ -127,6 +132,8 @@ Seed completed execution evidence for review-fix tests.
 #### Acceptance Criteria
 
 - tests/code-review-fix-slice.test.ts exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 
@@ -346,6 +353,8 @@ Leave a pending execution plan for review-fix debt checks.
 #### Acceptance Criteria
 
 - Pending execution evidence is routed through execute-phase
+
+${noExternalServicesSection}
 
 ## Verification
 
@@ -1522,6 +1531,8 @@ Add a second completed summary to change live evidence inventory.
 #### Acceptance Criteria
 
 - Second focused fixture exits 0
+
+${noExternalServicesSection}
 
 ## Verification
 
