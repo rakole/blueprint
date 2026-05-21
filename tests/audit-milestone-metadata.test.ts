@@ -15,7 +15,9 @@ test("audit-milestone manifest references the roadmap audit tools, overwrite gat
   );
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
-  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-verifier`/);
+  assert.match(commandFile, /bounded milestone-evidence review packet/);
+  assert.match(commandFile, /Do not read, inline, or load separate agent source/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-verifier\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
@@ -58,6 +60,8 @@ test("audit-milestone skill captures milestone-evidence digest rules and report 
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint-verifier/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool `blueprint-verifier`/);
+  assert.match(skillFile, /Do not read, inline, or load separate agent source/);
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /explicit overwrite confirmation/i);
   assert.match(skillFile, /ask_user/);

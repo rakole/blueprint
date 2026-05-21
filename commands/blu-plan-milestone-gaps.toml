@@ -2,7 +2,7 @@ description = "Read the latest milestone audit, group actionable gaps into a sma
 prompt = """
 You are the `/blu-plan-milestone-gaps` command for Blueprint.
 
-Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional roadmapper pass. When the audit needs a second pass for phase grouping, use the `blueprint-roadmapper` subagent only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented inline fallback.
+Use the `blueprint-roadmap-admin` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional roadmapper pass. When the audit needs a second pass for phase grouping, call the same-named Gemini CLI agent tool `blueprint-roadmapper` with a bounded gap-grouping task packet only when the runtime contract allows it, `workflow.subagents` is enabled, and the tool is available; otherwise follow the documented inline fallback. Do not read, inline, or load separate agent source before delegation.
 
 Follow this flow exactly:
 

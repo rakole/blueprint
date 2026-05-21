@@ -45,7 +45,7 @@ Orchestrate Blueprint roadmap and milestone management flows so phase mutations,
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Before optional delegation, read effective config with `mcp_blueprint_blueprint_config_get`. Call same-named Gemini CLI agent tools only when the current command contract explicitly allows them, `workflow.subagents` is enabled, the same-named tool is available in the current host session, and the task benefits from bounded roadmap or milestone analysis. Do not read, inline, or load separate agent source before delegation; otherwise use the command's no-subagent fallback and state the fallback reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - Load only the active command's structured `input_bundles.commands[...]` inputs when one is present; roadmap-admin commands do not use docs as active runtime inputs.
 
@@ -100,8 +100,8 @@ The earlier repository-doc-backed Required Inputs list is retained only in repos
 
 ## No-Subagent Parity
 
-When a roadmap-admin command allows an optional Blueprint subagent and that
-subagent is unavailable, disabled, or unnecessary, the parent command keeps the
+When a roadmap-admin command allows an optional Blueprint agent tool and that
+same-named tool is unavailable, disabled, or unnecessary, the parent command keeps the
 same evidence depth, confirmation discipline, and output quality by working one
 isolated roadmap or milestone unit at a time, compressing carry-forward context
 after each completed unit, and finishing through the same MCP-owned write path.
@@ -113,7 +113,8 @@ inline fallback must produce the same result shape as the delegated path:
 `assumptions`, `confidence`, and `relativeFirstPhaseRecommendation`.
 
 Do not swap in browser-only, web-search-only, shell-only, or generic helper
-substitutes for `blueprint-roadmapper` or `blueprint-verifier`.
+substitutes for the same-named `blueprint-roadmapper` or `blueprint-verifier`
+Gemini CLI agent tools.
 
 ## Shared MCP Contracts
 
@@ -196,7 +197,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 3. Read `report.milestone-audit` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final report body to the returned authoring template when the contract provides one.
 4. Require explicit overwrite confirmation before replacing an existing milestone audit report, and prefer `ask_user` for that confirmation gate.
 5. Use `blueprint_artifact_summary_digest` with explicit milestone artifact paths when the command needs a compact roadmap-plus-evidence digest.
-6. Use `blueprint-verifier` when a second-pass evidence review helps explain gaps or stale assumptions.
+6. Call the same-named Gemini CLI agent tool `blueprint-verifier` with a bounded milestone-evidence review packet when a second-pass review helps explain gaps or stale assumptions and optional delegation is enabled. Do not read, inline, or load separate agent source before delegation.
 7. If `blueprint-verifier` is unavailable or unnecessary, keep parity by reviewing one milestone evidence group at a time and carrying forward only a compact note of confirmed gaps, stale assumptions, and remaining questions before writing the report.
 8. Keep milestone report output project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 9. If the audit surfaces actionable gaps and `plan-milestone-gaps` is implemented, route the follow-up there; otherwise treat planned-only milestone follow-up commands as unavailable.
@@ -208,12 +209,13 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 2. Fail fast when the matching milestone audit report is missing or when the audit contains no actionable gaps.
 3. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-audit inputs to build a compact evidence view before proposing any new phases.
 4. Preserve the locked gap-closure intent by grouping related requirement, integration, and flow gaps into a few coherent roadmap phases rather than adding one phase per gap, and keep any requirements traceability repair in the grouped plan instead of scattering it across phases.
-5. Keep the grouping reviewable: show which gaps each proposed phase closes, separate optional nice-to-have gaps from must-close work, and surface the sectioned requirement / integration / flow / optional breakdown from the audit.
-6. Require one explicit confirmation before any roadmap mutation, and prefer Gemini CLI `ask_user` for that confirmation gate when available.
-7. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls with `auditBackedDetails` populated from the source audit report, grouped repair requirement IDs, success criteria, and gap rows; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt, and do not imply code or git mutation.
-8. Treat an existing-audit-backed-phase reuse warning from `blueprint_roadmap_add_phase` as retry recovery. Continue from the returned canonical `phaseNumber`, `phasePrefix`, and `phaseDir` rather than appending the same grouped gaps again.
-9. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
-10. Keep follow-up routing inside implemented Blueprint commands only.
+5. When broad audit gaps benefit from a second-pass grouping review, call the same-named Gemini CLI agent tool `blueprint-roadmapper` with a bounded gap-grouping packet only when optional delegation is enabled. Do not read, inline, or load separate agent source before delegation.
+6. Keep the grouping reviewable: show which gaps each proposed phase closes, separate optional nice-to-have gaps from must-close work, and surface the sectioned requirement / integration / flow / optional breakdown from the audit.
+7. Require one explicit confirmation before any roadmap mutation, and prefer Gemini CLI `ask_user` for that confirmation gate when available.
+8. Append each approved gap-closure phase through repeated `blueprint_roadmap_add_phase` calls with `auditBackedDetails` populated from the source audit report, grouped repair requirement IDs, success criteria, and gap rows; do not rewrite `.blueprint/ROADMAP.md` directly from the command prompt, and do not imply code or git mutation.
+9. Treat an existing-audit-backed-phase reuse warning from `blueprint_roadmap_add_phase` as retry recovery. Continue from the returned canonical `phaseNumber`, `phasePrefix`, and `phaseDir` rather than appending the same grouped gaps again.
+10. Update `STATE.md` through `blueprint_state_update` so the first new gap-closure phase becomes current and the next safe implemented follow-up is `/blu-discuss-phase <phase>`.
+11. Keep follow-up routing inside implemented Blueprint commands only.
 
 ### `complete-milestone`
 
@@ -249,7 +251,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 6. Before any optional delegation, build a typed `Roadmapper Packet` from digest-backed evidence only. The packet must include `digestScope`, `carryForwardFacts`, `requirementTransitionHints`, `firstPhasePreview`, `parentOwnedResponsibilities`, `forbiddenActions`, and `stopConditions`.
 7. `digestScope` must stay limited to the digest `inputsUsed` plus the resolved milestone summary path. `carryForwardFacts` must stay limited to digest-backed roadmap and milestone facts. `requirementTransitionHints` may summarize likely `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain` rows with `sourceRefs` plus `rationale`, but they remain starter-seed evidence only and do not become a competing `.blueprint/REQUIREMENTS.md` write path.
 8. `parentOwnedResponsibilities` must keep digest reads, evidence-scope construction, final milestone name, final phase numbers and paths, confirmation gates, MCP writes, final response, and routing with the parent command. `forbiddenActions` must forbid MCP writes, hand-editing `.blueprint/`, final phase-context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter. `stopConditions` must include missing summary evidence, conflicting carry-forward facts, unresolved transition uncertainty that changes grouping, stale preview receipts, and any case where the parent cannot keep the write path deterministic.
-9. Use `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope; the roadmapper proposes grouping and ordering only. Do not pass raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes to it.
+9. Call the same-named Gemini CLI agent tool `blueprint-roadmapper` only when grouped carry-forward synthesis helps sharpen the next milestone's starter scope and optional delegation is enabled; the roadmapper proposes grouping and ordering only. Do not read, inline, or load separate agent source before delegation, and do not pass raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes to it.
 10. The typed roadmapper result must stay limited to `roadmapperMode`, `provisionalOrderedProposals`, `coverageNotes`, `blockers`, `warnings`, `assumptions`, `confidence`, and `relativeFirstPhaseRecommendation`. `relativeFirstPhaseRecommendation` is advisory only; the parent still owns the final first phase number and path.
 11. If `blueprint-roadmapper` is disabled, unnecessary, or unavailable, keep parity by filling that same result shape inline before scaffold. Use `roadmapperMode: "skipped-disabled"` when effective config disables subagents, `roadmapperMode: "skipped-unnecessary"` when the carry-forward scope is small enough that inline synthesis is equivalent, `roadmapperMode: "unavailable-fallback"` when the agent is not available at runtime, and `roadmapperMode: "used"` only when the roadmapper was called.
 12. Before scaffold, build a compact `New Milestone First-Phase Handoff Packet` with `mode`, `fromMilestone`, `toMilestone`, `firstPhase`, `digestInputsUsed`, `retainedDecisions`, `activeRequirementTransitions`, `openForDiscuss`, `riskWatchlist`, `deferredNotDoingNow`, `canonicalReferences`, and `routeReceipt`.
