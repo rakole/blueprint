@@ -64,9 +64,9 @@ const discussRuntimeBundleCurrentBudget = {
   // Includes the deliberate list-phase-assumptions config parity line in the shared skill.
   skillBytes: 21077,
   // Includes explicit phaseSelection recovery wording to avoid redundant locate fallback calls.
-  runtimeContractBytes: 37362,
-  // Includes the first-pass compact discuss launcher while keeping the runtime contract rich.
-  totalBytes: 66442
+  runtimeContractBytes: 37534,
+  // Includes the simple gray-area fast path while keeping the full taxonomy fallback.
+  totalBytes: 66614
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -242,7 +242,11 @@ test("shared phase-discovery skill is deflated while discuss runtime contract ke
   assert.doesNotMatch(contract, /Sample v2 checkpoint:/);
   assert.match(
     contract,
-    /`areaId`[\s\S]*`slot`[\s\S]*`defect`[\s\S]*`lens`[\s\S]*`evidence`[\s\S]*`downstreamImpact`[\s\S]*`decisionValue`[\s\S]*`resolutionCriterion`[\s\S]*`candidateQuestion`/i
+    /simple gray-area\s+fast path[\s\S]*`areaId`[\s\S]*`title`[\s\S]*`state`[\s\S]*`candidateQuestion`[\s\S]*`decisionValue`[\s\S]*`downstreamImpact`\s+or\s+`resolutionCriterion`[\s\S]*`evidence`\s+only/i
+  );
+  assert.match(
+    contract,
+    /full gray-area taxonomy[\s\S]*`slot`[\s\S]*`defect`[\s\S]*`lens`[\s\S]*`evidence`[\s\S]*`downstreamImpact`[\s\S]*`decisionValue`[\s\S]*`resolutionCriterion`[\s\S]*`candidateQuestion`/i
   );
   assert.match(
     contract,
@@ -891,16 +895,21 @@ test("discuss runtime contract replaces vague speed-killer phrases with concrete
   );
 });
 
-test("discuss runtime contract defines gray area queue", () => {
+test("discuss runtime contract defines gray area queue fast path and taxonomy fallback", () => {
   const contract = readRepoText(discussRuntimeContractPath);
 
   assertIncludesAll(contract, [
     "grayAreaQueue",
+    "simple gray-area",
+    "fast path",
     "areaId",
+    "title",
+    "state",
     "decisionValue",
     "resolutionCriterion",
     "candidateQuestion",
     "downstreamImpact",
+    "full gray-area taxonomy",
     "actor",
     "action-task",
     "object-concept",
@@ -918,6 +927,16 @@ test("discuss runtime contract defines gray area queue", () => {
     "unverifiable",
     "tradeoff"
   ]);
+  assert.match(
+    contract,
+    /Do not\s+require `slot`, `defect`, or `lens` classification for\s+every simple\s+queue entry/i
+  );
+  assert.match(
+    contract,
+    /Use the full gray-area taxonomy for complex sessions:[\s\S]*multiple ambiguous areas[\s\S]*unclear boundaries[\s\S]*high downstream risk[\s\S]*routing\s+uncertainty/i
+  );
+  assert.doesNotMatch(contract, /Classify every gray area by requirement slot/i);
+  assert.match(contract, /For complex sessions, classify each gray area/i);
 });
 
 test("discuss runtime contract has anti-generic-question rule", () => {
@@ -1055,6 +1074,20 @@ test("final routing copies refreshed state and forbids alternate routes", () => 
     "/blu-progress"
   ]);
   assert.match(contract, /(missing|blocked)[\s\S]*\/blu-progress/i);
+});
+
+test("state warning preservation surfaces only non-empty routing-relevant warnings", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(
+    contract,
+    /Surface non-empty routing-relevant warnings returned by `blueprint_state_update`[\s\S]*final `blueprint_state_load`/i
+  );
+  assert.match(contract, /do not invent warning categories or audit\s+state warning families/i);
+  assert.doesNotMatch(contract, /requested-phase preservation warnings/i);
+  assert.doesNotMatch(contract, /invalid research warnings/i);
+  assert.doesNotMatch(contract, /missing\s+plan dependency warnings/i);
+  assert.doesNotMatch(contract, /quality-gate debt warnings/i);
 });
 
 test("allowlist remains stable", () => {

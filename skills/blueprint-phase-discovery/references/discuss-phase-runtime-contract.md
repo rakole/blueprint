@@ -279,27 +279,28 @@ real conflict. When reusing a prior decision, cite the artifact that locked it.
 
 ## Gray Area Queue
 
-Before asking the user anything, build a compact `grayAreaQueue` from the
-evidence packet. This queue is working state and checkpoint context, not a
-competing artifact schema. Each entry must include:
+Before asking the user anything, build a compact `grayAreaQueue`. It is working
+state and checkpoint context, not a competing artifact schema.
 
-- `areaId`: stable kebab-case label
-- `slot`: actor | action-task | object-concept | attribute | goal | event |
-  constraint | exception | external-interface | quality-attribute |
-  acceptance-verification
-- `defect`: ambiguous | incomplete | inconsistent | unverifiable | tradeoff
-- `lens`: scope | user-visible-behavior | interface-contract | reuse |
-  dependency | risk-failure | methodology | routing
-- `evidence`: repo paths, saved artifacts, MCP results, or user-provided
-  source that exposed the gap
-- `downstreamImpact`: research | ui | plan | validation | routing
-- `decisionValue`: high | medium | low
-- `resolutionCriterion`: what answer, assumption, or handoff makes the area
-  resolved
-- `candidateQuestion`: the single next question that would resolve or shrink
-  the area
+For 1-2 obvious low-risk areas, use the simple gray-area fast path: `areaId`,
+`title`, `state`, `candidateQuestion`, `decisionValue`, `downstreamImpact` or
+`resolutionCriterion` when useful, and `evidence` only when actual source
+exposed the gap. Do not require `slot`, `defect`, or `lens` classification for
+every simple queue entry.
+The queue still must explain the decision, why it matters, and what answer lets
+discussion continue.
 
-Classify every gray area by requirement slot first, then by Blueprint lens.
+Use the full gray-area taxonomy for complex sessions: multiple ambiguous areas,
+unclear boundaries, contradictory evidence, high downstream risk, routing
+uncertainty, or any case where the simple path does not explain why the question
+matters. Full entries may include `slot` (actor, action-task, object-concept,
+attribute, goal, event, constraint, exception, external-interface,
+quality-attribute, acceptance-verification), `defect` (ambiguous, incomplete,
+inconsistent, unverifiable, tradeoff), `lens`, `evidence`, `downstreamImpact`,
+`decisionValue`, `resolutionCriterion`, and `candidateQuestion`.
+
+For complex sessions, classify each gray area by requirement slot first, then by
+Blueprint lens.
 Example: `slot=external-interface`, `lens=interface-contract`,
 `defect=incomplete`, `impact=plan+validation`: "The roadmap says sync to
 GitHub, but no payload, auth, or failure contract is known."
@@ -711,11 +712,10 @@ Route only from the post-write `blueprint_state_load` result:
 
 ### State Warning Preservation
 
-Preserve state warnings in the final response when they affect routing:
-requested-phase preservation warnings, invalid research warnings, missing
-plan dependency warnings, and quality-gate debt warnings. This makes the
-refreshed route auditable without requiring downstream agents to re-run
-all reads.
+Surface non-empty routing-relevant warnings returned by `blueprint_state_update`
+or the final `blueprint_state_load` in the final response. If neither result
+returns a routing-relevant warning, do not invent warning categories or audit
+state warning families.
 
 ## Final Response Shape
 
