@@ -223,9 +223,13 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   // Wave 2 three-gate optional agents
   assert.match(skillFile, /workflow\.subagents/);
   assert.match(skillFile, /effective config/i);
+  assert.match(skillFile, /same-named Gemini CLI agent tool/i);
+  assert.match(skillFile, /active command contract permits that optional agent/i);
+  assert.match(skillFile, /same-named Gemini agent tool is available/i);
   assert.match(skillFile, /does not hide catalog entries/i);
   assert.match(skillFile, /authorize generic browser\/web-search\/shell helpers as substitutes/i);
   assert.match(skillFile, /no-subagent\s+fallback/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
   assert.match(skillFile, /contract\.authoringTemplate/);
   assert.match(skillFile, /specific, user-centered, atomic, grouped, and traceable/i);
   assert.match(skillFile, /cover every committed requirement exactly once/i);
@@ -280,8 +284,17 @@ test("blueprint-bootstrap skill and questioning reference capture Gemini-native 
   assert.match(contractRef, /specific, user-centered, atomic, grouped, and\s+traceable/i);
   assert.match(contractRef, /## Capability-Gated Research And Roadmapping/);
   assert.match(contractRef, /`Stack`, `Features`, `Architecture`, `Pitfalls`/);
-  assert.match(contractRef, /Do not replace them with browser, web-search, shell-only,\s+or generic helpers/i);
+  assert.match(contractRef, /Do not replace\s+them with browser, web-search, shell-only,\s+or generic helpers/i);
   assert.match(contractRef, /Optional-Agent Decision Record/);
+  assert.match(contractRef, /command contract permits optional agent/i);
+  assert.match(contractRef, /same-named Gemini agent tools available/i);
+  assert.match(contractRef, /Gemini CLI exposes an enabled delegated agent as a same-named tool/i);
+  assert.match(contractRef, /Do not read,\s+inline, or load any separate agent source before delegation/i);
+  assert.match(contractRef, /Call bounded\s+same-named Gemini agent tools only when the command contract permits the agent/i);
+  assert.match(contractRef, /Call `blueprint-project-researcher` with a bounded task packet/i);
+  assert.match(contractRef, /Call `blueprint-roadmapper` with a bounded task packet/i);
+  assert.doesNotMatch(contractRef, /subagent_type/i);
+  assert.doesNotMatch(contractRef, /agents\/blueprint-/i);
   assert.match(contractRef, /Dimension.*Evidence.*Confidence/s);
   assert.match(contractRef, /map every committed requirement to exactly one phase/i);
   assert.match(contractRef, /2-5 success\s+criteria per phase/i);
