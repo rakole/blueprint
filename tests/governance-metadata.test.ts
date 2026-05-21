@@ -130,6 +130,18 @@ const governanceExpectations = {
 
 test("governance commands resolve catalog and runtime contracts from docless metadata", async () => {
   const catalog = await blueprintCommandCatalog();
+  const skill = await fs.readFile(
+    path.join(repoRoot, "skills/blueprint-governance/SKILL.md"),
+    "utf8"
+  );
+
+  assert.match(skill, /Governance\s+commands do not declare optional agents/i);
+  assert.match(skill, /same-named Gemini CLI agent\s+tool/i);
+  assert.match(skill, /same-named tool is available in the current host session/i);
+  assert.match(skill, /Do not\s+read, inline, or load any separate agent source/i);
+  assert.doesNotMatch(skill, /subagent_type/i);
+  assert.doesNotMatch(skill, /agent definition/i);
+  assert.doesNotMatch(skill, /agents\/blueprint-/i);
 
   for (const [commandName, expectation] of Object.entries(governanceExpectations)) {
     const metadata = getRuntimeOwnedCommandMetadata(commandName);
