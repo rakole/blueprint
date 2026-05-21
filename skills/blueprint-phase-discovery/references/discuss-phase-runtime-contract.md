@@ -14,6 +14,33 @@ for the shared `long-running-mutation` stage vocabulary, in-flight status
 fields, session-local helper policy, and host-supported structured choice
 guidance.
 
+## Visible Discuss Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, checkpoint authority,
+state-sync authority, routing authority, sidecar authority, or user-decision
+authority defined by this contract.
+
+Visible discuss stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve selected phase | Resolve | selected phase number, resolution source, or recovery blocker |
+| 2 | build discovery evidence packet | Read | context, roadmap, config, artifact inventory, checkpoint, prior-context, codebase-summary, and plan-inventory posture |
+| 3 | classify discovery gates | Decide | artifact status, checkpoint resume/discard gate, overwrite gate, mode, and active gray-area queue |
+| 4 | work current gray area | Execute | active area, question or assumption posture, evidence basis, sidecar/fallback mode, and completed versus remaining area count |
+| 5 | checkpoint area progress | Persist | checkpoint path/status, owner/mode guard, and next area or blocking reason |
+| 6 | write context and optional log | Persist/Validate | context write status, optional discussion-log status, validation repair attempt, and placeholder/scaffold cleanup result |
+| 7 | sync state and route | Route | checkpoint cleanup result, state-sync result, refreshed next implemented action, and deferred follow-ups |
+
+Progress updates must be short boundary updates, not a transcript of every
+question or file read. Emit exceptional updates for phase ambiguity,
+resume-versus-discard waits, overwrite waits, sidecar unavailable or failed,
+gray-area blockers, checkpoint write failure, validation repair, repeated
+validation diagnostics, post-write state-sync failure, route-refresh failure,
+and completion.
+
 ## Objective And Authority Boundary
 
 `/blu-discuss-phase` must behave like a Blueprint-native thinking partner, not a

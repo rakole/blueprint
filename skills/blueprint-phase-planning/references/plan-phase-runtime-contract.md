@@ -4,6 +4,32 @@ This reference is the rich behavior contract for `/blu-plan-phase`. The command
 manifest should stay thin; the skill should load this file when planning a
 phase so plan authoring preserves Blueprint's retained quality bar.
 
+## Visible Planning Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, model-validation
+authority, checker authority, state-sync authority, routing authority, or user
+confirmation authority defined by this contract.
+
+Visible planning stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve planning target | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | read planning readiness | Read | readiness status, research/UI gates, saved-plan inventory, selected slot, schema source, and read-set freshness |
+| 3 | choose plan action | Decide | add/revise/replace/overwrite decision, blocker, or explicit no-write route |
+| 4 | draft structured plan model | Execute | planner/checker/inline mode, evidence basis, plan id, split posture, and active repair loop when relevant |
+| 5 | persist plan model | Persist | write path/status, validationMode strict, expectedReadSet usage, and next authoring context freshness |
+| 6 | validate plan set | Validate | final scoped validation result, uncovered requirements, dependency or slot diagnostics, and repair outcome |
+| 7 | sync state and hand off | Route | state-sync result, implemented next action, and Downstream Execution Handoff summary |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+readiness blockers, saved-plan add/revise/replace waits, overwrite waits,
+stale read-set repair, planner or checker unavailable fallback, checker
+revision, model validation repair, write rejection, final scoped validation
+failure, state-sync failure, ambiguous routing, and completion.
+
 ## Stage Mapping
 
 ### Resolve

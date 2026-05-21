@@ -145,6 +145,19 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(requiredInputs, /artifact contracts read through MCP/i);
   assert.doesNotMatch(requiredInputs, /docs\//);
   assert.doesNotMatch(requiredInputs, /verify-work-runtime-contract|add-tests-runtime-contract/);
+  assert.match(validateReference, /## Visible Validation Progress/);
+  assert.match(
+    validateReference,
+    /resolve validation phase[\s\S]*read saved execution evidence[\s\S]*classify validation state[\s\S]*analyze coverage and gaps[\s\S]*write verification model[\s\S]*validate saved artifacts[\s\S]*sync state and route/i
+  );
+  assert.match(
+    validateReference,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+coverage authority, validation authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+  );
+  assert.match(
+    validateReference,
+    /Emit exceptional updates for\s+missing summaries, overwrite waits, manual-feedback or UAT-readiness waits,\s+verifier unavailable fallback/i
+  );
   assert.match(skillFile, /State A\/B\/C handling/i);
   assert.match(skillFile, /saved-summary-first, phase-scoped, and MCP-owned/i);
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);

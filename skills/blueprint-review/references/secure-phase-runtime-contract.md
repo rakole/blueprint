@@ -5,6 +5,32 @@ preserves the retained GSD secure-phase behavior in Blueprint-native terms:
 MCP owns deterministic state, the command remains thin, the skill orchestrates,
 and the optional security auditor verifies only declared threat mitigations.
 
+## Visible Security Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, auditor authority,
+threat-register authority, risk-acceptance authority, validation authority, or
+routing authority defined by this contract.
+
+Visible security stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve security phase | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | load saved threat evidence | Read | plan coverage, completed-summary coverage, pending-plan blockers, prior security artifact status, contract source, and authoring schema |
+| 3 | build threat gate | Decide | declared threat count, open/closed/accepted posture, overwrite gate, verify-versus-accept gate, and pending-open-threat state |
+| 4 | verify declared threats | Execute | active threat or threat group, evidence checked, auditor/fallback mode, unregistered flags, and mitigation status |
+| 5 | persist security model | Persist | security model status, report path candidate, accepted-risk rows, open-threat rows, and blocked advancement status |
+| 6 | validate threat register | Validate | model-validation status, threat-count consistency, diagnostics, repair attempt, and final open-threat count |
+| 7 | route after threat closure | Route | next implemented action only when all threats are closed or accepted; otherwise blocked `pending-open-threat` status |
+
+Progress updates must be short boundary updates and should avoid status-only
+ceremony. Emit exceptional updates for missing summaries, pending plans, missing
+or weak threat model evidence, overwrite waits, verify-versus-accept waits,
+auditor unavailable fallback, open threats, accepted-risk decisions, validation
+repair, record rejection, blocked advancement, and completion.
+
 ## Stage Mapping
 
 ### Resolve

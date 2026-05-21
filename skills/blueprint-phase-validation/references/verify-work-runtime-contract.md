@@ -6,6 +6,33 @@ orchestration: MCP owns deterministic state, the command stays thin and
 user-facing, the skill owns workflow policy, and the verifier agent performs
 bounded read-only UAT analysis when a suitable agent is available.
 
+## Visible UAT Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, verifier authority,
+UAT-result authority, checkpoint authority, state-sync authority, routing
+authority, or user confirmation authority defined by this contract.
+
+Visible UAT stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve UAT phase | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | read UAT prerequisites | Read | completed summaries, verification readiness, existing UAT status, effective config, artifact health, and current state |
+| 3 | choose UAT path | Decide | view/resume/update/create/stop choice, overwrite gate, checkpoint posture, verifier/Nyquist mode, and next safe action |
+| 4 | run current UAT test | Execute | active test, expected behavior, saved evidence, user response classification, result counts, and blocked prerequisite or issue detail |
+| 5 | persist UAT checkpoint | Persist | model-validation status, write/reuse status, summaryPaths, checkpoint label, resume state, and artifact path |
+| 6 | reread and validate saved UAT | Validate | post-write UAT read status, artifact validation result, repair attempt, and completion state |
+| 7 | sync state and route | Route | state-sync result, saved UAT status, checkpoint state, review/security gate posture, and implemented next action |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+missing summaries, missing or not-ready verification, malformed saved UAT,
+view/resume/update waits, overwrite waits, per-test no-answer retries,
+review/skip/stop waits, verifier unavailable fallback, model-validation repair,
+write rejection, post-write UAT reread failure, artifact-validation failure,
+state-sync failure, and completion.
+
 ## Stage Mapping
 
 | Stage | Purpose | Required Control Signal |

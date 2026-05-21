@@ -180,9 +180,13 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
 });
 
 test("secure-phase manifest and runtime resource describe the long-running security spine", async () => {
-  const [commandFile, contract] = await Promise.all([
+  const [commandFile, contract, referenceFile] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8"),
-    buildBlueprintCommandRuntimeContractResource("secure-phase")
+    buildBlueprintCommandRuntimeContractResource("secure-phase"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/secure-phase-runtime-contract.md"),
+      "utf8"
+    )
   ]);
 
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
@@ -218,6 +222,19 @@ test("secure-phase manifest and runtime resource describe the long-running secur
   assert.match(
     contract.skillInputs.effective.join("\n"),
     /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/i
+  );
+  assert.match(referenceFile, /## Visible Security Progress/);
+  assert.match(
+    referenceFile,
+    /resolve security phase[\s\S]*load saved threat evidence[\s\S]*build threat gate[\s\S]*verify declared threats[\s\S]*persist security model[\s\S]*validate threat register[\s\S]*route after threat closure/i
+  );
+  assert.match(
+    referenceFile,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, auditor authority,\s+threat-register authority, risk-acceptance authority, validation authority, or\s+routing authority/i
+  );
+  assert.match(
+    referenceFile,
+    /Emit exceptional updates for missing summaries, pending plans, missing\s+or weak threat model evidence, overwrite waits/i
   );
 });
 

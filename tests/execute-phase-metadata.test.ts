@@ -153,6 +153,10 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
 
   assertMatchesAll(runtimeContract, [
     /This reference is the rich behavior contract for `\/blu-execute-phase`/i,
+    /## Visible Execution Progress/,
+    /resolve execution phase[\s\S]*select executable targets[\s\S]*confirm execution mode[\s\S]*execute selected plan work[\s\S]*write execution summary[\s\S]*run post-execution checks[\s\S]*sync state and route/i,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, executor authority,\s+verification authority, state-sync authority, routing authority, or user\s+confirmation authority/i,
+    /Emit exceptional updates for[\s\S]*missing or stale plans, lower-wave blockers, external-service waits, overwrite\s+waits, overlapping write ownership/i,
     /blueprint_phase_execution_targets/,
     /gapClosurePlans/,
     /lowerWavePendingPlans/,

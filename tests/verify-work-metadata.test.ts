@@ -127,6 +127,19 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(requiredInputs, /artifact contracts read through MCP/i);
   assert.doesNotMatch(requiredInputs, /docs\//);
   assert.doesNotMatch(requiredInputs, /add-tests-runtime-contract|validate-phase-runtime-contract/);
+  assert.match(runtimeContractFile, /## Visible UAT Progress/);
+  assert.match(
+    runtimeContractFile,
+    /resolve UAT phase[\s\S]*read UAT prerequisites[\s\S]*choose UAT path[\s\S]*run current UAT test[\s\S]*persist UAT checkpoint[\s\S]*reread and validate saved UAT[\s\S]*sync state and route/i
+  );
+  assert.match(
+    runtimeContractFile,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, verifier authority,\s+UAT-result authority, checkpoint authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+  );
+  assert.match(
+    runtimeContractFile,
+    /Emit exceptional updates for\s+missing summaries, missing or not-ready verification, malformed saved UAT,\s+view\/resume\/update waits/i
+  );
   assert.match(runtimeContractFile, /Build a concrete UAT queue before asking the user anything/i);
   assert.match(runtimeContractFile, /Present one test at a time/i);
   assert.match(runtimeContractFile, /use `ask_user` for the first-pass result on each test/i);
