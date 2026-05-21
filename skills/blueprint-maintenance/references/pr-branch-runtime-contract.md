@@ -77,8 +77,9 @@ This reference is the detailed `/blu-pr-branch` workflow contract. The command m
 
 ## Subagent And Fallback Rules
 
-- Default path: no subagent. The parent command owns git preflight, commit classification, confirmation, replay, verification, report authoring, and persistence.
-- Capability-gated read-only sidecar: when a suitable code-analysis subagent is available and the user asks for extra risk review before confirmation, it may inspect only the candidate included/excluded file list and return advisory notes. It must not classify commits, run git mutation, author the final report, or call Blueprint persistence tools.
+- Current default path: no optional agent. The parent command owns git preflight, commit classification, confirmation, replay, verification, report authoring, and persistence.
+- If a future `/blu-pr-branch` command contract explicitly names a code-analysis agent, delegate only by calling that same-named Gemini CLI agent tool with a bounded review-branch risk packet when effective config allows optional agents, the tool is available in the current host session, and the user asks for extra risk review before confirmation. Do not read, inline, or load any separate agent source before delegation.
+- Any future read-only sidecar may inspect only the candidate included/excluded file list and return advisory notes. It must not classify commits, run git mutation, author the final report, or call Blueprint persistence tools.
 - Browser, web-search-only, shell-only, and generic agents are forbidden as substitutes for repo/workflow analysis.
 - No-subagent fallback is the canonical behavior: process one commit at a time, keep a compact carry-forward ledger, and summarize included/excluded counts after each stage.
 
