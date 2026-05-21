@@ -87,10 +87,15 @@ planning, or unrelated repo changes.
 
 ## Optional Agent
 
-Use `blueprint-debugger` only for bounded hypothesis testing, reproduction, log
-review, and confidence-rated diagnosis when the investigation is more than a
-quick local inspection. Do not substitute browser-only, web-search-only,
-shell-only, or generic helper agents for this Blueprint debugging role.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Call the
+same-named `blueprint-debugger` Gemini agent tool with a bounded diagnosis
+packet only when the active `/blu-debug` command contract permits it, effective
+config does not disable `workflow.subagents`, the tool is available in the
+current host session, and the investigation benefits from bounded hypothesis
+testing, reproduction, log review, or confidence-rated diagnosis. Do not
+substitute browser-only, web-search-only, shell-only, or generic helper agents
+for this Blueprint debugging role.
 
 ## No-Subagent Fallback
 

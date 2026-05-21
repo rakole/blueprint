@@ -97,6 +97,14 @@ test("debug runtime-owned metadata, skill, and local contract capture the explic
   assert.match(skillFile, /blueprint_artifact_report_write/);
   assert.match(skillFile, /blueprint_artifact_mutate_index/);
   assert.match(skillFile, /blueprint_state_update/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool `blueprint-debugger`/);
+  assert.match(skillFile, /active `\/blu-debug` command contract permits `blueprint-debugger`/);
+  assert.match(skillFile, /same-named Gemini agent tool is available/i);
+  assert.match(skillFile, /bounded diagnosis packet/i);
+  assert.match(skillFile, /references\/debug-runtime-contract\.md/);
+  assert.doesNotMatch(skillFile, /subagent_type/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
+  assert.doesNotMatch(skillFile, /agents\/blueprint-debugger/i);
   assert.match(skillFile, /debug-latest/);
   assert.match(skillFile, /Treat `--diagnose` as a hard diagnose-only boundary/i);
   assert.match(
@@ -115,6 +123,13 @@ test("debug runtime-owned metadata, skill, and local contract capture the explic
   assert.match(runtimeContract, /returned `path` as\s+authoritative/i);
   assert.match(runtimeContract, /explicit user ask or confirmation/i);
   assert.match(runtimeContract, /session-local visibility only/i);
+  assert.match(runtimeContract, /Gemini CLI exposes an enabled delegated agent as a same-named tool/i);
+  assert.match(runtimeContract, /Do not read,\s+inline, or load any separate agent source before delegation/i);
+  assert.match(runtimeContract, /same-named `blueprint-debugger` Gemini agent tool with a bounded diagnosis\s+packet/i);
+  assert.match(runtimeContract, /active `\/blu-debug` command contract permits it/i);
+  assert.match(runtimeContract, /tool is available in the\s+current host session/i);
+  assert.doesNotMatch(runtimeContract, /subagent_type/i);
+  assert.doesNotMatch(runtimeContract, /agents\/blueprint-debugger/i);
   assert.match(runtimeContract, /\/blu-quick/);
   assert.match(runtimeContract, /\/blu-plan-phase/);
   assert.match(runtimeContract, /\/blu-validate-phase/);
