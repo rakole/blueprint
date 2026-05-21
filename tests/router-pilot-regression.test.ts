@@ -75,6 +75,8 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.match(routerSkill, /waiting state/i);
   assert.match(routerSkill, /pending gate|missing artifact, approval gate/i);
   assert.match(routerSkill, /next safe action/i);
+  assert.match(routerSkill, /Router commands have no optional agent delegation path today/);
+  assert.match(routerSkill, /do not read, inline, or load separate agent source/);
   assert.doesNotMatch(routerSkill, /## Required Inputs/);
 });
 
