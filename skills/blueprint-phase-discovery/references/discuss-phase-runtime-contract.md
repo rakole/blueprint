@@ -190,12 +190,11 @@ The classification controls the next gate:
 
 ## Checkpoint And Resume
 
-6. Write or refresh the structured checkpoint with the v2 checkpoint fields:
-   `schemaVersion: 2`, `ownerCommand: "/blu-discuss-phase"`, top-level
-   `mode: "discuss"`, `progress`, `areaQueue`, `carryForward`, and `readSet`.
-   Do not write compatibility summary fields such as `completedAreas`,
-   `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, or
-   `resumeMeta`.
+Write or refresh only structured checkpoint v2: `schemaVersion: 2`,
+`ownerCommand: "/blu-discuss-phase"`, top-level `mode: "discuss"`,
+`progress`, `areaQueue`, `carryForward`, and `readSet`. Do not write
+compatibility summary fields such as `completedAreas`, `remainingAreas`,
+`decisions`, `deferredIdeas`, `canonicalReferences`, or `resumeMeta`.
 
 ### Checkpoint Persistence Frequency
 
@@ -207,11 +206,9 @@ transcript.
 
 ### Area States
 
-Each gray area in the checkpoint progresses through these states:
-`questioning`, `assumed`, `decided`, `blocked`, `needs-revisit`, `unseen`.
-
-Resume must not re-ask an area whose `resolutionCriterion` was already met
-unless new evidence contradicts the saved decision.
+Area states are `questioning`, `assumed`, `decided`, `blocked`,
+`needs-revisit`, and `unseen`. Resume must not re-ask an area whose
+`resolutionCriterion` was already met unless new evidence contradicts it.
 
 ### Checkpoint V2 Shape
 
@@ -243,47 +240,31 @@ checkpoint v2 -> identity + progress
   readSet[path,fingerprint|updatedAt]
 ```
 
-### Carry-Forward Packet
-
-Before asking the next question or handing off to a sidecar, build
-`carryForward`: `phaseBoundary`, `activeArea`, `completedDecisions`,
-`openQuestions`, `deferredIdeas`, `canonicalReferences`, `evidenceRefs`,
-`contradictions`, `omittedDetails`, and `doNotInferBeyond`. Store the compact
-`carryForward` in the checkpoint. Copy the final version into
-`XX-DISCUSSION-LOG.md` when the session had more than one area,
-contradictions, assumptions, or deferred ideas.
-
-### Deterministic Resume Ordering
+Before each next question or sidecar handoff, keep compact `carryForward` in
+the checkpoint: phase boundary, active area, completed decisions, open
+questions, deferred ideas, canonical references, evidence refs,
+contradictions, omitted details, and do-not-infer-beyond notes. Copy the final
+version into `XX-DISCUSSION-LOG.md` only when the log triggers below apply.
 
 On resume, read with `expectedOwnerCommand: "/blu-discuss-phase"` and
 `expectedMode: "discuss"`. If `safeToResume` is false, ask resume-versus-
-discard using the warnings. If `safeToResume` is true, pick the first area
-with state `questioning`, then `blocked`, then `needs-revisit`, then the
-first `unseen` area. Never reconstruct the queue from legacy summary prose.
+discard using the warnings. If true, pick the first area in this order:
+`questioning`, `blocked`, `needs-revisit`, then `unseen`. Never reconstruct
+the queue from legacy summary prose.
 
-### Stale-Input Detection
+`readSet` lists roadmap/context/config/plan-index/artifact-contract inputs
+with path plus fingerprint or `updatedAt` when available. Changed inputs route
+affected areas to `needs-revisit`.
 
-`readSet` should list the roadmap/context/config/plan-index artifacts used to
-form the queue, with path plus lightweight fingerprint or `updatedAt` where
-available. On resume, warn when the read set changed and route the affected
-area to `needs-revisit` instead of silently continuing.
-
-7. Delete the checkpoint only after the context write, optional discussion-log
-   write, synced state update, and follow-up state load have all succeeded.
-   Pass `expectedOwnerCommand: "/blu-discuss-phase"` and
-   `expectedMode: "discuss"` so cleanup cannot delete another command's shared
-   checkpoint. If any finalization step fails, leave the checkpoint in place
-   and report the exact continuation blocker.
-
-If validation cannot be repaired in the current run, leave the checkpoint in
-place and report the exact blocker plus the next safe continuation action.
-
-### Checkpoint Deletion And Audit Trail
-
-When `blueprint_phase_checkpoint_delete` succeeds after finalization, the
-final response and optional discussion log should say which areas were
-decided, which were assumed, which remain open, and where those facts landed
-in `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md`.
+Delete the checkpoint only after context write, optional discussion-log write,
+synced state update, and follow-up state load all succeed. Pass
+`expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"` so
+cleanup cannot delete another command's checkpoint. If context write,
+discussion-log write, state update, state load, validation repair, or guarded
+checkpoint delete finalization fails, leave the checkpoint in place and report
+the exact continuation blocker. After successful delete, the final response
+and optional log should say which areas were decided, assumed, or left open
+and where those facts landed in `XX-CONTEXT.md` or `XX-DISCUSSION-LOG.md`.
 
 ## Gray Area Identification
 
@@ -597,10 +578,11 @@ look next. The final artifact must be renderer output and must not preserve
 literal scaffold headings, placeholder bullets, example filler, or "replace me"
 instructions.
 
-Starter-handoff packet fields such as `Source refs`, `Deferred risks`, `Open
+Starter-handoff packet labels such as `Source refs`, `Deferred risks`, `Open
 gray areas`, `researchBrief`, `uiBrief`, `planBrief`, `planInventory`, or
-`routingGates` are carry-forward inputs, not final headings. Map their
-substance into canonical sections and reject verbatim packet copy.
+`routingGates` are intermediate labels only, not required fields or final
+headings. Map their substance into existing `phase.context` fields and reject
+verbatim packet copy.
 
 Write `XX-DISCUSSION-LOG.md` when it adds durable value beyond the context,
 especially for multi-area sessions, assumptions-mode corrections, advisor-style
@@ -639,47 +621,47 @@ When assumptions mode was used, include:
 Presented assumption, user correction, evidence changed, final disposition
 (`accepted`, `corrected`, or `rejected`), and downstream impact.
 
-## Downstream Handoff Packet
+## Downstream Context Mapping
 
-Before final validation and routing, derive a compact handoff packet from the
-saved context model, checkpoint decisions, plan index, effective config, and
-artifact inventory. Persist its substance inside existing `phase.context`
-model sections; do not create a new artifact or pass the raw conversation
-transcript downstream.
+Before final validation and routing, turn downstream-relevant substance from
+the saved context model, checkpoint decisions, plan index, effective config,
+and artifact inventory into existing `phase.context` fields. Do not create a
+handoff schema field, new artifact, runtime behavior, or pass the raw
+conversation transcript downstream.
 
-### Required Packet Fields
+Use this mapping:
 
-- `researchBrief`: known unknowns, evidence needed, source policy, unblocked
-  decision, stop condition, evidence refs, and unresolved research questions.
-- `uiBrief`: UI applicability, users/journeys/surfaces, constraints, and any
-  no-UI skip-rationale candidate. This is not a completed `XX-UI-SPEC.md`.
-- `planBrief`: initial/desired state, dependencies, forbidden moves,
-  validation oracle, non-goals, constraints, accepted assumptions, rejected
-  options, and planning risks.
-- `planInventory`: plan IDs/paths, dependency gaps, stale-plan warning, and
-  whether `/blu-plan-phase` must be rerun.
-- `routingGates`: selected phase, research/UI booleans, artifact statuses,
-  refreshed next safe action, and `/blu-progress` fallback.
+- research unknowns, evidence needs, source policy, stop conditions, and
+  unresolved research questions -> `openQuestions`, `dependencies`, and
+  `canonicalReferences`
+- UI applicability, users, journeys, surfaces, constraints, and no-UI skip
+  rationale candidates -> `specificIdeas`, `implementationDecisions`,
+  `openQuestions`, `deferredIdeas`, and `phaseBoundary` where present
+- initial/desired state, forbidden moves, validation oracle, non-goals,
+  accepted assumptions, rejected options, and planning risks ->
+  `implementationDecisions`, `dependencies`, `openQuestions`,
+  `deferredIdeas`, and `existingCodeInsights`
+- saved plan IDs/paths, dependency gaps, stale-plan warning, and whether
+  `/blu-plan-phase` must be rerun -> `dependencies`, `canonicalReferences`,
+  and `openQuestions`
+- selected phase, research/UI booleans, artifact statuses, refreshed next safe
+  action, and `/blu-progress` fallback -> final response routing text only,
+  plus `phaseBoundary` or `dependencies` when they are phase-context facts
 
 ### Stale-Plan Warning
 
 When `blueprint_phase_plan_index.plans.length > 0`, include this warning
-in the handoff and the final response:
+in `dependencies` or `openQuestions` and the final response:
 
 > Existing saved plans were not rewritten by this refreshed discussion;
 > rerun `/blu-plan-phase <selectedPhase>` before trusting plan content that
 > depends on the new context.
 
-### UI Handoff Applicability
-
-`uiBrief.applicability` should be one of:
-- `needs-ui-contract` - UI work is needed
-- `skip-rationale-candidate` - discuss captured a skip rationale candidate
-  but `/blu-ui-phase` must still confirm or formalize it
-- `unknown` - UI applicability not yet determined
-
-Keep `planBrief` planning-oriented. Unresolved high-impact ambiguity stays in
-`openQuestions` or `researchBrief`, not as a silent plan premise.
+For UI applicability, record one of these meanings in the relevant existing
+field: UI work is needed; discuss captured a skip-rationale candidate but
+`/blu-ui-phase` must still confirm or formalize it; or UI applicability is
+unknown. Unresolved high-impact ambiguity stays in `openQuestions` or
+`dependencies`, not as a silent plan premise.
 
 ## Validation And Repair
 
@@ -742,9 +724,11 @@ Final response shape:
 - **Saved**: context path, optional discussion-log path, reused/replaced
   status.
 - **Checkpoint**: deleted, retained with reason, or no checkpoint.
-- **Handoff**: one-line summary of `researchBrief`, `uiBrief`, `planBrief`,
-  and `planInventory`, including the stale-plan warning when plans already
-  exist.
+- **Context carry-forward**: one-line summary of downstream-relevant entries
+  saved in `implementationDecisions`, `dependencies`, `openQuestions`,
+  `deferredIdeas`, `canonicalReferences`, `specificIdeas`,
+  `existingCodeInsights`, and `phaseBoundary` where present, including the
+  stale-plan warning when plans already exist.
 - **Next safe action**: exact refreshed `derivedStatus.nextAction` or
   `/blu-progress` fallback. Do not include secondary runnable routes.
 

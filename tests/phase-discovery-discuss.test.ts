@@ -64,9 +64,9 @@ const discussRuntimeBundleCurrentBudget = {
   // Includes the deliberate list-phase-assumptions config parity line in the shared skill.
   skillBytes: 21077,
   // Includes explicit phaseSelection recovery wording to avoid redundant locate fallback calls.
-  runtimeContractBytes: 37567,
+  runtimeContractBytes: 37362,
   // Includes the first-pass compact discuss launcher while keeping the runtime contract rich.
-  totalBytes: 66647
+  totalBytes: 66442
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -1017,17 +1017,32 @@ test("context readiness ledger and discussion log triggers are present", () => {
   ]);
 });
 
-test("downstream handoff packet is required", () => {
+test("downstream handoff substance maps to existing context fields", () => {
   const contract = readRepoText(discussRuntimeContractPath);
 
   assertIncludesAll(contract, [
-    "Downstream Handoff Packet",
-    "researchBrief",
-    "uiBrief",
-    "planBrief",
-    "planInventory",
-    "routingGates"
+    "Downstream Context Mapping",
+    "intermediate labels only",
+    "Do not create a",
+    "handoff schema field",
+    "implementationDecisions",
+    "dependencies",
+    "openQuestions",
+    "deferredIdeas",
+    "canonicalReferences",
+    "specificIdeas",
+    "existingCodeInsights",
+    "phaseBoundary"
   ]);
+  assert.doesNotMatch(contract, /### Required Packet Fields/);
+  assert.doesNotMatch(
+    contract,
+    /Final response shape:[\s\S]*researchBrief[\s\S]*uiBrief[\s\S]*planBrief[\s\S]*planInventory/i
+  );
+  assert.match(
+    contract,
+    /saved plan IDs\/paths[\s\S]*`dependencies`[\s\S]*`canonicalReferences`[\s\S]*`openQuestions`/i
+  );
 });
 
 test("final routing copies refreshed state and forbids alternate routes", () => {
