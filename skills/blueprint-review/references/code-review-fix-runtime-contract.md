@@ -6,6 +6,32 @@ terms: MCP owns Blueprint state, the command stays thin, the skill orchestrates,
 agents do bounded analysis only, review-fix persistence is schema-first and
 model-only, and repo mutation remains explicit and scoped.
 
+## Visible Review-Fix Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, reviewer authority,
+repo-mutation authority, state-sync authority, routing authority, or user
+confirmation authority defined by this contract.
+
+Visible review-fix stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve remediation phase | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | load saved findings and context | Read | source review path, finding count, follow-up baseline, existing review-fix status, selected targetIds posture, and authoring schema |
+| 3 | confirm remediation targets | Decide | selected finding ids, `--all`/bounded `--auto`/explicit mode, overwrite gate, defer/skip posture, and reviewer/fallback mode |
+| 4 | remediate selected finding | Execute | active target id, implicated files, fix/defer/skip decision, repo-change status, and verification status |
+| 5 | author review-fix model | Persist | lifecycle status, fixed/deferred/blocked counts, report path candidate, and same-targetIds persistence posture |
+| 6 | validate remediation evidence | Validate | model-validation status, verification gaps, diagnostics, repair attempt, and partial/blocked reason |
+| 7 | sync state and route | Route | state-sync result, implemented next action, remaining gaps, and whether validation or tests should run next |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+missing saved review, no actionable findings, finding-selection waits,
+overwrite waits, stale evidence, broader-remediation handoff, reviewer
+unavailable fallback, verification failure, model-validation repair, record
+rejection, state-sync failure, ambiguous routing, and completion.
+
 ## Stage Mapping
 
 ### Resolve

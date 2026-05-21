@@ -4,6 +4,32 @@ This file is the rich behavior contract for `/blu-ui-phase`. The command
 manifest stays thin, the skill owns orchestration, and MCP tools own all
 deterministic state reads and writes.
 
+## Visible UI Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, designer/checker
+authority, contract-versus-skip authority, state-sync authority, routing
+authority, or user confirmation authority defined by this contract.
+
+Visible UI stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve UI phase | Resolve | selected phase, research readiness, existing UI-spec posture, and config-driven contract/skip posture |
+| 2 | read branch evidence | Read | effective config, existing artifact status, context/research bodies when needed, contract source for UI-contract mode, and current route posture |
+| 3 | choose UI outcome | Decide | contract-versus-skip decision, UI-safety rationale gate, overwrite gate, checker gate, and pending gate |
+| 4 | draft UI artifact | Execute | skip-rationale or UI-contract mode, designer/checker/fallback mode, six-dimension coverage, and active revision scope |
+| 5 | persist single UI spec | Persist | skip-write or artifact-write path, scaffold use only in contract mode, saved path, and single-artifact status |
+| 6 | validate UI artifact | Validate | placeholder/rationale/checker validation status, MCP validation repair, and normalized authoring-template status when contract mode applies |
+| 7 | sync state and route | Route | state-sync result, refreshed next implemented action, command-catalog proof when needed, and plan-phase/progress handoff |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+phase ambiguity, contract-versus-skip waits, UI-safety rationale waits,
+overwrite waits, checker-requested revisions, designer/checker unavailable
+fallback, invalid skip rationale, placeholder or validation repair, state-sync
+failure, route-refresh failure, and completion.
+
 ## Shared Stage Mapping
 
 ### Resolve

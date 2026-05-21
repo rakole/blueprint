@@ -10,6 +10,32 @@ This file is the canonical detailed contract for `validate-phase`. The skill
 bundle, command manifest, and command doc should point here for detailed stage
 mapping and retry behavior instead of restating the full flow.
 
+## Visible Validation Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, verifier authority,
+coverage authority, validation authority, state-sync authority, routing
+authority, or user confirmation authority defined by this contract.
+
+Visible validation stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve validation phase | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | read saved execution evidence | Read | summary index, completed summary count, existing verification state, effective config, artifact health, and current state |
+| 3 | classify validation state | Decide | State A/B/C, overwrite gate, verifier/Nyquist mode, missing evidence, and pre-write next action |
+| 4 | analyze coverage and gaps | Execute | requirement/task coverage posture, gap classes, verifier/fallback mode, manual-only or deferred rows, and repair route candidates |
+| 5 | write verification model | Persist | authoring-context status, model-validation status, write/reuse status, summaryPaths, and artifact path |
+| 6 | validate saved artifacts | Validate | post-write artifact validation result, suggested repairs, retry status, and gate-state consistency |
+| 7 | sync state and route | Route | state-sync result, saved gate state, readiness, and implemented next action |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+missing summaries, overwrite waits, manual-feedback or UAT-readiness waits,
+verifier unavailable fallback, contradictory evidence, model-validation repair,
+write rejection, post-write artifact-validation repair, state-sync failure,
+ambiguous routing, and completion.
+
 ## Stage Mapping
 
 | Stage | Purpose | Required Control Signal |

@@ -181,6 +181,20 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
     "utf8"
   );
 
+  assert.match(referenceFile, /## Visible Review-Fix Progress/);
+  assert.match(
+    referenceFile,
+    /resolve remediation phase[\s\S]*load saved findings and context[\s\S]*confirm remediation targets[\s\S]*remediate selected finding[\s\S]*author review-fix model[\s\S]*validate remediation evidence[\s\S]*sync state and route/i
+  );
+  assert.match(
+    referenceFile,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+repo-mutation authority, state-sync authority, routing authority, or user\s+confirmation authority/i
+  );
+  assert.match(
+    referenceFile,
+    /Emit exceptional updates for\s+missing saved review, no actionable findings, finding-selection waits,\s+overwrite waits/i
+  );
+
   for (const stage of ["Resolve", "Read", "Decide", "Execute", "Persist", "Validate", "Route"]) {
     assert.match(referenceFile, new RegExp(`### ${stage}`));
   }

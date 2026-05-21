@@ -10,6 +10,33 @@ Use `skills/blueprint-phase-execution/references/long-running-execution-profile.
 for the shared stage vocabulary, in-flight status fields, and session-local
 helper guidance.
 
+## Visible Execution Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, executor authority,
+verification authority, state-sync authority, routing authority, or user
+confirmation authority defined by this contract.
+
+Visible execution stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve execution phase | Resolve | selected phase, phase directory, or recovery blocker |
+| 2 | select executable targets | Read | selected plans, lower-wave blockers, gap-only scope, existing summaries, conflicts, and external-service preflight |
+| 3 | confirm execution mode | Decide | overwrite posture, overlap posture, external-service confirmation gate, parallel/sequential mode, and subagent/fallback mode |
+| 4 | execute selected plan work | Execute | active plan or task group, write ownership, verification target, blocker, and repair attempt count |
+| 5 | write execution summary | Persist | summary path/status, `COMPLETED`/`PARTIAL`/`BLOCKED` truth state, linked plan, and durable carry-forward evidence |
+| 6 | run post-execution checks | Validate | summary index, artifact validation result, failed checks, lower-wave debt, partial/blocked status, and state-sync readiness |
+| 7 | sync state and route | Route | state-sync result, implemented next action, remaining execution debt, and validation handoff posture |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+missing or stale plans, lower-wave blockers, external-service waits, overwrite
+waits, overlapping write ownership, executor unavailable or unsafe fallback,
+verification repair, failed checks requiring `PARTIAL` or `BLOCKED`,
+summary-validation repair, post-write artifact-validation failure, state-sync
+failure, ambiguous routing, and completion.
+
 ## Stage Mapping
 
 ### Resolve

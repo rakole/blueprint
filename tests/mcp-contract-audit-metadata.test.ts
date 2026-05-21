@@ -236,6 +236,15 @@ test("discovery contracts stay explicit across discuss, research, and ui command
   assert.match(discussRuntimeContract, /mapped codebase summaries/i);
   assert.match(discussRuntimeContract, /Assumptions Mode/i);
   assert.match(discussRuntimeContract, /checkpoint-per-area/i);
+  assert.match(discussRuntimeContract, /## Visible Discuss Progress/);
+  assert.match(
+    discussRuntimeContract,
+    /resolve selected phase[\s\S]*build discovery evidence packet[\s\S]*classify discovery gates[\s\S]*work current gray area[\s\S]*checkpoint area progress[\s\S]*write context and optional log[\s\S]*sync state and route/i
+  );
+  assert.match(
+    discussRuntimeContract,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, checkpoint authority,\s+state-sync authority, routing authority, sidecar authority, or user-decision\s+authority/i
+  );
   assert.match(discussRuntimeContract, /state_update` with `base: "synced"/i);
   assert.match(discussDoc, /## Artifact Persistence Contract/);
   assert.match(discussDoc, /resolved numeric phase reference only/i);

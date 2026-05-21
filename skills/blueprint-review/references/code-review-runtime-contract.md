@@ -52,6 +52,32 @@ Map `/blu-code-review` to those stages:
 7. `Route`: summarize findings or `positiveSignals` pass evidence and end with
    the next safe implemented command.
 
+## Visible Code-Review Progress
+
+For non-trivial runs, keep progress visible through short boundary updates.
+Gemini-native progress helpers are presentation mirrors only. They do not
+expand the MCP tool allowlist, persistence authority, reviewer authority,
+scope authority, validation authority, routing authority, or user confirmation
+authority defined by this contract.
+
+Visible code-review stages:
+
+| Step | User-visible wording | Shared stage | Required visibility |
+|------|----------------------|--------------|---------------------|
+| 1 | resolve review phase | Resolve | selected phase, depth input, explicit file input posture, or recovery blocker |
+| 2 | load review contract and scope | Read | contract source, scope source, file count, evidence inventory, existing review status, and authoring schema |
+| 3 | confirm review gates | Decide | workflow enablement, broad/deep scope confirmation, overwrite gate, reviewer/fallback mode, and pending gate |
+| 4 | inspect scoped files | Execute | active file group, selected depth, saved evidence used, rolling finding counts or severity buckets, and unresolved uncertainty |
+| 5 | validate review model | Validate | model-validation status, schema/task diagnostics, repair attempt, and severity consistency result |
+| 6 | persist review artifact | Persist | record status, report path, scope provenance, follow-up count, and MCP-rendered artifact status |
+| 7 | route follow-up | Route | primary next implemented action, secondary queued code-review-fix recommendation when security still routes first, and pass/follow-up posture |
+
+Progress updates must be short boundary updates. Emit exceptional updates for
+invalid phase resolution, disabled review, invalid explicit file scope,
+scope-confirmation waits, overwrite waits, reviewer unavailable fallback,
+deep-scope narrowing recommendations, validation repair, record rejection,
+ambiguous next action, and completion.
+
 ## Required MCP Calls
 
 Call these tools in this order unless the command must stop early:

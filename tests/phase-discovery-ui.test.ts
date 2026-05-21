@@ -338,6 +338,19 @@ test("ui-phase command references registered tools and single-artifact UI handli
   assert.match(uiRuntimeRow, /no-subagent section-by-section fallback/i);
   assert.match(uiRuntimeRow, /browser\/web-search\/shell-only or generic substitute agents/i);
   assert.match(uiRuntimeRow, /repair invalid writes/i);
+  assert.match(runtimeContract, /## Visible UI Progress/);
+  assert.match(
+    runtimeContract,
+    /resolve UI phase[\s\S]*read branch evidence[\s\S]*choose UI outcome[\s\S]*draft UI artifact[\s\S]*persist single UI spec[\s\S]*validate UI artifact[\s\S]*sync state and route/i
+  );
+  assert.match(
+    runtimeContract,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, designer\/checker\s+authority, contract-versus-skip authority, state-sync authority, routing\s+authority, or user confirmation authority/i
+  );
+  assert.match(
+    runtimeContract,
+    /Emit exceptional updates for\s+phase ambiguity, contract-versus-skip waits, UI-safety rationale waits,\s+overwrite waits/i
+  );
   assert.match(runtimeContract, /## Shared Stage Mapping/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_ui_skip_write/);

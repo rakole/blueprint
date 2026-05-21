@@ -144,6 +144,13 @@ test("plan-phase runtime contract owns detailed behavior and fresh-read semantic
   );
 
   assertIncludesAll(runtimeContract, [
+    "## Visible Planning Progress",
+    "read planning readiness",
+    "choose plan action",
+    "draft structured plan model",
+    "persist plan model",
+    "validate plan set",
+    "sync state and hand off",
     "## Stage Mapping",
     "### Resolve",
     "### Read",
@@ -175,6 +182,14 @@ test("plan-phase runtime contract owns detailed behavior and fresh-read semantic
     "saved plan paths/hashes",
     "read-only `read_file` for supplied plan paths"
   ]);
+  assert.match(
+    runtimeContract,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, model-validation\s+authority, checker authority, state-sync authority, routing authority, or user\s+confirmation authority/i
+  );
+  assert.match(
+    runtimeContract,
+    /Emit exceptional updates for\s+readiness blockers, saved-plan add\/revise\/replace waits, overwrite waits,\s+stale read-set repair/i
+  );
 
   assert.doesNotMatch(runtimeContract, /fresh readiness or authoring packet/);
   assert.doesNotMatch(runtimeContract, /GSD's retained quality bar/);

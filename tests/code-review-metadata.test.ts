@@ -100,6 +100,19 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   );
 
   assert.match(runtimeContract, /## Required MCP Calls/);
+  assert.match(runtimeContract, /## Visible Code-Review Progress/);
+  assert.match(
+    runtimeContract,
+    /resolve review phase[\s\S]*load review contract and scope[\s\S]*confirm review gates[\s\S]*inspect scoped files[\s\S]*validate review model[\s\S]*persist review artifact[\s\S]*route follow-up/i
+  );
+  assert.match(
+    runtimeContract,
+    /Gemini-native progress helpers are presentation mirrors only[\s\S]*do not\s+expand the MCP tool allowlist, persistence authority, reviewer authority,\s+scope authority, validation authority, routing authority, or user confirmation\s+authority/i
+  );
+  assert.match(
+    runtimeContract,
+    /Emit exceptional updates for\s+invalid phase resolution, disabled review, invalid explicit file scope,\s+scope-confirmation waits/i
+  );
   assert.match(runtimeContract, /mcp_blueprint_blueprint_phase_locate/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(runtimeContract, /mcp_blueprint_blueprint_review_scope/);
