@@ -31,7 +31,8 @@ test("execute-phase manifest stays thin while keeping the core execution invaria
   );
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /`update_topic` tool plus `write_todos`/);
-  assert.match(commandFile, /`blueprint-executor` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-executor`/);
+  assert.match(commandFile, /bounded per-plan task packet/);
 
   const requiredTools = [
     "blueprint_phase_locate",
@@ -176,6 +177,8 @@ test("execute-phase runtime contract carries the rich execution sequencing and c
     /base: "synced"/,
     /summary-backed carry-forward evidence/i,
     /one-plan-at-a-time\s+inline execution/i,
+    /same-named\s+`blueprint-executor` tool/i,
+    /Do not read, inline, or load separate agent source/i,
     /phase-level completion claim/i,
     /external service/i,
     /\/blu-validate-phase/,
