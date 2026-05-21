@@ -619,6 +619,7 @@ const DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
 const IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
 const IMPACT_REPORT_ROOT = ".blueprint/impact";
 const IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
+const RUNTIME_REFERENCE_DOC_PATH = "docs/RUNTIME-REFERENCE.md";
 const GIT_COMMAND_TIMEOUT_MS = 15_000;
 const CODEOWNERS_CANDIDATES = [
   "CODEOWNERS",
@@ -4079,6 +4080,61 @@ function expectedSkillPath(entry: CommandCatalogEntryLike): string | null {
   return primarySkill ? `skills/${primarySkill}/SKILL.md` : null;
 }
 
+function stripPathFragment(filePath: string): string {
+  const hashIndex = filePath.indexOf("#");
+
+  return hashIndex >= 0 ? filePath.slice(0, hashIndex) : filePath;
+}
+
+function extractRuntimeReferencePaths(text: string): string[] {
+  return [...text.matchAll(/docs\/RUNTIME-REFERENCE\.md(?:#[A-Za-z0-9._-]+)?/gu)]
+    .map((match) => match[0]);
+}
+
+function collectCommandSubstratePaths(
+  commandName: string,
+  entry: CommandCatalogEntryLike
+): string[] {
+  const blockedBy = extractBlockedBy(entry);
+  const candidates = [
+    stringValue(entry.specPath),
+    pathFromBlockedBy(blockedBy, "Missing command spec: "),
+    pathFromBlockedBy(blockedBy, "Missing locked command spec: "),
+    expectedCommandSpecPath(commandName),
+    stringValue(entry.manifestPath),
+    pathFromBlockedBy(blockedBy, "Missing command manifest: "),
+    expectedCommandManifestPath(commandName),
+    stringValue(entry.skillPath),
+    pathFromBlockedBy(blockedBy, "Missing primary skill: "),
+    expectedSkillPath(entry)
+  ].filter((value): value is string => value !== null);
+
+  return uniqueSorted(candidates.flatMap((value) => {
+    const normalized = stripPathFragment(value);
+
+    return normalized === value ? [value] : [value, normalized];
+  }));
+}
+
+function commandSubstrateInScope(
+  scopedFiles: Set<string>,
+  commandName: string,
+  entry: CommandCatalogEntryLike
+): boolean {
+  if (
+    scopedFiles.has("src/mcp/command-runtime-metadata.ts") ||
+    scopedFiles.has("docs/COMMAND-CATALOG.md") ||
+    scopedFiles.has(RUNTIME_REFERENCE_DOC_PATH) ||
+    scopedFiles.has("src/mcp/tools/project.ts")
+  ) {
+    return true;
+  }
+
+  return collectCommandSubstratePaths(commandName, entry).some((candidate) =>
+    scopedFiles.has(candidate)
+  );
+}
+
 function registeredRuntimeToolNames(runtime: Record<string, unknown> | null): Set<string> | null {
   if (!runtime) {
     return null;
@@ -4095,7 +4151,7 @@ function addCommandSubstrateFinding(
   evidence: ImpactEvidenceRecord[],
   commandName: string,
   entry: CommandCatalogEntryLike,
-  asset: "spec" | "manifest" | "skill" | "required-tools",
+  asset: "spec" | "manifest" | "skill" | "required-tools" | "runtime-reference",
   impactedFiles: string[],
   requiredActions: string[],
   extraData: Record<string, unknown> = {}
@@ -4121,7 +4177,8 @@ function addCommandSubstrateFinding(
     spec: "Implemented command missing command spec",
     manifest: "Implemented command missing command manifest",
     skill: "Implemented command missing primary skill",
-    "required-tools": "Implemented command missing required MCP tool"
+    "required-tools": "Implemented command missing required MCP tool",
+    "runtime-reference": "Implemented command runtime reference drift"
   } as const;
 
   findings.push({
@@ -4140,6 +4197,7 @@ function addCommandSubstrateFinding(
 }
 
 function analyzeImplementedCommandSubstrate(
+  files: string[],
   catalog: CommandCatalogLike | null,
   runtime: Record<string, unknown> | null,
   findings: ImpactFindingRecord[],
@@ -4149,10 +4207,19 @@ function analyzeImplementedCommandSubstrate(
     return;
   }
 
+  const scopedFiles = new Set(files.flatMap((file) => {
+    const normalized = stripPathFragment(file);
+
+    return normalized === file ? [file] : [file, normalized];
+  }));
   const runtimeToolNames = registeredRuntimeToolNames(runtime);
 
   for (const [commandName, entry] of catalogEntries(catalog)) {
     if (entry.declaredStatus !== "implemented") {
+      continue;
+    }
+
+    if (!commandSubstrateInScope(scopedFiles, commandName, entry)) {
       continue;
     }
 
@@ -4188,7 +4255,12 @@ function analyzeImplementedCommandSubstrate(
         : [])
     ]);
 
-    if (!stringValue(entry.specPath) || blockedBy.some((item) => item.startsWith("Missing command spec: "))) {
+    if (
+      blockedBy.some((item) =>
+        item.startsWith("Missing command spec: ") ||
+        item.startsWith("Missing locked command spec: ")
+      )
+    ) {
       addCommandSubstrateFinding(
         findings,
         evidence,
@@ -4249,6 +4321,34 @@ function analyzeImplementedCommandSubstrate(
           "Keep the command out of runnable routing until all required tools are present."
         ],
         { missingRequiredTools }
+      );
+    }
+
+    const runtimeReferenceBlockers = blockedBy.filter((item) =>
+      item.startsWith("Missing runtime reference row: ") ||
+      item.startsWith("Runtime reference ")
+    );
+
+    if (runtimeReferenceBlockers.length > 0) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "runtime-reference",
+        uniqueSorted([
+          RUNTIME_REFERENCE_DOC_PATH,
+          ...runtimeReferenceBlockers.flatMap((item) =>
+            extractRuntimeReferencePaths(item).filter((filePath) =>
+              stripPathFragment(filePath) === RUNTIME_REFERENCE_DOC_PATH
+            )
+          )
+        ]),
+        [
+          `Restore the ${RUNTIME_REFERENCE_DOC_PATH} row for ${commandName} before it can remain declared implemented.`,
+          "Keep the command out of runnable routing until the locked runtime-reference substrate is complete."
+        ],
+        { runtimeReferenceBlockers }
       );
     }
   }
@@ -4819,6 +4919,7 @@ async function analyzeContractAndObligations(
   });
 
   analyzeImplementedCommandSubstrate(
+    files,
     phase6Context.catalog,
     phase6Context.runtime,
     findings,

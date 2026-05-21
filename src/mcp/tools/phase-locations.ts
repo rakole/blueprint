@@ -19,7 +19,7 @@ import {
 } from "./phase-roadmap-parser.js";
 import { loadBlueprintState } from "./state.js";
 
-export type PhaseArtifactKind = "context" | "discussion-log" | "research" | "ui-spec";
+export type PhaseArtifactKind = "context" | "discussion-log" | "research" | "spec" | "ui-spec";
 export type PhaseValidationArtifactKind = "verification" | "uat";
 
 export type ParsedRoadmap = {
@@ -37,6 +37,7 @@ const PHASE_ARTIFACT_SUFFIXES: Record<PhaseArtifactKind, string> = {
   context: "-CONTEXT.md",
   "discussion-log": "-DISCUSSION-LOG.md",
   research: "-RESEARCH.md",
+  spec: "-SPEC.md",
   "ui-spec": "-UI-SPEC.md"
 };
 const PHASE_VALIDATION_ARTIFACT_SUFFIXES: Record<PhaseValidationArtifactKind, string> = {
@@ -242,6 +243,18 @@ export function buildArtifactPath(phaseDir: string, phasePrefix: string, suffix:
 
 export function findArtifact(artifacts: string[], suffix: string): string | null {
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
+}
+
+export function findPhaseSpecArtifact(
+  artifacts: string[],
+  phaseDir: string,
+  phasePrefix: string
+): string | null {
+  const expectedPath = buildArtifactPath(phaseDir, phasePrefix, "-SPEC.md");
+
+  return (
+    artifacts.find((artifact) => artifact === expectedPath) ?? null
+  );
 }
 
 export function artifactPathFor(located: PhasePathLocation, artifact: PhaseArtifactKind): string {

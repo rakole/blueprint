@@ -6,7 +6,7 @@ Purpose: create or extend execution-ready `phase.plan` artifacts for one phase w
 
 Primary contract:
 - Use the `blueprint-phase-planning` skill when available.
-- Load `skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md` as the detailed Resolve/Read/Decide/Execute/Persist/Validate/Route source of truth.
+- Load `plan-phase-runtime-contract.md` as the detailed Resolve/Read/Decide/Execute/Persist/Validate/Route source of truth.
 - Keep this manifest thin; do not infer behavior from docs-only command pages.
 
 Execution profile:
@@ -25,17 +25,22 @@ Visible progress requirements:
 - Keep resolved scope, active stage, pending gate, execution mode, and next safe action visible.
 - Prefer `ask_user` for overwrite confirmation and structured saved-plan choices.
 - Default to one focused question per `ask_user` call.
+- Use `blueprint-planner` and `blueprint-checker` only when suitable and enabled.
 
 Hard invariants:
 - Resolve the phase through `mcp_blueprint_blueprint_phase_locate` before drafting.
 - Prefer one `mcp_blueprint_blueprint_phase_plan_readiness` packet for Read-stage grounding, model contract authority, readiness gates, plan inventory, effective config, state, selected-slot authoring context, and read-set freshness.
+- Treat phase context as read-only. Treat the canonical `XX-CONTEXT.md` artifact in `.blueprint/phases/<phase>/` as read-only context evidence. If it is missing, invalid, contradictory, or unusable, route to `/blu-discuss-phase <phase>` with diagnostics instead of repairing, overwriting, or synthesizing it.
+- Treat optional XX-SPEC.md when present as saved planning evidence in readiness, the Planning Investigation Trace, read-set freshness, and runtime-narrowed evidence coverage. Treat missing XX-SPEC.md as nonblocking by default.
 - Stop before drafting when readiness says `readyForPlanPhase=false`; route to the returned `nextSafeAction` and report the blocker.
 - Do not interpret `phase_plan_authoring_context.taskSchema` for drafting until readiness and any saved-plan gate are satisfied.
+- When explicit spec out-of-scope boundaries conflict with the draft, repair or defer the conflicting plan item before persistence.
 - Existing saved plans plus omitted `planId` require an explicit `add`, `revise`, or `replace` decision. Explicit additive intent may choose the new slot without an overwrite gate; revise, replace, overwrite, or saved-plan-set replacement always require confirmation.
 - Use saved research for freshness-sensitive decisions. Do not browse live web docs; route to `/blu-research-phase` when required evidence is missing or stale.
 - Draft structured `phase.plan` JSON against the selected runtime task schema. Do not seed scaffold placeholders, write Markdown fallback, or pass `content` from this command.
 - Persist only through `mcp_blueprint_blueprint_phase_plan_write` with `authoringMode: "model-only"` and `validationMode: "strict"`. Normal happy-path writes may skip standalone dry-run validation only when the server checks `expectedReadSet` freshness.
 - `mcp_blueprint_blueprint_phase_plan_validate_model` remains available for dry-run previews, repair loops, and checker convergence; it is not mandatory before every write.
+- If model validation, plan write, or final scoped validation fails, repair the same structured draft once and retry the same MCP path. If identical diagnostics or the same diagnostics repeat, stop, report the exact diagnostics and next safe action, and do not inspect MCP source files as a repair strategy.
 - After successful writes, use `returnNextAuthoringContext: true` or make a fresh readiness/authoring-context call before drafting another plan. `expectedReadSet` only skips duplicate pre-write re-reads.
 - Treat `phase_plan_write.validation.valid`, `planSetValidationSummary`, `completionReady`, and `incrementalCheckpoint` as write-scope signals only. Final completion still requires `mcp_blueprint_blueprint_phase_plan_validate` status `valid`.
 - Call `mcp_blueprint_blueprint_state_update` with `base: "synced"` only after final scoped validation is valid.

@@ -21,7 +21,7 @@ Primary command lists are canonical ownership metadata and must stay consistent 
 | `blueprint-governance` | `implemented` | Config, profile, health, and handoff flows | `settings`, `set-profile`, `health`, `pause-work`, `resume-work` |
 | `blueprint-map` | `implemented` | Brownfield codebase mapping | `map-codebase` |
 | `blueprint-capture` | `implemented` | Notes, todos, backlog, ideation routing | `note`, `add-todo`, `check-todos`, `add-backlog`, `review-backlog`, `explore` |
-| `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
+| `blueprint-phase-discovery` | `implemented` | Pre-planning discovery and requirements shaping | `spec-phase`, `discuss-phase`, `research-phase`, `ui-phase`, `list-phase-assumptions` |
 | `blueprint-phase-planning` | `implemented` | Plan synthesis, plan checks, and phase plan persistence | `plan-phase` |
 | `blueprint-phase-execution` | `implemented` | Plan execution, bounded quick delivery, and durable execution evidence | `execute-phase`, `quick`, `fast` |
 | `blueprint-phase-validation` | `implemented` | Verification, UAT, tests, and gap closure | `validate-phase`, `verify-work`, `add-tests` |
@@ -94,6 +94,7 @@ The planned `blueprint-fixer` remains future inventory only. Implemented Bluepri
 - `map-codebase` uses `blueprint-mapper`.
 - `next` and `do` remain router-owned and do not require dedicated subagents.
 - `pause-work` and `resume-work` remain governance-owned and do not require dedicated subagents.
+- `spec-phase` remains an optional pre-discussion discovery flow under `blueprint-phase-discovery`; it should not make saved spec artifacts mandatory for `discuss-phase`, and it does not require a dedicated subagent path in the docs inventory slice.
 - `discuss-phase` may use `blueprint-researcher` selectively for one gray area or assumptions pass, but must preserve the single-agent one-area-at-a-time fallback from `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`.
 - `research-phase` uses `blueprint-researcher`.
 - `ui-phase` uses `blueprint-ui-designer` for draft generation and `blueprint-checker` for bounded revision review before persistence.

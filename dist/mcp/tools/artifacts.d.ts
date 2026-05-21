@@ -620,6 +620,7 @@ export type PlanArtifactMetadata = {
     }>;
     autonomous: boolean | null;
 };
+type ContractPhaseArtifactKind = "context" | "discussion-log" | "research" | "spec" | "ui-spec";
 export declare function parseCaptureIndexDocument(content: string, target: ArtifactMutateIndexTarget): {
     rows: CaptureIndexRow[];
     malformed: boolean;
@@ -659,7 +660,7 @@ export declare function validateResearchArtifactContent(content: string): {
     diagnostics: PhaseArtifactValidationDiagnostic[];
 };
 export declare function isExplicitUiSkipRationale(content: string): boolean;
-export declare function validatePhaseArtifactContent(content: string, artifact: "context" | "discussion-log" | "research" | "ui-spec"): {
+export declare function validatePhaseArtifactContent(content: string, artifact: ContractPhaseArtifactKind): {
     valid: boolean;
     issues: string[];
     warnings: string[];
@@ -774,6 +775,7 @@ export declare const artifactToolDefinitions: ({
             "phase.context": "phase.context";
             "phase.discussion-log": "phase.discussion-log";
             "phase.research": "phase.research";
+            "phase.spec": "phase.spec";
             "phase.ui-spec": "phase.ui-spec";
             "phase.plan": "phase.plan";
             "phase.summary": "phase.summary";

@@ -3350,16 +3350,40 @@ test("root router and help/progress assets keep implemented-only waiting-state g
     /surface the waiting state explicitly: missing artifact, approval gate, verification debt, or blocked substrate/
   );
   assert.match(
+    rootRouterCommand,
+    /Recommend `?\/blu-spec-phase <phase>`? only after confirming its catalog entry is `implemented: true`/i
+  );
+  assert.match(
+    rootRouterCommand,
+    /Do not treat a missing spec as a normal lifecycle blocker/i
+  );
+  assert.match(
     helpCommand,
     /Only recommend commands whose catalog entry is `implemented: true`/
+  );
+  assert.match(
+    helpCommand,
+    /Recommend `?\/blu-spec-phase <phase>`? only when its catalog entry is `implemented: true`/i
   );
   assert.match(
     helpCommand,
     /If the safest path is still waiting on a prerequisite, name that waiting state clearly: partial repo repair, missing artifact, verification debt, or blocked substrate/
   );
   assert.match(
+    helpCommand,
+    /Do not describe a missing spec as a normal lifecycle blocker/i
+  );
+  assert.match(
     progressCommand,
     /If the repo is waiting on a prerequisite, name the waiting state plainly: missing artifact, partial repo repair, verification debt, or blocked substrate/
+  );
+  assert.match(
+    progressCommand,
+    /Recommend `?\/blu-spec-phase <phase>`? only when its catalog entry is `implemented: true`/i
+  );
+  assert.match(
+    progressCommand,
+    /Do not frame a missing spec by itself as a normal lifecycle blocker/i
   );
   assert.match(progressCommand, /waiting state/i);
   assert.match(progressCommand, /next safe action/i);

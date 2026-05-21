@@ -32,6 +32,10 @@ test("structured input bundles resolve command-specific discovery inputs", async
       ["skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"]
     ],
     [
+      "/blu-spec-phase",
+      ["skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"]
+    ],
+    [
       "/blu-ui-phase",
       ["skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"]
     ],
@@ -72,6 +76,32 @@ test("structured multi-command skills return shared-only inputs for unknown comm
   assert.deepEqual(inputs.shared, []);
   assert.deepEqual(inputs.commandSpecific, []);
   assert.deepEqual(inputs.effective, []);
+});
+
+test("spec-phase input bundle stays narrowed to the runtime contract only", async () => {
+  const raw = await readFile(
+    path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
+    "utf8"
+  );
+  const inputs = resolveBlueprintSkillInputsFromContent(
+    "blueprint-phase-discovery",
+    "/blu-spec-phase",
+    raw
+  );
+
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md"
+  ]);
+  assert.equal(
+    inputs.effective.includes("skills/blueprint-phase-discovery/references/spec-template.md"),
+    false
+  );
+  assert.equal(inputs.effective.includes("commands/blu-spec-phase.toml"), false);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
 test("structured input bundles resolve docs-free command-specific execution inputs", async () => {

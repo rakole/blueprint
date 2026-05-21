@@ -51,6 +51,14 @@ test("help manifest and runtime reference stay aligned on router profile and wai
   );
   assert.match(
     runtimeReference,
+    /Recommend `?\/blu-spec-phase <phase>`? only after `?blueprint_command_catalog`? proves it implemented/i
+  );
+  assert.match(
+    runtimeReference,
+    /do not treat missing `?XX-SPEC\.md`? alone as a normal lifecycle blocker/i
+  );
+  assert.match(
+    runtimeReference,
     /\| `help` [^\n]+ \| `locked`; `source-owned`; `needs-behavior-audit` \|/
   );
 });
@@ -71,6 +79,14 @@ test("help runtime contract is source-owned and uses only the command manifest a
   assert.deepEqual(contract.spec?.writes, []);
   assert.equal(contract.runtimeReference?.path, HELP_RUNTIME_METADATA.sourceId);
   assert.equal(contract.runtimeReference?.commandSpecPath, HELP_RUNTIME_METADATA.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /\/blu-spec-phase <phase>[\s\S]*blueprint_command_catalog[\s\S]*implemented/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing XX-SPEC\.md alone as a normal lifecycle blocker/i
+  );
   assert.deepEqual(contract.runtimeReference?.evidenceState, [
     "locked",
     "source-owned",

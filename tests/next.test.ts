@@ -33,7 +33,12 @@ test("next command manifest preserves safe fallback and routing guarantees", asy
 
   assert.match(raw, /\/blu-new-project/);
   assert.match(raw, /\/blu-health/);
+  assert.match(
+    raw,
+    /Recommend `?\/blu-spec-phase <phase>`? only when its catalog entry is `implemented: true`/i
+  );
   assert.match(raw, /implemented: true/);
+  assert.match(raw, /Do not turn a missing spec alone into a normal lifecycle blocker/i);
   assert.match(raw, /waiting-state reporting/);
   assert.match(raw, /next safe follow-up/);
   assert.match(raw, /Do not write files, mutate config, or call write-oriented MCP tools/);
@@ -55,6 +60,14 @@ test("next runtime reference preserves waiting-state and fallback alignment", as
     /\|\s*`next`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#next`\s*\|/
   );
   assert.match(runtimeReference, /never hide destructive behavior behind implicit routing\./);
+  assert.match(
+    runtimeReference,
+    /Recommend `?\/blu-spec-phase <phase>`? only after `?blueprint_command_catalog`? proves it implemented/i
+  );
+  assert.match(
+    runtimeReference,
+    /do not treat missing `?XX-SPEC\.md`? alone as a normal lifecycle blocker/i
+  );
   assert.match(
     runtimeReference,
     /\| `next` [^\n]+ \| `locked`; `source-owned`; `needs-behavior-audit` \|/
@@ -84,6 +97,14 @@ test("next runtime contract is source-owned and uses only the command manifest a
   assert.deepEqual(contract.spec?.writes, []);
   assert.equal(contract.runtimeReference?.path, NEXT_RUNTIME_METADATA.sourceId);
   assert.equal(contract.runtimeReference?.commandSpecPath, NEXT_RUNTIME_METADATA.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /\/blu-spec-phase <phase>[\s\S]*blueprint_command_catalog[\s\S]*implemented/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /missing XX-SPEC\.md alone as a normal lifecycle blocker/i
+  );
   assert.deepEqual(contract.runtimeReference?.evidenceState, [
     "locked",
     "source-owned",

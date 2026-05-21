@@ -20,6 +20,7 @@ The validation, UAT, governance handoff/resume, roadmap append/insertion/removal
 
 ### Wave 1: Core lifecycle
 
+- `spec-phase`
 - `discuss-phase`
 - `research-phase`
 - `ui-phase`
@@ -98,6 +99,7 @@ Shipped in this wave: `new-workspace`, `cleanup`.
 | `progress` | 0 | `new-project` |
 | `health` | 0 | `new-project` |
 | `map-codebase` | 0 | `new-project` |
+| `spec-phase` | 1 | `new-project` |
 | `discuss-phase` | 1 | `new-project` |
 | `research-phase` | 1 | `new-project`, `discuss-phase` |
 | `ui-phase` | 1 | `new-project`, `discuss-phase`, `map-codebase` |
@@ -144,6 +146,8 @@ Shipped in this wave: `new-workspace`, `cleanup`.
 | `cleanup` | 5 | `complete-milestone` |
 | `update` | 5 | none |
 | `reapply-patches` | 5 | `update` |
+
+`spec-phase` is an optional pre-discussion slice. It may run before `discuss-phase` when the phase needs extra requirements clarification, but downstream lifecycle commands must not require a saved spec artifact.
 
 ## Shared Primitive Checklist Before Wave 0 Code
 

@@ -21,11 +21,17 @@ const SKILL_BUNDLES = [
   {
     name: "blueprint-phase-discovery",
     description: "Pre-planning discovery and requirements shaping",
-    commands: ["/blu-discuss-phase", "/blu-research-phase", "/blu-ui-phase", "/blu-list-phase-assumptions"]
+    commands: [
+      "/blu-discuss-phase",
+      "/blu-research-phase",
+      "/blu-spec-phase",
+      "/blu-ui-phase",
+      "/blu-list-phase-assumptions"
+    ]
   },
   {
     name: "blueprint-phase-planning",
-    description: "Plan synthesis, plan checks, and phase plan persistence",
+    description: "Plan synthesis, checker coordination, and phase.plan persistence for Blueprint",
     commands: ["/blu-plan-phase"]
   },
   {

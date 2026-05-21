@@ -1037,6 +1037,78 @@ test("impact analyze can produce PASS with stable normalized report data", async
   assert.deepEqual(first.report, second.report);
 });
 
+test("impact analyze ignores unrelated runtime-owned command doc gaps for docless scopes", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["tests/impact-tools.test.ts"],
+    config: lowNoiseConfig()
+  });
+
+  assert.equal(
+    analysis.findings.some(
+      (finding) => finding.id === "finding.contract.command-substrate.spec-phase.spec"
+    ),
+    false
+  );
+});
+
+test("impact analyze checks implemented command substrate when runtime metadata changes", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/command-runtime-metadata.ts"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({
+      "custom-command": {
+        declaredStatus: "implemented",
+        status: "repairing",
+        implemented: false,
+        manifestPath: "commands/blu-custom-command.toml",
+        specPath: "docs/commands/custom-command.md",
+        skillPath: "skills/blueprint-custom/SKILL.md",
+        primarySkill: "blueprint-custom",
+        requiredTools: [],
+        requiredToolsSatisfied: true,
+        blockedBy: [
+          "Missing command spec: docs/commands/custom-command.md"
+        ]
+      }
+    })
+  });
+
+  assert.equal(analysis.status, "BLOCK");
+  assert.equal(findingByCheck(analysis, "contract.command.spec")?.status, "BLOCK");
+});
+
+test("impact analyze blocks implemented command substrate when runtime reference drifts", async () => {
+  const analysis = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/RUNTIME-REFERENCE.md"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({
+      "spec-phase": {
+        declaredStatus: "implemented",
+        status: "repairing",
+        implemented: false,
+        manifestPath: "commands/blu-spec-phase.toml",
+        specPath: "src/mcp/command-runtime-metadata.ts#spec-phase",
+        skillPath: "skills/blueprint-phase-discovery/SKILL.md",
+        primarySkill: "blueprint-phase-discovery",
+        requiredTools: [],
+        requiredToolsSatisfied: true,
+        blockedBy: [
+          "Missing runtime reference row: docs/RUNTIME-REFERENCE.md#spec-phase"
+        ]
+      }
+    })
+  });
+
+  const finding = findingByCheck(analysis, "contract.command.runtime-reference");
+
+  assert.equal(analysis.status, "BLOCK");
+  assert.equal(finding?.status, "BLOCK");
+  assert.equal(finding?.impactedFiles.includes("docs/RUNTIME-REFERENCE.md#spec-phase"), true);
+});
+
 test("impact analyze raises WARN for obligations without conflating risk and confidence", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,

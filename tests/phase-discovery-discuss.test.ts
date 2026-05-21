@@ -61,12 +61,12 @@ const wave0RuntimeBundleByteBaseline = [
 const wave0RuntimeBundleObservedTotal = 79781;
 const wave0RuntimeBundleMaxTotal = 101000;
 const discussRuntimeBundleCurrentBudget = {
-  // Includes the deliberate list-phase-assumptions config parity line in the shared skill.
-  skillBytes: 21077,
-  // Includes explicit phaseSelection recovery wording to avoid redundant locate fallback calls.
-  runtimeContractBytes: 37534,
-  // Includes the simple gray-area fast path while keeping the full taxonomy fallback.
-  totalBytes: 66614
+  // Includes deliberate Wave 4 optional spec intake plus Wave 7 spec-phase routing guidance.
+  skillBytes: 25415,
+  // Includes the optional spec-basis mapping and contradiction-routing rules.
+  runtimeContractBytes: 44391,
+  // Includes Wave 4 discuss/spec integration plus Wave 7 routing guidance while staying under the Wave 0 ceiling.
+  totalBytes: 79115
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -126,6 +126,10 @@ function assertOrdered(content: string, orderedParts: readonly string[]) {
   }
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test("discuss-phase runtime bundle records Wave 0 byte baseline without enforcing shrink yet", () => {
   const actualContributors = wave0RuntimeBundleByteBaseline.map((entry) => ({
     ...entry,
@@ -183,7 +187,7 @@ test("shared phase-discovery skill is deflated while discuss runtime contract ke
   const contract = readRepoText(discussRuntimeContractPath);
   const skillBytes = Buffer.byteLength(skill, "utf8");
   const discussSection = skill.match(
-    /### `discuss-phase`\n([\s\S]*?)(?=\n### `research-phase`)/
+    /### `discuss-phase`\n([\s\S]*?)(?=\n### `[^`]+`)/
   )?.[1] ?? "";
 
   assert.ok(
@@ -221,8 +225,8 @@ test("shared phase-discovery skill is deflated while discuss runtime contract ke
   );
 
   assert.ok(
-    Buffer.byteLength(contract, "utf8") < wave0RuntimeBundleByteBaseline[2].observedBytes,
-    "discuss runtime contract should shrink below the Wave 0 byte baseline"
+    Buffer.byteLength(contract, "utf8") <= wave0RuntimeBundleByteBaseline[2].maxBytes,
+    "discuss runtime contract should stay within the Wave 0 byte ceiling"
   );
   assert.equal(
     Buffer.byteLength(contract, "utf8"),
@@ -658,7 +662,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.match(skillFile, /long-running profile/i);
   assert.match(skillFile, /no-subagent fallback[\s\S]*artifact quality/i);
   const skillDiscussSection = skillFile.match(
-    /### `discuss-phase`\n([\s\S]*?)(?=\n### `research-phase`)/
+    /### `discuss-phase`\n([\s\S]*?)(?=\n### `[^`]+`)/
   )?.[1] ?? "";
   assert.match(skillDiscussSection, /runtime contract owns the discuss-specific behavior/i);
   assert.match(skillDiscussSection, /long-running profile owns visible stage/i);
@@ -677,7 +681,7 @@ test("discuss-phase command references only registered phase-discovery tool name
   );
   assert.match(skillFile, /Command-Scoped Required MCP Tools/i);
   const discussToolSection = skillFile.match(
-    /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-research-phase`)/
+    /### `\/blu-discuss-phase`\n([\s\S]*?)(?=\n### `\/blu-[^`]+`)/
   )?.[1] ?? "";
   const skillDiscussTools = [...discussToolSection.matchAll(/`(blueprint_[a-z_]+)`/g)]
     .map(([, tool]) => tool)
@@ -757,6 +761,10 @@ test("discuss-phase command references only registered phase-discovery tool name
   assert.ok(discussRuntimeRow, "runtime reference should include the discuss-phase row");
   assert.match(discussRuntimeRow, new RegExp(sharedProfilePath));
   assert.match(discussRuntimeRow, new RegExp(runtimeContractPath));
+  assert.match(discussRuntimeRow, /phase-local spec[\s\S]*phase\.artifacts\.spec/i);
+  assert.match(discussRuntimeRow, /Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria[\s\S]*locked WHAT\/WHY/i);
+  assert.match(discussRuntimeRow, /missing spec nonblocking/i);
+  assert.match(discussRuntimeRow, /spec contradictions[\s\S]*\/blu-spec-phase <phase>/i);
   assert.match(
     discussRuntimeRow,
     /`phase\.context` model contract as context schema authority[\s\S]*`phase\.discussion-log` `contract\.authoringTemplate` as discussion-log authority/i
@@ -1064,6 +1072,58 @@ test("downstream handoff substance maps to existing context fields", () => {
   );
 });
 
+test("discuss runtime contract reads saved spec through the shared artifact read path and keeps absence nonblocking", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /phase\.artifacts\.spec[\s\S]*if present/i);
+  assert.match(
+    contract,
+    /blueprint_phase_artifact_read[\s\S]*artifact:\s*"spec"/i
+  );
+  assert.match(
+    contract,
+    /(missing|no saved)\s+spec[\s\S]*(nonblocking|does not block|continue|must still work)/i
+  );
+});
+
+test("discuss runtime contract treats spec what-why sections as locked and redirects to implementation questions", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /locked WHAT\/WHY input/i);
+  assert.match(
+    contract,
+    /Goal[\s\S]*Requirements[\s\S]*Boundaries[\s\S]*Constraints[\s\S]*Acceptance Criteria/i
+  );
+  assert.match(
+    contract,
+    /(when|if)[\s\S]*spec[\s\S]*(already\s+)?answers[\s\S]*(what|why)/i
+  );
+  assert.match(contract, /implementation questions/i);
+  assert.match(
+    contract,
+    /reuse[\s\S]*approach[\s\S]*tradeoffs[\s\S]*sequencing[\s\S]*safety posture[\s\S]*deferred ideas[\s\S]*research handoff[\s\S]*plan handoff/i
+  );
+});
+
+test("discuss runtime contract maps spec basis into existing context fields and routes contradictions back to spec-phase", () => {
+  const contract = readRepoText(discussRuntimeContractPath);
+
+  assert.match(contract, /spec basis/i);
+  assert.match(contract, /no new schema/i);
+  assert.match(contract, /spec path[\s\S]*`canonicalReferences`/i);
+  assert.match(contract, /requirements and constraints[\s\S]*goals?[\s\S]*decisions?[\s\S]*risks?/i);
+  assert.match(
+    contract,
+    /boundaries[\s\S]*(scope|out-of-scope)[\s\S]*deferred/i
+  );
+  assert.match(
+    contract,
+    /unresolved[\s\S]*(assumptions|open questions)/i
+  );
+  assert.match(contract, /ask_user[\s\S]*\/blu-spec-phase <phase>/i);
+  assert.match(contract, /do not silently override SPEC/i);
+});
+
 test("final routing copies refreshed state and forbids alternate routes", () => {
   const contract = readRepoText(discussRuntimeContractPath);
 
@@ -1092,6 +1152,12 @@ test("state warning preservation surfaces only non-empty routing-relevant warnin
 
 test("allowlist remains stable", () => {
   const commandFile = readRepoText(discussCommandPath);
+  const contract = readRepoText(discussRuntimeContractPath);
+  const docFile = readRepoText("docs/commands/discuss-phase.md");
+  const metadata = getRuntimeOwnedCommandMetadata("discuss-phase");
+  const runtimeToolCalls = [...commandFile.matchAll(/mcp_blueprint_blueprint_[a-z_]+/g)]
+    .map(([tool]) => tool)
+    .sort();
 
   assert.doesNotMatch(commandFile, /blueprint_command_catalog/);
   assert.match(
@@ -1102,6 +1168,28 @@ test("allowlist remains stable", () => {
     commandFile,
     /resolve the phase through `mcp_blueprint_blueprint_phase_context\.phaseSelection`/i
   );
+  assert.ok(metadata, "discuss-phase runtime metadata should exist");
+  assert.ok(
+    runtimeToolCalls.includes(blueprintRuntimeToolFqn("blueprint_phase_artifact_read")),
+    "manifest should continue allowing shared phase artifact reads"
+  );
+  assert.deepEqual(
+    [...new Set(runtimeToolCalls)],
+    metadata.requiredTools.map((toolName) => blueprintRuntimeToolFqn(toolName)).sort()
+  );
+
+  for (const text of [commandFile, contract, docFile]) {
+    for (const bannedToken of [
+      "AskUserQuestion",
+      ".planning",
+      "gsd-tools.cjs",
+      "/gsd:",
+      "Claude",
+      "Codex"
+    ]) {
+      assert.doesNotMatch(text, new RegExp(escapeRegExp(bannedToken), "i"));
+    }
+  }
 });
 
 test("long running profile has fallback progress line", () => {

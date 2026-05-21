@@ -14359,7 +14359,7 @@ function getRuntimeOwnedCommandMetadataBySourceId(sourceId) {
     (metadata) => metadata.sourceId === sourceId
   ) ?? null;
 }
-var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_REQUIRED_TOOLS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
+var RUNTIME_METADATA_PATH, KNOWN_BLUEPRINT_AGENT_NAMES, NEW_PROJECT_OPTIONAL_AGENTS, NEW_PROJECT_REQUIRED_TOOLS, NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID, NEW_PROJECT_RUNTIME_METADATA, ADD_PHASE_RUNTIME_METADATA_SOURCE_ID, ADD_PHASE_SPEC_PATH, ADD_PHASE_RUNTIME_METADATA, PROGRESS_REQUIRED_TOOLS, HELP_REQUIRED_TOOLS, NEXT_REQUIRED_TOOLS, DISCUSS_PHASE_REQUIRED_TOOLS, PLAN_PHASE_REQUIRED_TOOLS, RESEARCH_PHASE_REQUIRED_TOOLS, SPEC_PHASE_REQUIRED_TOOLS, UI_PHASE_REQUIRED_TOOLS, EXECUTE_PHASE_REQUIRED_TOOLS, LIST_PHASE_ASSUMPTIONS_REQUIRED_TOOLS, INSERT_PHASE_REQUIRED_TOOLS, REMOVE_PHASE_REQUIRED_TOOLS, PLAN_MILESTONE_GAPS_REQUIRED_TOOLS, AUDIT_MILESTONE_REQUIRED_TOOLS, COMPLETE_MILESTONE_REQUIRED_TOOLS, MILESTONE_SUMMARY_REQUIRED_TOOLS, NEW_MILESTONE_REQUIRED_TOOLS, VALIDATE_PHASE_REQUIRED_TOOLS, VERIFY_WORK_REQUIRED_TOOLS, CODE_REVIEW_REQUIRED_TOOLS, CODE_REVIEW_FIX_REQUIRED_TOOLS, SECURE_PHASE_REQUIRED_TOOLS, AUDIT_FIX_REQUIRED_TOOLS, REVIEW_REQUIRED_TOOLS, UI_REVIEW_REQUIRED_TOOLS, ADD_TESTS_REQUIRED_TOOLS, DOCS_UPDATE_REQUIRED_TOOLS, IMPACT_REQUIRED_TOOLS, NOTE_REQUIRED_TOOLS, ADD_TODO_REQUIRED_TOOLS, CHECK_TODOS_REQUIRED_TOOLS, ADD_BACKLOG_REQUIRED_TOOLS, REVIEW_BACKLOG_REQUIRED_TOOLS, EXPLORE_REQUIRED_TOOLS, QUICK_REQUIRED_TOOLS, DEBUG_REQUIRED_TOOLS, FAST_REQUIRED_TOOLS, SETTINGS_REQUIRED_TOOLS, SET_PROFILE_REQUIRED_TOOLS, HEALTH_REQUIRED_TOOLS, PAUSE_WORK_REQUIRED_TOOLS, RESUME_WORK_REQUIRED_TOOLS, PR_BRANCH_REQUIRED_TOOLS, SHIP_REQUIRED_TOOLS, UNDO_REQUIRED_TOOLS, NEW_WORKSPACE_REQUIRED_TOOLS, REMOVE_WORKSPACE_REQUIRED_TOOLS, WORKSTREAMS_REQUIRED_TOOLS, CLEANUP_REQUIRED_TOOLS, UPDATE_REQUIRED_TOOLS, REAPPLY_PATCHES_REQUIRED_TOOLS, MAP_CODEBASE_REQUIRED_TOOLS, HELP_SPEC_PATH, PROGRESS_SPEC_PATH, NEXT_SPEC_PATH, MAP_CODEBASE_SPEC_PATH, DISCUSS_PHASE_SPEC_PATH, LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH, PLAN_PHASE_SPEC_PATH, RESEARCH_PHASE_SPEC_PATH, SPEC_PHASE_SPEC_PATH, UI_PHASE_SPEC_PATH, LIST_PHASE_ASSUMPTIONS_SPEC_PATH, INSERT_PHASE_SPEC_PATH, REMOVE_PHASE_SPEC_PATH, PLAN_MILESTONE_GAPS_SPEC_PATH, AUDIT_MILESTONE_SPEC_PATH, COMPLETE_MILESTONE_SPEC_PATH, MILESTONE_SUMMARY_SPEC_PATH, NEW_MILESTONE_SPEC_PATH, VALIDATE_PHASE_SPEC_PATH, VERIFY_WORK_SPEC_PATH, CODE_REVIEW_SPEC_PATH, CODE_REVIEW_FIX_SPEC_PATH, SECURE_PHASE_SPEC_PATH, AUDIT_FIX_SPEC_PATH, REVIEW_SPEC_PATH, UI_REVIEW_SPEC_PATH, ADD_TESTS_SPEC_PATH, DOCS_UPDATE_SPEC_PATH, IMPACT_SPEC_PATH, SETTINGS_SPEC_PATH, SET_PROFILE_SPEC_PATH, HEALTH_SPEC_PATH, PAUSE_WORK_SPEC_PATH, RESUME_WORK_SPEC_PATH, PR_BRANCH_SPEC_PATH, SHIP_SPEC_PATH, UNDO_SPEC_PATH, NEW_WORKSPACE_SPEC_PATH, REMOVE_WORKSPACE_SPEC_PATH, WORKSTREAMS_SPEC_PATH, CLEANUP_SPEC_PATH, UPDATE_SPEC_PATH, REAPPLY_PATCHES_SPEC_PATH, DEBUG_SPEC_PATH, PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS, PLAN_PHASE_OPTIONAL_AGENTS, UI_PHASE_OPTIONAL_AGENTS, EXECUTE_PHASE_OPTIONAL_AGENTS, VALIDATION_OPTIONAL_AGENTS, ADD_TESTS_OPTIONAL_AGENTS, CODE_REVIEW_OPTIONAL_AGENTS, CODE_REVIEW_FIX_OPTIONAL_AGENTS, SECURE_PHASE_OPTIONAL_AGENTS, AUDIT_FIX_OPTIONAL_AGENTS, REVIEW_OPTIONAL_AGENTS, UI_REVIEW_OPTIONAL_AGENTS, DOCS_UPDATE_OPTIONAL_AGENTS, ROADMAP_ADMIN_HOOKS, ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS, ROADMAP_ADMIN_VERIFIER_OPTIONAL_AGENTS, EXPLORE_OPTIONAL_AGENTS, QUICK_OPTIONAL_AGENTS, MAP_CODEBASE_OPTIONAL_AGENTS, INSERT_PHASE_RUNTIME_METADATA, REMOVE_PHASE_RUNTIME_METADATA, PLAN_MILESTONE_GAPS_RUNTIME_METADATA, AUDIT_MILESTONE_RUNTIME_METADATA, COMPLETE_MILESTONE_RUNTIME_METADATA, MILESTONE_SUMMARY_RUNTIME_METADATA, NEW_MILESTONE_RUNTIME_METADATA, HELP_RUNTIME_METADATA, PROGRESS_RUNTIME_METADATA, NEXT_RUNTIME_METADATA, MAP_CODEBASE_RUNTIME_METADATA, SETTINGS_RUNTIME_METADATA, SET_PROFILE_RUNTIME_METADATA, HEALTH_RUNTIME_METADATA, DISCUSS_PHASE_RUNTIME_METADATA, PLAN_PHASE_RUNTIME_METADATA, RESEARCH_PHASE_RUNTIME_METADATA, SPEC_PHASE_RUNTIME_METADATA, UI_PHASE_RUNTIME_METADATA, EXECUTE_PHASE_RUNTIME_METADATA, LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA, VALIDATE_PHASE_RUNTIME_METADATA, VERIFY_WORK_RUNTIME_METADATA, CODE_REVIEW_RUNTIME_METADATA, CODE_REVIEW_FIX_RUNTIME_METADATA, SECURE_PHASE_RUNTIME_METADATA, AUDIT_FIX_RUNTIME_METADATA, REVIEW_RUNTIME_METADATA, UI_REVIEW_RUNTIME_METADATA, ADD_TESTS_RUNTIME_METADATA, DOCS_UPDATE_RUNTIME_METADATA, IMPACT_RUNTIME_METADATA, PAUSE_WORK_RUNTIME_METADATA, RESUME_WORK_RUNTIME_METADATA, PR_BRANCH_RUNTIME_METADATA, SHIP_RUNTIME_METADATA, UNDO_RUNTIME_METADATA, NEW_WORKSPACE_RUNTIME_METADATA, REMOVE_WORKSPACE_RUNTIME_METADATA, WORKSTREAMS_RUNTIME_METADATA, CLEANUP_RUNTIME_METADATA, UPDATE_RUNTIME_METADATA, REAPPLY_PATCHES_RUNTIME_METADATA, NOTE_RUNTIME_METADATA, ADD_TODO_RUNTIME_METADATA, CHECK_TODOS_RUNTIME_METADATA, ADD_BACKLOG_RUNTIME_METADATA, REVIEW_BACKLOG_RUNTIME_METADATA, EXPLORE_RUNTIME_METADATA, QUICK_RUNTIME_METADATA, DEBUG_RUNTIME_METADATA, FAST_RUNTIME_METADATA, RUNTIME_OWNED_COMMAND_METADATA;
 var init_command_runtime_metadata = __esm({
   "src/mcp/command-runtime-metadata.ts"() {
     "use strict";
@@ -14538,6 +14538,19 @@ var init_command_runtime_metadata = __esm({
       "blueprint_state_load",
       "blueprint_command_catalog",
       "blueprint_state_update"
+    ];
+    SPEC_PHASE_REQUIRED_TOOLS = [
+      "blueprint_phase_locate",
+      "blueprint_phase_context",
+      "blueprint_roadmap_read",
+      "blueprint_artifact_list",
+      "blueprint_config_get",
+      "blueprint_phase_artifact_read",
+      "blueprint_phase_artifact_write",
+      "blueprint_artifact_contract_read",
+      "blueprint_state_load",
+      "blueprint_state_update",
+      "blueprint_command_catalog"
     ];
     UI_PHASE_REQUIRED_TOOLS = [
       "blueprint_phase_locate",
@@ -14909,6 +14922,7 @@ var init_command_runtime_metadata = __esm({
     LONG_RUNNING_PHASE_DISCOVERY_PROFILE_PATH = "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md";
     PLAN_PHASE_SPEC_PATH = "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
     RESEARCH_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md";
+    SPEC_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md";
     UI_PHASE_SPEC_PATH = "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md";
     LIST_PHASE_ASSUMPTIONS_SPEC_PATH = "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md";
     INSERT_PHASE_SPEC_PATH = "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md";
@@ -15322,7 +15336,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: HELP_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [],
-        contractNotes: "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project.",
+        contractNotes: "Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable. This includes map-first waiting states: brownfield uninitialized and mapping-incomplete route to /blu-map-codebase, while mapped-only routes to /blu-new-project. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -15358,7 +15372,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PROGRESS_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [],
-        contractNotes: "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable.",
+        contractNotes: "Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface. Brownfield uninitialized and mapping-incomplete states point to /blu-map-codebase; mapped-only points to /blu-new-project. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -15394,7 +15408,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEXT_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [],
-        contractNotes: "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable.",
+        contractNotes: "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -15572,7 +15586,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`discuss-phase` gathers durable phase context through adaptive discovery, capability-gated gray-area research sidecars, checkpointed resumability, validation repair, and MCP-owned phase artifact writes.",
         reads: [
-          "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
+          "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
         ],
         writes: [
           "phase XX-CONTEXT.md",
@@ -15589,7 +15603,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, does a prior-context sweep before asking questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15613,7 +15627,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`plan-phase` creates or extends execution-ready phase plans through MCP-owned structured phase.plan model validation and plan writes.",
         reads: [
-          "Phase resolution, context, planning readiness, saved discovery artifacts, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
+          "Phase resolution, context, planning readiness, saved discovery artifacts including optional phase-local XX-SPEC.md when present, validation and review evidence, plan inventory, plan authoring schema, effective config, and state through MCP."
         ],
         writes: [
           "structured phase.plan JSON through blueprint_phase_plan_write",
@@ -15629,7 +15643,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: PLAN_PHASE_REQUIRED_TOOLS,
         optionalAgents: PLAN_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
+        contractNotes: 'Long-running-mutation profile; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible. Load skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md as the local runtime contract, prefer blueprint_phase_plan_readiness as the compact read-only Read-stage packet with contract schema authority, effective config, state snapshot, evidence absence signals including optional XX-SPEC.md when present, selected-slot authoring context, and read-set freshness metadata, respect readiness.researchStatus.planningReadiness or fallback blueprint_phase_research_status.planningReadiness as the config-aware pre-draft handoff gate, consume saved research instead of live browsing for freshness-sensitive technical decisions, and route to /blu-research-phase when research evidence is required. Treat missing XX-SPEC.md as nonblocking by default, but when phase.artifacts.spec exists include it in the Planning Investigation Trace, the readiness read set, and runtime-narrowed evidenceCoverage, and repair or warn on draft contradictions against explicit spec out-of-scope boundaries. Author phase.plan as structured JSON against blueprint_phase_plan_authoring_context.taskSchema and contract.modelContract.schemaPath, persist the model through blueprint_phase_plan_write with validationMode: "strict", authoringMode: "model-only", returnPlanSetValidation: true, and expectedReadSet from the readiness readSet when skipping a duplicate pre-write re-read, use blueprint_phase_plan_validate_model only for dry-run preview, repair loops, or checker convergence, use returnNextAuthoringContext: true or make a fresh readiness/authoring-context call after successful writes before drafting another plan, and reject scaffold-placeholder seeding, Markdown fallback, raw .blueprint edits, or warn-mode writes from /blu-plan-phase. Existing saved plans plus omitted planId require an add/revise/replace decision; explicit additive new plan ids may proceed without an overwrite gate, while revise, replace, overwrite, or saved-plan-set replacement always asks. Use blueprint-planner when suitable, preserve the one-plan-at-a-time no-subagent fallback, run blueprint-checker only when workflow.plan_check is enabled, and keep the checker/fallback loop bounded. Repair MCP validation, write, or scoped plan diagnostics against the live task schema before retrying, run blueprint_phase_plan_validate after persistence, then call blueprint_state_update with base: "synced" followed by state-aware routing to implemented follow-ups; never infer final completion from blueprint_phase_plan_write.validation.valid, completionReady, or incrementalCheckpoint alone.',
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15651,9 +15665,9 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-research-phase`",
         executionProfile: "long-running-mutation",
         rootRoutable: true,
-        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
+        purpose: "`research-phase` gathers phase-scoped implementation guidance from saved Blueprint artifacts, optional spec evidence, repo evidence, and approved external references, then persists validated research through MCP-owned state paths.",
         reads: [
-          "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
+          "Phase selection starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate stays fallback-only recovery; research status, saved phase artifacts including optional spec when phase.artifacts.spec exists, checkpoints, artifact contracts, effective config, command catalog, and refreshed state stay MCP-owned."
         ],
         writes: [
           "phase XX-RESEARCH.md",
@@ -15669,7 +15683,46 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: RESEARCH_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md as behavior authority. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus non-null phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. Independent read-only calls with known args may share one tool-call turn, while confirmations, writes, validation repair, state update, post-write state load, route proof, and checkpoint deletion stay sequenced. blueprint_artifact_contract_read with artifactId phase.research plus contract.authoringTemplate is schema authority. Routing remains implemented-only through refreshed state plus blueprint_command_catalog implemented-command routing proof. Research checkpoints are owner/mode guarded with /blu-research-phase and research. Default execution is parent-only; blueprint-researcher is optional only when workflow.subagents is enabled and sidecar criteria show material help, while the parent owns synthesis, persistence, checkpoints, state, user gates, and routing.",
+        contractNotes: "Long-running-mutation research uses skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md. Selected-phase resolution starts with blueprint_phase_context.phaseSelection plus phase_context.phase only when number, prefix, name, directory, and phase_context.phase.artifacts inventory are complete; blueprint_phase_locate is fallback-only recovery. After usable context is confirmed, read phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists and treat missing spec as nonblocking. It ties research strands and dependency/tool choices to spec requirements or constraints, includes spec path and requirement labels in Recommendation Handoff, routes stale context to /blu-discuss-phase <phase>, and routes stale or wrong spec to /blu-spec-phase <phase>. Independent read-only calls with known args may share one tool-call turn; writes/repair/state/routing/checkpoint deletion stay sequenced. phase.research contract.authoringTemplate is schema authority.",
+        evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+      }
+    };
+    SPEC_PHASE_RUNTIME_METADATA = {
+      commandName: "spec-phase",
+      sourceId: runtimeMetadataSourceId("spec-phase"),
+      catalog: {
+        wave: 1,
+        family: "Core Lifecycle",
+        primarySkill: "blueprint-phase-discovery",
+        declaredStatus: "implemented",
+        risk: "Low: optional pre-discussion requirements clarification writes one phase-scoped spec artifact and synced state only."
+      },
+      requiredTools: SPEC_PHASE_REQUIRED_TOOLS,
+      optionalAgents: [],
+      requiredInputPaths: [SPEC_PHASE_SPEC_PATH],
+      spec: {
+        path: runtimeMetadataSourceId("spec-phase"),
+        title: "`/blu-spec-phase`",
+        executionProfile: "long-running-mutation",
+        rootRoutable: true,
+        purpose: "`spec-phase` clarifies what a Blueprint phase should deliver and writes the optional phase-scoped spec artifact before later discovery and planning flows.",
+        reads: [
+          "Phase resolution, roadmap requirements, state, codebase summaries, artifact inventory, effective config, any existing spec, phase.spec contract inputs, refreshed command catalog state, and synced state through MCP."
+        ],
+        writes: [
+          "canonical phase XX-SPEC.md artifact through blueprint_phase_artifact_write with artifact spec",
+          ".blueprint/STATE.md through synced state update after a valid write or no-write route"
+        ]
+      },
+      runtimeReference: {
+        path: runtimeMetadataSourceId("spec-phase"),
+        waveTitle: "Core Lifecycle",
+        command: "spec-phase",
+        primarySkill: "blueprint-phase-discovery",
+        exactMcpDestination: SPEC_PHASE_REQUIRED_TOOLS,
+        optionalAgents: [],
+        hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+        contractNotes: "Implemented runtime-owned behavior: load skills/blueprint-phase-discovery/references/spec-phase-runtime-contract.md as the active behavior contract, resolve through blueprint_phase_context before fallback locate, read existing spec and the live phase.spec contract before drafting, run the existing-spec update/view/skip gate, use the quantitative ambiguity formula and six-round Socratic loop, persist only through blueprint_phase_artifact_write with artifact spec, then sync state and prove the next safe implemented action through blueprint_command_catalog. Treat missing spec as nonblocking for normal discuss/research/plan lifecycle; recommend /blu-spec-phase only when the catalog proves it implemented for spec-first planning, ambiguous roadmap or context gaps, or stale/contradictory saved spec evidence.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -16980,6 +17033,7 @@ var init_command_runtime_metadata = __esm({
       [DISCUSS_PHASE_RUNTIME_METADATA.commandName]: DISCUSS_PHASE_RUNTIME_METADATA,
       [PLAN_PHASE_RUNTIME_METADATA.commandName]: PLAN_PHASE_RUNTIME_METADATA,
       [RESEARCH_PHASE_RUNTIME_METADATA.commandName]: RESEARCH_PHASE_RUNTIME_METADATA,
+      [SPEC_PHASE_RUNTIME_METADATA.commandName]: SPEC_PHASE_RUNTIME_METADATA,
       [UI_PHASE_RUNTIME_METADATA.commandName]: UI_PHASE_RUNTIME_METADATA,
       [EXECUTE_PHASE_RUNTIME_METADATA.commandName]: EXECUTE_PHASE_RUNTIME_METADATA,
       [LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA.commandName]: LIST_PHASE_ASSUMPTIONS_RUNTIME_METADATA,
@@ -17917,6 +17971,9 @@ function summaryFile(context) {
 function summaryPath(context) {
   return context?.summaryPath?.trim() || `.blueprint/phases/<phase-dir>/${summaryFile(context)}`;
 }
+function phaseDir(context) {
+  return context?.phaseDir?.trim() || "<phase-dir>";
+}
 function milestone(context) {
   return context?.milestone?.trim() || "<milestone>";
 }
@@ -18481,6 +18538,92 @@ Do not preserve scaffold prompts or this guidance block in the final saved artif
 
 ## Follow-Ups
 
+`;
+}
+function renderSpecTemplate(context) {
+  return `# ${phaseLabel(context)} - Specification
+
+**Created:** <YYYY-MM-DD>
+**Ambiguity score:** <0.00>
+**Requirements locked:** <count>
+
+## Goal
+
+<observable goal stated as a falsifiable outcome>
+
+## Background
+
+<current codebase, workflow, or product reality that makes this phase necessary>
+
+## Requirements
+
+1. **<requirement label>**: <specific, testable requirement statement>
+   - Current: <what exists today>
+   - Target: <what changes after this phase>
+   - Acceptance: <how a verifier confirms this requirement>
+
+## Boundaries
+
+**In scope:**
+- <concrete deliverable in scope>
+
+**Out of scope:**
+- <adjacent work kept out of this phase> - <why it stays out>
+
+## Constraints
+
+- <constraint or dependency that must remain true>
+
+## Acceptance Criteria
+
+- [ ] <pass/fail acceptance criterion>
+- [ ] <pass/fail acceptance criterion>
+
+## Ambiguity Report
+
+| Dimension | Score | Min | Status | Notes |
+|-----------|-------|-----|--------|-------|
+| Goal Clarity | <score> | 0.75 | <status> | <notes> |
+| Boundary Clarity | <score> | 0.70 | <status> | <notes> |
+| Constraint Clarity | <score> | 0.65 | <status> | <notes> |
+| Acceptance Criteria | <score> | 0.70 | <status> | <notes> |
+| Ambiguity | <score> | <=0.20 | <status> | <notes> |
+
+## Interview Log
+
+| Round | Perspective | Question summary | Decision locked |
+|-------|-------------|------------------|-----------------|
+| 1 | <perspective> | <question summary> | <decision locked> |
+
+---
+*Phase: ${phaseDir(context)}*
+*Next step: /blu-discuss-phase ${phasePrefix(context)}*`;
+}
+function renderSpecAuthoringTemplate(context) {
+  return `# ${phaseLabel(context)} - Specification
+
+<!--
+Final saved content only.
+Replace the scaffold metadata and every section below with Blueprint-native phase requirements, scope boundaries, constraints, acceptance criteria, ambiguity notes, and interview decisions.
+Keep the canonical headings exactly as written. Each numbered requirement must include Current, Target, and Acceptance. Boundaries must include explicit In scope and Out of scope subsections. Acceptance Criteria must stay as checkbox bullets.
+Do not preserve scaffold placeholders, example rows, or this guidance block in the final saved artifact.
+-->
+
+## Goal
+
+## Background
+
+## Requirements
+
+## Boundaries
+
+## Constraints
+
+## Acceptance Criteria
+
+## Ambiguity Report
+
+## Interview Log
 `;
 }
 function renderResearchTemplate(context) {
@@ -19997,6 +20140,8 @@ function resolvePhaseArtifactContractId(artifact) {
       return "phase.discussion-log";
     case "research":
       return "phase.research";
+    case "spec":
+      return "phase.spec";
     case "ui-spec":
       return "phase.ui-spec";
   }
@@ -22110,6 +22255,68 @@ var init_artifact_contracts = __esm({
         ],
         renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
         renderAuthoringTemplate: renderResearchTemplate
+      },
+      "phase.spec": {
+        id: "phase.spec",
+        scope: "phase",
+        ownerTool: "blueprint_phase_artifact_write",
+        pathOwner: "blueprint_phase_artifact_write",
+        canonicalName: "Phase Specification",
+        canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-SPEC.md",
+        freehandPolicy: "additional-top-level-headings",
+        requiredHeadings: [
+          "Goal",
+          "Background",
+          "Requirements",
+          "Boundaries",
+          "Constraints",
+          "Acceptance Criteria",
+          "Ambiguity Report",
+          "Interview Log"
+        ],
+        lockedMarkers: [],
+        placeholderSignals: [
+          "**Created:** <YYYY-MM-DD>",
+          "**Ambiguity score:** <0.00>",
+          "**Requirements locked:** <count>",
+          "<count>",
+          "<observable goal stated as a falsifiable outcome>",
+          "<current codebase, workflow, or product reality that makes this phase necessary>",
+          "<requirement label>",
+          "<specific, testable requirement statement>",
+          "1. **<requirement label>**: <specific, testable requirement statement>",
+          "- Current: <what exists today>",
+          "- Target: <what changes after this phase>",
+          "- Acceptance: <how a verifier confirms this requirement>",
+          "<what exists today>",
+          "<what changes after this phase>",
+          "<how a verifier confirms this requirement>",
+          "- <concrete deliverable in scope>",
+          "- <adjacent work kept out of this phase> - <why it stays out>",
+          "- <constraint or dependency that must remain true>",
+          "- [ ] <pass/fail acceptance criterion>",
+          "<concrete deliverable in scope>",
+          "<adjacent work kept out of this phase>",
+          "<why it stays out>",
+          "<constraint or dependency that must remain true>",
+          "<pass/fail acceptance criterion>",
+          "<score>",
+          "<status>",
+          "<notes>",
+          "| Goal Clarity | <score> | 0.75 | <status> | <notes> |",
+          "<perspective>",
+          "<question summary>",
+          "<decision locked>",
+          "| 1 | <perspective> | <question summary> | <decision locked> |"
+        ],
+        notes: [
+          "Phase specs are Markdown-first artifacts that lock what and why before /blu-discuss-phase chooses implementation details.",
+          "Canonical specs live at .blueprint/phases/<phase-slug>/XX-SPEC.md and must stay Blueprint-native.",
+          "Write validation remains intentionally light: H1 required, scaffold placeholders removed, canonical headings present, and section-specific Markdown structure preserved without introducing a strict model schema.",
+          "Downstream work should treat the spec as upstream input for /blu-discuss-phase, /blu-plan-phase, and /blu-verify-work."
+        ],
+        renderScaffoldTemplate: (context) => withScaffoldFooter(renderSpecTemplate(context)),
+        renderAuthoringTemplate: renderSpecAuthoringTemplate
       },
       "phase.ui-spec": {
         id: "phase.ui-spec",
@@ -24484,8 +24691,8 @@ import path4 from "node:path";
 function normalizePhasePrefix(args) {
   return args.phasePrefix?.trim() || formatBlueprintPhasePrefix(args.phaseNumber);
 }
-function normalizePhaseRoot(phaseDir) {
-  const trimmed = phaseDir?.trim();
+function normalizePhaseRoot(phaseDir2) {
+  const trimmed = phaseDir2?.trim();
   if (!trimmed) {
     return null;
   }
@@ -25649,8 +25856,8 @@ async function phaseDirectoryExists(projectRoot, phaseNumber) {
   const phaseDirs = await listImmediateDirectories(
     resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
   );
-  return phaseDirs.some((phaseDir) => {
-    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+  return phaseDirs.some((phaseDir2) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir2);
     return extractedPhase !== null && normalizePhaseNumber2(extractedPhase) === normalizedPhase;
   });
 }
@@ -25660,8 +25867,8 @@ async function assertCurrentPhaseContextPathExists(args) {
     return;
   }
   const phaseRoot = resolveBlueprintPath(args.projectRoot, `${BLUEPRINT_DIR}/phases`);
-  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir) => {
-    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir);
+  const matchingPhaseDirs = (await listImmediateDirectories(phaseRoot)).filter((phaseDir2) => {
+    const extractedPhase = extractPhaseNumberFromDirectory(phaseDir2);
     return extractedPhase !== null && normalizePhaseNumber2(extractedPhase) === args.currentPhase;
   });
   if (matchingPhaseDirs.length === 0) {
@@ -25671,7 +25878,7 @@ async function assertCurrentPhaseContextPathExists(args) {
   }
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
-      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because multiple matching phase directories exist under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs.map((phaseDir) => `${BLUEPRINT_DIR}/phases/${phaseDir}/`).join(", ")}.`
+      `Cannot write ${BLUEPRINT_STATE_PATH} for current phase ${args.currentPhase} because multiple matching phase directories exist under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_DIR}/phases/${phaseDir2}/`).join(", ")}.`
     );
   }
   const phasePrefix2 = formatPhasePrefix2(args.currentPhase);
@@ -25839,11 +26046,11 @@ function extractPhaseArtifactDirectory(artifacts, phasePrefix2) {
   }
   return null;
 }
-function phaseArtifactPathsForDirectory(artifacts, phaseDir) {
-  if (!phaseDir) {
+function phaseArtifactPathsForDirectory(artifacts, phaseDir2) {
+  if (!phaseDir2) {
     return [];
   }
-  const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir}/`;
+  const prefix = `${BLUEPRINT_DIR}/phases/${phaseDir2}/`;
   return artifacts.filter((artifact) => artifact.startsWith(prefix));
 }
 function findPhaseArtifactPath(artifacts, phasePrefix2, suffix) {
@@ -25950,8 +26157,8 @@ async function listImmediateDirectories(rootPath) {
     return [];
   }
 }
-function extractPhaseNumberFromDirectory(phaseDir) {
-  return phaseDir.match(/^(\d+(?:\.\d+)?)/)?.[1] ?? null;
+function extractPhaseNumberFromDirectory(phaseDir2) {
+  return phaseDir2.match(/^(\d+(?:\.\d+)?)/)?.[1] ?? null;
 }
 async function getImplementedCommandNames() {
   if (!implementedCommandNamesPromise) {
@@ -26106,8 +26313,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   const phaseDirs = await listImmediateDirectories(
     resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/phases`)
   );
-  const matchingPhaseDirs = phaseDirs.filter((phaseDir2) => {
-    const phaseNumber = extractPhaseNumberFromDirectory(phaseDir2);
+  const matchingPhaseDirs = phaseDirs.filter((phaseDir3) => {
+    const phaseNumber = extractPhaseNumberFromDirectory(phaseDir3);
     return phaseNumber !== null && normalizePhaseNumber2(phaseNumber) === normalizedPhase;
   });
   if (matchingPhaseDirs.length === 0) {
@@ -26163,7 +26370,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   }
   if (matchingPhaseDirs.length > 1) {
     blockers.push(
-      `Current phase ${currentPhase2} has multiple matching directories under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_DIR}/phases/${phaseDir2}/`).join(", ")}.`
+      `Current phase ${currentPhase2} has multiple matching directories under ${BLUEPRINT_DIR}/phases/: ${matchingPhaseDirs.map((phaseDir3) => `${BLUEPRINT_DIR}/phases/${phaseDir3}/`).join(", ")}.`
     );
     warnings.push(
       `Blueprint could not choose a single current-phase directory for ${currentPhase2}; next action will stay on health until the ambiguity is resolved.`
@@ -26206,9 +26413,9 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       warnings
     };
   }
-  const phaseDir = matchingPhaseDirs[0];
+  const phaseDir2 = matchingPhaseDirs[0];
   const phasePrefix2 = formatPhasePrefix2(normalizedPhase);
-  const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir}`;
+  const phaseRoot = `${BLUEPRINT_DIR}/phases/${phaseDir2}`;
   const phaseArtifacts = inspectionPhases.filter((artifact) => artifact.startsWith(`${phaseRoot}/`));
   const contextPath = `${phaseRoot}/${phasePrefix2}-CONTEXT.md`;
   const researchPath = `${phaseRoot}/${phasePrefix2}-RESEARCH.md`;
@@ -26364,7 +26571,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   warnings.push(...qualityGateEvaluation.warnings);
   return {
     currentPhase: currentPhase2,
-    phaseDir,
+    phaseDir: phaseDir2,
     phasePrefix: phasePrefix2,
     contextPath,
     contextNeedsAuthoring,
@@ -26459,8 +26666,8 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
       continue;
     }
     const phasePrefix2 = formatBlueprintPhasePrefix(phase.phaseNumber);
-    const phaseDir = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix2);
-    const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir);
+    const phaseDir2 = extractPhaseArtifactDirectory(phaseArtifacts, phasePrefix2);
+    const phaseScopedArtifacts = phaseArtifactPathsForDirectory(phaseArtifacts, phaseDir2);
     const uiSpecPath = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-SPEC.md");
     const hasReviewableUiSpec = uiSpecPath === null ? false : await uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings);
     const hasUiReview = findPhaseArtifactPath(phaseScopedArtifacts, phasePrefix2, "-UI-REVIEW.md") !== null;
@@ -26511,7 +26718,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
       projectRoot,
       phaseNumber: phase.phaseNumber,
       phasePrefix: phasePrefix2,
-      phaseDir: phaseDir ? `${BLUEPRINT_DIR}/phases/${phaseDir}` : void 0,
+      phaseDir: phaseDir2 ? `${BLUEPRINT_DIR}/phases/${phaseDir2}` : void 0,
       artifacts: phaseScopedArtifacts
     });
     const qualityGateNextAction = resolvePhaseQualityGateNextAction({
@@ -27750,19 +27957,19 @@ async function pathExists(targetPath) {
     return false;
   }
 }
-async function materializePhaseDirectory(projectRoot, phaseDir) {
-  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir);
+async function materializePhaseDirectory(projectRoot, phaseDir2) {
+  const phaseDirPath = resolveBlueprintPath(projectRoot, phaseDir2);
   try {
     const stats = await fs3.stat(phaseDirPath);
     if (!stats.isDirectory()) {
       throw new Error(
-        `Phase directory path exists but is not a directory: ${phaseDir}. Resolve the drift before mutating the roadmap.`
+        `Phase directory path exists but is not a directory: ${phaseDir2}. Resolve the drift before mutating the roadmap.`
       );
     }
     return {
       phaseDirPath,
       created: false,
-      warnings: [`Phase directory already exists and can be reused: ${phaseDir}`]
+      warnings: [`Phase directory already exists and can be reused: ${phaseDir2}`]
     };
   } catch (error2) {
     const statError = error2;
@@ -27871,11 +28078,15 @@ async function resolveRequestedPhase(projectRoot, requestedPhase, phases) {
     resolvedFrom: "roadmap"
   };
 }
-function buildArtifactPath(phaseDir, phasePrefix2, suffix) {
-  return `${phaseDir}/${phasePrefix2}${suffix}`;
+function buildArtifactPath(phaseDir2, phasePrefix2, suffix) {
+  return `${phaseDir2}/${phasePrefix2}${suffix}`;
 }
 function findArtifact(artifacts, suffix) {
   return artifacts.find((artifact) => artifact.endsWith(suffix)) ?? null;
+}
+function findPhaseSpecArtifact(artifacts, phaseDir2, phasePrefix2) {
+  const expectedPath = buildArtifactPath(phaseDir2, phasePrefix2, "-SPEC.md");
+  return artifacts.find((artifact) => artifact === expectedPath) ?? null;
 }
 function artifactPathFor(located, artifact) {
   return buildArtifactPath(
@@ -27906,6 +28117,7 @@ var init_phase_locations = __esm({
       context: "-CONTEXT.md",
       "discussion-log": "-DISCUSSION-LOG.md",
       research: "-RESEARCH.md",
+      spec: "-SPEC.md",
       "ui-spec": "-UI-SPEC.md"
     };
     PHASE_VALIDATION_ARTIFACT_SUFFIXES = {
@@ -30224,8 +30436,8 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
       `Phase ${phase.phaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before reusing the audit-backed phase.`
     );
   }
-  const phaseDir = locatedPhaseDir.phaseDir ?? buildBlueprintPhaseDirectoryPath(phase.phaseNumber, phase.phaseName);
-  const phaseDirState = await materializePhaseDirectory(projectRoot, phaseDir);
+  const phaseDir2 = locatedPhaseDir.phaseDir ?? buildBlueprintPhaseDirectoryPath(phase.phaseNumber, phase.phaseName);
+  const phaseDirState = await materializePhaseDirectory(projectRoot, phaseDir2);
   const requirementsPath = `${BLUEPRINT_DIR}/REQUIREMENTS.md`;
   const requirementsAbsolutePath = resolveBlueprintPath(projectRoot, requirementsPath);
   const warnings = [
@@ -30278,8 +30490,8 @@ async function reuseAuditBackedPhase(projectRoot, roadmap, phase, auditBackedDet
     phasePrefix: phase.phasePrefix,
     phaseName: phase.phaseName,
     slug: slugifyPhaseName(phase.phaseName),
-    phaseDir,
-    contextPath: buildArtifactPath(phaseDir, phase.phasePrefix, "-CONTEXT.md"),
+    phaseDir: phaseDir2,
+    contextPath: buildArtifactPath(phaseDir2, phase.phasePrefix, "-CONTEXT.md"),
     roadmapPath: roadmap.path,
     milestone: roadmap.milestone,
     requirementValidationStatus: auditBackedDetails.repairRequirementIds?.length ? "traceability-repaired" : "declared",
@@ -31466,8 +31678,8 @@ function buildRemovePhaseRecovery(targetPhaseNumber, roadmap) {
   );
   return recovery;
 }
-function fallbackPhaseName(phaseDir) {
-  return slugToTitle(path7.basename(phaseDir).replace(/^\d+(?:\.\d+)?-/, ""));
+function fallbackPhaseName(phaseDir2) {
+  return slugToTitle(path7.basename(phaseDir2).replace(/^\d+(?:\.\d+)?-/, ""));
 }
 function toResolvedPhaseLocation(located) {
   if (!located.found || !located.phaseNumber || !located.phasePrefix || !located.phaseDir) {
@@ -32635,6 +32847,21 @@ function isPhasePlanEvidenceArtifact(artifactPath, targetPath) {
   }
   return normalized.startsWith(`${BLUEPRINT_PHASES_PATH}/`) && normalized.endsWith(".md");
 }
+function isCanonicalPhaseSpecArtifactPath(artifactPath, resolved) {
+  return artifactPath === artifactPathFor(resolved, "spec");
+}
+function isNoncanonicalPhaseSpecLookalikePath(artifactPath, resolved) {
+  const basename = path7.posix.basename(artifactPath);
+  const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
+  const uiSpecFileName = `${resolved.phasePrefix}-UI-SPEC.md`;
+  if (isCanonicalPhaseSpecArtifactPath(artifactPath, resolved)) {
+    return false;
+  }
+  if (basename === uiSpecFileName) {
+    return false;
+  }
+  return basename === canonicalSpecFileName || basename.startsWith(`${resolved.phasePrefix}-`) && basename.endsWith("-SPEC.md");
+}
 function isPhasePlanAcceptanceCriterionVerifiable(value) {
   return /\b(?:test|tests|grep|rg|command|file-read|artifact-validation|validate|validation|typecheck|build)\b/i.test(
     value
@@ -32675,7 +32902,24 @@ async function collectKnownPhasePlanEvidenceArtifacts(projectRoot, resolved, tar
     cwd: projectRoot,
     phase: resolved.phaseNumber
   })).artifacts;
-  return phaseArtifacts.filter((artifact) => isPhasePlanEvidenceArtifact(artifact, targetPath));
+  const canonicalSpecPath = findPhaseSpecArtifact(
+    phaseArtifacts,
+    resolved.phaseDir,
+    resolved.phasePrefix
+  );
+  const canonicalSpecFileName = `${resolved.phasePrefix}-SPEC.md`;
+  return phaseArtifacts.filter((artifact) => {
+    if (!isPhasePlanEvidenceArtifact(artifact, targetPath)) {
+      return false;
+    }
+    if (isNoncanonicalPhaseSpecLookalikePath(artifact, resolved)) {
+      return false;
+    }
+    if (path7.posix.basename(artifact) === canonicalSpecFileName) {
+      return canonicalSpecPath !== null && isCanonicalPhaseSpecArtifactPath(artifact, resolved);
+    }
+    return true;
+  });
 }
 async function resolvePhasePlanAuthoringContextData(args) {
   return buildPhasePlanAuthoringContextData({
@@ -33049,6 +33293,200 @@ function phasePlanCoverageDiagnosticFromIssue(issue2, model) {
     suggestion: "Repair the cross-field requirement, task, file, verification, or deferral coverage named in the diagnostic."
   });
 }
+function normalizeSpecBoundaryComparisonValue(value) {
+  return value.toLowerCase().replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();
+}
+function extractMarkdownSubsection(markdown, heading) {
+  const expectedHeading = normalizeSpecBoundaryComparisonValue(heading);
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let startIndex = -1;
+  let startLevel = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
+    if (match && normalizeSpecBoundaryComparisonValue(match[2] ?? "") === expectedHeading) {
+      startIndex = index + 1;
+      startLevel = match[1].length;
+      break;
+    }
+  }
+  if (startIndex < 0) {
+    return "";
+  }
+  let endIndex = lines.length;
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(#{2,6})\s+/);
+    if (match && match[1].length <= startLevel) {
+      endIndex = index;
+      break;
+    }
+  }
+  return lines.slice(startIndex, endIndex).join("\n").trim();
+}
+function extractBoldLabelSection(markdown, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(
+    new RegExp(
+      `(?:^|\\n)\\*\\*${escapedLabel}:\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+:\\*\\*|\\n#{2,6}\\s+|$)`,
+      "i"
+    )
+  );
+  return match?.[1]?.trim() ?? "";
+}
+function extractPhaseSpecOutOfScopeItems(specContent) {
+  const boundariesSection = extractMarkdownSection3(specContent, "Boundaries");
+  const boundedContent = boundariesSection || specContent;
+  const subsection = extractMarkdownSubsection(boundedContent, "Out of scope") || extractBoldLabelSection(boundedContent, "Out of scope");
+  return subsection ? uniqueSortedStrings(sectionToList(subsection)) : [];
+}
+function buildPhasePlanSpecBoundarySignals(items) {
+  const signals = /* @__PURE__ */ new Map();
+  const addSignal = (candidate, sourceItem) => {
+    const display = candidate.trim();
+    const normalized = normalizeSpecBoundaryComparisonValue(display);
+    if (!normalized) {
+      return;
+    }
+    const wordCount = normalized.split(" ").filter((word) => word.length > 0).length;
+    const isPreciseToken = /\/blu-[a-z0-9-]+/i.test(display) || /(?:^|\/)[^/\s]+\.(?:md|ts|tsx|js|jsx|mjs|json|toml)$/i.test(display);
+    if (!isPreciseToken && (wordCount < 4 || normalized.length < 20)) {
+      return;
+    }
+    if (!signals.has(normalized)) {
+      signals.set(normalized, {
+        display,
+        normalized,
+        sourceItem
+      });
+    }
+  };
+  for (const item of items) {
+    const trimmed = item.trim();
+    if (!trimmed) {
+      continue;
+    }
+    addSignal(trimmed.split(/\s[-–—]\s/, 1)[0] ?? trimmed, trimmed);
+    for (const match of trimmed.matchAll(
+      /(?:^|[\s`(])((?:\/blu-[a-z0-9-]+)|(?:\.?[\w./-]+?\.(?:md|ts|tsx|js|jsx|mjs|json|toml)))/gi
+    )) {
+      addSignal(match[1] ?? "", trimmed);
+    }
+  }
+  return [...signals.values()];
+}
+function collectPhasePlanComparableStrings(model) {
+  const strings = [];
+  const push = (pathValue, value) => {
+    if (typeof value !== "string") {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    strings.push({
+      path: pathValue,
+      value: trimmed,
+      normalized: normalizeSpecBoundaryComparisonValue(trimmed)
+    });
+  };
+  push("model.title", model.title);
+  push("model.objective", model.objective);
+  push("model.goal", model.goal);
+  model.scope.forEach((value, index) => push(`model.scope[${index}]`, value));
+  model.filesModified.forEach((value, index) => push(`model.filesModified[${index}]`, value));
+  model.readFirst.forEach((value, index) => push(`model.readFirst[${index}]`, value));
+  model.mustHaves.forEach((value, index) => push(`model.mustHaves[${index}]`, value));
+  model.tasks.forEach((task, taskIndex) => {
+    push(`model.tasks[${taskIndex}].title`, task.title);
+    task.readFirst.forEach(
+      (value, index) => push(`model.tasks[${taskIndex}].readFirst[${index}]`, value)
+    );
+    task.action.forEach(
+      (value, index) => push(`model.tasks[${taskIndex}].action[${index}]`, value)
+    );
+    task.acceptanceCriteria.forEach(
+      (value, index) => push(`model.tasks[${taskIndex}].acceptanceCriteria[${index}]`, value)
+    );
+    task.filesModified.forEach(
+      (value, index) => push(`model.tasks[${taskIndex}].filesModified[${index}]`, value)
+    );
+  });
+  model.verification.forEach((row, index) => {
+    push(`model.verification[${index}].item`, row.item);
+    push(`model.verification[${index}].evidence`, row.evidence);
+  });
+  model.evidenceCoverage.forEach((row, index) => {
+    push(`model.evidenceCoverage[${index}].artifact`, row.artifact);
+    push(`model.evidenceCoverage[${index}].rationale`, row.rationale);
+  });
+  model.fileSurfaceCoverage.forEach((row, index) => {
+    push(`model.fileSurfaceCoverage[${index}].surface`, row.surface);
+    push(`model.fileSurfaceCoverage[${index}].verification`, row.verification);
+    push(`model.fileSurfaceCoverage[${index}].rationale`, row.rationale);
+  });
+  model.unknownsAndDeferrals.forEach((row, index) => {
+    push(`model.unknownsAndDeferrals[${index}].item`, row.item);
+    push(`model.unknownsAndDeferrals[${index}].rationale`, row.rationale);
+    push(`model.unknownsAndDeferrals[${index}].followUp`, row.followUp);
+  });
+  return strings;
+}
+function phasePlanSpecBoundaryDiagnostics(args) {
+  const signals = buildPhasePlanSpecBoundarySignals(
+    extractPhaseSpecOutOfScopeItems(args.specContent)
+  );
+  if (signals.length === 0) {
+    return [];
+  }
+  const diagnostics = [];
+  const seen = /* @__PURE__ */ new Set();
+  const comparableStrings = collectPhasePlanComparableStrings(args.model);
+  for (const candidate of comparableStrings) {
+    for (const signal of signals) {
+      if (!candidate.normalized.includes(signal.normalized)) {
+        continue;
+      }
+      const key = `${candidate.path}:${signal.normalized}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      diagnostics.push(
+        phasePlanDiagnostic({
+          source: "scope",
+          path: candidate.path,
+          code: "scope.spec_out_of_scope_conflict",
+          message: `Saved phase spec ${args.specPath} marks "${signal.sourceItem}" as out of scope, but ${candidate.path} includes "${candidate.value}".`,
+          context: {
+            specPath: args.specPath,
+            outOfScope: signal.sourceItem,
+            modelValue: candidate.value
+          },
+          actual: candidate.value,
+          expected: `Avoid planned work that conflicts with saved out-of-scope spec boundary: ${signal.display}`,
+          repairAction: "replace",
+          suggestion: "Remove or defer the conflicting plan item, or update the saved XX-SPEC.md boundary before authoring the phase plan."
+        })
+      );
+      if (diagnostics.length >= 5) {
+        return diagnostics;
+      }
+    }
+  }
+  return diagnostics;
+}
+async function validatePhasePlanModelAgainstSavedSpec(args) {
+  const specPath = artifactPathFor(args.resolved, "spec");
+  const specContent = await readMarkdownDocument(args.projectRoot, specPath);
+  if (!specContent) {
+    return [];
+  }
+  return phasePlanSpecBoundaryDiagnostics({
+    model: args.model,
+    specContent,
+    specPath
+  });
+}
 function phasePlanPreflightDiagnosticFromIssue(issue2) {
   const dependencyRelated = issue2.startsWith("Plan dependency cycle detected:") || issue2.includes("depends_on references missing plan") || issue2.includes(" must come after dependency ");
   return phasePlanDiagnostic({
@@ -33136,6 +33574,13 @@ async function validatePhasePlanModelWithContext(args) {
       for (const warning of coverage.warnings) {
         diagnostics.push(phasePlanCoverageDiagnosticFromIssue(warning, normalizedModel));
       }
+      diagnostics.push(
+        ...await validatePhasePlanModelAgainstSavedSpec({
+          projectRoot: args.context.projectRoot,
+          resolved: args.context.resolved,
+          model: normalizedModel
+        })
+      );
     }
   }
   let renderPreview = null;
@@ -33808,7 +34253,7 @@ async function blueprintRoadmapAddPhase(args) {
     }
     const phasePrefix2 = formatPhasePrefix(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
-    const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
+    const phaseDir2 = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const roadmapPath = resolveBlueprintPath(projectRoot, roadmap.path);
     const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
     const requirementRepair = auditBackedDetails?.repairRequirementIds?.length ? await repairRequirementsTraceability(
@@ -33861,7 +34306,7 @@ async function blueprintRoadmapAddPhase(args) {
     const originalRequirements = requirementRepair ? await fs4.readFile(requirementsAbsolutePath, "utf8") : null;
     warnings.push(...preparedRoadmap.warnings);
     warnings.push(...preparedRequirements?.warnings ?? []);
-    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
+    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
     warnings.push(...materializedPhaseDir.warnings);
     try {
       if (requirementRepair) {
@@ -33903,8 +34348,8 @@ async function blueprintRoadmapAddPhase(args) {
       phasePrefix: phasePrefix2,
       phaseName: normalizedDescription,
       slug,
-      phaseDir,
-      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
+      phaseDir: phaseDir2,
+      contextPath: buildArtifactPath(phaseDir2, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
       requirementValidationStatus: normalizedRepairRequirementIds.length > 0 ? "traceability-repaired" : "declared",
@@ -33970,10 +34415,10 @@ async function blueprintRoadmapInsertPhase(args) {
     const phaseNumber = nextDecimalPhaseNumber(roadmap.phases, afterPhaseNumber);
     const phasePrefix2 = formatPhasePrefix(phaseNumber);
     const slug = slugifyPhaseName(normalizedDescription);
-    const phaseDir = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
+    const phaseDir2 = buildBlueprintPhaseDirectoryPath(phaseNumber, normalizedDescription);
     const existingDecimalDirectory = await findPhaseDirectory(projectRoot, phaseNumber);
     requireUnassignedRoadmapRequirements(roadmap, normalizedRequirementIds, phaseNumber);
-    if (existingDecimalDirectory.reason === "ambiguous" || existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir) {
+    if (existingDecimalDirectory.reason === "ambiguous" || existingDecimalDirectory.phaseDir && existingDecimalDirectory.phaseDir !== phaseDir2) {
       throw new Error(
         existingDecimalDirectory.reason === "ambiguous" ? `Phase ${phaseNumber} already has multiple matching directories under ${BLUEPRINT_PHASES_PATH}. Resolve the drift before inserting it into the roadmap.` : `Phase ${phaseNumber} already has a conflicting directory under ${BLUEPRINT_PHASES_PATH}: ${existingDecimalDirectory.phaseDir}. Resolve the drift before inserting it into the roadmap.`
       );
@@ -34032,7 +34477,7 @@ async function blueprintRoadmapInsertPhase(args) {
     const originalRequirements = await fs4.readFile(requirementsAbsolutePath, "utf8");
     const warnings = [...preparedRoadmap.warnings];
     warnings.push(...preparedRequirements.warnings);
-    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir);
+    const materializedPhaseDir = await materializePhaseDirectory(projectRoot, phaseDir2);
     warnings.push(...materializedPhaseDir.warnings);
     try {
       warnings.push(...requirementMapping.warnings);
@@ -34067,8 +34512,8 @@ async function blueprintRoadmapInsertPhase(args) {
       phasePrefix: phasePrefix2,
       phaseName: normalizedDescription,
       slug,
-      phaseDir,
-      contextPath: buildArtifactPath(phaseDir, phasePrefix2, "-CONTEXT.md"),
+      phaseDir: phaseDir2,
+      contextPath: buildArtifactPath(phaseDir2, phasePrefix2, "-CONTEXT.md"),
       roadmapPath: roadmap.path,
       milestone: roadmap.milestone,
       requirementMappingStatus: requirementMapping.mappingStatus,
@@ -34555,8 +35000,8 @@ async function locatePhaseFromRoadmap(projectRoot, args, roadmap, options = {}) 
     };
   }
   const phaseDirectoryResolution = await findPhaseDirectory(projectRoot, matchedPhase.phaseNumber);
-  const phaseDir = phaseDirectoryResolution.phaseDir;
-  if (!phaseDir) {
+  const phaseDir2 = phaseDirectoryResolution.phaseDir;
+  if (!phaseDir2) {
     const reason = phaseDirectoryResolution.reason === "ambiguous" ? `Phase ${matchedPhase.phaseNumber} has multiple matching directories in ${BLUEPRINT_PHASES_PATH}/.` : `Phase ${matchedPhase.phaseNumber} exists in ${BLUEPRINT_DIR}/ROADMAP.md but has no matching directory in ${BLUEPRINT_PHASES_PATH}/.`;
     return {
       found: false,
@@ -34573,7 +35018,7 @@ async function locatePhaseFromRoadmap(projectRoot, args, roadmap, options = {}) 
     };
   }
   const phaseArtifacts = await listPhaseArtifacts2(
-    resolveBlueprintPath(projectRoot, phaseDir),
+    resolveBlueprintPath(projectRoot, phaseDir2),
     projectRoot
   );
   return {
@@ -34581,7 +35026,7 @@ async function locatePhaseFromRoadmap(projectRoot, args, roadmap, options = {}) 
     phaseNumber: matchedPhase.phaseNumber,
     phasePrefix: matchedPhase.phasePrefix,
     phaseName: matchedPhase.phaseName,
-    phaseDir,
+    phaseDir: phaseDir2,
     artifacts: phaseArtifacts,
     milestone: roadmap.milestone,
     resolvedFrom,
@@ -34715,6 +35160,7 @@ async function buildPhaseContext(projectRoot, args = {}) {
         context: findArtifact(artifacts, "-CONTEXT.md"),
         discussionLog: findArtifact(artifacts, "-DISCUSSION-LOG.md"),
         research: findArtifact(artifacts, "-RESEARCH.md"),
+        spec: findPhaseSpecArtifact(artifacts, located.phaseDir, located.phasePrefix),
         uiSpec: findArtifact(artifacts, "-UI-SPEC.md"),
         verification: findArtifact(artifacts, "-VERIFICATION.md"),
         uat: findArtifact(artifacts, "-UAT.md"),
@@ -34949,7 +35395,7 @@ function phaseArtifactSuggestedRepairs(artifact, diagnostics) {
 function phaseArtifactRetryPlan(artifact, diagnostics) {
   const errorDiagnostics = diagnostics.filter((diagnostic) => diagnostic.severity !== "warning");
   const suggestedRepairs = phaseArtifactSuggestedRepairs(artifact, errorDiagnostics);
-  const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : "/blu-ui-phase";
+  const command = artifact === "context" || artifact === "discussion-log" ? "/blu-discuss-phase" : artifact === "research" ? "/blu-research-phase" : artifact === "spec" ? "/blu-spec-phase" : "/blu-ui-phase";
   return {
     retryable: errorDiagnostics.length === 0 || errorDiagnostics.every((diagnostic) => diagnostic.retryable),
     nextTool: "blueprint_phase_artifact_write",
@@ -35865,10 +36311,12 @@ async function blueprintPhasePlanReadiness(args = {}) {
   const artifactBodies = {};
   const contextPath = context.phase?.artifacts.context ?? null;
   const researchPath = context.phase?.artifacts.research ?? null;
+  const specPath = context.phase?.artifacts.spec ?? null;
   const uiSpecPath = context.phase?.artifacts.uiSpec ?? null;
   const expectedArtifactPaths = resolved ? {
     context: artifactPathFor(resolved, "context"),
     research: artifactPathFor(resolved, "research"),
+    spec: artifactPathFor(resolved, "spec"),
     uiSpec: artifactPathFor(resolved, "ui-spec"),
     verification: validationArtifactPathFor(resolved, "verification"),
     uat: validationArtifactPathFor(resolved, "uat"),
@@ -35877,11 +36325,15 @@ async function blueprintPhasePlanReadiness(args = {}) {
   for (const [key, pathValue, kind, relevant] of [
     ["context", contextPath, "phase.context", true],
     ["research", researchPath, "phase.research", config2.config.workflow.research],
+    ["spec", specPath, "phase.spec", true],
     ["uiSpec", uiSpecPath, "phase.uiSpec", config2.config.workflow.ui_phase]
   ]) {
     const expectedPath = expectedArtifactPaths?.[key] ?? null;
     const omittedReason = relevant ? "artifact absent" : "disabled or not relevant under effective config";
     if (!pathValue) {
+      if (key === "spec") {
+        continue;
+      }
       if (expectedPath) {
         const missingRead = await readReadinessPath({
           projectRoot,
@@ -37932,7 +38384,7 @@ var init_phase = __esm({
     phaseArtifactInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
-      artifact: _enum(["context", "discussion-log", "research", "ui-spec"])
+      artifact: _enum(["context", "discussion-log", "research", "spec", "ui-spec"])
     };
     phaseArtifactScaffoldInputSchema = {
       ...phaseArtifactInputSchema,
@@ -37959,7 +38411,7 @@ var init_phase = __esm({
     phaseArtifactWriteInputSchema = {
       cwd: string2().optional(),
       phase: numericBlueprintInputSchema.optional(),
-      artifact: _enum(["context", "discussion-log", "research", "ui-spec"]),
+      artifact: _enum(["context", "discussion-log", "research", "spec", "ui-spec"]),
       content: string2().optional(),
       model: record(string2(), unknown()).optional(),
       overwrite: boolean2().optional(),
@@ -38232,19 +38684,19 @@ var init_phase = __esm({
       },
       {
         name: "blueprint_phase_artifact_read",
-        description: "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, or UI-SPEC.",
+        description: "Read a phase-scoped discovery artifact such as CONTEXT, DISCUSSION-LOG, RESEARCH, SPEC, or UI-SPEC.",
         inputSchema: phaseArtifactInputSchema,
         handler: async (args) => blueprintPhaseArtifactRead(args)
       },
       {
         name: "blueprint_phase_artifact_scaffold",
-        description: "Seed a phase-scoped discovery artifact placeholder from the resolved numeric phase and artifact enum.",
+        description: "Seed a phase-scoped discovery artifact placeholder, including SPEC, from the resolved numeric phase and artifact enum.",
         inputSchema: phaseArtifactScaffoldInputSchema,
         handler: async (args) => blueprintPhaseArtifactScaffold(args)
       },
       {
         name: "blueprint_phase_artifact_write",
-        description: "Persist substantive phase-scoped discovery artifacts with overwrite protection; phase.context is model-only and rendered by MCP.",
+        description: "Persist substantive phase-scoped discovery artifacts, including SPEC, with overwrite protection; phase.context is model-only and rendered by MCP.",
         inputSchema: phaseArtifactWriteInputSchema,
         handler: async (args) => blueprintPhaseArtifactWrite(args)
       },
@@ -38677,12 +39129,12 @@ function nextBacklogReservedPhase(rows) {
 }
 function buildReservedBacklogPhase(rows, description) {
   const phaseNumber = nextBacklogReservedPhase(rows);
-  const phaseDir = `${BLUEPRINT_PHASES_PATH}/${phaseNumber}-${slugifyCaptureEntry(description)}`;
+  const phaseDir2 = `${BLUEPRINT_PHASES_PATH}/${phaseNumber}-${slugifyCaptureEntry(description)}`;
   return {
     phaseNumber,
     phasePrefix: phaseNumber,
-    phaseDir,
-    artifactPaths: [`${phaseDir}/${phaseNumber}-CONTEXT.md`]
+    phaseDir: phaseDir2,
+    artifactPaths: [`${phaseDir2}/${phaseNumber}-CONTEXT.md`]
   };
 }
 function renderCaptureIndexRow(target, row) {
@@ -39271,8 +39723,8 @@ function parsePhaseArtifactRequest(artifact) {
   if (!match) {
     return null;
   }
-  const [, phaseDir, , rawPrefix, rawPlanId, kind] = match;
-  const directoryPrefix = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+  const [, phaseDir2, , rawPrefix, rawPlanId, kind] = match;
+  const directoryPrefix = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
   if (!directoryPrefix) {
     throw new Error(`Phase artifact path must use a numbered phase directory: ${artifact}`);
   }
@@ -39289,8 +39741,8 @@ function parsePhaseArtifactRequest(artifact) {
   }
   return {
     artifact,
-    phaseDir,
-    phaseName: slugToTitle2(phaseDir.replace(/^\d+(?:\.\d+)?-?/, "")),
+    phaseDir: phaseDir2,
+    phaseName: slugToTitle2(phaseDir2.replace(/^\d+(?:\.\d+)?-?/, "")),
     phasePrefix: canonicalPrefix,
     kind: rawPlanId ? "PLAN" : kind,
     planId: rawPlanId ? rawPlanId.padStart(2, "0") : null
@@ -39314,6 +39766,8 @@ function renderPhaseArtifact(request) {
       return renderArtifactScaffoldTemplate("phase.discussion-log", context);
     case "RESEARCH":
       return renderArtifactScaffoldTemplate("phase.research", context);
+    case "SPEC":
+      return renderArtifactScaffoldTemplate("phase.spec", context);
     case "UI-SPEC":
       return renderArtifactScaffoldTemplate("phase.ui-spec", context);
     case "PLAN":
@@ -39692,14 +40146,14 @@ function externalSourceRowHasCurrentAccessEvidence(row) {
   return RESEARCH_ISO_DATE_PATTERN.test(row.accessed || "") && RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN.test(row.source_ref || "") && /\b(?:directly_supported|partially_supported|inferred_from_supported)\b/i.test(row.claim_class || "") && hasPlannerRelevantDownstreamUse(row.downstream_use || "");
 }
 function hasLiveExternalAccessDateEvidence(sources) {
-  const sourceRegister = extractMarkdownSubsection(sources, "Source Register");
+  const sourceRegister = extractMarkdownSubsection2(sources, "Source Register");
   if (/### External Sources/i.test(sources) && /\baccessed\s+\d{4}-\d{2}-\d{2}\b/i.test(sources)) {
     return true;
   }
   if (/\|\s*(?:external|supplied)\s*\|[\s\S]*\|\s*\d{4}-\d{2}-\d{2}\s*\|/i.test(sourceRegister)) {
     return true;
   }
-  return parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")).some(
+  return parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "External Sources")).some(
     externalSourceRowHasCurrentAccessEvidence
   );
 }
@@ -39765,7 +40219,7 @@ function parseResearchMarkdownTable(section) {
   }
   return [];
 }
-function extractMarkdownSubsection(section, subheading) {
+function extractMarkdownSubsection2(section, subheading) {
   const escaped = subheading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = section.match(new RegExp(`(?:^|\\n)### ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n### |\\n## |$)`));
   return match?.[1] ?? "";
@@ -39784,7 +40238,7 @@ function collectResearchRecommendationRows(content) {
 }
 function collectResearchSourceRegisterRows(content) {
   return parseResearchMarkdownTable(
-    extractMarkdownSubsection(extractMarkdownSection5(content, "Sources"), "Source Register")
+    extractMarkdownSubsection2(extractMarkdownSection5(content, "Sources"), "Source Register")
   );
 }
 function sourceRegisterRowId(row) {
@@ -39793,9 +40247,9 @@ function sourceRegisterRowId(row) {
 function collectResearchEvidenceRows(content) {
   const sources = extractMarkdownSection5(content, "Sources");
   return [
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Repo Evidence")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "External Sources")),
-    ...parseResearchMarkdownTable(extractMarkdownSubsection(sources, "Inference Notes"))
+    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "Repo Evidence")),
+    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "External Sources")),
+    ...parseResearchMarkdownTable(extractMarkdownSubsection2(sources, "Inference Notes"))
   ];
 }
 function hasConcreteStructuredSourceReference(text) {
@@ -41568,6 +42022,9 @@ function phaseArtifactRepairInstruction(args) {
   if (args.artifact === "discussion-log") {
     return args.heading ? `Populate ## ${args.heading} with concrete discussion evidence, then retry blueprint_phase_artifact_write.` : "Read the phase.discussion-log contract, repair the discussion log, then retry blueprint_phase_artifact_write.";
   }
+  if (args.artifact === "spec") {
+    return args.heading ? `Populate ## ${args.heading} with Blueprint-native spec detail, or regenerate the draft through /blu-spec-phase, then retry blueprint_phase_artifact_write.` : "Read the phase.spec contract or regenerate the canonical draft through /blu-spec-phase, repair the specification, then retry blueprint_phase_artifact_write.";
+  }
   return "Read the phase.research contract, repair the research artifact, then retry blueprint_phase_artifact_write.";
 }
 function phaseArtifactDiagnostic(args) {
@@ -41586,6 +42043,218 @@ function phaseArtifactDiagnostic(args) {
     }),
     retryable: true,
     nextTool: "blueprint_phase_artifact_write"
+  };
+}
+function phaseArtifactLabel(artifact) {
+  switch (artifact) {
+    case "context":
+      return "Context artifact";
+    case "discussion-log":
+      return "Discussion log artifact";
+    case "research":
+      return "Research artifact";
+    case "spec":
+      return "Spec artifact";
+    case "ui-spec":
+      return "UI spec artifact";
+  }
+}
+function extractMarkdownNumberedItems(section) {
+  return Array.from(
+    section.replace(/\r\n/g, "\n").matchAll(/(?:^|\n)\d+\.\s+([\s\S]*?)(?=\n\d+\.\s+|$)/g)
+  ).map((match) => match[0].replace(/^\n/, "").trim());
+}
+function hasMarkdownSubsectionLabel(section, label) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const labelLinePattern = new RegExp(
+    [
+      "(?:^|\\n)\\s*",
+      "(?:",
+      `#{3,6}\\s+${escapedLabel}:?`,
+      "|",
+      `(?:[-*+]\\s*)?(?:\\*\\*${escapedLabel}:?\\*\\*|\\*\\*${escapedLabel}\\*\\*:?|${escapedLabel}:?)`,
+      ")\\s*(?:\\n|$)"
+    ].join(""),
+    "i"
+  );
+  return labelLinePattern.test(section);
+}
+function validateSpecArtifactContent(content) {
+  const artifact = "spec";
+  const contract = readArtifactContract("phase.spec");
+  const artifactLabel = phaseArtifactLabel(artifact);
+  const issues = [];
+  const warnings = [];
+  const diagnostics = [];
+  if (!/^\uFEFF?# .+\S[ \t]*(?:\r?\n|$)/.test(content)) {
+    const issue2 = `${artifactLabel} must start with a markdown H1 title.`;
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.title",
+        code: "markdown.missing_h1",
+        message: issue2
+      })
+    );
+  }
+  const placeholderSignals = uniqueStrings([
+    ...content.includes(SCAFFOLD_GENERATED_MARKER) ? [SCAFFOLD_GENERATED_MARKER] : [],
+    ...contract.placeholderSignals.filter((signal) => signal.length > 0 && content.includes(signal))
+  ]);
+  for (const signal of placeholderSignals) {
+    const issue2 = `${artifactLabel} still contains placeholder scaffold text: ${signal}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content",
+        code: "markdown.placeholder_text",
+        message: issue2
+      })
+    );
+  }
+  const missingRequiredSections = contract.requiredHeadings.filter(
+    (heading) => extractMarkdownSection5(content, heading).trim().length === 0
+  );
+  if (missingRequiredSections.length > 0) {
+    const issue2 = `Spec artifact is missing required contract sections: ${missingRequiredSections.join(", ")}.`;
+    issues.push(issue2);
+    diagnostics.push(
+      ...missingRequiredSections.map(
+        (heading) => phaseArtifactDiagnostic({
+          artifact,
+          path: `content.sections.${heading}`,
+          code: "spec.missing_required_section",
+          message: `Spec artifact is missing required contract section: ${heading}.`,
+          heading,
+          missing: [heading]
+        })
+      )
+    );
+  }
+  const requirementsSection = extractMarkdownSection5(content, "Requirements");
+  if (requirementsSection.trim().length > 0) {
+    const requirementItems = extractMarkdownNumberedItems(requirementsSection);
+    if (requirementItems.length === 0) {
+      const issue2 = "Spec artifact section Requirements must include at least one numbered requirement.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Requirements",
+          code: "spec.requirements_missing_numbered_items",
+          message: issue2,
+          heading: "Requirements",
+          repair: "Add at least one numbered requirement with Current, Target, and Acceptance bullets, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+    for (const requirementItem of requirementItems) {
+      for (const field of ["Current", "Target", "Acceptance"]) {
+        if (!new RegExp(`^\\s*[-*+]\\s+${field}:`, "mi").test(requirementItem)) {
+          const issue2 = `Spec artifact requirement is missing the ${field} bullet.`;
+          issues.push(issue2);
+          diagnostics.push(
+            phaseArtifactDiagnostic({
+              artifact,
+              path: "content.sections.Requirements",
+              code: "spec.requirement_missing_field",
+              message: issue2,
+              heading: "Requirements",
+              missing: [field],
+              repair: `Update every numbered requirement so it includes \`- Current:\`, \`- Target:\`, and \`- Acceptance:\`, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write.`
+            })
+          );
+        }
+      }
+    }
+  }
+  const boundariesSection = extractMarkdownSection5(content, "Boundaries");
+  if (boundariesSection.trim().length > 0) {
+    if (!hasMarkdownSubsectionLabel(boundariesSection, "In scope")) {
+      const issue2 = "Spec artifact section Boundaries must include an In scope subsection.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Boundaries",
+          code: "spec.boundaries_missing_in_scope",
+          message: issue2,
+          heading: "Boundaries",
+          repair: "Add an explicit `**In scope:**` subsection with concrete in-scope deliverables, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+    if (!hasMarkdownSubsectionLabel(boundariesSection, "Out of scope")) {
+      const issue2 = "Spec artifact section Boundaries must include an Out of scope subsection.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Boundaries",
+          code: "spec.boundaries_missing_out_of_scope",
+          message: issue2,
+          heading: "Boundaries",
+          repair: "Add an explicit `**Out of scope:**` subsection naming adjacent work that stays out of this phase, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+  }
+  const acceptanceSection = extractMarkdownSection5(content, "Acceptance Criteria");
+  if (acceptanceSection.trim().length > 0) {
+    const acceptanceLines = acceptanceSection.replace(/\r\n/g, "\n").split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
+    const bulletLines = acceptanceLines.filter((line) => /^[-*+]\s+/.test(line));
+    const checkboxLines = bulletLines.filter((line) => /^[-*+]\s+\[[ xX]\]\s+/.test(line));
+    if (checkboxLines.length === 0) {
+      const issue2 = "Spec artifact section Acceptance Criteria must include checkbox bullets.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Acceptance Criteria",
+          code: "spec.acceptance_missing_checkboxes",
+          message: issue2,
+          heading: "Acceptance Criteria",
+          repair: "Rewrite Acceptance Criteria as `- [ ]` checkbox bullets with pass/fail wording, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+    if (bulletLines.some((line) => !/^[-*+]\s+\[[ xX]\]\s+/.test(line))) {
+      const issue2 = "Spec artifact section Acceptance Criteria must use checkbox bullets for every listed criterion.";
+      issues.push(issue2);
+      diagnostics.push(
+        phaseArtifactDiagnostic({
+          artifact,
+          path: "content.sections.Acceptance Criteria",
+          code: "spec.acceptance_non_checkbox_bullet",
+          message: issue2,
+          heading: "Acceptance Criteria",
+          repair: "Convert each Acceptance Criteria bullet into a `- [ ]` checkbox, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+        })
+      );
+    }
+  }
+  const ambiguitySection = extractMarkdownSection5(content, "Ambiguity Report");
+  if (ambiguitySection.trim().length > 0 && extractMarkdownTableRows(ambiguitySection).length === 0) {
+    const issue2 = "Spec artifact section Ambiguity Report must include a Markdown table.";
+    issues.push(issue2);
+    diagnostics.push(
+      phaseArtifactDiagnostic({
+        artifact,
+        path: "content.sections.Ambiguity Report",
+        code: "spec.ambiguity_report_missing_table",
+        message: issue2,
+        heading: "Ambiguity Report",
+        repair: "Add the Ambiguity Report Markdown table with scored dimensions, or regenerate the draft through /blu-spec-phase before retrying blueprint_phase_artifact_write."
+      })
+    );
+  }
+  return {
+    valid: issues.length === 0,
+    issues,
+    warnings,
+    diagnostics
   };
 }
 function researchEvidenceWarningDiagnostic(args) {
@@ -41810,9 +42479,12 @@ function validatePhaseArtifactContent(content, artifact) {
     const validation = validateResearchArtifactContent(content);
     return validation;
   }
+  if (artifact === "spec") {
+    return validateSpecArtifactContent(content);
+  }
   const contractId = resolvePhaseArtifactContractId(artifact);
   const contract = readArtifactContract(contractId);
-  const artifactLabel = artifact === "context" ? "Context artifact" : artifact === "discussion-log" ? "Discussion log artifact" : "UI spec artifact";
+  const artifactLabel = phaseArtifactLabel(artifact);
   const issues = [];
   const warnings = [];
   const diagnostics = [];
@@ -43899,14 +44571,14 @@ async function prepareCarryForwardBootstrapReceipt(args) {
     );
   }
   const phaseRoot = resolveBlueprintPath(args.projectRoot, BLUEPRINT_PHASES_PATH);
-  const matchingPhaseDirs = (await listImmediateDirectories2(phaseRoot)).filter((phaseDir) => {
-    const directoryPhaseNumber = phaseDir.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+  const matchingPhaseDirs = (await listImmediateDirectories2(phaseRoot)).filter((phaseDir2) => {
+    const directoryPhaseNumber = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
     return directoryPhaseNumber !== void 0 && normalizePhaseNumber3(directoryPhaseNumber) === firstPhaseNumber;
   });
   const computedPhaseDirName = path8.basename(firstPhaseDir);
   if (matchingPhaseDirs.length > 1) {
     throw new Error(
-      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir) => `${BLUEPRINT_PHASES_PATH}/${phaseDir}`).join(", ")}.`
+      `Carry-forward scaffold is blocked because Phase ${firstPhaseNumber} has multiple matching directories under ${BLUEPRINT_PHASES_PATH}: ${matchingPhaseDirs.map((phaseDir2) => `${BLUEPRINT_PHASES_PATH}/${phaseDir2}`).join(", ")}.`
     );
   }
   if (matchingPhaseDirs.length === 1 && matchingPhaseDirs[0] !== computedPhaseDirName) {
@@ -44511,6 +45183,20 @@ async function isActiveDiscussPhaseDraft(projectRoot, inspection) {
     return false;
   }
 }
+function isCanonicalPhaseSpecArtifactPath2(artifactPath) {
+  const match = artifactPath.match(
+    /^\.blueprint\/phases\/([^/]+)\/(\d+(?:\.\d+)?)-SPEC\.md$/
+  );
+  if (!match) {
+    return false;
+  }
+  const [, phaseDir2, filePrefix] = match;
+  const directoryPrefix = phaseDir2.match(/^(\d+(?:\.\d+)?)(?:-|$)/)?.[1];
+  if (!directoryPrefix) {
+    return false;
+  }
+  return formatPhasePrefix3(normalizePhaseNumber3(directoryPrefix)) === filePrefix;
+}
 function diagnosticCodeFromIssue(message) {
   const normalized = message.replace(/`[^`]+`/g, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
   return normalized.length > 0 ? normalized.slice(0, 80) : "artifact_validation_failed";
@@ -44672,13 +45358,21 @@ async function blueprintArtifactValidate(args = {}) {
       repair: "Regenerate or update malformed phase research through /blu-research-phase before planning."
     },
     {
+      suffix: "-SPEC.md",
+      kind: "spec",
+      repair: "Regenerate or update malformed phase specs through /blu-spec-phase before planning.",
+      matches: (artifact) => isCanonicalPhaseSpecArtifactPath2(artifact)
+    },
+    {
       suffix: "-UI-SPEC.md",
       kind: "ui-spec",
       repair: "Regenerate or update malformed phase UI specs through /blu-ui-phase before planning."
     }
   ];
   for (const target of phaseArtifactValidationTargets) {
-    for (const artifact of inspection.phases.filter((value) => value.endsWith(target.suffix))) {
+    for (const artifact of inspection.phases.filter(
+      (value) => "matches" in target ? target.matches(value) : value.endsWith(target.suffix)
+    )) {
       if (activeDiscussPhaseDraft && target.kind === "context") {
         continue;
       }
@@ -45871,8 +46565,8 @@ async function validateAuditFixScopeFiles(args) {
   }
   return { files, blockers, warnings };
 }
-function dependencyPlanPathForPhase(phaseDir, phasePrefix2, planId2) {
-  return `${phaseDir}/${phasePrefix2}-${planId2}-PLAN.md`;
+function dependencyPlanPathForPhase(phaseDir2, phasePrefix2, planId2) {
+  return `${phaseDir2}/${phasePrefix2}-${planId2}-PLAN.md`;
 }
 async function collectAuditFixSummaryInventory(args) {
   const blockers = [];
@@ -48283,7 +48977,7 @@ var init_artifacts = __esm({
       ...SUPPORTED_BOOTSTRAP_ARTIFACTS,
       ...CODEBASE_ARTIFACTS
     ];
-    SCAFFOLD_PHASE_ARTIFACT_PATTERN = /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|UI-SPEC))\.md)$/;
+    SCAFFOLD_PHASE_ARTIFACT_PATTERN = /^\.blueprint\/phases\/([^/]+)\/((\d+(?:\.\d+)?)-(?:(\d+)-PLAN|(CONTEXT|DISCUSSION-LOG|RESEARCH|SPEC|UI-SPEC))\.md)$/;
     SCAFFOLD_ARTIFACT_PATH_GUIDANCE = "Use repo-relative Blueprint artifact paths such as `.blueprint/codebase/STACK.md` or `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names like `STACK` and absolute filesystem paths are not supported.";
     DURABLE_REQUIREMENT_ID_PATTERN = /^[A-Z][A-Z0-9-]*-\d+$/;
     BOOTSTRAP_SOURCE_DIRECTORIES = /* @__PURE__ */ new Set([
@@ -49589,7 +50283,7 @@ async function buildAllowedReviewFixNextActions(args) {
     ])
   };
 }
-function dependencyPlanRowsForReviewFix(dependsOn, phasePrefix2, phaseDir, knownPlanIds) {
+function dependencyPlanRowsForReviewFix(dependsOn, phasePrefix2, phaseDir2, knownPlanIds) {
   return dependsOn.flatMap((dependency) => {
     const trimmed = dependency.trim();
     const candidates = [
@@ -49604,7 +50298,7 @@ function dependencyPlanRowsForReviewFix(dependsOn, phasePrefix2, phaseDir, known
     const dependencyPrefix = `${phasePrefix2}-${normalized}`;
     return [{
       planId: normalized,
-      path: `${phaseDir}/${dependencyPrefix}-PLAN.md`
+      path: `${phaseDir2}/${dependencyPrefix}-PLAN.md`
     }];
   });
 }
@@ -61326,6 +62020,40 @@ function expectedSkillPath(entry) {
   const primarySkill = stringValue(entry.primarySkill);
   return primarySkill ? `skills/${primarySkill}/SKILL.md` : null;
 }
+function stripPathFragment(filePath) {
+  const hashIndex = filePath.indexOf("#");
+  return hashIndex >= 0 ? filePath.slice(0, hashIndex) : filePath;
+}
+function extractRuntimeReferencePaths(text) {
+  return [...text.matchAll(/docs\/RUNTIME-REFERENCE\.md(?:#[A-Za-z0-9._-]+)?/gu)].map((match) => match[0]);
+}
+function collectCommandSubstratePaths(commandName, entry) {
+  const blockedBy = extractBlockedBy(entry);
+  const candidates = [
+    stringValue(entry.specPath),
+    pathFromBlockedBy(blockedBy, "Missing command spec: "),
+    pathFromBlockedBy(blockedBy, "Missing locked command spec: "),
+    expectedCommandSpecPath(commandName),
+    stringValue(entry.manifestPath),
+    pathFromBlockedBy(blockedBy, "Missing command manifest: "),
+    expectedCommandManifestPath(commandName),
+    stringValue(entry.skillPath),
+    pathFromBlockedBy(blockedBy, "Missing primary skill: "),
+    expectedSkillPath(entry)
+  ].filter((value) => value !== null);
+  return uniqueSorted2(candidates.flatMap((value) => {
+    const normalized = stripPathFragment(value);
+    return normalized === value ? [value] : [value, normalized];
+  }));
+}
+function commandSubstrateInScope(scopedFiles, commandName, entry) {
+  if (scopedFiles.has("src/mcp/command-runtime-metadata.ts") || scopedFiles.has("docs/COMMAND-CATALOG.md") || scopedFiles.has(RUNTIME_REFERENCE_DOC_PATH) || scopedFiles.has("src/mcp/tools/project.ts")) {
+    return true;
+  }
+  return collectCommandSubstratePaths(commandName, entry).some(
+    (candidate) => scopedFiles.has(candidate)
+  );
+}
 function registeredRuntimeToolNames(runtime) {
   if (!runtime) {
     return null;
@@ -61355,7 +62083,8 @@ function addCommandSubstrateFinding(findings, evidence, commandName, entry, asse
     spec: "Implemented command missing command spec",
     manifest: "Implemented command missing command manifest",
     skill: "Implemented command missing primary skill",
-    "required-tools": "Implemented command missing required MCP tool"
+    "required-tools": "Implemented command missing required MCP tool",
+    "runtime-reference": "Implemented command runtime reference drift"
   };
   findings.push({
     id: `finding.contract.command-substrate.${sanitizeIdentifier(commandName)}.${asset}`,
@@ -61371,13 +62100,20 @@ function addCommandSubstrateFinding(findings, evidence, commandName, entry, asse
     evidenceRefs: [evidenceRef]
   });
 }
-function analyzeImplementedCommandSubstrate(catalog, runtime, findings, evidence) {
+function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, evidence) {
   if (!catalog) {
     return;
   }
+  const scopedFiles = new Set(files.flatMap((file2) => {
+    const normalized = stripPathFragment(file2);
+    return normalized === file2 ? [file2] : [file2, normalized];
+  }));
   const runtimeToolNames = registeredRuntimeToolNames(runtime);
   for (const [commandName, entry] of catalogEntries(catalog)) {
     if (entry.declaredStatus !== "implemented") {
+      continue;
+    }
+    if (!commandSubstrateInScope(scopedFiles, commandName, entry)) {
       continue;
     }
     const blockedBy = extractBlockedBy(entry);
@@ -61393,7 +62129,9 @@ function analyzeImplementedCommandSubstrate(catalog, runtime, findings, evidence
       ...missingRequiredToolsFromRuntime,
       ...entry.requiredToolsSatisfied === false && missingRequiredToolsFromBlockedBy.length === 0 && missingRequiredToolsFromRuntime.length === 0 ? ["unknown-required-tool"] : []
     ]);
-    if (!stringValue(entry.specPath) || blockedBy.some((item) => item.startsWith("Missing command spec: "))) {
+    if (blockedBy.some(
+      (item) => item.startsWith("Missing command spec: ") || item.startsWith("Missing locked command spec: ")
+    )) {
       addCommandSubstrateFinding(
         findings,
         evidence,
@@ -61448,6 +62186,31 @@ function analyzeImplementedCommandSubstrate(catalog, runtime, findings, evidence
           "Keep the command out of runnable routing until all required tools are present."
         ],
         { missingRequiredTools }
+      );
+    }
+    const runtimeReferenceBlockers = blockedBy.filter(
+      (item) => item.startsWith("Missing runtime reference row: ") || item.startsWith("Runtime reference ")
+    );
+    if (runtimeReferenceBlockers.length > 0) {
+      addCommandSubstrateFinding(
+        findings,
+        evidence,
+        commandName,
+        entry,
+        "runtime-reference",
+        uniqueSorted2([
+          RUNTIME_REFERENCE_DOC_PATH,
+          ...runtimeReferenceBlockers.flatMap(
+            (item) => extractRuntimeReferencePaths(item).filter(
+              (filePath) => stripPathFragment(filePath) === RUNTIME_REFERENCE_DOC_PATH
+            )
+          )
+        ]),
+        [
+          `Restore the ${RUNTIME_REFERENCE_DOC_PATH} row for ${commandName} before it can remain declared implemented.`,
+          "Keep the command out of runnable routing until the locked runtime-reference substrate is complete."
+        ],
+        { runtimeReferenceBlockers }
       );
     }
   }
@@ -61894,6 +62657,7 @@ async function analyzeContractAndObligations(projectRoot, files, surfaces, provi
     }
   });
   analyzeImplementedCommandSubstrate(
+    files,
     phase6Context.catalog,
     phase6Context.runtime,
     findings,
@@ -64564,7 +65328,7 @@ async function blueprintImpactOutputRender(args = {}) {
     warnings: parsed.warnings
   };
 }
-var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync4, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, RUNTIME_REFERENCE_DOC_PATH, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync4, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
@@ -64600,6 +65364,7 @@ var init_impact = __esm({
     IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
     IMPACT_REPORT_ROOT = ".blueprint/impact";
     IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
+    RUNTIME_REFERENCE_DOC_PATH = "docs/RUNTIME-REFERENCE.md";
     GIT_COMMAND_TIMEOUT_MS2 = 15e3;
     CODEOWNERS_CANDIDATES = [
       "CODEOWNERS",
@@ -65735,7 +66500,175 @@ function parseCatalogRow(cells) {
     risk
   };
 }
-async function buildCommandCatalogEntry(parsedRow) {
+function commandRequiresLockedDocSubstrates(commandName) {
+  return commandName === "spec-phase";
+}
+function parseMarkdownTableCell(line) {
+  return line.trim().split("|").slice(1, -1).map((cell) => cell.trim());
+}
+function parseSpecDocField(markdown, fieldName) {
+  const escapedFieldName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = markdown.match(new RegExp(`\\| ${escapedFieldName} \\| (.+?) \\|`));
+  return match?.[1]?.replaceAll("`", "").trim() ?? null;
+}
+function parseSpecDocPrimarySkill(markdown) {
+  return markdown.match(/- Primary skill:\s*`([^`]+)`/)?.[1] ?? null;
+}
+function parseRuntimeReferenceInlineList(cell) {
+  const normalized = cell.replaceAll("<br>", "\n").replace(/`/g, "").trim();
+  if (normalized.length === 0 || normalized.toLowerCase() === "none") {
+    return [];
+  }
+  return normalized.split(/\n|;\s+/).map((entry) => entry.trim()).filter((entry) => entry.length > 0 && entry.toLowerCase() !== "none");
+}
+function parseRuntimeReferenceRow(markdown, commandName) {
+  let currentWave = null;
+  for (const line of markdown.split("\n")) {
+    const waveMatch = line.match(/^### Wave ([0-9]+):/);
+    if (waveMatch) {
+      currentWave = Number.parseInt(waveMatch[1], 10);
+      continue;
+    }
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("| `") || trimmed.startsWith("|---")) {
+      continue;
+    }
+    const cells = parseMarkdownTableCell(trimmed);
+    if (cells.length < 8 || cells[0].replaceAll("`", "") !== commandName) {
+      continue;
+    }
+    return {
+      wave: currentWave,
+      commandSpecPath: cells[1].replaceAll("`", "") || null,
+      primarySkill: cells[2].replaceAll("`", "") || null,
+      exactMcpDestination: parseRuntimeReferenceInlineList(cells[3]),
+      optionalAgents: parseRuntimeReferenceInlineList(cells[4]),
+      hookInvolvement: parseRuntimeReferenceInlineList(cells[5]),
+      evidenceState: parseRuntimeReferenceInlineList(cells[7])
+    };
+  }
+  return null;
+}
+function arraysEqual(left, right) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+function pushMismatch(blockedBy, label, expected, actual) {
+  if (expected === actual) {
+    return;
+  }
+  blockedBy.push(`${label} mismatch: expected ${String(expected)} but found ${String(actual)}`);
+}
+async function readOptionalBundledFile(relativePath) {
+  try {
+    return await fs10.readFile(bundledUrl(relativePath), "utf8");
+  } catch {
+    return null;
+  }
+}
+async function validateLockedDocSubstrates(parsedRow, runtimeMetadata, catalogRowSource) {
+  if (!commandRequiresLockedDocSubstrates(runtimeMetadata.commandName)) {
+    return [];
+  }
+  const blockedBy = [];
+  if (catalogRowSource !== "docs") {
+    blockedBy.push(`Missing command catalog row: ${COMMAND_CATALOG_DOC_PATH}#${runtimeMetadata.commandName}`);
+    return blockedBy;
+  }
+  const expectedCatalog = runtimeMetadata.catalog;
+  pushMismatch(blockedBy, "Command catalog wave", expectedCatalog.wave, parsedRow.wave);
+  pushMismatch(blockedBy, "Command catalog family", expectedCatalog.family, parsedRow.family);
+  pushMismatch(
+    blockedBy,
+    "Command catalog primary skill",
+    expectedCatalog.primarySkill,
+    parsedRow.primarySkill
+  );
+  pushMismatch(
+    blockedBy,
+    "Command catalog declared status",
+    expectedCatalog.declaredStatus,
+    parsedRow.declaredStatus
+  );
+  pushMismatch(blockedBy, "Command catalog risk", expectedCatalog.risk, parsedRow.risk);
+  const commandSpecMarkdown = await readOptionalBundledFile(SPEC_PHASE_COMMAND_DOC_PATH);
+  if (!commandSpecMarkdown) {
+    blockedBy.push(`Missing locked command spec: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
+  } else {
+    pushMismatch(
+      blockedBy,
+      "Command spec wave",
+      String(runtimeMetadata.catalog.wave),
+      parseSpecDocField(commandSpecMarkdown, "Wave")
+    );
+    pushMismatch(
+      blockedBy,
+      "Command spec family",
+      runtimeMetadata.catalog.family,
+      parseSpecDocField(commandSpecMarkdown, "Family")
+    );
+    pushMismatch(
+      blockedBy,
+      "Command spec execution profile",
+      runtimeMetadata.spec.executionProfile,
+      parseSpecDocField(commandSpecMarkdown, "Execution profile")
+    );
+    pushMismatch(
+      blockedBy,
+      "Command spec root-routable",
+      runtimeMetadata.spec.rootRoutable ? "Yes" : "No",
+      parseSpecDocField(commandSpecMarkdown, "Root-routable")
+    );
+    pushMismatch(
+      blockedBy,
+      "Command spec primary skill",
+      runtimeMetadata.catalog.primarySkill,
+      parseSpecDocPrimarySkill(commandSpecMarkdown)
+    );
+    const commandSpecTools = parseRequiredTools(commandSpecMarkdown);
+    if (!arraysEqual(commandSpecTools, runtimeMetadata.requiredTools)) {
+      blockedBy.push(`Command spec required tools mismatch: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
+    }
+  }
+  const runtimeReferenceMarkdown = await readOptionalBundledFile(RUNTIME_REFERENCE_DOC_PATH2);
+  const runtimeReferenceRow = runtimeReferenceMarkdown ? parseRuntimeReferenceRow(runtimeReferenceMarkdown, runtimeMetadata.commandName) : null;
+  if (!runtimeReferenceRow) {
+    blockedBy.push(`Missing runtime reference row: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
+  } else {
+    pushMismatch(
+      blockedBy,
+      "Runtime reference wave",
+      runtimeMetadata.catalog.wave,
+      runtimeReferenceRow.wave
+    );
+    pushMismatch(
+      blockedBy,
+      "Runtime reference command spec path",
+      runtimeMetadata.sourceId,
+      runtimeReferenceRow.commandSpecPath
+    );
+    pushMismatch(
+      blockedBy,
+      "Runtime reference primary skill",
+      runtimeMetadata.runtimeReference.primarySkill,
+      runtimeReferenceRow.primarySkill
+    );
+    if (!arraysEqual(runtimeReferenceRow.exactMcpDestination, runtimeMetadata.requiredTools)) {
+      blockedBy.push(`Runtime reference MCP destination mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
+    }
+    if (!arraysEqual(runtimeReferenceRow.optionalAgents, runtimeMetadata.optionalAgents)) {
+      blockedBy.push(`Runtime reference optional agents mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
+    }
+    if (!arraysEqual(runtimeReferenceRow.hookInvolvement, runtimeMetadata.runtimeReference.hookInvolvement)) {
+      blockedBy.push(`Runtime reference hook involvement mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
+    }
+    if (!arraysEqual(runtimeReferenceRow.evidenceState, runtimeMetadata.runtimeReference.evidenceState)) {
+      blockedBy.push(`Runtime reference evidence state mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
+    }
+  }
+  return blockedBy;
+}
+async function buildCommandCatalogEntry(parsedRow, options = {}) {
+  const catalogRowSource = options.catalogRowSource ?? "docs";
   const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
   const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
   const specPath = runtimeMetadata?.sourceId ?? `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
@@ -65770,6 +66703,11 @@ async function buildCommandCatalogEntry(parsedRow) {
   if (!skillExists) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
   }
+  if (runtimeMetadata) {
+    blockedBy.push(
+      ...await validateLockedDocSubstrates(parsedRow, runtimeMetadata, catalogRowSource)
+    );
+  }
   for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
     if (!await pathExists7(bundledUrl(inputPath))) {
       missingRuntimeInputs.push(inputPath);
@@ -65779,6 +66717,9 @@ async function buildCommandCatalogEntry(parsedRow) {
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
+  const lockedDocsSatisfied = !runtimeMetadata ? true : !commandRequiresLockedDocSubstrates(runtimeMetadata.commandName) || !blockedBy.some(
+    (blocker) => blocker.startsWith("Missing command catalog row:") || blocker.startsWith("Command catalog ") || blocker.startsWith("Missing locked command spec:") || blocker.startsWith("Command spec ") || blocker.startsWith("Missing runtime reference row:") || blocker.startsWith("Runtime reference ")
+  );
   for (const toolName of missingTools) {
     blockedBy.push(`Missing required MCP tool: ${toolName}`);
   }
@@ -65792,7 +66733,7 @@ async function buildCommandCatalogEntry(parsedRow) {
     })
   );
   let status = catalogFacts.declaredStatus;
-  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
+  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied && lockedDocsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -65818,7 +66759,7 @@ async function buildCommandCatalogEntry(parsedRow) {
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
     skillPath: skillResolution.resolvedPath,
-    specPath: specExists && runtimeInputsSatisfied ? specPath : null,
+    specPath: specExists && runtimeInputsSatisfied && lockedDocsSatisfied ? specPath : null,
     requiredTools,
     requiredToolsSatisfied,
     optionalAgents,
@@ -65837,7 +66778,7 @@ function runtimeOwnedMetadataToParsedRow(metadata) {
 }
 async function addRuntimeOwnedCommandCatalogEntry(result, metadata) {
   const parsedRow = runtimeOwnedMetadataToParsedRow(metadata);
-  const entry = await buildCommandCatalogEntry(parsedRow);
+  const entry = await buildCommandCatalogEntry(parsedRow, { catalogRowSource: "runtime" });
   const waveKey = String(parsedRow.wave);
   result.commands[parsedRow.commandName] = entry;
   result.waves[waveKey] ??= [];
@@ -66181,7 +67122,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, COMMAND_CATALOG_DOC_PATH, RUNTIME_REFERENCE_DOC_PATH2, SPEC_PHASE_COMMAND_DOC_PATH, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -66275,6 +67216,9 @@ var init_project = __esm({
     ]);
     MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
+    COMMAND_CATALOG_DOC_PATH = "docs/COMMAND-CATALOG.md";
+    RUNTIME_REFERENCE_DOC_PATH2 = "docs/RUNTIME-REFERENCE.md";
+    SPEC_PHASE_COMMAND_DOC_PATH = "docs/commands/spec-phase.md";
     projectToolDefinitions = [
       {
         name: "blueprint_command_catalog",
@@ -76727,7 +77671,7 @@ function shouldTrimCreatedPhaseDirs(result) {
     return false;
   }
   const promotedCreatedPhaseDirs = promotedItems.filter((item) => asRecord2(item)?.createdPhaseDir === true).map((item) => asRecord2(item)?.phaseDir);
-  if (promotedCreatedPhaseDirs.some((phaseDir) => typeof phaseDir !== "string")) {
+  if (promotedCreatedPhaseDirs.some((phaseDir2) => typeof phaseDir2 !== "string")) {
     return false;
   }
   return areEquivalentJsonValues(promotedCreatedPhaseDirs, createdPhaseDirs);
@@ -76741,11 +77685,11 @@ function shouldTrimRoadmapPhaseSlug(toolName, result) {
   }
   const slug = getString(result, "slug");
   const phaseName = getString(result, "phaseName");
-  const phaseDir = getString(result, "phaseDir");
-  if (!slug || !phaseName || !phaseDir) {
+  const phaseDir2 = getString(result, "phaseDir");
+  if (!slug || !phaseName || !phaseDir2) {
     return false;
   }
-  const phaseDirBaseName = phaseDir.split("/").at(-1);
+  const phaseDirBaseName = phaseDir2.split("/").at(-1);
   if (!phaseDirBaseName) {
     return false;
   }
@@ -78014,14 +78958,14 @@ function validateGodReviewSessionPaths(session) {
         message: "Phase god-review sessions must use a generated phase session path."
       });
     }
-    const phaseDir = sessionPath.replace(/\/\.god-review-session\.json$/, "");
-    if (!isGeneratedPhaseHumanStatePath(humanStatePath) || humanStatePath !== `${phaseDir}/.god-review-state.md`) {
+    const phaseDir2 = sessionPath.replace(/\/\.god-review-session\.json$/, "");
+    if (!isGeneratedPhaseHumanStatePath(humanStatePath) || humanStatePath !== `${phaseDir2}/.god-review-state.md`) {
       issues.push({
         field: "humanStatePath",
         message: "Phase god-review human state must use the generated phase state path."
       });
     }
-    if (!isGeneratedPhaseReportPath(reportPath) || !reportPath.startsWith(`${phaseDir}/`)) {
+    if (!isGeneratedPhaseReportPath(reportPath) || !reportPath.startsWith(`${phaseDir2}/`)) {
       issues.push({
         field: "reportPath",
         message: "Phase god-review reports must stay in the generated phase report path."

@@ -6,19 +6,21 @@ This file describes the intended artifact flow through a single Blueprint phase 
 
 ## Happy-Path Sequence
 
-1. `discuss-phase`
+1. Optional `spec-phase`
+   Writes `XX-SPEC.md` when a phase needs explicit what-and-why clarification before solution discovery. This pre-discussion step remains optional, and `discuss-phase` must still work when no spec artifact exists.
+2. `discuss-phase`
    Writes `XX-CONTEXT.md`, may persist the shared `XX-DISCUSS-CHECKPOINT.json` continuation artifact during long discovery, and should delete only discuss-owned checkpoint state after successful context capture.
-2. `research-phase`
+3. `research-phase`
    Writes `XX-RESEARCH.md` when technical uncertainty or integration risk exists, and may reuse the shared `XX-DISCUSS-CHECKPOINT.json` continuation artifact with `ownerCommand: "/blu-research-phase"` during pauses or inconclusive research.
-3. `ui-phase`
+4. `ui-phase`
    Writes `XX-UI-SPEC.md` for frontend-heavy work, or records an explicit UI-skip rationale in `XX-UI-SPEC.md` when UI work is intentionally out of scope.
-4. `plan-phase`
+5. `plan-phase`
    Uses the plan index plus dedicated plan read/write tools to persist one or more `XX-YY-PLAN.md` files and updates `STATE.md`.
-5. `execute-phase`
+6. `execute-phase`
    Uses the plan index/read tools plus dedicated summary index/read/write tools to produce implementation changes and `XX-YY-SUMMARY.md` execution evidence.
-6. `validate-phase`
+7. `validate-phase`
    Reads the saved execution summaries first, then writes `XX-VERIFICATION.md` with validation gaps, pass signals, and a clear next safe action.
-7. `verify-work`
+8. `verify-work`
    Reads the saved execution summaries first, then writes resumable `XX-UAT.md` evidence with explicit follow-up fixes when needed.
 
 ## Optional Quality Passes
@@ -64,6 +66,7 @@ A phase should not be treated as complete just because execution finished. Compl
 
 ## Related Specs
 
+- `docs/commands/spec-phase.md`
 - `docs/commands/discuss-phase.md`
 - `docs/commands/research-phase.md`
 - `docs/commands/ui-phase.md`

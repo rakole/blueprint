@@ -38,6 +38,7 @@ export type ArtifactContractId =
   | "phase.context"
   | "phase.discussion-log"
   | "phase.research"
+  | "phase.spec"
   | "phase.ui-spec"
   | "phase.plan"
   | "phase.summary"
@@ -941,6 +942,94 @@ Do not preserve scaffold prompts or this guidance block in the final saved artif
 
 ## Follow-Ups
 
+`;
+}
+
+function renderSpecTemplate(context?: ArtifactTemplateContext): string {
+  return `# ${phaseLabel(context)} - Specification
+
+**Created:** <YYYY-MM-DD>
+**Ambiguity score:** <0.00>
+**Requirements locked:** <count>
+
+## Goal
+
+<observable goal stated as a falsifiable outcome>
+
+## Background
+
+<current codebase, workflow, or product reality that makes this phase necessary>
+
+## Requirements
+
+1. **<requirement label>**: <specific, testable requirement statement>
+   - Current: <what exists today>
+   - Target: <what changes after this phase>
+   - Acceptance: <how a verifier confirms this requirement>
+
+## Boundaries
+
+**In scope:**
+- <concrete deliverable in scope>
+
+**Out of scope:**
+- <adjacent work kept out of this phase> - <why it stays out>
+
+## Constraints
+
+- <constraint or dependency that must remain true>
+
+## Acceptance Criteria
+
+- [ ] <pass/fail acceptance criterion>
+- [ ] <pass/fail acceptance criterion>
+
+## Ambiguity Report
+
+| Dimension | Score | Min | Status | Notes |
+|-----------|-------|-----|--------|-------|
+| Goal Clarity | <score> | 0.75 | <status> | <notes> |
+| Boundary Clarity | <score> | 0.70 | <status> | <notes> |
+| Constraint Clarity | <score> | 0.65 | <status> | <notes> |
+| Acceptance Criteria | <score> | 0.70 | <status> | <notes> |
+| Ambiguity | <score> | <=0.20 | <status> | <notes> |
+
+## Interview Log
+
+| Round | Perspective | Question summary | Decision locked |
+|-------|-------------|------------------|-----------------|
+| 1 | <perspective> | <question summary> | <decision locked> |
+
+---
+*Phase: ${phaseDir(context)}*
+*Next step: /blu-discuss-phase ${phasePrefix(context)}*`;
+}
+
+function renderSpecAuthoringTemplate(context?: ArtifactTemplateContext): string {
+  return `# ${phaseLabel(context)} - Specification
+
+<!--
+Final saved content only.
+Replace the scaffold metadata and every section below with Blueprint-native phase requirements, scope boundaries, constraints, acceptance criteria, ambiguity notes, and interview decisions.
+Keep the canonical headings exactly as written. Each numbered requirement must include Current, Target, and Acceptance. Boundaries must include explicit In scope and Out of scope subsections. Acceptance Criteria must stay as checkbox bullets.
+Do not preserve scaffold placeholders, example rows, or this guidance block in the final saved artifact.
+-->
+
+## Goal
+
+## Background
+
+## Requirements
+
+## Boundaries
+
+## Constraints
+
+## Acceptance Criteria
+
+## Ambiguity Report
+
+## Interview Log
 `;
 }
 
@@ -4332,6 +4421,68 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     renderScaffoldTemplate: (context) => withScaffoldFooter(renderResearchTemplate(context)),
     renderAuthoringTemplate: renderResearchTemplate
   },
+  "phase.spec": {
+    id: "phase.spec",
+    scope: "phase",
+    ownerTool: "blueprint_phase_artifact_write",
+    pathOwner: "blueprint_phase_artifact_write",
+    canonicalName: "Phase Specification",
+    canonicalFilePattern: ".blueprint/phases/<phase-slug>/XX-SPEC.md",
+    freehandPolicy: "additional-top-level-headings",
+    requiredHeadings: [
+      "Goal",
+      "Background",
+      "Requirements",
+      "Boundaries",
+      "Constraints",
+      "Acceptance Criteria",
+      "Ambiguity Report",
+      "Interview Log"
+    ],
+    lockedMarkers: [],
+    placeholderSignals: [
+      "**Created:** <YYYY-MM-DD>",
+      "**Ambiguity score:** <0.00>",
+      "**Requirements locked:** <count>",
+      "<count>",
+      "<observable goal stated as a falsifiable outcome>",
+      "<current codebase, workflow, or product reality that makes this phase necessary>",
+      "<requirement label>",
+      "<specific, testable requirement statement>",
+      "1. **<requirement label>**: <specific, testable requirement statement>",
+      "- Current: <what exists today>",
+      "- Target: <what changes after this phase>",
+      "- Acceptance: <how a verifier confirms this requirement>",
+      "<what exists today>",
+      "<what changes after this phase>",
+      "<how a verifier confirms this requirement>",
+      "- <concrete deliverable in scope>",
+      "- <adjacent work kept out of this phase> - <why it stays out>",
+      "- <constraint or dependency that must remain true>",
+      "- [ ] <pass/fail acceptance criterion>",
+      "<concrete deliverable in scope>",
+      "<adjacent work kept out of this phase>",
+      "<why it stays out>",
+      "<constraint or dependency that must remain true>",
+      "<pass/fail acceptance criterion>",
+      "<score>",
+      "<status>",
+      "<notes>",
+      "| Goal Clarity | <score> | 0.75 | <status> | <notes> |",
+      "<perspective>",
+      "<question summary>",
+      "<decision locked>",
+      "| 1 | <perspective> | <question summary> | <decision locked> |"
+    ],
+    notes: [
+      "Phase specs are Markdown-first artifacts that lock what and why before /blu-discuss-phase chooses implementation details.",
+      "Canonical specs live at .blueprint/phases/<phase-slug>/XX-SPEC.md and must stay Blueprint-native.",
+      "Write validation remains intentionally light: H1 required, scaffold placeholders removed, canonical headings present, and section-specific Markdown structure preserved without introducing a strict model schema.",
+      "Downstream work should treat the spec as upstream input for /blu-discuss-phase, /blu-plan-phase, and /blu-verify-work."
+    ],
+    renderScaffoldTemplate: (context) => withScaffoldFooter(renderSpecTemplate(context)),
+    renderAuthoringTemplate: renderSpecAuthoringTemplate
+  },
   "phase.ui-spec": {
     id: "phase.ui-spec",
     scope: "phase",
@@ -5343,7 +5494,7 @@ export function renderArtifactScaffoldTemplate(
 }
 
 export function resolvePhaseArtifactContractId(
-  artifact: "context" | "discussion-log" | "research" | "ui-spec"
+  artifact: "context" | "discussion-log" | "research" | "spec" | "ui-spec"
 ): ArtifactContractId {
   switch (artifact) {
     case "context":
@@ -5352,6 +5503,8 @@ export function resolvePhaseArtifactContractId(
       return "phase.discussion-log";
     case "research":
       return "phase.research";
+    case "spec":
+      return "phase.spec";
     case "ui-spec":
       return "phase.ui-spec";
   }

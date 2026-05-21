@@ -32,7 +32,7 @@ input_bundles:
 
 ## Purpose
 
-Provide implementation-aware routing and next-step guidance without advertising spec-only commands as runnable.
+Provide implementation-aware routing and next-step guidance without widening recommendations past the implemented runtime surface.
 
 ## Runtime Call Rules
 
@@ -78,6 +78,9 @@ Runtime input resolution is structured and command-scoped through the `input_bun
 10. If repo state is partial, prefer `/blu-health`.
 11. Surface config warnings only when they materially change the next safe action.
 12. When handling a root `/blu` request and routing cannot proceed, explain the waiting state in concrete terms such as a mapping prerequisite, missing artifact, approval gate, or blocked substrate.
+13. Recommend `/blu-spec-phase <phase>` only after confirming its `blueprint_command_catalog` entry is `implemented: true`.
+14. Use `/blu-spec-phase <phase>` when the user wants spec-first planning or requirements clarification before discuss, when missing context leaves a roadmap phase ambiguous enough to need WHAT/WHY clarification first, or when a saved spec is stale or contradictory and needs refresh.
+15. Do not describe a missing spec by itself as a normal lifecycle blocker; discuss, research, and plan remain allowed when their own gates are satisfied.
 
 ## Planned `/blu-do` Contract
 
@@ -105,7 +108,7 @@ Before claiming completion, verify:
 
 - The active router input was only the current command (`/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`); sibling manifests/docs and the planned `/blu-do` taxonomy did not add active reads, writes, agents, or routable commands.
 - The active command's manifest/runtime contract was loaded, and the required MCP read set used runtime FQNs: `/blu-help` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`; `/blu-progress` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_config_get`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu-next` -> `mcp_blueprint_blueprint_project_status`, `mcp_blueprint_blueprint_state_load`, `mcp_blueprint_blueprint_artifact_list`, `mcp_blueprint_blueprint_command_catalog`; `/blu` -> `mcp_blueprint_blueprint_command_catalog`, `mcp_blueprint_blueprint_project_status`, plus `mcp_blueprint_blueprint_config_get` only when config affects routing.
-- Every recommendation was checked against the live catalog result with `implemented: true`; planned, blocked, or repairing commands were described with `status`/`blockedBy`, and `/blu-do` remained non-runnable.
+- Every recommendation was checked against the live catalog result with `implemented: true`; planned, blocked, or repairing commands were described with `status`/`blockedBy`, `/blu-do` remained non-runnable, and `/blu-spec-phase <phase>` was only recommended for the spec-first or stale-spec cases above.
 - Project status, config warnings, state, artifacts, blockers, `derivedStatus`, `nextAction`, `missing`, `reason`, and source/path fields from MCP results were treated as authoritative; missing or rejected reads were repaired or reported as blockers.
 - The router stayed read-only: no files, `.blueprint/` artifacts, host-global `~/.<host>/blueprint/`, installed extension directories, shell slash commands, or write-oriented MCP tools were mutated or invoked.
 - High-risk, destructive, host-global, maintenance, shipping, undo, cleanup, workspace, or patch asks were not hidden behind freeform routing; any confirmation gate belongs to the explicit implemented direct command, not this router response.

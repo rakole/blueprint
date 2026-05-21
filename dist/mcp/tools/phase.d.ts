@@ -369,6 +369,7 @@ type PhaseContextResult = {
             context: string | null;
             discussionLog: string | null;
             research: string | null;
+            spec: string | null;
             uiSpec: string | null;
             verification: string | null;
             uat: string | null;
@@ -772,6 +773,7 @@ type PhasePlanReadinessResult = {
     artifactBodies: {
         context?: PhasePlanReadinessBody;
         research?: PhasePlanReadinessBody;
+        spec?: PhasePlanReadinessBody;
         uiSpec?: PhasePlanReadinessBody;
     };
     validationEvidence: {
@@ -1195,6 +1197,7 @@ export declare const phaseToolDefinitions: ({
             context: "context";
             "discussion-log": "discussion-log";
             research: "research";
+            spec: "spec";
             "ui-spec": "ui-spec";
         }>;
     };
@@ -1210,6 +1213,7 @@ export declare const phaseToolDefinitions: ({
             context: "context";
             "discussion-log": "discussion-log";
             research: "research";
+            spec: "spec";
             "ui-spec": "ui-spec";
         }>;
     };
@@ -1224,6 +1228,7 @@ export declare const phaseToolDefinitions: ({
             context: "context";
             "discussion-log": "discussion-log";
             research: "research";
+            spec: "spec";
             "ui-spec": "ui-spec";
         }>;
         content: z.ZodOptional<z.ZodString>;
