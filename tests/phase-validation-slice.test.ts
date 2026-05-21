@@ -799,8 +799,8 @@ test("validate-phase and verify-work manifests reference registered validation t
 
   assert.match(validateManifest, /Use the `blueprint-phase-validation` skill/);
   assert.match(verifyManifest, /Use the `blueprint-phase-validation` skill/);
-  assert.match(validateManifest, /`blueprint-verifier` subagent/);
-  assert.match(verifyManifest, /`blueprint-verifier` subagent/);
+  assert.match(validateManifest, /same-named Gemini CLI agent tool `blueprint-verifier`/);
+  assert.match(verifyManifest, /same-named Gemini CLI agent tool `blueprint-verifier`/);
   assert.match(validateManifest, /artifact: "verification"/);
   assert.match(verifyManifest, /artifact: "uat"/);
   assert.match(validateManifest, /\/blu-validate-phase <phase>/);

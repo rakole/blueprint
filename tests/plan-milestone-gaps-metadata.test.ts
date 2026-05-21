@@ -15,7 +15,9 @@ test("plan-milestone-gaps manifest references the audit-first gap-planning tools
   );
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
-  assert.match(commandFile, /`blueprint-roadmapper` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-roadmapper`/);
+  assert.match(commandFile, /bounded gap-grouping task packet/);
+  assert.match(commandFile, /Do not read, inline, or load separate agent source/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
@@ -43,6 +45,8 @@ test("roadmap-admin skill captures grouped audit-follow-up planning behavior", a
 
   assert.match(skillFile, /\/blu-plan-milestone-gaps/);
   assert.match(skillFile, /blueprint_artifact_list/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool `blueprint-roadmapper`/);
+  assert.match(skillFile, /Do not read, inline, or load separate agent source/);
   assert.match(skillFile, /grouping reviewable/i);
   assert.match(skillFile, /one explicit confirmation/i);
   assert.match(skillFile, /requirements traceability repair/i);

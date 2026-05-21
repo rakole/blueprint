@@ -99,17 +99,21 @@ visible approval, or implemented-only routing.
 
 ## Optional Agents
 
-Before invoking either optional agent, read effective config with
-`mcp_blueprint_blueprint_config_get`. Use `blueprint-project-researcher` or
-`blueprint-roadmapper` only when all three gates pass:
+Before delegating to either optional agent, read effective config with
+`mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+same-named Gemini CLI agent tool (`blueprint-project-researcher` or
+`blueprint-roadmapper`) with a bounded task packet. Delegate only when all four
+gates pass:
 
-1. `workflow.subagents` is not `false`.
-2. The bundled Blueprint agent definition is available.
-3. The current bootstrap question benefits from bounded read-only synthesis.
+1. The active command contract permits that optional agent.
+2. `workflow.subagents` is not `false`.
+3. The same-named Gemini agent tool is available in the current host session.
+4. The current bootstrap question benefits from bounded read-only synthesis.
 
-If config disables subagents, the bundled agent is unavailable, or the question
-does not need sidecar depth, stay in the parent session and follow the
-no-subagent fallback in `references/bootstrap-runtime-contract.md`.
+If the command contract does not permit delegation, config disables subagents,
+the same-named tool is unavailable, or the question does not need sidecar
+depth, stay in the parent session and follow the no-subagent fallback in
+`references/bootstrap-runtime-contract.md`.
 `workflow.subagents: false` disables optional agent invocation only; it does not hide catalog entries, change implemented-command routing, or authorize generic browser/web-search/shell helpers as substitutes.
 
 ## Shared Bootstrap Posture

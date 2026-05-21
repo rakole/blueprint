@@ -32,8 +32,8 @@ This skill package is the runtime source of truth for `/blu-map-codebase`.
 - Runtime behavior must stay executable from this skill plus its local
   references alone.
 - Use `skills/blueprint-map/references/map-runtime-contract.md` as the
-  richness, evidence-density, capability-gated subagent, and one-document
-  fallback contract.
+  richness, evidence-density, capability-gated mapper delegation, and
+  one-document fallback contract.
 
 ## Runtime Call Rules
 
@@ -49,17 +49,25 @@ This skill package is the runtime source of truth for `/blu-map-codebase`.
   authority for every codebase artifact.
 - For `mcp_blueprint_blueprint_artifact_scaffold`, pass repo-relative artifact paths such as `.blueprint/codebase/STACK.md`; do not guess bare names like `STACK` and do not pass absolute filesystem paths.
 - For `mcp_blueprint_blueprint_artifact_summary_digest`, pass repo-relative evidence inputs only and treat the returned `inputsUsed` list as the authoritative digest scope.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
-- Use a suitable code-analysis subagent or task mechanism when the host exposes
-  one; never substitute browser, web, generic page-inspection, or search-only
-  agents for codebase mapping.
+- Treat Blueprint skills as loaded guidance, not callable tools. Before any
+  mapper delegation decision, read effective config with
+  `mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+  same-named Gemini CLI agent tool `blueprint-mapper` with bounded mapper-lane
+  task packets. Delegate only when the active command contract permits
+  `blueprint-mapper`, `workflow.subagents` is not `false`, the same-named tool
+  is available in the current host session, and mapper decomposition would
+  materially improve codebase analysis. Do not read, inline, or load any
+  separate agent source before delegation.
+- Never substitute browser, web, generic page-inspection, or search-only agents
+  for codebase mapping.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
 
 Carry forward the mapper-oriented flow:
 
-- prefer dedicated mapper agents when available
+- prefer the same-named `blueprint-mapper` Gemini agent tool when allowed and
+  available
 - otherwise perform deterministic sequential mapping
 - produce a full codebase reference bundle
 - keep focused deepening within the same seven artifact outputs
@@ -114,8 +122,9 @@ Blueprint deltas:
 7. Produce rich canonical authoring drafts with concrete repo paths in every
    artifact, using `map-runtime-contract.md` for evidence density and
    `contract.authoringTemplate` for required headings.
-8. If a suitable code-analysis subagent or task mechanism is available, run
-   four bounded mapper lanes: tech, architecture, quality, and concerns.
+8. If mapper delegation gates pass, call the same-named `blueprint-mapper`
+   Gemini agent tool with four bounded mapper-lane task packets: tech,
+   architecture, quality, and concerns.
 9. If subagents are unavailable, author exactly one artifact at a time in this
    order: `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`,
    `TESTING.md`, `INTEGRATIONS.md`, `CONCERNS.md`.

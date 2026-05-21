@@ -63,9 +63,9 @@ Map the bootstrap workflow to the shared stages like this:
    `.blueprint/codebase/*.md` bundle as an overwrite conflict.
 7. If initialized core `.blueprint/` artifacts already exist, require explicit
    overwrite confirmation before continuing.
-8. If repo evidence, product intent, or overwrite risk is fuzzy, use
-   `blueprint-project-researcher` for bounded read-only synthesis before the
-   first write.
+8. If repo evidence, product intent, or overwrite risk is fuzzy and optional
+   agent gates pass, call the same-named `blueprint-project-researcher` Gemini
+   agent tool with a bounded read-only synthesis packet before the first write.
 
 ## Read
 
@@ -236,36 +236,42 @@ Any material change to committed requirements, roadmap phase coverage, defaults 
      observed.
 3. Distinguish committed v1 scope from deferred and explicitly out-of-scope
    work.
-4. Use `blueprint-roadmapper` when grouped phase proposals, requirement
-   coverage, sequencing, or success-criteria shaping would benefit from bounded
-   synthesis.
+4. When optional agent gates pass, call the same-named `blueprint-roadmapper`
+   Gemini agent tool with a bounded synthesis packet when grouped phase
+   proposals, requirement coverage, sequencing, or success-criteria shaping
+   would benefit from bounded synthesis.
 5. Keep any task-tracker graph honest as research, revision, or roadmap-shape
    decisions change.
 
 ### Capability-Gated Research And Roadmapping
 
 Optional-Agent Decision Record (session-local, not a new artifact):
+- command contract permits optional agent: yes | no
 - effective `workflow.subagents`: enabled | disabled | unavailable
-- bundled Blueprint agents available: list or none
+- same-named Gemini agent tools available: list or none
 - selected agent and reason, or fallback reason
 - synthesis boundary: private agent output rewritten into the visible approval
   packet; raw child output is never the approval surface
 
-Use bounded subagents only when the runtime reports suitable bundled Blueprint
-agents as available. Do not replace them with browser, web-search, shell-only,
-or generic helpers.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Call bounded
+same-named Gemini agent tools only when the command contract permits the agent,
+`workflow.subagents` is enabled, the tool is available in the current host
+session, and the task materially benefits from sidecar synthesis. Do not replace
+them with browser, web-search, shell-only, or generic helpers.
 
-1. Use `blueprint-project-researcher` when the project brief needs repo-shape
-   evidence, product-context recovery, or parent-approved outside context before
-   requirements are scoped.
+1. Call `blueprint-project-researcher` with a bounded task packet when the
+   project brief needs repo-shape evidence, product-context recovery, or
+   parent-approved outside context before requirements are scoped.
 2. When project-level research is useful, ask for the GSD-inspired dimensions
    that matter to the current repo instead of creating a mandatory research
    directory: `Stack`, `Features`, `Architecture`, `Pitfalls`.
 3. Treat those research results as private synthesis inputs. Fold only
    approved, relevant findings into the visible approval packet and
    `bootstrapSeed`.
-4. Use `blueprint-roadmapper` when the roadmap needs requirement clustering,
-   dependency ordering, or goal-backward success criteria.
+4. Call `blueprint-roadmapper` with a bounded task packet when the roadmap
+   needs requirement clustering, dependency ordering, or goal-backward success
+   criteria.
 5. Roadmapper output must map every committed requirement to exactly one phase,
    identify duplicates or orphans before persistence, derive 2-5 success
    criteria per phase, prefer wording that points to observable evidence when

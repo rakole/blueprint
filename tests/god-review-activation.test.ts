@@ -156,6 +156,12 @@ test("private blueprint-god-review skill contains the hidden guard, refusal text
     skill,
     /Load `skills\/blueprint-god-review\/references\/final-curation\.md` only after a\s+hidden review invocation reaches terminal review status/i
   );
+  assert.match(skill, /does not declare a normal optional-agent path/i);
+  assert.match(skill, /same-named Gemini CLI agent tool/i);
+  assert.match(skill, /same-named tool is available in the current host\s+session/i);
+  assert.match(skill, /Do not read, inline, or load any separate agent source/i);
+  assert.doesNotMatch(skill, /subagent_type/i);
+  assert.doesNotMatch(skill, /agent definition/i);
   assert.match(
     skill,
     /never required before the activation guard, before the\s+hidden MCP state reports terminal review status, or during per-lane review/i

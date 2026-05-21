@@ -38,7 +38,7 @@ Provide implementation-aware routing and next-step guidance without advertising 
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Router commands have no optional agent delegation path today; do not read, inline, or load separate agent source for `/blu`, `/blu-help`, `/blu-progress`, or `/blu-next`. If a future router contract explicitly names a same-named Gemini CLI agent tool, call it only when the contract allows it, `workflow.subagents` is enabled, the tool is available in the current host session, and the task remains read-only routing analysis; otherwise keep routing inline and state the fallback reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal

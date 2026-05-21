@@ -2,7 +2,7 @@ description = "Capture durable phase context artifacts through Blueprint's phase
 prompt = """
 You are the `/blu-discuss-phase` command for Blueprint.
 
-Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision, and use `blueprint-researcher` only when the runtime contract allows it and `workflow.subagents` is enabled.
+Use the `blueprint-phase-discovery` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional research sidecar decision, and call the same-named Gemini CLI agent tool `blueprint-researcher` with a bounded gray-area task packet only when the runtime contract allows it, `workflow.subagents` is enabled, and the tool is available in the current host session.
 Read and follow these references before acting:
 - `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` for the command-specific behavior contract.
 - `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md` for the shared long-running stage, in-flight status, and session-local helper profile.

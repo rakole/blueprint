@@ -44,8 +44,8 @@ failure, state-sync failure, ambiguous routing, and completion.
 
 - Prefer one `mcp_blueprint_blueprint_phase_plan_readiness` call as the compact
   Read-stage packet. Use summary/hash mode by default; request bounded bodies
-  only when drafting or a subagent handoff needs actual context, research, or UI
-  excerpts.
+  only when drafting or an agent-tool task packet needs actual context,
+  research, or UI excerpts.
 - Use readiness `contract.modelContract.schemaPath` plus the returned JSON
   Schema as the base model authority. Fall back to
   `mcp_blueprint_blueprint_artifact_contract_read` only when the packet omitted
@@ -75,7 +75,7 @@ failure, state-sync failure, ambiguous routing, and completion.
   before broad repo rereads. Call out missing or invalid mapped codebase
   evidence as uncertainty.
 - After all Read-stage MCP calls complete, build the Planning Investigation
-  Trace before any drafting or subagent invocation. The full section is
+  Trace before any drafting or agent-tool invocation. The full section is
   defined below, after Stage Mapping, to preserve the stage hierarchy.
 
 #### Read-Set Staleness Check
@@ -148,13 +148,19 @@ failure, state-sync failure, ambiguous routing, and completion.
 
 ### Execute
 
-- When `blueprint-planner` is available, use it for bounded plan drafting.
-- When `workflow.plan_check=true` and `blueprint-checker` is available, use it
-  for bounded saved-plan review. When `workflow.plan_check=false`, skip checker
-  review entirely and state that config disabled it.
+- Gemini CLI exposes enabled delegated planning agents as same-named tools. Do
+  not read, inline, or load separate agent source before delegation.
+- Call `blueprint-planner` with a bounded planning task packet only when the
+  active command contract permits it, `workflow.subagents` is enabled, the
+  same-named tool is available in the current host session, and bounded plan
+  drafting would help.
+- When `workflow.plan_check=true`, call `blueprint-checker` with a bounded
+  plan-check task packet only when the same command/config/tool gates pass.
+  When `workflow.plan_check=false`, skip checker review entirely and state that
+  config disabled it.
 - The parent command owns MCP calls, user gates, persistence, validation, state
   updates, and final routing.
-- Planner input should be a compact packet by default: resolved phase and phase
+- Planner task packets should be compact by default: resolved phase and phase
   dir, readiness summary, effective config, task schema path/hash plus task
   schema only when needed, artifact paths plus read-set hashes, short excerpts
   for context/research/UI/validation/review evidence, plan index summary,
@@ -163,10 +169,10 @@ failure, state-sync failure, ambiguous routing, and completion.
   supplied paths when it needs the full body.
 - Planner output must be a complete structured `phase.plan` JSON model, not
   Markdown, outlines, notes, or scaffold text.
-- Checker input should be compact by default: saved plan paths/hashes, write and
-  validation result summaries, readiness/config summary, prior findings, and
-  evidence paths/excerpts. The checker may use read-only `read_file` for supplied plan paths
-  when exact body review is necessary.
+- Checker task packets should be compact by default: saved plan paths/hashes,
+  write and validation result summaries, readiness/config summary, prior
+  findings, and evidence paths/excerpts. The checker may use read-only
+  `read_file` for supplied plan paths when exact body review is necessary.
 
 ### Persist
 
@@ -181,7 +187,7 @@ failure, state-sync failure, ambiguous routing, and completion.
   readiness `readSet` when skipping a duplicate pre-write re-read.
 - After any successful plan write, use `returnNextAuthoringContext: true` on the
   write result or re-read readiness/`mcp_blueprint_blueprint_phase_plan_authoring_context`
-  before drafting another plan. Also refresh after a user pause or subagent
+  before drafting another plan. Also refresh after a user pause or agent-tool
   return, or whenever read-set freshness is absent or stale; saved
   `XX-YY-PLAN.md` files are intentional known evidence artifacts for later plan
   slots and must be covered by the refreshed task schema. `expectedReadSet` only
@@ -300,7 +306,7 @@ Before drafting, extract and list:
 Summarize in 3-5 lines: phase goal, key constraints, evidence quality,
 anticipated plan count, and highest-risk planning decision.
 
-Present this summary before any plan drafting or subagent invocation.
+Present this summary before any plan drafting or agent-tool invocation.
 
 ## Planning Decision Record
 
@@ -449,37 +455,40 @@ When splitting, include in the planning decision record:
 - What the execution order constraint is
 - What would trigger a re-merge if evidence changes
 
-## Subagent Path
+## Agent Tool Path
 
-Use this path only when suitable code/workflow analysis subagents are available:
+Use this path only when suitable Blueprint planning/checking agent tools are
+available:
 
 1. Parent reads all required MCP context and saved artifacts.
-2. Parent gives `blueprint-planner` a compact packet with readiness/config
-   summary, task schema authority, paths/hashes, short excerpts, plan index, and
-   existing plan bodies only when revising/replacing. Planner can use read-only
-   `read_file` for supplied paths when exact bodies are needed.
+2. Parent calls `blueprint-planner` with a compact task packet containing
+   readiness/config summary, task schema authority, paths/hashes, short
+   excerpts, plan index, and existing plan bodies only when
+   revising/replacing. Planner can use read-only `read_file` for supplied paths
+   when exact bodies are needed.
 3. Planner returns complete plan bodies, coverage mapping, dependency waves,
    split rationale, blockers, and assumptions.
 4. Parent writes through MCP.
-5. If `workflow.plan_check=true`, parent gives `blueprint-checker` saved plan
-   paths/hashes, write and validation summaries, readiness/config summary, prior
-   findings, and full plan bodies only when needed. Checker can use read-only
-   `read_file` for supplied plan paths.
+5. If `workflow.plan_check=true`, parent calls `blueprint-checker` with saved
+   plan paths/hashes, write and validation summaries, readiness/config summary,
+   prior findings, and full plan bodies only when needed. Checker can use
+   read-only `read_file` for supplied plan paths.
 6. Checker returns `ACCEPT`, `REVISE`, or `BLOCK` with blockers, warnings,
    evidence, why each issue matters, and concrete fix hints.
 7. Parent performs targeted revisions, up to three checker passes. If issue
    count stalls or the checker keeps finding the same blocker, ask whether to
    adjust approach, proceed with an explicitly risky saved draft, or stop.
 
-Do not use browser, web-search-only, or generic browsing agents as substitutes
-for Blueprint planning, codebase, or workflow analysis agents.
+Do not use browser, web-search-only, shell-only, or generic agents as
+substitutes for Blueprint planning, codebase, or workflow analysis agent tools.
 
 ## No-Subagent Fallback
 
-When planner/checker agents are unavailable, continue sequentially with the
-same plan quality, evidence coverage, and review bar expected from the bounded
-subagent path. Do not substitute browser-only, web-search-only, shell-only, or
-generic helpers for Blueprint planning, codebase, or workflow analysis.
+When planner/checker tools are unavailable, disabled, unnecessary, or unsafe,
+continue sequentially with the same plan quality, evidence coverage, and review
+bar expected from the bounded agent-tool path. Do not substitute browser-only,
+web-search-only, shell-only, or generic helpers for Blueprint planning,
+codebase, or workflow analysis.
 
 1. Build the Planning Investigation Trace from the read context: evidence
    inventory, planning signals, and compact summary.

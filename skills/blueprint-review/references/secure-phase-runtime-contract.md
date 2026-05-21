@@ -92,14 +92,14 @@ repair, record rejection, blocked advancement, and completion.
 
 - Verify only the declared threat register and declared mitigations. Do not run
   a broad vulnerability scan.
-- Use `blueprint-security-auditor` only as a bounded read-only mitigation
+- Call `blueprint-security-auditor` only as a bounded read-only mitigation
   verifier when the phase spans multiple plans, touches risky surfaces, or
   already has prior security evidence that needs comparison.
 - Pass the auditor the saved plans, summaries, prior security artifact when
   present, implicated repo files, canonical `review.security` headings, and the
   bounded threat register. The auditor must not persist artifacts or mutate repo
   files.
-- If the auditor is unavailable or unnecessary, use the no-subagent fallback in
+- If the auditor tool is unavailable or unnecessary, use the no-subagent fallback in
   this reference.
 
 ### Persist
@@ -212,8 +212,11 @@ renders it to Markdown.
 
 ## Subagent Path
 
-Use `blueprint-security-auditor` only as a bounded mitigation verifier. Suitable
-triggers:
+Gemini CLI exposes an enabled security auditor as the same-named
+`blueprint-security-auditor` tool. Do not read, inline, or load separate agent
+source before delegation. Call `blueprint-security-auditor` with a bounded
+mitigation-verification task packet only as a bounded mitigation verifier.
+Suitable triggers:
 
 - multiple plans or summaries
 - risky surfaces such as auth, secrets, filesystem, shell, network, prompt, or
@@ -221,7 +224,7 @@ triggers:
 - prior `XX-SECURITY.md` comparison
 - open threats whose mitigation evidence is non-obvious
 
-The auditor may classify declared threats, cite evidence, identify partial or
+The delegated auditor may classify declared threats, cite evidence, identify partial or
 missing controls, and draft security artifact content. It must not persist
 artifacts, mutate repo files, create commits, route the user, invent threats, or
 substitute browser/web/search-only work for repo evidence.
@@ -236,10 +239,10 @@ The auditor should return one of:
 
 ## No-Subagent Fallback
 
-When a suitable security auditor is unavailable or unnecessary, the parent
+When a suitable security auditor tool is unavailable, disabled, unnecessary, or unsafe, the parent
 command uses this sequential fallback. It must preserve the same threat-by-
 threat evidence depth, open-risk honesty, and artifact quality as the auditor
-path; the only change is that verification happens one declared threat at a
+agent-tool path; the only change is that verification happens one declared threat at a
 time in the parent flow.
 
 1. Read saved plans, summaries, prior security artifact when present, and

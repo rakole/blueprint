@@ -199,8 +199,8 @@ test("ui-phase command references registered tools and single-artifact UI handli
   }
 
   assert.match(commandFile, /Use the `blueprint-phase-discovery` skill/);
-  assert.match(commandFile, /`blueprint-ui-designer` subagent/);
-  assert.match(commandFile, /`blueprint-checker` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-ui-designer`/);
+  assert.match(commandFile, /`blueprint-checker` with a bounded UI-check task packet/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`\./);
   assert.match(
     commandFile,

@@ -2,9 +2,8 @@
 
 This reference is the runtime-heavy contract for `/blu-map-codebase`.
 
-Use it together with `skills/blueprint-map/SKILL.md` and
-`agents/blueprint-mapper.md` so mapping output is useful as future planning and
-execution evidence, not merely valid markdown.
+Use it together with `skills/blueprint-map/SKILL.md` so mapping output is useful
+as future planning and execution evidence, not merely valid markdown.
 
 ## Contract Authority
 
@@ -59,10 +58,16 @@ artifacts.
 
 ## Capability-Gated Mapping
 
-Prefer bounded mapper decomposition when the host exposes a suitable code
-analysis subagent or task mechanism.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Prefer bounded
+mapper decomposition only when the active `/blu-map-codebase` command contract
+permits `blueprint-mapper`, effective config does not disable
+`workflow.subagents`, the same-named `blueprint-mapper` Gemini agent tool is
+available in the current host session, and mapper decomposition would
+materially improve codebase analysis.
 
-Use four lanes:
+When those gates pass, call `blueprint-mapper` with four bounded mapper-lane
+task packets:
 
 - tech lane: `STACK.md`, `INTEGRATIONS.md`
 - architecture lane: `STRUCTURE.md`, `ARCHITECTURE.md`
@@ -72,12 +77,12 @@ Use four lanes:
 The lane output must either be persisted through Blueprint MCP tools or returned
 to the parent as canonical draft content for MCP persistence. Browser, web,
 generic page-inspection, or search-only agents are not acceptable substitutes
-for code-analysis mapper agents.
+for the `blueprint-mapper` tool.
 
 ## Single-Agent Fallback
 
-When code-analysis subagents are unavailable, the main agent must author exactly
-one artifact at a time in this order:
+When `blueprint-mapper` is unavailable, disabled, unnecessary, or unsafe, the
+main agent must author exactly one artifact at a time in this order:
 
 1. `STACK.md`
 2. `STRUCTURE.md`

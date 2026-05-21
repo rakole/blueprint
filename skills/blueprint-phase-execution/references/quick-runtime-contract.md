@@ -23,12 +23,15 @@ helper guidance that apply to non-trivial quick runs.
 
 - `--discuss`, `--research`, `--validate`, and `--full` require explicit
   confirmation before the run expands into those deeper branches.
-- Use `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and
-  `blueprint-verifier` only for bounded work that stays inside the confirmed
-  quick-run scope.
-- If those Blueprint agents are unavailable, unnecessary, or unsafe for the
-  bounded scope, continue inline with the same evidence depth and output
-  quality one confirmed branch at a time.
+- Gemini CLI exposes enabled delegated agents as same-named tools. Do not read,
+  inline, or load separate agent source before delegation.
+- Call `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and
+  `blueprint-verifier` only with bounded task packets that stay inside the
+  confirmed quick-run scope, only when `workflow.subagents` is enabled and the
+  same-named tool is available in the current host session.
+- If those Blueprint agent tools are unavailable, unnecessary, disabled, or
+  unsafe for the bounded scope, continue inline with the same evidence depth and
+  output quality one confirmed branch at a time.
 - Do not substitute browser-only, web-search-only, shell-only, or generic
   helper agents for these Blueprint roles.
 - Tracker-backed branching is allowed only as session-local coordination for

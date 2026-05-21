@@ -71,11 +71,11 @@ test("review-family contracts keep overwrite and scope boundaries explicit", asy
   );
   assert.match(
     review,
-    /use the `blueprint-reviewer` subagent only for read-only packet and consensus\/disagreement analysis/i
+    /call the same-named Gemini CLI agent tool `blueprint-reviewer` with a bounded peer-review synthesis task packet/i
   );
   assert.match(
     review,
-    /If that subagent is unavailable or unnecessary, use the local runtime contract's no-subagent fallback/i
+    /If that tool is unavailable or unnecessary, use the local runtime contract's no-subagent fallback/i
   );
 
   const reviewRuntimeContract = files["skills/blueprint-review/references/review-runtime-contract.md"];

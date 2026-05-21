@@ -112,9 +112,12 @@ stay free of hidden control flow.
   `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older
   Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke
-  optional subagents only when the current command contract explicitly allows
-  them and effective config has `workflow.subagents=true`; otherwise use the
-  command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. This private
+  skill does not declare a normal optional-agent path. Keep hidden review lane
+  work and hidden fix selection inline unless a future command contract
+  explicitly names a same-named Gemini CLI agent tool, effective config allows
+  optional agents, and that same-named tool is available in the current host
+  session. Do not read, inline, or load any separate agent source for ordinary
+  hidden god-review execution.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.

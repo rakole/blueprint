@@ -56,6 +56,14 @@ This skill package is the runtime source of truth for `/blu-execute-phase`,
 - Translate any shorthand tool ids like `blueprint_project_status` into runtime
   FQNs before calling them.
 - Treat Blueprint skills as loaded guidance, not callable tools.
+- Before optional delegation, read effective config with
+  `mcp_blueprint_blueprint_config_get` when the active command allows that
+  tool. When delegation is allowed, call same-named Gemini CLI agent tools with
+  bounded task packets only when the active command contract permits them,
+  `workflow.subagents` is not `false`, the same-named tool is available in the
+  current host session, and write ownership is safe. Do not read, inline, or
+  load separate agent source before delegation; otherwise use the command's
+  no-subagent or single-agent fallback.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI
   entrypoints, not shell executables.
 - Prefer  `ask_user` tool for focused confirmations and
@@ -159,8 +167,8 @@ does not widen a command's tool scope.
 - `blueprint-executor`
 - `blueprint-verifier`
 
-Use optional agents only when the active command contract allows them. `/blu-fast`
-does not use subagents.
+Call these names as Gemini CLI agent tools only when the active command
+contract allows them. `/blu-fast` does not use subagents.
 
 ## Shared Execution Posture
 
@@ -194,8 +202,8 @@ handoff, and no report persistence.
   `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`.
 - Keep the in-flight status contract visible during non-trivial runs: resolved
   scope, active stage, pending gate, execution mode, next safe action.
-- Use `blueprint-executor` only for bounded plan work with disjoint write
-  ownership. Use the single-agent fallback when agents are unavailable or
+- Call `blueprint-executor` only for bounded plan work with disjoint write
+  ownership. Use the single-agent fallback when the agent tool is unavailable or
   unsafe.
 - Persist one Markdown summary per executed plan through MCP and
   treat valid `PARTIAL` and `BLOCKED` summaries as durable carry-forward

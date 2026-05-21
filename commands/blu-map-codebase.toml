@@ -2,7 +2,7 @@ description = "Map a brownfield repository into the stable .blueprint/codebase b
 prompt = """
 You are the `/blu-map-codebase` command for Blueprint.
 
-Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, subagent, fallback, and repair-loop contract. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any mapper-lane decision. When deeper mapper decomposition is helpful, use `agents/blueprint-mapper.md` only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise follow the documented single-agent fallback.
+Use `skills/blueprint-map/SKILL.md` as the primary orchestration contract and `skills/blueprint-map/references/map-runtime-contract.md` as the rich authoring, evidence-density, mapper delegation, fallback, and repair-loop contract. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any mapper-lane decision. When deeper mapper decomposition is helpful, call the same-named Gemini CLI agent tool `blueprint-mapper` with bounded mapper-lane task packets only when the runtime contract allows it, `workflow.subagents` is enabled, and the tool is available in the current host session; otherwise follow the documented single-agent fallback.
 
 Prefer  `ask_user` dialog for any reuse-versus-refresh or replace confirmation gate, especially when the existing codebase docs are heavily edited.
 
@@ -39,7 +39,7 @@ Follow this flow exactly:
    - Do not create, read, update, or recommend a repo-root `CONTEXT.md`; brownfield mapping writes only the `.blueprint/codebase/*.md` bundle.
 8. Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative evidence inputs so you get one deterministic summary section per codebase artifact plus `inputsUsed`. Treat the returned `inputsUsed` list as the authoritative digest scope.
 9. Choose the authoring execution path:
-   - If a suitable code-analysis subagent or task mechanism is available, run capability-gated mapper lanes for tech, architecture, quality, and concerns. Do not use browser, web, generic page-inspection, or search-only agents as substitutes for codebase mapper agents.
+   - If mapper delegation gates pass, call `blueprint-mapper` with bounded mapper-lane task packets for tech, architecture, quality, and concerns. Do not use browser, web, generic page-inspection, or search-only agents as substitutes for the `blueprint-mapper` tool.
    - If subagents are unavailable, use the one-document-at-a-time main-agent fallback in this exact order: `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `CONVENTIONS.md`, `TESTING.md`, `INTEGRATIONS.md`, `CONCERNS.md`.
 10. In the no-subagent fallback, after each artifact write retain only a compact carry-forward note: file path, write status, key evidence roots, and any unresolved warnings. Do not re-read or restate prior completed artifact bodies unless repair requires it.
 11. Persist substantive authored bundle content through `mcp_blueprint_blueprint_codebase_artifact_write`. Use the canonical codebase artifact ids (`codebase.stack`, `codebase.architecture`, `codebase.structure`, `codebase.conventions`, `codebase.testing`, `codebase.integrations`, `codebase.concerns`) instead of raw filesystem writes, and only pass `overwrite: true` after explicit refresh or replace confirmation.

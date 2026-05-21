@@ -60,7 +60,8 @@ test("ui-review manifest references the review tools, UI auditor, and safe routi
 
   assert.match(commandFile, /Use the `blueprint-review` skill/);
   assert.match(commandFile, /ui-review-runtime-contract\.md/);
-  assert.match(commandFile, /`blueprint-ui-auditor` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-ui-auditor`/);
+  assert.match(commandFile, /bounded six-pillar UI task packet/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     commandFile,

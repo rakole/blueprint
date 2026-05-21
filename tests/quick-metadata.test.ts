@@ -15,8 +15,9 @@ test("quick manifest references the execution skill, bounded depth agents, and r
   assert.match(commandFile, /Use the `blueprint-phase-execution` skill/);
   assert.match(
     commandFile,
-    /`blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents/
+    /same-named Gemini CLI agent tools \(`blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier`\)/
   );
+  assert.match(commandFile, /bounded task packets/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-execution\.md/);
   assert.doesNotMatch(
     commandFile,
@@ -77,6 +78,8 @@ test("execution skill and local quick contract capture visibility, tracker eligi
   assert.match(quickRuntimeContract, /blueprint-planner/);
   assert.match(quickRuntimeContract, /blueprint-executor/);
   assert.match(quickRuntimeContract, /blueprint-verifier/);
+  assert.match(quickRuntimeContract, /same-named tools/i);
+  assert.match(quickRuntimeContract, /Do not read,\s+inline,\s+or load separate agent source/i);
   assert.match(quickRuntimeContract, /\/blu-progress/);
 });
 

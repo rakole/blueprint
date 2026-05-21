@@ -24,7 +24,7 @@ Visible execution stages:
 |------|----------------------|--------------|---------------------|
 | 1 | resolve execution phase | Resolve | selected phase, phase directory, or recovery blocker |
 | 2 | select executable targets | Read | selected plans, lower-wave blockers, gap-only scope, existing summaries, conflicts, and external-service preflight |
-| 3 | confirm execution mode | Decide | overwrite posture, overlap posture, external-service confirmation gate, parallel/sequential mode, and subagent/fallback mode |
+| 3 | confirm execution mode | Decide | overwrite posture, overlap posture, external-service confirmation gate, parallel/sequential mode, and agent-tool/fallback mode |
 | 4 | execute selected plan work | Execute | active plan or task group, write ownership, verification target, blocker, and repair attempt count |
 | 5 | write execution summary | Persist | summary path/status, `COMPLETED`/`PARTIAL`/`BLOCKED` truth state, linked plan, and durable carry-forward evidence |
 | 6 | run post-execution checks | Validate | summary index, artifact validation result, failed checks, lower-wave debt, partial/blocked status, and state-sync readiness |
@@ -109,15 +109,19 @@ failure, ambiguous routing, and completion.
   - `git.branching_strategy` shapes whether execution stays on the current
     branch or uses branch-scoped guidance.
 - Preserve wave order. Execute lower waves before higher waves.
-- Use bounded `blueprint-executor` subagents only when selected plans have
-  disjoint write ownership. Each executor prompt must name exactly one plan or
-  one explicitly confirmed bounded batch, list write-owned files or surfaces,
-  list read-first files, state isolation expectations, and require verification
-  evidence plus a summary draft before returning.
+- Gemini CLI exposes an enabled delegated executor as the same-named
+  `blueprint-executor` tool. Do not read, inline, or load separate agent source
+  before delegation. Call `blueprint-executor` with a bounded execution task
+  packet only when selected plans have disjoint write ownership, the active
+  command contract permits it, `workflow.subagents` is enabled, and the tool is
+  available in the current host session. Each task packet must name exactly one
+  plan or one explicitly confirmed bounded batch, list write-owned files or
+  surfaces, list read-first files, state isolation expectations, and require
+  verification evidence plus a summary draft before returning.
 - Do not substitute browser-only, web-search-only, shell-only, or generic
-  helper agents for `blueprint-executor`.
-- If subagents are unavailable, unreliable, disabled by config, or unsafe
-  because of overlapping write ownership, fall back to one-plan-at-a-time
+  helper agents for the `blueprint-executor` tool.
+- If `blueprint-executor` is unavailable, unreliable, disabled by config, or
+  unsafe because of overlapping write ownership, fall back to one-plan-at-a-time
   inline execution.
 - Interactive runs remain sequential and checkpointed. After each plan or major
   task group, ask whether to `review`, `skip`, `stop`, or `retry`.
@@ -222,8 +226,8 @@ failure, ambiguous routing, and completion.
 
 ## No-Subagent Fallback
 
-When suitable execution agents are unavailable, continue sequentially with the
-same evidence depth and output quality bar:
+When `blueprint-executor` is unavailable, disabled, unnecessary, or unsafe,
+continue sequentially with the same evidence depth and output quality bar:
 
 1. Compress the read context into a carry-forward note containing the selected
    plan ids, wave order, overlap or blocker notes, config-driven execution

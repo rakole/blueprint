@@ -2,9 +2,10 @@
 
 This reference is the runtime-heavy contract for `/blu-code-review`.
 
-Use it with `skills/blueprint-review/SKILL.md` and
-`agents/blueprint-reviewer.md` so code review output is useful engineering
-evidence, not merely valid markdown.
+Use it with the `blueprint-review` skill and the same-named
+`blueprint-reviewer` Gemini CLI agent tool only when that tool is explicitly
+delegated, so code review output is useful engineering evidence, not merely
+valid markdown.
 
 ## Contract Authority
 
@@ -170,22 +171,25 @@ Use the effective depth from `blueprint_review_scope.reviewMode.depth`.
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-reviewer` only when a suitable code-analysis subagent is
-available and the command scope benefits from bounded deep work:
+Gemini CLI exposes an enabled delegated reviewer as the same-named
+`blueprint-reviewer` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-reviewer` with a bounded findings-analysis
+task packet only when a suitable code-analysis tool is available and the
+command scope benefits from bounded deep work:
 
 - multiple plans or many files
 - `--depth=deep`
 - risky config, auth, persistence, security, or orchestration surfaces
 - revising an existing `XX-REVIEW.md`
 
-Pass the subagent only:
+Pass the reviewer task packet only:
 
 - the exact `blueprint_review_scope.files` list
 - selected saved phase artifacts needed as evidence
 - the effective depth
 - the canonical authoring requirements from this contract
 
-The subagent returns JSON model fields, including findings and
+The delegated reviewer returns JSON model fields, including findings and
 `positiveSignals`; it does not return a Markdown artifact draft. The parent
 command owns all confirmation, user-facing progress, MCP writes, validation, and
 routing.
@@ -195,9 +199,9 @@ acceptable substitutes for `blueprint-reviewer`.
 
 ## No-Subagent Fallback
 
-If `blueprint-reviewer` is unavailable or unnecessary, continue sequentially in
+If `blueprint-reviewer` is unavailable, disabled, unnecessary, or unsafe, continue sequentially in
 the parent session. The fallback must preserve the same saved-evidence depth,
-finding quality, and artifact quality as the subagent path; the only change is
+finding quality, and artifact quality as the agent-tool path; the only change is
 that review work happens one scoped file group at a time in the parent flow.
 
 1. Read saved evidence first: summaries, plans, validation or UAT artifacts,
@@ -211,7 +215,7 @@ that review work happens one scoped file group at a time in the parent flow.
 6. Run one final consistency pass: every finding has file evidence and every
    severity count matches the `Findings` section.
 
-Do not replace the missing subagent with browser/web/search-only analysis.
+Do not replace the missing agent tool with browser/web/search-only analysis.
 
 ## Retry And Repair
 

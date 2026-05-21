@@ -40,6 +40,13 @@ and Downstream Execution Handoff.
 - Never run `/blu-*` commands in the shell.
 - Treat docs under `docs/commands/` as user-facing documentation, not runtime
   prompt authority.
+- Treat Blueprint skills as loaded guidance, not callable tools. Before
+  planner/checker delegation, read effective config with
+  `mcp_blueprint_blueprint_config_get`; call same-named Gemini CLI agent tools
+  only when the runtime contract permits them, `workflow.subagents` is not
+  `false`, the same-named tool is available in the current host session, and
+  the task benefits from bounded planning or checking. Do not read, inline, or
+  load separate agent source before delegation.
 
 ## Command Inputs
 
@@ -73,13 +80,14 @@ Use only tools allowed by the active command contract:
 - `blueprint-planner`
 - `blueprint-checker`
 
-Use optional agents only when suitable and enabled by effective config. The
-parent command owns user gates, MCP reads, validation, persistence, state
-update, and final routing. Give planner/checker agents compact packets by
-default: phase identity, readiness/config summaries, schema path/hash, read-set
-hashes, artifact paths, short excerpts, plan index summary, and full bodies only
-when needed. Agents may use read-only `read_file` on supplied paths for exact
-body review; they must not write files or call MCP persistence.
+Call these names as Gemini CLI agent tools only when suitable and enabled by
+effective config. The parent command owns user gates, MCP reads, validation,
+persistence, state update, and final routing. Give planner/checker tools compact
+task packets by default: phase identity, readiness/config summaries, schema
+path/hash, read-set hashes, artifact paths, short excerpts, plan index summary,
+and full bodies only when needed. Delegated agents may use read-only
+`read_file` on supplied paths for exact body review; they must not write files
+or call MCP persistence.
 
 ## Orchestration Rules
 

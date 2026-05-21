@@ -123,10 +123,12 @@ test("plan-phase skill is compact and delegates detailed behavior to the runtime
     "No `validationMode: \"warn\"`",
     "Completion Criteria",
     "Downstream Execution Handoff",
-    "Give planner/checker agents compact packets by",
+    "same-named Gemini CLI agent tools",
+    "Do not read, inline, or\n  load separate agent source",
+    "Give planner/checker tools compact\ntask packets by",
     "full bodies only",
-    "read-only `read_file` on supplied paths",
-    "must not write files or call MCP persistence"
+    "read-only\n`read_file` on supplied paths",
+    "must not write files\nor call MCP persistence"
   ]);
 
   for (const tool of planPhaseTools) {
@@ -175,10 +177,11 @@ test("plan-phase runtime contract owns detailed behavior and fresh-read semantic
     "Do not write raw `.blueprint/` files",
     "validationMode:\n  \"warn\" is not part of this command's write contract",
     "separate final scoped validation remains authoritative",
-    "Planner input should be a compact packet by default",
+    "not read, inline, or load separate agent source",
+    "Planner task packets should be compact by default",
     "task schema path/hash",
     "existing plan bodies only when revising or replacing",
-    "Checker input should be compact by default",
+    "Checker task packets should be compact by default",
     "saved plan paths/hashes",
     "read-only `read_file` for supplied plan paths"
   ]);

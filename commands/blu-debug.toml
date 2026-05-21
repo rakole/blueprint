@@ -2,7 +2,7 @@ description = "Investigate a repo issue with a structured debugging flow, persis
 prompt = """
 You are the `/blu-debug` command for Blueprint.
 
-Use the `blueprint-debug` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional debugger pass. Use the `blueprint-debugger` subagent for bounded investigation work when the issue needs deeper reproduction, log analysis, or hypothesis testing before a safe next step is clear only when the runtime contract allows it and `workflow.subagents` is enabled; otherwise keep the investigation inline.
+Use the `blueprint-debug` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional debugger pass. Call the same-named Gemini CLI agent tool `blueprint-debugger` with a bounded diagnosis packet when the issue needs deeper reproduction, log analysis, or hypothesis testing before a safe next step is clear only when the runtime contract allows it, `workflow.subagents` is enabled, and the tool is available; otherwise keep the investigation inline. Do not read, inline, or load separate agent source before delegation.
 
 Execution profile: start in `interactive-read` for lightweight evidence-backed investigations that can stay concise, and escalate to `long-running-mutation` only when the investigation becomes non-trivial and needs visible stage, gate, and follow-up reporting.
 
@@ -14,7 +14,7 @@ Follow this flow exactly:
 4. Treat `/blu-debug` as a shared execution-profile `long-running-mutation` command whenever the investigation is non-trivial. Keep the shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route` honest, and keep the resolved scope, active stage, pending gate, execution mode, and next safe implemented action visible while work is in flight.
 5. For any non-trivial debug run, use  `update_topic` tool to keep the active stage visible and `write_todos` to keep a compact user-facing checklist aligned to the investigation. These are session-local visibility tools only; they do not replace Blueprint MCP persistence, and they are not permission to persist follow-up todos without an explicit user ask or confirmation.
 6. Inspect the most relevant repo evidence before proposing conclusions. Read the directly implicated files, tests, logs, or the current `.blueprint/reports/debug-latest.md` report when it exists and helps continue an earlier investigation.
-7. Use the `blueprint-debugger` subagent only for bounded investigative work such as:
+7. Call the same-named Gemini CLI agent tool `blueprint-debugger` only for bounded investigative work such as:
    - reproducing a failing test or command
    - comparing expected versus actual behavior in a narrow code path
    - gathering log, stack trace, or config evidence

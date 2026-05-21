@@ -553,7 +553,8 @@ test("research-phase command references only registered tool names and safe rout
   assertAllMatch("command manifest", commandFile, [
     /Use `blueprint-phase-discovery`/,
     /research-phase-runtime-contract\.md/,
-    /Use `blueprint-researcher` only when/i,
+    /same-named Gemini CLI agent tool `blueprint-researcher`/i,
+    /bounded research task packet/i,
     /long-running-mutation/,
     /`mcp_blueprint_blueprint_phase_context` as the first selected-phase read/i,
     /phase_context\.phaseSelection[\s\S]*phase_context\.phase[\s\S]*authority[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase\.artifacts/i,

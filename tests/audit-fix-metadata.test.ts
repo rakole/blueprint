@@ -63,8 +63,9 @@ test("audit-fix manifest references the remediation tools, agents, and safe rout
     commandFile,
     /skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md/
   );
-  assert.match(commandFile, /`blueprint-reviewer` subagent/);
-  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tools/);
+  assert.match(commandFile, /`blueprint-reviewer` with a bounded findings-classification task packet/);
+  assert.match(commandFile, /`blueprint-verifier` with a bounded post-fix verification task packet/);
   assert.match(commandFile, /Treat `blueprint-fixer` as planned-only inventory/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
@@ -248,8 +249,9 @@ test("audit-fix runtime contract preserves retained classification, fallback, an
     runtimeContract,
     /`remediationSummary`, `summaryEvidence`,\s+`classification`, `changesApplied`, `verification`, `pendingPlans`,\s+`dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`,\s+`evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
   );
-  assert.match(runtimeContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);
-  assert.match(runtimeContract, /Use `blueprint-verifier` only after a fix or dry-run plan/i);
+  assert.match(runtimeContract, /same-named tools/i);
+  assert.match(runtimeContract, /bounded read-only classification task packet/i);
+  assert.match(runtimeContract, /bounded post-fix verification task packet/i);
   assert.match(runtimeContract, /## No-Subagent Fallback/);
   assert.match(
     runtimeContract,

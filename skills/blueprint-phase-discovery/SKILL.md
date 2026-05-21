@@ -35,7 +35,17 @@ Orchestrate Blueprint's pre-planning discovery flow with deterministic MCP-owned
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Before any
+  discovery delegation decision, read effective config with
+  `mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+  same-named Gemini CLI agent tool (`blueprint-researcher`,
+  `blueprint-ui-designer`, or `blueprint-checker`) with a bounded task packet.
+  Delegate only when the active command contract permits that agent,
+  `workflow.subagents` is not `false`, the same-named tool is available in the
+  current host session, and the task benefits from bounded sidecar synthesis.
+  Do not read, inline, or load any separate agent source before delegation;
+  otherwise use the command's no-subagent fallback and state the fallback
+  reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured interactive choices, confirmations, or short clarifications, prefer  `ask_user` tool over plain assistant prose.
 - Load only the active command's `input_bundles.commands[...]` inputs plus the shared inputs for that invocation. Do not preload sibling discovery command runtime references unless the active command contract explicitly calls for them.
@@ -182,7 +192,7 @@ Use `blueprint_artifact_contract_read` with `artifactId: "phase.research"` when 
 
 Before running `/blu-discuss-phase`, load `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md` and `skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md`. The runtime contract owns the discuss-specific behavior; the long-running profile owns visible stage, pending-gate, and next-safe-action posture.
 
-Keep persistent writes MCP-owned, phase-scoped, and limited to the command-scoped MCP tools. If no suitable subagent is available or enabled, use the runtime contract's no-subagent fallback while preserving final artifact quality.
+Keep persistent writes MCP-owned, phase-scoped, and limited to the command-scoped MCP tools. If the allowed same-named Gemini agent tool is unavailable, disabled, unnecessary, or unsafe, use the runtime contract's no-subagent fallback while preserving final artifact quality.
 
 ### `research-phase`
 
@@ -193,7 +203,7 @@ Before running the command flow, read `skills/blueprint-phase-discovery/referenc
 3. Read any existing `XX-RESEARCH.md` through `blueprint_phase_artifact_read` before proposing replacement. Force repair when saved research is invalid. When saved research is already valid, prefer a one-question `ask_user` dialog for `view`/`skip`/`update`; choosing `update` is the overwrite gate.
 4. Draft directly from `contract.authoringTemplate`. Use `blueprint_phase_artifact_scaffold` only for deliberate placeholder creation when a seeded file is explicitly needed before final research exists.
 5. Apply the runtime contract sections for external-source decisions, evidence quality, investigation trace, strand ledger, dependency/tool evaluation, sidecar criteria, progress visibility, validation repair, and completion receipt. Those sections own the detailed research behavior; this shared skill owns only the command boundary.
-6. Use `blueprint-researcher` only when the runtime contract's capability and material-help criteria are met. The parent owns evidence acceptance, synthesis, final confidence, persistence, checkpoints, state sync, user gates, and routing.
+6. Call the same-named `blueprint-researcher` Gemini agent tool with a bounded research task packet only when the runtime contract's capability and material-help criteria are met. The parent owns evidence acceptance, synthesis, final confidence, persistence, checkpoints, state sync, user gates, and routing.
 7. If `blueprint_phase_artifact_write` returns `status: "invalid"` or validation issues, repair the same normalized draft using the returned issues and retry once before treating `/blu-research-phase` as complete. If the same diagnostics repeat, preserve or refresh the research checkpoint, report the exact diagnostics and next safe action, and stop.
 8. After a successful research write or a valid `view`/`skip`/`reuse` exit, call `blueprint_state_update` with `base: "synced"` while preserving the already resolved selected phase in `patch.currentPhase` together with `patch.activeCommand`, then call `blueprint_state_load`, verify the recommended follow-up through `blueprint_command_catalog`, and delete only the guarded research-owned checkpoint after route proof succeeds.
 

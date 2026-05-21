@@ -123,16 +123,21 @@ else:
   uses the dedicated write tool so the model only needs to supply the
   `skipRationale` text, not the full UI-contract scaffold.
 
-## Subagent Path
+## Agent Tool Path
 
-Use `blueprint-ui-designer` only when suitable UI design or code-analysis
-subagents are available and deeper phase-scoped UI synthesis would improve the
-artifact. The designer should read upstream artifacts, scout the existing UI or
-design system, and return markdown that can be normalized into the final
-`XX-UI-SPEC.md`.
+Gemini CLI exposes enabled delegated agents as same-named tools. Do not read,
+inline, or load any separate agent source before delegation. Call
+`blueprint-ui-designer` with a bounded UI-design task packet only when the
+active `/blu-ui-phase` command contract permits it, `workflow.subagents` is
+enabled, the same-named tool is available in the current host session, and
+deeper phase-scoped UI synthesis would improve the artifact. The designer should
+read upstream artifacts, scout the existing UI or design system, and return
+markdown that can be normalized into the final `XX-UI-SPEC.md`.
 
-Run `blueprint-checker` after drafting and before persistence when a UI
-contract is created or materially revised. The checker must evaluate the six UI
+Call `blueprint-checker` with a bounded UI-check task packet after drafting and
+before persistence when a UI contract is created or materially revised, only
+when the active command contract permits it, `workflow.subagents` is enabled,
+and the same-named tool is available. The checker must evaluate the six UI
 dimensions: copywriting, visual hierarchy, color, typography, spacing, and
 registry/design-system safety. A `BLOCK` or `REVISE` verdict is a pending gate,
 not a completed run.
@@ -144,11 +149,12 @@ but they do not replace repo evidence and saved Blueprint artifacts.
 
 ## No-Subagent Fallback
 
-When suitable subagents are unavailable or unsafe, the parent command performs
-the full workflow sequentially with the same evidence depth and artifact
-quality expected from the designer-plus-checker path. Do not substitute
-browser-only, web-search-only, shell-only, or generic helpers for Blueprint UI
-design, codebase, or workflow analysis.
+When `blueprint-ui-designer` or `blueprint-checker` is unavailable, disabled,
+unnecessary, or unsafe, the parent command performs the full workflow
+sequentially with the same evidence depth and artifact quality expected from the
+designer-plus-checker path. Do not substitute browser-only, web-search-only,
+shell-only, or generic helpers for Blueprint UI design, codebase, or workflow
+analysis.
 
 1. Compress the phase goal, requirements, saved context, saved research, and
    codebase evidence into a short carry-forward note.
@@ -223,7 +229,7 @@ design, codebase, or workflow analysis.
   were read before drafting or replacement.
 - The final artifact is either a concrete UI contract that satisfies the six UI
   dimensions or a concrete explicit skip rationale.
-- Capability-gated subagent review or the sequential no-subagent fallback
+- Capability-gated agent-tool review or the sequential no-subagent fallback
   completed before persistence.
 - Any invalid write or checker failure was repaired through the bounded retry
   path, or the run stopped with a named blocker.

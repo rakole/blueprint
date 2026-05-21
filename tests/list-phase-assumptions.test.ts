@@ -63,7 +63,8 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   ]);
 
   assert.match(raw, /Use the `blueprint-phase-discovery` skill/);
-  assert.match(raw, /`blueprint-researcher` subagent/);
+  assert.match(raw, /same-named Gemini CLI agent tool `blueprint-researcher`/);
+  assert.match(raw, /bounded assumptions task packet/);
   assert.match(raw, /five areas/);
   assert.match(raw, /What do you think\?/);
   assert.match(raw, /Do not mutate files, config, roadmap entries, or phase artifacts/);

@@ -26,7 +26,8 @@ test("validate-phase manifest stays thin while referencing the validation tools 
     commandFile,
     /skills\/blueprint-phase-validation\/references\/validate-phase-runtime-contract\.md/
   );
-  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-verifier`/);
+  assert.match(commandFile, /bounded validation task packet/);
   assert.match(commandFile, /no-subagent fallback/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /shared stage vocabulary `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
@@ -175,6 +176,8 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(validateReference, /State C:/);
   assert.match(validateReference, /manual-only coverage,[\s\S]*UAT\s+readiness, or another structured gate/i);
   assert.match(validateReference, /## Capability-Gated Subagent Path/);
+  assert.match(validateReference, /same-named\s+`blueprint-verifier` tool/i);
+  assert.match(validateReference, /Do not read, inline, or load separate agent source/i);
   assert.match(validateReference, /## No-Subagent Fallback/);
   assert.match(validateReference, /Do not substitute browser, web-search-only, shell-only, or generic agents/);
   assert.match(validateReference, /## Retry And Repair Behavior/);

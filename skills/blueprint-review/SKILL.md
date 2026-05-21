@@ -46,7 +46,7 @@ phase-scoped, evidence-backed, and persisted only through MCP tools.
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Before optional delegation, read effective config with `mcp_blueprint_blueprint_config_get`. Call same-named Gemini CLI agent tools only when the current command contract explicitly allows them, `workflow.subagents` is not `false`, the same-named tool is available in the current host session, and the task benefits from bounded review/audit work. Do not read, inline, or load separate agent source before delegation; otherwise use the command's no-subagent fallback and state the fallback reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
@@ -153,9 +153,9 @@ artifacts, and optional review agents when the command contract allows them.
    to reuse unless the user explicitly asks for an update.
 9. Keep findings grounded in the selected repo files plus saved execution,
    validation, or UAT artifacts.
-10. Use `blueprint-reviewer` when the scope spans multiple plans, multiple files,
+10. Call the same-named `blueprint-reviewer` Gemini agent tool with a bounded findings-analysis task packet when the scope spans multiple plans, multiple files,
    or a deep pass that benefits from a bounded second look.
-11. If `blueprint-reviewer` is unavailable or unnecessary, use the no-subagent
+11. If the `blueprint-reviewer` tool is unavailable or unnecessary, use the no-subagent
     fallback from the local runtime contract: review saved evidence first,
     handle one file group at a time, compress carry-forward context, and run a
     final severity-count consistency pass.
@@ -198,7 +198,7 @@ artifacts, and optional review agents when the command contract allows them.
    keep that same array for validation and persistence.
 4. Load `skills/blueprint-review/references/code-review-fix-runtime-contract.md`
    for the detailed stage mapping, required MCP call controls, artifact
-   authoring rules, capability-gated subagent path, no-subagent fallback,
+   authoring rules, capability-gated agent-tool path, no-subagent fallback,
    retry/repair behavior, output quality criteria, and completion criteria.
 5. If there is no saved `XX-REVIEW.md` or no structured finding to act on,
    route back to `/blu-code-review <phase>` or `/blu-progress` instead of
@@ -218,13 +218,13 @@ artifacts, and optional review agents when the command contract allows them.
    clearly requested `--all`, `--auto`, or an equivalent narrow automatic fix.
 9. Keep repo mutation tightly bounded to the selected review findings and the
    implicated repo files.
-10. Use `blueprint-reviewer` for bounded reclassification when the saved review
-   is broad or ambiguous. The subagent stays read-only: it may only sort the
+10. Call the same-named `blueprint-reviewer` Gemini agent tool with a bounded reclassification task packet when the saved review
+   is broad or ambiguous. The delegated reviewer stays read-only: it may only sort the
    selected saved target ids into `fix`, `defer`, or `skip`, flag stale
    evidence, and recommend a bounded selection posture. It must not apply
    fixes, persist artifacts, create commits, or act as a browser/web/search-only
    substitute for codebase analysis.
-11. When the subagent is unavailable or unnecessary, use the no-subagent
+11. When the reviewer tool is unavailable or unnecessary, use the no-subagent
     fallback from the runtime contract: process one selected target at a time,
     reread implicated files, decide `fix`, `defer`, or `skip`, record
     stale-evidence notes when needed, apply the minimal scoped change only for
@@ -243,7 +243,7 @@ artifacts, and optional review agents when the command contract allows them.
     remediation progress, and verification progress while work is in flight,
     not only in the closing summary. Keep pending gates limited to overwrite confirmation or
     finding-selection confirmation, and let execution mode reflect whether the
-    run stays inline, uses the reviewer subagent, or is following an explicit
+    run stays inline, uses the reviewer tool, or is following an explicit
     versus bounded `--auto` selection path.
 15. Author only the `review.review-fix` JSON model. Use lifecycle statuses
    `COMPLETED`, `PARTIAL`, or `BLOCKED`; populate the schema's camelCase fields
@@ -329,7 +329,7 @@ artifacts, and optional review agents when the command contract allows them.
    them, use `ask_user` for that structured decision, and block
    advancement when any threat remains open instead of always computing a next
    action.
-16. Use `blueprint-security-auditor` only for bounded mitigation verification
+16. Call the same-named `blueprint-security-auditor` Gemini agent tool only for bounded mitigation verification
    when the phase spans multiple plans, touches risky surfaces, or needs a
    higher-confidence review of declared threats. The auditor stays read-only and
    cannot persist artifacts, mutate repo files, invent threats, or route the
@@ -416,7 +416,7 @@ artifacts, and optional review agents when the command contract allows them.
     safe action while work is in flight. Let execution mode reflect inline
     versus `blueprint-ui-auditor`-assisted analysis, and keep pending gates
     limited to overwrite confirmation only.
-13. Use `blueprint-ui-auditor` when the phase spans multiple screens, includes
+13. Call the same-named `blueprint-ui-auditor` Gemini agent tool when the phase spans multiple screens, includes
     richer interaction work, has user-supplied visual evidence, needs prior
     UI-review comparison, or benefits from a higher-confidence six-pillar UI
     audit.
@@ -491,13 +491,13 @@ artifacts, and optional review agents when the command contract allows them.
     is unavailable.
 14. Keep repo mutation tightly bounded to the resolved review scope and capped
     candidate list.
-15. Use `blueprint-reviewer` for bounded classification when evidence is broad,
+15. Call same-named Gemini agent tools: `blueprint-reviewer` for bounded classification when evidence is broad,
     and `blueprint-verifier` for bounded post-fix verification when targeted
     checks need a second pass. The planned `blueprint-fixer` is not a shipped
     runtime path for `audit-fix`.
 16. Reject browser-only, web-search-only, shell-only, or generic agents as
     substitutes for audit-fix classification or verification. If suitable
-    subagents are unavailable, use the no-subagent fallback from the runtime
+    agent tools are unavailable, use the no-subagent fallback from the runtime
     contract: classify saved evidence, process one finding at a time, reread
     implicated scoped files, apply the minimal fix, run narrow verification,
     record fixed/skipped/deferred evidence, compress carry-forward context, and
@@ -588,13 +588,13 @@ artifacts, and optional review agents when the command contract allows them.
 7. Preserve partial reviewer output when at least one selected reviewer
    completed, and keep material disagreement visible instead of flattening it
    into false consensus.
-8. Use `blueprint-reviewer` only for read-only packet-completeness or
+8. Call the same-named `blueprint-reviewer` Gemini agent tool only for read-only packet-completeness or
    consensus/disagreement synthesis when the saved plan set is broad, multiple
    plans are involved, prior peer-review evidence exists, or reviewer outputs
-   materially disagree. The subagent must not invoke external reviewer CLIs,
+   materially disagree. The delegated reviewer must not invoke external reviewer CLIs,
    replace unavailable reviewers, persist artifacts, mutate files, or route the
    command.
-9. If `blueprint-reviewer` is unavailable or unnecessary, use the no-subagent
+9. If the `blueprint-reviewer` tool is unavailable or unnecessary, use the no-subagent
    fallback from the local runtime contract: assemble one evidence group at a
    time, run selected available reviewers sequentially, compress each reviewer
    result into strengths, severity-tagged concerns, suggestions, risk, and

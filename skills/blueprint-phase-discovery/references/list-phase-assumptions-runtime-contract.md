@@ -90,11 +90,15 @@ happen in this command.
 
 ## Optional Researcher Bounds
 
-Use `blueprint-researcher` only when the host exposes a suitable Blueprint
-researcher and a bounded read-only sidecar would materially improve a single
-assumption area. Never require the agent for command correctness.
+Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not read,
+inline, or load any separate agent source before delegation. Call
+`blueprint-researcher` with a bounded assumptions task packet only when the
+active `/blu-list-phase-assumptions` command contract permits it,
+`workflow.subagents` is enabled, the same-named tool is available in the
+current host session, and a bounded read-only sidecar would materially improve a
+single assumption area. Never require the agent for command correctness.
 
-When used, bound the agent to one area and pass only the compact runtime
+When used, bound the task packet to one area and pass only the compact runtime
 evidence packet from the resolved phase. Ask for likely assumptions, supporting
 evidence, uncertainty, and consequences if wrong. The agent must not write
 artifacts, update state, fetch external sources independently, or draft command

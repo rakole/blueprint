@@ -204,9 +204,11 @@ say that consensus is limited rather than manufacturing agreement.
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-reviewer` only when a suitable codebase/workflow-analysis
-subagent is available and the scope benefits from bounded read-only quality
-work:
+Gemini CLI exposes an enabled delegated reviewer as the same-named
+`blueprint-reviewer` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-reviewer` with a bounded peer-review
+synthesis task packet only when a suitable codebase/workflow-analysis tool is
+available and the scope benefits from bounded read-only quality work:
 
 - multiple saved plans or broad roadmap context
 - context, research, security, validation, or prior-review evidence that should
@@ -214,7 +216,7 @@ work:
 - complex reviewer disagreement that needs structured synthesis
 - replacing an existing `XX-REVIEWS.md`
 
-Pass the subagent only:
+Pass the reviewer task packet only:
 
 - the resolved phase and selected plan paths
 - the saved plan contents and selected Blueprint evidence
@@ -222,7 +224,7 @@ Pass the subagent only:
 - completed reviewer outputs when asking for synthesis quality checks
 - the canonical `review.peer-review` authoring requirements
 
-The subagent may return packet-completeness issues, synthesis gaps, consensus
+The delegated reviewer may return packet-completeness issues, synthesis gaps, consensus
 and disagreement notes, risk posture, and an artifact draft. The parent command
 owns external CLI invocation, reviewer availability truth, confirmation gates,
 MCP writes, validation, and routing.
@@ -232,9 +234,9 @@ acceptable substitutes for `blueprint-reviewer` or for external reviewer CLIs.
 
 ## No-Subagent Fallback
 
-If `blueprint-reviewer` is unavailable or unnecessary, continue sequentially in
+If `blueprint-reviewer` is unavailable, disabled, unnecessary, or unsafe, continue sequentially in
 the parent session. The fallback must preserve the same saved-evidence depth,
-reviewer honesty, and artifact quality as the subagent path; the only change is
+reviewer honesty, and artifact quality as the agent-tool path; the only change is
 that packet assembly and synthesis happen one isolated unit at a time in the
 parent flow.
 
@@ -252,7 +254,7 @@ parent flow.
    reviewer truth, consensus, disagreements, risk, and follow-ups.
 7. Run the final consistency pass before persistence.
 
-Do not replace the missing subagent with browser/web/search-only analysis.
+Do not replace the missing agent tool with browser/web/search-only analysis.
 
 ## Retry And Repair Behavior
 

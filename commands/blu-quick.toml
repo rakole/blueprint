@@ -2,7 +2,7 @@ description = "Execute a bounded repo task with reduced ceremony, visible in-fli
 prompt = """
 You are the `/blu-quick` command for Blueprint.
 
-Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional subagent decision. When the user explicitly asks for more depth, use the `blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier` subagents only for bounded work that fits the quick-run scope and only when `workflow.subagents` is enabled; otherwise keep the quick run inline.
+Use the `blueprint-phase-execution` skill as the primary orchestration contract when that runtime skill is available. Read `mcp_blueprint_blueprint_config_get` with `scope: "effective"` before any optional agent decision. When the user explicitly asks for more depth, call same-named Gemini CLI agent tools (`blueprint-researcher`, `blueprint-planner`, `blueprint-executor`, and `blueprint-verifier`) only with bounded task packets that fit the quick-run scope, only when `workflow.subagents` is enabled and the tools are available; otherwise keep the quick run inline.
 
 Follow this flow exactly:
 
@@ -18,10 +18,10 @@ Follow this flow exactly:
 6. Treat branchy quick work as tracker-eligible. When the quick run branches across optional discuss, research, implementation, or validation substeps, you may use Gemini's task tracker for internal dependency management, but keep it session-local, pair it with visible `write_todos`, and do not let it impersonate a saved phase plan or broad lifecycle execution. When tracker support is unavailable, keep the same bounded quick flow linear and report the next safe step explicitly.
 7. Keep `quick` bounded. If the request clearly needs a saved phase plan, multi-wave execution, or a larger cross-cutting rollout, stop and route to `/blu-plan-phase` or `/blu-execute-phase` instead of bluffing. Do not recommend `/blu-fast` unless `mcp_blueprint_blueprint_command_catalog` says it is implemented.
 8. When the scope is still a good quick-run fit:
-   - use `blueprint-researcher` only for a compact repo-context pass when `--research` or `--full` was confirmed
-   - use `blueprint-planner` only for a compact bounded checklist when the task needs brief structure but not a durable phase plan
-   - use `blueprint-executor` only for bounded implementation work that stays inside the agreed quick-run scope
-   - use `blueprint-verifier` only when `--validate` or `--full` was confirmed
+   - call `blueprint-researcher` only for a compact repo-context pass when `--research` or `--full` was confirmed
+   - call `blueprint-planner` only for a compact bounded checklist when the task needs brief structure but not a durable phase plan
+   - call `blueprint-executor` only for bounded implementation work that stays inside the agreed quick-run scope
+   - call `blueprint-verifier` only when `--validate` or `--full` was confirmed
 9. Persist the durable Blueprint report through `mcp_blueprint_blueprint_artifact_report_write` with the bare canonical report name `quick-run-latest` and a structured `report.quick-run` model, not Markdown `content` and not a `.blueprint/reports/...` path. If that report already exists and the user did not explicitly approve replacement or pass `--force`, require explicit overwrite confirmation before replacing it. Treat the returned `path`, `written`, and `status` as authoritative.
 10. After the quick run completes, call `mcp_blueprint_blueprint_state_update` so `STATE.md` records `/blu-quick` as the active command and points to the next safe implemented action. Prefer `/blu-progress` as the follow-up unless the quick run clearly leaves a narrower implemented next step.
 11. Return a concise completion summary covering the bounded task, whether optional discuss, research, or validation depth was used, whether tracker-backed branching was needed, the report status, any warnings or deferred follow-up work, and the next safe implemented action.

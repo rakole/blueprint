@@ -71,8 +71,9 @@ test("add-tests manifest references visibility, validation/report tools, bounded
   assert.match(commandFile, /report status/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /Prefer\s+`ask_user` tool/i);
-  assert.match(commandFile, /`blueprint-executor` subagent/);
-  assert.match(commandFile, /`blueprint-verifier` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tools/);
+  assert.match(commandFile, /`blueprint-executor` with a bounded implementation task packet/);
+  assert.match(commandFile, /`blueprint-verifier` with a bounded coverage-review task packet/);
 
   for (const toolName of [
     "blueprint_phase_locate",
@@ -193,6 +194,8 @@ test("add-tests runtime contract preserves GSD-inspired richness without script-
   assert.match(runtimeContract, /implementation bug/i);
   assert.match(runtimeContract, /blueprint-executor/);
   assert.match(runtimeContract, /blueprint-verifier/);
+  assert.match(runtimeContract, /same-named tools/i);
+  assert.match(runtimeContract, /Do not read,\s+inline,\s+or load separate agent source/i);
   assert.match(runtimeContract, /instead of a public `contract\.authoringTemplate`/i);
   assert.match(runtimeContract, /Do not substitute browser, web-search-only, shell-only, or generic agents/i);
   assert.match(runtimeContract, /No-Subagent Fallback/);

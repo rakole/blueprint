@@ -21,7 +21,9 @@ test("new-milestone manifest references carry-forward seed generation and discus
   );
 
   assert.match(commandFile, /`blueprint-roadmap-admin` skill/);
-  assert.match(commandFile, /`blueprint-roadmapper` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-roadmapper`/);
+  assert.match(commandFile, /bounded carry-forward grouping task packet/);
+  assert.match(commandFile, /Do not read, inline, or load separate agent source/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-roadmap-admin\.md/);
   assert.doesNotMatch(commandFile, /agents\/blueprint-roadmapper\.md/);
   assert.match(commandFile, /Execution profile: `interactive-read`/);
@@ -118,6 +120,8 @@ test("roadmap-admin skill captures carry-forward new-milestone behavior", async 
     "confidence and consequence",
     "assumptions",
     "requirementTransitionHints",
+    "same-named Gemini CLI agent tool `blueprint-roadmapper`",
+    "Do not read, inline, or load separate agent source",
     "starter-seed evidence only",
     "sourceRefs",
     "self-derived",

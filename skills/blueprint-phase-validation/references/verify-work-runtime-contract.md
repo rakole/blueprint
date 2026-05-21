@@ -190,10 +190,13 @@ For non-trivial UAT, checkpoint after each major test group. Use `ask_user` for
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-verifier` only when the host provides that suitable
-code/workflow-analysis agent and `workflow.verifier=true`.
+Gemini CLI exposes an enabled delegated verifier as the same-named
+`blueprint-verifier` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-verifier` with a bounded UAT-prep task
+packet only when the host provides that suitable code/workflow-analysis tool,
+`workflow.verifier=true`, and `workflow.subagents` is not `false`.
 
-Pass the verifier:
+Pass the verifier task packet:
 
 - resolved phase number, name, and phase directory
 - summary index metadata and every completed summary body
@@ -213,13 +216,13 @@ completed result counts, or a final acceptance-ready UAT draft before the
 parent has collected user responses.
 
 Do not substitute browser, web-search-only, shell-only, or generic agents for
-`blueprint-verifier`. If the suitable verifier is unavailable, use the fallback
-below.
+the `blueprint-verifier` tool. If the suitable verifier is unavailable, use the
+fallback below.
 
 ## No-Subagent Fallback
 
-When a suitable verifier is unavailable or disabled, perform the same UAT
-preparation sequentially in the parent command:
+When `blueprint-verifier` is unavailable, disabled, unnecessary, or unsafe,
+perform the same UAT preparation sequentially in the parent command:
 
 1. Read one completed summary at a time.
 2. Extract user-observable outcomes, changed surfaces, verification evidence,
@@ -235,7 +238,7 @@ preparation sequentially in the parent command:
 8. Draft the canonical UAT artifact from the final queue, counts, gaps, and
    checkpoint state.
 
-This fallback must preserve the same output quality bar as the subagent path.
+This fallback must preserve the same output quality bar as the agent-tool path.
 
 ## Retry And Repair Behavior
 

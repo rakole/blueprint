@@ -36,7 +36,13 @@ the right next step is a bounded fix, a saved plan, or more validation.
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Delegate to
+  optional agents by calling the same-named Gemini CLI agent tool only when the
+  current command contract explicitly allows that agent, effective config does
+  not disable `workflow.subagents`, the same-named tool is available in the
+  current host session, and the task benefits from bounded sidecar analysis;
+  otherwise use the command's no-subagent fallback and state the fallback
+  reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 - For structured diagnose-only, overwrite, todo-capture, or reroute decisions, prefer  `ask_user` tool over plain assistant prose when the host makes it available.
 - Use  `update_topic` tool only for non-trivial
@@ -81,6 +87,25 @@ evidence the user supplied.
 
 - `blueprint-debugger`
 
+Before any debugger delegation decision, read effective config with
+`mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+same-named Gemini CLI agent tool `blueprint-debugger` with a bounded diagnosis
+packet. Do not read, inline, or load any separate agent source before
+delegation.
+
+Use `blueprint-debugger` only when all gates pass:
+
+1. The active `/blu-debug` command contract permits `blueprint-debugger`.
+2. `workflow.subagents` is not `false`.
+3. The same-named Gemini agent tool is available in the current host session.
+4. The investigation benefits from bounded hypothesis testing, reproduction,
+   log review, or confidence-rated diagnosis.
+
+If the command contract does not permit delegation, config disables subagents,
+the same-named tool is unavailable, or sidecar analysis is unnecessary, keep the
+run inline and follow the no-subagent fallback in
+`references/debug-runtime-contract.md`.
+
 ## Shared MCP Contracts
 
 - `blueprint_artifact_report_write`: pass the bare report name `debug-latest`, not `.blueprint/reports/debug-latest.md`. Use the returned `path` as the authoritative saved report location.
@@ -110,9 +135,10 @@ and output-quality criteria.
 5. Read the most relevant local evidence directly, including existing
    `.blueprint/reports/debug-latest.md` content when a prior run should be
    continued instead of replaced.
-6. Use `blueprint-debugger` for bounded hypothesis testing, reproduction, log
-   review, and confidence-rated diagnosis when the investigation is more than a
-   quick local inspection.
+6. When optional-agent gates pass, call the same-named `blueprint-debugger`
+   Gemini agent tool with a bounded diagnosis packet for hypothesis testing,
+   reproduction, log review, and confidence-rated diagnosis when the
+   investigation is more than a quick local inspection.
 7. Keep `debug` investigative. When the result is a bounded fix, route to
    `/blu-quick`. When it needs a broader saved-plan rollout, route to
    `/blu-plan-phase`. When the next safe step is saved verification evidence,

@@ -19,7 +19,8 @@ test("code-review manifest references the review tools, canonical contract, and 
     commandFile,
     /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/
   );
-  assert.match(commandFile, /`blueprint-reviewer` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-reviewer`/);
+  assert.match(commandFile, /bounded findings-analysis task packet/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(commandFile, /runtime contract's shared review posture/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);

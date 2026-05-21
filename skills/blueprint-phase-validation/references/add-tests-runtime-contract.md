@@ -130,11 +130,14 @@ Before writing tests:
 
 ## Capability-Gated Subagent Path
 
-Use subagents only when the host provides suitable Blueprint agents and the work
-is large enough to benefit from bounded delegation.
+Gemini CLI exposes enabled delegated agents as same-named tools. Do not read,
+inline, or load separate agent source before delegation. Call agent tools only
+when the host provides suitable Blueprint tools, `workflow.subagents` is not
+`false`, and the work is large enough to benefit from bounded delegation.
 
-Use `blueprint-executor` for non-trivial test implementation when the approved
-scope spans multiple files, multiple suites, or a harness adaptation. Pass it:
+Call `blueprint-executor` with a bounded implementation task packet for
+non-trivial test implementation when the approved scope spans multiple files,
+multiple suites, or a harness adaptation. Pass it:
 
 - resolved phase number, name, and phase directory
 - completed summary bodies plus verification or UAT evidence
@@ -144,8 +147,8 @@ scope spans multiple files, multiple suites, or a harness adaptation. Pass it:
 - required output: changed files, targeted command results, failed/blocked
   tests, bugs discovered, and report-ready notes
 
-Use `blueprint-verifier` after implementation when coverage confidence matters.
-Pass it:
+Call `blueprint-verifier` with a bounded coverage-review task packet after
+implementation when coverage confidence matters. Pass it:
 
 - saved execution and validation evidence
 - approved test plan and changed test files
@@ -155,12 +158,12 @@ Pass it:
   rows and remaining gaps
 
 Do not substitute browser, web-search-only, shell-only, or generic agents for
-these Blueprint code/workflow-analysis roles.
+these Blueprint code/workflow-analysis agent tools.
 
 ## No-Subagent Fallback
 
-When suitable subagents are unavailable or unnecessary, perform the same work
-sequentially in the parent command:
+When suitable agent tools are unavailable, disabled, unnecessary, or unsafe,
+perform the same work sequentially in the parent command:
 
 1. Read one completed summary at a time.
 2. Extract changed surfaces, behavior claims, test commands, and validation or
@@ -176,7 +179,7 @@ sequentially in the parent command:
    report-ready rows before moving on.
 9. Draft the verification update and add-tests report from the final rows.
 
-This fallback must preserve the same output quality bar as the subagent path.
+This fallback must preserve the same output quality bar as the agent-tool path.
 
 ## Retry And Repair Behavior
 
