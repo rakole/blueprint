@@ -83,6 +83,14 @@ test("docs skill captures the long-running docs-update contract", async () => {
   assert.match(skillFile, /### `docs-update`/);
   assert.match(skillFile, /blueprint_artifact_summary_digest/);
   assert.match(skillFile, /blueprint_artifact_report_write/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool \(`blueprint-doc-writer` or\s+`blueprint-doc-verifier`\)/);
+  assert.match(skillFile, /active `\/blu-docs-update` command contract permits the selected agent/);
+  assert.match(skillFile, /same-named Gemini agent tool is available/i);
+  assert.match(skillFile, /bounded documentation task packet/i);
+  assert.match(skillFile, /references\/docs-update-runtime-contract\.md/);
+  assert.doesNotMatch(skillFile, /subagent_type/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
+  assert.doesNotMatch(skillFile, /agents\/blueprint-doc-/i);
   assert.match(skillFile, /update_topic plus `write_todos`/i);
   assert.match(skillFile, /`--verify-only` as read-only/i);
   assert.match(skillFile, /docs-update-latest/);
@@ -140,6 +148,14 @@ test("docs-update runtime metadata and local reference describe the docs spine",
   assert.match(referenceFile, /cited external truth/i);
   assert.match(referenceFile, /returned `inputsUsed` as the authoritative digest scope/i);
   assert.match(referenceFile, /`--verify-only` mode, keep repo documentation read-only/i);
+  assert.match(referenceFile, /Gemini CLI exposes an enabled delegated agent as a same-named tool/i);
+  assert.match(referenceFile, /Do not\s+read, inline, or load any separate agent source before delegation/i);
+  assert.match(referenceFile, /same-named `blueprint-doc-writer` Gemini agent tool with a bounded\s+documentation task packet/i);
+  assert.match(referenceFile, /same-named `blueprint-doc-verifier` Gemini agent tool with a bounded\s+documentation task packet/i);
+  assert.match(referenceFile, /active `\/blu-docs-update` command\s+contract permits it/i);
+  assert.match(referenceFile, /tool is available in the current host session/i);
+  assert.doesNotMatch(referenceFile, /subagent_type/i);
+  assert.doesNotMatch(referenceFile, /agents\/blueprint-doc-/i);
   assert.match(referenceFile, /bare `reportName`\s+`docs-update-latest`/i);
   assert.match(referenceFile, /Pending gates are limited/i);
   assert.match(

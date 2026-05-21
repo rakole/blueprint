@@ -28,7 +28,13 @@ and doc mutation remains reviewable and tightly scoped.
 
 - Call Blueprint MCP tools only through runtime FQNs such as `mcp_blueprint_blueprint_project_status`.
 - Translate any shorthand tool ids like `blueprint_project_status` from older Blueprint docs into their runtime FQNs before calling them.
-- Treat Blueprint skills as loaded guidance, not callable tools. Invoke optional subagents only when the current command contract explicitly allows them and effective config has `workflow.subagents=true`; otherwise use the command's no-subagent fallback and state config disabled subagents.
+- Treat Blueprint skills as loaded guidance, not callable tools. Delegate to
+  optional agents by calling the same-named Gemini CLI agent tool only when the
+  current command contract explicitly allows that agent, effective config does
+  not disable `workflow.subagents`, the same-named tool is available in the
+  current host session, and the task benefits from bounded sidecar analysis;
+  otherwise use the command's no-subagent fallback and state the fallback
+  reason.
 - Never run `/blu-*` in the shell. Blueprint slash commands are host CLI entrypoints, not shell executables.
 
 ## Parity Goal
@@ -61,6 +67,24 @@ artifacts, and optional docs agents when the command contract allows them.
 
 - `blueprint-doc-writer`
 - `blueprint-doc-verifier`
+
+Before any docs-agent delegation decision, read effective config with
+`mcp_blueprint_blueprint_config_get`. When delegation is allowed, call the
+same-named Gemini CLI agent tool (`blueprint-doc-writer` or
+`blueprint-doc-verifier`) with a bounded documentation task packet. Do not read,
+inline, or load any separate agent source before delegation.
+
+Use optional docs agents only when all gates pass:
+
+1. The active `/blu-docs-update` command contract permits the selected agent.
+2. `workflow.subagents` is not `false`.
+3. The same-named Gemini agent tool is available in the current host session.
+4. The docs-update scope benefits from bounded drafting or fact-checking.
+
+If the command contract does not permit delegation, config disables subagents,
+the same-named tool is unavailable, or sidecar analysis is unnecessary, keep the
+run inline and follow the no-subagent fallback in
+`references/docs-update-runtime-contract.md`.
 
 ## Shared Runtime Contract
 
@@ -112,10 +136,13 @@ artifacts, and optional docs agents when the command contract allows them.
    confirmation, report overwrite confirmation, or `none`.
 10. Treat `--verify-only` as read-only for repo docs. The command may still
    write the durable `.blueprint/reports/docs-update-latest.md` report.
-11. Use `blueprint-doc-writer` for bounded drafting when the update spans
-   multiple sections or files.
-12. Use `blueprint-doc-verifier` to fact-check either the current docs or the
-   drafted update before finalizing results.
+11. When optional-agent gates pass, call the same-named `blueprint-doc-writer`
+   Gemini agent tool with a bounded documentation task packet for drafting when
+   the update spans multiple sections or files.
+12. When optional-agent gates pass, call the same-named
+   `blueprint-doc-verifier` Gemini agent tool with a bounded documentation task
+   packet to fact-check either the current docs or the drafted update before
+   finalizing results.
 13. Require explicit overwrite confirmation before replacing heavily edited docs
    or the canonical `docs-update-latest` report unless the user passed
    `--force`.

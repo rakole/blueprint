@@ -42,10 +42,18 @@ write scope is intentionally narrow.
 - In `--verify-only` mode, keep repo documentation read-only. The command may
   still write the durable `.blueprint/reports/docs-update-latest.md` report
   through MCP.
-- Use `blueprint-doc-writer` only for bounded drafting when the change spans
+- Gemini CLI exposes an enabled delegated agent as a same-named tool. Do not
+  read, inline, or load any separate agent source before delegation.
+- Call the same-named `blueprint-doc-writer` Gemini agent tool with a bounded
+  documentation task packet only when the active `/blu-docs-update` command
+  contract permits it, effective config does not disable `workflow.subagents`,
+  the tool is available in the current host session, and the change spans
   multiple sections or files.
-- Use `blueprint-doc-verifier` only for bounded fact-checking of current docs
-  or proposed updates.
+- Call the same-named `blueprint-doc-verifier` Gemini agent tool with a bounded
+  documentation task packet only when the active `/blu-docs-update` command
+  contract permits it, effective config does not disable `workflow.subagents`,
+  the tool is available in the current host session, and bounded fact-checking
+  of current docs or proposed updates is useful.
 - Preserve the inline fallback when optional docs agents are unavailable or the
   scope is too small to justify delegation. The fallback must keep the same
   evidence depth and output quality one doc section or file at a time.
