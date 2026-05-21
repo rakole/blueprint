@@ -66,7 +66,8 @@ test("code-review-fix manifest references findings tools, canonical contracts, a
     commandFile,
     /skills\/blueprint-review\/references\/code-review-fix-runtime-contract\.md/
   );
-  assert.match(commandFile, /`blueprint-reviewer` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-reviewer`/);
+  assert.match(commandFile, /bounded reclassification task packet/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     commandFile,
@@ -154,7 +155,7 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
     skillFile,
     /resolved phase, resolved scope, selected finding ids,\s+remediation progress,\s+and\s+verification progress/i
   );
-  assert.match(skillFile, /subagent stays read-only/i);
+  assert.match(skillFile, /delegated reviewer stays read-only/i);
   assert.match(skillFile, /`fix`, `defer`, or `skip`/i);
   assert.match(skillFile, /process one selected target at a time/i);
   assert.match(skillFile, /Author only the `review\.review-fix` JSON model/i);
@@ -164,7 +165,7 @@ test("blueprint-review skill captures review-fix rules on top of the saved findi
   assert.match(skillFile, /Markdown `content`\s+fallback is invalid/i);
   assert.match(skillFile, /browser\/web\/search-only\s+substitute for codebase analysis/i);
   assert.match(skillFile, /No auto-fixer behavior is shipped/i);
-  assert.match(skillFile, /run stays inline,\s+uses the reviewer subagent/i);
+  assert.match(skillFile, /run stays inline,\s+uses the reviewer tool/i);
   assert.match(skillFile, /`base: "synced"`/i);
   assert.match(skillFile, /activeCommand`, `currentPhase`, and\s+`nextAction`/i);
   assert.match(skillFile, /\/blu-validate-phase <phase>/);
@@ -219,7 +220,8 @@ test("code-review-fix local runtime contract locks richer saved-finding remediat
   assert.match(referenceFile, /camelCase keys such as `remediationSummary`,\s+`findingsAddressed`,\s+`changesMade`/i);
   assert.match(referenceFile, /Literal rendered heading keys like `Remediation Summary`/i);
   assert.match(referenceFile, /same selected `targetIds` used for\s+authoring/i);
-  assert.match(referenceFile, /Use `blueprint-reviewer` only as a bounded analysis helper/i);
+  assert.match(referenceFile, /same-named\s+`blueprint-reviewer` tool/i);
+  assert.match(referenceFile, /bounded reclassification\s+task packet/i);
   assert.match(referenceFile, /must stay read-only/i);
   assert.match(referenceFile, /recommend `fix`, `defer`, or `skip` decisions/i);
   assert.match(referenceFile, /must not apply fixes/i);

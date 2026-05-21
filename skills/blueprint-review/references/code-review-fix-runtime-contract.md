@@ -161,15 +161,17 @@ rejection, state-sync failure, ambiguous routing, and completion.
 
 ## Subagent Path
 
-Use `blueprint-reviewer` only as a bounded analysis helper when available and
-useful. Suitable triggers:
+Gemini CLI exposes an enabled delegated reviewer as the same-named
+`blueprint-reviewer` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-reviewer` with a bounded reclassification
+task packet only when available and useful. Suitable triggers:
 
 - saved findings span multiple files or severity bands
 - finding severity is unclear
 - selected remediation scope is ambiguous
 - the user requests `--auto` but the saved finding set is not trivially narrow
 
-The subagent may reclassify selected saved targets, flag stale evidence, and
+The delegated reviewer may reclassify selected saved targets, flag stale evidence, and
 recommend `fix`, `defer`, or `skip` decisions for those exact target ids. It
 must stay read-only and must not apply fixes, persist artifacts, invent new
 findings, widen scope, use browser/web/search-only tools as substitutes for
@@ -177,7 +179,7 @@ codebase analysis, create commits, or route the user.
 
 ## No-Subagent Fallback
 
-When `blueprint-reviewer` is unavailable or unnecessary:
+When `blueprint-reviewer` is unavailable, disabled, unnecessary, or unsafe:
 
 1. Sort selected findings by severity and saved-review order.
 2. Work one finding at a time.

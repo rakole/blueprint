@@ -63,7 +63,8 @@ test("secure-phase manifest references the review tools, agent, and safe routing
     commandFile,
     /skills\/blueprint-review\/references\/secure-phase-runtime-contract\.md/
   );
-  assert.match(commandFile, /`blueprint-security-auditor` subagent/);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-security-auditor`/);
+  assert.match(commandFile, /bounded threat-mitigation task packet/);
   assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
     commandFile,
@@ -276,7 +277,8 @@ test("secure-phase local runtime contract locks retained threat verification beh
   assert.match(runtimeContract, /`## Threat Flags`/);
   assert.match(runtimeContract, /Build a bounded threat register from saved plan threats only/i);
   assert.match(runtimeContract, /threat id, category, component, disposition, mitigation, current status,\s+and evidence/i);
-  assert.match(runtimeContract, /Use `blueprint-security-auditor` only as a bounded read-only mitigation\s+verifier/i);
+  assert.match(runtimeContract, /same-named\s+`blueprint-security-auditor` tool/i);
+  assert.match(runtimeContract, /bounded\s+mitigation-verification task packet/i);
   assert.match(runtimeContract, /SECURED/);
   assert.match(runtimeContract, /OPEN_THREATS/);
   assert.match(runtimeContract, /ESCALATE/);

@@ -106,7 +106,7 @@ bounded agents classify or verify only when they are suitable.
   loop and do not write the report by hand.
 - If verification could not run, failed, or was reread-only, make that explicit
   in `Changes Applied` or `Remaining Gaps` and route accordingly.
-- Use `blueprint-verifier` for a bounded second pass when post-fix verification
+- Call `blueprint-verifier` for a bounded second pass when post-fix verification
   needs summary, UAT, or targeted-check reconciliation beyond a simple local
   check.
 
@@ -173,7 +173,9 @@ Do not create `XX-REVIEW-FIX.md` from this command. That artifact belongs to
 
 ## Subagent Path
 
-Use `blueprint-reviewer` only as a bounded read-only classification helper when
+Gemini CLI exposes enabled delegated agents as same-named tools. Do not read,
+inline, or load separate agent source before delegation. Call
+`blueprint-reviewer` with a bounded read-only classification task packet when
 available and useful. Suitable triggers:
 
 - selected evidence spans multiple artifacts or many scoped files
@@ -186,16 +188,17 @@ narrow verification. It must not apply fixes, persist artifacts, create commits,
 invent new files, widen scope, route the user, or act as a browser/web/search-
 only substitute for codebase analysis.
 
-Use `blueprint-verifier` only after a fix or dry-run plan when targeted
-verification needs a bounded second pass. It may compare changed files, saved
+Call `blueprint-verifier` with a bounded post-fix verification task packet only
+after a fix or dry-run plan when targeted verification needs a bounded second
+pass. It may compare changed files, saved
 verification/UAT evidence, and targeted check output, then return
 `VERIFIED`, `GAPS`, or `BLOCKED` with concrete evidence. It must not persist
 reports, mutate repo files, or replace the parent command's final routing.
 
 ## No-Subagent Fallback
 
-When suitable subagents are unavailable or unnecessary, the parent command uses
-this single-agent fallback:
+When suitable agent tools are unavailable, disabled, unnecessary, or unsafe, the
+parent command uses this single-agent fallback:
 
 1. Read selected saved evidence and scoped files.
 2. Classify findings into `auto-fixable`, `manual-only`, or `skip`.

@@ -186,8 +186,11 @@ were checked and why the evidence supports `PASS`.
 
 ## Capability-Gated Subagent Path
 
-Use `blueprint-ui-auditor` only when a suitable code/UI analysis subagent is
-available and the scope benefits from bounded deep work:
+Gemini CLI exposes an enabled UI auditor as the same-named
+`blueprint-ui-auditor` tool. Do not read, inline, or load separate agent source
+before delegation. Call `blueprint-ui-auditor` with a bounded six-pillar UI task
+packet only when a suitable code/UI analysis tool is available and the scope
+benefits from bounded deep work:
 
 - multiple UI surfaces, components, or responsive breakpoints
 - a saved `XX-UI-SPEC.md` with concrete design-system, layout, copy, or state
@@ -197,7 +200,7 @@ available and the scope benefits from bounded deep work:
 - third-party registry or component-source evidence that needs a read-only
   pass
 
-Pass the auditor only:
+Pass the auditor task packet only:
 
 - the resolved phase and phase evidence inventory
 - saved summaries, UI spec, context or plans when available, prior UI review,
@@ -206,7 +209,7 @@ Pass the auditor only:
 - the canonical `review.ui-review` authoring requirements and scored-pillar
   expectations
 
-The auditor returns scored findings and an artifact draft. The parent command
+The delegated auditor returns scored findings and an artifact draft. The parent command
 owns all confirmation, user-facing progress, MCP writes, validation, and
 routing.
 
@@ -215,9 +218,9 @@ acceptable substitutes for `blueprint-ui-auditor`.
 
 ## No-Subagent Fallback
 
-If `blueprint-ui-auditor` is unavailable or unnecessary, continue sequentially
+If `blueprint-ui-auditor` is unavailable, disabled, unnecessary, or unsafe, continue sequentially
 in the parent session. The fallback must preserve the same evidence depth,
-scored-pillar rigor, and artifact quality as the auditor path; the only change
+scored-pillar rigor, and artifact quality as the agent-tool path; the only change
 is that the audit runs one pillar at a time in the parent flow.
 
 1. Read saved evidence first: summaries, UI spec, context or plans when
@@ -234,7 +237,7 @@ is that the audit runs one pillar at a time in the parent flow.
    and follow-ups.
 6. Run the final consistency pass before persistence.
 
-Do not replace the missing subagent with browser/web/search-only analysis.
+Do not replace the missing agent tool with browser/web/search-only analysis.
 
 ## Retry And Repair Behavior
 

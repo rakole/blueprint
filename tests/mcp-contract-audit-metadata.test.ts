@@ -691,8 +691,8 @@ test("review contracts stay explicit across code-review, remediation, and review
     /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, `repairSummary`, and returned diagnostics by exact `path`, `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`/i
   );
   assert.match(auditFixContract, /## No-Subagent Fallback/i);
-  assert.match(auditFixContract, /Use `blueprint-reviewer` only as a bounded read-only classification helper/i);
-  assert.match(auditFixContract, /Use `blueprint-verifier` only after a fix or dry-run plan/i);
+  assert.match(auditFixContract, /bounded read-only classification task packet/i);
+  assert.match(auditFixContract, /bounded post-fix verification task packet/i);
   assert.match(auditFixContract, /No browser\/web\/search-only or generic agent was used as a substitute/i);
   assert.match(auditFixContract, /`blueprint-fixer` remained planned-only and non-routable/i);
 
