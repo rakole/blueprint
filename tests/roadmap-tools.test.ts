@@ -102,9 +102,9 @@ async function createRoadmapRepo(currentPhase = "2.2"): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2.1: Planning Drift Recovery** - Repair roadmap drift
-- [ ] **Phase 2.2: Validation Parity** - Close validation gaps
+- [x] Phase 1: Foundation (Requirements: RQ-01)
+- [ ] Phase 2.1: Planning Drift Recovery (Requirements: RQ-02)
+- [ ] Phase 2.2: Validation Parity (Requirements: RQ-03)
 
 ## Phase Details
 
@@ -229,9 +229,9 @@ async function createInsertRoadmapRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2: Core Runtime** - Finish the main lifecycle slice
-- [ ] **Phase 4: Release Hardening** - Package the extension for public release
+- [x] Phase 1: Foundation (Requirements: RQ-01)
+- [ ] Phase 2: Core Runtime (Requirements: RQ-02)
+- [ ] Phase 4: Release Hardening (Requirements: RQ-04)
 
 ## Phase Details
 
@@ -312,8 +312,13 @@ async function createNewMilestoneTransitionRepo(options: {
 
 ${options.phases
   .map(
-    (phase) =>
-      `- [${phase.completed ? "x" : " "}] **Phase ${phase.phaseNumber}: ${phase.phaseName}**${phase.summary ? ` - ${phase.summary}` : ""}`
+    (phase) => {
+      const requirements = phase.requirements?.length
+        ? ` (Requirements: ${phase.requirements.join(", ")})`
+        : "";
+
+      return `- [${phase.completed ? "x" : " "}] Phase ${phase.phaseNumber}: ${phase.phaseName}${requirements}`;
+    }
   )
   .join("\n")}
 
@@ -1422,9 +1427,9 @@ test("blueprint_roadmap_add_phase writes concrete inline roadmap details without
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2.1: Planning Drift Recovery** - Repair roadmap drift
-- [ ] **Phase 2.2: Validation Parity** - Close validation gaps
+- [x] Phase 1: Foundation (Requirements: RQ-01)
+- [ ] Phase 2.1: Planning Drift Recovery (Requirements: RQ-02)
+- [ ] Phase 2.2: Validation Parity (Requirements: RQ-03)
 
 ## Phase Details
 
@@ -1901,7 +1906,7 @@ test("blueprint_roadmap_remove_phase removes a future phase and renumbers later 
     ),
     true
   );
-  assert.match(roadmapBody, /- \[ \] \*\*Phase 2\.1: Validation Parity\*\*/);
+  assert.match(roadmapBody, /- \[ \] Phase 2\.1: Validation Parity \(Requirements: RQ-03\)/);
   assert.doesNotMatch(roadmapBody, /Planning Drift Recovery/);
 });
 

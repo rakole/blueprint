@@ -32,7 +32,11 @@ import {
   type PhaseQualityGateEvaluation,
   type PhaseQualityGateMissingGate
 } from "./quality-gates.js";
-import { parseRoadmapDocument } from "./phase-roadmap-parser.js";
+import {
+  parseRoadmapDocument,
+  parseRoadmapPhaseDetailHeading,
+  splitRoadmapPhaseDetailBlocks
+} from "./phase-roadmap-parser.js";
 import { detectStrongExplicitNoUiSignal } from "./phase-no-ui-signals.js";
 import {
   blueprintDirectCommand,
@@ -258,25 +262,47 @@ function roadmapDetailStatusIsComplete(status: string | null): boolean | null {
   return ["completed", "done"].includes(status.trim().toLowerCase().replace(/-/g, "_"));
 }
 
-function readRoadmapPhaseDetailSignals(raw: string): RoadmapPhaseDetailSignal[] {
+function splitRoadmapDetailBlock(block: string): {
+  heading: string;
+  body: string;
+} {
+  const normalizedBlock = block.trim();
+  const newlineIndex = normalizedBlock.indexOf("\n");
+
+  return {
+    heading:
+      newlineIndex === -1
+        ? normalizedBlock
+        : normalizedBlock.slice(0, newlineIndex).trim(),
+    body: newlineIndex === -1 ? "" : normalizedBlock.slice(newlineIndex + 1)
+  };
+}
+
+function readRoadmapPhaseDetailBlocks(raw: string): string[] {
   const phaseDetails = extractMarkdownSection(raw, "Phase Details");
+
+  if (phaseDetails.trim().length === 0) {
+    return [];
+  }
+
+  return splitRoadmapPhaseDetailBlocks(phaseDetails);
+}
+
+function readRoadmapPhaseDetailSignals(raw: string): RoadmapPhaseDetailSignal[] {
   const phases: RoadmapPhaseDetailSignal[] = [];
 
-  for (const rawBlock of phaseDetails.split(/^### Phase\s+/gm).slice(1)) {
-    const newlineIndex = rawBlock.indexOf("\n");
-    const heading = newlineIndex === -1 ? rawBlock.trim() : rawBlock.slice(0, newlineIndex).trim();
-    const body = newlineIndex === -1 ? "" : rawBlock.slice(newlineIndex + 1);
-    const match = heading.match(/^(\d+(?:\.\d+)?)(?=$|\s|:|-|–|—)/);
+  for (const block of readRoadmapPhaseDetailBlocks(raw)) {
+    const { heading, body } = splitRoadmapDetailBlock(block);
+    const parsedHeading = parseRoadmapPhaseDetailHeading(heading);
 
-    if (!match) {
+    if (!parsedHeading) {
       continue;
     }
 
-    const phaseNumber = normalizeBlueprintPhaseRef(match[1] ?? "") ?? (match[1] ?? "");
     const status = body.match(/^\*\*Status\*\*:\s*(.+)$/im)?.[1]?.trim() ?? null;
 
     phases.push({
-      phaseNumber,
+      phaseNumber: parsedHeading.phaseNumber,
       completed: roadmapDetailStatusIsComplete(status)
     });
   }
@@ -1896,12 +1922,10 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
 
   try {
     const raw = await fs.readFile(roadmapPath, "utf8");
-    const milestoneMatch = raw.match(/Active milestone:\s*(.+)$/m);
-    const checkboxPhases = [...raw.matchAll(
-      /^\s*-\s+\[([ xX])\]\s+(?:\*\*)?Phase\s+(\d+(?:\.\d+)?)(?:\*\*)?\s*(?::|-)\s+/gm
-    )].map((match) => ({
-      phaseNumber: normalizeBlueprintPhaseRef(match[2]) ?? match[2],
-      completed: match[1].toLowerCase() === "x"
+    const roadmap = parseRoadmapDocument(raw);
+    const checkboxPhases = roadmap.phases.map((phase) => ({
+      phaseNumber: normalizeBlueprintPhaseRef(phase.phaseNumber) ?? phase.phaseNumber,
+      completed: phase.completed
     }));
     const phases = mergeRoadmapPhaseSignals(
       checkboxPhases,
@@ -1913,7 +1937,7 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
       null;
 
     return {
-      currentMilestone: milestoneMatch?.[1]?.trim() ?? null,
+      currentMilestone: roadmap.milestone,
       currentPhase,
       allPhasesComplete:
         phases.length > 0 &&

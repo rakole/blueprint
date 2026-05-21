@@ -235,8 +235,8 @@ async function createExecutionReadyRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Discovery**
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [x] Phase 2: Discovery
+- [ ] Phase 3: Phase Discovery (Requirements: EXEC-01)
 
 ## Phase Details
 
@@ -592,8 +592,8 @@ async function createPlanCoverageGatedExecutionRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Discovery**
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [x] Phase 2: Discovery
+- [ ] Phase 3: Phase Discovery (Requirements: EXEC-01, EXEC-02)
 
 ## Phase Details
 
@@ -634,7 +634,7 @@ async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 2: Phase Discovery**
+- [ ] Phase 2: Phase Discovery (Requirements: UI-01)
 `,
     "utf8"
   );
@@ -793,11 +793,11 @@ async function createStaleRoadmapAdvancedStateRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation**
-- [x] **Phase 2: Discovery**
-- [x] **Phase 3: Delivery**
-- [ ] **Phase 4: Results Dashboard**
-- [ ] **Phase 5: Rule Management**
+- [x] Phase 1: Foundation (Requirements: RCA-01)
+- [x] Phase 2: Discovery (Requirements: RCA-02)
+- [x] Phase 3: Delivery (Requirements: RCA-03)
+- [ ] Phase 4: Results Dashboard (Requirements: RCA-04)
+- [ ] Phase 5: Rule Management (Requirements: RCA-05)
 
 ## Phase Details
 
@@ -891,8 +891,8 @@ async function createMilestoneCloseoutRepo(
 
 ## Phases
 
-- [x] **Phase 2: Validation Hardening**
-- [x] **Phase 3: Milestone Closeout**
+- [x] Phase 2: Validation Hardening (Requirements: CLOSE-01)
+- [x] Phase 3: Milestone Closeout (Requirements: CLOSE-02)
 
 ## Phase Details
 
@@ -1982,8 +1982,8 @@ test("project status keeps plan-phase blocked when roadmap requirements are abse
 
 ## Phases
 
-- [x] **Phase 2: Discovery**
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [x] Phase 2: Discovery
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );
@@ -2624,8 +2624,8 @@ test("project status does not close a milestone while later roadmap detail phase
 
 ## Phases
 
-- [x] **Phase 2: Validation Hardening**
-- [x] **Phase 3: Milestone Closeout**
+- [x] Phase 2: Validation Hardening (Requirements: CLOSE-01)
+- [x] Phase 3: Milestone Closeout (Requirements: CLOSE-02)
 
 ## Phase Details
 
@@ -2671,7 +2671,7 @@ test("project status does not close a milestone while later roadmap detail phase
   assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
-test("project status does not close a milestone while drifted roadmap detail headings remain planned", async (t) => {
+test("project status does not close a milestone while canonical roadmap detail headings remain planned", async (t) => {
   const repoPath = await createMilestoneCloseoutRepo("audit");
   const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/04-follow-up-delivery");
   t.after(async () => {
@@ -2689,8 +2689,8 @@ test("project status does not close a milestone while drifted roadmap detail hea
 
 ## Phases
 
-- [x] **Phase 2: Validation Hardening**
-- [x] **Phase 3: Milestone Closeout**
+- [x] Phase 2: Validation Hardening (Requirements: CLOSE-01)
+- [x] Phase 3: Milestone Closeout (Requirements: CLOSE-02)
 
 ## Phase Details
 
@@ -2704,12 +2704,12 @@ test("project status does not close a milestone while drifted roadmap detail hea
 **Requirements**: CLOSE-02
 **Status**: completed
 
-### Phase 4 Follow-Up Delivery
+### Phase 4: Follow-Up Delivery
 **Goal**: Continue the roadmap after the first two completed phases.
 **Requirements**: CLOSE-04
 **Status**: planned
 
-### Phase 5 – Release Polish
+### Phase 5: Release Polish
 **Goal**: Finish the remaining milestone polish.
 **Requirements**: CLOSE-05
 **Status**: planned
@@ -2736,7 +2736,7 @@ test("project status does not close a milestone while drifted roadmap detail hea
   assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
-test("project status advances past stale phase-scoped STATE.md when later bold roadmap phases are planned", async (t) => {
+test("project status advances past stale phase-scoped STATE.md when later canonical roadmap phases are planned", async (t) => {
   const repoPath = await createMilestoneCloseoutRepo("audit");
   const nextPhaseRoot = path.join(repoPath, ".blueprint/phases/04-follow-up-delivery");
   t.after(async () => {
@@ -2754,29 +2754,29 @@ test("project status advances past stale phase-scoped STATE.md when later bold r
 
 ## Phases
 
-- [x] **Phase 2**: Validation Hardening
-- [x] **Phase 3**: Milestone Closeout
-- [ ] **Phase 4**: Follow-Up Delivery
-- [ ] **Phase 5**: Release Polish
+- [x] Phase 2: Validation Hardening (Requirements: CLOSE-01)
+- [x] Phase 3: Milestone Closeout (Requirements: CLOSE-02)
+- [ ] Phase 4: Follow-Up Delivery (Requirements: CLOSE-04)
+- [ ] Phase 5: Release Polish (Requirements: CLOSE-05)
 
 ## Phase Details
 
-### Phase 2 - Validation Hardening
+### Phase 2: Validation Hardening
 **Goal**: Finish the earlier validation slice.
 **Requirements**: CLOSE-01
 **Status**: completed
 
-### Phase 3 - Milestone Closeout
+### Phase 3: Milestone Closeout
 **Goal**: Finalize milestone evidence and archival routing.
 **Requirements**: CLOSE-02
 **Status**: completed
 
-### Phase 4 - Follow-Up Delivery
+### Phase 4: Follow-Up Delivery
 **Goal**: Continue the roadmap after Phase 3 is complete.
 **Requirements**: CLOSE-04
 **Status**: planned
 
-### Phase 5 - Release Polish
+### Phase 5: Release Polish
 **Goal**: Finish the remaining milestone polish.
 **Requirements**: CLOSE-05
 **Status**: planned
@@ -3014,8 +3014,8 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
 
 ## Phases
 
-- [x] Phase 1: Foundation bootstrap
-- [ ] Phase 3: Discovery and definition
+- [x] Phase 1: Foundation bootstrap (Requirements: SYNC-01)
+- [ ] Phase 3: Discovery and definition (Requirements: SYNC-03)
 `,
     "utf8"
   );
@@ -3135,7 +3135,7 @@ test("artifact validation does not flag an in-progress discovery phase as struct
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery**
+- [ ] Phase 3: Phase Discovery (Requirements: EXEC-01)
 `,
     "utf8"
   );

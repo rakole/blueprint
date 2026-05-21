@@ -56,7 +56,7 @@ async function createPeerReviewRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Review Phase** - Finalize the saved plan set before execution
+- [ ] Phase 3: Review Phase
 
 ## Phase Details
 

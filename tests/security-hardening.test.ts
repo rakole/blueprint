@@ -50,8 +50,8 @@ async function createSecurePhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 4: Delivery** - Completed implementation
-- [ ] **Phase 5: Security Audit** - Review threat mitigations for the delivered phase
+- [x] Phase 4: Delivery
+- [ ] Phase 5: Security Audit
 
 ## Phase Details
 

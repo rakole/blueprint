@@ -358,6 +358,7 @@ const BOOTSTRAP_ROADMAP_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Author the roadmap as the canonical milestone-to-phase traceability model before rendering Markdown; do not invent phase numbers, requirement ids, status labels, dependency labels, or inserted markers outside the schema vocabulary.",
     "Every whole-number bootstrap phase must declare durable requirement ids, dependency phase numbers, objective, status, and 2-5 concrete success criteria; inserted decimal phases may temporarily use empty requirement grounding only until discovery assigns it.",
+    "Rendered phase checklist lines must use `- [ ] Phase N: Title (Requirements: REQ-01)` or `- [x] Phase N: Title`; rendered phase detail headings must use `### Phase N: Title`. Do not bold Phase labels or use dash separators.",
     "Use inserted: true only for urgent decimal phases that must preserve the rendered Inserted: yes marker; ordinary whole-number phases omit inserted or set it to false.",
     "Phase details are optional but, when present, must use the same phase number, requirement ids, dependencies, inserted marker, status, and 2-5 success criteria as the matching phase entry.",
     "The rendered ROADMAP.md must preserve the canonical headings in renderedHeadings; Phase Details may be omitted only when no detail blocks exist.",

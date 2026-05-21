@@ -115,7 +115,7 @@ async function createValidationReadyRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Validate the completed plans
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -3415,7 +3415,7 @@ Capture the second completed validation summary.
   const state = await blueprintStateLoad({ cwd: repoPath });
 
   assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
-  assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Phase Discovery\*\* - Validate the completed plans/);
+  assert.match(roadmapBody, /- \[x\] Phase 3: Phase Discovery/);
   assert.match(roadmapBody, /### Phase 3: Phase Discovery[\s\S]*\*\*Status\*\*: completed/);
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
   assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
@@ -3437,7 +3437,7 @@ test("verification writes do not rewrite roadmap completion state before UAT clo
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Validate the completed plans
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -3517,7 +3517,7 @@ test("verification writes do not rewrite roadmap completion state before UAT clo
   assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
   assert.deepEqual(verification.warnings, []);
   assert.match(roadmapBody, /\*\*Status\*\*:\s*completed/);
-  assert.match(roadmapBody, /- \[ \] \*\*Phase 3: Phase Discovery\*\*/);
+  assert.match(roadmapBody, /- \[ \] Phase 3: Phase Discovery/);
 });
 
 test("validation tools do not complete the roadmap when UAT evidence is invalid", async (t) => {

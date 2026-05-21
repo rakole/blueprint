@@ -139,8 +139,8 @@ async function createPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Router Health**
-- [ ] **Phase 3: Phase Discovery** - Add the discovery command slice
+- [x] Phase 2: Router Health
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -560,7 +560,7 @@ async function createLegacyDecimalPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 1.0: Legacy Bootstrap** - Old whole-number decimal format
+- [ ] Phase 1.0: Legacy Bootstrap
 
 ## Phase Details
 

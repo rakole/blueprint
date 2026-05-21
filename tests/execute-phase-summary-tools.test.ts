@@ -46,7 +46,7 @@ async function createExecutionRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery (Requirements: LIFE-01)** - Execute the prepared plans
+- [ ] Phase 3: Phase Discovery (Requirements: LIFE-01)
 `,
     "utf8"
   );

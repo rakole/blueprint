@@ -36,7 +36,7 @@ async function createPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery (Requirements: LIFE-01, LIFE-02)
 
 ## Phase Details
 
@@ -1333,10 +1333,15 @@ test("phase plan validation and writes see roadmap changes after an earlier auth
 
   await writeFile(
     roadmapPath,
-    roadmapContent.replace(
-      "**Requirements**: LIFE-01, LIFE-02",
-      "**Requirements**: LIFE-01, LIFE-02, LIFE-03"
-    ),
+    roadmapContent
+      .replace(
+        "Phase 3: Phase Discovery (Requirements: LIFE-01, LIFE-02)",
+        "Phase 3: Phase Discovery (Requirements: LIFE-01, LIFE-02, LIFE-03)"
+      )
+      .replace(
+        "**Requirements**: LIFE-01, LIFE-02",
+        "**Requirements**: LIFE-01, LIFE-02, LIFE-03"
+      ),
     "utf8"
   );
 
@@ -1672,7 +1677,7 @@ test("phase plan authoring rejects invented requirement coverage when roadmap re
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1731,7 +1736,7 @@ test("phase plan final validation rejects saved plans when roadmap requirements 
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1768,7 +1773,7 @@ test("phase plan writes do not report completion readiness without roadmap requi
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1796,7 +1801,7 @@ test("phase plan writes do not report completion readiness without roadmap requi
   assert.match(written.validation.warnings.join("\n"), /Final plan-set validation is still invalid/i);
 });
 
-test("phase plan authoring accepts mapped requirements detail labels", async (t) => {
+test("phase plan authoring rejects mapped requirements detail labels without canonical list requirements", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1828,13 +1833,14 @@ test("phase plan authoring accepts mapped requirements detail labels", async (t)
     phase: "3"
   });
 
-  assert.equal(context.status, "ready");
-  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
-  assert.match(JSON.stringify(context.taskSchema), /LIFE-01/);
-  assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
+  assert.equal(context.status, "invalid");
+  assert.deepEqual(context.knownRequirements, []);
+  assert.match(context.reason ?? "", /no roadmap requirements/i);
+  assert.doesNotMatch(JSON.stringify(context.taskSchema), /LIFE-01/);
+  assert.doesNotMatch(JSON.stringify(context.taskSchema), /LIFE-02/);
 });
 
-test("phase plan authoring accepts roadmap overview table requirements", async (t) => {
+test("phase plan authoring rejects roadmap overview table requirements without canonical list requirements", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1871,10 +1877,11 @@ test("phase plan authoring accepts roadmap overview table requirements", async (
     phase: "3"
   });
 
-  assert.equal(context.status, "ready");
-  assert.deepEqual(context.knownRequirements, ["LIFE-01", "LIFE-02"]);
-  assert.match(JSON.stringify(context.taskSchema), /LIFE-01/);
-  assert.match(JSON.stringify(context.taskSchema), /LIFE-02/);
+  assert.equal(context.status, "invalid");
+  assert.deepEqual(context.knownRequirements, []);
+  assert.match(context.reason ?? "", /no roadmap requirements/i);
+  assert.doesNotMatch(JSON.stringify(context.taskSchema), /LIFE-01/);
+  assert.doesNotMatch(JSON.stringify(context.taskSchema), /LIFE-02/);
 });
 
 test("phase plan authoring accepts list-only roadmap requirement clauses", async (t) => {

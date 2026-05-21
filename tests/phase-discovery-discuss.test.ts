@@ -343,7 +343,7 @@ async function createPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery**
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );
@@ -390,8 +390,8 @@ async function createEarlierSelectedDiscussPhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Earlier Discovery**
-- [ ] **Phase 3: Later Delivery**
+- [x] Phase 2: Earlier Discovery
+- [ ] Phase 3: Later Delivery
 `,
     "utf8"
   );

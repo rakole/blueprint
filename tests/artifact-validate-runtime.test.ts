@@ -385,6 +385,7 @@ ${outOfScope}
 function createBootstrapRoadmapContent(options: {
   requirementCoverage?: string;
   phases?: string;
+  phaseDetails?: string;
   notes?: string;
 } = {}): string {
   const requirementCoverage =
@@ -413,6 +414,10 @@ function createBootstrapRoadmapContent(options: {
     options.notes ??
     `- Keep traceability consistent.
 - Treat later planning as provisional until the bootstrap seed is stable.`;
+  const phaseDetailsSection =
+    options.phaseDetails && options.phaseDetails.trim().length > 0
+      ? `\n## Phase Details\n\n${options.phaseDetails}\n`
+      : "";
 
   return `# Roadmap: Bootstrap Seed
 
@@ -433,6 +438,7 @@ ${requirementCoverage}
 ## Phases
 
 ${phases}
+${phaseDetailsSection}
 
 ## Notes
 
@@ -817,7 +823,7 @@ test("bootstrap roadmap validation requires per-phase requirement mapping and su
   );
 });
 
-test("bootstrap roadmap validation treats bold and unbolded phase lines consistently", async (t) => {
+test("bootstrap roadmap validation rejects bold phase lines while accepting canonical unbolded lines", async (t) => {
   const boldRepoPath = await createThinBootstrapFixtureRepo();
   const unboldedRepoPath = await createThinBootstrapFixtureRepo();
 
@@ -853,8 +859,52 @@ test("bootstrap roadmap validation treats bold and unbolded phase lines consiste
   const boldValidation = await blueprintArtifactValidate({ cwd: boldRepoPath });
 
   assert.equal(unboldedValidation.valid, true);
-  assert.deepEqual(boldValidation.issues, unboldedValidation.issues);
-  assert.equal(boldValidation.valid, unboldedValidation.valid);
+  assert.equal(boldValidation.valid, false);
+  assert.match(
+    boldValidation.issues.join("\n"),
+    /Roadmap artifact section Phases must include at least one concrete phase entry/
+  );
+});
+
+test("bootstrap roadmap validation rejects mixed canonical and noncanonical roadmap syntax", async (t) => {
+  const repoPath = await createThinBootstrapFixtureRepo();
+
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeBootstrapArtifacts(repoPath, {
+    roadmapContent: createBootstrapRoadmapContent({
+      phases: `- [ ] Phase 1: Bootstrap Seed (Requirements: RQ-01, RQ-04)
+  - Objective: Seed the first milestone.
+  - Success Criteria:
+    - Bootstrap requirements are traceable.
+    - The bootstrap contract stays coherent.
+- [ ] **Phase 2: Traceable Follow-Through** (Requirements: RQ-02, RQ-03)
+  - Objective: Turn the bootstrap draft into durable planning inputs.
+  - Success Criteria:
+    - Requirement coverage stays aligned with the canonical requirements table.
+    - Later planning can proceed without renumbering.`,
+      phaseDetails: `### Phase 1: Bootstrap Seed
+**Goal**: Seed the first milestone.
+**Requirements**: RQ-01, RQ-04
+**Success Criteria**: Bootstrap requirements are traceable.; The bootstrap contract stays coherent.
+**Status**: planned
+
+### Phase 2 - Traceable Follow-Through
+**Goal**: Turn the bootstrap draft into durable planning inputs.
+**Requirements**: RQ-02, RQ-03
+**Success Criteria**: Requirement coverage stays aligned with the canonical requirements table.; Later planning can proceed without renumbering.
+**Status**: planned`
+    })
+  });
+
+  const validation = await blueprintArtifactValidate({ cwd: repoPath });
+  const issues = validation.issues.join("\n");
+
+  assert.equal(validation.valid, false);
+  assert.match(issues, /Non-canonical ROADMAP phase checklist line/);
+  assert.match(issues, /Non-canonical ROADMAP Phase Details heading/);
 });
 
 test("bootstrap roadmap validation reports phase-specific success criteria count diagnostics", async (t) => {

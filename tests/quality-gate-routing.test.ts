@@ -709,7 +709,7 @@ async function createQualityGateRepo(options: {
 
 ## Phases
 
-${options.phases.map((phase) => `- [${phase.completed ? "x" : " "}] **Phase ${phase.phase}: ${phase.title}** - ${phase.title}`).join("\n")}
+${options.phases.map((phase) => `- [${phase.completed ? "x" : " "}] Phase ${phase.phase}: ${phase.title} (Requirements: QG-01)`).join("\n")}
 
 ## Phase Details
 

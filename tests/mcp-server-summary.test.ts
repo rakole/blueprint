@@ -245,7 +245,7 @@ async function createCodeReviewSummaryRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 5: Review Scope** - Completed implementation ready for review
+- [x] Phase 5: Review Scope
 
 ## Phase Details
 
@@ -523,7 +523,7 @@ async function createPhaseExecutionTargetsRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Execution Targets** - Select the next runnable plan set
+- [ ] Phase 3: Execution Targets
 `,
     "utf8"
   );
@@ -618,7 +618,7 @@ async function createRoadmapReadRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 1: Discovery** - Map the current defect surface
+- [ ] Phase 1: Discovery
 
 ## Phase Details
 
@@ -671,7 +671,7 @@ async function createPhaseContextTrimRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 1: Discovery** - Map the current defect surface
+- [ ] Phase 1: Discovery
 
 ## Phase Details
 
@@ -769,7 +769,7 @@ async function createReviewScopeRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 5: Review Scope** - Completed implementation ready for review
+- [x] Phase 5: Review Scope
 
 ## Phase Details
 
@@ -971,7 +971,7 @@ async function createPhasePlanWriteRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1064,7 +1064,7 @@ async function createPhasePlanWriteRepoWithUncoveredRoadmapRequirements(): Promi
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery** - Add the planning slice
+- [ ] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1117,7 +1117,7 @@ async function createPhaseResearchStatusTrimRepo(): Promise<string> {
 
 ## Phases
 
-- [ ] **Phase 3: Phase Discovery**
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );
@@ -1170,8 +1170,8 @@ async function createPauseHandoffWriteRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 2: Discovery**
-- [ ] **Phase 3: Phase Discovery** - Execute the prepared plans
+- [x] Phase 2: Discovery
+- [ ] Phase 3: Phase Discovery
 `,
     "utf8"
   );
@@ -1423,7 +1423,7 @@ async function createAddTestsReportValidationRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 3: Phase Discovery** - Completed implementation ready for validation follow-up
+- [x] Phase 3: Phase Discovery
 
 ## Phase Details
 
@@ -1535,8 +1535,8 @@ async function createRoadmapPromoteBacklogRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2: Planning** - Prepare the next roadmap slices
+- [x] Phase 1: Foundation
+- [ ] Phase 2: Planning
 
 ## Phase Details
 
@@ -1635,8 +1635,8 @@ async function createRoadmapPhaseMutationRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2: Planning** - Prepare the next roadmap slices
+- [x] Phase 1: Foundation
+- [ ] Phase 2: Planning
 
 ## Phase Details
 
@@ -1703,10 +1703,10 @@ async function createRoadmapRemovePhaseRepo(): Promise<string> {
 
 ## Phases
 
-- [x] **Phase 1: Foundation** - Baseline initialization
-- [ ] **Phase 2: Planning** - Prepare the next roadmap slices
-- [ ] **Phase 3: Research** - Validate the next slice
-- [ ] **Phase 4: Delivery** - Ship the approved work
+- [x] Phase 1: Foundation
+- [ ] Phase 2: Planning
+- [ ] Phase 3: Research
+- [ ] Phase 4: Delivery
 
 ## Phase Details
 
