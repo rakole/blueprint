@@ -39,8 +39,13 @@ command manifest, `blueprint-phase-planning` skill, and
 - No scaffold-placeholder plans.
 - No Markdown `content` fallback from `/blu-plan-phase`.
 - No `validationMode: "warn"` from this command.
+- Treat `XX-CONTEXT.md` as read-only planning input. Missing, invalid,
+  contradictory, or unusable phase context routes to
+  `/blu-discuss-phase <phase>` before any planning draft.
 - No live web browsing for planning evidence; use saved research or route to
   `/blu-research-phase`.
+- If model validation or write repair returns identical diagnostics, stop and
+  report the diagnostics; do not inspect MCP source as a repair strategy.
 - No synced state update until final scoped plan-set validation is valid.
 - No planned-only lifecycle command should be presented as runnable.
 

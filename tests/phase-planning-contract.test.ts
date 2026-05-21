@@ -180,7 +180,7 @@ test("planning contract defines split framework", () => {
     "## Planning Decision Record",
     "## Artifact Authoring Rules",
     "## Plan Complexity And Split Framework",
-    "## Subagent Path"
+    "## Agent Tool Path"
   ]);
 });
 
