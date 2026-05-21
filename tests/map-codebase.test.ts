@@ -656,8 +656,11 @@ test("map-codebase command file uses runtime FQNs and explicit repo-relative art
   assert.match(commandFile, /skills\/blueprint-map\/references\/map-runtime-contract\.md/);
   assert.match(commandFile, /contract\.authoringTemplate/);
   assert.match(commandFile, /evidence-density/i);
-  assert.match(commandFile, /suitable code-analysis subagent or task mechanism/i);
+  assert.match(commandFile, /same-named Gemini CLI agent tool `blueprint-mapper`/i);
+  assert.match(commandFile, /bounded mapper-lane task packets/i);
+  assert.match(commandFile, /tool is available in the current host session/i);
   assert.match(commandFile, /browser, web, generic page-inspection, or search-only agents/i);
+  assert.doesNotMatch(commandFile, /agents\/blueprint-mapper\.md/);
   assert.match(commandFile, /one-document-at-a-time main-agent fallback/i);
   assert.match(
     commandFile,
@@ -668,6 +671,13 @@ test("map-codebase command file uses runtime FQNs and explicit repo-relative art
   assert.match(commandFile, /repair that same draft using the returned `issues` and the canonical `contract\.authoringTemplate`/);
   assert.match(skillFile, /references\/map-runtime-contract\.md/);
   assert.match(skillFile, /contract\.authoringTemplate/);
+  assert.match(skillFile, /same-named Gemini CLI agent tool `blueprint-mapper`/i);
+  assert.match(skillFile, /active command contract permits\s+`blueprint-mapper`/i);
+  assert.match(skillFile, /same-named tool\s+is available in the current host session/i);
+  assert.match(skillFile, /Do not read, inline, or load any\s+separate agent source before delegation/i);
+  assert.doesNotMatch(skillFile, /subagent_type/i);
+  assert.doesNotMatch(skillFile, /agent definition/i);
+  assert.doesNotMatch(skillFile, /agents\/blueprint-mapper/i);
   assert.match(skillFile, /one artifact at a time/i);
   assert.match(skillFile, /compact\s+carry-forward note/i);
   assert.match(skillFile, /status: "invalid"/);
@@ -733,8 +743,15 @@ test("map-codebase runtime reference defines rich canonical templates and fallba
   assert.match(reference, /contract\.authoringTemplate/);
   assert.match(reference, /richness and evidence authority/i);
   assert.match(reference, /capability-gated/i);
+  assert.match(reference, /Gemini CLI exposes an enabled delegated agent as a same-named tool/i);
+  assert.match(reference, /Do not read,\s+inline, or load any separate agent source before delegation/i);
+  assert.match(reference, /same-named `blueprint-mapper` Gemini agent tool/i);
+  assert.match(reference, /call `blueprint-mapper` with four bounded mapper-lane\s+task packets/i);
+  assert.doesNotMatch(reference, /agents\/blueprint-mapper/i);
+  assert.doesNotMatch(reference, /subagent_type/i);
+  assert.doesNotMatch(reference, /agent definition/i);
   assert.match(reference, /Browser, web,\s+generic page-inspection, or search-only agents are not acceptable substitutes/i);
-  assert.match(reference, /When code-analysis subagents are unavailable, the main agent must author exactly\s+one artifact at a time/i);
+  assert.match(reference, /When `blueprint-mapper` is unavailable, disabled, unnecessary, or unsafe, the\s+main agent must author exactly one artifact at a time/i);
   assert.match(
     reference,
     /1\. `STACK\.md`[\s\S]*2\. `STRUCTURE\.md`[\s\S]*3\. `ARCHITECTURE\.md`[\s\S]*4\. `CONVENTIONS\.md`[\s\S]*5\. `TESTING\.md`[\s\S]*6\. `INTEGRATIONS\.md`[\s\S]*7\. `CONCERNS\.md`/
