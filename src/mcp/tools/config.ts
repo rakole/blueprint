@@ -56,7 +56,6 @@ type BlueprintConfig = {
     auto_advance: boolean;
     research_before_questions: boolean;
     discuss_mode: string;
-    skip_discuss: boolean;
     use_worktrees: boolean;
     subagents: boolean;
     subagent_timeout: number;
@@ -246,7 +245,6 @@ function getHardCodedConfig(): BlueprintConfig {
       auto_advance: false,
       research_before_questions: false,
       discuss_mode: "discuss",
-      skip_discuss: false,
       use_worktrees: true,
       subagents: true,
       subagent_timeout: 300000

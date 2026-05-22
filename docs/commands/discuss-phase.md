@@ -160,8 +160,7 @@
 - The target phase is omitted or ambiguous while multiple active phases exist.
 - Expected prior artifacts exist but are stale, incomplete, or inconsistent with `ROADMAP.md`.
 - `workflow.discuss_mode` may switch the command into an evidence-first assumptions flow rather than an interview-style loop.
-- `workflow.skip_discuss=true` should shorten the discussion path instead of pretending no context capture is needed.
-- `workflow.skip_discuss=true` must still produce evidence-backed context and stop when high-impact assumptions are unresolved.
+- No settings flag may bypass context capture; every successful run must produce evidence-backed phase context and stop when high-impact assumptions are unresolved.
 - Earlier phase context artifacts may contain canonical references or deferred ideas that should be reused instead of re-elicited.
 - When answers are vague, incomplete, or inconsistent with saved context, retry the question with a narrower prompt instead of accepting them as final.
 - Use structured gray-area lenses such as scope, tradeoffs, dependencies, risks, reuse, implementation order, and methodology so the discussion stays grounded in Blueprint-friendly decisions.

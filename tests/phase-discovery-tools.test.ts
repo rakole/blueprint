@@ -192,7 +192,6 @@ async function createPhaseRepo(): Promise<string> {
           auto_advance: false,
           research_before_questions: false,
           discuss_mode: "discuss",
-          skip_discuss: false,
           use_worktrees: true,
           subagent_timeout: 300000
         },
@@ -703,7 +702,6 @@ test("phase tools resolve roadmap-backed phase details and artifact paths", asyn
   assert.equal(context.workflowPosture.currentPhase, "3");
   assert.equal(context.workflowPosture.nextAction, "Run /blu-research-phase 3 to capture phase research");
   assert.equal(context.workflowPosture.workflow.discussMode, "discuss");
-  assert.equal(context.workflowPosture.workflow.skipDiscuss, false);
   assert.equal(context.workflowPosture.workflow.researchBeforeQuestions, false);
   assert.deepEqual(context.requirements, ["LIFE-01", "LIFE-02", "LIFE-03"]);
   assert.ok(

@@ -72,7 +72,7 @@ one-line status format for progress recaps:
 
 ```
 Progress: phase=<resolved phase> stage=<Resolve|Read|Decide|Execute|Persist|Validate|Route>
-gate=<pending gate or none> mode=<discuss|assumptions|skip-discuss>/<fresh|resumed>
+gate=<pending gate or none> mode=<discuss|assumptions>/<fresh|resumed>
 areas=<decided>/<total> active=<areaId or none> next=<next safe action or next question>
 ```
 

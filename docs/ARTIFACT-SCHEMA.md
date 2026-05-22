@@ -214,7 +214,6 @@ Current normalized schema:
     "auto_advance": false,
     "research_before_questions": false,
     "discuss_mode": "discuss",
-    "skip_discuss": false,
     "use_worktrees": true,
     "subagents": true,
     "subagent_timeout": 300000
@@ -275,7 +274,7 @@ Normalization and precedence rules:
 - `workflow.code_review` and `workflow.code_review_depth` are surfaced through `/blu-settings` and consumed by `/blu-code-review`; the review toggle should stay meaningful as a surfaced workflow setting, and the depth value is the default when the review command runs without an explicit `--depth`.
 - `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
-- Discovery runtime actively uses `workflow.discuss_mode`, `workflow.skip_discuss`, and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.
+- Discovery runtime actively uses `workflow.discuss_mode` and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.
 
 ### `mcp-write-failures.ndjson`
 

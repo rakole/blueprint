@@ -80,8 +80,8 @@ phase number, prefix, and dir. Build a compact evidence packet from:
 - `blueprint_roadmap_read`: phase title, objective, success criteria,
   requirement links, and any canonical refs already written into the roadmap
 - `blueprint_artifact_list`: current artifact inventory
-- `blueprint_config_get`: `workflow.discuss_mode`,
-  `workflow.skip_discuss`, and `workflow.research_before_questions`
+- `blueprint_config_get`: `workflow.discuss_mode` and
+  `workflow.research_before_questions`
 - `blueprint_phase_artifact_read`: current context, discussion log, current
   spec when `phase.artifacts.spec` exists for the selected phase, and earlier
   phase context artifacts that match the Prior-Context Relevance Rule; missing
@@ -178,8 +178,8 @@ earlier context was reused instead of doing a broad sweep.
 
 Before the first fresh user question, summarize these fields and no extra
 inventory dump: selected phase, phase resolution source, `stateCurrentPhase` if
-different, config mode (`discuss`, `assumptions`, or `skip_discuss`), context
-status, discussion-log status, checkpoint status, prior context reused/skipped,
+different, config mode (`discuss` or `assumptions`), context status,
+discussion-log status, checkpoint status, prior context reused/skipped,
 codebase-summary status, artifact inventory status, plan-inventory warning,
 artifact-contract status, and spec status when present, including spec path,
 locked numbered requirement count, ambiguity score, notable out-of-scope
@@ -566,12 +566,13 @@ contradictions or missing evidence, and the smallest question that would
 change each default. It must not draft `phase.context` or mark `Unclear`
 defaults as decisions.
 
-### Skip-Discuss Safety
+### Context Capture Cannot Be Bypassed
 
-When `workflow.skip_discuss=true`, the same safety rules apply: produce
-evidence-backed context, label defaults, and stop or ask when high-impact
-assumptions remain unresolved. Skip-discuss may reduce interview turns but
-must not silently convert thin evidence into saved context.
+No settings flag may bypass durable context capture. Every successful
+`/blu-discuss-phase` run must produce evidence-backed context, label defaults,
+and stop or ask when high-impact assumptions remain unresolved. Assumptions
+mode may reduce interview turns, but it must not silently convert thin evidence
+into saved context.
 
 ## Capability-Gated Agent Use
 

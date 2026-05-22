@@ -92,7 +92,6 @@ async function createPhaseRepo(): Promise<string> {
           auto_advance: false,
           research_before_questions: false,
           discuss_mode: "discuss",
-          skip_discuss: false,
           use_worktrees: true,
           subagent_timeout: 300000
         },

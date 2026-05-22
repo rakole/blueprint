@@ -91,7 +91,6 @@ async function createPhaseRepo(): Promise<string> {
           auto_advance: false,
           research_before_questions: false,
           discuss_mode: "discuss",
-          skip_discuss: false,
           use_worktrees: true,
           subagent_timeout: 300000
         },
@@ -2145,6 +2144,11 @@ test("phase plan task schema permits empty evidence coverage only when no saved 
   assert.equal(context.status, "invalid", JSON.stringify(context, null, 2));
   assert.deepEqual(context.knownEvidenceArtifacts, []);
   assert.equal(context.planningReadiness.readyForPlanPhase, false);
+  assert.equal(
+    context.planningReadiness.nextSafeAction,
+    "Run /blu-discuss-phase 3 to rebuild the current phase context"
+  );
+  assert.match(context.planningReadiness.blockers.join("\n"), /usable XX-CONTEXT\.md artifact/);
   assert.match(JSON.stringify(context.taskSchema), /"evidenceCoverage".*"maxItems":0/s);
   assert.equal(emptyEvidence.status, "valid", JSON.stringify(emptyEvidence.diagnostics, null, 2));
   assert.equal(inventedEvidence.status, "invalid");
