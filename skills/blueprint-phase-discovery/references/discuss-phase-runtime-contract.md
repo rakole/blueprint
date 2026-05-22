@@ -142,16 +142,26 @@ state-derived current phase returned by later reads as `stateCurrentPhase`, an
 ambient routing signal, not a replacement for `selectedPhase`.
 
 If `phaseSelection` is not usable but includes `reason` plus `recovery`, stop
-before artifact reads/writes and report them. Call `blueprint_phase_locate` once
-only when context lacks recovery detail. If locate returns `found: false`, stop
-before artifact reads/writes and report `reason` plus `recovery`.
+unless it is the planned ROADMAP-only starter case below. Call
+`blueprint_phase_locate` once only when context lacks recovery detail.
+
+Planned ROADMAP-only starter case: if `phaseSelection` or fallback locate has
+`found: false`, number, prefix, name, and a no matching directory `reason`, read
+the roadmap and confirm that phase is present and incomplete. Call
+`blueprint_phase_artifact_scaffold` with numeric `phase` and
+`artifact: "context"`; it creates the canonical directory and `XX-CONTEXT.md`
+without overwrite confirmation. Re-run `blueprint_phase_context`. Absent,
+completed, ambiguous, non-context use `/blu-health`.
 
 ### Minimum Read Order
 
 1. Call `blueprint_phase_context` first.
 2. If `phaseSelection` is not usable but includes `reason` plus `recovery`, stop
-   with those diagnostics. Otherwise call `blueprint_phase_locate` as the
-   fallback and stop when locate cannot identify one phase.
+   unless it is the planned ROADMAP-only starter case. Otherwise call
+   `blueprint_phase_locate` as fallback and stop unless it is the starter case.
+   For the starter case, confirm ROADMAP says planned, call
+   `blueprint_phase_artifact_scaffold` with `artifact: "context"`, then re-run
+   `blueprint_phase_context`.
 3. Using `selectedPhase`, request the independent reads still needed before the
    first question in the same model response/tool-call turn when the host
    supports it: `blueprint_roadmap_read`, `blueprint_artifact_list`,
@@ -663,9 +673,9 @@ runtime contract names this order and tests assert it."
 
 The `phase.context` model contract is the schema authority. Populate every
 model field with concrete content and let MCP render `XX-CONTEXT.md`. If a
-missing file is first seeded from `blueprint_artifact_scaffold` or a future
-`scaffoldTemplate`, treat that seed as throwaway starter material to replace
-with model-rendered Markdown, not as text to preserve:
+missing file is first seeded from `blueprint_phase_artifact_scaffold` or a
+future `scaffoldTemplate`, treat that seed as throwaway starter material to
+replace with model-rendered Markdown, not as text to preserve:
 
 The saved phase context artifact is `XX-CONTEXT.md` for the resolved phase.
 
