@@ -41,4 +41,5 @@ export type PhaseQualityGateRoutingArgs = {
 };
 export declare function isReviewableRepoFile(relativePath: string): boolean;
 export declare function evaluatePhaseQualityGates(args: PhaseQualityGateEvaluationArgs): Promise<PhaseQualityGateEvaluation>;
+export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity">): string | null;
 export declare function buildPhaseQualityGateNextAction(args: PhaseQualityGateRoutingArgs): string | null;

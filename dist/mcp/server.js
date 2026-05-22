@@ -15883,7 +15883,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: VALIDATE_PHASE_REQUIRED_TOOLS,
         optionalAgents: VALIDATION_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use MCP content.text as compact mirrored structured result JSON when host structured content is hidden, author the phase.verification 1.1.0 model with status equal to gateState, normalize covered coverage to COVERED, preserve extended validation evidence fields, and route only to implemented follow-up commands.",
+        contractNotes: "Long-running-mutation profile; validate saved summary evidence through the phase validation MCP substrate, use MCP content.text as compact mirrored structured result JSON when host structured content is hidden, author against the taskSchema returned by blueprint_phase_validation_authoring_context, treat blueprint_phase_validation_validate_model diagnostics as schema authority, and route only to implemented follow-up commands.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };

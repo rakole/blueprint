@@ -140,7 +140,7 @@ the need explicit.
     for implementation/behavior gaps or `/blu-add-tests <phase>` for
     test-generation gaps.
 12. Call `blueprint_phase_validation_validate_model` with the structured evidence payload and treat `status: "valid"` plus `renderPreview` as the pre-write self-check.
-13. Author against `phase.verification` model schema `1.1.0`: include `status` equal to `gateState`, use `COVERED` or `PASS` for completed coverage rows, preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when that detail exists, and let MCP normalize scalar `validationSummary`, lowercase `covered`, and empty or omitted passing no-gap arrays.
+13. Author against the `taskSchema` returned by `blueprint_phase_validation_authoring_context`; treat `blueprint_phase_validation_validate_model` diagnostics and `normalizedModel` as the schema authority for repairs and MCP-owned normalization instead of hand-applying version-specific `phase.verification` rules in prompt prose.
 14. Call `blueprint_phase_validation_write` only with the same ready structured `model` and `authoringMode: "model-only"`; do not hand-build or pass the final markdown body from `/blu-validate-phase`. Model writes must not include identity fields such as `phase`, `artifact`, `path`, or `content`.
 
 ## Pre-Write Routing Shorthand

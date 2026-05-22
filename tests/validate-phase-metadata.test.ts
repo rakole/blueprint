@@ -67,6 +67,9 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   );
   assert.match(commandFile, /saved-summary-first/i);
   assert.match(commandFile, /Route only to implemented commands/i);
+  assert.match(commandFile, /Follow the loaded runtime contract for `phase\.verification` model-authoring authority/i);
+  assert.doesNotMatch(commandFile, /schema version `1\.1\.0`/);
+  assert.doesNotMatch(commandFile, /status` equal to `gateState`/);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/);
   assert.doesNotMatch(commandFile, /every completed saved summary citation inside the contract's evidence section/i);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
@@ -166,6 +169,12 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` and implementation\/behavior gaps to `\/blu-audit-fix <phase>`/i);
   assert.match(
     skillFile,
+    /follow `references\/validate-phase-runtime-contract\.md` for `phase\.verification` model-authoring authority instead of restating schema-version rules here/i
+  );
+  assert.doesNotMatch(skillFile, /schema version `1\.1\.0`/);
+  assert.doesNotMatch(skillFile, /keep `status` equal to `gateState`/);
+  assert.match(
+    skillFile,
     /Apply the pre-write routing shorthand from `references\/validate-phase-runtime-contract\.md`/i
   );
   assert.match(skillFile, /narrowed task schema and route diagnostics as the enforcement authority/i);
@@ -191,6 +200,11 @@ test("validate-phase skill scopes required inputs to the active command and keep
     /taskSchema[\s\S]*schema authority[\s\S]*renderPreview[\s\S]*canonical rendered preview/i
   );
   assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
+  assert.match(
+    validateReference,
+    /taskSchema` returned by `blueprint_phase_validation_authoring_context`[\s\S]*`blueprint_phase_validation_validate_model` diagnostics and `normalizedModel` as the schema authority/i
+  );
+  assert.doesNotMatch(validateReference, /model schema `1\.1\.0`/);
   assert.match(validateReference, /## Pre-Write Routing Shorthand/);
   assert.match(validateReference, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
   assert.match(validateReference, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
