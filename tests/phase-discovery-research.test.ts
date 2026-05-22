@@ -167,7 +167,9 @@ async function createPhaseRepo(): Promise<string> {
   return repoPath;
 }
 
-async function createEarlierSelectedResearchPhaseRepo(): Promise<string> {
+async function createEarlierSelectedResearchPhaseRepo(options?: {
+  uiSafetyGate?: boolean;
+}): Promise<string> {
   const repoPath = await createGitRepo("blueprint-research-earlier-phase-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/02-earlier-discovery"), {
@@ -216,7 +218,8 @@ async function createEarlierSelectedResearchPhaseRepo(): Promise<string> {
       {
         version: 2,
         workflow: {
-          ui_phase: true
+          ui_phase: true,
+          ui_safety_gate: options?.uiSafetyGate ?? true
         }
       },
       null,
@@ -2651,8 +2654,52 @@ test("research-phase synced state update skips ui-phase for explicit backend-onl
   assert.doesNotMatch(stateBody, /Run \/blu-plan-phase 2 to create execution-ready phase plans/);
 });
 
+test("research-phase synced state update bypasses ui-phase for explicit backend-only earlier phase when ui safety gate is disabled", async (t) => {
+  const repoPath = await createEarlierSelectedResearchPhaseRepo({
+    uiSafetyGate: false
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-CONTEXT.md"),
+    backendOnlyNoUiContextContent("2", "Earlier Discovery"),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/02-earlier-discovery/02-RESEARCH.md"),
+    validResearchContent(
+      "Keep research routing pinned to the explicitly selected earlier backend-only phase."
+    ).replaceAll("Phase 03: Phase Discovery", "Phase 02: Earlier Discovery"),
+    "utf8"
+  );
+
+  const stateUpdate = await blueprintStateUpdate({
+    cwd: repoPath,
+    base: "synced",
+    patch: {
+      activeCommand: "/blu-research-phase",
+      currentPhase: "2",
+      lastUpdated: "2026-04-12T00:00:00.000Z"
+    }
+  });
+  const loadedState = await blueprintStateLoad({ cwd: repoPath });
+  const stateBody = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.ok(stateUpdate.updatedFields.includes("activeCommand"));
+  assert.equal(loadedState.state.activeCommand, "/blu-research-phase");
+  assert.equal(loadedState.derivedStatus.currentPhase, "2");
+  assert.match(loadedState.derivedStatus.nextAction, /\/blu-plan-phase 2/);
+  assert.doesNotMatch(loadedState.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.match(stateBody, /Run \/blu-plan-phase 2 to create execution-ready phase plans/);
+  assert.doesNotMatch(stateBody, /Run \/blu-ui-phase 2/);
+});
+
 test("research-phase synced state update still routes to ui-phase when a saved ui-spec is invalid", async (t) => {
-  const repoPath = await createEarlierSelectedResearchPhaseRepo();
+  const repoPath = await createEarlierSelectedResearchPhaseRepo({
+    uiSafetyGate: false
+  });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });

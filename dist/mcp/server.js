@@ -24993,6 +24993,16 @@ function isBlockingReviewNextSafeAction(args) {
     hasSecurity: args.hasSecurity
   });
 }
+function savedReviewFollowUpCommandName(args) {
+  if (args.missingGate !== null || !args.hasSecurity) {
+    return null;
+  }
+  const commandName = extractCommandName(args.reviewNextSafeAction ?? "");
+  if (commandName === null || commandName === "progress") {
+    return null;
+  }
+  return commandName;
+}
 function isReviewableConfigPath(relativePath) {
   const basename = path4.posix.basename(relativePath);
   if (REVIEWABLE_FILENAMES.has(basename)) {
@@ -25299,6 +25309,30 @@ async function evaluatePhaseQualityGates(args) {
     warnings,
     reviewNextSafeAction
   };
+}
+function formatPhaseQualityGateDebtReason(args) {
+  if (!args.requiresCodeReview) {
+    return null;
+  }
+  const reviewableFileCount = args.reviewableFiles.length;
+  if (args.missingGate === "review") {
+    return `REVIEW evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+  if (args.missingGate === "security") {
+    return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
+    reviewNextSafeAction: args.reviewNextSafeAction,
+    missingGate: args.missingGate,
+    hasSecurity: args.hasSecurity
+  });
+  if (reviewFollowUpCommand === "code-review-fix") {
+    return `Saved review remediation debt remains for ${reviewableFileCount} reviewable file(s).`;
+  }
+  if (reviewFollowUpCommand !== null) {
+    return `Saved review follow-up remains for ${reviewableFileCount} reviewable file(s).`;
+  }
+  return null;
 }
 function buildPhaseQualityGateNextAction(args) {
   const phaseNumber = normalizeBlueprintPhaseRef(args.phaseNumber);
@@ -26297,6 +26331,10 @@ function resolvePhaseQualityGateNextAction(args) {
   }
   return null;
 }
+function formatPhaseQualityGateWarning(args) {
+  const debtReason = formatPhaseQualityGateDebtReason(args.evaluation);
+  return debtReason === null ? null : `${args.subject} has quality gate debt: ${debtReason}`;
+}
 async function uiSpecRequiresUiReview(projectRoot, uiSpecPath, warnings) {
   try {
     const raw = await fs2.readFile(resolveBlueprintPath(projectRoot, uiSpecPath), "utf8");
@@ -26668,9 +26706,13 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasUiReview
   });
   if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
-    warnings.push(
-      `Current phase ${currentPhase2} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
-    );
+    const qualityGateWarning = formatPhaseQualityGateWarning({
+      subject: `Current phase ${currentPhase2}`,
+      evaluation: qualityGateEvaluation
+    });
+    if (qualityGateWarning) {
+      warnings.push(qualityGateWarning);
+    }
   }
   warnings.push(...qualityGateEvaluation.warnings);
   return {
@@ -26857,13 +26899,21 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
       missingQualityGatePhases.push(phase.phaseNumber);
       qualityGateDebtPhases.push(phase.phaseNumber);
       qualityGateMissingGates[phase.phaseNumber] = qualityGateEvaluation.missingGate;
-      warnings.push(
-        `Phase ${phase.phaseNumber} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
-      );
+      const qualityGateWarning = formatPhaseQualityGateWarning({
+        subject: `Phase ${phase.phaseNumber}`,
+        evaluation: qualityGateEvaluation
+      });
+      if (qualityGateWarning) {
+        warnings.push(qualityGateWarning);
+      }
     } else if (qualityGateNextAction !== null) {
       qualityGateDebtPhases.push(phase.phaseNumber);
+      const qualityGateWarning = formatPhaseQualityGateWarning({
+        subject: `Phase ${phase.phaseNumber}`,
+        evaluation: qualityGateEvaluation
+      });
       warnings.push(
-        `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
+        qualityGateWarning ?? `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
       );
     }
     if (qualityGateNextAction !== null) {
@@ -27066,6 +27116,7 @@ async function deriveNextAction(args) {
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
   const currentPhaseHasAcceptanceEvidence = args.phaseArtifacts.hasUat || !args.workflow.uatRequired && !args.phaseArtifacts.hasBlockingUat && args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat;
+  const noUiBypassAllowed = args.workflow.uiPhaseEnabled && !args.workflow.uiSafetyGateEnabled && args.phaseArtifacts.noUiSkipRationaleSuggested && !args.phaseArtifacts.hasUiSpec;
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     if (args.currentPhase && args.phaseArtifacts.roadmapOnlyStarter && implementedCommands.has(discussPhaseCommand)) {
       return `Run ${discussPhaseCommand} ${args.currentPhase} to seed the current phase context`;
@@ -27081,17 +27132,17 @@ async function deriveNextAction(args) {
   if (args.workflow.researchEnabled && args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid === false && !args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasSummaries && !args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(researchPhaseCommand)) {
     return `Run ${researchPhaseCommand} ${args.currentPhase} to repair invalid phase research`;
   }
-  if (!args.workflow.researchEnabled && args.phaseArtifacts.hasContext && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
+  if (!args.workflow.researchEnabled && args.phaseArtifacts.hasContext && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && !noUiBypassAllowed && implementedCommands.has(uiPhaseCommand)) {
     return args.phaseArtifacts.noUiSkipRationaleSuggested ? `Run ${uiPhaseCommand} ${args.currentPhase} to record the explicit UI skip rationale` : `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
-  if (args.phaseArtifacts.hasResearch && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && implementedCommands.has(uiPhaseCommand)) {
+  if (args.phaseArtifacts.hasResearch && args.workflow.uiPhaseEnabled && !args.phaseArtifacts.hasUiSpec && !noUiBypassAllowed && implementedCommands.has(uiPhaseCommand)) {
     return args.phaseArtifacts.noUiSkipRationaleSuggested ? `Run ${uiPhaseCommand} ${args.currentPhase} to record the explicit UI skip rationale` : `Run ${uiPhaseCommand} ${args.currentPhase} to draft the phase UI contract`;
   }
   if (args.workflow.uiPhaseEnabled && args.phaseArtifacts.hasUiSpec && !args.phaseArtifacts.hasUsableUiSpec && !args.phaseArtifacts.hasPlans && !args.phaseArtifacts.hasSummaries && !args.phaseArtifacts.hasVerification && !args.phaseArtifacts.hasUat && implementedCommands.has(uiPhaseCommand)) {
     return `Run ${uiPhaseCommand} ${args.currentPhase} to repair the phase UI contract`;
   }
   const researchReady = !args.workflow.researchEnabled || args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false;
-  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUsableUiSpec;
+  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUsableUiSpec || noUiBypassAllowed;
   if (args.phaseArtifacts.hasContext && researchReady && uiReady && !args.phaseArtifacts.hasPlans && implementedCommands.has(planPhaseCommand)) {
     return `Run ${planPhaseCommand} ${args.currentPhase} to create execution-ready phase plans`;
   }
@@ -27257,6 +27308,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
   let workflowRouting = {
     researchEnabled: true,
     uiPhaseEnabled: true,
+    uiSafetyGateEnabled: true,
     uatRequired: true
   };
   try {
@@ -27267,6 +27319,7 @@ async function buildSyncedState(projectRoot, patch = {}) {
     workflowRouting = {
       researchEnabled: effectiveConfig.config.workflow.research,
       uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase,
+      uiSafetyGateEnabled: effectiveConfig.config.workflow.ui_safety_gate,
       uatRequired: effectiveConfig.config.workflow.no_uat !== true
     };
   } catch {
@@ -27525,6 +27578,7 @@ async function blueprintStateLoad(args = {}) {
       workflow: {
         researchEnabled: true,
         uiPhaseEnabled: true,
+        uiSafetyGateEnabled: true,
         uatRequired: true
       }
     })
@@ -31398,8 +31452,9 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
   });
   validationWarnings.push(...qualityGateEvaluation.warnings);
   if ((hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+    const debtReason = formatPhaseQualityGateDebtReason(qualityGateEvaluation);
     validationWarnings.push(
-      `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+      debtReason === null ? `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because quality-gate closeout evidence is still incomplete for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).` : `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${debtReason}`
     );
   }
   const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.gatesSatisfied;
@@ -31770,6 +31825,17 @@ function buildPhasePlanningReadiness(args) {
       blockers: [
         args.researchPath ? "workflow.research=true but the saved XX-RESEARCH.md artifact is not usable." : "workflow.research=true but no XX-RESEARCH.md artifact is saved."
       ]
+    };
+  }
+  const bypassMissingUiSpec = workflow.uiPhase && !workflow.uiSafetyGate && !args.uiSpecStatus.present && args.noUiSignalDetected;
+  if (bypassMissingUiSpec) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: true,
+      nextSafeAction: `Run /blu-plan-phase${phaseSuffix} to create execution-ready phase plans`,
+      blockers: []
     };
   }
   if (workflow.uiPhase && !args.uiSpecStatus.usable) {

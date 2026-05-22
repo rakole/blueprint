@@ -381,6 +381,7 @@ type BootstrapRoutingSignals = {
 type WorkflowRoutingSignals = {
   researchEnabled: boolean;
   uiPhaseEnabled: boolean;
+  uiSafetyGateEnabled: boolean;
   uatRequired: boolean;
 };
 
@@ -2556,6 +2557,11 @@ async function deriveNextAction(args: {
       !args.phaseArtifacts.hasBlockingUat &&
       args.phaseArtifacts.hasVerification &&
       args.phaseArtifacts.verificationReadyForUat);
+  const noUiBypassAllowed =
+    args.workflow.uiPhaseEnabled &&
+    !args.workflow.uiSafetyGateEnabled &&
+    args.phaseArtifacts.noUiSkipRationaleSuggested &&
+    !args.phaseArtifacts.hasUiSpec;
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     if (
@@ -2605,6 +2611,7 @@ async function deriveNextAction(args: {
     args.phaseArtifacts.hasContext &&
     args.workflow.uiPhaseEnabled &&
     !args.phaseArtifacts.hasUiSpec &&
+    !noUiBypassAllowed &&
     implementedCommands.has(uiPhaseCommand)
   ) {
     return args.phaseArtifacts.noUiSkipRationaleSuggested
@@ -2616,6 +2623,7 @@ async function deriveNextAction(args: {
     args.phaseArtifacts.hasResearch &&
     args.workflow.uiPhaseEnabled &&
     !args.phaseArtifacts.hasUiSpec &&
+    !noUiBypassAllowed &&
     implementedCommands.has(uiPhaseCommand)
   ) {
     return args.phaseArtifacts.noUiSkipRationaleSuggested
@@ -2639,7 +2647,10 @@ async function deriveNextAction(args: {
   const researchReady =
     !args.workflow.researchEnabled ||
     (args.phaseArtifacts.hasResearch && args.phaseArtifacts.researchValid !== false);
-  const uiReady = !args.workflow.uiPhaseEnabled || args.phaseArtifacts.hasUsableUiSpec;
+  const uiReady =
+    !args.workflow.uiPhaseEnabled ||
+    args.phaseArtifacts.hasUsableUiSpec ||
+    noUiBypassAllowed;
 
   if (
     args.phaseArtifacts.hasContext &&
@@ -3010,6 +3021,7 @@ async function buildSyncedState(
   let workflowRouting: WorkflowRoutingSignals = {
     researchEnabled: true,
     uiPhaseEnabled: true,
+    uiSafetyGateEnabled: true,
     uatRequired: true
   };
 
@@ -3021,6 +3033,7 @@ async function buildSyncedState(
     workflowRouting = {
       researchEnabled: effectiveConfig.config.workflow.research,
       uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase,
+      uiSafetyGateEnabled: effectiveConfig.config.workflow.ui_safety_gate,
       uatRequired: effectiveConfig.config.workflow.no_uat !== true
     };
   } catch {
@@ -3391,6 +3404,7 @@ export async function blueprintStateLoad(
             workflow: {
               researchEnabled: true,
               uiPhaseEnabled: true,
+              uiSafetyGateEnabled: true,
               uatRequired: true
             }
           })

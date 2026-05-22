@@ -3525,6 +3525,23 @@ function buildPhasePlanningReadiness(args: {
     };
   }
 
+  const bypassMissingUiSpec =
+    workflow.uiPhase &&
+    !workflow.uiSafetyGate &&
+    !args.uiSpecStatus.present &&
+    args.noUiSignalDetected;
+
+  if (bypassMissingUiSpec) {
+    return {
+      workflowResearchRequired: workflow.research,
+      workflowUiPhaseRequired: workflow.uiPhase,
+      workflowUiSafetyGateEnabled: workflow.uiSafetyGate,
+      readyForPlanPhase: true,
+      nextSafeAction: `Run /blu-plan-phase${phaseSuffix} to create execution-ready phase plans`,
+      blockers: []
+    };
+  }
+
   if (workflow.uiPhase && !args.uiSpecStatus.usable) {
     const uiSpecIssueBlockers = args.uiSpecStatus.issues.map((issue) => `UI spec validation: ${issue}`);
     const nextSafeAction = args.uiSpecStatus.present
