@@ -231,7 +231,7 @@ The config schema/default matrix is in `src/mcp/tools/config.ts:46-91` and `src/
 - Smallest fix surface: Pass implemented-command status into readiness generation or degrade non-implemented readiness actions to `/blu-progress`.
 - Focused tests: Add catalog-drift fixtures for `blueprintPhaseResearchStatus` and `blueprintPhasePlanReadiness`.
 
-### SM-L02: `blueprint_phase_context.missingArtifacts` Is Config-Blind
+### SM-L02: `blueprint_phase_context.missingArtifacts` Is Config-Blind `FIXED`
 
 - Severity: Low
 - Status: LIKELY
