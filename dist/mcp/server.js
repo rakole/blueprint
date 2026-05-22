@@ -14500,7 +14500,7 @@ var init_command_runtime_metadata = __esm({
       "blueprint_phase_checkpoint_get",
       "blueprint_phase_checkpoint_put",
       "blueprint_phase_checkpoint_delete",
-      "blueprint_artifact_scaffold",
+      "blueprint_phase_artifact_scaffold",
       "blueprint_state_update",
       "blueprint_state_load"
     ];
@@ -15589,6 +15589,7 @@ var init_command_runtime_metadata = __esm({
           "Phase resolution starts with blueprint_phase_context.phaseSelection; blueprint_phase_locate remains fallback-only recovery. The command then reads roadmap state, artifact inventory, effective config, saved phase artifacts including phase-local spec when phase.artifacts.spec exists, plan inventory, artifact contracts, checkpoints, and refreshed state through MCP, batching independent read-only calls in one tool-call turn when supported."
         ],
         writes: [
+          "starter phase directory and phase XX-CONTEXT.md for planned roadmap-only phases",
           "phase XX-CONTEXT.md",
           "optional phase XX-DISCUSSION-LOG.md",
           "optional shared phase XX-DISCUSS-CHECKPOINT.json during in-progress discovery",
@@ -15603,7 +15604,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: DISCUSS_PHASE_REQUIRED_TOOLS,
         optionalAgents: PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, reports phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
+        contractNotes: "Long-running-mutation phase discovery uses the shared profile in skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md and the command-specific behavior contract in skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md. It starts selected-phase resolution with blueprint_phase_context.phaseSelection, treats a planned ROADMAP phase with no matching directory as seedable by blueprint_phase_artifact_scaffold artifact=context before regular selected-phase reads, reports other phaseSelection reason/recovery diagnostics directly when present, uses blueprint_phase_locate only as fallback recovery when phaseSelection is missing, incomplete, ambiguous, or lacks diagnostics, requests independent read-only MCP calls together in one model response/tool-call turn when the host supports batching and arguments are already known, reads phase-local spec through blueprint_phase_artifact_read when phase.artifacts.spec exists, treats saved Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, counts locked numbered requirements, keeps missing spec nonblocking, avoids generic deliverable questions when the spec already answers them, routes spec contradictions back through ask_user to /blu-spec-phase <phase> instead of silently overriding spec intent in context, does a prior-context sweep before asking implementation questions, keeps host-supported structured choices and checkpoint resume-versus-discard gates explicit, supports assumptions-mode analysis, uses capability-gated blueprint-researcher sidecars only for one gray area or assumptions pass in lightweight gray-area memo mode, preserves a one-area-at-a-time single-agent fallback with checkpoint-per-area resumability, keeps phase.context.modelContract plus freehand-artifact authoring templates as schema authority, maps spec basis into existing context fields only, reads plan-index and artifact-contract guidance before persistence, repairs returned artifact validation issues, folds deferred ideas into the saved record, keeps mutating writes and final routing reads sequenced, calls blueprint_state_update with synced state followed by blueprint_state_load, and does not promise a dedicated todo/backlog file crawl.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -25836,6 +25837,11 @@ function extractNextActionPhaseSelection(nextAction) {
     currentPhase: normalizeSelectedPhase(match?.[2])
   };
 }
+function isDerivedPhaseDirectoryBlocker(blocker) {
+  return /^Current phase \d+(?:\.\d+)? (?:is missing a matching directory|has multiple matching directories) under \.blueprint\/phases\//.test(
+    blocker
+  );
+}
 function resolveStoredPhaseRoutingOverride(args) {
   const nextActionSelection = extractNextActionPhaseSelection(args.nextAction);
   if (!PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(args.activeCommand) || nextActionSelection.command === null || nextActionSelection.command === args.activeCommand || !STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS.has(nextActionSelection.command)) {
@@ -26302,6 +26308,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return {
       currentPhase: null,
       phaseDir: null,
+      roadmapOnlyStarter: false,
       phasePrefix: null,
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -26348,7 +26355,23 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return phaseNumber !== null && normalizePhaseNumber2(phaseNumber) === normalizedPhase;
   });
   if (matchingPhaseDirs.length === 0) {
-    if (inspectionPhases.length === 0) {
+    const hasLaterPhaseDirectories = phaseDirs.some((phaseDir3) => {
+      const phaseNumber = extractPhaseNumberFromDirectory(phaseDir3);
+      return phaseNumber !== null && comparePhaseNumbers2(phaseNumber, normalizedPhase) > 0;
+    });
+    const roadmapOnlyStarter = options.roadmapPhase?.completed === false && !hasLaterPhaseDirectories;
+    if (roadmapOnlyStarter) {
+      warnings.push(
+        `Current phase ${currentPhase2} is planned in ${BLUEPRINT_DIR}/ROADMAP.md but has no phase directory yet; ${blueprintRunDirectCommand("discuss-phase", currentPhase2)} can seed the starter context.`
+      );
+    } else if (hasLaterPhaseDirectories) {
+      blockers.push(
+        `Current phase ${currentPhase2} is missing a matching directory under ${BLUEPRINT_DIR}/phases/.`
+      );
+      warnings.push(
+        `Blueprint found later phase directories while current phase ${currentPhase2} is missing; next action will stay on health until the phase tree is repaired.`
+      );
+    } else if (inspectionPhases.length === 0) {
       warnings.push(
         `Current phase ${currentPhase2} does not have a phase directory yet; Blueprint will fall back to the safest next implemented command until discovery artifacts exist.`
       );
@@ -26363,6 +26386,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return {
       currentPhase: currentPhase2,
       phaseDir: null,
+      roadmapOnlyStarter,
       phasePrefix: formatPhasePrefix2(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -26410,6 +26434,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     return {
       currentPhase: currentPhase2,
       phaseDir: null,
+      roadmapOnlyStarter: false,
       phasePrefix: formatPhasePrefix2(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -26609,6 +26634,7 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
   return {
     currentPhase: currentPhase2,
     phaseDir: phaseDir2,
+    roadmapOnlyStarter: false,
     phasePrefix: phasePrefix2,
     contextPath,
     contextNeedsAuthoring,
@@ -26999,6 +27025,9 @@ async function deriveNextAction(args) {
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
   const currentPhaseHasAcceptanceEvidence = args.phaseArtifacts.hasUat || !args.workflow.uatRequired && !args.phaseArtifacts.hasBlockingUat && args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat;
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
+    if (args.currentPhase && args.phaseArtifacts.roadmapOnlyStarter && implementedCommands.has(discussPhaseCommand)) {
+      return `Run ${discussPhaseCommand} ${args.currentPhase} to seed the current phase context`;
+    }
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
   if ((!args.phaseArtifacts.hasContext || args.phaseArtifacts.contextNeedsAuthoring) && implementedCommands.has(discussPhaseCommand)) {
@@ -27250,13 +27279,19 @@ async function buildSyncedState(projectRoot, patch = {}) {
     (artifact) => `Missing ${artifact}`
   );
   const nonStructuralBlockers = existingState.blockers.filter(
-    (blocker) => !blocker.startsWith("Missing .blueprint/") && !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX)
+    (blocker) => !blocker.startsWith("Missing .blueprint/") && !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX) && !isDerivedPhaseDirectoryBlocker(blocker)
   );
+  const currentRoadmapPhase = currentPhase2 === null ? null : roadmapSignals.phases.find(
+    (phase) => normalizePhaseNumber2(phase.phaseNumber) === normalizePhaseNumber2(currentPhase2)
+  ) ?? null;
   const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
     projectRoot,
     inspection.phases,
     currentPhase2,
-    { noUat: !workflowRouting.uatRequired }
+    {
+      noUat: !workflowRouting.uatRequired,
+      roadmapPhase: currentRoadmapPhase
+    }
   );
   const bootstrapRouting = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
@@ -34260,6 +34295,31 @@ async function resolveLocatedPhaseForMutation(args) {
     matchedPhase: snapshot.matchedPhase
   };
 }
+async function resolvePlannedContextScaffoldPhase(args) {
+  if (args.artifact !== "context") {
+    return null;
+  }
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const matchedPhase = snapshot.matchedPhase;
+  if (snapshot.resolved || !matchedPhase || matchedPhase.completed || snapshot.located.reason?.includes("no matching directory") !== true) {
+    return null;
+  }
+  const phaseDir2 = buildBlueprintPhaseDirectoryPath(
+    matchedPhase.phaseNumber,
+    matchedPhase.phaseName
+  );
+  const phaseDirState = await materializePhaseDirectory(snapshot.projectRoot, phaseDir2);
+  return {
+    projectRoot: snapshot.projectRoot,
+    resolved: {
+      phaseNumber: matchedPhase.phaseNumber,
+      phasePrefix: matchedPhase.phasePrefix,
+      phaseName: matchedPhase.phaseName,
+      phaseDir: phaseDir2
+    },
+    warnings: phaseDirState.warnings
+  };
+}
 async function resolveLocatedPhaseForRead(args) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const located = await blueprintPhaseLocate(args);
@@ -35464,7 +35524,8 @@ async function blueprintPhaseArtifactRead(args) {
   };
 }
 async function blueprintPhaseArtifactScaffold(args) {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const plannedContextScaffold = await resolvePlannedContextScaffoldPhase(args);
+  const { projectRoot, resolved } = plannedContextScaffold ?? await resolveLocatedPhaseForMutation(args);
   const artifactPath = artifactPathFor(resolved, args.artifact);
   const scaffoldResult = await blueprintArtifactScaffold({
     cwd: projectRoot,
@@ -35480,7 +35541,7 @@ async function blueprintPhaseArtifactScaffold(args) {
     path: artifactPath,
     createdFiles: scaffoldResult.createdFiles,
     reusedFiles: scaffoldResult.reusedFiles,
-    warnings: scaffoldResult.warnings
+    warnings: [...plannedContextScaffold?.warnings ?? [], ...scaffoldResult.warnings]
   };
 }
 function phaseArtifactSuggestedRepairs(artifact, diagnostics) {

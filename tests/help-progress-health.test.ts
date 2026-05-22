@@ -2840,6 +2840,170 @@ test("project status advances past stale phase-scoped STATE.md when later bold r
   assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-complete-milestone/);
 });
 
+test("project status routes a planned roadmap-only phase to discuss-phase without health repair", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true,
+          code_review: false,
+          ui_phase: false
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: No UAT Next Phase Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 2: Validation Hardening**
+- [x] **Phase 3: Milestone Closeout**
+- [ ] **Phase 4: Follow-Up Delivery**
+
+## Phase Details
+
+### Phase 2: Validation Hardening
+**Goal**: Finish the earlier validation slice.
+**Requirements**: CLOSE-01
+**Status**: completed
+
+### Phase 3: Milestone Closeout
+**Goal**: Finalize milestone evidence and archival routing.
+**Requirements**: CLOSE-02
+**Status**: completed
+
+### Phase 4: Follow-Up Delivery
+**Goal**: Continue the roadmap after no-UAT closeout.
+**Requirements**: CLOSE-04
+**Status**: planned
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v2
+- Current phase: 3
+- Active command: /blu-validate-phase
+- Next action: Run /blu-progress
+- Last updated: 2026-04-12T00:00:00.000Z
+
+## Blockers
+
+- Current phase 4 is missing a matching directory under .blueprint/phases/.
+`,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "4");
+  assert.equal(state.derivedStatus.currentPhase, "4");
+  assert.equal(state.derivedStatus.hasBlockers, false);
+  assert.match(status.nextAction, /\/blu-discuss-phase 4/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-discuss-phase 4/);
+  assert.doesNotMatch(status.nextAction, /\/blu-health/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-health/);
+});
+
+test("project status keeps completed phases with missing directories on health", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/phases/03-milestone-closeout"), {
+    recursive: true,
+    force: true
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "3");
+  assert.equal(state.derivedStatus.currentPhase, "3");
+  assert.equal(state.derivedStatus.hasBlockers, true);
+  assert.match(state.state.blockers.join("\n"), /Current phase 3 is missing a matching directory/);
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
+});
+
+test("project status keeps ambiguous planned phase directories on health", async (t) => {
+  const repoPath = await createMilestoneCloseoutRepo("audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Ambiguous Next Phase Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [x] **Phase 2: Validation Hardening**
+- [x] **Phase 3: Milestone Closeout**
+- [ ] **Phase 4: Follow-Up Delivery**
+
+## Phase Details
+
+### Phase 2: Validation Hardening
+**Goal**: Finish the earlier validation slice.
+**Requirements**: CLOSE-01
+**Status**: completed
+
+### Phase 3: Milestone Closeout
+**Goal**: Finalize milestone evidence and archival routing.
+**Requirements**: CLOSE-02
+**Status**: completed
+
+### Phase 4: Follow-Up Delivery
+**Goal**: Continue the roadmap after closeout.
+**Requirements**: CLOSE-04
+**Status**: planned
+`,
+    "utf8"
+  );
+  await mkdir(path.join(repoPath, ".blueprint/phases/04-follow-up-delivery"), {
+    recursive: true
+  });
+  await mkdir(path.join(repoPath, ".blueprint/phases/04-follow-up-copy"), {
+    recursive: true
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "4");
+  assert.equal(state.derivedStatus.currentPhase, "4");
+  assert.equal(state.derivedStatus.hasBlockers, true);
+  assert.match(state.state.blockers.join("\n"), /multiple matching directories/);
+  assert.match(status.nextAction, /\/blu-health/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-health/);
+});
+
 test("project status keeps blocked milestone audits on gap planning instead of completion", async (t) => {
   const repoPath = await createMilestoneCloseoutRepo("none");
   t.after(async () => {
@@ -3017,6 +3181,46 @@ test("project status prefers reconciled roadmap signals over stale STATE.md valu
 - [x] Phase 1: Foundation bootstrap
 - [ ] Phase 3: Discovery and definition
 `,
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(status.status, "initialized");
+  assert.equal(status.currentMilestone, "v3");
+  assert.equal(status.currentPhase, "3");
+  assert.match(status.nextAction, /\/blu-discuss-phase 3/);
+});
+
+test("project status keeps missing planned phases with later phase artifacts on health", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  const roadmapPath = path.join(repoPath, ".blueprint/ROADMAP.md");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    roadmapPath,
+    `# Roadmap: later-artifacts
+
+## Milestone
+
+- Active milestone: v3
+
+## Phases
+
+- [x] Phase 1: Foundation bootstrap
+- [ ] Phase 3: Discovery and definition
+- [ ] Phase 4: Later implementation
+`,
+    "utf8"
+  );
+  await mkdir(path.join(repoPath, ".blueprint/phases/04-later-implementation"), {
+    recursive: true
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/04-later-implementation/04-CONTEXT.md"),
+    "# Phase 4 Context\n",
     "utf8"
   );
 

@@ -191,6 +191,7 @@ type PhaseSummaryIndexSnapshot = {
 type CurrentPhaseArtifactStatus = {
   currentPhase: string | null;
   phaseDir: string | null;
+  roadmapOnlyStarter: boolean;
   phasePrefix: string | null;
   contextPath: string | null;
   contextNeedsAuthoring: boolean;
@@ -809,6 +810,12 @@ function extractNextActionPhaseSelection(nextAction: string): {
     command: match?.[1] ?? null,
     currentPhase: normalizeSelectedPhase(match?.[2])
   };
+}
+
+function isDerivedPhaseDirectoryBlocker(blocker: string): boolean {
+  return /^Current phase \d+(?:\.\d+)? (?:is missing a matching directory|has multiple matching directories) under \.blueprint\/phases\//.test(
+    blocker
+  );
 }
 
 function resolveStoredPhaseRoutingOverride(args: {
@@ -1541,7 +1548,10 @@ async function inspectCurrentPhaseArtifacts(
   projectRoot: string,
   inspectionPhases: string[],
   currentPhase: string | null,
-  options: { noUat?: boolean } = {}
+  options: {
+    noUat?: boolean;
+    roadmapPhase?: RoadmapPhaseSignal | null;
+  } = {}
 ): Promise<CurrentPhaseArtifactStatus> {
   const warnings: string[] = [];
   const blockers: string[] = [];
@@ -1552,6 +1562,7 @@ async function inspectCurrentPhaseArtifacts(
     return {
       currentPhase: null,
       phaseDir: null,
+      roadmapOnlyStarter: false,
       phasePrefix: null,
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -1601,7 +1612,26 @@ async function inspectCurrentPhaseArtifacts(
   });
 
   if (matchingPhaseDirs.length === 0) {
-    if (inspectionPhases.length === 0) {
+    const hasLaterPhaseDirectories = phaseDirs.some((phaseDir) => {
+      const phaseNumber = extractPhaseNumberFromDirectory(phaseDir);
+
+      return phaseNumber !== null && comparePhaseNumbers(phaseNumber, normalizedPhase) > 0;
+    });
+    const roadmapOnlyStarter =
+      options.roadmapPhase?.completed === false && !hasLaterPhaseDirectories;
+
+    if (roadmapOnlyStarter) {
+      warnings.push(
+        `Current phase ${currentPhase} is planned in ${BLUEPRINT_DIR}/ROADMAP.md but has no phase directory yet; ${blueprintRunDirectCommand("discuss-phase", currentPhase)} can seed the starter context.`
+      );
+    } else if (hasLaterPhaseDirectories) {
+      blockers.push(
+        `Current phase ${currentPhase} is missing a matching directory under ${BLUEPRINT_DIR}/phases/.`
+      );
+      warnings.push(
+        `Blueprint found later phase directories while current phase ${currentPhase} is missing; next action will stay on health until the phase tree is repaired.`
+      );
+    } else if (inspectionPhases.length === 0) {
       warnings.push(
         `Current phase ${currentPhase} does not have a phase directory yet; Blueprint will fall back to the safest next implemented command until discovery artifacts exist.`
       );
@@ -1617,6 +1647,7 @@ async function inspectCurrentPhaseArtifacts(
     return {
       currentPhase,
       phaseDir: null,
+      roadmapOnlyStarter,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -1668,6 +1699,7 @@ async function inspectCurrentPhaseArtifacts(
     return {
       currentPhase,
       phaseDir: null,
+      roadmapOnlyStarter: false,
       phasePrefix: formatPhasePrefix(normalizedPhase),
       contextPath: null,
       contextNeedsAuthoring: false,
@@ -1895,6 +1927,7 @@ async function inspectCurrentPhaseArtifacts(
   return {
     currentPhase,
     phaseDir,
+    roadmapOnlyStarter: false,
     phasePrefix,
     contextPath,
     contextNeedsAuthoring,
@@ -2497,6 +2530,14 @@ async function deriveNextAction(args: {
       args.phaseArtifacts.verificationReadyForUat);
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
+    if (
+      args.currentPhase &&
+      args.phaseArtifacts.roadmapOnlyStarter &&
+      implementedCommands.has(discussPhaseCommand)
+    ) {
+      return `Run ${discussPhaseCommand} ${args.currentPhase} to seed the current phase context`;
+    }
+
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
 
@@ -3055,13 +3096,23 @@ async function buildSyncedState(
   const nonStructuralBlockers = existingState.blockers.filter(
     (blocker) =>
       !blocker.startsWith("Missing .blueprint/") &&
-      !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX)
+      !blocker.startsWith(PAUSE_HANDOFF_BLOCKER_PREFIX) &&
+      !isDerivedPhaseDirectoryBlocker(blocker)
   );
+  const currentRoadmapPhase =
+    currentPhase === null
+      ? null
+      : (roadmapSignals.phases.find(
+          (phase) => normalizePhaseNumber(phase.phaseNumber) === normalizePhaseNumber(currentPhase)
+        ) ?? null);
   const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
     projectRoot,
     inspection.phases,
     currentPhase,
-    { noUat: !workflowRouting.uatRequired }
+    {
+      noUat: !workflowRouting.uatRequired,
+      roadmapPhase: currentRoadmapPhase
+    }
   );
   const bootstrapRouting: BootstrapRoutingSignals = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",

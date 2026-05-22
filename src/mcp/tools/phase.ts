@@ -7084,6 +7084,47 @@ async function resolveLocatedPhaseForMutation(
   };
 }
 
+async function resolvePlannedContextScaffoldPhase(
+  args: PhaseArtifactScaffoldArgs
+): Promise<{
+  projectRoot: string;
+  resolved: ResolvedPhaseLocation;
+  warnings: string[];
+} | null> {
+  if (args.artifact !== "context") {
+    return null;
+  }
+
+  const snapshot = await resolvePhaseRuntimeSnapshot(args);
+  const matchedPhase = snapshot.matchedPhase;
+
+  if (
+    snapshot.resolved ||
+    !matchedPhase ||
+    matchedPhase.completed ||
+    snapshot.located.reason?.includes("no matching directory") !== true
+  ) {
+    return null;
+  }
+
+  const phaseDir = buildBlueprintPhaseDirectoryPath(
+    matchedPhase.phaseNumber,
+    matchedPhase.phaseName
+  );
+  const phaseDirState = await materializePhaseDirectory(snapshot.projectRoot, phaseDir);
+
+  return {
+    projectRoot: snapshot.projectRoot,
+    resolved: {
+      phaseNumber: matchedPhase.phaseNumber,
+      phasePrefix: matchedPhase.phasePrefix,
+      phaseName: matchedPhase.phaseName,
+      phaseDir
+    },
+    warnings: phaseDirState.warnings
+  };
+}
+
 async function resolveLocatedPhaseForRead(
   args: PhaseLookupArgs
 ): Promise<{
@@ -8604,7 +8645,9 @@ export async function blueprintPhaseArtifactRead(
 export async function blueprintPhaseArtifactScaffold(
   args: PhaseArtifactScaffoldArgs
 ): Promise<PhaseArtifactScaffoldResult> {
-  const { projectRoot, resolved } = await resolveLocatedPhaseForMutation(args);
+  const plannedContextScaffold = await resolvePlannedContextScaffoldPhase(args);
+  const { projectRoot, resolved } =
+    plannedContextScaffold ?? (await resolveLocatedPhaseForMutation(args));
   const artifactPath = artifactPathFor(resolved, args.artifact);
   const scaffoldResult = await blueprintArtifactScaffold({
     cwd: projectRoot,
@@ -8621,7 +8664,7 @@ export async function blueprintPhaseArtifactScaffold(
     path: artifactPath,
     createdFiles: scaffoldResult.createdFiles,
     reusedFiles: scaffoldResult.reusedFiles,
-    warnings: scaffoldResult.warnings
+    warnings: [...(plannedContextScaffold?.warnings ?? []), ...scaffoldResult.warnings]
   };
 }
 

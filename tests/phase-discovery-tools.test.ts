@@ -17,6 +17,7 @@ import {
   blueprintPhaseCheckpointGet,
   blueprintPhaseContext,
   blueprintPhaseCheckpointPut,
+  blueprintPhaseArtifactScaffold,
   blueprintPhaseLocate,
   blueprintPhasePlanAuthoringContext,
   blueprintPhasePlanIndex,
@@ -1756,6 +1757,37 @@ test("phase locate returns structured recovery when the roadmap phase directory 
   assert.equal(context.phase, null);
   assert.deepEqual(context.phaseSelection, phaseSelectionFromLocate(located));
   assert.match(context.warnings.join("\n"), /no matching directory/i);
+});
+
+test("phase artifact scaffold materializes context for a planned roadmap-only phase", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await rm(path.join(repoPath, ".blueprint/phases/03-phase-discovery"), {
+    recursive: true,
+    force: true
+  });
+
+  const scaffold = await blueprintPhaseArtifactScaffold({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "context"
+  });
+  const located = await blueprintPhaseLocate({ cwd: repoPath, phase: "3" });
+  const savedContext = await readFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    "utf8"
+  );
+
+  assert.equal(scaffold.phaseNumber, "3");
+  assert.equal(scaffold.phaseDir, ".blueprint/phases/03-phase-discovery");
+  assert.deepEqual(scaffold.createdFiles, [
+    ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"
+  ]);
+  assert.equal(located.found, true);
+  assert.ok(savedContext.includes(SCAFFOLD_GENERATED_MARKER));
 });
 
 test("phase locate returns structured recovery when multiple phase directories match", async (t) => {

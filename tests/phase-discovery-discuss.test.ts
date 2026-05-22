@@ -61,12 +61,12 @@ const wave0RuntimeBundleByteBaseline = [
 const wave0RuntimeBundleObservedTotal = 79781;
 const wave0RuntimeBundleMaxTotal = 101000;
 const discussRuntimeBundleCurrentBudget = {
-  // Includes deliberate Wave 4 optional spec intake plus Wave 7 spec-phase routing guidance.
-  skillBytes: 25415,
-  // Includes the optional spec-basis mapping, contradiction routing, and no-bypass context capture rule.
-  runtimeContractBytes: 44407,
-  // Includes Wave 4 discuss/spec integration plus Wave 7 routing guidance and no-bypass context capture rule while staying under the Wave 0 ceiling.
-  totalBytes: 79118
+  // Includes the planned roadmap-only context scaffold allowlist.
+  skillBytes: 25421,
+  // Includes the planned roadmap-only starter carveout while staying under the Wave 0 ceiling.
+  runtimeContractBytes: 44998,
+  // Includes planned starter routing plus existing spec and no-bypass guidance under the Wave 0 ceiling.
+  totalBytes: 79940
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -585,7 +585,7 @@ test("discuss-phase command references only registered phase-discovery tool name
     "blueprint_phase_checkpoint_get",
     "blueprint_phase_checkpoint_put",
     "blueprint_phase_checkpoint_delete",
-    "blueprint_artifact_scaffold",
+    "blueprint_phase_artifact_scaffold",
     "blueprint_state_update",
     "blueprint_state_load"
   ] as const;
@@ -865,7 +865,7 @@ test("discuss runtime contract allows only same-turn independent read batching",
   assert.match(contract, /Minimum Read Order[\s\S]*Call `blueprint_phase_context` first/i);
   assert.match(
     contract,
-    /phaseSelection` is not usable but includes `reason` plus `recovery`[\s\S]*Otherwise call `blueprint_phase_locate` as the\s+fallback[\s\S]*stop when locate cannot identify one phase/i
+    /phaseSelection` is not usable but includes `reason` plus `recovery`[\s\S]*planned ROADMAP-only starter case[\s\S]*Otherwise call[\s\S]*`blueprint_phase_locate` as (?:the\s+)?fallback[\s\S]*blueprint_phase_artifact_scaffold[\s\S]*artifact: "context"/i
   );
   assert.match(contract, /same model response\/tool-call\s+turn[\s\S]*Using `selectedPhase`/i);
   assert.match(

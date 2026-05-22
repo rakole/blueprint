@@ -98,11 +98,11 @@ does not grant broader tool scope to a command.
 - `blueprint_phase_artifact_read`
 - `blueprint_phase_plan_index`
 - `blueprint_artifact_contract_read`
+- `blueprint_phase_artifact_scaffold`
 - `blueprint_phase_artifact_write`
 - `blueprint_phase_checkpoint_get`
 - `blueprint_phase_checkpoint_put`
 - `blueprint_phase_checkpoint_delete`
-- `blueprint_artifact_scaffold`
 - `blueprint_state_update`
 - `blueprint_state_load`
 

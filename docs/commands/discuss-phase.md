@@ -38,13 +38,14 @@
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - Repo side effects: Writes only declared `.blueprint/` phase artifacts, checkpoints, and `STATE.md` through MCP tools.
 - Blueprint does not create or manage repo-root `CONTEXT.md`; this command authors or repairs phase context only at `.blueprint/phases/<phase>/<XX>-CONTEXT.md`.
+- A planned ROADMAP phase with no starter directory may be seeded through `blueprint_phase_artifact_scaffold` with `artifact: "context"` before regular selected-phase reads continue.
 - In-flight discovery follows the shared profile until the run concludes or stops on a checkpoint or overwrite decision.
 - The rich behavior contract lives at `skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md`; the saved `phase.context` schema authority remains the live `contract.modelContract` returned by `blueprint_artifact_contract_read`, the saved `phase.discussion-log` authority remains the live `contract.authoringTemplate`, and scaffold output remains starter-only and must not survive verbatim into saved artifacts.
 
 
 ## Behavior Stages
 
-1. `Resolve`: call `blueprint_phase_context` first, use its `phaseSelection` fields as the selected-phase authority when complete, report any `phaseSelection` `reason` plus `recovery` diagnostics directly, and call `blueprint_phase_locate` only as fallback recovery when phase identity is missing, ambiguous, incomplete, or lacks diagnostics.
+1. `Resolve`: call `blueprint_phase_context` first, use its `phaseSelection` fields as the selected-phase authority when complete, seed planned ROADMAP-only starter phases through `blueprint_phase_artifact_scaffold` with `artifact: "context"`, report all other `phaseSelection` `reason` plus `recovery` diagnostics directly, and call `blueprint_phase_locate` only as fallback recovery when phase identity is missing, ambiguous, incomplete, or lacks diagnostics.
 2. `Read`: sweep phase context, roadmap state, artifact inventory, effective config, saved context or discussion artifacts, checkpoint state, and saved plan inventory, then build the selected-phase read packet and classify artifact status before asking for fresh detail. If the selected phase exposes `phase.artifacts.spec`, read it through `blueprint_phase_artifact_read`, treat Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria as locked WHAT/WHY input, count the locked numbered requirements, and keep missing spec nonblocking. When the host supports multiple tool calls in one turn, request independent read-only MCP calls together after the selected phase is known.
 3. `Decide`: keep the current gray area, resume-versus-discard checkpoint posture, overwrite posture, and discussion mode explicit before branching, and select from the `grayAreaQueue` by decision value.
 4. `Execute`: run one-question `ask_user` branching, use the one-question format with decision-value ranking and stop criteria, optionally use capability-gated sidecar research for one gray area, and capture decisions, evidence, canonical references, deferred ideas, and short progress recaps one area at a time. When a saved spec already answers the deliverable definition, focus questions on reuse, approach, tradeoffs, sequencing, safety posture, deferred ideas, research handoff, and plan handoff; if discussion shows the spec is stale or wrong, route back to `/blu-spec-phase <phase>` instead of silently overriding the contradicted WHAT/WHY in context.
@@ -82,11 +83,11 @@
 - `blueprint_phase_plan_index` -> `{plans, waves, missingPlans}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, authoringTemplate, validation, warnings}`
 - `blueprint_phase_artifact_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, content, reason}` for `context`, `discussion-log`, optional `spec`, and any reused prior-context reads allowed by the runtime contract
+- `blueprint_phase_artifact_scaffold` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, createdFiles, reusedFiles, warnings}`
 - `blueprint_phase_artifact_write` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, artifact, path, written, created, overwritten, warnings}`
 - `blueprint_phase_checkpoint_get` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, path, checkpoint, ownerCommand, resumeMode, safeToResume, warnings, reason}`
 - `blueprint_phase_checkpoint_put` -> `{phaseNumber, phasePrefix, phaseName, phaseDir, path, updated, warnings}`
 - `blueprint_phase_checkpoint_delete` -> `{phaseFound, phaseNumber, phasePrefix, phaseName, phaseDir, path, deleted, reason}`
-- `blueprint_artifact_scaffold` -> `{createdFiles, reusedFiles, warnings}`
 - `blueprint_state_update` -> `{updatedFields, statePath}`
 - `blueprint_state_load` -> `{state, blockers, derivedStatus}`
 
@@ -96,7 +97,7 @@
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.context"` before drafting or revising `XX-CONTEXT.md`.
 - Read `blueprint_artifact_contract_read` with `artifactId: "phase.discussion-log"` before drafting or revising `XX-DISCUSSION-LOG.md`.
 - Build the final context as a structured `phase.context` model against the returned `modelContract`; MCP owns Markdown rendering. Normalize the final discussion draft to the returned `authoringTemplate` before writing, then self-check the normalized body against the contract and block the write if placeholder text, preserved scaffold literals, contradictions, missing canonical references, unsupported mode claims, or dropped deferred ideas remain.
-- Use `blueprint_artifact_scaffold` only with repo-relative Blueprint artifact paths such as `.blueprint/phases/03-auth/03-CONTEXT.md`; bare names and absolute filesystem paths are invalid.
+- Use `blueprint_phase_artifact_scaffold` only with the resolved numeric `phase` and an artifact enum such as `artifact: "context"`; never reconstruct phase directories or filenames for the scaffold path.
 - Treat scaffold output as first-write seeding only. Persist the real final context through `blueprint_phase_artifact_write` with `artifact: "context"` and a structured `phase.context` `model`; Markdown `content` is rejected for context. Persist the optional discussion log through `artifact: "discussion-log"` with Markdown `content`. Treat the returned `path` as authoritative instead of rebuilding filenames manually.
 - Read checkpoints with `expectedOwnerCommand: "/blu-discuss-phase"` and `expectedMode: "discuss"`, then honor `safeToResume` and `warnings` before using saved state.
 - `blueprint_phase_checkpoint_put` requires `checkpoint` to be a JSON object using checkpoint v2. Include `schemaVersion: 2`, `ownerCommand: "/blu-discuss-phase"`, top-level `mode: "discuss"`, `progress`, `areaQueue`, `carryForward`, and `readSet`. Do not write compatibility summary fields such as `completedAreas`, `remainingAreas`, `decisions`, `deferredIdeas`, `canonicalReferences`, or `resumeMeta`. Treat the returned checkpoint `path` as authoritative, do not try to serialize resumable state into markdown fields, and remember that the filename is a shared phase checkpoint path rather than proof of discuss ownership.
