@@ -51,10 +51,11 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /XX-VERIFICATION\.md/);
   assert.match(commandFile, /artifactId: "phase\.verification"/);
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
-  assert.match(commandFile, /explicit test-generation gaps[\s\S]*\/blu-add-tests <phase>/i);
-  assert.match(commandFile, /implementation\/behavior gaps[\s\S]*\/blu-audit-fix <phase>/i);
-  assert.match(commandFile, /Apply the pre-write routing shorthand from the loaded runtime contract/i);
-  assert.match(commandFile, /MCP task schema and route diagnostics as the enforcement authority/i);
+  assert.match(commandFile, /Route only to implemented commands/i);
+  assert.match(commandFile, /loaded runtime contract and tool-owned results/i);
+  assert.doesNotMatch(commandFile, /pre-write routing shorthand/i);
+  assert.doesNotMatch(commandFile, /explicit test-generation gaps/i);
+  assert.doesNotMatch(commandFile, /implementation\/behavior gaps/i);
   assert.doesNotMatch(commandFile, /if gateState == PASS/i);
   assert.doesNotMatch(commandFile, /else if explicit deferred-test or test-generation gaps remain/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);

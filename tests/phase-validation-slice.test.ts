@@ -803,7 +803,12 @@ test("validate-phase and verify-work manifests reference registered validation t
   assert.match(verifyManifest, /`blueprint-verifier` subagent/);
   assert.match(validateManifest, /artifact: "verification"/);
   assert.match(verifyManifest, /artifact: "uat"/);
-  assert.match(validateManifest, /\/blu-validate-phase <phase>/);
+  assert.match(
+    validateManifest,
+    /skills\/blueprint-phase-validation\/references\/validate-phase-runtime-contract\.md/
+  );
+  assert.match(validateManifest, /Route only to implemented commands/i);
+  assert.doesNotMatch(validateManifest, /pre-write routing shorthand/i);
   assert.match(verifyManifest, /\/blu-progress/);
   assert.doesNotMatch(validateManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
   assert.doesNotMatch(verifyManifest, /skills\/blueprint-phase-validation\.md|agents\/blueprint-verifier\.md/);
