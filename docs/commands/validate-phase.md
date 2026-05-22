@@ -55,7 +55,7 @@
 - effective Blueprint config through `blueprint_config_get`
 - execution summaries through `blueprint_phase_summary_index` and `blueprint_phase_summary_read`
 - existing validation artifacts through `blueprint_phase_validation_read`
-- schema-first validation authoring inputs through `blueprint_phase_validation_authoring_context`
+- schema-first validation authoring inputs, including the embedded canonical `contract`, through `blueprint_phase_validation_authoring_context`
 - canonical validation metadata, optional rendered authoring previews, optional structured `modelContract`, and required-tool derivation through `blueprint_artifact_contract_read`
 - For Tabnine, Gemini, or other hosts that expose only MCP `content.text`, every registered Blueprint MCP tool mirrors its full `structuredContent` as compact JSON in the text response; do not fall back to shell reads of `.blueprint/`.
 
@@ -89,8 +89,8 @@
 - `blueprint_phase_validation_write` accepts exactly one of canonical Markdown `content` or a structured `model`. For `/blu-validate-phase`, use `authoringMode: "model-only"` with the same structured model that passed `blueprint_phase_validation_validate_model`; do not fall back to Markdown `content`.
 - Pass `phase` as the resolved numeric phase reference and use only the validation artifact enums that the tool owns: `verification` or `uat`.
 - Validation writes require saved execution summaries. Treat the returned `summaryPaths` as the authoritative evidence set that backed the saved artifact.
-- Read the canonical contract through `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final normalization.
-- Read `blueprint_phase_validation_authoring_context` before final authoring so the mandatory completed-summary citations, allowed values, routing rules, existing baseline, prerequisite blockers, `schemaPath`, base schema, and narrowed `taskSchema` are explicit.
+- Read `blueprint_phase_validation_authoring_context` before final authoring so the returned `contract`, mandatory completed-summary citations, allowed values, routing rules, existing baseline, prerequisite blockers, `schemaPath`, base schema, and narrowed `taskSchema` are explicit.
+- Call `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` only when that embedded contract payload is missing, malformed, or you need a standalone contract sanity check before repair.
 - For `phase.verification`, treat `contract.modelContract` together with `blueprint_phase_validation_authoring_context.taskSchema` as the authoring authority. Use `blueprint_phase_validation_validate_model.renderPreview` as the canonical preview instead of relying on a public `contract.authoringTemplate`.
 - Build a structured verification evidence payload, call `blueprint_phase_validation_validate_model` for the pre-write self-check, and call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 - The `phase.verification` model contract is version `1.1.0`: include `status` plus `gateState` with matching values, use `COVERED` or `PASS` for passing coverage rows (`covered` is accepted and normalized), scalar `validationSummary` is accepted and normalized, empty no-gap arrays are allowed only for passing gates, and optional session state, checkpoint, test matrix, result summary, observed behavior, unresolved gaps, structured gaps, and follow-up fixes are preserved in rendered `XX-VERIFICATION.md`.

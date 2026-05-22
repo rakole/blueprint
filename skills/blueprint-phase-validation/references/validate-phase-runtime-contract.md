@@ -64,11 +64,12 @@ surface text still expose the complete deterministic result.
 | `blueprint_config_get` with `scope: "effective"` | Whether verifier and Nyquist-style coverage expectations are active or informational. |
 | `blueprint_artifact_validate` | Preflight artifact health and post-write validation status. |
 | `blueprint_state_load` | Current safe action and blockers before routing changes. |
-| `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` | Canonical markers, required headings, notes, and structured `modelContract` authority for the model-only public contract read. |
-| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, and narrowed task schema. |
+| `blueprint_phase_validation_authoring_context` with `artifact: "verification"` | Mandatory valid summary citations, compact saved-summary evidence, existing baseline, prerequisite blockers, allowed values, routing rules, base schema, narrowed task schema, and the embedded `phase.verification` contract with canonical markers, required headings, notes, and `modelContract` metadata. |
 | `blueprint_phase_validation_validate_model` with `artifact: "verification"` | AJV task-schema validation, residual quality checks, all diagnostics, normalized model, and canonical markdown render preview from the structured verification payload. |
 | `blueprint_phase_validation_write` with `artifact: "verification"` | The only allowed persistence path for `XX-VERIFICATION.md`; `/blu-validate-phase` passes the validated model with `authoringMode: "model-only"`. |
 | `blueprint_state_update` with `base: "synced"` plus `patch.activeCommand: "/blu-validate-phase"` | Final state sync, active-command capture, and next-action derivation. |
+
+Keep `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` available as an allowed fallback when `blueprint_phase_validation_authoring_context.contract` is missing, malformed, or needs a standalone sanity read before repair, but do not treat it as part of the default validate-phase call sequence.
 
 ## Input State Model
 
@@ -113,13 +114,15 @@ the need explicit.
 
 ## Artifact Authoring Rules
 
-1. Read `phase.verification` with `blueprint_artifact_contract_read` before
-   drafting final content.
-2. Read `blueprint_phase_validation_authoring_context` before rendering so every mandatory summary citation, prerequisite blocker, allowed value, and routing rule is in the authoring packet.
-3. Treat `contract.modelContract`, `requiredHeadings`, `lockedMarkers`,
-   `freehandPolicy`, and `blueprint_phase_validation_authoring_context.taskSchema`
-   as schema authority. Use `blueprint_phase_validation_validate_model.renderPreview`
-   as the canonical rendered preview.
+1. Read `blueprint_phase_validation_authoring_context` before rendering so every mandatory summary citation, prerequisite blocker, allowed value, routing rule, and embedded `phase.verification` contract is in the authoring packet.
+2. Treat `blueprint_phase_validation_authoring_context.contract.modelContract`,
+   `requiredHeadings`, `lockedMarkers`, `freehandPolicy`, and
+   `blueprint_phase_validation_authoring_context.taskSchema` as schema
+   authority. Use `blueprint_phase_validation_validate_model.renderPreview` as
+   the canonical rendered preview.
+3. Call `blueprint_artifact_contract_read` with `artifactId:
+   "phase.verification"` only when the embedded `contract` payload is missing,
+   malformed, or otherwise insufficient for repair.
 4. Preserve all locked markers exactly, including `**Coverage:**`,
    `**Gate State:**`, and `**Sign-off:**`.
 5. Fill every required section with concrete evidence. Do not leave scaffold
