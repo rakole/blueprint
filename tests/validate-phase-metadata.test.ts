@@ -50,6 +50,10 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /browser, web-search-only, shell-only, or generic agents/);
   assert.match(commandFile, /XX-VERIFICATION\.md/);
   assert.match(commandFile, /artifactId: "phase\.verification"/);
+  assert.match(
+    commandFile,
+    /artifact_contract_read` with `artifactId: "phase\.verification"` only when that embedded contract payload is missing, malformed, or otherwise insufficient for repair/i
+  );
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(commandFile, /Route only to implemented commands/i);
   assert.match(commandFile, /loaded runtime contract and tool-owned results/i);
@@ -137,6 +141,14 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
   assert.match(skillFile, /artifactId: "phase\.verification"/);
+  assert.match(
+    skillFile,
+    /For `XX-VERIFICATION\.md`, use `blueprint_phase_validation_authoring_context`, then `blueprint_phase_validation_validate_model` before `\/blu-validate-phase` persistence/i
+  );
+  assert.match(
+    skillFile,
+    /Call `blueprint_artifact_contract_read` with `artifactId: "phase\.verification"` only when the embedded contract payload is missing or needs a standalone sanity read before repair/i
+  );
   assert.match(skillFile, /locked markers and required section names unchanged/i);
   assert.match(skillFile, /phase\.verification.*expose `modelContract` without a public `authoringTemplate`/i);
   assert.match(skillFile, /references\/validate-phase-runtime-contract\.md/);
@@ -182,6 +194,10 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.doesNotMatch(skillFile, /else if explicit deferred-test or test-generation gaps remain/i);
   assert.match(validateReference, /## Stage Mapping/);
   assert.match(validateReference, /## Required MCP Calls/);
+  assert.match(
+    validateReference,
+    /Keep `blueprint_artifact_contract_read` with `artifactId: "phase\.verification"` available as an allowed fallback/i
+  );
   assert.match(validateReference, /## Input State Model/);
   assert.match(validateReference, /State A:/);
   assert.match(validateReference, /State B:/);
@@ -197,7 +213,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(validateReference, /Keep every completed saved summary path or filename under `## Evidence Reviewed`/i);
   assert.match(
     validateReference,
-    /taskSchema[\s\S]*schema authority[\s\S]*renderPreview[\s\S]*canonical rendered preview/i
+    /taskSchema` as schema[\s\S]*`blueprint_phase_validation_validate_model\.renderPreview` as\s+the canonical rendered preview/i
   );
   assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(
@@ -227,7 +243,10 @@ test("validate-phase verifier and artifact contract preserve evidence expectatio
 
   assert.match(agentFile, /requirement\/task coverage map/i);
   assert.match(agentFile, /manual-only, deferred, partial, and blocked coverage/i);
-  assert.match(agentFile, /live `phase\.verification` contract returned by[\s\S]*`blueprint_artifact_contract_read`/i);
+  assert.match(
+    agentFile,
+    /live `phase\.verification` contract supplied by the parent from[\s\S]*`blueprint_phase_validation_authoring_context\.contract`[\s\S]*`blueprint_artifact_contract_read`/i
+  );
   assert.match(agentFile, /never emit scaffold literals or placeholder-grade text/i);
   assert.match(
     agentFile,

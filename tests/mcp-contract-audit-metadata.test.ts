@@ -34,7 +34,7 @@ test("shared MCP contract docs lock the model-facing call rules for ids, paths, 
   assert.match(mcpToolsDoc, /`blueprint_artifact_report_write` accepts a bare `reportName`/i);
   assert.match(
     mcpToolsDoc,
-    /`validate-phase` and `verify-work` use summary index\/read, validation read\/write, `blueprint_phase_validation_authoring_context`, `blueprint_phase_validation_validate_model` for verification and UAT models, `blueprint_phase_validation_render` for lower-level compatibility render paths, `blueprint_artifact_contract_read`, config, artifact validation, and state update tools/i
+    /`validate-phase` uses summary index\/read, validation read\/write, `blueprint_phase_validation_authoring_context`, `blueprint_phase_validation_validate_model`, config, artifact validation, and state update tools[\s\S]*`blueprint_artifact_contract_read` remains an allowed fallback sanity read[\s\S]*`verify-work` still uses[\s\S]*`blueprint_phase_validation_render`[\s\S]*`blueprint_artifact_contract_read`/i
   );
   assert.match(
     mcpToolsDoc,

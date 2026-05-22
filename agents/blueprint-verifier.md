@@ -183,7 +183,8 @@ durable audit-fix report.
 - Keep the draft bounded to the parent-selected validation or UAT scope and the
   supplied evidence bundle.
 - In validation mode, the draft must be ready for the parent to normalize into
-  `XX-VERIFICATION.md` using the live contract it read through
+  `XX-VERIFICATION.md` using the live contract it supplied from
+  `blueprint_phase_validation_authoring_context.contract` or, when needed,
   `blueprint_artifact_contract_read`.
 - In UAT mode, the draft must be ready for `XX-UAT.md`, must preserve
   resumable follow-up notes when gaps remain, and must make any follow-up-fix
@@ -205,7 +206,8 @@ durable audit-fix report.
 
 When the parent command asks for validation output:
 
-- treat the live `phase.verification` contract returned by
+- treat the live `phase.verification` contract supplied by the parent from
+  `blueprint_phase_validation_authoring_context.contract` or, when needed,
   `blueprint_artifact_contract_read` as the only heading, locked-marker, and
   authoring authority
 - provide populated section content for the contract-defined verification areas:
