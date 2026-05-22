@@ -3,6 +3,7 @@ import * as z from "zod/v4";
 import {
   BLUEPRINT_CONFIG_PATH,
   ensureRepoRoot,
+  inspectBlueprintArtifacts,
   readJsonIfPresent,
   resolveBlueprintPath,
   toRepoRelativePath,
@@ -549,6 +550,7 @@ function applyConfigLayer(
     if (isPlainObject(currentValue)) {
       if (fullPath === "parallelization" && typeof value === "boolean") {
         currentValue.enabled = value;
+        appliedPaths?.add("parallelization.enabled");
         warnings.push(
           "Migrated shorthand config key parallelization to parallelization.enabled"
         );
@@ -977,13 +979,13 @@ export async function blueprintConfigSet(
   }
 
   const projectRoot = await ensureRepoRoot(args.cwd);
+  const projectConfigRaw = scope === "project" ? await readProjectConfig(projectRoot) : null;
   const baseResult = await blueprintConfigGet({
     scope: scope === "project" ? "effective" : "defaults",
     cwd: projectRoot,
     defaultsPath: args.defaultsPath
   });
   const previousConfig = cloneConfig(baseResult.config);
-  const nextConfig = cloneConfig(baseResult.config);
   const warnings = [...baseResult.warnings];
 
   for (const key of flattenPatchKeys(patch)) {
@@ -992,17 +994,64 @@ export async function blueprintConfigSet(
     }
   }
 
+  const configPath =
+    scope === "project"
+      ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH)
+      : getDefaultUserConfigPath(args.defaultsPath);
+
+  if (scope === "project") {
+    const projectLayerTarget = getHardCodedConfig() as unknown as Record<string, unknown>;
+    const appliedPaths = new Set<string>(["version"]);
+
+    if (projectConfigRaw) {
+      const normalizedProjectLayer = normalizeSparseConfigLayer(projectConfigRaw, "project");
+      warnings.push(...normalizedProjectLayer.warnings);
+      applyConfigLayer(
+        projectLayerTarget,
+        normalizedProjectLayer.config,
+        "project",
+        warnings,
+        [],
+        appliedPaths
+      );
+    }
+
+    applyConfigLayer(projectLayerTarget, patch, scope, warnings, [], appliedPaths);
+
+    const persistedProjectLayer = buildAppliedConfigLayer(
+      projectLayerTarget as unknown as BlueprintConfig,
+      appliedPaths
+    );
+    await writeJsonFile(configPath, persistedProjectLayer);
+
+    const nextResult = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot,
+      defaultsPath: args.defaultsPath
+    });
+    const changedKeys = collectChangedKeys(
+      previousConfig as unknown as Record<string, unknown>,
+      nextResult.config as unknown as Record<string, unknown>
+    );
+    const patchKeys = flattenPatchKeys(patch);
+
+    return {
+      scope,
+      updatedKeys: patchKeys.filter((key) => changedKeys.includes(key)),
+      config: nextResult.config,
+      provenance: nextResult.provenance,
+      configPath: toRepoRelativePath(projectRoot, configPath),
+      warnings: [...new Set([...warnings, ...nextResult.warnings])]
+    };
+  }
+
+  const nextConfig = cloneConfig(baseResult.config);
   applyConfigLayer(
     nextConfig as unknown as Record<string, unknown>,
     patch,
     scope,
     warnings
   );
-
-  const configPath =
-    scope === "project"
-      ? resolveBlueprintPath(projectRoot, BLUEPRINT_CONFIG_PATH)
-      : getDefaultUserConfigPath(args.defaultsPath);
 
   await writeJsonFile(configPath, nextConfig as unknown as Record<string, unknown>);
 
@@ -1018,23 +1067,12 @@ export async function blueprintConfigSet(
     config: nextConfig,
     provenance: {
       layersApplied: ["hardcoded", scope],
-      defaultsPath:
-        scope === "defaults"
-          ? configPath
-          : baseResult.provenance.defaultsApplied
-            ? baseResult.provenance.defaultsPath
-            : null,
-      projectPath:
-        scope === "project"
-          ? toRepoRelativePath(projectRoot, configPath)
-          : baseResult.provenance.projectPath,
-      defaultsApplied:
-        scope === "defaults" || baseResult.provenance.defaultsApplied,
-      projectApplied:
-        scope === "project" || baseResult.provenance.projectApplied
+      defaultsPath: configPath,
+      projectPath: baseResult.provenance.projectPath,
+      defaultsApplied: true,
+      projectApplied: baseResult.provenance.projectApplied
     },
-    configPath:
-      scope === "project" ? toRepoRelativePath(projectRoot, configPath) : configPath,
+    configPath,
     warnings
   };
 }
@@ -1043,11 +1081,11 @@ export async function blueprintConfigSetProfile(
   args: ConfigSetProfileArgs
 ): Promise<ConfigSetProfileResult> {
   const projectRoot = await ensureRepoRoot(args.cwd);
-  const projectConfig = await readProjectConfig(projectRoot);
+  const inspection = await inspectBlueprintArtifacts(projectRoot);
 
-  if (!projectConfig) {
+  if (inspection.readiness !== "initialized") {
     throw new Error(
-      "Blueprint project config is missing. Initialize the repo first with /blu-new-project."
+      "Blueprint project is not initialized. Initialize the repo first with /blu-new-project."
     );
   }
 

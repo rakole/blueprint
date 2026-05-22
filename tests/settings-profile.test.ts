@@ -83,11 +83,24 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(raw) as T;
 }
 
+async function writeInitializedBlueprintArtifacts(repoPath: string): Promise<void> {
+  const blueprintDir = path.join(repoPath, ".blueprint");
+  const phasesDir = path.join(blueprintDir, "phases");
+
+  await mkdir(blueprintDir, { recursive: true });
+  await mkdir(phasesDir, { recursive: true });
+  await writeFile(path.join(blueprintDir, "PROJECT.md"), "# Project\n", "utf8");
+  await writeFile(path.join(blueprintDir, "REQUIREMENTS.md"), "# Requirements\n", "utf8");
+  await writeFile(path.join(blueprintDir, "ROADMAP.md"), "# Roadmap\n", "utf8");
+  await writeFile(path.join(blueprintDir, "STATE.md"), "# State\n", "utf8");
+}
+
 test("config_set persists normalized version 2 config for initialized repos", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  await writeInitializedBlueprintArtifacts(repoPath);
 
   const result = await blueprintConfigSet({
     cwd: repoPath,
@@ -109,20 +122,25 @@ test("config_set persists normalized version 2 config for initialized repos", as
   assert.match(normalizedConfigText, /"version": 2/);
   assert.equal((config.planning as Record<string, unknown>).commit_docs, false);
   assert.equal((config.workflow as Record<string, unknown>).verifier, false);
-  assert.equal((config.workflow as Record<string, unknown>).no_uat, false);
-  assert.equal((config.workflow as Record<string, unknown>).subagents, true);
   assert.equal(config.model_profile, "balanced");
-  assert.deepEqual(config.ux, {
+  assert.equal(result.config.workflow.no_uat, false);
+  assert.equal(result.config.workflow.subagents, true);
+  assert.deepEqual(result.config.ux, {
     progress_mode: "quiet",
     structured_confirmations: "auto",
     user_checkpoints: "off"
   });
-  assert.deepEqual(config.orchestration, {
+  assert.deepEqual(result.config.orchestration, {
     task_tracker: "off"
   });
-  assert.deepEqual(config.research, {
+  assert.deepEqual(result.config.research, {
     external_sources: "off"
   });
+  assert.equal("no_uat" in (config.workflow as Record<string, unknown>), false);
+  assert.equal("subagents" in (config.workflow as Record<string, unknown>), false);
+  assert.equal("ux" in config, false);
+  assert.equal("orchestration" in config, false);
+  assert.equal("research" in config, false);
 });
 
 test("config_set_profile changes only model_profile and leaves saved defaults unchanged", async (t) => {
@@ -132,6 +150,7 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   t.after(async () => {
     await rm(tempRoot, { recursive: true, force: true });
   });
+  await writeInitializedBlueprintArtifacts(repoPath);
 
   const configPath = path.join(repoPath, ".blueprint/config.json");
   const defaultsBefore = await readFile(defaultsPath, "utf8");
@@ -147,28 +166,103 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   const defaultsAfter = await readFile(defaultsPath, "utf8");
   const expectedConfig = structuredClone(beforeConfig);
   expectedConfig.model_profile = "budget";
-  expectedConfig.workflow = {
-    ...(expectedConfig.workflow as Record<string, unknown>),
-    no_uat: false,
-    subagents: true
-  };
-  expectedConfig.ux = {
-    progress_mode: "quiet",
-    structured_confirmations: "auto",
-    user_checkpoints: "off"
-  };
-  expectedConfig.orchestration = {
-    task_tracker: "off"
-  };
-  expectedConfig.research = {
-    external_sources: "off"
-  };
 
   assert.deepEqual(result.updatedKeys, ["model_profile"]);
   assert.equal(result.profile, "budget");
   assert.equal(result.configPath, ".blueprint/config.json");
   assert.equal(afterConfig.model_profile, "budget");
   assert.deepEqual(afterConfig, expectedConfig);
+  assert.equal(defaultsAfter, defaultsBefore);
+});
+
+test("config_set_profile rejects partial repos that only have .blueprint/config.json", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await mkdir(path.dirname(configPath), { recursive: true });
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 2,
+        model_profile: "balanced"
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  await assert.rejects(
+    blueprintConfigSetProfile({
+      cwd: repoPath,
+      profile: "budget"
+    }),
+    /Initialize the repo first/
+  );
+});
+
+test("config_set_profile changes only model_profile without materializing inherited defaults", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await createDefaultsFile("valid-defaults.json", tempRoot);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await writeInitializedBlueprintArtifacts(repoPath);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          subagents: false
+        },
+        model_profile: "balanced"
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const defaultsBefore = await readFile(defaultsPath, "utf8");
+
+  const result = await blueprintConfigSetProfile({
+    cwd: repoPath,
+    defaultsPath,
+    profile: "budget"
+  });
+
+  const afterConfig = await readJsonFile<Record<string, unknown>>(configPath);
+  const effectiveConfig = await blueprintConfigGet({
+    cwd: repoPath,
+    defaultsPath,
+    scope: "effective"
+  });
+  const defaultsAfter = await readFile(defaultsPath, "utf8");
+
+  assert.deepEqual(result.updatedKeys, ["model_profile"]);
+  assert.equal(result.profile, "budget");
+  assert.deepEqual(afterConfig, {
+    version: 2,
+    workflow: {
+      subagents: false
+    },
+    model_profile: "budget"
+  });
+  assert.equal(effectiveConfig.config.model_profile, "budget");
+  assert.equal(effectiveConfig.config.mode, "auto");
+  assert.equal(effectiveConfig.config.workflow.subagents, false);
+  assert.equal(effectiveConfig.config.workflow.verifier, true);
+  assert.equal("planning" in afterConfig, false);
+  assert.equal("parallelization" in afterConfig, false);
   assert.equal(defaultsAfter, defaultsBefore);
 });
 
@@ -185,7 +279,7 @@ test("config_set_profile rejects repos without initialized project config", asyn
       cwd: repoPath,
       profile: "budget"
     }),
-    /Blueprint project config is missing/
+    /Blueprint project is not initialized/
   );
 
   assert.equal(await pathExists(configPath), false);
@@ -196,6 +290,7 @@ test("config_set rejects reserved repo keys for hooks and removed workflow flags
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
+  await writeInitializedBlueprintArtifacts(repoPath);
 
   await assert.rejects(
     blueprintConfigSet({
@@ -258,19 +353,19 @@ test("legacy and minimal config inputs are upgraded to the full schema on write"
   assert.equal((config.planning as Record<string, unknown>).search_gitignored, true);
   assert.equal((config.parallelization as Record<string, unknown>).enabled, false);
   assert.equal(workflow.research, false);
-  assert.equal(workflow.no_uat, false);
+  assert.equal(result.config.workflow.no_uat, false);
   assert.equal("use_workspaces" in workflow, false);
   assert.equal("use_workstreams" in workflow, false);
   assert.equal("hooks" in config, false);
-  assert.ok("gates" in config);
-  assert.ok("safety" in config);
-  assert.ok("maintenance" in config);
+  assert.equal("gates" in config, false);
+  assert.equal("safety" in config, false);
+  assert.equal("maintenance" in config, false);
   assert.ok(
     result.warnings.some((warning) =>
       warning.includes("Migrated legacy config key commit_docs")
     )
   );
-  assert.equal(workflow.subagents, true);
+  assert.equal(result.config.workflow.subagents, true);
 });
 
 test("config_set reports only keys that actually changed", async (t) => {
@@ -289,6 +384,111 @@ test("config_set reports only keys that actually changed", async (t) => {
 
   assert.deepEqual(result.updatedKeys, ["model_profile"]);
   assert.match(result.warnings.join("\n"), /Ignored unknown config key: unknown_top/);
+});
+
+test("config_set project patches do not freeze inherited defaults into project config", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const defaultsPath = await createDefaultsFile("valid-defaults.json", tempRoot);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await writeInitializedBlueprintArtifacts(repoPath);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 2,
+        model_profile: "balanced"
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    defaultsPath,
+    patch: {
+      workflow: {
+        subagents: false
+      }
+    }
+  });
+  const afterConfig = await readJsonFile<Record<string, unknown>>(configPath);
+  const effectiveConfig = await blueprintConfigGet({
+    cwd: repoPath,
+    defaultsPath,
+    scope: "effective"
+  });
+
+  assert.deepEqual(result.updatedKeys, ["workflow.subagents"]);
+  assert.deepEqual(afterConfig, {
+    version: 2,
+    model_profile: "balanced",
+    workflow: {
+      subagents: false
+    }
+  });
+  assert.equal(effectiveConfig.config.model_profile, "balanced");
+  assert.equal(effectiveConfig.config.mode, "auto");
+  assert.equal(effectiveConfig.config.workflow.subagents, false);
+  assert.equal(effectiveConfig.config.workflow.verifier, true);
+  assert.equal("planning" in afterConfig, false);
+  assert.equal("parallelization" in afterConfig, false);
+});
+
+test("config_set preserves migrated legacy parallelization overrides during unrelated writes", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await writeInitializedBlueprintArtifacts(repoPath);
+  await writeFile(
+    configPath,
+    JSON.stringify(
+      {
+        version: 2,
+        model_profile: "balanced",
+        parallelization: false
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        subagents: false
+      }
+    }
+  });
+  const afterConfig = await readJsonFile<Record<string, unknown>>(configPath);
+
+  assert.deepEqual(result.updatedKeys, ["workflow.subagents"]);
+  assert.deepEqual(afterConfig, {
+    version: 2,
+    model_profile: "balanced",
+    parallelization: {
+      enabled: false
+    },
+    workflow: {
+      subagents: false
+    }
+  });
+  assert.equal(
+    (result.config.parallelization as Record<string, unknown>).enabled,
+    false
+  );
 });
 
 test("config_get defaults workflow.subagents to true and project patches can disable it", async (t) => {
