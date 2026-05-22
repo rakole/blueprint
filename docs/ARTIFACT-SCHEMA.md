@@ -208,6 +208,7 @@ Current normalized schema:
     "nyquist_validation": true,
     "ui_phase": true,
     "ui_safety_gate": true,
+    "no_uat": false,
     "code_review": true,
     "code_review_depth": "standard",
     "auto_advance": false,
@@ -270,6 +271,7 @@ Normalization and precedence rules:
 - `.blueprint/config.json` is persisted in normalized object form for every section, including `parallelization`, even if legacy or shorthand input was accepted at the tool boundary.
 - Repo config must not contain `workflow.use_workspaces`, `workflow.use_workstreams`, or repo-level `hooks.*` keys. Workspace and workstream behavior stays command-driven; hook activation stays extension-owned in `hooks/hooks.json`.
 - `workflow.subagents` is the global optional-subagent workflow policy for Blueprint command orchestration. It governs whether commands may use their optional Blueprint subagent paths; it does not install host agents, change agent catalog availability, or widen routing.
+- `workflow.no_uat` defaults to `false`; when `true`, missing `XX-UAT.md` evidence is not lifecycle-blocking after PASS verification, while `/blu-verify-work` remains manually runnable and quality gates still block completion.
 - `workflow.code_review` and `workflow.code_review_depth` are surfaced through `/blu-settings` and consumed by `/blu-code-review`; the review toggle should stay meaningful as a surfaced workflow setting, and the depth value is the default when the review command runs without an explicit `--depth`.
 - `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
@@ -634,7 +636,7 @@ Validation expectations:
 - should describe gaps and pass signals explicitly rather than only restating artifact content
 - should keep the locked markers `**Coverage:**`, `**Gate State:**`, and `**Sign-off:**` exactly as written
 - should keep the full heading set above so the persisted artifact matches the runtime validator and authoring template
-- should only route the next safe action to `/blu-verify-work` when the saved gate state is `PASS`, readiness is ready for UAT, and no unresolved gap or repair signals remain
+- should route the next safe action to `/blu-verify-work <phase>` when the saved gate state is `PASS`, readiness is ready for UAT, no unresolved gap or repair signals remain, and `workflow.no_uat=false`; when `workflow.no_uat=true`, the PASS route is `/blu-progress` while explicit `/blu-verify-work` remains manually runnable
 - should keep non-ready validation truthful as `PARTIAL` or `BLOCKED` and route repairable test gaps to `/blu-add-tests <phase>` or implementation/behavior gaps to `/blu-audit-fix <phase>`
 - should be resumable by the next `validate-phase` run if the artifact already exists
 

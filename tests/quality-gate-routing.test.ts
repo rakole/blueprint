@@ -803,6 +803,55 @@ test("UAT-complete code changes without REVIEW route to code-review before compl
   assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone|\/blu-discuss-phase 2/);
 });
 
+test("workflow.no_uat routes ready verification to quality gates instead of verify-work", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withUat: false
+      })
+    ],
+    configPatch: {
+      workflow: {
+        no_uat: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-code-review 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-verify-work 1/);
+});
+
+test("workflow.no_uat lets milestone routing ignore missing UAT after quality gates pass", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true,
+        withUat: false,
+        withReview: true,
+        withSecurity: true
+      })
+    ],
+    configPatch: {
+      workflow: {
+        no_uat: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-audit-milestone v1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-verify-work 1/);
+});
+
 test("summary-derived source evidence is unioned with non-reviewable plan evidence", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [

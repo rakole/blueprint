@@ -146,8 +146,9 @@ repair, record rejection, blocked advancement, and completion.
   `pending-open-threat`, and omit next-step routing.
 - If all threats are closed or explicitly accepted, route only to implemented
   Blueprint commands. Prefer `/blu-validate-phase <phase>` when verification is
-  missing, then `/blu-verify-work <phase>` when UAT is missing, otherwise
-  `/blu-progress`. Repo-wide derived progress/state may still surface saved
+  missing, then `/blu-verify-work <phase>` when UAT is missing and
+  `workflow.no_uat=false`; when `workflow.no_uat=true`, missing UAT routes to
+  `/blu-progress` while `/blu-verify-work` remains manual. Repo-wide derived progress/state may still surface saved
   review remediation debt such as `/blu-code-review-fix <phase>` after
   security exists, but `/blu-secure-phase` itself must not emit that action.
 

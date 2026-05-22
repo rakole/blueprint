@@ -219,8 +219,9 @@ handoff, and no report persistence.
   another repair loop when linkage, status, dependency order, verification truth,
   and external-service readiness are otherwise valid.
 - Do not make a phase-level completion claim from execute-phase itself; that
-  waits for `/blu-validate-phase`, and `/blu-verify-work` remains the verifier
-  follow-up once validation evidence exists.
+  waits for `/blu-validate-phase`, and the validation/state tools choose
+  `/blu-verify-work` or `/blu-progress` from `workflow.no_uat` once validation
+  evidence exists.
 - Prefer `/blu-progress` as the default safe follow-up unless a narrower
   implemented next step is clearly warranted.
 

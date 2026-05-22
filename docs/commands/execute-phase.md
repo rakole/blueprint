@@ -84,8 +84,8 @@ state without claiming phase completion on its own.
 - Verifier handoff: `/blu-execute-phase` records execution coverage but never
   makes a phase-level completion claim on its own; the downstream
   `/blu-validate-phase` handoff is required before any completion claim, and
-  `/blu-verify-work` remains the next lifecycle step once validation evidence
-  exists.
+  validation/state tools choose `/blu-verify-work` or `/blu-progress` from
+  `workflow.no_uat` once validation evidence exists.
 
 For detailed sequencing, overwrite behavior, carry-forward checkpoint rules,
 and no-subagent fallback behavior, read the rich runtime contract in

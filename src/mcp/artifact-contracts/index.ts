@@ -3678,7 +3678,7 @@ const PHASE_VERIFICATION_MODEL_CONTRACT: ArtifactModelContract = {
   qualityRules: [
     "Do not include model-owned identity keys such as cwd, phase, artifact, path, or content; the write tool owns identity and path derivation.",
     "Cite every completed execution summary from context.summaryPaths in evidenceReviewedSummaryPaths unless the renderer is intentionally allowed to include the complete summary set.",
-    "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
+    "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work when workflow.no_uat=false, or /blu-progress when workflow.no_uat=true, only when no unresolved gap remains.",
     "Use only allowed coverage states, manual coverage statuses, and gap classes from blueprint_phase_validation_authoring_context.allowedValues.",
     "Use COVERED or PASS for completed verification rows; lowercase covered is accepted for model ergonomics and normalized to COVERED during rendering.",
     "Preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when the host/model has that detail.",

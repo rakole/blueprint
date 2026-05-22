@@ -830,6 +830,48 @@ test("ui-review authoring context exposes plan dependency and verification prove
   assert.equal(runtimeContext.verificationArtifact, authoringContext.verification);
 });
 
+test("workflow.no_uat lets ui-review route missing UAT to progress", async (t) => {
+  const repoPath = await createUiReviewRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/06-ui-audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "06-VERIFICATION.md"),
+    "# Phase 06: UI Audit - Verification\n\n## Verification Summary\n\n- Focused validation passed.\n",
+    "utf8"
+  );
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review"
+  });
+  const authoringContext = context.authoringContext as {
+    completedNextSafeAction: string;
+    allowedNextActions: string[];
+  };
+
+  assert.equal(context.status, "ready", context.reason ?? "");
+  assert.equal(authoringContext.completedNextSafeAction, "/blu-progress");
+  assert.ok(authoringContext.allowedNextActions.includes("/blu-progress"));
+  assert.equal(authoringContext.allowedNextActions.includes("/blu-verify-work 6"), false);
+});
+
 test("ui-review rejects Markdown fallback for the model-only writer", async (t) => {
   const repoPath = await createUiReviewRepo();
   t.after(async () => {

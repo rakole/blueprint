@@ -13,9 +13,9 @@ Visible validation contract:
 - Surface the current pending gate, and the next safe implemented action while validation is running.
 - Keep the run saved-summary-first: execution summaries are the baseline, overwrite confirmation for an existing `XX-VERIFICATION.md` is a pending gate, and `Execute` is bounded validation analysis rather than repo mutation outside MCP.
 - Use `workflow.verifier` and `workflow.nyquist_validation` from effective config to decide whether verifier analysis runs and whether remaining gap language is required or informational.
-- Keep the next safe action on `/blu-validate-phase <phase>` until the saved verification artifact is either ready for `/blu-verify-work` or explicitly names an implemented repair route. Treat explicit test-generation gaps such as saved `deferred-test` rows as gaps that route to `/blu-add-tests <phase>`, and route implementation/behavior gaps to `/blu-audit-fix <phase>` when the saved artifact makes that follow-up authoritative.
+- Keep the next safe action on `/blu-validate-phase <phase>` until the saved verification artifact is ready for the configured PASS route or explicitly names an implemented repair route. With `workflow.no_uat=false`, PASS routes to `/blu-verify-work <phase>`; with `workflow.no_uat=true`, PASS routes to `/blu-progress` while `/blu-verify-work` remains manual. Treat explicit test-generation gaps such as saved `deferred-test` rows as gaps that route to `/blu-add-tests <phase>`, and route implementation/behavior gaps to `/blu-audit-fix <phase>` when the saved artifact makes that follow-up authoritative.
 - Apply this routing shorthand before the final model validation and write:
-  `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = /blu-verify-work <phase>`
+  `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = workflow.no_uat ? /blu-progress : /blu-verify-work <phase>`
   `else if explicit deferred-test or test-generation gaps remain -> nextSafeAction = /blu-add-tests <phase>`
   `else if implementation or behavior gaps remain -> nextSafeAction = /blu-audit-fix <phase>`
   `else -> keep nextSafeAction on /blu-validate-phase <phase> only for validation-document repair or manual-only prerequisites`

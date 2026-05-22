@@ -1757,7 +1757,11 @@ export const VALIDATE_PHASE_RUNTIME_METADATA = {
     reads: [
       "Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."
     ],
-    writes: ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"]
+    writes: [
+      "phase XX-VERIFICATION.md",
+      ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes",
+      ".blueprint/STATE.md"
+    ]
   },
   runtimeReference: {
     path: runtimeMetadataSourceId("validate-phase"),

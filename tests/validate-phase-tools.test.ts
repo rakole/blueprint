@@ -2433,6 +2433,13 @@ test("verification validation enforces semantic coverage enums, gap classes, and
     }),
     [summaryPath]
   );
+  const noUatProgressRoute = validateVerificationArtifactContent(
+    renderVerificationArtifact([summaryPath], {
+      nextAction: "Return to `/blu-progress` for the next safe implemented action."
+    }),
+    [summaryPath],
+    { noUat: true }
+  );
   const blockedRouteMismatch = validateVerificationArtifactContent(
     renderVerificationArtifact([summaryPath], {
       gateState: "PARTIAL",
@@ -2483,6 +2490,7 @@ test("verification validation enforces semantic coverage enums, gap classes, and
     readyRouteMismatch.issues.join("\n"),
     /must route ready-for-UAT validation to \/blu-verify-work/
   );
+  assert.equal(noUatProgressRoute.valid, true, noUatProgressRoute.issues.join("\n"));
   assert.equal(manualCoveragePass.valid, false);
   assert.match(manualCoveragePass.issues.join("\n"), /must not declare PASS/i);
   assert.equal(manualStatusPass.valid, false);
@@ -2502,6 +2510,68 @@ test("verification validation enforces semantic coverage enums, gap classes, and
     blockedRouteMismatch.issues.join("\n"),
     /must not route PARTIAL or BLOCKED validation to \/blu-verify-work/
   );
+});
+
+test("workflow.no_uat routes PASS verification to progress and closes the phase without UAT", async (t) => {
+  const repoPath = await createValidationReadyRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await markValidationPlanCompleted(repoPath, "02");
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true,
+          code_review: false
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const summaryPaths = [
+    ".blueprint/phases/03-phase-discovery/03-01-SUMMARY.md",
+    ".blueprint/phases/03-phase-discovery/03-02-SUMMARY.md"
+  ];
+  const context = await blueprintPhaseValidationAuthoringContext({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification"
+  });
+  const { artifact: _artifact, phase: _phase, ...model } = verificationRenderInput(summaryPaths, {
+    evidenceReviewedSummaryPaths: summaryPaths,
+    nextSafeAction: "/blu-progress"
+  });
+  const validated = await blueprintPhaseValidationValidateModel({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    model
+  });
+  const written = await blueprintPhaseValidationWrite({
+    cwd: repoPath,
+    phase: "3",
+    artifact: "verification",
+    content: renderVerificationArtifact(summaryPaths, {
+      nextAction: "Return to `/blu-progress` for the next safe implemented action."
+    })
+  });
+  const roadmap = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.equal(context.readyForDraft, true);
+  assert.match(JSON.stringify(context.taskSchema), /"const":"\/blu-progress"/);
+  assert.equal(validated.status, "valid", JSON.stringify(validated.diagnostics, null, 2));
+  assert.equal(written.status, "created", JSON.stringify(written, null, 2));
+  assert.match(roadmap, /- \[x\] \*\*Phase 3: Phase Discovery\*\*/);
+  assert.match(roadmap, /### Phase 3: Phase Discovery[\s\S]*\*\*Status\*\*: completed/);
+  assert.doesNotMatch(status.nextAction, /\/blu-verify-work 3/);
 });
 
 test("validate-phase manifest flow reads all completed summaries, repairs once, then syncs state from the saved artifact", async (t) => {

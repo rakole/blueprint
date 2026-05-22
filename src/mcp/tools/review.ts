@@ -2440,8 +2440,22 @@ function canonicalNoneTableRow(width: number): string[] {
   return Array.from({ length: width }, () => "none");
 }
 
+async function readWorkflowNoUat(projectRoot: string): Promise<boolean> {
+  try {
+    const config = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+
+    return config.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
+
 async function buildAllowedSecurityNextActions(args: {
   phaseNumber: string;
+  uatRequired: boolean;
   artifacts: {
     verification: string | null;
     uat: string | null;
@@ -2455,7 +2469,7 @@ async function buildAllowedSecurityNextActions(args: {
   const completedCandidate =
     args.artifacts.verification === null
       ? `/blu-validate-phase ${args.phaseNumber}`
-      : args.artifacts.uat === null
+      : args.uatRequired && args.artifacts.uat === null
         ? `/blu-verify-work ${args.phaseNumber}`
         : "/blu-progress";
   const partialCandidate = "/blu-progress";
@@ -3144,6 +3158,7 @@ async function buildSecurityAuthoringContext(args: {
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
     phaseNumber,
+    uatRequired: !(await readWorkflowNoUat(args.projectRoot)),
     artifacts
   });
   const allowCompleted = completionWarnings.length === 0;
@@ -3195,6 +3210,7 @@ async function buildSecurityAuthoringContext(args: {
 
 async function buildAllowedUiReviewNextActions(args: {
   phaseNumber: string;
+  uatRequired: boolean;
   artifacts: {
     verification: string | null;
     uat: string | null;
@@ -3208,7 +3224,7 @@ async function buildAllowedUiReviewNextActions(args: {
   const completedCandidate =
     args.artifacts.verification === null
       ? `/blu-validate-phase ${args.phaseNumber}`
-      : args.artifacts.uat === null
+      : args.uatRequired && args.artifacts.uat === null
         ? `/blu-verify-work ${args.phaseNumber}`
         : "/blu-progress";
   const implementedCommands = await getImplementedCommandNames();
@@ -3567,6 +3583,7 @@ async function buildUiReviewAuthoringContext(args: {
     executionTargets.blockers.lowerWavePendingPlanIds.length === 0;
   const nextActions = await buildAllowedUiReviewNextActions({
     phaseNumber,
+    uatRequired: !(await readWorkflowNoUat(args.projectRoot)),
     artifacts
   });
   const uiReviewBaseSchema = cloneJsonObject(modelContract.jsonSchema);

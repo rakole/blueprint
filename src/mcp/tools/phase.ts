@@ -2894,7 +2894,8 @@ function replacePhaseDetailStatus(
 
 async function syncRoadmapPhaseCompletion(
   projectRoot: string,
-  resolved: ResolvedPhaseLocation
+  resolved: ResolvedPhaseLocation,
+  options: { noUat?: boolean } = {}
 ): Promise<string[]> {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
 
@@ -2930,7 +2931,9 @@ async function syncRoadmapPhaseCompletion(
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation =
       artifact === "verification"
-        ? validateVerificationArtifactContent(content, summaryPaths)
+        ? validateVerificationArtifactContent(content, summaryPaths, {
+            noUat: options.noUat === true
+          })
         : validateUatArtifactContent(content, summaryPaths, {
             requireReadyVerificationEvidence: true
           });
@@ -2976,7 +2979,7 @@ async function syncRoadmapPhaseCompletion(
   validationWarnings.push(...qualityGateEvaluation.warnings);
 
   if (
-    hasCompleteUat &&
+    (hasCompleteUat || options.noUat === true) &&
     qualityGateEvaluation.requiresCodeReview &&
     !qualityGateEvaluation.gatesSatisfied
   ) {
@@ -2990,7 +2993,7 @@ async function syncRoadmapPhaseCompletion(
     summaryPaths.length > 0 &&
     hasValidVerification &&
     verificationReadyForUat &&
-    hasCompleteUat &&
+    (hasCompleteUat || options.noUat === true) &&
     qualityGateEvaluation.gatesSatisfied;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
@@ -6500,11 +6503,27 @@ function resolvedPhaseFromValidationContext(
     : null;
 }
 
-function phaseValidationRoutingRules(phaseNumber: string | null): string[] {
+async function readWorkflowNoUat(projectRoot: string): Promise<boolean> {
+  try {
+    const config = await blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    });
+
+    return config.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
+
+function phaseValidationRoutingRules(phaseNumber: string | null, noUat = false): string[] {
   const phaseRef = phaseNumber ?? "<phase>";
+  const passRoute = noUat
+    ? "PASS verification must use Readiness: ready for UAT and route to /blu-progress because workflow.no_uat=true; /blu-verify-work remains manual only."
+    : `PASS verification must use Readiness: ready for UAT and route to /blu-verify-work ${phaseRef}.`;
 
   return [
-    `PASS verification must use Readiness: ready for UAT and route to /blu-verify-work ${phaseRef}.`,
+    passRoute,
     "PARTIAL or BLOCKED verification must use Readiness: not ready for UAT.",
     `Test-generation gaps route to /blu-add-tests ${phaseRef}; implementation or behavior gaps route to /blu-audit-fix ${phaseRef}.`,
     "UAT PASS is complete only when **Checkpoint:** is none; checkpointed UAT should route back to /blu-verify-work."
@@ -6689,6 +6708,7 @@ export async function blueprintPhaseValidationAuthoringContext(
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
+  const noUat = await readWorkflowNoUat(projectRoot);
   const completedSummaryPlanIds = new Set(summaryIndex.completedPlans);
   const summaryEvidence = await collectValidationAuthoringSummaryEvidence(
     projectRoot,
@@ -6712,7 +6732,8 @@ export async function blueprintPhaseValidationAuthoringContext(
       ? await phaseVerificationModelSchemas({
           contract,
           phaseNumber: resolved.phaseNumber,
-          summaryPaths: summaryEvidence.summaryPaths
+          summaryPaths: summaryEvidence.summaryPaths,
+          noUat
         })
       : await phaseUatModelSchemas({
           contract,
@@ -6747,7 +6768,7 @@ export async function blueprintPhaseValidationAuthoringContext(
     baseSchema: modelSchemas.baseSchema,
     taskSchema: modelSchemas.taskSchema,
     allowedValues,
-    routingRules: phaseValidationRoutingRules(resolved.phaseNumber),
+    routingRules: phaseValidationRoutingRules(resolved.phaseNumber, noUat),
     warnings: summaryEvidence.warnings,
     reason: readyForDraft ? null : prerequisites.blockers.join(" ")
   };
@@ -6859,6 +6880,10 @@ export async function blueprintPhaseValidationValidateModel(
   }
 
   let renderPreview: string | null = null;
+  const noUat =
+    args.artifact === "verification" && resolved
+      ? await readWorkflowNoUat(await ensureRepoRoot(args.cwd))
+      : false;
 
   if (diagnostics.length === 0 && normalizedModel && resolved) {
     const rendered =
@@ -6885,7 +6910,7 @@ export async function blueprintPhaseValidationValidateModel(
           );
     const validation =
       args.artifact === "verification"
-        ? validateVerificationArtifactContent(rendered, context.summaryPaths)
+        ? validateVerificationArtifactContent(rendered, context.summaryPaths, { noUat })
         : validateUatArtifactContent(rendered, context.summaryPaths, {
             requireReadyVerificationEvidence: true
           });
@@ -6991,9 +7016,10 @@ export async function blueprintPhaseValidationRender(
     summaryIndex.summaries,
     completedSummaryPlanIds
   );
+  const noUat = await readWorkflowNoUat(projectRoot);
   const validation =
     args.artifact === "verification"
-      ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths)
+      ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths, { noUat })
       : validateUatArtifactContent(content, summaryEvidence.summaryPaths, {
           requireReadyVerificationEvidence: true
         });
@@ -9009,9 +9035,10 @@ export async function blueprintPhaseValidationRead(
   );
   const { summaryPaths: completedSummaryPaths, warnings: completedSummaryWarnings } =
     await collectValidatedSummaryPaths(projectRoot, completedSummaries);
+  const noUat = await readWorkflowNoUat(projectRoot);
   const validation =
     args.artifact === "verification"
-      ? validateVerificationArtifactContent(content, completedSummaryPaths)
+      ? validateVerificationArtifactContent(content, completedSummaryPaths, { noUat })
       : validateUatArtifactContent(content, completedSummaryPaths, {
           requireReadyVerificationEvidence: true
         });
@@ -9117,8 +9144,9 @@ export async function blueprintPhaseValidationWrite(
     projectRoot,
     completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
   );
+  const noUat = await readWorkflowNoUat(projectRoot);
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
-  const shouldSurfaceWarnings = args.artifact !== "verification";
+  const shouldSurfaceWarnings = args.artifact !== "verification" || noUat;
   const warnings: string[] = shouldSurfaceWarnings ? [...summaryWarnings] : [];
 
   if (summaryPaths.length === 0) {
@@ -9171,7 +9199,7 @@ export async function blueprintPhaseValidationWrite(
           warnings: [] as string[]
         }
       : args.artifact === "verification"
-        ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths)
+        ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths, { noUat })
         : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
             requireReadyVerificationEvidence: true
           });
@@ -9189,7 +9217,8 @@ export async function blueprintPhaseValidationWrite(
     const verificationContent = await fs.readFile(verificationAbsolutePath, "utf8");
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
-      completedSummaryPaths
+      completedSummaryPaths,
+      { noUat }
     );
 
     if (!verificationValidation.valid) {
@@ -9214,7 +9243,9 @@ export async function blueprintPhaseValidationWrite(
     );
     const existingValidation =
       args.artifact === "verification"
-        ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths)
+        ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths, {
+            noUat
+          })
         : validateUatArtifactContent(existingContent, validationSummaryPaths, {
             requireReadyVerificationEvidence: true
           });
@@ -9243,8 +9274,8 @@ export async function blueprintPhaseValidationWrite(
       if (shouldSurfaceWarnings) {
         warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       }
-      if (args.artifact === "uat") {
-        warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
+      if (args.artifact === "uat" || (args.artifact === "verification" && noUat)) {
+        warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat })));
       }
 
       return {
@@ -9314,8 +9345,8 @@ export async function blueprintPhaseValidationWrite(
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
 
-  if (args.artifact === "uat") {
-    warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved)));
+  if (args.artifact === "uat" || (args.artifact === "verification" && noUat)) {
+    warnings.push(...(await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat })));
   }
 
   return {

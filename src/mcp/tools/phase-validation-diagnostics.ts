@@ -78,6 +78,7 @@ function phaseValidationRouteDiagnostic(
   const nextSafeAction = getValueAtJsonPointer(model, "/nextSafeAction");
   const readyAction =
     typeof runtimeContext?.readyAction === "string" ? runtimeContext.readyAction : null;
+  const noUat = runtimeContext?.noUat === true;
   const repairActions = Array.isArray(runtimeContext?.repairActions)
     ? runtimeContext.repairActions.filter((value): value is string => typeof value === "string")
     : [];
@@ -162,14 +163,18 @@ function phaseValidationRouteDiagnostic(
         source: "schema",
         path: "model.nextSafeAction",
         code: "schema.if",
-        message: `PASS verification models must route to ${readyAction} before UAT.`,
+        message: noUat
+          ? `PASS verification models must route to ${readyAction} when workflow.no_uat is true.`
+          : `PASS verification models must route to ${readyAction} before UAT.`,
         context: {
           keyword: error.keyword,
           params: error.params,
           schemaPath: error.schemaPath,
           expectedAction: readyAction
         },
-        suggestion: `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
+        suggestion: noUat
+          ? `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}; /blu-verify-work remains manual.`
+          : `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
       });
     }
 

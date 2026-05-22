@@ -125,7 +125,9 @@ Map `/blu-ui-review` to the shared stages:
 
 - Route only to implemented Blueprint commands. Prefer
   `/blu-validate-phase <phase>` when validation is missing, then
-  `/blu-verify-work <phase>` when UAT is missing, otherwise `/blu-progress`.
+  `/blu-verify-work <phase>` when UAT is missing and `workflow.no_uat=false`;
+  when `workflow.no_uat=true`, missing UAT routes to `/blu-progress` while
+  `/blu-verify-work` remains manual.
 - If material UI follow-up remains but the safe next action is ambiguous, route
   to `/blu-progress` rather than inventing a planned command.
 

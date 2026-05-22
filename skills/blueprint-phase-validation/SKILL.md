@@ -121,7 +121,7 @@ Runtime input resolution is structured and command-scoped:
 3. Respect `workflow.verifier` and `workflow.nyquist_validation` from normalized effective config when deciding whether verifier analysis runs and whether Nyquist-style gap language is active or informational.
 4. Read `blueprint_phase_validation_authoring_context` and `blueprint_artifact_contract_read` with `artifactId: "phase.verification"` before final authoring, build a structured verification evidence payload against the returned `taskSchema`, call `blueprint_phase_validation_validate_model`, keep every completed summary filename or path in the contract-defined evidence section, and persist only through `blueprint_phase_validation_write` with the `verification` artifact when validation returns `status: "valid"`, passing the same structured `model` with `authoringMode: "model-only"`.
 5. Apply this routing shorthand before the final verification model validation and write:
-   `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = /blu-verify-work <phase>`
+   `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = workflow.no_uat ? /blu-progress : /blu-verify-work <phase>`
    `else if explicit deferred-test or test-generation gaps remain -> nextSafeAction = /blu-add-tests <phase>`
    `else if implementation or behavior gaps remain -> nextSafeAction = /blu-audit-fix <phase>`
    `else -> keep nextSafeAction on /blu-validate-phase <phase> only for validation-document repair or manual-only prerequisites`
