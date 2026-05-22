@@ -616,7 +616,10 @@ async function createPlanCoverageGatedExecutionRepo(): Promise<string> {
   return repoPath;
 }
 
-async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
+async function createUiDiscoveryWithoutResearchRepo(options?: {
+  uiSafetyGate?: boolean;
+  contextContent?: string;
+}): Promise<string> {
   const repoPath = await createGitRepo("blueprint-ui-discovery-routing-");
 
   await mkdir(path.join(repoPath, ".blueprint/phases/02-phase-discovery"), {
@@ -662,7 +665,8 @@ async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
         version: 2,
         workflow: {
           research: false,
-          ui_phase: true
+          ui_phase: true,
+          ui_safety_gate: options?.uiSafetyGate ?? true
         }
       },
       null,
@@ -672,7 +676,8 @@ async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
   );
   await writeFile(
     path.join(repoPath, ".blueprint/phases/02-phase-discovery/02-CONTEXT.md"),
-    `# Phase 02: Phase Discovery - Context
+    options?.contextContent ??
+      `# Phase 02: Phase Discovery - Context
 
 ## Decisions
 - UI discovery should still be requested even when research is disabled.
@@ -681,6 +686,49 @@ async function createUiDiscoveryWithoutResearchRepo(): Promise<string> {
   );
 
   return repoPath;
+}
+
+function validBackendOnlyNoUiContextContent(): string {
+  return `# Phase 02: Phase Discovery - Context
+
+## Phase Boundary
+- Backend-only API phase with no user-facing work in scope.
+- Included work - persist discovery outputs for the explicitly selected phase only.
+- Excluded work - letting later roadmap phases override selected-phase routing.
+- Success target - downstream commands continue on the same selected phase.
+
+## Discovery Grounding
+- Project brief - This phase is purely backend and not user-facing.
+- Requirements grounding - downstream research and planning work must stay phase-scoped.
+- Workflow posture - synced state refresh should preserve an explicit earlier-phase selection.
+- Locked decisions - MCP-owned state writes are the only persistence path.
+
+## Implementation Decisions
+- Decision: preserve the resolved selected phase during synced state refresh.
+- Tradeoff or constraint: roadmap-derived current phase alone is not enough when the user selected an earlier phase.
+
+## Specific Ideas
+- Specific idea 1: keep the phase selection explicit in the final sync patch.
+- Specific idea 2: make regression coverage assert earlier-phase routing.
+
+## Existing Code Insights
+- Existing code insight 1: state sync recomputes routing from artifacts and the current phase.
+- Reusable pattern: patch currentPhase during synced updates when a command resolved a different selected phase.
+- Known gap or caution: roadmap-only sync can drift to a later phase.
+
+## Dependencies
+- Prior phase artifacts: selected phase context and research stay under the same phase directory.
+- External constraints: no host-global state writes.
+- Required follow-up reads: src/mcp/tools/state.ts
+
+## Open Questions
+- none
+
+## Deferred Ideas
+- Scope creep or later follow-up: generalize this regression shape for later lifecycle commands if needed.
+
+## Canonical References
+- Source 1: src/mcp/tools/state.ts`;
 }
 
 async function createUiDiscoveryWithoutResearchButInvalidResearchRepo(): Promise<string> {
@@ -2538,7 +2586,9 @@ test("project status stays blocked from milestone audit when an earlier checked-
 });
 
 test("project status routes to ui-phase when research is disabled but UI discovery is still required", async (t) => {
-  const repoPath = await createUiDiscoveryWithoutResearchRepo();
+  const repoPath = await createUiDiscoveryWithoutResearchRepo({
+    uiSafetyGate: false
+  });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
@@ -2550,6 +2600,48 @@ test("project status routes to ui-phase when research is disabled but UI discove
   assert.equal(state.derivedStatus.currentPhase, "2");
   assert.match(status.nextAction, /\/blu-ui-phase 2/);
   assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+});
+
+test("project status bypasses ui-phase for explicit no-ui context when research is disabled and ui safety gate is disabled", async (t) => {
+  const repoPath = await createUiDiscoveryWithoutResearchRepo({
+    uiSafetyGate: false,
+    contextContent: validBackendOnlyNoUiContextContent()
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "2");
+  assert.equal(state.derivedStatus.currentPhase, "2");
+  assert.match(status.nextAction, /\/blu-plan-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-plan-phase 2/);
+  assert.doesNotMatch(status.nextAction, /\/blu-ui-phase 2/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+});
+
+test("project status keeps ui-phase for explicit no-ui context when ui safety gate is enabled", async (t) => {
+  const repoPath = await createUiDiscoveryWithoutResearchRepo({
+    uiSafetyGate: true,
+    contextContent: validBackendOnlyNoUiContextContent()
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(status.currentPhase, "2");
+  assert.equal(state.derivedStatus.currentPhase, "2");
+  assert.match(status.nextAction, /\/blu-ui-phase 2/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-ui-phase 2/);
+  assert.match(status.nextAction, /explicit UI skip rationale/);
+  assert.match(state.derivedStatus.nextAction, /explicit UI skip rationale/);
+  assert.doesNotMatch(status.nextAction, /\/blu-plan-phase 2/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-plan-phase 2/);
 });
 
 test("project status ignores stale invalid research when research is disabled", async (t) => {

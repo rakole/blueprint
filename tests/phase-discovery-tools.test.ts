@@ -1132,7 +1132,7 @@ test("phase research status exposes config-aware plan-phase readiness", async (t
   assert.deepEqual(disabledGateStatus.planningReadiness.blockers, []);
 });
 
-test("phase research status bypasses ui-phase only for strong explicit no-ui context", async (t) => {
+test("phase research status bypasses missing ui-phase only for strong explicit no-ui context when safety gate is off", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
@@ -1146,16 +1146,50 @@ test("phase research status bypasses ui-phase only for strong explicit no-ui con
 
   const configPath = path.join(repoPath, ".blueprint/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
-    workflow: { research: boolean; ui_phase: boolean };
+    workflow: { research: boolean; ui_phase: boolean; ui_safety_gate: boolean };
   };
   config.workflow.research = false;
   config.workflow.ui_phase = true;
+  config.workflow.ui_safety_gate = false;
   await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
 
   const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
 
   assert.equal(status.planningReadiness.workflowResearchRequired, false);
   assert.equal(status.planningReadiness.workflowUiPhaseRequired, true);
+  assert.equal(status.planningReadiness.workflowUiSafetyGateEnabled, false);
+  assert.equal(status.planningReadiness.readyForPlanPhase, true);
+  assert.equal(
+    status.planningReadiness.nextSafeAction,
+    "Run /blu-plan-phase 3 to create execution-ready phase plans"
+  );
+  assert.deepEqual(status.planningReadiness.blockers, []);
+});
+
+test("phase research status keeps ui-phase gate for strong explicit no-ui context when safety gate is on", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/03-phase-discovery/03-CONTEXT.md"),
+    backendOnlyNoUiContextContent(),
+    "utf8"
+  );
+
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workflow: { research: boolean; ui_phase: boolean; ui_safety_gate: boolean };
+  };
+  config.workflow.research = false;
+  config.workflow.ui_phase = true;
+  config.workflow.ui_safety_gate = true;
+  await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
+
+  const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
+
+  assert.equal(status.planningReadiness.workflowUiSafetyGateEnabled, true);
   assert.equal(status.planningReadiness.readyForPlanPhase, false);
   assert.equal(
     status.planningReadiness.nextSafeAction,
@@ -1178,7 +1212,7 @@ test("phase research status keeps ui-phase gate when positive UI clues are prese
 
   const configPath = path.join(repoPath, ".blueprint/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
-    workflow: { research: boolean; ui_phase: boolean };
+    workflow: { research: boolean; ui_phase: boolean; ui_safety_gate: boolean };
   };
   config.workflow.research = false;
   config.workflow.ui_phase = true;
@@ -1217,14 +1251,16 @@ test("phase research status routes invalid saved ui specs to ui-phase repair", a
 
   const configPath = path.join(repoPath, ".blueprint/config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
-    workflow: { research: boolean; ui_phase: boolean };
+    workflow: { research: boolean; ui_phase: boolean; ui_safety_gate: boolean };
   };
   config.workflow.research = false;
   config.workflow.ui_phase = true;
+  config.workflow.ui_safety_gate = false;
   await writeFile(configPath, JSON.stringify(config, null, 2), "utf8");
 
   const status = await blueprintPhaseResearchStatus({ cwd: repoPath, phase: "3" });
 
+  assert.equal(status.planningReadiness.workflowUiSafetyGateEnabled, false);
   assert.equal(status.planningReadiness.readyForPlanPhase, false);
   assert.equal(
     status.planningReadiness.nextSafeAction,
