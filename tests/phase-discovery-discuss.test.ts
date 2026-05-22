@@ -63,10 +63,10 @@ const wave0RuntimeBundleMaxTotal = 101000;
 const discussRuntimeBundleCurrentBudget = {
   // Includes deliberate Wave 4 optional spec intake plus Wave 7 spec-phase routing guidance.
   skillBytes: 25415,
-  // Includes the optional spec-basis mapping and contradiction-routing rules.
-  runtimeContractBytes: 44391,
-  // Includes Wave 4 discuss/spec integration plus Wave 7 routing guidance while staying under the Wave 0 ceiling.
-  totalBytes: 79115
+  // Includes the optional spec-basis mapping, contradiction routing, and no-bypass context capture rule.
+  runtimeContractBytes: 44407,
+  // Includes Wave 4 discuss/spec integration plus Wave 7 routing guidance and no-bypass context capture rule while staying under the Wave 0 ceiling.
+  totalBytes: 79118
 } as const;
 const discussPhaseNoDilutionMatrix = [
   {
@@ -991,12 +991,13 @@ test("assumptions mode defines confidence labels and ask threshold", () => {
   assert.match(contract, /Unclear[\s\S]*evidence[\s\S]*consequence/i);
 });
 
-test("skip discuss uses assumptions safety rules", () => {
+test("context capture cannot be bypassed by settings", () => {
   const contract = readRepoText(discussRuntimeContractPath);
 
-  assert.match(contract, /workflow\.skip_discuss\s*=\s*true/i);
-  assert.match(contract, /workflow\.skip_discuss[\s\S]*evidence-backed context/i);
-  assert.match(contract, /workflow\.skip_discuss[\s\S]*(high-impact|stop\/ask|stop and ask)/i);
+  assert.match(contract, /No settings flag may bypass durable context capture/i);
+  assert.match(contract, /Every successful[\s\S]*must produce evidence-backed context/i);
+  assert.match(contract, /high-impact assumptions remain unresolved/i);
+  assert.doesNotMatch(contract, new RegExp("skip[_-]discuss|skip" + "Discuss", "i"));
 });
 
 test("checkpoint contract preserves area queue as semantic source", () => {

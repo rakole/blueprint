@@ -716,7 +716,6 @@ type PhaseContextResult = {
       autoAdvance: boolean;
       researchBeforeQuestions: boolean;
       discussMode: string;
-      skipDiscuss: boolean;
       useWorktrees: boolean;
     };
     research: {
@@ -3225,7 +3224,6 @@ async function readPhaseContextGrounding(
         ? `phase: ${stateResult.derivedStatus.currentPhase}`
         : null,
       workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
-      workflow.skip_discuss ? "skip_discuss enabled" : "skip_discuss disabled",
       workflow.research_before_questions
         ? "research_before_questions enabled"
         : "research_before_questions disabled",
@@ -3278,7 +3276,6 @@ async function readPhaseContextGrounding(
         autoAdvance: workflow.auto_advance,
         researchBeforeQuestions: workflow.research_before_questions,
         discussMode: workflow.discuss_mode,
-        skipDiscuss: workflow.skip_discuss,
         useWorktrees: workflow.use_worktrees
       },
       research: {

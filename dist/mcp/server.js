@@ -23667,7 +23667,6 @@ function getHardCodedConfig() {
       auto_advance: false,
       research_before_questions: false,
       discuss_mode: "discuss",
-      skip_discuss: false,
       use_worktrees: true,
       subagents: true,
       subagent_timeout: 3e5
@@ -31471,7 +31470,6 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
       stateResult.state.currentMilestone ? `milestone: ${stateResult.state.currentMilestone}` : null,
       stateResult.derivedStatus.currentPhase ? `phase: ${stateResult.derivedStatus.currentPhase}` : null,
       workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
-      workflow.skip_discuss ? "skip_discuss enabled" : "skip_discuss disabled",
       workflow.research_before_questions ? "research_before_questions enabled" : "research_before_questions disabled",
       `external sources: ${researchConfig.external_sources}`,
       stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
@@ -31521,7 +31519,6 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
         autoAdvance: workflow.auto_advance,
         researchBeforeQuestions: workflow.research_before_questions,
         discussMode: workflow.discuss_mode,
-        skipDiscuss: workflow.skip_discuss,
         useWorktrees: workflow.use_worktrees
       },
       research: {

@@ -419,7 +419,6 @@ type PhaseContextResult = {
             autoAdvance: boolean;
             researchBeforeQuestions: boolean;
             discussMode: string;
-            skipDiscuss: boolean;
             useWorktrees: boolean;
         };
         research: {

@@ -43,7 +43,6 @@ type BlueprintConfig = {
         auto_advance: boolean;
         research_before_questions: boolean;
         discuss_mode: string;
-        skip_discuss: boolean;
         use_worktrees: boolean;
         subagents: boolean;
         subagent_timeout: number;
