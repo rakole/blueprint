@@ -140,7 +140,7 @@
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
 - Creates or updates only the declared artifacts for this command.
-- Persists project config in normalized full form and never treats `.blueprint/config.json` as a sparse override file.
+- Persists project config as the normalized project override layer so inherited defaults stay inherited until the project explicitly writes an override.
 - Never stores hook enablement in repo config; hook control remains in `hooks/hooks.json`.
 - Keeps `workflow.code_review` and `workflow.code_review_depth` in the normalized config so `/blu-code-review` can read them as real defaults.
 - Keeps `workflow.no_uat` as an explicit lifecycle toggle that bypasses only missing-UAT requirements, not manual `/blu-verify-work` or quality gates.
