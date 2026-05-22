@@ -1,5 +1,5 @@
-import { access } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
+import {access} from "node:fs/promises";
+import {constants as fsConstants} from "node:fs";
 import path from "node:path";
 
 export const KNOWN_EXTENSION_HOSTS = Object.freeze([

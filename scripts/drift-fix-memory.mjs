@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import fs from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import {existsSync} from "node:fs";
+import {spawnSync} from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
