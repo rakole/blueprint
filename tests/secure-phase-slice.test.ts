@@ -434,6 +434,7 @@ async function writeSecurityLifecycleArtifacts(
   options: {
     verification?: boolean;
     uat?: boolean;
+    uatContent?: string;
   } = {}
 ): Promise<void> {
   const phaseDir = path.join(repoPath, ".blueprint/phases/05-security-audit");
@@ -449,10 +450,141 @@ async function writeSecurityLifecycleArtifacts(
   if (options.uat) {
     await writeFile(
       path.join(phaseDir, "05-UAT.md"),
-      "# Phase 05: Security Audit - UAT\n\n**Status:** PASS\n**Checkpoint:** none\n",
+      options.uatContent ??
+        `# Phase 05: Security Audit - UAT
+
+**Status:** PASS
+**Resume State:** NEW
+**Checkpoint:** none
+
+## UAT Summary
+
+- The user acceptance run passed against \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\` with ready verification evidence.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\`
+- Current session step: Close the UAT pass.
+- Continuity notes: Keep the saved security evidence aligned if the session resumes.
+
+## Current Test
+
+- Number: testing complete
+- Name: none
+- Expected: Keep the security evidence aligned with the saved summary.
+- Awaiting: none
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Security UAT smoke | Keep the security evidence aligned with the saved summary. | .blueprint/phases/05-security-audit/05-01-SUMMARY.md | pass | none |
+
+## Result Summary
+
+- Total: 1
+- Passed: 1
+- Issues: 0
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
+## Questions Asked
+
+- Did the secured behavior match the saved execution summary?
+
+## Observed Behavior
+
+- The secured behavior matched \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\` with ready verification evidence.
+
+## Unresolved Gaps
+
+- none
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| none | none | none | none | none | none |
+
+## Follow-Up Fixes
+
+- none
+
+## Next Safe Action
+
+- Return to \`/blu-progress\` for the next safe implemented action.
+`,
       "utf8"
     );
   }
+}
+
+function blockingSecurityUatContent(nextSafeAction = "/blu-audit-fix 5"): string {
+  return `# Phase 05: Security Audit - UAT
+
+**Status:** PARTIAL
+**Resume State:** RESUMED
+**Checkpoint:** resume-security-follow-up
+
+## UAT Summary
+
+- The user acceptance run found a remaining security follow-up against \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\` with ready verification evidence.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\`
+- Current session step: Resume the security follow-up after repair.
+- Continuity notes: Keep the saved security evidence aligned while the follow-up remains open.
+
+## Current Test
+
+- Number: 1
+- Name: Security UAT smoke
+- Expected: Keep the security evidence aligned with the saved summary.
+- Awaiting: follow-up verification
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Security UAT smoke | Keep the security evidence aligned with the saved summary. | .blueprint/phases/05-security-audit/05-01-SUMMARY.md | issue | One security follow-up remains open. |
+
+## Result Summary
+
+- Total: 1
+- Passed: 0
+- Issues: 1
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
+## Questions Asked
+
+- Did the secured behavior still match the saved execution summary?
+
+## Observed Behavior
+
+- The secured behavior still needs one follow-up against \`.blueprint/phases/05-security-audit/05-01-SUMMARY.md\` with ready verification evidence.
+
+## Unresolved Gaps
+
+- Resume \`${nextSafeAction}\` after the security follow-up is repaired.
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| 1 | Keep the security evidence aligned with the saved summary. | partial | major | One security follow-up remains open. | Resume \`${nextSafeAction}\` after repair. |
+
+## Follow-Up Fixes
+
+- Resume \`${nextSafeAction}\` after repair.
+
+## Next Safe Action
+
+- Continue with \`${nextSafeAction}\`.
+`;
 }
 
 test("secure-phase docs and catalog metadata keep the security review slice implemented and spine-aligned", async () => {
@@ -475,6 +607,10 @@ test("secure-phase docs and catalog metadata keep the security review slice impl
   assert.match(commandDoc, /Markdown content fallback is not supported/i);
   assert.match(commandDoc, /`pending-open-threat`/i);
   assert.match(commandDoc, /saved plan evidence only/i);
+  assert.match(
+    commandDoc,
+    /only (?:a )?missing UAT[\s\S]*`\/blu-progress`[\s\S]*saved invalid[\s\S]*FAIL[\s\S]*PARTIAL[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i
+  );
   assert.match(runtimeReference, /`secure-phase`[\s\S]*model-only/i);
 });
 
@@ -1052,11 +1188,13 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
   const missingValidationRepo = await createSecurePhaseRepo();
   const missingUatRepo = await createSecurePhaseRepo();
   const missingUatNoUatRepo = await createSecurePhaseRepo();
+  const blockingUatNoUatRepo = await createSecurePhaseRepo();
   const completeRepo = await createSecurePhaseRepo();
   t.after(async () => {
     await rm(path.dirname(missingValidationRepo), { recursive: true, force: true });
     await rm(path.dirname(missingUatRepo), { recursive: true, force: true });
     await rm(path.dirname(missingUatNoUatRepo), { recursive: true, force: true });
+    await rm(path.dirname(blockingUatNoUatRepo), { recursive: true, force: true });
     await rm(path.dirname(completeRepo), { recursive: true, force: true });
   });
 
@@ -1064,6 +1202,25 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
   await writeSecurityLifecycleArtifacts(missingUatNoUatRepo, { verification: true });
   await writeFile(
     path.join(missingUatNoUatRepo, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeSecurityLifecycleArtifacts(blockingUatNoUatRepo, {
+    verification: true,
+    uat: true,
+    uatContent: blockingSecurityUatContent("/blu-audit-fix 5")
+  });
+  await writeFile(
+    path.join(blockingUatNoUatRepo, ".blueprint/config.json"),
     JSON.stringify(
       {
         version: 2,
@@ -1092,6 +1249,10 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
       expectedAction: "/blu-progress"
     },
     {
+      repoPath: blockingUatNoUatRepo,
+      expectedAction: "/blu-audit-fix 5"
+    },
+    {
       repoPath: completeRepo,
       expectedAction: "/blu-progress"
     }
@@ -1113,12 +1274,12 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
     });
 
     assert.equal(context.status, "ready");
-    assert.ok(context.authoringContext && "allowedNextActions" in context.authoringContext);
-    assert.deepEqual(
-      context.authoringContext && "allowedNextActions" in context.authoringContext
-        ? context.authoringContext.allowedNextActions.includes(scenario.expectedAction)
-        : false,
-      true
+    assert.ok(context.authoringContext && "completedNextSafeAction" in context.authoringContext);
+    assert.equal(
+      context.authoringContext && "completedNextSafeAction" in context.authoringContext
+        ? context.authoringContext.completedNextSafeAction
+        : null,
+      scenario.expectedAction
     );
     assert.deepEqual(
       context.authoringContext && "allowedNextActions" in context.authoringContext
@@ -1134,6 +1295,113 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
       )
     );
   }
+});
+
+test("security partial routing stays on saved blocking UAT repair when workflow.no_uat only bypasses missing UAT", async (t) => {
+  const repoPath = await createSecurePhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeSecurityLifecycleArtifacts(repoPath, {
+    verification: true,
+    uat: true,
+    uatContent: blockingSecurityUatContent("/blu-audit-fix 5")
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security"
+  });
+  const blockingEvidenceCoverage = {
+    ...((createSecurityModel().evidenceCoverage as Record<string, unknown>) ?? {}),
+    ".blueprint/phases/05-security-audit/05-VERIFICATION.md": {
+      status: "used",
+      rationale: "Verification evidence stays part of the saved blocking UAT chain."
+    },
+    ".blueprint/phases/05-security-audit/05-UAT.md": {
+      status: "used",
+      rationale: "Saved partial UAT evidence keeps the repair route authoritative."
+    }
+  };
+  const blockingPartialModel = (nextSafeAction: string): Record<string, unknown> =>
+    createSecurityModel({
+      status: "PARTIAL",
+      readiness: "needs-follow-up",
+      completionState: "partial",
+      securitySummary: [
+        "Threat verification passed, but saved blocking UAT keeps the next step on the repair route."
+      ],
+      evidenceCoverage: blockingEvidenceCoverage,
+      findings: [
+        {
+          kind: "hardening-follow-up",
+          severity: "low",
+          threatId: "T-01",
+          evidence: ".blueprint/phases/05-security-audit/05-UAT.md",
+          recommendation: "Finish the saved UAT repair before advancing.",
+          status: "follow-up"
+        }
+      ],
+      manualOrDeferredWork: [
+        {
+          item: "Saved blocking UAT repair",
+          reason: "The saved UAT artifact is still PARTIAL.",
+          followUp: nextSafeAction,
+          status: "DEFERRED"
+        }
+      ],
+      gapRoutes: [
+        {
+          gap: "Saved blocking UAT follow-up",
+          evidence: ".blueprint/phases/05-security-audit/05-UAT.md",
+          repair: "Complete the saved UAT repair route before advancing.",
+          status: "OPEN"
+        }
+      ],
+      followUps: ["Complete the saved UAT repair route before advancing."],
+      nextSafeAction
+    });
+  const invalidProgress = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: blockingPartialModel("/blu-progress")
+  });
+  const validRepairRoute = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "security",
+    model: blockingPartialModel("/blu-audit-fix 5")
+  });
+
+  assert.equal(context.status, "ready", context.reason ?? "");
+  assert.equal(
+    context.authoringContext && "partialNextSafeAction" in context.authoringContext
+      ? context.authoringContext.partialNextSafeAction
+      : null,
+    "/blu-audit-fix 5"
+  );
+  assert.equal(invalidProgress.status, "invalid");
+  assert.match(
+    invalidProgress.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /\/blu-audit-fix 5|must be equal to constant/i
+  );
+  assert.equal(validRepairRoute.status, "valid", JSON.stringify(validRepairRoute.diagnostics, null, 2));
 });
 
 test("security threat parser treats N/A threat rows and bullets as explicit no-threat evidence for completed reports", async (t) => {

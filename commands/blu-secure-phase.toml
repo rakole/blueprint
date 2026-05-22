@@ -40,7 +40,8 @@ Follow this flow exactly:
 Next-action rules:
  - Apply these only when all threats are closed or explicitly accepted.
 - If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu-validate-phase <phase>`.
-- Otherwise if the phase lacks `XX-UAT.md` and `workflow.no_uat=false`, prefer `/blu-verify-work <phase>`; if `workflow.no_uat=true`, prefer `/blu-progress` while leaving `/blu-verify-work` manual.
+- Otherwise if saved UAT is invalid, `FAIL`, `PARTIAL`, or otherwise incomplete, keep routing on the saved implemented UAT repair action or fall back to `/blu-verify-work <phase>`.
+- Otherwise if the phase lacks `XX-UAT.md` and `workflow.no_uat=false`, prefer `/blu-verify-work <phase>`; if `workflow.no_uat=true`, only a missing `XX-UAT.md` may route to `/blu-progress` while leaving `/blu-verify-work` manual.
 - Otherwise if meaningful follow-up fixes remain, still prefer `/blu-progress`. Repo-wide derived progress/state may still surface saved review remediation debt such as `/blu-code-review-fix <phase>` after security exists, but `/blu-secure-phase` itself must not emit that action.
 - Otherwise prefer `/blu-progress`.
 

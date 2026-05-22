@@ -2920,6 +2920,7 @@ async function syncRoadmapPhaseCompletion(
   let hasValidVerification = false;
   let verificationReadyForUat = false;
   let hasCompleteUat = false;
+  let hasBlockingUat = false;
 
   for (const artifact of ["verification", "uat"] as const) {
     const artifactPath = validationArtifactPathFor(resolved, artifact);
@@ -2953,6 +2954,7 @@ async function syncRoadmapPhaseCompletion(
         if (uatState.complete) {
           hasCompleteUat = true;
         } else {
+          hasBlockingUat = true;
           validationWarnings.push(
             `${artifactPath}: UAT artifact is valid but remains incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so the phase cannot complete yet.`
           );
@@ -2964,6 +2966,9 @@ async function syncRoadmapPhaseCompletion(
     validationWarnings.push(
       `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
     );
+    if (artifact === "uat") {
+      hasBlockingUat = true;
+    }
     validationWarnings.push(...validation.issues.map((issue) => `${artifactPath}: ${issue}`));
     validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
@@ -2979,7 +2984,7 @@ async function syncRoadmapPhaseCompletion(
   validationWarnings.push(...qualityGateEvaluation.warnings);
 
   if (
-    (hasCompleteUat || options.noUat === true) &&
+    (hasCompleteUat || (options.noUat === true && !hasBlockingUat)) &&
     qualityGateEvaluation.requiresCodeReview &&
     !qualityGateEvaluation.gatesSatisfied
   ) {
@@ -2993,7 +2998,7 @@ async function syncRoadmapPhaseCompletion(
     summaryPaths.length > 0 &&
     hasValidVerification &&
     verificationReadyForUat &&
-    (hasCompleteUat || options.noUat === true) &&
+    (hasCompleteUat || (options.noUat === true && !hasBlockingUat)) &&
     qualityGateEvaluation.gatesSatisfied;
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(

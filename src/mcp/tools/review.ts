@@ -11,10 +11,12 @@ import { blueprintDirectCommand } from "../command-paths.js";
 import { isObviouslyNonPathMarkupToken } from "./path-token-heuristics.js";
 import {
   ensureRepoRoot,
+  readUatArtifactState,
   resolveBlueprintPath,
   resolveRepoRelativePath,
   toRepoRelativePath,
   validatePlanArtifactContent,
+  validateUatArtifactContent,
   validateReviewArtifactContent,
   validateReviewArtifactScopeCoverage,
   writeTextFile
@@ -881,6 +883,40 @@ let implementedCommandNamesPromise: Promise<Set<string> | null> | null = null;
 
 function normalizeTextContent(content: string): string {
   return content.endsWith("\n") ? content : `${content}\n`;
+}
+
+function extractBlueprintCommandText(line: string): string | null {
+  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
+
+  if (!match || match.index === undefined) {
+    return null;
+  }
+
+  const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
+  let argumentText = line.slice(match.index + match[0].length).trimStart();
+
+  if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
+    return command;
+  }
+
+  const wrapperIndex = argumentText.search(/[`'"]/);
+
+  if (wrapperIndex >= 0) {
+    argumentText = argumentText.slice(0, wrapperIndex);
+  }
+
+  argumentText = argumentText
+    .replace(/\s+(?:to|then|so)\s+.+$/i, "")
+    .replace(/[.,;:!?]+$/g, "")
+    .trim();
+
+  if (argumentText.length === 0 || /^(?:to|then|so)\b/i.test(argumentText)) {
+    return command;
+  }
+
+  const simpleArgument = argumentText.match(/^[^\s`'").,;:!?]+/)?.[0] ?? null;
+
+  return simpleArgument ? `${command} ${simpleArgument}` : command;
 }
 
 function collectModelStringValues(value: unknown): string[] {
@@ -2453,9 +2489,110 @@ async function readWorkflowNoUat(projectRoot: string): Promise<boolean> {
   }
 }
 
+function extractSavedNextSafeAction(content: string): string | null {
+  return (
+    extractMarkdownSectionContent(content, /^Next Safe Action$/i)
+      .flatMap((section) => section.split(/\r?\n/))
+      .map((line) => extractBlueprintCommandText(line))
+      .find((command): command is string => command !== null) ?? null
+  );
+}
+
+async function inspectUatRoutingState(args: {
+  projectRoot: string;
+  artifactPath: string | null;
+  summaryPaths: string[];
+}): Promise<{
+  hasCompleteUat: boolean;
+  hasBlockingUat: boolean;
+  blockingNextSafeAction: string | null;
+  warnings: string[];
+}> {
+  if (args.artifactPath === null) {
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: false,
+      blockingNextSafeAction: null,
+      warnings: []
+    };
+  }
+
+  try {
+    const content = await fs.readFile(
+      resolveBlueprintPath(args.projectRoot, args.artifactPath),
+      "utf8"
+    );
+    const validation = validateUatArtifactContent(content, args.summaryPaths, {
+      requireReadyVerificationEvidence: true
+    });
+    const nextSafeAction = extractSavedNextSafeAction(content);
+
+    if (validation.valid) {
+      const uatState = readUatArtifactState(content);
+
+      return {
+        hasCompleteUat: uatState.complete,
+        hasBlockingUat: !uatState.complete,
+        blockingNextSafeAction: uatState.complete ? null : nextSafeAction,
+        warnings:
+          uatState.complete
+            ? []
+            : [
+                `${args.artifactPath}: saved UAT evidence is incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so post-review routing should stay on UAT repair.`
+              ]
+      };
+    }
+
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: nextSafeAction,
+      warnings: [
+        `${args.artifactPath}: saved UAT evidence is invalid, so post-review routing should stay on UAT repair.`,
+        ...validation.issues.map((issue) => `${args.artifactPath}: ${issue}`),
+        ...validation.warnings.map((warning) => `${args.artifactPath}: ${warning}`)
+      ]
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: null,
+      warnings: [`${args.artifactPath}: ${message}`]
+    };
+  }
+}
+
+function keepImplementedNonProgressAction(
+  candidate: string | null,
+  implementedCommands: Set<string> | null
+): string | null {
+  if (!candidate) {
+    return null;
+  }
+
+  const commands = extractBlueprintDirectCommands(candidate);
+
+  if (
+    commands.length === 0 ||
+    commands.includes("/blu-progress") ||
+    (implementedCommands !== null &&
+      implementedCommands.size > 0 &&
+      !commands.every((command) => implementedCommands.has(command)))
+  ) {
+    return null;
+  }
+
+  return candidate;
+}
+
 async function buildAllowedSecurityNextActions(args: {
+  projectRoot: string;
   phaseNumber: string;
   uatRequired: boolean;
+  summaryPaths: string[];
   artifacts: {
     verification: string | null;
     uat: string | null;
@@ -2466,15 +2603,28 @@ async function buildAllowedSecurityNextActions(args: {
   blockedNextSafeAction: string;
   allowedNextActions: string[];
 }> {
+  const uatRouting = await inspectUatRoutingState({
+    projectRoot: args.projectRoot,
+    artifactPath: args.artifacts.uat,
+    summaryPaths: args.summaryPaths
+  });
+  const implementedCommands = await getImplementedCommandNames();
+  const preferredBlockingAction = keepImplementedNonProgressAction(
+    uatRouting.blockingNextSafeAction,
+    implementedCommands
+  );
   const completedCandidate =
     args.artifacts.verification === null
       ? `/blu-validate-phase ${args.phaseNumber}`
-      : args.uatRequired && args.artifacts.uat === null
+      : uatRouting.hasBlockingUat
+        ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}`
+        : args.uatRequired && !uatRouting.hasCompleteUat
         ? `/blu-verify-work ${args.phaseNumber}`
         : "/blu-progress";
-  const partialCandidate = "/blu-progress";
+  const partialCandidate = uatRouting.hasBlockingUat
+    ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}`
+    : "/blu-progress";
   const blockedNextSafeAction = "Blocked: pending-open-threat";
-  const implementedCommands = await getImplementedCommandNames();
   const implementedOrProgress = (candidate: string): string => {
     if (implementedCommands === null || implementedCommands.size === 0) {
       return candidate;
@@ -3157,8 +3307,10 @@ async function buildSecurityAuthoringContext(args: {
     ...(artifacts.uat ? [artifacts.uat] : [])
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber,
     uatRequired: !(await readWorkflowNoUat(args.projectRoot)),
+    summaryPaths: completedSummaries,
     artifacts
   });
   const allowCompleted = completionWarnings.length === 0;
@@ -3209,8 +3361,10 @@ async function buildSecurityAuthoringContext(args: {
 }
 
 async function buildAllowedUiReviewNextActions(args: {
+  projectRoot: string;
   phaseNumber: string;
   uatRequired: boolean;
+  summaryPaths: string[];
   artifacts: {
     verification: string | null;
     uat: string | null;
@@ -3221,13 +3375,27 @@ async function buildAllowedUiReviewNextActions(args: {
   blockedNextSafeAction: string;
   allowedNextActions: string[];
 }> {
+  const uatRouting = await inspectUatRoutingState({
+    projectRoot: args.projectRoot,
+    artifactPath: args.artifacts.uat,
+    summaryPaths: args.summaryPaths
+  });
+  const implementedCommands = await getImplementedCommandNames();
+  const preferredBlockingAction = keepImplementedNonProgressAction(
+    uatRouting.blockingNextSafeAction,
+    implementedCommands
+  );
   const completedCandidate =
     args.artifacts.verification === null
       ? `/blu-validate-phase ${args.phaseNumber}`
-      : args.uatRequired && args.artifacts.uat === null
+      : uatRouting.hasBlockingUat
+        ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}`
+        : args.uatRequired && !uatRouting.hasCompleteUat
         ? `/blu-verify-work ${args.phaseNumber}`
         : "/blu-progress";
-  const implementedCommands = await getImplementedCommandNames();
+  const followUpCandidate = uatRouting.hasBlockingUat
+    ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}`
+    : "/blu-progress";
   const implementedOrProgress = (candidate: string): string => {
     if (implementedCommands === null || implementedCommands.size === 0) {
       return candidate;
@@ -3240,7 +3408,7 @@ async function buildAllowedUiReviewNextActions(args: {
       : "/blu-progress";
   };
   const completedNextSafeAction = implementedOrProgress(completedCandidate);
-  const followUpNextSafeAction = "/blu-progress";
+  const followUpNextSafeAction = implementedOrProgress(followUpCandidate);
   const blockedNextSafeAction = "/blu-progress";
 
   return {
@@ -3582,8 +3750,10 @@ async function buildUiReviewAuthoringContext(args: {
     summaryIndex.pendingPlans.length === 0 &&
     executionTargets.blockers.lowerWavePendingPlanIds.length === 0;
   const nextActions = await buildAllowedUiReviewNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber,
     uatRequired: !(await readWorkflowNoUat(args.projectRoot)),
+    summaryPaths: completedSummaries,
     artifacts
   });
   const uiReviewBaseSchema = cloneJsonObject(modelContract.jsonSchema);

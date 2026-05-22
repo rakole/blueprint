@@ -221,6 +221,73 @@ function validSummaryContent(planId = "01"): string {
 `;
 }
 
+function partialUatContent(nextSafeAction = "/blu-verify-work 6"): string {
+  return `# Phase 06: UI Audit - UAT
+
+**Status:** PARTIAL
+**Resume State:** RESUMED
+**Checkpoint:** resume-ui-follow-up
+
+## UAT Summary
+
+- The user acceptance run found a remaining follow-up against \`.blueprint/phases/06-ui-audit/06-01-SUMMARY.md\` with ready verification evidence.
+
+## Session State
+
+- Resume source: \`.blueprint/phases/06-ui-audit/06-01-SUMMARY.md\`
+- Current session step: Resume the UI follow-up after repair.
+- Continuity notes: Keep the dashboard evidence aligned with the saved summary while the follow-up remains open.
+
+## Current Test
+
+- Number: 1
+- Name: Dashboard UI smoke
+- Expected: Preserve the completed dashboard hierarchy.
+- Awaiting: follow-up verification
+
+## Test Matrix
+
+| # | Test | Expected Behavior | Evidence | Result | Notes |
+|---|------|-------------------|----------|--------|-------|
+| 1 | Dashboard UI smoke | Preserve the completed dashboard hierarchy. | .blueprint/phases/06-ui-audit/06-01-SUMMARY.md | issue | One UI follow-up remains open. |
+
+## Result Summary
+
+- Total: 1
+- Passed: 0
+- Issues: 1
+- Pending: 0
+- Skipped: 0
+- Blocked: 0
+
+## Questions Asked
+
+- Did the dashboard behavior still match the saved execution summary?
+
+## Observed Behavior
+
+- The dashboard hierarchy still needs one follow-up against \`.blueprint/phases/06-ui-audit/06-01-SUMMARY.md\` with ready verification evidence.
+
+## Unresolved Gaps
+
+- Resume \`${nextSafeAction}\` after the saved follow-up is repaired.
+
+## Structured Gaps
+
+| Test | Truth | Status | Severity | Reason | Follow-Up |
+|------|-------|--------|----------|--------|-----------|
+| 1 | Preserve the completed dashboard hierarchy. | partial | major | One UI follow-up remains open. | Resume \`${nextSafeAction}\` after repair. |
+
+## Follow-Up Fixes
+
+- Resume \`${nextSafeAction}\` after repair.
+
+## Next Safe Action
+
+- Continue with \`${nextSafeAction}\`.
+`;
+}
+
 function validUiReviewModel(patch: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     verdict: "FOLLOW_UP",
@@ -349,6 +416,10 @@ test("ui-review docs and catalog metadata promote the UI audit slice to implemen
   assert.match(commandDoc, /no-subagent fallback/i);
   assert.match(commandDoc, /browser-only, web-search-only, shell-only, or generic helpers/i);
   assert.match(commandDoc, /retry once through MCP/i);
+  assert.match(
+    commandDoc,
+    /only missing UAT[\s\S]*UI-review[\s\S]*`\/blu-progress`[\s\S]*saved invalid[\s\S]*FAIL[\s\S]*PARTIAL[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i
+  );
   assert.match(
     runtimeReference,
     /`ui-review`[\s\S]*Long-running-mutation profile for phase-scoped UI audit/i
@@ -870,6 +941,85 @@ test("workflow.no_uat lets ui-review route missing UAT to progress", async (t) =
   assert.equal(authoringContext.completedNextSafeAction, "/blu-progress");
   assert.ok(authoringContext.allowedNextActions.includes("/blu-progress"));
   assert.equal(authoringContext.allowedNextActions.includes("/blu-verify-work 6"), false);
+});
+
+test("workflow.no_uat keeps ui-review routing on saved blocking UAT repair", async (t) => {
+  const repoPath = await createUiReviewRepo();
+  const phaseDir = path.join(repoPath, ".blueprint/phases/06-ui-audit");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+  await writeFile(
+    path.join(phaseDir, "06-VERIFICATION.md"),
+    "# Phase 06: UI Audit - Verification\n\n## Verification Summary\n\n- Focused validation passed.\n",
+    "utf8"
+  );
+  await writeFile(path.join(phaseDir, "06-UAT.md"), partialUatContent("/blu-audit-fix 6"), "utf8");
+
+  const context = await blueprintReviewAuthoringContext({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review"
+  });
+  const authoringContext = context.authoringContext as {
+    completedNextSafeAction: string;
+    followUpNextSafeAction: string;
+    allowedNextActions: string[];
+  };
+  const blockingEvidenceCoverage = {
+    ...((validUiReviewModel().evidenceCoverage as Record<string, unknown>) ?? {}),
+    ".blueprint/phases/06-ui-audit/06-VERIFICATION.md": {
+      status: "used",
+      rationale: "Verification evidence is part of the saved blocking UAT chain."
+    },
+    ".blueprint/phases/06-ui-audit/06-UAT.md": {
+      status: "used",
+      rationale: "Saved partial UAT evidence keeps the repair route authoritative."
+    }
+  };
+  const invalidProgress = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: validUiReviewModel({
+      evidenceCoverage: blockingEvidenceCoverage,
+      nextSafeAction: "/blu-progress"
+    })
+  });
+  const validRepairRoute = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "6",
+    artifact: "ui-review",
+    model: validUiReviewModel({
+      evidenceCoverage: blockingEvidenceCoverage,
+      nextSafeAction: "/blu-audit-fix 6"
+    })
+  });
+
+  assert.equal(context.status, "ready", context.reason ?? "");
+  assert.equal(authoringContext.completedNextSafeAction, "/blu-audit-fix 6");
+  assert.equal(authoringContext.followUpNextSafeAction, "/blu-audit-fix 6");
+  assert.ok(authoringContext.allowedNextActions.includes("/blu-audit-fix 6"));
+  assert.equal(invalidProgress.status, "invalid");
+  assert.match(
+    invalidProgress.diagnostics.map((diagnostic) => diagnostic.message).join("\n"),
+    /\/blu-audit-fix 6|must be equal to constant/i
+  );
+  assert.equal(validRepairRoute.status, "valid", JSON.stringify(validRepairRoute.diagnostics, null, 2));
 });
 
 test("ui-review rejects Markdown fallback for the model-only writer", async (t) => {
