@@ -26974,7 +26974,7 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && (args.phaseArtifacts.planSetExecutionReady || args.phaseArtifacts.hasSavedSummaries) && implementedCommands.has(executePhaseCommand)) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
   }
-  const savedReviewRepairAction = args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
+  const savedReviewRepairAction = args.phaseArtifacts.requiresCodeReview && args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
     args.phaseArtifacts.reviewNextSafeAction,
     implementedCommands
   ) : null;

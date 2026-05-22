@@ -2519,7 +2519,9 @@ async function deriveNextAction(args: {
   }
 
   const savedReviewRepairAction =
-    args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity
+    args.phaseArtifacts.requiresCodeReview &&
+    args.phaseArtifacts.hasReview &&
+    args.phaseArtifacts.hasSecurity
       ? implementedReviewNextSafeAction(
           args.phaseArtifacts.reviewNextSafeAction,
           implementedCommands
