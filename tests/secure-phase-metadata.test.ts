@@ -120,6 +120,8 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   assert.match(commandFile, /\/blu-validate-phase/);
   assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /saved UAT is invalid[\s\S]*`PARTIAL`[\s\S]*saved implemented UAT repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(commandFile, /only a missing `XX-UAT\.md` may route to `\/blu-progress`/i);
   assert.match(
     commandFile,
     /Repo-wide derived progress\/state may still surface saved review remediation debt such as `\/blu-code-review-fix <phase>` after security exists, but `\/blu-secure-phase` itself must not emit that action\./
@@ -173,6 +175,8 @@ test("secure-phase review skill captures MCP-owned security audit rules", async 
   assert.match(skillFile, /do not emit next-step\s+routing while threats remain open/i);
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-progress/);
+  assert.match(skillFile, /saved invalid[\s\S]*`FAIL`[\s\S]*`PARTIAL`[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(skillFile, /only missing UAT routes to[\s\S]*`\/blu-progress`/i);
   assert.match(
     skillFile,
     /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
@@ -236,6 +240,8 @@ test("secure-phase manifest and runtime resource describe the long-running secur
     referenceFile,
     /Emit exceptional updates for missing summaries, pending plans, missing\s+or weak threat model evidence, overwrite waits/i
   );
+  assert.match(referenceFile, /saved invalid[\s\S]*`FAIL`[\s\S]*`PARTIAL`[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(referenceFile, /only a missing UAT routes to `\/blu-progress`/i);
 });
 
 test("secure-phase local runtime contract locks retained threat verification behavior", async () => {

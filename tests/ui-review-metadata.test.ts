@@ -89,6 +89,8 @@ test("ui-review manifest references the review tools, UI auditor, and safe routi
   assert.match(commandFile, /\/blu-validate-phase/);
   assert.match(commandFile, /\/blu-verify-work/);
   assert.match(commandFile, /\/blu-progress/);
+  assert.match(commandFile, /saved UAT is invalid[\s\S]*`PARTIAL`[\s\S]*saved implemented UAT repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(commandFile, /only a missing `XX-UAT\.md` may route to `\/blu-progress`/i);
   assert.match(
     commandFile,
     /saved execution and UI-spec coverage, active stage, pending gate, execution mode/
@@ -128,6 +130,8 @@ test("blueprint-review skill captures MCP-owned ui-review rules", async () => {
   assert.match(skillFile, /\/blu-validate-phase/);
   assert.match(skillFile, /\/blu-verify-work/);
   assert.match(skillFile, /\/blu-progress/);
+  assert.match(skillFile, /saved invalid[\s\S]*`FAIL`[\s\S]*`PARTIAL`[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(skillFile, /only missing UAT routes to `\/blu-progress`/i);
 });
 
 test("ui-review runtime contract captures rich artifact authoring and recovery", async () => {
@@ -160,6 +164,8 @@ test("ui-review runtime contract captures rich artifact authoring and recovery",
   assert.match(runtimeContract, /Browser-only, web-search-only, shell-only, or generic helpers/);
   assert.match(runtimeContract, /Invalid UI-review model or write/);
   assert.match(runtimeContract, /blueprint_review_validate_model[\s\S]*blueprint_review_record/);
+  assert.match(runtimeContract, /saved invalid[\s\S]*`FAIL`[\s\S]*`PARTIAL`[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(runtimeContract, /only missing UAT routes to `\/blu-progress`/i);
 
   assert.match(agentFile, /Score each pillar from `1\/4` through `4\/4`/);
   assert.match(agentFile, /overall score out of 24/);

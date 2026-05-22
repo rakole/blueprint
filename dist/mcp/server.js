@@ -26088,6 +26088,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
   let verificationNextSafeAction = null;
   let verificationHasDeferredTestGaps = false;
   let hasUat = false;
+  let hasBlockingUat = false;
+  let blockingUatNextSafeAction = null;
   if (summaryPaths.length === 0) {
     warnings.push(
       `${phasePrefix2}: no valid execution summaries were found, so VERIFICATION and UAT evidence cannot count toward milestone closeout.`
@@ -26098,6 +26100,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
       verificationNextSafeAction: null,
       verificationHasDeferredTestGaps: false,
       hasUat: false,
+      hasBlockingUat: false,
+      blockingUatNextSafeAction: null,
       warnings
     };
   }
@@ -26119,6 +26123,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     if (artifact === "verification") {
       verificationNextSafeAction = extractNextSafeActionCommand(content);
       verificationHasDeferredTestGaps = hasDeferredTestGap(content);
+    } else {
+      blockingUatNextSafeAction = extractNextSafeActionCommand(content);
     }
     if (validation.valid) {
       if (artifact === "verification") {
@@ -26134,6 +26140,7 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
         if (uatState.complete) {
           hasUat = true;
         } else {
+          hasBlockingUat = true;
           warnings.push(
             `${artifactPath}: UAT artifact is valid but remains incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so it does not count toward milestone closeout yet.`
           );
@@ -26144,6 +26151,9 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     warnings.push(
       `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
     );
+    if (artifact === "uat") {
+      hasBlockingUat = true;
+    }
     warnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     warnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
@@ -26153,6 +26163,8 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
     verificationNextSafeAction,
     verificationHasDeferredTestGaps,
     hasUat,
+    hasBlockingUat,
+    blockingUatNextSafeAction,
     warnings
   };
 }
@@ -26206,6 +26218,16 @@ function implementedReviewNextSafeAction(reviewNextSafeAction, implementedComman
     return null;
   }
   return reviewNextSafeAction;
+}
+function implementedBlockingUatNextSafeAction(uatNextSafeAction, implementedCommands) {
+  if (!uatNextSafeAction) {
+    return null;
+  }
+  const uatNextCommand = uatNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+  if (uatNextCommand === null || uatNextCommand === blueprintDirectCommand("progress") || !implementedCommands.has(uatNextCommand)) {
+    return null;
+  }
+  return uatNextSafeAction;
 }
 function resolvePhaseQualityGateNextAction(args) {
   const missingGateAction = buildPhaseQualityGateNextAction({
@@ -26306,6 +26328,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
+      hasBlockingUat: false,
+      blockingUatNextSafeAction: null,
       hasPlans: false,
       planSetExecutionReady: false,
       hasSummaries: false,
@@ -26365,6 +26389,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
+      hasBlockingUat: false,
+      blockingUatNextSafeAction: null,
       hasPlans: false,
       planSetExecutionReady: false,
       hasSummaries: false,
@@ -26410,6 +26436,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
       hasVerification: false,
       verificationReadyForUat: false,
       hasUat: false,
+      hasBlockingUat: false,
+      blockingUatNextSafeAction: null,
       hasPlans: false,
       planSetExecutionReady: false,
       hasSummaries: false,
@@ -26458,6 +26486,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     verificationNextSafeAction,
     verificationHasDeferredTestGaps,
     hasUat,
+    hasBlockingUat,
+    blockingUatNextSafeAction,
     warnings: validationWarnings
   } = await inspectValidatedPhaseValidationArtifacts(
     projectRoot,
@@ -26607,6 +26637,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasVerification,
     verificationReadyForUat,
     hasUat,
+    hasBlockingUat,
+    blockingUatNextSafeAction,
     hasPlans,
     planSetExecutionReady: planRoutingReadiness.executionReady,
     hasSummaries,
@@ -26658,9 +26690,11 @@ async function readRoadmapSignals(projectRoot) {
 async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, options = {}) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
+  const blockingUatPhases = [];
   const verificationNotReadyPhases = [];
   const verificationTestGapPhases = [];
   const verificationRepairActions = {};
+  const uatRepairActions = {};
   const pendingSummaryCoveragePhases = [];
   const missingQualityGatePhases = [];
   const qualityGateDebtPhases = [];
@@ -26696,6 +26730,8 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
       verificationHasDeferredTestGaps,
       verificationNextSafeAction,
       hasUat,
+      hasBlockingUat,
+      blockingUatNextSafeAction,
       warnings: validationWarnings
     } = await inspectValidatedPhaseValidationArtifacts(
       projectRoot,
@@ -26722,6 +26758,15 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
     }
     if (!hasUat && options.noUat !== true) {
       missingUatPhases.push(phase.phaseNumber);
+    }
+    if (hasBlockingUat) {
+      blockingUatPhases.push(phase.phaseNumber);
+      warnings.push(
+        `Phase ${phase.phaseNumber} has saved UAT evidence that is failing, incomplete, or invalid, so milestone closeout remains blocked until that UAT state is repaired.`
+      );
+    }
+    if (hasBlockingUat && blockingUatNextSafeAction) {
+      uatRepairActions[phase.phaseNumber] = blockingUatNextSafeAction;
     }
     const qualityGateEvaluation = await evaluatePhaseQualityGates({
       projectRoot,
@@ -26761,18 +26806,20 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
   return {
     missingVerificationPhases,
     missingUatPhases,
+    blockingUatPhases,
     verificationNotReadyPhases,
     verificationTestGapPhases,
     verificationRepairActions,
+    uatRepairActions,
     pendingSummaryCoveragePhases,
     missingQualityGatePhases,
     qualityGateDebtPhases,
     qualityGateRepairActions,
     qualityGateMissingGates,
     qualityGateReviewableFiles,
-    blockingPhase: missingVerificationPhases[0] ?? verificationTestGapPhases[0] ?? verificationNotReadyPhases[0] ?? missingUatPhases[0] ?? qualityGateDebtPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
+    blockingPhase: missingVerificationPhases[0] ?? verificationTestGapPhases[0] ?? verificationNotReadyPhases[0] ?? blockingUatPhases[0] ?? missingUatPhases[0] ?? qualityGateDebtPhases[0] ?? pendingSummaryCoveragePhases[0] ?? null,
     qualityGateBlockingPhase: qualityGateDebtPhases[0] ?? null,
-    allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && verificationTestGapPhases.length === 0 && missingUatPhases.length === 0 && qualityGateDebtPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
+    allCompletedPhasesReady: missingVerificationPhases.length === 0 && verificationNotReadyPhases.length === 0 && verificationTestGapPhases.length === 0 && blockingUatPhases.length === 0 && missingUatPhases.length === 0 && qualityGateDebtPhases.length === 0 && pendingSummaryCoveragePhases.length === 0,
     warnings
   };
 }
@@ -26951,7 +26998,7 @@ async function deriveNextAction(args) {
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
-  const currentPhaseHasAcceptanceEvidence = args.phaseArtifacts.hasUat || !args.workflow.uatRequired && args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat;
+  const currentPhaseHasAcceptanceEvidence = args.phaseArtifacts.hasUat || !args.workflow.uatRequired && !args.phaseArtifacts.hasBlockingUat && args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat;
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
@@ -27012,6 +27059,18 @@ async function deriveNextAction(args) {
       return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
     }
   }
+  if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && args.phaseArtifacts.hasBlockingUat) {
+    const blockingUatNextAction = implementedBlockingUatNextSafeAction(
+      args.phaseArtifacts.blockingUatNextSafeAction,
+      implementedCommands
+    );
+    if (blockingUatNextAction) {
+      return blockingUatNextAction;
+    }
+    if (implementedCommands.has(verifyWorkCommand)) {
+      return `Run ${verifyWorkCommand} ${args.currentPhase} to repair the saved UAT evidence before advancing`;
+    }
+  }
   if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && args.workflow.uatRequired && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
@@ -27041,10 +27100,24 @@ async function deriveNextAction(args) {
     }
     return `Run ${validatePhaseCommand} ${phaseNumber} to repair milestone validation evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && args.workflow.uatRequired && implementedCommands.has(verifyWorkCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.blockingUatPhases.length > 0) {
+    const phaseNumber = args.milestoneEvidence.blockingUatPhases[0];
+    const uatRepairAction = implementedBlockingUatNextSafeAction(
+      args.milestoneEvidence.uatRepairActions[phaseNumber] ?? null,
+      implementedCommands
+    );
+    const uatRepairCommand = uatRepairAction?.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
+    if (uatRepairAction && uatRepairCommand && implementedCommands.has(uatRepairCommand)) {
+      return uatRepairAction;
+    }
+    if (implementedCommands.has(verifyWorkCommand)) {
+      return `Run ${verifyWorkCommand} ${phaseNumber} to repair the saved milestone UAT evidence before closeout`;
+    }
+  }
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.blockingUatPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && args.workflow.uatRequired && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length === 0 && args.milestoneEvidence.qualityGateDebtPhases.length > 0) {
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.blockingUatPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length === 0 && args.milestoneEvidence.qualityGateDebtPhases.length > 0) {
     const phaseNumber = args.milestoneEvidence.qualityGateDebtPhases[0];
     const qualityGateRepairAction = args.milestoneEvidence.qualityGateRepairActions[phaseNumber] ?? null;
     if (qualityGateRepairAction !== null) {
@@ -27356,9 +27429,11 @@ async function blueprintStateLoad(args = {}) {
       milestoneEvidence: {
         missingVerificationPhases: [],
         missingUatPhases: [],
+        blockingUatPhases: [],
         verificationNotReadyPhases: [],
         verificationTestGapPhases: [],
         verificationRepairActions: {},
+        uatRepairActions: {},
         pendingSummaryCoveragePhases: [],
         missingQualityGatePhases: [],
         qualityGateDebtPhases: [],
@@ -31195,6 +31270,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
   let hasValidVerification = false;
   let verificationReadyForUat = false;
   let hasCompleteUat = false;
+  let hasBlockingUat = false;
   for (const artifact of ["verification", "uat"]) {
     const artifactPath = validationArtifactPathFor(resolved, artifact);
     if (!phaseArtifacts.includes(artifactPath)) {
@@ -31220,6 +31296,7 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
         if (uatState.complete) {
           hasCompleteUat = true;
         } else {
+          hasBlockingUat = true;
           validationWarnings.push(
             `${artifactPath}: UAT artifact is valid but remains incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so the phase cannot complete yet.`
           );
@@ -31230,6 +31307,9 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     validationWarnings.push(
       `${artifactPath}: ${artifact.toUpperCase()} artifact is invalid and does not count as completed validation evidence.`
     );
+    if (artifact === "uat") {
+      hasBlockingUat = true;
+    }
     validationWarnings.push(...validation.issues.map((issue2) => `${artifactPath}: ${issue2}`));
     validationWarnings.push(...validation.warnings.map((warning) => `${artifactPath}: ${warning}`));
   }
@@ -31241,12 +31321,12 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     artifacts: phaseArtifacts
   });
   validationWarnings.push(...qualityGateEvaluation.warnings);
-  if ((hasCompleteUat || options.noUat === true) && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+  if ((hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
     validationWarnings.push(
       `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
     );
   }
-  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true) && qualityGateEvaluation.gatesSatisfied;
+  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.gatesSatisfied;
   const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -49633,6 +49713,27 @@ function normalizeTextContent3(content) {
   return content.endsWith("\n") ? content : `${content}
 `;
 }
+function extractBlueprintCommandText(line) {
+  const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
+  if (!match || match.index === void 0) {
+    return null;
+  }
+  const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
+  let argumentText = line.slice(match.index + match[0].length).trimStart();
+  if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
+    return command;
+  }
+  const wrapperIndex = argumentText.search(/[`'"]/);
+  if (wrapperIndex >= 0) {
+    argumentText = argumentText.slice(0, wrapperIndex);
+  }
+  argumentText = argumentText.replace(/\s+(?:to|then|so)\s+.+$/i, "").replace(/[.,;:!?]+$/g, "").trim();
+  if (argumentText.length === 0 || /^(?:to|then|so)\b/i.test(argumentText)) {
+    return command;
+  }
+  const simpleArgument = argumentText.match(/^[^\s`'").,;:!?]+/)?.[0] ?? null;
+  return simpleArgument ? `${command} ${simpleArgument}` : command;
+}
 function collectModelStringEntries3(value, pathValue = "model") {
   if (typeof value === "string") {
     return [{ path: pathValue, value }];
@@ -50819,11 +50920,82 @@ async function readWorkflowNoUat3(projectRoot) {
     return false;
   }
 }
+function extractSavedNextSafeAction(content) {
+  return extractMarkdownSectionContent(content, /^Next Safe Action$/i).flatMap((section) => section.split(/\r?\n/)).map((line) => extractBlueprintCommandText(line)).find((command) => command !== null) ?? null;
+}
+async function inspectUatRoutingState(args) {
+  if (args.artifactPath === null) {
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: false,
+      blockingNextSafeAction: null,
+      warnings: []
+    };
+  }
+  try {
+    const content = await fs6.readFile(
+      resolveBlueprintPath(args.projectRoot, args.artifactPath),
+      "utf8"
+    );
+    const validation = validateUatArtifactContent(content, args.summaryPaths, {
+      requireReadyVerificationEvidence: true
+    });
+    const nextSafeAction = extractSavedNextSafeAction(content);
+    if (validation.valid) {
+      const uatState = readUatArtifactState(content);
+      return {
+        hasCompleteUat: uatState.complete,
+        hasBlockingUat: !uatState.complete,
+        blockingNextSafeAction: uatState.complete ? null : nextSafeAction,
+        warnings: uatState.complete ? [] : [
+          `${args.artifactPath}: saved UAT evidence is incomplete (${uatState.status ?? "unknown status"} with checkpoint ${uatState.checkpoint ?? "missing"}), so post-review routing should stay on UAT repair.`
+        ]
+      };
+    }
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: nextSafeAction,
+      warnings: [
+        `${args.artifactPath}: saved UAT evidence is invalid, so post-review routing should stay on UAT repair.`,
+        ...validation.issues.map((issue2) => `${args.artifactPath}: ${issue2}`),
+        ...validation.warnings.map((warning) => `${args.artifactPath}: ${warning}`)
+      ]
+    };
+  } catch (error2) {
+    const message = error2 instanceof Error ? error2.message : String(error2);
+    return {
+      hasCompleteUat: false,
+      hasBlockingUat: true,
+      blockingNextSafeAction: null,
+      warnings: [`${args.artifactPath}: ${message}`]
+    };
+  }
+}
+function keepImplementedNonProgressAction(candidate, implementedCommands) {
+  if (!candidate) {
+    return null;
+  }
+  const commands = extractBlueprintDirectCommands2(candidate);
+  if (commands.length === 0 || commands.includes("/blu-progress") || implementedCommands !== null && implementedCommands.size > 0 && !commands.every((command) => implementedCommands.has(command))) {
+    return null;
+  }
+  return candidate;
+}
 async function buildAllowedSecurityNextActions(args) {
-  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.uatRequired && args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
-  const partialCandidate = "/blu-progress";
-  const blockedNextSafeAction = "Blocked: pending-open-threat";
+  const uatRouting = await inspectUatRoutingState({
+    projectRoot: args.projectRoot,
+    artifactPath: args.artifacts.uat,
+    summaryPaths: args.summaryPaths
+  });
   const implementedCommands = await getImplementedCommandNames3();
+  const preferredBlockingAction = keepImplementedNonProgressAction(
+    uatRouting.blockingNextSafeAction,
+    implementedCommands
+  );
+  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : uatRouting.hasBlockingUat ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}` : args.uatRequired && !uatRouting.hasCompleteUat ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const partialCandidate = uatRouting.hasBlockingUat ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const blockedNextSafeAction = "Blocked: pending-open-threat";
   const implementedOrProgress = (candidate) => {
     if (implementedCommands === null || implementedCommands.size === 0) {
       return candidate;
@@ -51342,8 +51514,10 @@ async function buildSecurityAuthoringContext(args) {
     ...artifacts.uat ? [artifacts.uat] : []
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber,
     uatRequired: !await readWorkflowNoUat3(args.projectRoot),
+    summaryPaths: completedSummaries,
     artifacts
   });
   const allowCompleted = completionWarnings.length === 0;
@@ -51392,8 +51566,18 @@ async function buildSecurityAuthoringContext(args) {
   };
 }
 async function buildAllowedUiReviewNextActions(args) {
-  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.uatRequired && args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const uatRouting = await inspectUatRoutingState({
+    projectRoot: args.projectRoot,
+    artifactPath: args.artifacts.uat,
+    summaryPaths: args.summaryPaths
+  });
   const implementedCommands = await getImplementedCommandNames3();
+  const preferredBlockingAction = keepImplementedNonProgressAction(
+    uatRouting.blockingNextSafeAction,
+    implementedCommands
+  );
+  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : uatRouting.hasBlockingUat ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}` : args.uatRequired && !uatRouting.hasCompleteUat ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const followUpCandidate = uatRouting.hasBlockingUat ? preferredBlockingAction ?? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
   const implementedOrProgress = (candidate) => {
     if (implementedCommands === null || implementedCommands.size === 0) {
       return candidate;
@@ -51402,7 +51586,7 @@ async function buildAllowedUiReviewNextActions(args) {
     return commands.length > 0 && commands.every((command) => implementedCommands.has(command)) ? candidate : "/blu-progress";
   };
   const completedNextSafeAction = implementedOrProgress(completedCandidate);
-  const followUpNextSafeAction = "/blu-progress";
+  const followUpNextSafeAction = implementedOrProgress(followUpCandidate);
   const blockedNextSafeAction = "/blu-progress";
   return {
     completedNextSafeAction,
@@ -51663,8 +51847,10 @@ async function buildUiReviewAuthoringContext(args) {
   const allowedExistingReviewPostures = artifacts.existingUiReview ? ["reused", "overwrite-confirmed"] : ["none"];
   const allowPass = summaryIndex.pendingPlans.length === 0 && executionTargets.blockers.lowerWavePendingPlanIds.length === 0;
   const nextActions = await buildAllowedUiReviewNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber,
     uatRequired: !await readWorkflowNoUat3(args.projectRoot),
+    summaryPaths: completedSummaries,
     artifacts
   });
   const uiReviewBaseSchema = cloneJsonObject4(modelContract.jsonSchema);

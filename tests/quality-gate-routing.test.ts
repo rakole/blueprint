@@ -324,6 +324,37 @@ function uatContent(phase: PhaseFixture): string {
 `;
 }
 
+function blockingUatContent(
+  phase: PhaseFixture,
+  nextSafeAction = `/blu-verify-work ${phase.phase}`
+): string {
+  return uatContent(phase)
+    .replace("**Status:** PASS", "**Status:** PARTIAL")
+    .replace("**Resume State:** NEW", "**Resume State:** RESUMED")
+    .replace("**Checkpoint:** none", "**Checkpoint:** resume-uat-follow-up")
+    .replace("- Number: testing complete", "- Number: 1")
+    .replace("- Name: none", "- Name: Quality gate UAT smoke")
+    .replace("- Awaiting: none", "- Awaiting: follow-up review")
+    .replace(
+      "| 1 | Quality gate UAT smoke | Keep the quality-gated behavior stable. | .blueprint/phases/01-quality-gate/01-01-SUMMARY.md | pass | none |",
+      "| 1 | Quality gate UAT smoke | Keep the quality-gated behavior stable. | .blueprint/phases/01-quality-gate/01-01-SUMMARY.md | issue | Follow-up review remains open. |"
+    )
+    .replace("- Passed: 1", "- Passed: 0")
+    .replace("- Issues: 0", "- Issues: 1")
+    .replace("- none\n\n## Structured Gaps", "- One UAT follow-up remains open.\n\n## Structured Gaps")
+    .replace(
+      "| none | none | none | none | none | none |",
+      `| 1 | Keep the quality-gated behavior stable. | partial | major | Follow-up review remains open. | Resume \`${nextSafeAction}\` after repair. |`
+    )
+    .replace("- none\n\n## Follow-Up Fixes", `- Resume \`${nextSafeAction}\` after repair.\n\n## Follow-Up Fixes`)
+    .replace("- none\n\n## Next Safe Action", `- Resume \`${nextSafeAction}\` after repair.\n\n## Next Safe Action`)
+    .replace("- Return to `/blu-progress` for the next safe implemented action.", `- Continue with \`${nextSafeAction}\`.`);
+}
+
+function malformedPassUatContent(phase: PhaseFixture): string {
+  return uatContent(phase).replace("**Checkpoint:** none", "**Checkpoint:** resume-uat-follow-up");
+}
+
 function uiSpecContent(phase: PhaseFixture): string {
   if (phase.uiSpecMode === "skip-rationale") {
     return `# ${phaseTitle(phase)} - UI Spec
@@ -826,6 +857,34 @@ test("workflow.no_uat routes ready verification to quality gates instead of veri
   assert.doesNotMatch(status.nextAction, /\/blu-verify-work 1/);
 });
 
+test("workflow.no_uat still blocks on saved partial UAT and prefers its repair action", async (t) => {
+  const phase = implementedPhase({
+    withReview: false,
+    withSecurity: false
+  });
+  const repoPath = await createQualityGateRepo({
+    phases: [phase],
+    configPatch: {
+      workflow: {
+        no_uat: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/01-quality-gate/01-UAT.md"),
+    blockingUatContent(phase, "/blu-audit-fix 1"),
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-audit-fix 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review 1|\/blu-audit-milestone/);
+});
+
 test("workflow.no_uat lets milestone routing ignore missing UAT after quality gates pass", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
@@ -850,6 +909,35 @@ test("workflow.no_uat lets milestone routing ignore missing UAT after quality ga
 
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
   assert.doesNotMatch(status.nextAction, /\/blu-verify-work 1/);
+});
+
+test("workflow.no_uat milestone closeout stays blocked by malformed saved UAT", async (t) => {
+  const phase = implementedPhase({
+    completed: true,
+    withReview: true,
+    withSecurity: true
+  });
+  const repoPath = await createQualityGateRepo({
+    phases: [phase],
+    configPatch: {
+      workflow: {
+        no_uat: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/phases/01-quality-gate/01-UAT.md"),
+    malformedPassUatContent(phase),
+    "utf8"
+  );
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-verify-work 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-audit-milestone v1|\/blu-complete-milestone|\/blu-new-milestone/);
 });
 
 test("summary-derived source evidence is unioned with non-reviewable plan evidence", async (t) => {
