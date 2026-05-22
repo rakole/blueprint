@@ -7,8 +7,10 @@ import { blueprintPhaseValidationWrite } from "../src/mcp/tools/phase.js";
 import { blueprintProjectStatus } from "../src/mcp/tools/project.js";
 import {
   buildPhaseQualityGateNextAction,
-  evaluatePhaseQualityGates
+  evaluatePhaseQualityGates,
+  formatPhaseQualityGateDebtReason
 } from "../src/mcp/tools/quality-gates.js";
+import { blueprintStateSync } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 type PhaseFixture = {
@@ -1144,6 +1146,11 @@ test("review fix follow-up blocks UAT completion even after review and security 
   assert.equal(verification.status, "created", JSON.stringify(verification, null, 2));
   assert.equal(uat.status, "created", JSON.stringify(uat, null, 2));
   assert.match(status.nextAction, /\/blu-code-review-fix 1/);
+  assert.match(
+    uat.warnings.join("\n"),
+    /Saved review remediation debt remains for 3 reviewable file\(s\)\./
+  );
+  assert.doesNotMatch(uat.warnings.join("\n"), /SECURITY evidence is missing/i);
   assert.match(roadmap, /- \[ \] \*\*Phase 1: Quality Gate\*\*/);
   assert.doesNotMatch(roadmap, /### Phase 1: Quality Gate[\s\S]*\*\*Status\*\*: completed/);
 });
@@ -1164,10 +1171,29 @@ test("repo-wide progress routes saved review remediation debt after security eve
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
   const status = await blueprintProjectStatus({ cwd: repoPath });
+  const syncResult = await blueprintStateSync({ cwd: repoPath });
+  const debtReason = formatPhaseQualityGateDebtReason(evaluation);
 
+  assert.equal(
+    debtReason,
+    "Saved review remediation debt remains for 3 reviewable file(s)."
+  );
+  assert.equal(evaluation.missingGate, null);
+  assert.equal(evaluation.hasSecurity, true);
   assert.match(status.nextAction, /\/blu-code-review-fix 1/);
   assert.doesNotMatch(status.nextAction, /\/blu-validate-phase 1|\/blu-verify-work 1/);
+  assert.match(
+    syncResult.warnings.join("\n"),
+    /Current phase 1 has quality gate debt: Saved review remediation debt remains for 3 reviewable file\(s\)\./
+  );
+  assert.doesNotMatch(syncResult.warnings.join("\n"), /SECURITY evidence is missing/i);
 });
 
 test("completed REVIEW-FIX next action outranks stale REVIEW follow-up", async (t) => {

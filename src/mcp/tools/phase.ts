@@ -47,7 +47,10 @@ import {
   prepareTextForPersistence,
   safeJsonParseObject
 } from "../../shared/security.js";
-import { evaluatePhaseQualityGates } from "./quality-gates.js";
+import {
+  evaluatePhaseQualityGates,
+  formatPhaseQualityGateDebtReason
+} from "./quality-gates.js";
 import {
   basePhaseNumber,
   comparePhaseNumbers,
@@ -2987,8 +2990,12 @@ async function syncRoadmapPhaseCompletion(
     qualityGateEvaluation.requiresCodeReview &&
     !qualityGateEvaluation.gatesSatisfied
   ) {
+    const debtReason = formatPhaseQualityGateDebtReason(qualityGateEvaluation);
+
     validationWarnings.push(
-      `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+      debtReason === null
+        ? `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because quality-gate closeout evidence is still incomplete for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
+        : `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${debtReason}`
     );
   }
 

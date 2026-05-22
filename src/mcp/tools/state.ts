@@ -29,6 +29,7 @@ import { blueprintConfigGet } from "./config.js";
 import {
   buildPhaseQualityGateNextAction,
   evaluatePhaseQualityGates,
+  formatPhaseQualityGateDebtReason,
   type PhaseQualityGateEvaluation,
   type PhaseQualityGateMissingGate
 } from "./quality-gates.js";
@@ -1479,6 +1480,17 @@ function resolvePhaseQualityGateNextAction(args: {
   return null;
 }
 
+function formatPhaseQualityGateWarning(args: {
+  subject: string;
+  evaluation: Pick<
+    PhaseQualityGateEvaluation,
+    "missingGate" | "reviewableFiles" | "requiresCodeReview" | "reviewNextSafeAction" | "hasSecurity"
+  >;
+}): string | null {
+  const debtReason = formatPhaseQualityGateDebtReason(args.evaluation);
+  return debtReason === null ? null : `${args.subject} has quality gate debt: ${debtReason}`;
+}
+
 async function uiSpecRequiresUiReview(
   projectRoot: string,
   uiSpecPath: string,
@@ -1917,9 +1929,14 @@ async function inspectCurrentPhaseArtifacts(
   });
 
   if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
-    warnings.push(
-      `Current phase ${currentPhase} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
-    );
+    const qualityGateWarning = formatPhaseQualityGateWarning({
+      subject: `Current phase ${currentPhase}`,
+      evaluation: qualityGateEvaluation
+    });
+
+    if (qualityGateWarning) {
+      warnings.push(qualityGateWarning);
+    }
   }
 
   warnings.push(...qualityGateEvaluation.warnings);
@@ -2153,13 +2170,24 @@ async function inspectMilestoneEvidence(
       missingQualityGatePhases.push(phase.phaseNumber);
       qualityGateDebtPhases.push(phase.phaseNumber);
       qualityGateMissingGates[phase.phaseNumber] = qualityGateEvaluation.missingGate;
-      warnings.push(
-        `Phase ${phase.phaseNumber} has quality gate debt: ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
-      );
+      const qualityGateWarning = formatPhaseQualityGateWarning({
+        subject: `Phase ${phase.phaseNumber}`,
+        evaluation: qualityGateEvaluation
+      });
+
+      if (qualityGateWarning) {
+        warnings.push(qualityGateWarning);
+      }
     } else if (qualityGateNextAction !== null) {
       qualityGateDebtPhases.push(phase.phaseNumber);
+      const qualityGateWarning = formatPhaseQualityGateWarning({
+        subject: `Phase ${phase.phaseNumber}`,
+        evaluation: qualityGateEvaluation
+      });
+
       warnings.push(
-        `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
+        qualityGateWarning ??
+          `Phase ${phase.phaseNumber} has derived quality gate debt: ${qualityGateNextAction}`
       );
     }
 
