@@ -593,6 +593,24 @@ function isBlockingReviewNextSafeAction(args: {
   );
 }
 
+function savedReviewFollowUpCommandName(args: {
+  reviewNextSafeAction: string | null;
+  missingGate: PhaseQualityGateMissingGate;
+  hasSecurity: boolean;
+}): string | null {
+  if (args.missingGate !== null || !args.hasSecurity) {
+    return null;
+  }
+
+  const commandName = extractCommandName(args.reviewNextSafeAction ?? "");
+
+  if (commandName === null || commandName === "progress") {
+    return null;
+  }
+
+  return commandName;
+}
+
 function isReviewableConfigPath(relativePath: string): boolean {
   const basename = path.posix.basename(relativePath);
 
@@ -1014,6 +1032,43 @@ export async function evaluatePhaseQualityGates(
     warnings,
     reviewNextSafeAction
   };
+}
+
+export function formatPhaseQualityGateDebtReason(
+  args: Pick<
+    PhaseQualityGateEvaluation,
+    "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity"
+  >
+): string | null {
+  if (!args.requiresCodeReview) {
+    return null;
+  }
+
+  const reviewableFileCount = args.reviewableFiles.length;
+
+  if (args.missingGate === "review") {
+    return `REVIEW evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  if (args.missingGate === "security") {
+    return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
+    reviewNextSafeAction: args.reviewNextSafeAction,
+    missingGate: args.missingGate,
+    hasSecurity: args.hasSecurity
+  });
+
+  if (reviewFollowUpCommand === "code-review-fix") {
+    return `Saved review remediation debt remains for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  if (reviewFollowUpCommand !== null) {
+    return `Saved review follow-up remains for ${reviewableFileCount} reviewable file(s).`;
+  }
+
+  return null;
 }
 
 export function buildPhaseQualityGateNextAction(
