@@ -53,10 +53,10 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(commandFile, /explicit test-generation gaps[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(commandFile, /implementation\/behavior gaps[\s\S]*\/blu-audit-fix <phase>/i);
-  assert.match(commandFile, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
-  assert.match(commandFile, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
-  assert.match(commandFile, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
-  assert.match(commandFile, /else -> keep nextSafeAction on \/blu-validate-phase <phase>/i);
+  assert.match(commandFile, /Apply the pre-write routing shorthand from the loaded runtime contract/i);
+  assert.match(commandFile, /MCP task schema and route diagnostics as the enforcement authority/i);
+  assert.doesNotMatch(commandFile, /if gateState == PASS/i);
+  assert.doesNotMatch(commandFile, /else if explicit deferred-test or test-generation gaps remain/i);
   assert.match(commandFile, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(commandFile, /ask_user/);
   assert.match(commandFile, /manual validation feedback, UAT-readiness confirmation/i);
@@ -163,10 +163,13 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);
   assert.match(skillFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` and implementation\/behavior gaps to `\/blu-audit-fix <phase>`/i);
-  assert.match(skillFile, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
-  assert.match(skillFile, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
-  assert.match(skillFile, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
-  assert.match(skillFile, /else -> keep nextSafeAction on \/blu-validate-phase <phase>/i);
+  assert.match(
+    skillFile,
+    /Apply the pre-write routing shorthand from `references\/validate-phase-runtime-contract\.md`/i
+  );
+  assert.match(skillFile, /narrowed task schema and route diagnostics as the enforcement authority/i);
+  assert.doesNotMatch(skillFile, /if gateState == PASS/i);
+  assert.doesNotMatch(skillFile, /else if explicit deferred-test or test-generation gaps remain/i);
   assert.match(validateReference, /## Stage Mapping/);
   assert.match(validateReference, /## Required MCP Calls/);
   assert.match(validateReference, /## Input State Model/);

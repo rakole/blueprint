@@ -1570,9 +1570,10 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_state_update/);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
   assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
-  assert.match(validateDoc, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
-  assert.match(validateDoc, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
-  assert.match(validateDoc, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
+  assert.match(validateDoc, /pre-write routing shorthand from `skills\/blueprint-phase-validation\/references\/validate-phase-runtime-contract\.md`/i);
+  assert.match(validateDoc, /narrowed task schema plus route diagnostics/i);
+  assert.doesNotMatch(validateDoc, /if gateState == PASS/i);
+  assert.doesNotMatch(validateDoc, /else if explicit deferred-test or test-generation gaps remain/i);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
   assert.match(validateDoc, /Direct `validate-phase` happy-path fixture\./);
   assert.match(verifyDoc, /Primary skill: `blueprint-phase-validation`/);
