@@ -447,6 +447,81 @@ test("invalid UAT overwrite does not resync roadmap completion", async () => {
   }
 });
 
+test("workflow.no_uat lets verification PASS sync roadmap completion without UAT", async () => {
+  const noUatVerification = validVerification.replace(
+    "- Continue with `/blu-verify-work 4`.",
+    "- Return to `/blu-progress` for the next safe implemented action."
+  );
+  const repoPath = await createRepoFixture({
+    verificationContent: validVerification,
+    uatContent: validUat
+  });
+
+  try {
+    await writeFile(
+      path.join(repoPath, ".blueprint/config.json"),
+      JSON.stringify(
+        {
+          version: 2,
+          workflow: {
+            no_uat: true,
+            code_review: false
+          }
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+    await rm(path.join(repoPath, ".blueprint/phases/04-phase-validation/04-UAT.md"), {
+      force: true
+    });
+    await writeFile(
+      path.join(repoPath, ".blueprint/ROADMAP.md"),
+      `# Roadmap: Verification Fixture
+
+## Milestone
+
+- Active milestone: v2
+
+## Phases
+
+- [ ] **Phase 4: Validation** - Persist verification and UAT evidence
+
+## Phase Details
+
+### Phase 4: Validation
+**Goal**: Persist verification and UAT evidence.
+**Requirements**: EXEC-01
+**Status**: in_progress
+`,
+      "utf8"
+    );
+
+    const result = await blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "4",
+      artifact: "verification",
+      content: noUatVerification,
+      overwrite: true
+    });
+    const read = await blueprintPhaseValidationRead({
+      cwd: repoPath,
+      phase: "4",
+      artifact: "verification"
+    });
+    const roadmap = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+    assert.equal(result.status, "updated", JSON.stringify(result, null, 2));
+    assert.equal(read.validation?.valid, true, read.validation?.issues.join("\n"));
+    assert.equal(read.verificationReadyForUat, true);
+    assert.match(roadmap, /- \[x\] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+    assert.match(roadmap, /\*\*Status\*\*: completed/);
+  } finally {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  }
+});
+
 test("partial UAT reopens roadmap completion and stays incomplete in typed validation reads", async () => {
   const repoPath = await createRepoFixture({
     verificationContent: validVerification,

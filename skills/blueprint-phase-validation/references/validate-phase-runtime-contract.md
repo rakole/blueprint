@@ -132,7 +132,9 @@ the need explicit.
    `## Manual-Only or Deferred Coverage`.
 10. Keep top `**Gate State:**` aligned with the `## Gate State` section:
    `PASS` means `ready for UAT`; `PARTIAL` or `BLOCKED` means
-   `not ready for UAT`.
+   `not ready for UAT`. When `workflow.no_uat=true`, ready verification is
+   still the acceptance signal, but the next safe lifecycle route is
+   `/blu-progress` instead of `/blu-verify-work <phase>`.
 11. Do not declare `PASS` while unresolved coverage, gap, or repair signals
     remain. Use `PARTIAL` or `BLOCKED` and route to `/blu-audit-fix <phase>`
     for implementation/behavior gaps or `/blu-add-tests <phase>` for
@@ -145,7 +147,7 @@ the need explicit.
 
 Before the final verification model validation and write, apply this exact routing logic:
 
-- `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = /blu-verify-work <phase>`
+- `if gateState == PASS and no unresolved gaps or repair signals remain -> nextSafeAction = workflow.no_uat ? /blu-progress : /blu-verify-work <phase>`
 - `else if explicit deferred-test or test-generation gaps remain -> nextSafeAction = /blu-add-tests <phase>`
 - `else if implementation or behavior gaps remain -> nextSafeAction = /blu-audit-fix <phase>`
 - `else -> keep nextSafeAction on /blu-validate-phase <phase> only for validation-document repair or manual-only prerequisites`

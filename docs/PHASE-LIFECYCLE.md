@@ -21,7 +21,7 @@ This file describes the intended artifact flow through a single Blueprint phase 
 7. `validate-phase`
    Reads the saved execution summaries first, then writes `XX-VERIFICATION.md` with validation gaps, pass signals, and a clear next safe action.
 8. `verify-work`
-   Reads the saved execution summaries first, then writes resumable `XX-UAT.md` evidence with explicit follow-up fixes when needed.
+   Reads the saved execution summaries first, then writes resumable `XX-UAT.md` evidence with explicit follow-up fixes when needed. When `workflow.no_uat=true`, this command remains manually runnable but missing UAT no longer blocks lifecycle routing after PASS verification.
 
 ## Optional Quality Passes
 
@@ -35,11 +35,11 @@ This file describes the intended artifact flow through a single Blueprint phase 
 
 ## Post-UAT Quality Gate
 
-When effective config `workflow.code_review` is true and saved execution evidence includes reviewable repo or source files, completed UAT does not advance the phase by itself. `/blu-code-review <phase>` and `/blu-secure-phase <phase>` become mandatory before normal phase advancement.
+When effective config `workflow.code_review` is true and saved execution evidence includes reviewable repo or source files, acceptance evidence does not advance the phase by itself. Acceptance evidence is completed UAT when `workflow.no_uat=false`, or PASS verification when `workflow.no_uat=true`. `/blu-code-review <phase>` and `/blu-secure-phase <phase>` become mandatory before normal phase advancement.
 
-Routing order after UAT is:
+Routing order after acceptance evidence is:
 
-- UAT complete, reviewable files present, and no `XX-REVIEW.md`: route to `/blu-code-review <phase>`.
+- Acceptance evidence complete, reviewable files present, and no `XX-REVIEW.md`: route to `/blu-code-review <phase>`.
 - `XX-REVIEW.md` exists and no `XX-SECURITY.md`: route to `/blu-secure-phase <phase>`.
 - `XX-REVIEW.md` has open findings: follow the saved review next safe action.
 - Review and security gates complete: advance normally.
@@ -52,7 +52,7 @@ A phase should not be treated as complete just because execution finished. Compl
 
 - execution summaries exist
 - validation state is known and grounded in saved summaries
-- UAT state is known, resumable, or explicitly deferred
+- UAT state is known, resumable, explicitly deferred, or intentionally optional via `workflow.no_uat=true`
 - required review and security gates are complete, or any follow-up is visible in artifacts
 - `STATE.md` names the next action clearly
 

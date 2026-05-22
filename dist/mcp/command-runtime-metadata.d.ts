@@ -837,7 +837,7 @@ export declare const VALIDATE_PHASE_RUNTIME_METADATA: {
         readonly rootRoutable: true;
         readonly purpose: "`validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.";
         readonly reads: readonly ["Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."];
-        readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"];
+        readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes", ".blueprint/STATE.md"];
     };
     readonly runtimeReference: {
         readonly path: string;
@@ -2664,7 +2664,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly rootRoutable: true;
             readonly purpose: "`validate-phase` audits saved execution summaries and persists phase verification evidence through the validation MCP substrate.";
             readonly reads: readonly ["Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."];
-            readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"];
+            readonly writes: readonly ["phase XX-VERIFICATION.md", ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes", ".blueprint/STATE.md"];
         };
         readonly runtimeReference: {
             readonly path: string;

@@ -752,7 +752,7 @@ test("phase validation docs and catalog metadata promote validate-phase and veri
 
   assert.match(
     catalogMarkdown,
-    /\| `validate-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-VERIFICATION\.md; \.blueprint\/STATE\.md` \| `Low: writes summary-aware verification evidence and updates follow-up state\.` \|/
+    /\| `validate-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-VERIFICATION\.md; \.blueprint\/ROADMAP\.md when workflow\.no_uat completion evidence closes; \.blueprint\/STATE\.md` \| `Low: writes summary-aware verification evidence and updates follow-up state\.` \|/
   );
   assert.match(
     catalogMarkdown,
@@ -1570,7 +1570,7 @@ test("validate-phase and verify-work command docs keep the validation skill and 
   assert.match(validateDoc, /blueprint_state_update/);
   assert.match(validateDoc, /blueprint_artifact_contract_read/);
   assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
-  assert.match(validateDoc, /if gateState == PASS[\s\S]*\/blu-verify-work <phase>/i);
+  assert.match(validateDoc, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
   assert.match(validateDoc, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(validateDoc, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
@@ -1609,7 +1609,8 @@ test("validation contract docs keep the published verification schema aligned wi
   assert.match(artifactSchema, /## Manual-Only or Deferred Coverage/);
   assert.match(artifactSchema, /## Gate State/);
   assert.match(artifactSchema, /## Gap Classification/);
-  assert.match(artifactSchema, /should only route the next safe action to `\/blu-verify-work` when the saved gate state is `PASS`/i);
+  assert.match(artifactSchema, /should route the next safe action to `\/blu-verify-work <phase>`[\s\S]*`workflow\.no_uat=false`/i);
+  assert.match(artifactSchema, /when `workflow\.no_uat=true`, the PASS route is `\/blu-progress`/i);
 
   assert.match(addTestsDoc, /blueprint_artifact_contract_read/);
   assert.match(addTestsDoc, /blueprint_phase_validation_render/);

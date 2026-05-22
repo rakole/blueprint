@@ -64,6 +64,7 @@
 - Older project configs may omit those keys; effective config should still inherit them from saved defaults or hardcoded defaults until the project explicitly writes an override.
 - `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
 - Setting `workflow.subagents` to `false` disables optional Blueprint subagent invocation and forces the documented no-subagent fallback paths instead. It does not hide agent entries, change agent catalog visibility, or widen or narrow implemented-command routing.
+- `workflow.no_uat` defaults to `false`. Setting it to `true` makes missing UAT evidence optional for lifecycle routing and phase closeout after PASS verification; `/blu-verify-work` remains explicitly runnable, and quality gates still block completion.
 
 
 ## Skills And Subagents
@@ -108,7 +109,7 @@
 
 
 - Run a common settings pass for profile, research/plan/verify, Nyquist, UI, the `/blu-code-review` review toggle and depth, commit-docs, branching, and worktree isolation before offering advanced keys.
-- Offer an advanced settings pass for gate, safety, subagent toggle, timeout, template, response-language, and agent-skill fields.
+- Offer an advanced settings pass for gate, safety, UAT optionality, subagent toggle, timeout, template, response-language, and agent-skill fields.
 - Keep the common settings pass stable; do not force the effectiveness-spine keys into that first pass just because runtime support exists now.
 - If the user asks for the effectiveness-spine keys directly, write them through the documented config MCP path instead of inventing a separate persistence flow.
 - Offer to save the resolved settings as `~/.<host>/blueprint/defaults.json` after project-local changes are applied.
@@ -142,6 +143,7 @@
 - Persists project config in normalized full form and never treats `.blueprint/config.json` as a sparse override file.
 - Never stores hook enablement in repo config; hook control remains in `hooks/hooks.json`.
 - Keeps `workflow.code_review` and `workflow.code_review_depth` in the normalized config so `/blu-code-review` can read them as real defaults.
+- Keeps `workflow.no_uat` as an explicit lifecycle toggle that bypasses only missing-UAT requirements, not manual `/blu-verify-work` or quality gates.
 - Normalizes and persists `ux.progress_mode`, `ux.structured_confirmations`, `ux.user_checkpoints`, `orchestration.task_tracker`, and `research.external_sources` through the documented config MCP path.
 - Preserves defaults precedence for those keys when older project configs still omit them.
 

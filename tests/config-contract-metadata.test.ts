@@ -91,6 +91,19 @@ test("artifact schema documents workflow.subagents as workflow policy rather tha
   );
 });
 
+test("artifact schema documents workflow.no_uat as UAT optionality rather than command removal", async () => {
+  const artifactSchema = await readFile(
+    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
+    "utf8"
+  );
+
+  assert.match(artifactSchema, /"no_uat": false/);
+  assert.match(artifactSchema, /`workflow\.no_uat` defaults to `false`/);
+  assert.match(artifactSchema, /missing `XX-UAT\.md` evidence is not lifecycle-blocking/i);
+  assert.match(artifactSchema, /`\/blu-verify-work` remains manually runnable/i);
+  assert.match(artifactSchema, /quality gates still block completion/i);
+});
+
 test("settings docs describe workflow.subagents as fallback policy rather than visibility or routing control", async () => {
   const [settingsDoc, settingsReference] = await Promise.all([
     readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
@@ -112,5 +125,25 @@ test("settings docs describe workflow.subagents as fallback policy rather than v
     assert.match(markdown, /does not hide agent entries/i);
     assert.match(markdown, /does not .*change agent catalog visibility/i);
     assert.match(markdown, /does not .*implemented-command routing/i);
+  }
+});
+
+test("settings docs describe workflow.no_uat as lifecycle optionality with manual UAT preserved", async () => {
+  const [settingsDoc, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-governance/references/settings-runtime-contract.md"
+      ),
+      "utf8"
+    )
+  ]);
+
+  for (const markdown of [settingsDoc, settingsReference]) {
+    assert.match(markdown, /workflow\.no_uat.*defaults to `false`/i);
+    assert.match(markdown, /missing UAT evidence optional/i);
+    assert.match(markdown, /\/blu-verify-work.*explicitly runnable|\/blu-verify-work.*manually runnable/i);
+    assert.match(markdown, /quality gates still block completion/i);
   }
 });

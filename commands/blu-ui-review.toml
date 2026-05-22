@@ -27,7 +27,7 @@ Follow this flow exactly:
 
 Next-action rules:
 - If the phase still lacks `XX-VERIFICATION.md`, prefer `/blu-validate-phase <phase>`.
-- Otherwise if the phase lacks `XX-UAT.md`, prefer `/blu-verify-work <phase>`.
+- Otherwise if the phase lacks `XX-UAT.md` and `workflow.no_uat=false`, prefer `/blu-verify-work <phase>`; if `workflow.no_uat=true`, prefer `/blu-progress` while leaving `/blu-verify-work` manual.
 - Otherwise if meaningful UI follow-up work remains, prefer `/blu-progress` so the user can choose the safest next implemented step.
 - Otherwise prefer `/blu-progress`.
 

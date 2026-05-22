@@ -666,7 +666,10 @@ export declare function validatePhaseArtifactContent(content: string, artifact: 
     warnings: string[];
     diagnostics: PhaseArtifactValidationDiagnostic[];
 };
-export declare function validateVerificationArtifactContent(content: string, summaryPaths?: string[]): {
+type VerificationArtifactValidationOptions = {
+    noUat?: boolean;
+};
+export declare function validateVerificationArtifactContent(content: string, summaryPaths?: string[], options?: VerificationArtifactValidationOptions): {
     valid: boolean;
     issues: string[];
     warnings: string[];

@@ -26,6 +26,7 @@ Review and update normalized project-local Blueprint settings, with an optional 
 - Patches must be JSON objects, not arrays, strings, or raw config file content.
 - `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
 - Setting `workflow.subagents` to `false` disables optional Blueprint subagent invocation and forces the documented no-subagent fallback. It does not hide agent entries, change agent catalog visibility, or change implemented-command routing.
+- `workflow.no_uat` defaults to `false`. Setting it to `true` makes missing UAT evidence optional for lifecycle routing and phase closeout after PASS verification; `/blu-verify-work` remains explicitly runnable, and quality gates still block completion.
 
 ## Effectiveness Spine Settings
 

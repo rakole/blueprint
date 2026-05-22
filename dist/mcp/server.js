@@ -15868,7 +15868,11 @@ var init_command_runtime_metadata = __esm({
         reads: [
           "Saved phase summaries, validation baselines, config, artifact health, and state through MCP tools."
         ],
-        writes: ["phase XX-VERIFICATION.md", ".blueprint/STATE.md"]
+        writes: [
+          "phase XX-VERIFICATION.md",
+          ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes",
+          ".blueprint/STATE.md"
+        ]
       },
       runtimeReference: {
         path: runtimeMetadataSourceId("validate-phase"),
@@ -21517,7 +21521,7 @@ var init_artifact_contracts = __esm({
       qualityRules: [
         "Do not include model-owned identity keys such as cwd, phase, artifact, path, or content; the write tool owns identity and path derivation.",
         "Cite every completed execution summary from context.summaryPaths in evidenceReviewedSummaryPaths unless the renderer is intentionally allowed to include the complete summary set.",
-        "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work only when no unresolved gap remains.",
+        "Keep status, gateState, the rendered Gate section, readiness, gap rows, and nextSafeAction consistent: PASS routes to /blu-verify-work when workflow.no_uat=false, or /blu-progress when workflow.no_uat=true, only when no unresolved gap remains.",
         "Use only allowed coverage states, manual coverage statuses, and gap classes from blueprint_phase_validation_authoring_context.allowedValues.",
         "Use COVERED or PASS for completed verification rows; lowercase covered is accepted for model ergonomics and normalized to COVERED during rendering.",
         "Preserve validation session state, checkpoint, test matrix, result counts, observed behavior, unresolved gaps, structured gaps, and follow-up fixes when the host/model has that detail.",
@@ -23657,6 +23661,7 @@ function getHardCodedConfig() {
       nyquist_validation: true,
       ui_phase: true,
       ui_safety_gate: true,
+      no_uat: false,
       code_review: true,
       code_review_depth: "standard",
       auto_advance: false,
@@ -26076,7 +26081,7 @@ async function collectValidatedSummaryPathsForPhase(projectRoot, phaseNumber) {
     warnings: [...summaryIndex.warnings]
   };
 }
-async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifacts, phasePrefix2, summaryPaths) {
+async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifacts, phasePrefix2, summaryPaths, options = {}) {
   const warnings = [];
   let hasVerification = false;
   let verificationReadyForUat = false;
@@ -26106,7 +26111,9 @@ async function inspectValidatedPhaseValidationArtifacts(projectRoot, phaseArtifa
       continue;
     }
     const content = await fs2.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
-    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths, {
+    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
+      noUat: options.noUat === true
+    }) : validateUatArtifactContent(content, summaryPaths, {
       requireReadyVerificationEvidence: true
     });
     if (artifact === "verification") {
@@ -26266,7 +26273,7 @@ async function inspectUiSpecReadiness(projectRoot, uiSpecPath) {
     };
   }
 }
-async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, currentPhase2) {
+async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, currentPhase2, options = {}) {
   const warnings = [];
   const blockers = [];
   if (!currentPhase2) {
@@ -26456,7 +26463,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     projectRoot,
     phaseArtifacts,
     phasePrefix2,
-    summaryPaths
+    summaryPaths,
+    options
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
@@ -26647,7 +26655,7 @@ async function readRoadmapSignals(projectRoot) {
     };
   }
 }
-async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
+async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, options = {}) {
   const missingVerificationPhases = [];
   const missingUatPhases = [];
   const verificationNotReadyPhases = [];
@@ -26693,7 +26701,8 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
       projectRoot,
       phaseScopedArtifacts,
       phasePrefix2,
-      summaryPaths
+      summaryPaths,
+      options
     );
     warnings.push(...summaryWarnings, ...validationWarnings);
     if (verificationHasDeferredTestGaps) {
@@ -26711,7 +26720,7 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases) {
     if ((verificationHasDeferredTestGaps || hasVerification && !verificationReadyForUat) && verificationNextSafeAction) {
       verificationRepairActions[phase.phaseNumber] = verificationNextSafeAction;
     }
-    if (!hasUat) {
+    if (!hasUat && options.noUat !== true) {
       missingUatPhases.push(phase.phaseNumber);
     }
     const qualityGateEvaluation = await evaluatePhaseQualityGates({
@@ -26942,6 +26951,7 @@ async function deriveNextAction(args) {
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
+  const currentPhaseHasAcceptanceEvidence = args.phaseArtifacts.hasUat || !args.workflow.uatRequired && args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat;
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
   }
@@ -27002,10 +27012,10 @@ async function deriveNextAction(args) {
       return `Run ${validatePhaseCommand} ${args.currentPhase} to repair the verification evidence before UAT`;
     }
   }
-  if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && implementedCommands.has(verifyWorkCommand)) {
+  if (args.phaseArtifacts.hasVerification && args.phaseArtifacts.verificationReadyForUat && !args.phaseArtifacts.hasUat && args.workflow.uatRequired && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
-  if (args.phaseArtifacts.hasUat && args.phaseArtifacts.qualityGateNextAction) {
+  if (currentPhaseHasAcceptanceEvidence && args.phaseArtifacts.qualityGateNextAction) {
     return args.phaseArtifacts.qualityGateNextAction;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length > 0 && implementedCommands.has(validatePhaseCommand)) {
@@ -27031,7 +27041,7 @@ async function deriveNextAction(args) {
     }
     return `Run ${validatePhaseCommand} ${phaseNumber} to repair milestone validation evidence before closeout`;
   }
-  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && implementedCommands.has(verifyWorkCommand)) {
+  if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length > 0 && args.workflow.uatRequired && implementedCommands.has(verifyWorkCommand)) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
   }
   if (args.allPhasesComplete && args.milestoneEvidence.missingVerificationPhases.length === 0 && args.milestoneEvidence.verificationNotReadyPhases.length === 0 && args.milestoneEvidence.missingUatPhases.length === 0 && args.milestoneEvidence.qualityGateDebtPhases.length > 0) {
@@ -27101,10 +27111,28 @@ async function buildSyncedState(projectRoot, patch = {}) {
     nextAction: existingState.nextAction,
     roadmapCurrentPhase: roadmapSignals.currentPhase
   }) : null;
+  let workflowRouting = {
+    researchEnabled: true,
+    uiPhaseEnabled: true,
+    uatRequired: true
+  };
+  try {
+    const effectiveConfig = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    workflowRouting = {
+      researchEnabled: effectiveConfig.config.workflow.research,
+      uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase,
+      uatRequired: effectiveConfig.config.workflow.no_uat !== true
+    };
+  } catch {
+  }
   const milestoneEvidence = await inspectMilestoneEvidence(
     projectRoot,
     inspection.phases,
-    roadmapSignals.phases
+    roadmapSignals.phases,
+    { noUat: !workflowRouting.uatRequired }
   );
   const qualityGateDebtPhase = patch.activeCommand === void 0 && patch.currentPhase === void 0 ? milestoneEvidence.qualityGateBlockingPhase : null;
   const currentPhase2 = qualityGateDebtPhase ?? effectivePatchCurrentPhase ?? patchedPhaseRoutingOverride ?? storedPhaseRoutingOverride ?? (statePhaseIsAheadOfRoadmap ? existingState.currentPhase : roadmapSignals.currentPhase ?? existingState.currentPhase);
@@ -27155,27 +27183,13 @@ async function buildSyncedState(projectRoot, patch = {}) {
   const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
     projectRoot,
     inspection.phases,
-    currentPhase2
+    currentPhase2,
+    { noUat: !workflowRouting.uatRequired }
   );
   const bootstrapRouting = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
     codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
   };
-  let workflowRouting = {
-    researchEnabled: true,
-    uiPhaseEnabled: true
-  };
-  try {
-    const effectiveConfig = await blueprintConfigGet({
-      scope: "effective",
-      cwd: projectRoot
-    });
-    workflowRouting = {
-      researchEnabled: effectiveConfig.config.workflow.research,
-      uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase
-    };
-  } catch {
-  }
   const blockers = projectStatus === "partial" ? [
     .../* @__PURE__ */ new Set([
       ...nonStructuralBlockers,
@@ -27359,7 +27373,8 @@ async function blueprintStateLoad(args = {}) {
       bootstrapRouting,
       workflow: {
         researchEnabled: true,
-        uiPhaseEnabled: true
+        uiPhaseEnabled: true,
+        uatRequired: true
       }
     })
   } : syncedState.state;
@@ -28289,8 +28304,8 @@ var init_phase_task_schema_helpers = __esm({
 });
 
 // src/mcp/tools/phase-validation-schemas.ts
-async function buildPhaseVerificationAllowedNextActions(phaseNumber) {
-  const readyAction = `/blu-verify-work ${phaseNumber}`;
+async function buildPhaseVerificationAllowedNextActions(phaseNumber, noUat) {
+  const readyAction = noUat ? "/blu-progress" : `/blu-verify-work ${phaseNumber}`;
   const repairActions = [`/blu-add-tests ${phaseNumber}`, `/blu-audit-fix ${phaseNumber}`];
   const implementedCommands = await getPhasePlanImplementedCommandNames();
   if (implementedCommands === null || implementedCommands.size === 0) {
@@ -28437,7 +28452,8 @@ function buildPhaseVerificationTaskSchema(args) {
     summaryPaths: args.summaryPaths,
     readyAction: args.readyAction,
     repairActions: args.repairActions,
-    allowedActions: args.allowedActions
+    allowedActions: args.allowedActions,
+    noUat: args.readyAction === "/blu-progress"
   };
   return schema;
 }
@@ -28450,7 +28466,10 @@ async function phaseVerificationModelSchemas(args) {
     throw new Error("phase.verification modelContract does not expose a schemaPath.");
   }
   const baseSchema = cloneJsonObject2(modelContract.jsonSchema);
-  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
+  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(
+    args.phaseNumber,
+    args.noUat === true
+  );
   const taskSchema = buildPhaseVerificationTaskSchema({
     baseSchema,
     summaryPaths: args.summaryPaths,
@@ -29509,6 +29528,7 @@ function phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model) {
   const status = getValueAtJsonPointer(model, "/status");
   const nextSafeAction = getValueAtJsonPointer(model, "/nextSafeAction");
   const readyAction = typeof runtimeContext?.readyAction === "string" ? runtimeContext.readyAction : null;
+  const noUat = runtimeContext?.noUat === true;
   const repairActions = Array.isArray(runtimeContext?.repairActions) ? runtimeContext.repairActions.filter((value) => typeof value === "string") : [];
   const completeAction = typeof runtimeContext?.completeAction === "string" ? runtimeContext.completeAction : null;
   const continuationActions = Array.isArray(runtimeContext?.continuationActions) ? runtimeContext.continuationActions.filter((value) => typeof value === "string") : [];
@@ -29580,14 +29600,14 @@ function phaseValidationRouteDiagnostic(error2, pathValue, taskSchema, model) {
         source: "schema",
         path: "model.nextSafeAction",
         code: "schema.if",
-        message: `PASS verification models must route to ${readyAction} before UAT.`,
+        message: noUat ? `PASS verification models must route to ${readyAction} when workflow.no_uat is true.` : `PASS verification models must route to ${readyAction} before UAT.`,
         context: {
           keyword: error2.keyword,
           params: error2.params,
           schemaPath: error2.schemaPath,
           expectedAction: readyAction
         },
-        suggestion: `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
+        suggestion: noUat ? `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}; /blu-verify-work remains manual.` : `Keep PASS-only coverage rows and gap ledgers clean, then set model.nextSafeAction to ${readyAction}.`
       });
     }
     if (status === "PASS" && completeAction && nextSafeAction !== completeAction) {
@@ -31153,7 +31173,7 @@ function replacePhaseDetailStatus(raw, phaseNumber, nextStatus) {
     changed
   };
 }
-async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
+async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
   const roadmapPath = resolveBlueprintPath(projectRoot, `${BLUEPRINT_DIR}/ROADMAP.md`);
   if (!await pathExists(roadmapPath)) {
     return [];
@@ -31181,7 +31201,9 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
       continue;
     }
     const content = await fs4.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
-    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths) : validateUatArtifactContent(content, summaryPaths, {
+    const validation = artifact === "verification" ? validateVerificationArtifactContent(content, summaryPaths, {
+      noUat: options.noUat === true
+    }) : validateUatArtifactContent(content, summaryPaths, {
       requireReadyVerificationEvidence: true
     });
     if (validation.valid) {
@@ -31219,12 +31241,12 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved) {
     artifacts: phaseArtifacts
   });
   validationWarnings.push(...qualityGateEvaluation.warnings);
-  if (hasCompleteUat && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+  if ((hasCompleteUat || options.noUat === true) && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
     validationWarnings.push(
       `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${qualityGateEvaluation.missingGate === "review" ? "REVIEW evidence is missing" : "SECURITY evidence is missing"} for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).`
     );
   }
-  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && hasCompleteUat && qualityGateEvaluation.gatesSatisfied;
+  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true) && qualityGateEvaluation.gatesSatisfied;
   const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -33708,10 +33730,22 @@ function resolvedPhaseFromValidationContext(context) {
     phaseDir: context.phaseDir
   } : null;
 }
-function phaseValidationRoutingRules(phaseNumber) {
+async function readWorkflowNoUat(projectRoot) {
+  try {
+    const config2 = await blueprintConfigGet({
+      cwd: projectRoot,
+      scope: "effective"
+    });
+    return config2.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
+function phaseValidationRoutingRules(phaseNumber, noUat = false) {
   const phaseRef = phaseNumber ?? "<phase>";
+  const passRoute = noUat ? "PASS verification must use Readiness: ready for UAT and route to /blu-progress because workflow.no_uat=true; /blu-verify-work remains manual only." : `PASS verification must use Readiness: ready for UAT and route to /blu-verify-work ${phaseRef}.`;
   return [
-    `PASS verification must use Readiness: ready for UAT and route to /blu-verify-work ${phaseRef}.`,
+    passRoute,
     "PARTIAL or BLOCKED verification must use Readiness: not ready for UAT.",
     `Test-generation gaps route to /blu-add-tests ${phaseRef}; implementation or behavior gaps route to /blu-audit-fix ${phaseRef}.`,
     "UAT PASS is complete only when **Checkpoint:** is none; checkpointed UAT should route back to /blu-verify-work."
@@ -33850,6 +33884,7 @@ async function blueprintPhaseValidationAuthoringContext(args) {
     cwd: projectRoot,
     phase: resolved.phaseNumber
   });
+  const noUat = await readWorkflowNoUat(projectRoot);
   const completedSummaryPlanIds = new Set(summaryIndex.completedPlans);
   const summaryEvidence = await collectValidationAuthoringSummaryEvidence(
     projectRoot,
@@ -33871,7 +33906,8 @@ async function blueprintPhaseValidationAuthoringContext(args) {
   const modelSchemas = args.artifact === "verification" ? await phaseVerificationModelSchemas({
     contract,
     phaseNumber: resolved.phaseNumber,
-    summaryPaths: summaryEvidence.summaryPaths
+    summaryPaths: summaryEvidence.summaryPaths,
+    noUat
   }) : await phaseUatModelSchemas({
     contract,
     phaseNumber: resolved.phaseNumber,
@@ -33899,7 +33935,7 @@ async function blueprintPhaseValidationAuthoringContext(args) {
     baseSchema: modelSchemas.baseSchema,
     taskSchema: modelSchemas.taskSchema,
     allowedValues,
-    routingRules: phaseValidationRoutingRules(resolved.phaseNumber),
+    routingRules: phaseValidationRoutingRules(resolved.phaseNumber, noUat),
     warnings: summaryEvidence.warnings,
     reason: readyForDraft ? null : prerequisites.blockers.join(" ")
   };
@@ -33990,6 +34026,7 @@ async function blueprintPhaseValidationValidateModel(args) {
     }
   }
   let renderPreview = null;
+  const noUat = args.artifact === "verification" && resolved ? await readWorkflowNoUat(await ensureRepoRoot(args.cwd)) : false;
   if (diagnostics.length === 0 && normalizedModel && resolved) {
     const rendered = args.artifact === "verification" ? renderVerificationContent(
       {
@@ -34010,7 +34047,7 @@ async function blueprintPhaseValidationValidateModel(args) {
       },
       resolved
     );
-    const validation = args.artifact === "verification" ? validateVerificationArtifactContent(rendered, context.summaryPaths) : validateUatArtifactContent(rendered, context.summaryPaths, {
+    const validation = args.artifact === "verification" ? validateVerificationArtifactContent(rendered, context.summaryPaths, { noUat }) : validateUatArtifactContent(rendered, context.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
     for (const issue2 of validation.issues) {
@@ -34100,7 +34137,8 @@ async function blueprintPhaseValidationRender(args) {
     summaryIndex.summaries,
     completedSummaryPlanIds
   );
-  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths) : validateUatArtifactContent(content, summaryEvidence.summaryPaths, {
+  const noUat = await readWorkflowNoUat(projectRoot);
+  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, summaryEvidence.summaryPaths, { noUat }) : validateUatArtifactContent(content, summaryEvidence.summaryPaths, {
     requireReadyVerificationEvidence: true
   });
   const payloadIssues = args.artifact === "verification" ? verificationPayloadIssues(args) : uatPayloadIssues(args);
@@ -35709,7 +35747,8 @@ async function blueprintPhaseValidationRead(args) {
     completedSummaryPlanIds
   );
   const { summaryPaths: completedSummaryPaths, warnings: completedSummaryWarnings } = await collectValidatedSummaryPaths(projectRoot, completedSummaries);
-  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, completedSummaryPaths) : validateUatArtifactContent(content, completedSummaryPaths, {
+  const noUat = await readWorkflowNoUat(projectRoot);
+  const validation = args.artifact === "verification" ? validateVerificationArtifactContent(content, completedSummaryPaths, { noUat }) : validateUatArtifactContent(content, completedSummaryPaths, {
     requireReadyVerificationEvidence: true
   });
   const validationWithSummaryWarnings = {
@@ -35797,8 +35836,9 @@ async function blueprintPhaseValidationWrite(args) {
     projectRoot,
     completedSummaryRecords(summaryIndex.summaries, new Set(summaryIndex.completedPlans))
   );
+  const noUat = await readWorkflowNoUat(projectRoot);
   const artifactLabel = args.artifact === "verification" ? "verification" : "UAT";
-  const shouldSurfaceWarnings = args.artifact !== "verification";
+  const shouldSurfaceWarnings = args.artifact !== "verification" || noUat;
   const warnings = shouldSurfaceWarnings ? [...summaryWarnings] : [];
   if (summaryPaths.length === 0) {
     throw new Error(
@@ -35841,7 +35881,7 @@ async function blueprintPhaseValidationWrite(args) {
     valid: false,
     issues: [`${args.artifact} content must not be empty.`],
     warnings: []
-  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths) : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
+  } : args.artifact === "verification" ? validateVerificationArtifactContent(normalizedContent, completedSummaryPaths, { noUat }) : validateUatArtifactContent(normalizedContent, validationSummaryPaths, {
     requireReadyVerificationEvidence: true
   });
   if (args.artifact === "uat") {
@@ -35855,7 +35895,8 @@ async function blueprintPhaseValidationWrite(args) {
     const verificationContent = await fs4.readFile(verificationAbsolutePath, "utf8");
     const verificationValidation = validateVerificationArtifactContent(
       verificationContent,
-      completedSummaryPaths
+      completedSummaryPaths,
+      { noUat }
     );
     if (!verificationValidation.valid) {
       throw new Error(
@@ -35875,7 +35916,9 @@ async function blueprintPhaseValidationWrite(args) {
       summaryIndex.summaries,
       new Set(summaryIndex.completedPlans)
     );
-    const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths) : validateUatArtifactContent(existingContent, validationSummaryPaths, {
+    const existingValidation = args.artifact === "verification" ? validateVerificationArtifactContent(existingContent, existingReferencedSummaryPaths, {
+      noUat
+    }) : validateUatArtifactContent(existingContent, validationSummaryPaths, {
       requireReadyVerificationEvidence: true
     });
     const existingUatState = args.artifact === "uat" ? readUatArtifactState(existingContent) : null;
@@ -35901,8 +35944,8 @@ async function blueprintPhaseValidationWrite(args) {
       if (shouldSurfaceWarnings) {
         warnings.push(`Preserved existing ${args.artifact} artifact because the content was unchanged.`);
       }
-      if (args.artifact === "uat") {
-        warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+      if (args.artifact === "uat" || args.artifact === "verification" && noUat) {
+        warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat }));
       }
       return {
         phaseNumber: resolved.phaseNumber,
@@ -35958,8 +36001,8 @@ async function blueprintPhaseValidationWrite(args) {
   if (exists && shouldSurfaceWarnings) {
     warnings.push(`Replaced existing ${args.artifact} artifact: ${artifactPath}`);
   }
-  if (args.artifact === "uat") {
-    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved));
+  if (args.artifact === "uat" || args.artifact === "verification" && noUat) {
+    warnings.push(...await syncRoadmapPhaseCompletion(projectRoot, resolved, { noUat }));
   }
   return {
     phaseNumber: resolved.phaseNumber,
@@ -42774,7 +42817,7 @@ function validateModelExampleLeakage(content, contractId, artifactLabel) {
     (signal) => `${artifactLabel} still contains copied model example text from ${modelContract.schemaId}: ${signal}.`
   );
 }
-function validateVerificationArtifactContent(content, summaryPaths = []) {
+function validateVerificationArtifactContent(content, summaryPaths = [], options = {}) {
   const issues = [];
   const warnings = [];
   if (!/^# .+ - Verification(?:\r?\n|$)/.test(content)) {
@@ -42966,6 +43009,8 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
   const nextSafeAction = extractMarkdownSection5(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  const routesToProgress = nextActionCommands.some((command) => /^\/blu-progress$/i.test(command));
+  const routesToAcceptedPassAction = options.noUat ? routesToProgress || routesToVerifyWork : routesToVerifyWork;
   const routesToRepairCommand = nextActionCommands.some(
     (command) => VERIFICATION_REPAIR_COMMANDS.has(command.toLowerCase())
   );
@@ -42974,9 +43019,9 @@ function validateVerificationArtifactContent(content, summaryPaths = []) {
       "Verification artifact must not declare PASS while unresolved coverage, gap, or repair signals remain. Use PARTIAL or BLOCKED and route to /blu-audit-fix or /blu-add-tests as appropriate."
     );
   }
-  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
+  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToAcceptedPassAction) {
     issues.push(
-      "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
+      options.noUat ? "Verification artifact must route ready validation to /blu-progress under ## Next Safe Action when workflow.no_uat is true; /blu-verify-work remains valid only for explicit manual UAT handoff." : "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
     );
   }
   if ((gateState === "PARTIAL" || gateState === "BLOCKED" || readinessState === "not ready for UAT") && routesToVerifyWork) {
@@ -45257,6 +45302,17 @@ function createBootstrapValidationDiagnostic(artifact, message) {
     repair: BOOTSTRAP_REPAIR
   });
 }
+async function readWorkflowNoUat2(projectRoot) {
+  try {
+    const config2 = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    return config2.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
 async function blueprintArtifactValidate(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
   const inspection = await inspectBlueprintArtifacts(projectRoot);
@@ -45270,6 +45326,7 @@ async function blueprintArtifactValidate(args = {}) {
   );
   const bootstrapAssessment = await assessBootstrapRepoShape(projectRoot, inspection);
   const activeDiscussPhaseDraft = await isActiveDiscussPhaseDraft(projectRoot, inspection);
+  const noUat = await readWorkflowNoUat2(projectRoot);
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
     suggestedRepairs.add(
@@ -45458,7 +45515,7 @@ async function blueprintArtifactValidate(args = {}) {
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const raw = await fs5.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
-    const validation = validateVerificationArtifactContent(raw, summaryPaths);
+    const validation = validateVerificationArtifactContent(raw, summaryPaths, { noUat });
     for (const issue2 of validation.issues) {
       issues.push(`${artifact}: ${issue2}`);
     }
@@ -46314,9 +46371,10 @@ function extractSummaryDependencyPlanRows(content) {
 async function collectValidAddTestsValidationEvidencePaths(args) {
   const paths = [];
   const warnings = [];
+  const noUat = await readWorkflowNoUat2(args.projectRoot);
   for (const artifactPath of args.phaseFiles.filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md")).sort((left, right) => left.localeCompare(right))) {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
-    const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths) : validateUatArtifactContent(raw, args.summaryPaths, {
+    const validation = artifactPath.endsWith("-VERIFICATION.md") ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
     if (validation.valid) {
@@ -46668,11 +46726,12 @@ async function collectAuditFixSummaryInventory(args) {
 }
 async function collectValidAuditFixArtifactPath(args) {
   const warnings = [];
+  const noUat = await readWorkflowNoUat2(args.projectRoot);
   for (const artifactPath of args.phaseFiles.filter(
     (entry) => args.suffix === "-REVIEW.md" ? isNormalReviewArtifactPath(entry) : entry.endsWith(args.suffix)
   ).sort((left, right) => left.localeCompare(right))) {
     const raw = await fs5.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
-    const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths) : validateUatArtifactContent(raw, args.summaryPaths, {
+    const validation = args.suffix === "-REVIEW.md" ? validateReviewArtifactContent(raw, "code-review") : args.suffix === "-SECURITY.md" ? validateReviewArtifactContent(raw, "security") : args.suffix === "-VERIFICATION.md" ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat }) : validateUatArtifactContent(raw, args.summaryPaths, {
       requireReadyVerificationEvidence: true
     });
     if (validation.valid) {
@@ -50749,8 +50808,19 @@ function exactObjectPropertyContains3(propertyName, value) {
 function canonicalNoneTableRow(width) {
   return Array.from({ length: width }, () => "none");
 }
+async function readWorkflowNoUat3(projectRoot) {
+  try {
+    const config2 = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    return config2.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
 async function buildAllowedSecurityNextActions(args) {
-  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.uatRequired && args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
   const partialCandidate = "/blu-progress";
   const blockedNextSafeAction = "Blocked: pending-open-threat";
   const implementedCommands = await getImplementedCommandNames3();
@@ -51273,6 +51343,7 @@ async function buildSecurityAuthoringContext(args) {
   ]);
   const allowedNextActions = await buildAllowedSecurityNextActions({
     phaseNumber,
+    uatRequired: !await readWorkflowNoUat3(args.projectRoot),
     artifacts
   });
   const allowCompleted = completionWarnings.length === 0;
@@ -51321,7 +51392,7 @@ async function buildSecurityAuthoringContext(args) {
   };
 }
 async function buildAllowedUiReviewNextActions(args) {
-  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
+  const completedCandidate = args.artifacts.verification === null ? `/blu-validate-phase ${args.phaseNumber}` : args.uatRequired && args.artifacts.uat === null ? `/blu-verify-work ${args.phaseNumber}` : "/blu-progress";
   const implementedCommands = await getImplementedCommandNames3();
   const implementedOrProgress = (candidate) => {
     if (implementedCommands === null || implementedCommands.size === 0) {
@@ -51593,6 +51664,7 @@ async function buildUiReviewAuthoringContext(args) {
   const allowPass = summaryIndex.pendingPlans.length === 0 && executionTargets.blockers.lowerWavePendingPlanIds.length === 0;
   const nextActions = await buildAllowedUiReviewNextActions({
     phaseNumber,
+    uatRequired: !await readWorkflowNoUat3(args.projectRoot),
     artifacts
   });
   const uiReviewBaseSchema = cloneJsonObject4(modelContract.jsonSchema);

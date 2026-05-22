@@ -7153,9 +7153,14 @@ function validateModelExampleLeakage(
     );
 }
 
+type VerificationArtifactValidationOptions = {
+  noUat?: boolean;
+};
+
 export function validateVerificationArtifactContent(
   content: string,
-  summaryPaths: string[] = []
+  summaryPaths: string[] = [],
+  options: VerificationArtifactValidationOptions = {}
 ): {
   valid: boolean;
   issues: string[];
@@ -7393,6 +7398,10 @@ export function validateVerificationArtifactContent(
   const nextSafeAction = extractMarkdownSection(content, "Next Safe Action");
   const nextActionCommands = extractBlueprintCommands(nextSafeAction);
   const routesToVerifyWork = nextActionCommands.some((command) => /^\/blu-verify-work$/i.test(command));
+  const routesToProgress = nextActionCommands.some((command) => /^\/blu-progress$/i.test(command));
+  const routesToAcceptedPassAction = options.noUat
+    ? routesToProgress || routesToVerifyWork
+    : routesToVerifyWork;
   const routesToRepairCommand = nextActionCommands.some((command) =>
     VERIFICATION_REPAIR_COMMANDS.has(command.toLowerCase())
   );
@@ -7401,9 +7410,11 @@ export function validateVerificationArtifactContent(
       "Verification artifact must not declare PASS while unresolved coverage, gap, or repair signals remain. Use PARTIAL or BLOCKED and route to /blu-audit-fix or /blu-add-tests as appropriate."
     );
   }
-  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToVerifyWork) {
+  if (gateState === "PASS" && readinessState === "ready for UAT" && !routesToAcceptedPassAction) {
     issues.push(
-      "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
+      options.noUat
+        ? "Verification artifact must route ready validation to /blu-progress under ## Next Safe Action when workflow.no_uat is true; /blu-verify-work remains valid only for explicit manual UAT handoff."
+        : "Verification artifact must route ready-for-UAT validation to /blu-verify-work under ## Next Safe Action."
     );
   }
   if (
@@ -10605,6 +10616,19 @@ function createBootstrapValidationDiagnostic(
   });
 }
 
+async function readWorkflowNoUat(projectRoot: string): Promise<boolean> {
+  try {
+    const config = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+
+    return config.config.workflow.no_uat === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function blueprintArtifactValidate(
   args: ArtifactValidateArgs = {}
 ): Promise<ArtifactValidateResult> {
@@ -10620,6 +10644,7 @@ export async function blueprintArtifactValidate(
   );
   const bootstrapAssessment = await assessBootstrapRepoShape(projectRoot, inspection);
   const activeDiscussPhaseDraft = await isActiveDiscussPhaseDraft(projectRoot, inspection);
+  const noUat = await readWorkflowNoUat(projectRoot);
 
   if (!inspection.blueprintRootExists) {
     issues.push(`Missing ${BLUEPRINT_DIR}/ directory.`);
@@ -10867,7 +10892,7 @@ export async function blueprintArtifactValidate(
     const absolutePath = resolveBlueprintPath(projectRoot, artifact);
     const raw = await fs.readFile(absolutePath, "utf8");
     const summaryPaths = collectPhaseSummaryPathsForArtifact(inspection.phases, artifact);
-    const validation = validateVerificationArtifactContent(raw, summaryPaths);
+    const validation = validateVerificationArtifactContent(raw, summaryPaths, { noUat });
 
     for (const issue of validation.issues) {
       issues.push(`${artifact}: ${issue}`);
@@ -12191,13 +12216,14 @@ async function collectValidAddTestsValidationEvidencePaths(args: {
 }> {
   const paths: string[] = [];
   const warnings: string[] = [];
+  const noUat = await readWorkflowNoUat(args.projectRoot);
 
   for (const artifactPath of args.phaseFiles
     .filter((entry) => entry.endsWith("-VERIFICATION.md") || entry.endsWith("-UAT.md"))
     .sort((left, right) => left.localeCompare(right))) {
     const raw = await fs.readFile(resolveBlueprintPath(args.projectRoot, artifactPath), "utf8");
     const validation = artifactPath.endsWith("-VERIFICATION.md")
-      ? validateVerificationArtifactContent(raw, args.summaryPaths)
+      ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat })
       : validateUatArtifactContent(raw, args.summaryPaths, {
           requireReadyVerificationEvidence: true
         });
@@ -12701,6 +12727,7 @@ async function collectValidAuditFixArtifactPath(args: {
   warnings: string[];
 }> {
   const warnings: string[] = [];
+  const noUat = await readWorkflowNoUat(args.projectRoot);
 
   for (const artifactPath of args.phaseFiles
     .filter((entry) =>
@@ -12716,7 +12743,7 @@ async function collectValidAuditFixArtifactPath(args: {
         : args.suffix === "-SECURITY.md"
           ? validateReviewArtifactContent(raw, "security")
           : args.suffix === "-VERIFICATION.md"
-            ? validateVerificationArtifactContent(raw, args.summaryPaths)
+            ? validateVerificationArtifactContent(raw, args.summaryPaths, { noUat })
             : validateUatArtifactContent(raw, args.summaryPaths, {
                 requireReadyVerificationEvidence: true
               });

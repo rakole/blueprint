@@ -3,6 +3,7 @@ export declare function phaseVerificationModelSchemas(args: {
     contract: ArtifactContractReadResult;
     phaseNumber: string;
     summaryPaths: string[];
+    noUat?: boolean;
 }): Promise<{
     schemaPath: string;
     baseSchema: Record<string, unknown>;

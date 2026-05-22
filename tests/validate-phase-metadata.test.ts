@@ -53,7 +53,7 @@ test("validate-phase manifest stays thin while referencing the validation tools 
   assert.match(commandFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(commandFile, /explicit test-generation gaps[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(commandFile, /implementation\/behavior gaps[\s\S]*\/blu-audit-fix <phase>/i);
-  assert.match(commandFile, /if gateState == PASS[\s\S]*\/blu-verify-work <phase>/i);
+  assert.match(commandFile, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
   assert.match(commandFile, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(commandFile, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(commandFile, /else -> keep nextSafeAction on \/blu-validate-phase <phase>/i);
@@ -163,7 +163,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   assert.match(skillFile, /Run post-write `blueprint_artifact_validate` only after a successful write or reuse outcome/i);
   assert.match(skillFile, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(skillFile, /Route explicit test-generation gaps to `\/blu-add-tests <phase>` and implementation\/behavior gaps to `\/blu-audit-fix <phase>`/i);
-  assert.match(skillFile, /if gateState == PASS[\s\S]*\/blu-verify-work <phase>/i);
+  assert.match(skillFile, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
   assert.match(skillFile, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(skillFile, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(skillFile, /else -> keep nextSafeAction on \/blu-validate-phase <phase>/i);
@@ -188,7 +188,7 @@ test("validate-phase skill scopes required inputs to the active command and keep
   );
   assert.match(validateReference, /patch\.activeCommand: "\/blu-validate-phase"/);
   assert.match(validateReference, /## Pre-Write Routing Shorthand/);
-  assert.match(validateReference, /if gateState == PASS[\s\S]*\/blu-verify-work <phase>/i);
+  assert.match(validateReference, /if gateState == PASS[\s\S]*workflow\.no_uat[\s\S]*\/blu-progress[\s\S]*\/blu-verify-work <phase>/i);
   assert.match(validateReference, /else if explicit deferred-test or test-generation gaps remain[\s\S]*\/blu-add-tests <phase>/i);
   assert.match(validateReference, /else if implementation or behavior gaps remain[\s\S]*\/blu-audit-fix <phase>/i);
   assert.match(validateReference, /else -> keep nextSafeAction on \/blu-validate-phase <phase>/i);

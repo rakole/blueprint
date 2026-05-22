@@ -375,6 +375,7 @@ type BootstrapRoutingSignals = {
 type WorkflowRoutingSignals = {
   researchEnabled: boolean;
   uiPhaseEnabled: boolean;
+  uatRequired: boolean;
 };
 
 const DEFAULT_STATE: BlueprintState = {
@@ -1205,7 +1206,8 @@ async function inspectValidatedPhaseValidationArtifacts(
   projectRoot: string,
   phaseArtifacts: string[],
   phasePrefix: string,
-  summaryPaths: string[]
+  summaryPaths: string[],
+  options: { noUat?: boolean } = {}
 ): Promise<{
   hasVerification: boolean;
   verificationReadyForUat: boolean;
@@ -1250,7 +1252,9 @@ async function inspectValidatedPhaseValidationArtifacts(
     const content = await fs.readFile(resolveBlueprintPath(projectRoot, artifactPath), "utf8");
     const validation =
       artifact === "verification"
-        ? validateVerificationArtifactContent(content, summaryPaths)
+        ? validateVerificationArtifactContent(content, summaryPaths, {
+            noUat: options.noUat === true
+          })
         : validateUatArtifactContent(content, summaryPaths, {
             requireReadyVerificationEvidence: true
           });
@@ -1496,7 +1500,8 @@ async function inspectUiSpecReadiness(
 async function inspectCurrentPhaseArtifacts(
   projectRoot: string,
   inspectionPhases: string[],
-  currentPhase: string | null
+  currentPhase: string | null,
+  options: { noUat?: boolean } = {}
 ): Promise<CurrentPhaseArtifactStatus> {
   const warnings: string[] = [];
   const blockers: string[] = [];
@@ -1698,7 +1703,8 @@ async function inspectCurrentPhaseArtifacts(
     projectRoot,
     phaseArtifacts,
     phasePrefix,
-    summaryPaths
+    summaryPaths,
+    options
   );
   const hasPlans = planPaths.length > 0;
   const hasSummaries = summaryPaths.length > 0;
@@ -1933,7 +1939,8 @@ async function readRoadmapSignals(projectRoot: string): Promise<{
 async function inspectMilestoneEvidence(
   projectRoot: string,
   phaseArtifacts: string[],
-  phases: RoadmapPhaseSignal[]
+  phases: RoadmapPhaseSignal[],
+  options: { noUat?: boolean } = {}
 ): Promise<MilestoneEvidenceStatus> {
   const missingVerificationPhases: string[] = [];
   const missingUatPhases: string[] = [];
@@ -1988,7 +1995,8 @@ async function inspectMilestoneEvidence(
       projectRoot,
       phaseScopedArtifacts,
       phasePrefix,
-      summaryPaths
+      summaryPaths,
+      options
     );
 
     warnings.push(...summaryWarnings, ...validationWarnings);
@@ -2015,7 +2023,7 @@ async function inspectMilestoneEvidence(
       verificationRepairActions[phase.phaseNumber] = verificationNextSafeAction;
     }
 
-    if (!hasUat) {
+    if (!hasUat && options.noUat !== true) {
       missingUatPhases.push(phase.phaseNumber);
     }
 
@@ -2412,6 +2420,11 @@ async function deriveNextAction(args: {
   const completeMilestoneCommand = blueprintDirectCommand("complete-milestone");
   const milestoneSummaryCommand = blueprintDirectCommand("milestone-summary");
   const newMilestoneCommand = blueprintDirectCommand("new-milestone");
+  const currentPhaseHasAcceptanceEvidence =
+    args.phaseArtifacts.hasUat ||
+    (!args.workflow.uatRequired &&
+      args.phaseArtifacts.hasVerification &&
+      args.phaseArtifacts.verificationReadyForUat);
 
   if (!args.currentPhase || !args.phaseArtifacts.phaseDir) {
     return `${blueprintRunDirectCommand("progress")} to review the next safe Blueprint action`;
@@ -2589,12 +2602,13 @@ async function deriveNextAction(args: {
     args.phaseArtifacts.hasVerification &&
     args.phaseArtifacts.verificationReadyForUat &&
     !args.phaseArtifacts.hasUat &&
+    args.workflow.uatRequired &&
     implementedCommands.has(verifyWorkCommand)
   ) {
     return `Run ${verifyWorkCommand} ${args.currentPhase} to capture conversational UAT evidence`;
   }
 
-  if (args.phaseArtifacts.hasUat && args.phaseArtifacts.qualityGateNextAction) {
+  if (currentPhaseHasAcceptanceEvidence && args.phaseArtifacts.qualityGateNextAction) {
     return args.phaseArtifacts.qualityGateNextAction;
   }
 
@@ -2652,6 +2666,7 @@ async function deriveNextAction(args: {
     args.milestoneEvidence.missingVerificationPhases.length === 0 &&
     args.milestoneEvidence.verificationNotReadyPhases.length === 0 &&
     args.milestoneEvidence.missingUatPhases.length > 0 &&
+    args.workflow.uatRequired &&
     implementedCommands.has(verifyWorkCommand)
   ) {
     return `Run ${verifyWorkCommand} ${args.milestoneEvidence.missingUatPhases[0]} to restore missing milestone UAT evidence before closeout`;
@@ -2807,12 +2822,32 @@ async function buildSyncedState(
           currentPhase: normalizeSelectedPhase(existingState.currentPhase),
           nextAction: existingState.nextAction,
           roadmapCurrentPhase: roadmapSignals.currentPhase
-        })
+      })
       : null;
+  let workflowRouting: WorkflowRoutingSignals = {
+    researchEnabled: true,
+    uiPhaseEnabled: true,
+    uatRequired: true
+  };
+
+  try {
+    const effectiveConfig = await blueprintConfigGet({
+      scope: "effective",
+      cwd: projectRoot
+    });
+    workflowRouting = {
+      researchEnabled: effectiveConfig.config.workflow.research,
+      uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase,
+      uatRequired: effectiveConfig.config.workflow.no_uat !== true
+    };
+  } catch {
+    // Keep the hard-coded Blueprint defaults when config cannot be read.
+  }
   const milestoneEvidence = await inspectMilestoneEvidence(
     projectRoot,
     inspection.phases,
-    roadmapSignals.phases
+    roadmapSignals.phases,
+    { noUat: !workflowRouting.uatRequired }
   );
   const qualityGateDebtPhase =
     patch.activeCommand === undefined && patch.currentPhase === undefined
@@ -2911,29 +2946,13 @@ async function buildSyncedState(
   const currentPhaseArtifacts = await inspectCurrentPhaseArtifacts(
     projectRoot,
     inspection.phases,
-    currentPhase
+    currentPhase,
+    { noUat: !workflowRouting.uatRequired }
   );
   const bootstrapRouting: BootstrapRoutingSignals = {
     brownfieldDetected: bootstrapDiagnostics.brownfield.repoShape === "brownfield",
     codebaseMapped: bootstrapDiagnostics.brownfield.codebaseMapped
   };
-  let workflowRouting: WorkflowRoutingSignals = {
-    researchEnabled: true,
-    uiPhaseEnabled: true
-  };
-
-  try {
-    const effectiveConfig = await blueprintConfigGet({
-      scope: "effective",
-      cwd: projectRoot
-    });
-    workflowRouting = {
-      researchEnabled: effectiveConfig.config.workflow.research,
-      uiPhaseEnabled: effectiveConfig.config.workflow.ui_phase
-    };
-  } catch {
-    // Keep the hard-coded Blueprint defaults when config cannot be read.
-  }
   const blockers =
     projectStatus === "partial"
       ? [
@@ -3176,7 +3195,8 @@ export async function blueprintStateLoad(
             bootstrapRouting,
             workflow: {
               researchEnabled: true,
-              uiPhaseEnabled: true
+              uiPhaseEnabled: true,
+              uatRequired: true
             }
           })
         }

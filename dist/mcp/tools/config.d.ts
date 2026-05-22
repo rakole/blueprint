@@ -37,6 +37,7 @@ type BlueprintConfig = {
         nyquist_validation: boolean;
         ui_phase: boolean;
         ui_safety_gate: boolean;
+        no_uat: boolean;
         code_review: boolean;
         code_review_depth: string;
         auto_advance: boolean;

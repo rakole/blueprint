@@ -195,8 +195,8 @@ failure, ambiguous routing, and completion.
 
 - Do not make a phase-level completion claim from `/blu-execute-phase`. That
   waits for the `/blu-validate-phase` handoff.
-- `/blu-verify-work` remains the verifier follow-up once validation evidence
-  exists.
+- The validation/state tools choose `/blu-verify-work` or `/blu-progress`
+  from `workflow.no_uat` once validation evidence exists.
 - Route only to implemented commands. Prefer `/blu-progress` when the natural
   next step is ambiguous.
 

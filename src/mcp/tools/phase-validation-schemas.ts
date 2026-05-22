@@ -16,12 +16,15 @@ import {
   objectPropertyContainsAtLeast
 } from "./phase-task-schema-helpers.js";
 
-async function buildPhaseVerificationAllowedNextActions(phaseNumber: string): Promise<{
+async function buildPhaseVerificationAllowedNextActions(
+  phaseNumber: string,
+  noUat: boolean
+): Promise<{
   readyAction: string;
   repairActions: string[];
   allowedActions: string[];
 }> {
-  const readyAction = `/blu-verify-work ${phaseNumber}`;
+  const readyAction = noUat ? "/blu-progress" : `/blu-verify-work ${phaseNumber}`;
   const repairActions = [`/blu-add-tests ${phaseNumber}`, `/blu-audit-fix ${phaseNumber}`];
   const implementedCommands = await getPhasePlanImplementedCommandNames();
 
@@ -185,7 +188,8 @@ function buildPhaseVerificationTaskSchema(args: {
     summaryPaths: args.summaryPaths,
     readyAction: args.readyAction,
     repairActions: args.repairActions,
-    allowedActions: args.allowedActions
+    allowedActions: args.allowedActions,
+    noUat: args.readyAction === "/blu-progress"
   };
 
   return schema;
@@ -195,6 +199,7 @@ export async function phaseVerificationModelSchemas(args: {
   contract: ArtifactContractReadResult;
   phaseNumber: string;
   summaryPaths: string[];
+  noUat?: boolean;
 }): Promise<{
   schemaPath: string;
   baseSchema: Record<string, unknown>;
@@ -210,7 +215,10 @@ export async function phaseVerificationModelSchemas(args: {
   }
 
   const baseSchema = cloneJsonObject(modelContract.jsonSchema);
-  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(args.phaseNumber);
+  const allowedNextActions = await buildPhaseVerificationAllowedNextActions(
+    args.phaseNumber,
+    args.noUat === true
+  );
   const taskSchema = buildPhaseVerificationTaskSchema({
     baseSchema,
     summaryPaths: args.summaryPaths,

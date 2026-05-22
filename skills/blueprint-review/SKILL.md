@@ -364,8 +364,10 @@ artifacts, and optional review agents when the command contract allows them.
    authoring context is stale or incomplete. If the retry still fails, stop with
    the MCP reason and do not write the artifact by hand.
 22. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>`, and
-   otherwise `/blu-progress` only after all threats are closed or accepted.
+   `/blu-validate-phase <phase>`, then `/blu-verify-work <phase>` only when
+   UAT is required, and otherwise `/blu-progress` after all threats are closed
+   or accepted. When `workflow.no_uat=true`, missing UAT routes to
+   `/blu-progress` while `/blu-verify-work` remains manual.
    Repo-wide derived progress/state may still surface saved review remediation
    debt such as `/blu-code-review-fix <phase>` after security exists, but
    `/blu-secure-phase` itself must not emit that action. Do not emit next-step
@@ -437,9 +439,9 @@ artifacts, and optional review agents when the command contract allows them.
     the runtime contract, then retry once through MCP. If the retry still
     fails, stop with the MCP reason and do not write `.blueprint/` by hand.
 18. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-    `/blu-validate-phase`, then `/blu-verify-work`, and otherwise
-    `/blu-progress` depending on which lifecycle artifacts already exist and
-    whether follow-up UI work remains.
+    `/blu-validate-phase`, then `/blu-verify-work` only when UAT is required,
+    and otherwise `/blu-progress` depending on which lifecycle artifacts already
+    exist, `workflow.no_uat`, and whether follow-up UI work remains.
 
 ### `audit-fix`
 

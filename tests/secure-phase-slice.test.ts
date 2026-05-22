@@ -1051,14 +1051,31 @@ test("security missing threat-model context narrows authoring to PARTIAL or BLOC
 test("security nextSafeAction rejects code-review-fix and stays local to validation, UAT, or progress routing", async (t) => {
   const missingValidationRepo = await createSecurePhaseRepo();
   const missingUatRepo = await createSecurePhaseRepo();
+  const missingUatNoUatRepo = await createSecurePhaseRepo();
   const completeRepo = await createSecurePhaseRepo();
   t.after(async () => {
     await rm(path.dirname(missingValidationRepo), { recursive: true, force: true });
     await rm(path.dirname(missingUatRepo), { recursive: true, force: true });
+    await rm(path.dirname(missingUatNoUatRepo), { recursive: true, force: true });
     await rm(path.dirname(completeRepo), { recursive: true, force: true });
   });
 
   await writeSecurityLifecycleArtifacts(missingUatRepo, { verification: true });
+  await writeSecurityLifecycleArtifacts(missingUatNoUatRepo, { verification: true });
+  await writeFile(
+    path.join(missingUatNoUatRepo, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          no_uat: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
   await writeSecurityLifecycleArtifacts(completeRepo, { verification: true, uat: true });
 
   const scenarios = [
@@ -1069,6 +1086,10 @@ test("security nextSafeAction rejects code-review-fix and stays local to validat
     {
       repoPath: missingUatRepo,
       expectedAction: "/blu-verify-work 5"
+    },
+    {
+      repoPath: missingUatNoUatRepo,
+      expectedAction: "/blu-progress"
     },
     {
       repoPath: completeRepo,

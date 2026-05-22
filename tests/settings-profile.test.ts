@@ -109,6 +109,7 @@ test("config_set persists normalized version 2 config for initialized repos", as
   assert.match(normalizedConfigText, /"version": 2/);
   assert.equal((config.planning as Record<string, unknown>).commit_docs, false);
   assert.equal((config.workflow as Record<string, unknown>).verifier, false);
+  assert.equal((config.workflow as Record<string, unknown>).no_uat, false);
   assert.equal((config.workflow as Record<string, unknown>).subagents, true);
   assert.equal(config.model_profile, "balanced");
   assert.deepEqual(config.ux, {
@@ -148,6 +149,7 @@ test("config_set_profile changes only model_profile and leaves saved defaults un
   expectedConfig.model_profile = "budget";
   expectedConfig.workflow = {
     ...(expectedConfig.workflow as Record<string, unknown>),
+    no_uat: false,
     subagents: true
   };
   expectedConfig.ux = {
@@ -256,6 +258,7 @@ test("legacy and minimal config inputs are upgraded to the full schema on write"
   assert.equal((config.planning as Record<string, unknown>).search_gitignored, true);
   assert.equal((config.parallelization as Record<string, unknown>).enabled, false);
   assert.equal(workflow.research, false);
+  assert.equal(workflow.no_uat, false);
   assert.equal("use_workspaces" in workflow, false);
   assert.equal("use_workstreams" in workflow, false);
   assert.equal("hooks" in config, false);
@@ -318,6 +321,36 @@ test("config_get defaults workflow.subagents to true and project patches can dis
   assert.equal((savedConfig.workflow as Record<string, unknown>).subagents, false);
 });
 
+test("config_get defaults workflow.no_uat to false and project patches can enable it", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const before = await blueprintConfigGet({
+    cwd: repoPath,
+    scope: "effective"
+  });
+
+  assert.equal(before.config.workflow.no_uat, false);
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        no_uat: true
+      }
+    }
+  });
+  const savedConfig = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+
+  assert.equal(result.config.workflow.no_uat, true);
+  assert.deepEqual(result.updatedKeys, ["workflow.no_uat"]);
+  assert.equal((savedConfig.workflow as Record<string, unknown>).no_uat, true);
+});
+
 test("config_set ignores invalid workflow.subagents values and warns", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   t.after(async () => {
@@ -336,6 +369,26 @@ test("config_set ignores invalid workflow.subagents values and warns", async (t)
   assert.equal(result.config.workflow.subagents, true);
   assert.equal(result.updatedKeys.includes("workflow.subagents"), false);
   assert.match(result.warnings.join("\n"), /Ignored invalid config type for workflow\.subagents/);
+});
+
+test("config_set ignores invalid workflow.no_uat values and warns", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        no_uat: "enabled"
+      }
+    }
+  });
+
+  assert.equal(result.config.workflow.no_uat, false);
+  assert.equal(result.updatedKeys.includes("workflow.no_uat"), false);
+  assert.match(result.warnings.join("\n"), /Ignored invalid config type for workflow\.no_uat/);
 });
 
 test("defaults-scope writes for effectiveness-spine keys participate in effective precedence until project override", async (t) => {

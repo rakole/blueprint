@@ -50,6 +50,7 @@ type BlueprintConfig = {
     nyquist_validation: boolean;
     ui_phase: boolean;
     ui_safety_gate: boolean;
+    no_uat: boolean;
     code_review: boolean;
     code_review_depth: string;
     auto_advance: boolean;
@@ -239,6 +240,7 @@ function getHardCodedConfig(): BlueprintConfig {
       nyquist_validation: true,
       ui_phase: true,
       ui_safety_gate: true,
+      no_uat: false,
       code_review: true,
       code_review_depth: "standard",
       auto_advance: false,
