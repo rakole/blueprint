@@ -1126,6 +1126,33 @@ test("workflow.code_review false still routes UAT-complete UI phases to ui-revie
   assert.doesNotMatch(status.nextAction, /\/blu-code-review|\/blu-secure-phase/);
 });
 
+test("workflow.code_review false ignores saved review remediation debt", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withVerification: false,
+        withUat: false,
+        withReview: true,
+        withSecurity: true,
+        reviewNextSafeAction: "/blu-code-review-fix 1"
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+
+  assert.match(status.nextAction, /\/blu-validate-phase 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review-fix|\/blu-secure-phase/);
+});
+
 test("UAT-complete UI phase with no reviewable files still routes to ui-review", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
