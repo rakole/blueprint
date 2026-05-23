@@ -422,6 +422,11 @@ const STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS: ReadonlySet<string> = new S
   blueprintDirectCommand("verify-work"),
   blueprintDirectCommand("add-tests")
 ]);
+const BLOCKING_UAT_REPAIR_COMMANDS: ReadonlySet<string> = new Set([
+  blueprintDirectCommand("verify-work"),
+  blueprintDirectCommand("audit-fix"),
+  blueprintDirectCommand("add-tests")
+]);
 
 const stateUpdateInputSchema = {
   cwd: z.string().optional(),
@@ -1434,6 +1439,7 @@ function implementedBlockingUatNextSafeAction(
 
   if (
     uatNextCommand === null ||
+    !BLOCKING_UAT_REPAIR_COMMANDS.has(uatNextCommand) ||
     uatNextCommand === blueprintDirectCommand("progress") ||
     !implementedCommands.has(uatNextCommand)
   ) {
@@ -1485,7 +1491,12 @@ function formatPhaseQualityGateWarning(args: {
   subject: string;
   evaluation: Pick<
     PhaseQualityGateEvaluation,
-    "missingGate" | "reviewableFiles" | "requiresCodeReview" | "reviewNextSafeAction" | "hasSecurity"
+    | "missingGate"
+    | "reviewableFiles"
+    | "requiresCodeReview"
+    | "reviewNextSafeAction"
+    | "hasSecurity"
+    | "reviewDebtKind"
   >;
 }): string | null {
   const debtReason = formatPhaseQualityGateDebtReason(args.evaluation);

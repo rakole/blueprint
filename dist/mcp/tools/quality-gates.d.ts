@@ -33,13 +33,14 @@ export type PhaseQualityGateEvaluation = {
     missingGate: PhaseQualityGateMissingGate;
     warnings: string[];
     reviewNextSafeAction: string | null;
+    reviewDebtKind: "remediation" | "follow-up" | null;
 };
 export type PhaseQualityGateRoutingArgs = {
     implementedCommandNames: Set<string>;
     phaseNumber: string;
-    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction">;
+    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction" | "reviewDebtKind">;
 };
 export declare function isReviewableRepoFile(relativePath: string): boolean;
 export declare function evaluatePhaseQualityGates(args: PhaseQualityGateEvaluationArgs): Promise<PhaseQualityGateEvaluation>;
-export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity">): string | null;
+export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity" | "reviewDebtKind">): string | null;
 export declare function buildPhaseQualityGateNextAction(args: PhaseQualityGateRoutingArgs): string | null;
