@@ -55,6 +55,21 @@ export type BlueprintState = {
   lastUpdated: string;
 };
 
+export type BlueprintStateMetadata = {
+  blueprint_state_version: "1.0";
+  milestone: string;
+  status: string;
+  current_phase: string;
+  active_command: string;
+  next_action: string;
+  last_updated: string;
+  progress: {
+    total_phases: number;
+    completed_phases: number;
+    percent: number;
+  };
+};
+
 type StateUpdateArgs = {
   cwd?: string;
   base?: "stored" | "synced";
@@ -73,6 +88,7 @@ type StateLoadArgs = {
 
 type StateLoadResult = {
   state: BlueprintState;
+  metadata: BlueprintStateMetadata;
   blockers: string[];
   derivedStatus: {
     projectStatus: string;
@@ -396,6 +412,7 @@ const DEFAULT_STATE: BlueprintState = {
   lastUpdated: new Date(0).toISOString()
 };
 
+const BLUEPRINT_STATE_METADATA_VERSION = "1.0" as const;
 const PAUSE_HANDOFF_REPORT_PATH = ".blueprint/reports/pause-work-latest.md";
 const PAUSE_WORK_COMMAND = blueprintDirectCommand("pause-work");
 const RESUME_WORK_COMMAND = blueprintDirectCommand("resume-work");
@@ -703,7 +720,169 @@ function buildPauseHandoffNextAction(
     : `Run ${RESUME_WORK_COMMAND} to restore the saved pause handoff and recover the next safe implemented action`;
 }
 
-function renderStateDocument(state: BlueprintState): string {
+function quoteStateMetadataScalar(value: string): string {
+  return JSON.stringify(value);
+}
+
+function parseStateMetadataScalar(value: string): string {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+
+      return typeof parsed === "string" ? parsed : trimmed;
+    } catch {
+      return trimmed.slice(1, -1);
+    }
+  }
+
+  return trimmed;
+}
+
+function parseStateMetadataNumber(value: string | undefined): number | null {
+  const parsed = value === undefined ? Number.NaN : Number.parseInt(value.trim(), 10);
+
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function parseStateMetadataFrontmatter(frontmatter: string): BlueprintStateMetadata | null {
+  const scalars = new Map<string, string>();
+  const progress = new Map<string, string>();
+  let inProgress = false;
+
+  for (const rawLine of frontmatter.split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+
+    if (line.trim().length === 0) {
+      continue;
+    }
+
+    if (line === "progress:") {
+      inProgress = true;
+      continue;
+    }
+
+    const progressMatch = inProgress ? line.match(/^  ([a-z_]+):\s*(.+)$/) : null;
+
+    if (progressMatch) {
+      progress.set(progressMatch[1] ?? "", progressMatch[2] ?? "");
+      continue;
+    }
+
+    inProgress = false;
+    const scalarMatch = line.match(/^([a-z_]+):\s*(.+)$/);
+
+    if (scalarMatch) {
+      scalars.set(scalarMatch[1] ?? "", parseStateMetadataScalar(scalarMatch[2] ?? ""));
+    }
+  }
+
+  const totalPhases = parseStateMetadataNumber(progress.get("total_phases"));
+  const completedPhases = parseStateMetadataNumber(progress.get("completed_phases"));
+  const percent = parseStateMetadataNumber(progress.get("percent"));
+
+  if (
+    scalars.get("blueprint_state_version") !== BLUEPRINT_STATE_METADATA_VERSION ||
+    !scalars.has("milestone") ||
+    !scalars.has("status") ||
+    !scalars.has("current_phase") ||
+    !scalars.has("active_command") ||
+    !scalars.has("next_action") ||
+    !scalars.has("last_updated") ||
+    totalPhases === null ||
+    completedPhases === null ||
+    percent === null
+  ) {
+    return null;
+  }
+
+  return {
+    blueprint_state_version: BLUEPRINT_STATE_METADATA_VERSION,
+    milestone: scalars.get("milestone") ?? "",
+    status: scalars.get("status") ?? "",
+    current_phase: scalars.get("current_phase") ?? "",
+    active_command: scalars.get("active_command") ?? "",
+    next_action: scalars.get("next_action") ?? "",
+    last_updated: scalars.get("last_updated") ?? "",
+    progress: {
+      total_phases: totalPhases,
+      completed_phases: completedPhases,
+      percent
+    }
+  };
+}
+
+function stripStateFrontmatter(raw: string): {
+  body: string;
+  metadata: BlueprintStateMetadata | null;
+} {
+  const match = raw.match(/^\s*---\r?\n([\s\S]*?)\r?\n---\s*/);
+
+  if (!match || match.index !== 0) {
+    return {
+      body: raw,
+      metadata: null
+    };
+  }
+
+  return {
+    body: raw.slice(match[0].length),
+    metadata: parseStateMetadataFrontmatter(match[1] ?? "")
+  };
+}
+
+function buildStateMetadata(
+  state: BlueprintState,
+  roadmapSignals: Pick<Awaited<ReturnType<typeof readRoadmapSignals>>, "phases">
+): BlueprintStateMetadata {
+  const totalPhases = roadmapSignals.phases.length;
+  const completedPhases = roadmapSignals.phases.filter((phase) => phase.completed).length;
+  const percent =
+    totalPhases === 0 ? 0 : Math.round((completedPhases / totalPhases) * 100);
+
+  return {
+    blueprint_state_version: BLUEPRINT_STATE_METADATA_VERSION,
+    milestone: state.currentMilestone,
+    status: state.projectStatus,
+    current_phase: state.currentPhase,
+    active_command: state.activeCommand,
+    next_action: state.nextAction,
+    last_updated: state.lastUpdated,
+    progress: {
+      total_phases: totalPhases,
+      completed_phases: completedPhases,
+      percent
+    }
+  };
+}
+
+async function buildStateMetadataForProject(
+  projectRoot: string,
+  state: BlueprintState
+): Promise<BlueprintStateMetadata> {
+  return buildStateMetadata(state, await readRoadmapSignals(projectRoot));
+}
+
+function renderStateMetadataFrontmatter(metadata: BlueprintStateMetadata): string {
+  return `---
+blueprint_state_version: ${metadata.blueprint_state_version}
+milestone: ${metadata.milestone}
+status: ${metadata.status}
+current_phase: ${quoteStateMetadataScalar(metadata.current_phase)}
+active_command: ${metadata.active_command}
+next_action: ${quoteStateMetadataScalar(metadata.next_action)}
+last_updated: ${quoteStateMetadataScalar(metadata.last_updated)}
+progress:
+  total_phases: ${metadata.progress.total_phases}
+  completed_phases: ${metadata.progress.completed_phases}
+  percent: ${metadata.progress.percent}
+---
+
+`;
+}
+
+function renderStateDocument(state: BlueprintState, metadata: BlueprintStateMetadata): string {
   const blockers =
     state.blockers.length === 0 ? "- none" : state.blockers.map((item) => `- ${item}`).join("\n");
   const roadmapEvolutionNotes =
@@ -713,7 +892,7 @@ function renderStateDocument(state: BlueprintState): string {
           .map((item) => `- ${item}`)
           .join("\n")}\n`;
 
-  return `# Blueprint State
+  return `${renderStateMetadataFrontmatter(metadata)}# Blueprint State
 
 - Project status: ${state.projectStatus}
 - Current milestone: ${state.currentMilestone}
@@ -730,13 +909,14 @@ ${roadmapEvolutionNotes}
 }
 
 function parseStateDocument(raw: string): BlueprintState {
+  const { body } = stripStateFrontmatter(raw);
   const getLineValue = (label: string): string | null => {
-    const match = raw.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
+    const match = body.match(new RegExp(`^- ${label}:\\s*(.+)$`, "m"));
     return match ? match[1].trim() : null;
   };
 
-  const blockersSection = extractMarkdownSection(raw, "Blockers");
-  const roadmapEvolutionNotesSection = extractMarkdownSection(raw, "Roadmap Evolution Notes");
+  const blockersSection = extractMarkdownSection(body, "Blockers");
+  const roadmapEvolutionNotesSection = extractMarkdownSection(body, "Roadmap Evolution Notes");
   const blockers = blockersSection
     .split("\n")
     .map((line) => line.trim())
@@ -2994,6 +3174,7 @@ async function buildSyncedState(
   patch: Pick<Partial<BlueprintState>, "activeCommand" | "currentPhase"> = {}
 ): Promise<{
   state: BlueprintState;
+  metadata: BlueprintStateMetadata;
   warnings: string[];
   milestoneAuditReport: MilestoneAuditReportStatus;
 }> {
@@ -3210,42 +3391,45 @@ async function buildSyncedState(
   warnings.push(...milestoneEvidence.warnings);
   warnings.push(...pauseHandoff.warnings);
 
+  const state: BlueprintState = {
+    projectStatus,
+    currentMilestone,
+    currentPhase,
+    activeCommand:
+      projectStatus === "partial"
+        ? blueprintDirectCommand("health")
+        : activePauseHandoff
+          ? PAUSE_WORK_COMMAND
+          : existingState.activeCommand,
+    nextAction:
+      activePauseHandoff && pauseHandoff.handoff
+        ? buildPauseHandoffNextAction(currentPhase, pauseHandoff.handoff)
+        : await deriveNextAction({
+            projectStatus,
+            blockers,
+            currentPhase,
+            currentMilestone,
+            allPhasesComplete: roadmapSignals.allPhasesComplete,
+            milestoneAuditReport,
+            hasMilestoneCompletion:
+              milestoneCompletionReportPath !== null &&
+              inspection.reports.includes(milestoneCompletionReportPath),
+            hasMilestoneSummary:
+              milestoneSummaryReportPath !== null &&
+              inspection.reports.includes(milestoneSummaryReportPath),
+            phaseArtifacts: currentPhaseArtifacts,
+            milestoneEvidence,
+            bootstrapRouting,
+            workflow: workflowRouting
+          }),
+    blockers,
+    roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
+    lastUpdated: new Date().toISOString()
+  };
+
   return {
-    state: {
-      projectStatus,
-      currentMilestone,
-      currentPhase,
-      activeCommand:
-        projectStatus === "partial"
-          ? blueprintDirectCommand("health")
-          : activePauseHandoff
-            ? PAUSE_WORK_COMMAND
-            : existingState.activeCommand,
-      nextAction:
-        activePauseHandoff && pauseHandoff.handoff
-          ? buildPauseHandoffNextAction(currentPhase, pauseHandoff.handoff)
-          : await deriveNextAction({
-              projectStatus,
-              blockers,
-              currentPhase,
-              currentMilestone,
-              allPhasesComplete: roadmapSignals.allPhasesComplete,
-              milestoneAuditReport,
-              hasMilestoneCompletion:
-                milestoneCompletionReportPath !== null &&
-                inspection.reports.includes(milestoneCompletionReportPath),
-              hasMilestoneSummary:
-                milestoneSummaryReportPath !== null &&
-                inspection.reports.includes(milestoneSummaryReportPath),
-              phaseArtifacts: currentPhaseArtifacts,
-              milestoneEvidence,
-              bootstrapRouting,
-              workflow: workflowRouting
-            }),
-      blockers,
-      roadmapEvolutionNotes: existingState.roadmapEvolutionNotes,
-      lastUpdated: new Date().toISOString()
-    },
+    state,
+    metadata: buildStateMetadata(state, roadmapSignals),
     warnings,
     milestoneAuditReport
   };
@@ -3442,6 +3626,10 @@ export async function blueprintStateLoad(
   const currentPhase = readOnlyBootstrapState ? null : state.currentPhase;
   const blockers = state.blockers;
   const nextAction = state.nextAction;
+  const metadata =
+    readOnlyBootstrapState
+      ? await buildStateMetadataForProject(projectRoot, state)
+      : syncedState!.metadata;
   const milestoneAuditReport =
     readOnlyBootstrapState
       ? emptyMilestoneAuditReportStatus()
@@ -3449,6 +3637,7 @@ export async function blueprintStateLoad(
 
   return {
     state,
+    metadata,
     blockers,
     derivedStatus: {
       projectStatus: inspection.readiness,
@@ -3544,8 +3733,10 @@ export async function blueprintStateUpdate(
   });
 
   const warnings = [...(synced?.warnings ?? [])];
+  const metadata = await buildStateMetadataForProject(projectRoot, nextState);
+
   warnings.push(
-    ...await writeTextFile(statePath, renderStateDocument(nextState), {
+    ...await writeTextFile(statePath, renderStateDocument(nextState, metadata), {
       label: BLUEPRINT_STATE_PATH
     })
   );
@@ -3570,7 +3761,7 @@ export async function blueprintStateSync(
       JSON.stringify(currentState[field]) !== JSON.stringify(nextState[field])
   );
 
-  await writeTextFile(statePath, renderStateDocument(nextState), {
+  await writeTextFile(statePath, renderStateDocument(nextState, synced.metadata), {
     label: BLUEPRINT_STATE_PATH
   });
 
@@ -3584,7 +3775,7 @@ export async function blueprintStateSync(
 export const stateToolDefinitions = [
   {
     name: "blueprint_state_load",
-    description: "Load Blueprint STATE.md together with derived project status signals.",
+    description: "Load Blueprint STATE.md together with derived metadata and project status signals.",
     inputSchema: stateLoadInputSchema,
     handler: async (args: Record<string, unknown>) =>
       blueprintStateLoad(args as StateLoadArgs)

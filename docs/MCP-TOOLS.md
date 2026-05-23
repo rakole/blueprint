@@ -38,7 +38,7 @@ These are the tool names actually registered by `src/mcp/server.ts` today. Futur
 
 | Tool | Purpose | Returns |
 |---|---|---|
-| `blueprint_state_load` | Load stored state together with derived routing signals, including `derivedStatus.milestoneAudit` | `{state, blockers, derivedStatus}` |
+| `blueprint_state_load` | Load stored state together with derived metadata and routing signals, including `derivedStatus.milestoneAudit`; metadata mirrors the generated `STATE.md` frontmatter and stays derived from body/runtime truth | `{state, metadata, blockers, derivedStatus}` |
 | `blueprint_state_update` | Patch `STATE.md` deterministically; phase-scoped next actions are rejected when the matching current-phase context path is missing | `{updatedFields, statePath, warnings}` |
 | `blueprint_pause_handoff_get` | Read the latest `pause-work` handoff report | `{found, path, handoff, reason, warnings}` |
 | `blueprint_pause_handoff_write` | Persist the latest `pause-work` handoff report with overwrite protection | `{path, written, created, overwritten, status, handoff, warnings}` |

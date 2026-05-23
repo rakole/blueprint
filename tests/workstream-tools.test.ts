@@ -219,6 +219,67 @@ test("workstream mutate supports create, switch, resume, and complete while keep
   assert.match(indexContent, /`beta-stream`/);
 });
 
+test("workstream snapshots and resumes frontmatter-bearing STATE.md documents", async (t) => {
+  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-frontmatter-"));
+  t.after(async () => {
+    await fs.rm(tempRoot, { recursive: true, force: true });
+  });
+
+  const repoPath = await createBlueprintRepo(tempRoot, "repo");
+  const stateDocument = await fs.readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.match(stateDocument, /^---\nblueprint_state_version: 1\.0/m);
+
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Alpha Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "create",
+    workstream: "Beta Stream"
+  });
+  await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "switch",
+    workstream: "beta-stream"
+  });
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      currentPhase: "2",
+      activeCommand: "/blu-execute-phase",
+      nextAction: "Run /blu-verify-work 2"
+    }
+  });
+
+  const resumed = await blueprintWorkstreamMutate({
+    cwd: repoPath,
+    operation: "resume",
+    workstream: "alpha-stream"
+  });
+  const alphaState = JSON.parse(
+    await fs.readFile(
+      path.join(repoPath, ".blueprint/workstreams/alpha-stream/state.json"),
+      "utf8"
+    )
+  ) as {
+    stateSnapshot: {
+      currentPhase: string;
+      activeCommand: string;
+      nextAction: string;
+    } | null;
+  };
+
+  assert.equal(resumed.status, "updated");
+  assert.equal(resumed.statePatch?.currentPhase, "1");
+  assert.equal(resumed.statePatch?.activeCommand, "/blu-plan-phase");
+  assert.equal(alphaState.stateSnapshot?.currentPhase, "1");
+  assert.equal(alphaState.stateSnapshot?.activeCommand, "/blu-plan-phase");
+  assert.equal(alphaState.stateSnapshot?.nextAction, "Run /blu-execute-phase 1");
+});
+
 test("switching the active workstream blocks on dirty non-Blueprint repo changes", async (t) => {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-workstreams-dirty-"));
   t.after(async () => {

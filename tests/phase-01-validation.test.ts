@@ -23,7 +23,12 @@ import {
 } from "../src/mcp/tools/artifacts.js";
 import { blueprintConfigSet } from "../src/mcp/tools/config.js";
 import { blueprintProjectInit, blueprintProjectStatus } from "../src/mcp/tools/project.js";
-import { blueprintStateLoad, blueprintStateUpdate, loadBlueprintState } from "../src/mcp/tools/state.js";
+import {
+  blueprintStateLoad,
+  blueprintStateSync,
+  blueprintStateUpdate,
+  loadBlueprintState
+} from "../src/mcp/tools/state.js";
 import {
   shippedExtensionHosts,
   type ExtensionHost
@@ -109,6 +114,10 @@ function buildBootstrapSeed(): BootstrapSeed {
     ],
     assumptions: ["Fixture bootstrap exists only to exercise config and state tools."]
   };
+}
+
+function countStateFrontmatterDelimiters(content: string): number {
+  return content.match(/^---$/gm)?.length ?? 0;
 }
 
 test("root router and shipped host contexts stay aligned with the Phase 1 routing contract", async () => {
@@ -208,9 +217,46 @@ test("state_update patches STATE.md deterministically and reports updated fields
   assert.ok(result.updatedFields.includes("blockers"));
   assert.ok(result.updatedFields.includes("lastUpdated"));
   assert.deepEqual(result.warnings, []);
+  assert.match(stateDocument, /^---\nblueprint_state_version: 1\.0/m);
+  assert.match(stateDocument, /^milestone: v1$/m);
+  assert.match(stateDocument, /^status: initialized$/m);
+  assert.match(stateDocument, /^current_phase: "1"$/m);
+  assert.match(stateDocument, /^next_action: "Run \/blu-health"$/m);
+  assert.match(stateDocument, /^  total_phases: 1$/m);
+  assert.match(stateDocument, /^  completed_phases: 0$/m);
+  assert.match(stateDocument, /^  percent: 0$/m);
+  assert.equal(countStateFrontmatterDelimiters(stateDocument), 2);
   assert.match(stateDocument, /- Next action: Run \/blu-health/);
   assert.match(stateDocument, /## Blockers/);
   assert.match(stateDocument, /- Need roadmap review/);
+});
+
+test("state_sync writes STATE.md frontmatter from roadmap phase progress", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+
+  const result = await blueprintStateSync({ cwd: repoPath });
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(result.statePath, ".blueprint/STATE.md");
+  assert.ok(Array.isArray(result.warnings));
+  assert.match(stateDocument, /^---\nblueprint_state_version: 1\.0/m);
+  assert.match(stateDocument, /^milestone: v1$/m);
+  assert.match(stateDocument, /^status: initialized$/m);
+  assert.match(stateDocument, /^current_phase: "1"$/m);
+  assert.match(stateDocument, /^  total_phases: 1$/m);
+  assert.match(stateDocument, /^  completed_phases: 0$/m);
+  assert.match(stateDocument, /^  percent: 0$/m);
+  assert.match(stateDocument, /\n# Blueprint State\n/);
+  assert.equal(countStateFrontmatterDelimiters(stateDocument), 2);
 });
 
 test("state_update normalizes directory-shaped currentPhase patches", async (t) => {
@@ -307,6 +353,86 @@ test("legacy STATE.md files without roadmap evolution notes still parse cleanly"
   assert.deepEqual(parsed.roadmapEvolutionNotes, []);
   assert.deepEqual(parsed.blockers, []);
   assert.equal(parsed.currentPhase, "1");
+});
+
+test("stale STATE.md frontmatter is ignored when body fields disagree", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `---
+blueprint_state_version: 1.0
+milestone: stale
+status: partial
+current_phase: "99"
+active_command: /blu-health
+next_action: "Run /blu-health"
+last_updated: "1999-01-01T00:00:00.000Z"
+progress:
+  total_phases: 99
+  completed_phases: 99
+  percent: 100
+---
+
+# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 02-lets-do-some-work
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-20T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const parsed = await loadBlueprintState(repoPath);
+
+  assert.equal(parsed.projectStatus, "initialized");
+  assert.equal(parsed.currentMilestone, "v1");
+  assert.equal(parsed.currentPhase, "2");
+  assert.equal(parsed.activeCommand, "/blu-progress");
+  assert.equal(parsed.nextAction, "Run /blu-progress");
+  assert.equal(parsed.lastUpdated, "2026-04-20T00:00:00.000Z");
+});
+
+test("repeated state update and sync keep a single STATE.md frontmatter block", async (t) => {
+  const repoPath = await createRepoFromFixture("fresh-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await blueprintProjectInit({
+    cwd: repoPath,
+    bootstrapMode: "auto",
+    bootstrapSeed: buildBootstrapSeed()
+  });
+  await blueprintStateUpdate({
+    cwd: repoPath,
+    patch: {
+      activeCommand: "/blu-progress"
+    }
+  });
+  await blueprintStateSync({ cwd: repoPath });
+
+  const stateDocument = await readFile(path.join(repoPath, ".blueprint/STATE.md"), "utf8");
+
+  assert.equal(countStateFrontmatterDelimiters(stateDocument), 2);
+  assert.equal(stateDocument.match(/blueprint_state_version:/g)?.length, 1);
+  assert.match(stateDocument, /^---\nblueprint_state_version: 1\.0/m);
+  assert.match(stateDocument, /\n# Blueprint State\n/);
 });
 
 test("loadBlueprintState normalizes directory-shaped current phase values from STATE.md", async (t) => {
