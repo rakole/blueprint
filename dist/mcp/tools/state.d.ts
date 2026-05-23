@@ -118,6 +118,7 @@ type MilestoneAuditGapRow = {
     evidence: string;
     repair: string;
 };
+export declare function extractBlueprintCommand(line: string, exactMilestoneArgument?: string | null): string | null;
 export declare function blueprintPauseHandoffGet(args?: PauseHandoffGetArgs): Promise<PauseHandoffGetResult>;
 export declare function blueprintPauseHandoffWrite(args: PauseHandoffWriteArgs): Promise<PauseHandoffWriteResult>;
 export declare function loadBlueprintState(cwd?: string): Promise<BlueprintState>;

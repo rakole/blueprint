@@ -631,7 +631,7 @@ function validAddTestsReportModel(
           ? "Verification write blocked by the missing prerequisite."
           : "Verification write remains invalid until generated coverage passes."
     },
-    nextSafeAction: isComplete ? "/blu-code-review 3" : "/blu-progress",
+    nextSafeAction: isComplete ? context.allowedNextActions?.[0] ?? "/blu-progress" : "/blu-progress",
     ...patch
   };
 }
@@ -1956,8 +1956,9 @@ test("add-tests report authoring ignores malformed code-review artifacts for com
 
   assert.equal(context.status, "ready", context.reason ?? context.warnings.join("\n"));
   assert.match(context.warnings.join("\n"), /invalid code-review evidence is ignored/i);
+  assert.deepEqual(context.allowedNextActions, ["/blu-verify-work 3", "/blu-progress"]);
   assert.equal(validation.status, "valid", validation.diagnostics.map((d) => d.message).join("\n"));
-  assert.equal(validation.normalizedModel?.nextSafeAction, "/blu-code-review 3");
+  assert.equal(validation.normalizedModel?.nextSafeAction, "/blu-verify-work 3");
 });
 
 test("add-tests report model validates and writes with exact empty optional dependency context", async (t) => {

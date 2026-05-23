@@ -12894,6 +12894,7 @@ async function buildAuditFixAllowedNextActions(args: {
 }
 
 async function buildAddTestsAllowedNextActions(args: {
+  projectRoot: string;
   phaseNumber: string;
   reviewPath: string | null;
 }): Promise<{
@@ -12902,7 +12903,39 @@ async function buildAddTestsAllowedNextActions(args: {
   blockedAction: string;
   allowedActions: string[];
 }> {
-  const completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  let completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  try {
+    const [{ blueprintStateLoad, extractBlueprintCommand }, implementedCommands] = await Promise.all([
+      import("./state.js") as Promise<{
+        blueprintStateLoad: typeof import("./state.js").blueprintStateLoad;
+        extractBlueprintCommand: typeof import("./state.js").extractBlueprintCommand;
+      }>,
+      getImplementedCommandNames()
+    ]);
+    const stateResult = await blueprintStateLoad({ cwd: args.projectRoot });
+    const syncedNextAction = extractBlueprintCommand(
+      stateResult.derivedStatus.nextAction,
+      stateResult.state.currentMilestone
+    );
+    const syncedCommands = syncedNextAction
+      ? extractBlueprintCommands(syncedNextAction).map((command) => command.toLowerCase())
+      : [];
+
+    if (
+      syncedNextAction &&
+      syncedCommands.length > 0 &&
+      syncedCommands.every((command) => implementedCommands.has(command)) &&
+      isPhaseSafeAddTestsSyncedAction(
+        syncedNextAction,
+        args.phaseNumber,
+        stateResult.state.currentMilestone
+      )
+    ) {
+      completedAction = syncedNextAction;
+    }
+  } catch {
+    // Fall back to the legacy review-path heuristic when synced routing cannot be read.
+  }
   const partialAction = "/blu-progress";
   const blockedAction = "/blu-progress";
 
@@ -12912,6 +12945,75 @@ async function buildAddTestsAllowedNextActions(args: {
     blockedAction,
     allowedActions: [...new Set([completedAction, partialAction, blockedAction])]
   };
+}
+
+const MILESTONE_CLOSEOUT_COMMANDS = new Set([
+  "/blu-audit-milestone",
+  "/blu-complete-milestone",
+  "/blu-milestone-summary"
+]);
+
+const PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS = new Set([
+  "/blu-validate-phase",
+  "/blu-verify-work",
+  "/blu-add-tests",
+  "/blu-audit-fix",
+  "/blu-code-review",
+  "/blu-secure-phase",
+  "/blu-code-review-fix",
+  "/blu-ui-review"
+]);
+
+function extractLeadingActionArgumentToken(argumentText: string): string | null {
+  const token = argumentText.match(/^([^\s]+)/)?.[1] ?? null;
+
+  if (!token) {
+    return null;
+  }
+
+  const normalizedToken = token
+    .replace(/^[`"'([{]+/, "")
+    .replace(/[)\]}"'`.,;:!?]+$/g, "");
+
+  return normalizedToken.length > 0 ? normalizedToken : null;
+}
+
+function isPhaseSafeAddTestsSyncedAction(
+  action: string,
+  targetPhase: string,
+  currentMilestone: string | null
+): boolean {
+  const match = action.trim().match(/^(\/blu-[a-z0-9-]+)(?:\s+(.+))?$/i);
+
+  if (!match) {
+    return false;
+  }
+
+  const command = match[1]?.toLowerCase() ?? "";
+  const argumentText = match[2]?.trim() ?? "";
+  const phaseArgument = argumentText.match(/^(\d+(?:\.\d+)?)(?:\b|$)/)?.[1] ?? null;
+
+  if (phaseArgument) {
+    return (
+      PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS.has(command) &&
+      normalizePhaseNumber(phaseArgument) === normalizePhaseNumber(targetPhase)
+    );
+  }
+
+  if (!MILESTONE_CLOSEOUT_COMMANDS.has(command)) {
+    return false;
+  }
+
+  if (!currentMilestone) {
+    return false;
+  }
+
+  const milestoneArgument = extractLeadingActionArgumentToken(argumentText);
+
+  return (
+    milestoneArgument !== null &&
+    milestoneArgument.toLowerCase() === currentMilestone.trim().toLowerCase()
+  );
 }
 
 function buildAddTestsReportTaskSchema(args: {
@@ -13117,6 +13219,7 @@ function buildAddTestsReportTaskSchema(args: {
 }
 
 async function addTestsReportModelSchemas(args: {
+  projectRoot: string;
   contract: ReturnType<typeof readArtifactContract>;
   contextData: Awaited<ReturnType<typeof collectAddTestsReportContext>>;
 }): Promise<{
@@ -13139,6 +13242,7 @@ async function addTestsReportModelSchemas(args: {
 
   const baseSchema = cloneJsonObject(modelContract.jsonSchema);
   const allowedNextActions = await buildAddTestsAllowedNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber: args.contextData.phase.phaseNumber,
     reviewPath: args.contextData.reviewPath
   });
@@ -13652,7 +13756,7 @@ export async function blueprintArtifactReportAuthoringContext(
     const contextData = await collectAddTestsReportContext(projectRoot, args.reportName);
     const schemas =
       contextData.blockers.length === 0
-        ? await addTestsReportModelSchemas({ contract, contextData })
+        ? await addTestsReportModelSchemas({ projectRoot, contract, contextData })
         : null;
 
     return {

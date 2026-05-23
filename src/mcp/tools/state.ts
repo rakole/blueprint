@@ -2288,7 +2288,24 @@ function isNoneLikeReportSignal(line: string): boolean {
   );
 }
 
-function extractBlueprintCommand(line: string, exactMilestoneArgument?: string | null): string | null {
+function extractLeadingArgumentToken(argumentText: string): string | null {
+  const token = argumentText.match(/^([^\s]+)/)?.[1] ?? null;
+
+  if (!token) {
+    return null;
+  }
+
+  const normalizedToken = token
+    .replace(/^[`"'([{]+/, "")
+    .replace(/[)\]}"'`.,;:!?]+$/g, "");
+
+  return normalizedToken.length > 0 ? normalizedToken : null;
+}
+
+export function extractBlueprintCommand(
+  line: string,
+  exactMilestoneArgument?: string | null
+): string | null {
   const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
 
   if (!match || match.index === undefined) {
@@ -2305,7 +2322,8 @@ function extractBlueprintCommand(line: string, exactMilestoneArgument?: string |
       command === "/blu-complete-milestone" ||
       command === "/blu-milestone-summary"
     ) &&
-    argumentText.includes(exactMilestoneArgument)
+    extractLeadingArgumentToken(argumentText)?.toLowerCase() ===
+      exactMilestoneArgument.trim().toLowerCase()
   ) {
     return `${command} ${exactMilestoneArgument}`;
   }
