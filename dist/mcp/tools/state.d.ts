@@ -9,6 +9,20 @@ export type BlueprintState = {
     roadmapEvolutionNotes: string[];
     lastUpdated: string;
 };
+export type BlueprintStateMetadata = {
+    blueprint_state_version: "1.0";
+    milestone: string;
+    status: string;
+    current_phase: string;
+    active_command: string;
+    next_action: string;
+    last_updated: string;
+    progress: {
+        total_phases: number;
+        completed_phases: number;
+        percent: number;
+    };
+};
 type StateUpdateArgs = {
     cwd?: string;
     base?: "stored" | "synced";
@@ -24,6 +38,7 @@ type StateLoadArgs = {
 };
 type StateLoadResult = {
     state: BlueprintState;
+    metadata: BlueprintStateMetadata;
     blockers: string[];
     derivedStatus: {
         projectStatus: string;

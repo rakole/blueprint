@@ -23,7 +23,7 @@
 ## Inputs, Project State, And Prerequisite Artifacts
 
 
-- A prior `pause-work` handoff or populated `STATE.md` should exist.
+- A prior `pause-work` handoff should exist. `STATE.md` supplies current position and routing state, but the canonical resume context is `.blueprint/reports/pause-work-latest.md` plus the relevant phase artifacts.
 
 
 ## Outputs
@@ -120,7 +120,7 @@
 ## Acceptance Criteria
 
 
-- Reconstructs context from `STATE.md`, phase artifacts, and the canonical `pause-work` handoff schema in `.blueprint/reports/pause-work-latest.md`.
+- Reconstructs resume context from the canonical `pause-work` handoff schema in `.blueprint/reports/pause-work-latest.md` plus phase artifacts, using `STATE.md` only for current position and next-action routing.
 - Updates `STATE.md` whenever the next-step signal changes.
 - Uses only documented MCP tools for persistent state changes.
 - Leaves unrelated repo files untouched.
@@ -132,5 +132,4 @@
 - Single-phase happy path fixture.
 - Missing-artifact recovery fixture.
 - Direct `resume-work` happy-path fixture.
-
 

@@ -2634,6 +2634,63 @@ test("public state sync responses omit empty top-level warnings at the MCP bound
   });
 });
 
+test("public state load responses preserve derived metadata at the MCP boundary", () => {
+  const result = {
+    state: {
+      projectStatus: "initialized",
+      currentMilestone: "v1",
+      currentPhase: "1",
+      activeCommand: "/blu-progress",
+      nextAction: "Run /blu-progress",
+      blockers: [],
+      roadmapEvolutionNotes: [],
+      lastUpdated: "2026-04-20T00:00:00.000Z"
+    },
+    metadata: {
+      blueprint_state_version: "1.0",
+      milestone: "v1",
+      status: "initialized",
+      current_phase: "1",
+      active_command: "/blu-progress",
+      next_action: "Run /blu-progress",
+      last_updated: "2026-04-20T00:00:00.000Z",
+      progress: {
+        total_phases: 2,
+        completed_phases: 1,
+        percent: 50
+      }
+    },
+    blockers: [],
+    derivedStatus: {
+      projectStatus: "initialized",
+      currentPhase: "1",
+      nextAction: "Run /blu-progress",
+      hasBlockers: false,
+      milestoneAudit: {
+        found: false,
+        verdict: null,
+        gapSections: {
+          requirement: [],
+          integration: [],
+          flow: [],
+          optional: []
+        },
+        hasActionableGaps: false,
+        hasArchivalBlockers: false,
+        nextSafeAction: null,
+        readyForCompletion: false
+      }
+    }
+  };
+
+  const text = createToolResponseContent("blueprint_state_load", result)[0].text;
+  const parsed = JSON.parse(text);
+
+  assert.ok(!("blockers" in parsed));
+  assert.deepEqual(parsed.metadata, result.metadata);
+  assert.deepEqual(parsed.state.blockers, []);
+});
+
 test("public project init success trims redundant config provenance and bootstrap diagnostics", () => {
   const result = {
     projectRoot: "/tmp/blueprint-project-init-public",
@@ -6855,8 +6912,12 @@ test("public config set tool trims config and provenance on successful MCP respo
 });
 
 test("public config set profile live MCP response already matches the direct compact contract", async () => {
-  const directRepoPath = await createConfigSetRepo();
-  const repoPath = await createConfigSetRepo();
+  const directRepoPath = await createProjectInitRepo();
+  const repoPath = await createProjectInitRepo();
+
+  await initializeProjectInitRepo(directRepoPath);
+  await initializeProjectInitRepo(repoPath);
+
   const directResult = await blueprintConfigSetProfile({
     cwd: directRepoPath,
     profile: "quality"
