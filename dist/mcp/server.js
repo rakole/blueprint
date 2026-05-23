@@ -25600,6 +25600,17 @@ var init_phase_no_ui_signals = __esm({
 });
 
 // src/mcp/tools/state.ts
+var state_exports = {};
+__export(state_exports, {
+  blueprintPauseHandoffGet: () => blueprintPauseHandoffGet,
+  blueprintPauseHandoffWrite: () => blueprintPauseHandoffWrite,
+  blueprintStateLoad: () => blueprintStateLoad,
+  blueprintStateSync: () => blueprintStateSync,
+  blueprintStateUpdate: () => blueprintStateUpdate,
+  extractBlueprintCommand: () => extractBlueprintCommand2,
+  loadBlueprintState: () => loadBlueprintState,
+  stateToolDefinitions: () => stateToolDefinitions
+});
 import { promises as fs2 } from "node:fs";
 function roadmapDetailStatusIsComplete(status) {
   if (status === null) {
@@ -26970,6 +26981,14 @@ function isNoneLikeReportSignal(line) {
   const normalized = normalizeReportSignalLine(line);
   return normalized === "none" || normalized === "n/a" || normalized === "na" || normalized.startsWith("no gaps") || normalized.startsWith("no actionable gaps") || normalized.startsWith("no blockers") || normalized.startsWith("no archival blockers");
 }
+function extractLeadingArgumentToken(argumentText) {
+  const token = argumentText.match(/^([^\s]+)/)?.[1] ?? null;
+  if (!token) {
+    return null;
+  }
+  const normalizedToken = token.replace(/^[`"'([{]+/, "").replace(/[)\]}"'`.,;:!?]+$/g, "");
+  return normalizedToken.length > 0 ? normalizedToken : null;
+}
 function extractBlueprintCommand2(line, exactMilestoneArgument) {
   const match = line.match(/\/blu(?:-[a-z0-9]+(?:-[a-z0-9]+)*|\s+[a-z0-9]+(?:-[a-z0-9]+)*)/i);
   if (!match || match.index === void 0) {
@@ -26977,7 +26996,7 @@ function extractBlueprintCommand2(line, exactMilestoneArgument) {
   }
   const command = match[0].trim().replace(/^\/blu\s+/i, "/blu-").toLowerCase();
   let argumentText = line.slice(match.index + match[0].length).trimStart();
-  if (exactMilestoneArgument && (command === "/blu-audit-milestone" || command === "/blu-complete-milestone" || command === "/blu-milestone-summary") && argumentText.includes(exactMilestoneArgument)) {
+  if (exactMilestoneArgument && (command === "/blu-audit-milestone" || command === "/blu-complete-milestone" || command === "/blu-milestone-summary") && extractLeadingArgumentToken(argumentText)?.toLowerCase() === exactMilestoneArgument.trim().toLowerCase()) {
     return `${command} ${exactMilestoneArgument}`;
   }
   if (argumentText.length === 0 || /^[`'").,;:!?]/.test(argumentText)) {
@@ -36209,7 +36228,7 @@ async function blueprintPhaseValidationWrite(args) {
         warnings: shouldSurfaceWarnings ? [...warnings, ...validation.warnings] : []
       };
     }
-    const resumableUatContinuation = args.artifact === "uat" && existingValidation.valid && existingUatState !== null && !existingUatState.complete && nextUatState !== null && nextUatState.resumeState !== "NEW";
+    const resumableUatContinuation = args.artifact === "uat" && existingValidation.valid && existingUatState !== null && !existingUatState.complete && nextUatState !== null && !nextUatState.complete && nextUatState.resumeState !== "NEW";
     if (!(args.overwrite ?? false) && !resumableUatContinuation) {
       throw new Error(
         `${artifactPath} already exists. Re-run only after explicit overwrite confirmation.`
@@ -47087,7 +47106,27 @@ async function buildAuditFixAllowedNextActions(args) {
   };
 }
 async function buildAddTestsAllowedNextActions(args) {
-  const completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  let completedAction = args.reviewPath ? "/blu-progress" : `/blu-code-review ${args.phaseNumber}`;
+  try {
+    const [{ blueprintStateLoad: blueprintStateLoad2, extractBlueprintCommand: extractBlueprintCommand3 }, implementedCommands] = await Promise.all([
+      Promise.resolve().then(() => (init_state(), state_exports)),
+      getImplementedCommandNames2()
+    ]);
+    const stateResult = await blueprintStateLoad2({ cwd: args.projectRoot });
+    const syncedNextAction = extractBlueprintCommand3(
+      stateResult.derivedStatus.nextAction,
+      stateResult.state.currentMilestone
+    );
+    const syncedCommands = syncedNextAction ? extractBlueprintCommands(syncedNextAction).map((command) => command.toLowerCase()) : [];
+    if (syncedNextAction && syncedCommands.length > 0 && syncedCommands.every((command) => implementedCommands.has(command)) && isPhaseSafeAddTestsSyncedAction(
+      syncedNextAction,
+      args.phaseNumber,
+      stateResult.state.currentMilestone
+    )) {
+      completedAction = syncedNextAction;
+    }
+  } catch {
+  }
   const partialAction = "/blu-progress";
   const blockedAction = "/blu-progress";
   return {
@@ -47096,6 +47135,34 @@ async function buildAddTestsAllowedNextActions(args) {
     blockedAction,
     allowedActions: [.../* @__PURE__ */ new Set([completedAction, partialAction, blockedAction])]
   };
+}
+function extractLeadingActionArgumentToken(argumentText) {
+  const token = argumentText.match(/^([^\s]+)/)?.[1] ?? null;
+  if (!token) {
+    return null;
+  }
+  const normalizedToken = token.replace(/^[`"'([{]+/, "").replace(/[)\]}"'`.,;:!?]+$/g, "");
+  return normalizedToken.length > 0 ? normalizedToken : null;
+}
+function isPhaseSafeAddTestsSyncedAction(action, targetPhase, currentMilestone) {
+  const match = action.trim().match(/^(\/blu-[a-z0-9-]+)(?:\s+(.+))?$/i);
+  if (!match) {
+    return false;
+  }
+  const command = match[1]?.toLowerCase() ?? "";
+  const argumentText = match[2]?.trim() ?? "";
+  const phaseArgument = argumentText.match(/^(\d+(?:\.\d+)?)(?:\b|$)/)?.[1] ?? null;
+  if (phaseArgument) {
+    return PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS.has(command) && normalizePhaseNumber3(phaseArgument) === normalizePhaseNumber3(targetPhase);
+  }
+  if (!MILESTONE_CLOSEOUT_COMMANDS.has(command)) {
+    return false;
+  }
+  if (!currentMilestone) {
+    return false;
+  }
+  const milestoneArgument = extractLeadingActionArgumentToken(argumentText);
+  return milestoneArgument !== null && milestoneArgument.toLowerCase() === currentMilestone.trim().toLowerCase();
 }
 function buildAddTestsReportTaskSchema(args) {
   const schema = cloneJsonObject3(args.baseSchema);
@@ -47283,6 +47350,7 @@ async function addTestsReportModelSchemas(args) {
   }
   const baseSchema = cloneJsonObject3(modelContract.jsonSchema);
   const allowedNextActions = await buildAddTestsAllowedNextActions({
+    projectRoot: args.projectRoot,
     phaseNumber: args.contextData.phase.phaseNumber,
     reviewPath: args.contextData.reviewPath
   });
@@ -47703,7 +47771,7 @@ async function blueprintArtifactReportAuthoringContext(args) {
   if (contractId === "report.add-tests") {
     const contract2 = readArtifactContract("report.add-tests");
     const contextData2 = await collectAddTestsReportContext(projectRoot, args.reportName);
-    const schemas2 = contextData2.blockers.length === 0 ? await addTestsReportModelSchemas({ contract: contract2, contextData: contextData2 }) : null;
+    const schemas2 = contextData2.blockers.length === 0 ? await addTestsReportModelSchemas({ projectRoot, contract: contract2, contextData: contextData2 }) : null;
     return {
       status: contextData2.blockers.length === 0 ? "ready" : "invalid",
       reportName: normalizeReportSlug(args.reportName),
@@ -49214,7 +49282,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -49799,6 +49867,21 @@ var init_artifacts = __esm({
       ".blueprint/ROADMAP.md": "bootstrap.roadmap"
     };
     BOOTSTRAP_REPAIR = "Re-run /blu-new-project to regenerate bootstrap artifacts from the canonical contract, or repair the named artifact with durable requirement and roadmap mappings before retrying.";
+    MILESTONE_CLOSEOUT_COMMANDS = /* @__PURE__ */ new Set([
+      "/blu-audit-milestone",
+      "/blu-complete-milestone",
+      "/blu-milestone-summary"
+    ]);
+    PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS = /* @__PURE__ */ new Set([
+      "/blu-validate-phase",
+      "/blu-verify-work",
+      "/blu-add-tests",
+      "/blu-audit-fix",
+      "/blu-code-review",
+      "/blu-secure-phase",
+      "/blu-code-review-fix",
+      "/blu-ui-review"
+    ]);
     artifactToolDefinitions = [
       {
         name: "blueprint_artifact_contract_read",

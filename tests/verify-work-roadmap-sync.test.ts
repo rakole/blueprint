@@ -8,7 +8,11 @@ import {
   blueprintPhaseValidationRead,
   blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
-import { blueprintArtifactValidate } from "../src/mcp/tools/artifacts.js";
+import {
+  blueprintArtifactValidate,
+  readUatArtifactState,
+  validateUatArtifactContent
+} from "../src/mcp/tools/artifacts.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 function completedSummaryContent(): string {
@@ -705,13 +709,20 @@ test("reused UAT sync closes a plain roadmap checklist and dash-form detail head
   }
 });
 
-test("resuming a valid incomplete UAT persists without overwrite confirmation", async () => {
+test("status-closing UAT replacement requires overwrite confirmation", async () => {
   const repoPath = await createRepoFixture({
     verificationContent: validVerification,
-    uatContent: partialUat
+    uatContent: validUat
   });
 
   try {
+    const seededPartial = await blueprintPhaseValidationWrite({
+      cwd: repoPath,
+      phase: "4",
+      artifact: "uat",
+      content: partialUat,
+      overwrite: true
+    });
     const resumedPass = partialUat
       .replace("**Status:** PARTIAL", "**Status:** PASS")
       .replace("**Resume State:** RESUMED", "**Resume State:** CONTINUED")
@@ -728,24 +739,86 @@ test("resuming a valid incomplete UAT persists without overwrite confirmation", 
       .replace("| 1 | Confirm the saved validation behavior still matches the summary evidence. | partial | major | Follow-up review still open. | Resume `/blu-verify-work 4` after repair. |", "| none | none | none | none | none | none |")
       .replace("- Resume `/blu-verify-work 4` after the follow-up review is complete.", "- none")
       .replace("- Continue with `/blu-verify-work 4`.", "- Return to `/blu-progress` for the next safe implemented action.");
+    const resumedPassState = readUatArtifactState(resumedPass);
+    const resumedPassValidation = validateUatArtifactContent(
+      resumedPass,
+      [".blueprint/phases/04-phase-validation/04-01-SUMMARY.md"],
+      { requireReadyVerificationEvidence: true }
+    );
+
+    assert.equal(resumedPassState.status, "PASS");
+    assert.equal(resumedPassState.complete, true);
+    assert.equal(resumedPassValidation.valid, true);
+    await assert.rejects(
+      () =>
+        blueprintPhaseValidationWrite({
+          cwd: repoPath,
+          phase: "4",
+          artifact: "uat",
+          content: resumedPass
+        }),
+      /already exists\. Re-run only after explicit overwrite confirmation/i
+    );
+    const read = await blueprintPhaseValidationRead({
+      cwd: repoPath,
+      phase: "4",
+      artifact: "uat"
+    });
+    const roadmap = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
+
+    assert.equal(seededPartial.status, "updated");
+    assert.equal(read.validation?.valid, true);
+    assert.equal(read.uatStatus, "PARTIAL");
+    assert.equal(read.resumeState, "RESUMED");
+    assert.equal(read.checkpoint, "resume-gap-review");
+    assert.equal(read.complete, false);
+    assert.match(roadmap, /- \[ \] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+    assert.match(roadmap, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: in_progress/);
+  } finally {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  }
+});
+
+test("resuming an incomplete UAT persists without overwrite confirmation when it stays incomplete", async () => {
+  const repoPath = await createRepoFixture({
+    verificationContent: validVerification,
+    uatContent: partialUat
+  });
+
+  try {
+    const continuedPartial = partialUat
+      .replace("**Resume State:** RESUMED", "**Resume State:** CONTINUED")
+      .replace("Current session step: Resume the pass after a pause.", "Current session step: Continue the incomplete pass after the latest review.")
+      .replace("Continuity notes: Keep the validated summary-backed behavior stable if the session resumes.", "Continuity notes: Keep the incomplete follow-up path clear while the session continues.")
+      .replace("- Awaiting: review", "- Awaiting: retest")
+      .replace("| 1 | Validation UAT smoke | Confirm the saved validation behavior still matches the summary evidence. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | issue | Follow-up review still open. |", "| 1 | Validation UAT smoke | Confirm the saved validation behavior still matches the summary evidence. | .blueprint/phases/04-phase-validation/04-01-SUMMARY.md | issue | Follow-up retest still open. |")
+      .replace("- Validation UAT still needs one follow-up review.", "- Validation UAT still needs one follow-up retest.")
+      .replace("| 1 | Confirm the saved validation behavior still matches the summary evidence. | partial | major | Follow-up review still open. | Resume `/blu-verify-work 4` after repair. |", "| 1 | Confirm the saved validation behavior still matches the summary evidence. | partial | major | Follow-up retest still open. | Resume `/blu-verify-work 4` after retest. |")
+      .replace("- Resume `/blu-verify-work 4` after the follow-up review is complete.", "- Resume `/blu-verify-work 4` after the follow-up retest is complete.")
+      .replace("- Repair the remaining validation follow-up, then resume `/blu-verify-work 4`.", "- Complete the follow-up retest, then resume `/blu-verify-work 4`.");
     const result = await blueprintPhaseValidationWrite({
       cwd: repoPath,
       phase: "4",
       artifact: "uat",
-      content: resumedPass
+      content: continuedPartial
     });
     const read = await blueprintPhaseValidationRead({
       cwd: repoPath,
       phase: "4",
       artifact: "uat"
     });
+    const roadmap = await readFile(path.join(repoPath, ".blueprint/ROADMAP.md"), "utf8");
 
     assert.equal(result.status, "updated");
     assert.equal(result.overwritten, true);
     assert.match(result.warnings.join("\n"), /without the replace path/i);
     assert.equal(read.validation?.valid, true);
+    assert.equal(read.uatStatus, "PARTIAL");
     assert.equal(read.resumeState, "CONTINUED");
-    assert.equal(read.complete, true);
+    assert.equal(read.checkpoint, "resume-gap-review");
+    assert.equal(read.complete, false);
+    assert.match(roadmap, /- \[ \] \*\*Phase 4: Validation\*\* - Persist verification and UAT evidence/);
+    assert.match(roadmap, /### Phase 4: Validation[\s\S]*\*\*Status\*\*: in_progress/);
   } finally {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   }

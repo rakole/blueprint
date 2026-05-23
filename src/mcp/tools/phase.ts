@@ -9370,6 +9370,7 @@ export async function blueprintPhaseValidationWrite(
       existingUatState !== null &&
       !existingUatState.complete &&
       nextUatState !== null &&
+      !nextUatState.complete &&
       nextUatState.resumeState !== "NEW";
 
     if (!(args.overwrite ?? false) && !resumableUatContinuation) {

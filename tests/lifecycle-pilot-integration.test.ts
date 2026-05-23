@@ -22,7 +22,7 @@ import {
   blueprintPhaseValidationRead,
   blueprintPhaseValidationWrite
 } from "../src/mcp/tools/phase.js";
-import { blueprintStateLoad } from "../src/mcp/tools/state.js";
+import { blueprintStateLoad, extractBlueprintCommand } from "../src/mcp/tools/state.js";
 import { createGitRepo } from "./helpers/git-fixtures.js";
 
 const noExternalServicesSection = `## External Service Prerequisites
@@ -804,6 +804,15 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
   });
 
   await completeLifecycle(repoPath);
+  const addTestsContext = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+  const addTestsValidation = await blueprintArtifactReportValidateModel({
+    cwd: repoPath,
+    reportName: "add-tests-3",
+    model: await validAddTestsReportModel(repoPath)
+  });
 
   const reportWrite = await blueprintArtifactReportWrite({
     cwd: repoPath,
@@ -828,6 +837,11 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
 
   assert.equal(reportWrite.status, "created");
   assert.equal(reportWrite.path, ".blueprint/reports/add-tests-3.md");
+  assert.deepEqual(addTestsContext.allowedNextActions, ["/blu-audit-milestone v1", "/blu-progress"]);
+  assert.equal(
+    addTestsValidation.normalizedModel?.nextSafeAction,
+    "/blu-audit-milestone v1"
+  );
   assert.equal(verificationUpdate.status, "updated");
   assert.deepEqual(verificationUpdate.summaryPaths, [
     ".blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md"
@@ -842,6 +856,343 @@ test("add-tests follow-up stays report-backed and preserves lifecycle completion
   assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
   assert.match(roadmapBody, /- \[x\] \*\*Phase 3: Lifecycle Pilot\*\* - Prove lifecycle pilot coherence/);
   assert.match(roadmapBody, /### Phase 3: Lifecycle Pilot[\s\S]*\*\*Status\*\*: completed/);
+});
+
+test("extractBlueprintCommand keeps the first parsed milestone token for closeout commands", () => {
+  assert.equal(
+    extractBlueprintCommand("- /blu-complete-milestone v10 (not v1)", "v1"),
+    "/blu-complete-milestone v10 (not v1)"
+  );
+});
+
+test("add-tests report rejects argumentless milestone closeout routes from synced state", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await completeLifecycle(repoPath);
+  await mkdir(path.join(repoPath, ".blueprint/reports"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, ".blueprint/reports/milestone-audit-v1.md"),
+    `# Milestone Audit: v1
+
+**Verdict:** FOLLOW_UP
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: FOLLOW_UP
+- Rationale: The audit remains open for a follow-up closeout step.
+- Decision basis: Keep the milestone audit in FOLLOW_UP while the next action text is intentionally stale for this regression.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The roadmap evidence is present. |
+| Validation evidence | .blueprint/phases/03-lifecycle-pilot/03-VERIFICATION.md | PASS | Verification evidence is present. |
+| UAT evidence | .blueprint/phases/03-lifecycle-pilot/03-UAT.md | PASS | UAT evidence is present. |
+| Carry-forward evidence | .blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md | PASS | Summary evidence is present. |
+
+## Original Intent Snapshot
+
+- Keep the lifecycle pilot milestone aligned to the saved milestone evidence.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-audit-milestone
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+
+  assert.equal(state.state.currentMilestone, "v1");
+  assert.equal(state.derivedStatus.nextAction, "/blu-audit-milestone");
+  assert.deepEqual(context.allowedNextActions, ["/blu-code-review 3", "/blu-progress"]);
+  assert.ok(!context.allowedNextActions.includes("/blu-audit-milestone"));
+});
+
+test("add-tests report rejects milestone closeout routes when later prose mentions the current milestone", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await completeLifecycle(repoPath);
+  await mkdir(path.join(repoPath, ".blueprint/reports"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, ".blueprint/reports/milestone-audit-v1.md"),
+    `# Milestone Audit: v1
+
+**Verdict:** FOLLOW_UP
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: FOLLOW_UP
+- Rationale: The audit remains open for a follow-up closeout step.
+- Decision basis: Keep the milestone audit in FOLLOW_UP while the next action text is intentionally stale for this regression.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The roadmap evidence is present. |
+| Validation evidence | .blueprint/phases/03-lifecycle-pilot/03-VERIFICATION.md | PASS | Verification evidence is present. |
+| UAT evidence | .blueprint/phases/03-lifecycle-pilot/03-UAT.md | PASS | UAT evidence is present. |
+| Carry-forward evidence | .blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md | PASS | Summary evidence is present. |
+
+## Original Intent Snapshot
+
+- Keep the lifecycle pilot milestone aligned to the saved milestone evidence.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-complete-milestone v10 (not v1)
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+
+  assert.equal(state.state.currentMilestone, "v1");
+  assert.equal(state.derivedStatus.nextAction, "/blu-complete-milestone v10 (not v1)");
+  assert.deepEqual(context.allowedNextActions, ["/blu-code-review 3", "/blu-progress"]);
+  assert.ok(!context.allowedNextActions.includes("/blu-complete-milestone v1"));
+});
+
+test("add-tests report rejects unrelated same-phase synced routes from milestone audit state", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await completeLifecycle(repoPath);
+  await mkdir(path.join(repoPath, ".blueprint/reports"), { recursive: true });
+  await writeFile(
+    path.join(repoPath, ".blueprint/reports/milestone-audit-v1.md"),
+    `# Milestone Audit: v1
+
+**Verdict:** FOLLOW_UP
+**Evidence Dimensions:** roadmap, validation, UAT, carry-forward
+
+## Audit Verdict
+
+- Verdict: FOLLOW_UP
+- Rationale: The audit remains open while the synced route is intentionally malformed for this regression.
+- Decision basis: Preserve the stale same-phase route in state without letting add-tests accept it as a valid follow-up.
+
+## Milestone Evidence Dimensions
+
+| Dimension | Evidence | Status | Notes |
+|-----------|----------|--------|-------|
+| Roadmap intent | .blueprint/ROADMAP.md | PASS | The roadmap evidence is present. |
+| Validation evidence | .blueprint/phases/03-lifecycle-pilot/03-VERIFICATION.md | PASS | Verification evidence is present. |
+| UAT evidence | .blueprint/phases/03-lifecycle-pilot/03-UAT.md | PASS | UAT evidence is present. |
+| Carry-forward evidence | .blueprint/phases/03-lifecycle-pilot/03-01-SUMMARY.md | PASS | Summary evidence is present. |
+
+## Original Intent Snapshot
+
+- Keep the lifecycle pilot milestone aligned to the saved milestone evidence.
+
+## Roadmap And Phase Evidence
+
+- .blueprint/ROADMAP.md
+
+## Requirement Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Integration Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Flow Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Optional Gaps
+
+| Gap ID | Surface | Evidence | Repair |
+|--------|---------|----------|--------|
+| none | none | none | none |
+
+## Gaps Found
+
+- none
+
+## Archival Blockers
+
+- none
+
+## Next Safe Action
+
+- /blu-plan-phase 3
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+
+  assert.equal(state.state.currentMilestone, "v1");
+  assert.equal(state.derivedStatus.nextAction, "/blu-plan-phase 3");
+  assert.deepEqual(context.allowedNextActions, ["/blu-code-review 3", "/blu-progress"]);
+  assert.ok(!context.allowedNextActions.includes("/blu-plan-phase 3"));
+});
+
+test("add-tests report ignores synced routes for a different current phase", async (t) => {
+  const repoPath = await createLifecyclePilotRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await completeLifecycle(repoPath);
+  await writeFile(
+    path.join(repoPath, ".blueprint/ROADMAP.md"),
+    `# Roadmap: Lifecycle Pilot Fixture
+
+## Milestone
+
+- Active milestone: v1
+
+## Phases
+
+- [x] **Phase 3: Lifecycle Pilot** - Prove lifecycle pilot coherence
+- [ ] **Phase 4: Phase Expansion** - Start the next slice
+
+## Phase Details
+
+### Phase 3: Lifecycle Pilot
+**Goal**: Prove lifecycle pilot coherence.
+**Requirements**: LIFE-01
+**Status**: completed
+
+### Phase 4: Phase Expansion
+**Goal**: Start the next slice.
+**Requirements**: LIFE-02
+**Status**: planned
+`,
+    "utf8"
+  );
+  await writeFile(
+    path.join(repoPath, ".blueprint/STATE.md"),
+    `# Blueprint State
+
+- Project status: initialized
+- Current milestone: v1
+- Current phase: 4
+- Active command: /blu-progress
+- Next action: Run /blu-progress
+- Last updated: 2026-04-11T00:00:00.000Z
+
+## Blockers
+
+- none
+`,
+    "utf8"
+  );
+
+  const state = await blueprintStateLoad({ cwd: repoPath });
+  const context = await blueprintArtifactReportAuthoringContext({
+    cwd: repoPath,
+    reportName: "add-tests-3"
+  });
+
+  assert.match(state.derivedStatus.nextAction, /\/blu-discuss-phase 4/);
+  assert.deepEqual(context.allowedNextActions, ["/blu-code-review 3", "/blu-progress"]);
+  assert.ok(context.allowedNextActions.every((action) => !/\/blu-[a-z0-9-]+\s+4\b/i.test(action)));
 });
 
 test("artifact report writes report blocking input issues and contract-gate model writes", async (t) => {
