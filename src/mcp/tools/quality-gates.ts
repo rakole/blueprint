@@ -68,6 +68,7 @@ export type PhaseQualityGateEvaluation = {
   missingGate: PhaseQualityGateMissingGate;
   warnings: string[];
   reviewNextSafeAction: string | null;
+  reviewDebtKind: "remediation" | "follow-up" | null;
 };
 
 export type PhaseQualityGateRoutingArgs = {
@@ -80,6 +81,7 @@ export type PhaseQualityGateRoutingArgs = {
     | "gatesSatisfied"
     | "hasSecurity"
     | "reviewNextSafeAction"
+    | "reviewDebtKind"
   >;
 };
 
@@ -97,6 +99,16 @@ type CandidateResolution = {
 type ReviewArtifactRoutingState = {
   verdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
   nextSafeAction: string | null;
+};
+
+type ReviewFixArtifactStatus = "COMPLETED" | "PARTIAL" | "BLOCKED";
+
+type ReviewFixArtifactRoutingState = {
+  status: ReviewFixArtifactStatus | null;
+  nextSafeAction: string | null;
+  usesLatestReviewFixState: boolean;
+  usableRoutingAction: boolean;
+  leavesRemediationDebt: boolean;
 };
 
 const REVIEWABLE_EXTENSIONS = new Set([
@@ -177,6 +189,9 @@ const REVIEWABLE_ROOT_PREFIXES = [
 
 const PATH_TOKEN_PATTERN =
   /\/?[A-Za-z0-9._~@$+%-]+(?:\/[A-Za-z0-9._~@$+%-]+)+|\/?[A-Za-z0-9._~@$+%-]+\.[A-Za-z0-9]+/g;
+const VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
+const CANONICAL_CODE_REVIEW_FINDING_PATTERN =
+  /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
 
 function normalizePhasePrefix(args: PhaseQualityGateEvaluationArgs): string {
   return args.phasePrefix?.trim() || formatBlueprintPhasePrefix(args.phaseNumber);
@@ -445,6 +460,34 @@ function extractMarkdownSection(content: string, heading: string): string {
   return match?.[1]?.trim() ?? "";
 }
 
+function collectListItems(block: string): string[] {
+  return block
+    .split("\n")
+    .map((line) => line.trim())
+    .flatMap((line) => {
+      const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+
+      if (checklistMatch) {
+        return [checklistMatch[1].trim()];
+      }
+
+      const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+
+      if (bulletMatch) {
+        return [bulletMatch[1].trim()];
+      }
+
+      const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+
+      return numberedMatch ? [numberedMatch[1].trim()] : [];
+    })
+    .filter((item) => item.length > 0);
+}
+
+function extractMarkdownSectionItems(content: string, heading: string): string[] {
+  return [...new Set(collectListItems(extractMarkdownSection(content, heading)))];
+}
+
 function extractPathCandidatesFromSection(section: string): string[] {
   const candidates = new Set<string>();
 
@@ -506,6 +549,138 @@ function extractReviewFixNextSafeAction(content: string): string | null {
   return markerAction ? extractBlueprintCommand(markerAction) : null;
 }
 
+function extractReviewFixStatus(content: string): ReviewFixArtifactStatus | null {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+
+  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED") {
+    return status;
+  }
+
+  return null;
+}
+
+function extractVisibleReviewTargetId(value: string): string | null {
+  const trimmed = value.trim();
+  const startMatch = trimmed.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
+
+  if (startMatch) {
+    return startMatch[1].toUpperCase();
+  }
+
+  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN);
+
+  return inlineMatch ? inlineMatch[1].toUpperCase() : null;
+}
+
+function stripVisibleReviewTargetId(value: string): string {
+  return value
+    .replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "")
+    .trim();
+}
+
+function normalizeReviewListItem(item: string): string {
+  return stripVisibleReviewTargetId(item)
+    .replace(/^`+|`+$/g, "")
+    .replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function classifyReviewFixTargetSummary(
+  summary: string
+): "fixable" | "test-gap" | "validation-only" | "routing-note" | "no-op" {
+  const normalized = normalizeReviewListItem(summary);
+
+  if (normalized.length === 0) {
+    return "no-op";
+  }
+
+  if (
+    /(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) ||
+    /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) ||
+    /\/blu-add-tests\b/i.test(summary)
+  ) {
+    return "test-gap";
+  }
+
+  if (
+    /\b(?:verify|verification|validate|validation|uat|manual qa|smoke check|re-run)\b/i.test(summary) ||
+    /\/blu-(?:validate-phase|verify-work)\b/i.test(summary)
+  ) {
+    return "validation-only";
+  }
+
+  if (
+    /\/blu-(?:progress|secure-phase|plan-phase|review|execute-phase|pause-work|resume-work)\b/i.test(summary) ||
+    /\b(?:route|routing|document|triage|coordinate|handoff|process note)\b/i.test(summary)
+  ) {
+    return "routing-note";
+  }
+
+  if (/\b(?:no action|no change|already covered|informational only)\b/i.test(summary)) {
+    return "no-op";
+  }
+
+  return "fixable";
+}
+
+function extractReviewFindingSummary(item: string): string {
+  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+
+  if (canonical) {
+    return canonical[7]?.trim() ?? "";
+  }
+
+  const recommendationMatch = item.match(/Fix\/verification:\s*(.+)$/i);
+
+  return recommendationMatch?.[1]?.trim() ?? stripVisibleReviewTargetId(item);
+}
+
+function parseExplicitActionableReviewTargetIds(content: string): string[] {
+  const actionableTargetIds = new Set<string>();
+
+  for (const item of extractMarkdownSectionItems(content, "Findings")) {
+    const targetId = extractVisibleReviewTargetId(item);
+
+    if (targetId === null || !/\[follow-up\]/i.test(item)) {
+      continue;
+    }
+
+    if (classifyReviewFixTargetSummary(extractReviewFindingSummary(item)) === "fixable") {
+      actionableTargetIds.add(targetId);
+    }
+  }
+
+  for (const item of extractMarkdownSectionItems(content, "Follow-Ups")) {
+    const targetId = extractVisibleReviewTargetId(item);
+
+    if (
+      targetId !== null &&
+      classifyReviewFixTargetSummary(stripVisibleReviewTargetId(item)) === "fixable"
+    ) {
+      actionableTargetIds.add(targetId);
+    }
+  }
+
+  return [...actionableTargetIds];
+}
+
+function parseExplicitReviewFixAddressedIds(content: string): string[] {
+  const addressedTargetIds = new Set<string>();
+
+  for (const item of extractMarkdownSectionItems(content, "Findings Addressed")) {
+    const targetId = extractVisibleReviewTargetId(item);
+
+    if (targetId !== null) {
+      addressedTargetIds.add(targetId);
+    }
+  }
+
+  return [...addressedTargetIds];
+}
+
 function extractArtifactMarker(content: string, marker: string): string | null {
   const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = content.match(
@@ -515,12 +690,164 @@ function extractArtifactMarker(content: string, marker: string): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
-function isCompletedReviewFixArtifact(content: string): boolean {
-  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
-  const completionState =
-    extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
+function hasLegalReviewFixStatusPair(args: {
+  status: ReviewFixArtifactStatus;
+  completionState: string | null;
+}): boolean {
+  return (
+    (args.status === "COMPLETED" && args.completionState === "complete") ||
+    (args.status === "PARTIAL" && args.completionState === "pending") ||
+    (args.status === "BLOCKED" && args.completionState === "blocked")
+  );
+}
 
-  return status === "COMPLETED" && completionState === "complete";
+function isLegalReviewFixNextSafeAction(args: {
+  status: ReviewFixArtifactStatus;
+  nextSafeAction: string | null;
+  phaseNumber: string;
+}): boolean {
+  switch (args.status) {
+    case "COMPLETED":
+      return args.nextSafeAction === `/blu-validate-phase ${args.phaseNumber}`;
+    case "PARTIAL":
+      return (
+        args.nextSafeAction === `/blu-code-review-fix ${args.phaseNumber}` ||
+        args.nextSafeAction === `/blu-add-tests ${args.phaseNumber}` ||
+        args.nextSafeAction === `/blu-execute-phase ${args.phaseNumber}`
+      );
+    case "BLOCKED":
+      return (
+        args.nextSafeAction === "/blu-progress" ||
+        args.nextSafeAction === `/blu-execute-phase ${args.phaseNumber}`
+      );
+  }
+}
+
+function parseReviewFixRoutingState(args: {
+  content: string;
+  phaseNumber: string;
+}): ReviewFixArtifactRoutingState {
+  const status = extractReviewFixStatus(args.content);
+  const completionState =
+    extractArtifactMarker(args.content, "Completion State")?.toLowerCase() ?? null;
+
+  if (status === null || !hasLegalReviewFixStatusPair({ status, completionState })) {
+    return {
+      status,
+      nextSafeAction: extractReviewFixNextSafeAction(args.content),
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
+    };
+  }
+
+  const nextSafeAction = extractReviewFixNextSafeAction(args.content);
+  const legalNextSafeAction = isLegalReviewFixNextSafeAction({
+    status,
+    nextSafeAction,
+    phaseNumber: args.phaseNumber
+  });
+
+  return {
+    status,
+    nextSafeAction,
+    usesLatestReviewFixState: true,
+    usableRoutingAction:
+      legalNextSafeAction &&
+      !(status === "BLOCKED" && nextSafeAction === "/blu-progress"),
+    leavesRemediationDebt: status !== "COMPLETED"
+  };
+}
+
+async function reconcileCompletedReviewFixDebt(args: {
+  projectRoot: string;
+  reviewPath: string | null;
+  reviewFixPath: string;
+  reviewFixContent: string;
+  artifacts: NormalizedArtifact[];
+  warnings: string[];
+}): Promise<boolean | null> {
+  const addressedTargetIds = parseExplicitReviewFixAddressedIds(args.reviewFixContent);
+
+  if (addressedTargetIds.length === 0) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed; quality-gate routing will keep legacy debt-clearing behavior.`
+    );
+    return null;
+  }
+
+  if (args.reviewPath === null) {
+    return null;
+  }
+
+  const reviewArtifact =
+    args.artifacts.find((artifact) => artifact.path === args.reviewPath) ??
+    ({
+      path: args.reviewPath,
+      kind: "review"
+    } satisfies NormalizedArtifact);
+  const reviewContent = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: reviewArtifact
+  });
+
+  if (reviewContent === null) {
+    return null;
+  }
+
+  const actionableTargetIds = parseExplicitActionableReviewTargetIds(reviewContent);
+
+  if (actionableTargetIds.length === 0) {
+    return null;
+  }
+
+  const addressedTargetIdSet = new Set(addressedTargetIds);
+  const missingTargetIds = actionableTargetIds.filter((targetId) => !addressedTargetIdSet.has(targetId));
+
+  if (missingTargetIds.length === 0) {
+    return true;
+  }
+
+  const addressedCount = actionableTargetIds.length - missingTargetIds.length;
+  args.warnings.push(
+    `${args.reviewFixPath}: latest completed Review Fix artifact addressed ${addressedCount} of ${actionableTargetIds.length} actionable saved review target ids; quality-gate routing will keep remediation debt open. Missing: ${missingTargetIds.join(", ")}.`
+  );
+  return false;
+}
+
+function deriveReviewDebtKind(args: {
+  reviewFixState: ReviewFixArtifactRoutingState;
+  reviewNextSafeAction: string | null;
+  missingGate: PhaseQualityGateMissingGate;
+  hasSecurity: boolean;
+}): "remediation" | "follow-up" | null {
+  if (args.reviewFixState.leavesRemediationDebt) {
+    return "remediation";
+  }
+
+  if (
+    args.reviewFixState.usesLatestReviewFixState &&
+    args.reviewFixState.status === "COMPLETED" &&
+    args.reviewFixState.usableRoutingAction
+  ) {
+    return null;
+  }
+
+  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
+    reviewNextSafeAction: args.reviewNextSafeAction,
+    missingGate: args.missingGate,
+    hasSecurity: args.hasSecurity
+  });
+
+  if (reviewFollowUpCommand === "code-review-fix") {
+    return "remediation";
+  }
+
+  return reviewFollowUpCommand === null ? null : "follow-up";
+}
+
+function buildReviewDebtFallbackAction(phaseNumber: string): string {
+  return `/blu-code-review-fix ${phaseNumber}`;
 }
 
 function extractCommandName(action: string): string | null {
@@ -844,19 +1171,21 @@ async function readReviewRoutingState(args: {
   };
 }
 
-async function readCompletedReviewFixNextSafeAction(args: {
+async function readUsableReviewFixNextSafeAction(args: {
   projectRoot: string;
+  reviewPath: string | null;
   reviewFixPath: string | null;
   artifacts: NormalizedArtifact[];
   warnings: string[];
-}): Promise<{
-  completed: boolean;
-  nextSafeAction: string | null;
-}> {
+  phaseNumber: string;
+}): Promise<ReviewFixArtifactRoutingState> {
   if (args.reviewFixPath === null) {
     return {
-      completed: false,
-      nextSafeAction: null
+      status: null,
+      nextSafeAction: null,
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
     };
   }
 
@@ -876,30 +1205,73 @@ async function readCompletedReviewFixNextSafeAction(args: {
       `${args.reviewFixPath}: could not read Review Fix artifact Next Safe Action.`
     );
     return {
-      completed: false,
-      nextSafeAction: null
+      status: null,
+      nextSafeAction: null,
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
     };
   }
 
-  if (!isCompletedReviewFixArtifact(content)) {
-    return {
-      completed: false,
-      nextSafeAction: null
-    };
+  const routingState = parseReviewFixRoutingState({
+    content,
+    phaseNumber: args.phaseNumber
+  });
+
+  if (!routingState.usesLatestReviewFixState) {
+    return routingState;
   }
 
-  const nextSafeAction = extractReviewNextSafeAction(content);
-
-  if (nextSafeAction === null) {
+  if (routingState.nextSafeAction === null) {
     args.warnings.push(
-      `${args.reviewFixPath}: completed Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
+      `${args.reviewFixPath}: latest Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will keep the newest remediation state and use debt-aware fallback routing.`
+    );
+    return routingState;
+  }
+
+  if (routingState.status === null) {
+    return routingState;
+  }
+
+  if (
+    !isLegalReviewFixNextSafeAction({
+      status: routingState.status,
+      nextSafeAction: routingState.nextSafeAction,
+      phaseNumber: args.phaseNumber
+    })
+  ) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest ${routingState.status} Review Fix artifact Next Safe Action is not a legal review-fix route; quality-gate routing will keep the newest remediation state and use debt-aware fallback routing.`
+    );
+    return routingState;
+  }
+
+  if (routingState.status === "COMPLETED" && routingState.usableRoutingAction) {
+    const clearsSavedDebt = await reconcileCompletedReviewFixDebt({
+      projectRoot: args.projectRoot,
+      reviewPath: args.reviewPath,
+      reviewFixPath: args.reviewFixPath,
+      reviewFixContent: content,
+      artifacts: args.artifacts,
+      warnings: args.warnings
+    });
+
+    if (clearsSavedDebt === false) {
+      return {
+        ...routingState,
+        usableRoutingAction: false,
+        leavesRemediationDebt: true
+      };
+    }
+  }
+
+  if (!routingState.usableRoutingAction) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest ${routingState.status} Review Fix artifact keeps saved remediation debt open; quality-gate routing will not treat ${routingState.nextSafeAction} as debt-clearing.`
     );
   }
 
-  return {
-    completed: true,
-    nextSafeAction
-  };
+  return routingState;
 }
 
 export async function evaluatePhaseQualityGates(
@@ -981,16 +1353,21 @@ export async function evaluatePhaseQualityGates(
       : requiresCodeReview && hasReview && !hasSecurity
         ? "security"
         : null;
-  const reviewFixNextSafeAction = hasReviewFix
-    ? await readCompletedReviewFixNextSafeAction({
+  const reviewFixRoutingState = hasReviewFix
+    ? await readUsableReviewFixNextSafeAction({
         projectRoot,
+        reviewPath,
         reviewFixPath,
         artifacts,
-        warnings
+        warnings,
+        phaseNumber
       })
     : {
-        completed: false,
-        nextSafeAction: null
+        status: null,
+        nextSafeAction: null,
+        usesLatestReviewFixState: false,
+        usableRoutingAction: false,
+        leavesRemediationDebt: false
       };
   const reviewRoutingState = hasReview
     ? await readReviewRoutingState({
@@ -1003,8 +1380,10 @@ export async function evaluatePhaseQualityGates(
         verdict: null,
         nextSafeAction: null
       };
-  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed
-    ? reviewFixNextSafeAction.nextSafeAction
+  const rawReviewNextSafeAction = reviewFixRoutingState.usesLatestReviewFixState
+    ? reviewFixRoutingState.usableRoutingAction
+      ? reviewFixRoutingState.nextSafeAction
+      : null
     : reviewRoutingState.nextSafeAction;
   const reviewNextSafeAction = normalizeReviewNextSafeAction({
     action: rawReviewNextSafeAction,
@@ -1013,11 +1392,21 @@ export async function evaluatePhaseQualityGates(
     missingGate,
     hasSecurity
   });
-  const hasBlockingReviewFollowUp = isBlockingReviewNextSafeAction({
-    action: reviewNextSafeAction,
+  const reviewDebtKind = deriveReviewDebtKind({
+    reviewFixState: reviewFixRoutingState,
+    reviewNextSafeAction,
     missingGate,
     hasSecurity
   });
+  const hasBlockingReviewFollowUp =
+    reviewDebtKind !== null &&
+    isBlockingReviewNextSafeAction({
+      action:
+        reviewNextSafeAction ??
+        (reviewDebtKind === "remediation" ? buildReviewDebtFallbackAction(phaseNumber) : null),
+      missingGate,
+      hasSecurity
+    });
 
   return {
     reviewPath: hasReview ? reviewPath : null,
@@ -1027,17 +1416,23 @@ export async function evaluatePhaseQualityGates(
     reviewableFiles,
     codeReviewEnabled: reviewSettings.enabled,
     requiresCodeReview,
-    gatesSatisfied: missingGate === null && !hasBlockingReviewFollowUp,
+    gatesSatisfied: missingGate === null && reviewDebtKind === null && !hasBlockingReviewFollowUp,
     missingGate,
     warnings,
-    reviewNextSafeAction
+    reviewNextSafeAction,
+    reviewDebtKind
   };
 }
 
 export function formatPhaseQualityGateDebtReason(
   args: Pick<
     PhaseQualityGateEvaluation,
-    "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity"
+    | "requiresCodeReview"
+    | "missingGate"
+    | "reviewableFiles"
+    | "reviewNextSafeAction"
+    | "hasSecurity"
+    | "reviewDebtKind"
   >
 ): string | null {
   if (!args.requiresCodeReview) {
@@ -1054,17 +1449,11 @@ export function formatPhaseQualityGateDebtReason(
     return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
   }
 
-  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
-    reviewNextSafeAction: args.reviewNextSafeAction,
-    missingGate: args.missingGate,
-    hasSecurity: args.hasSecurity
-  });
-
-  if (reviewFollowUpCommand === "code-review-fix") {
+  if (args.reviewDebtKind === "remediation") {
     return `Saved review remediation debt remains for ${reviewableFileCount} reviewable file(s).`;
   }
 
-  if (reviewFollowUpCommand !== null) {
+  if (args.reviewDebtKind === "follow-up") {
     return `Saved review follow-up remains for ${reviewableFileCount} reviewable file(s).`;
   }
 
@@ -1109,6 +1498,13 @@ export function buildPhaseQualityGateNextAction(
     ) {
       return `Run ${reviewNextSafeAction}.`;
     }
+  }
+
+  if (
+    args.evaluation.reviewDebtKind === "remediation" &&
+    isImplementedCommand(args.implementedCommandNames, "code-review-fix")
+  ) {
+    return `Run /blu-code-review-fix ${phaseNumber} to continue resolving saved review remediation debt.`;
   }
 
   if (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) {

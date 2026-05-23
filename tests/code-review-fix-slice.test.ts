@@ -551,12 +551,18 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
   assert.equal(loaded.found, true);
   assert.equal(loaded.path, ".blueprint/phases/05-review-fix/05-REVIEW-FIX.md");
   assert.deepEqual(
-    loaded.findings.map((finding) => [finding.id, finding.severity, finding.summary]),
+    loaded.findings.map((finding) => [
+      finding.id,
+      finding.severity,
+      finding.summary,
+      finding.evidence
+    ]),
     [
       [
         "F-01",
         "high",
-        "Handle negative inputs explicitly in src/feature.ts. Evidence: The source now guards negative inputs before returning a calculated value. Disposition: Focused remediation completed for the saved high-severity finding."
+        "Handle negative inputs explicitly in src/feature.ts.",
+        "The source now guards negative inputs before returning a calculated value."
       ]
     ]
   );
@@ -568,6 +574,132 @@ test("blueprint_review_record persists model-only review-fix artifacts and load_
     unknown: 0
   });
   assert.deepEqual(loaded.followUps, []);
+  assert.deepEqual(loaded.followUpTargets, []);
+});
+
+test("review-fix canonical rows round-trip evidence payloads containing marker tokens", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const recorded = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model: validReviewFixModel({
+      findingsAddressed: [
+        {
+          findingId: "F-01",
+          status: "fixed",
+          evidence: "The guard preserves literal markers like Evidence: and Disposition: inside saved evidence text.",
+          disposition: "Focused remediation completed for the saved high-severity finding."
+        }
+      ]
+    })
+  });
+
+  assert.equal(recorded.status, "created");
+
+  const saved = await readFile(path.join(repoPath, recorded.reportPath), "utf8");
+  assert.match(
+    saved,
+    /Evidence: "The guard preserves literal markers like Evidence: and Disposition: inside saved evidence text\."/
+  );
+
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix"
+  });
+
+  assert.deepEqual(
+    loaded.findings.map((finding) => [
+      finding.id,
+      finding.summary,
+      finding.evidence
+    ]),
+    [
+      [
+        "F-01",
+        "Handle negative inputs explicitly in src/feature.ts.",
+        "The guard preserves literal markers like Evidence: and Disposition: inside saved evidence text."
+      ]
+    ]
+  );
+});
+
+test("review-fix load_findings preserves summary tokens and follow-up targets from saved markdown", async (t) => {
+  const repoPath = await createCodeReviewFixRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const recorded = await blueprintReviewRecord({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix",
+    targetIds: ["F-01"],
+    model: validReviewFixModel()
+  });
+
+  assert.equal(recorded.status, "created");
+
+  const reviewFixPath = path.join(repoPath, recorded.reportPath);
+  const saved = await readFile(reviewFixPath, "utf8");
+  const rewritten = saved
+    .replace(
+      /- \[high\]\[fixed\][^\n]+/,
+      "- [high][fixed] `F-01` - Handle labels named Evidence: and Disposition: in src/feature.ts. Evidence: The guard now preserves the saved review-fix evidence text verbatim. Disposition: Focused remediation completed after the parser stopped splitting the summary incorrectly."
+    )
+    .replace(
+      /## Follow-Ups\n\n- none/,
+      "## Follow-Ups\n\n- `FU-09` - Re-run focused validation after touching summary labels."
+    );
+  await writeFile(reviewFixPath, rewritten, "utf8");
+
+  const loaded = await blueprintReviewLoadFindings({
+    cwd: repoPath,
+    phase: "5",
+    artifact: "review-fix"
+  });
+
+  assert.deepEqual(
+    loaded.findings.map((finding) => [
+      finding.id,
+      finding.severity,
+      finding.summary,
+      finding.evidence
+    ]),
+    [
+      [
+        "F-01",
+        "high",
+        "Handle labels named Evidence: and Disposition: in src/feature.ts.",
+        "The guard now preserves the saved review-fix evidence text verbatim."
+      ]
+    ]
+  );
+  assert.deepEqual(loaded.followUps, [
+    "Re-run focused validation after touching summary labels."
+  ]);
+  assert.deepEqual(
+    loaded.followUpTargets.map((target) => ({
+      targetId: target.targetId,
+      source: target.source,
+      summary: target.summary,
+      classification: target.classification
+    })),
+    [
+      {
+        targetId: "FU-09",
+        source: "follow-up",
+        summary: "Re-run focused validation after touching summary labels.",
+        classification: "validation-only"
+      }
+    ]
+  );
 });
 
 test("review-fix evidence allows required upstream rows plus extra safe provenance", async (t) => {

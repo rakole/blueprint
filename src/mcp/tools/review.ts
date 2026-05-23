@@ -4467,6 +4467,216 @@ function parseCodeReviewFindings(content: string): {
   };
 }
 
+function findRightmostLabeledSegmentStart(
+  value: string,
+  label: string
+): number | null {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = [...value.matchAll(new RegExp(`(?:^|\\s)(${escaped})`, "gi"))];
+  const last = matches.at(-1);
+
+  if (!last || last.index === undefined) {
+    return null;
+  }
+
+  return last.index + last[0].length - last[1].length;
+}
+
+function extractLeadingJsonStringLiteral(value: string): {
+  parsed: string;
+  remainder: string;
+} | null {
+  if (!value.startsWith("\"")) {
+    return null;
+  }
+
+  let escaped = false;
+
+  for (let index = 1; index < value.length; index += 1) {
+    const character = value[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+
+    if (character === "\"") {
+      const literal = value.slice(0, index + 1);
+      let parsed: unknown;
+
+      try {
+        parsed = JSON.parse(literal);
+      } catch {
+        return null;
+      }
+
+      if (typeof parsed !== "string") {
+        return null;
+      }
+
+      return {
+        parsed,
+        remainder: value.slice(index + 1)
+      };
+    }
+  }
+
+  return null;
+}
+
+function parseCanonicalReviewFixFindingBody(body: string): {
+  summary: string;
+  evidence: string | null;
+} | null {
+  const matches = [...body.matchAll(/(?:^|\s)(Evidence:)/gi)];
+
+  for (const match of matches) {
+    if (match.index === undefined) {
+      continue;
+    }
+
+    const evidenceStart = match.index + match[0].length - match[1].length;
+    const summary = sanitizeMarkdownScalar(body.slice(0, evidenceStart).trim());
+    const quotedEvidence = extractLeadingJsonStringLiteral(
+      body.slice(evidenceStart + "Evidence:".length).trimStart()
+    );
+
+    if (!quotedEvidence) {
+      continue;
+    }
+
+    const dispositionMatch = quotedEvidence.remainder.match(/^\s+Disposition:\s*(.+)$/i);
+
+    if (!dispositionMatch) {
+      continue;
+    }
+
+    return {
+      summary: summary.length > 0 ? summary : sanitizeMarkdownScalar(body),
+      evidence: sanitizeMarkdownScalar(quotedEvidence.parsed)
+    };
+  }
+
+  return null;
+}
+
+function parseReviewFixFindingBody(body: string): {
+  summary: string;
+  evidence: string | null;
+} {
+  const canonical = parseCanonicalReviewFixFindingBody(body);
+
+  if (canonical) {
+    return canonical;
+  }
+
+  const dispositionStart = findRightmostLabeledSegmentStart(body, "Disposition:");
+
+  if (dispositionStart === null) {
+    return {
+      summary: sanitizeMarkdownScalar(body),
+      evidence: null
+    };
+  }
+
+  const beforeDisposition = body.slice(0, dispositionStart).trim();
+  const evidenceStart = findRightmostLabeledSegmentStart(beforeDisposition, "Evidence:");
+
+  if (evidenceStart === null) {
+    return {
+      summary: sanitizeMarkdownScalar(body),
+      evidence: null
+    };
+  }
+
+  const summary = sanitizeMarkdownScalar(beforeDisposition.slice(0, evidenceStart).trim());
+  const evidence = sanitizeMarkdownScalar(
+    beforeDisposition.slice(evidenceStart + "Evidence:".length).trim()
+  );
+
+  return {
+    summary: summary.length > 0 ? summary : sanitizeMarkdownScalar(body),
+    evidence: evidence.length > 0 ? evidence : null
+  };
+}
+
+function parseReviewFixFindingEntry(
+  item: string,
+  sourceSection: string
+): ReviewFinding {
+  const visibleId = extractVisibleReviewTargetId(item);
+  const stableId =
+    visibleId === null ? buildLegacyReviewTargetId("F", sourceSection, item) : null;
+  const canonical = item.match(
+    /^\[(critical|high|medium|low|unknown)\]\[([a-z0-9-]+)\]\s+`([^`]+)`\s*-\s*(.+)$/i
+  );
+
+  if (canonical) {
+    const [, severity, , canonicalId, body] = canonical;
+    const parsedBody = parseReviewFixFindingBody(body);
+
+    return buildReviewFinding({
+      id: canonicalId.toUpperCase(),
+      visibleId: canonicalId.toUpperCase(),
+      stableId: null,
+      legacyDerived: false,
+      severity: severity.toLowerCase() as ReviewFindingSeverity,
+      summary: parsedBody.summary,
+      sourceSection,
+      evidence: parsedBody.evidence
+    });
+  }
+
+  const stripped = stripVisibleReviewTargetId(item);
+  const parsedBody = parseReviewFixFindingBody(stripped);
+
+  return buildReviewFinding({
+    id: visibleId ?? stableId!,
+    visibleId,
+    stableId,
+    legacyDerived: visibleId === null,
+    severity: inferFindingSeverity(sourceSection, item),
+    summary: parsedBody.summary,
+    sourceSection,
+    evidence: parsedBody.evidence
+  });
+}
+
+function parseReviewFixFindings(content: string): {
+  findings: ReviewFinding[];
+  severityCounts: Record<ReviewFindingSeverity, number>;
+  followUps: string[];
+  followUpTargets: ReviewFixTarget[];
+} {
+  const findings = extractMarkdownSectionRawItems(
+    content,
+    /^(findings addressed|findings)$/i
+  ).flatMap((entry) =>
+    entry.items
+      .filter((item) => !isPlaceholderReviewListItem(item))
+      .map((item) => parseReviewFixFindingEntry(item, entry.heading))
+  );
+  const severityCounts = emptySeverityCounts();
+
+  findings.forEach((finding) => {
+    severityCounts[finding.severity] += 1;
+  });
+
+  const followUps = parseCodeReviewFollowUpTargets(content);
+
+  return {
+    findings,
+    severityCounts,
+    followUps: followUps.followUps,
+    followUpTargets: followUps.targets
+  };
+}
+
 function resolveFindingsHeadingPattern(artifact: ReviewArtifactKind): RegExp {
   if (artifact === "review-fix") {
     return /^(findings addressed|findings)$/i;
@@ -4777,6 +4987,10 @@ function parseFindingsFromArtifact(
     return parseCodeReviewFindings(content);
   }
 
+  if (artifact === "review-fix") {
+    return parseReviewFixFindings(content);
+  }
+
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings: ReviewFinding[] = [];
   const seenFindingKeys = new Set<string>();
@@ -4789,13 +5003,8 @@ function parseFindingsFromArtifact(
         continue;
       }
 
-      const reviewFixTargetId = artifact === "review-fix"
-        ? extractReviewFixTargetId(item)
-        : null;
-      const summary = reviewFixTargetId
-        ? normalizeReviewFixFindingSummary(item)
-        : normalizeFindingSummary(item);
-      const findingKey = reviewFixTargetId ?? summary;
+      const summary = normalizeFindingSummary(item);
+      const findingKey = summary;
 
       if (summary.length === 0 || seenFindingKeys.has(findingKey)) {
         continue;
@@ -4805,9 +5014,7 @@ function parseFindingsFromArtifact(
       seenFindingKeys.add(findingKey);
       severityCounts[severity] += 1;
       findings.push(buildReviewFinding({
-        id: reviewFixTargetId ?? `F-${String(findings.length + 1).padStart(2, "0")}`,
-        visibleId: reviewFixTargetId,
-        legacyDerived: reviewFixTargetId === null,
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity,
         summary,
         sourceSection: entry.heading
@@ -5276,8 +5483,9 @@ function renderReviewFixModelContent(
     const target = targetById.get(row.findingId);
     const severity = target?.severity ?? "unknown";
     const summary = target?.summary ?? "Saved review target summary unavailable.";
+    const evidence = JSON.stringify(sanitizeMarkdownScalar(row.evidence));
 
-    return `- [${severity}][${row.status}] \`${row.findingId}\` - ${summary} Evidence: ${row.evidence} Disposition: ${row.disposition}`;
+    return `- [${severity}][${row.status}] \`${row.findingId}\` - ${summary} Evidence: ${evidence} Disposition: ${row.disposition}`;
   });
 
   return normalizeTextContent(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Review Fix

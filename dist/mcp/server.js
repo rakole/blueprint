@@ -24904,6 +24904,23 @@ function extractMarkdownSection2(content, heading) {
   );
   return match?.[1]?.trim() ?? "";
 }
+function collectListItems(block) {
+  return block.split("\n").map((line) => line.trim()).flatMap((line) => {
+    const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
+    if (checklistMatch) {
+      return [checklistMatch[1].trim()];
+    }
+    const bulletMatch = line.match(/^[-*+]\s+(.+)$/);
+    if (bulletMatch) {
+      return [bulletMatch[1].trim()];
+    }
+    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    return numberedMatch ? [numberedMatch[1].trim()] : [];
+  }).filter((item) => item.length > 0);
+}
+function extractMarkdownSectionItems(content, heading) {
+  return [...new Set(collectListItems(extractMarkdownSection2(content, heading)))];
+}
 function extractPathCandidatesFromSection(section) {
   const candidates = /* @__PURE__ */ new Set();
   for (const match of section.matchAll(/`([^`]+)`/g)) {
@@ -24943,6 +24960,86 @@ function extractReviewFixNextSafeAction(content) {
   const markerAction = extractArtifactMarker(content, "Next Safe Action");
   return markerAction ? extractBlueprintCommand(markerAction) : null;
 }
+function extractReviewFixStatus(content) {
+  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
+  if (status === "COMPLETED" || status === "PARTIAL" || status === "BLOCKED") {
+    return status;
+  }
+  return null;
+}
+function extractVisibleReviewTargetId(value) {
+  const trimmed = value.trim();
+  const startMatch = trimmed.match(
+    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
+  );
+  if (startMatch) {
+    return startMatch[1].toUpperCase();
+  }
+  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN);
+  return inlineMatch ? inlineMatch[1].toUpperCase() : null;
+}
+function stripVisibleReviewTargetId(value) {
+  return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
+}
+function normalizeReviewListItem(item) {
+  return stripVisibleReviewTargetId(item).replace(/^`+|`+$/g, "").replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "").trim().toLowerCase();
+}
+function classifyReviewFixTargetSummary(summary) {
+  const normalized = normalizeReviewListItem(summary);
+  if (normalized.length === 0) {
+    return "no-op";
+  }
+  if (/(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) || /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) || /\/blu-add-tests\b/i.test(summary)) {
+    return "test-gap";
+  }
+  if (/\b(?:verify|verification|validate|validation|uat|manual qa|smoke check|re-run)\b/i.test(summary) || /\/blu-(?:validate-phase|verify-work)\b/i.test(summary)) {
+    return "validation-only";
+  }
+  if (/\/blu-(?:progress|secure-phase|plan-phase|review|execute-phase|pause-work|resume-work)\b/i.test(summary) || /\b(?:route|routing|document|triage|coordinate|handoff|process note)\b/i.test(summary)) {
+    return "routing-note";
+  }
+  if (/\b(?:no action|no change|already covered|informational only)\b/i.test(summary)) {
+    return "no-op";
+  }
+  return "fixable";
+}
+function extractReviewFindingSummary(item) {
+  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+  if (canonical) {
+    return canonical[7]?.trim() ?? "";
+  }
+  const recommendationMatch = item.match(/Fix\/verification:\s*(.+)$/i);
+  return recommendationMatch?.[1]?.trim() ?? stripVisibleReviewTargetId(item);
+}
+function parseExplicitActionableReviewTargetIds(content) {
+  const actionableTargetIds = /* @__PURE__ */ new Set();
+  for (const item of extractMarkdownSectionItems(content, "Findings")) {
+    const targetId = extractVisibleReviewTargetId(item);
+    if (targetId === null || !/\[follow-up\]/i.test(item)) {
+      continue;
+    }
+    if (classifyReviewFixTargetSummary(extractReviewFindingSummary(item)) === "fixable") {
+      actionableTargetIds.add(targetId);
+    }
+  }
+  for (const item of extractMarkdownSectionItems(content, "Follow-Ups")) {
+    const targetId = extractVisibleReviewTargetId(item);
+    if (targetId !== null && classifyReviewFixTargetSummary(stripVisibleReviewTargetId(item)) === "fixable") {
+      actionableTargetIds.add(targetId);
+    }
+  }
+  return [...actionableTargetIds];
+}
+function parseExplicitReviewFixAddressedIds(content) {
+  const addressedTargetIds = /* @__PURE__ */ new Set();
+  for (const item of extractMarkdownSectionItems(content, "Findings Addressed")) {
+    const targetId = extractVisibleReviewTargetId(item);
+    if (targetId !== null) {
+      addressedTargetIds.add(targetId);
+    }
+  }
+  return [...addressedTargetIds];
+}
 function extractArtifactMarker(content, marker) {
   const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = content.match(
@@ -24950,10 +25047,101 @@ function extractArtifactMarker(content, marker) {
   );
   return match?.[1]?.trim() ?? null;
 }
-function isCompletedReviewFixArtifact(content) {
-  const status = extractArtifactMarker(content, "Status")?.toUpperCase() ?? null;
-  const completionState = extractArtifactMarker(content, "Completion State")?.toLowerCase() ?? null;
-  return status === "COMPLETED" && completionState === "complete";
+function hasLegalReviewFixStatusPair(args) {
+  return args.status === "COMPLETED" && args.completionState === "complete" || args.status === "PARTIAL" && args.completionState === "pending" || args.status === "BLOCKED" && args.completionState === "blocked";
+}
+function isLegalReviewFixNextSafeAction(args) {
+  switch (args.status) {
+    case "COMPLETED":
+      return args.nextSafeAction === `/blu-validate-phase ${args.phaseNumber}`;
+    case "PARTIAL":
+      return args.nextSafeAction === `/blu-code-review-fix ${args.phaseNumber}` || args.nextSafeAction === `/blu-add-tests ${args.phaseNumber}` || args.nextSafeAction === `/blu-execute-phase ${args.phaseNumber}`;
+    case "BLOCKED":
+      return args.nextSafeAction === "/blu-progress" || args.nextSafeAction === `/blu-execute-phase ${args.phaseNumber}`;
+  }
+}
+function parseReviewFixRoutingState(args) {
+  const status = extractReviewFixStatus(args.content);
+  const completionState = extractArtifactMarker(args.content, "Completion State")?.toLowerCase() ?? null;
+  if (status === null || !hasLegalReviewFixStatusPair({ status, completionState })) {
+    return {
+      status,
+      nextSafeAction: extractReviewFixNextSafeAction(args.content),
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
+    };
+  }
+  const nextSafeAction = extractReviewFixNextSafeAction(args.content);
+  const legalNextSafeAction = isLegalReviewFixNextSafeAction({
+    status,
+    nextSafeAction,
+    phaseNumber: args.phaseNumber
+  });
+  return {
+    status,
+    nextSafeAction,
+    usesLatestReviewFixState: true,
+    usableRoutingAction: legalNextSafeAction && !(status === "BLOCKED" && nextSafeAction === "/blu-progress"),
+    leavesRemediationDebt: status !== "COMPLETED"
+  };
+}
+async function reconcileCompletedReviewFixDebt(args) {
+  const addressedTargetIds = parseExplicitReviewFixAddressedIds(args.reviewFixContent);
+  if (addressedTargetIds.length === 0) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest completed Review Fix artifact lacks explicit parseable addressed ids in Findings Addressed; quality-gate routing will keep legacy debt-clearing behavior.`
+    );
+    return null;
+  }
+  if (args.reviewPath === null) {
+    return null;
+  }
+  const reviewArtifact = args.artifacts.find((artifact) => artifact.path === args.reviewPath) ?? {
+    path: args.reviewPath,
+    kind: "review"
+  };
+  const reviewContent = await readArtifactContent({
+    projectRoot: args.projectRoot,
+    artifact: reviewArtifact
+  });
+  if (reviewContent === null) {
+    return null;
+  }
+  const actionableTargetIds = parseExplicitActionableReviewTargetIds(reviewContent);
+  if (actionableTargetIds.length === 0) {
+    return null;
+  }
+  const addressedTargetIdSet = new Set(addressedTargetIds);
+  const missingTargetIds = actionableTargetIds.filter((targetId) => !addressedTargetIdSet.has(targetId));
+  if (missingTargetIds.length === 0) {
+    return true;
+  }
+  const addressedCount = actionableTargetIds.length - missingTargetIds.length;
+  args.warnings.push(
+    `${args.reviewFixPath}: latest completed Review Fix artifact addressed ${addressedCount} of ${actionableTargetIds.length} actionable saved review target ids; quality-gate routing will keep remediation debt open. Missing: ${missingTargetIds.join(", ")}.`
+  );
+  return false;
+}
+function deriveReviewDebtKind(args) {
+  if (args.reviewFixState.leavesRemediationDebt) {
+    return "remediation";
+  }
+  if (args.reviewFixState.usesLatestReviewFixState && args.reviewFixState.status === "COMPLETED" && args.reviewFixState.usableRoutingAction) {
+    return null;
+  }
+  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
+    reviewNextSafeAction: args.reviewNextSafeAction,
+    missingGate: args.missingGate,
+    hasSecurity: args.hasSecurity
+  });
+  if (reviewFollowUpCommand === "code-review-fix") {
+    return "remediation";
+  }
+  return reviewFollowUpCommand === null ? null : "follow-up";
+}
+function buildReviewDebtFallbackAction(phaseNumber) {
+  return `/blu-code-review-fix ${phaseNumber}`;
 }
 function extractCommandName(action) {
   const match = action.match(/\/blu-([a-z0-9-]+)/i);
@@ -25155,11 +25343,14 @@ async function readReviewRoutingState(args) {
     nextSafeAction
   };
 }
-async function readCompletedReviewFixNextSafeAction(args) {
+async function readUsableReviewFixNextSafeAction(args) {
   if (args.reviewFixPath === null) {
     return {
-      completed: false,
-      nextSafeAction: null
+      status: null,
+      nextSafeAction: null,
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
     };
   }
   const reviewFixArtifact = args.artifacts.find((artifact) => artifact.path === args.reviewFixPath) ?? {
@@ -25175,26 +25366,62 @@ async function readCompletedReviewFixNextSafeAction(args) {
       `${args.reviewFixPath}: could not read Review Fix artifact Next Safe Action.`
     );
     return {
-      completed: false,
-      nextSafeAction: null
+      status: null,
+      nextSafeAction: null,
+      usesLatestReviewFixState: false,
+      usableRoutingAction: false,
+      leavesRemediationDebt: false
     };
   }
-  if (!isCompletedReviewFixArtifact(content)) {
-    return {
-      completed: false,
-      nextSafeAction: null
-    };
+  const routingState = parseReviewFixRoutingState({
+    content,
+    phaseNumber: args.phaseNumber
+  });
+  if (!routingState.usesLatestReviewFixState) {
+    return routingState;
   }
-  const nextSafeAction = extractReviewNextSafeAction(content);
-  if (nextSafeAction === null) {
+  if (routingState.nextSafeAction === null) {
     args.warnings.push(
-      `${args.reviewFixPath}: completed Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will use derived state.`
+      `${args.reviewFixPath}: latest Review Fix artifact Next Safe Action does not contain a Blueprint command; quality-gate routing will keep the newest remediation state and use debt-aware fallback routing.`
+    );
+    return routingState;
+  }
+  if (routingState.status === null) {
+    return routingState;
+  }
+  if (!isLegalReviewFixNextSafeAction({
+    status: routingState.status,
+    nextSafeAction: routingState.nextSafeAction,
+    phaseNumber: args.phaseNumber
+  })) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest ${routingState.status} Review Fix artifact Next Safe Action is not a legal review-fix route; quality-gate routing will keep the newest remediation state and use debt-aware fallback routing.`
+    );
+    return routingState;
+  }
+  if (routingState.status === "COMPLETED" && routingState.usableRoutingAction) {
+    const clearsSavedDebt = await reconcileCompletedReviewFixDebt({
+      projectRoot: args.projectRoot,
+      reviewPath: args.reviewPath,
+      reviewFixPath: args.reviewFixPath,
+      reviewFixContent: content,
+      artifacts: args.artifacts,
+      warnings: args.warnings
+    });
+    if (clearsSavedDebt === false) {
+      return {
+        ...routingState,
+        usableRoutingAction: false,
+        leavesRemediationDebt: true
+      };
+    }
+  }
+  if (!routingState.usableRoutingAction) {
+    args.warnings.push(
+      `${args.reviewFixPath}: latest ${routingState.status} Review Fix artifact keeps saved remediation debt open; quality-gate routing will not treat ${routingState.nextSafeAction} as debt-clearing.`
     );
   }
-  return {
-    completed: true,
-    nextSafeAction
-  };
+  return routingState;
 }
 async function evaluatePhaseQualityGates(args) {
   const projectRoot = await ensureRepoRoot(args.projectRoot);
@@ -25265,14 +25492,19 @@ async function evaluatePhaseQualityGates(args) {
   const reviewableFiles = evidenceFiles.filter(isReviewableRepoFile).sort((left, right) => left.localeCompare(right));
   const requiresCodeReview = reviewSettings.enabled && reviewableFiles.length > 0;
   const missingGate = requiresCodeReview && !hasReview ? "review" : requiresCodeReview && hasReview && !hasSecurity ? "security" : null;
-  const reviewFixNextSafeAction = hasReviewFix ? await readCompletedReviewFixNextSafeAction({
+  const reviewFixRoutingState = hasReviewFix ? await readUsableReviewFixNextSafeAction({
     projectRoot,
+    reviewPath,
     reviewFixPath,
     artifacts,
-    warnings
+    warnings,
+    phaseNumber
   }) : {
-    completed: false,
-    nextSafeAction: null
+    status: null,
+    nextSafeAction: null,
+    usesLatestReviewFixState: false,
+    usableRoutingAction: false,
+    leavesRemediationDebt: false
   };
   const reviewRoutingState = hasReview ? await readReviewRoutingState({
     projectRoot,
@@ -25283,7 +25515,7 @@ async function evaluatePhaseQualityGates(args) {
     verdict: null,
     nextSafeAction: null
   };
-  const rawReviewNextSafeAction = reviewFixNextSafeAction.completed ? reviewFixNextSafeAction.nextSafeAction : reviewRoutingState.nextSafeAction;
+  const rawReviewNextSafeAction = reviewFixRoutingState.usesLatestReviewFixState ? reviewFixRoutingState.usableRoutingAction ? reviewFixRoutingState.nextSafeAction : null : reviewRoutingState.nextSafeAction;
   const reviewNextSafeAction = normalizeReviewNextSafeAction({
     action: rawReviewNextSafeAction,
     phaseNumber,
@@ -25291,8 +25523,14 @@ async function evaluatePhaseQualityGates(args) {
     missingGate,
     hasSecurity
   });
-  const hasBlockingReviewFollowUp = isBlockingReviewNextSafeAction({
-    action: reviewNextSafeAction,
+  const reviewDebtKind = deriveReviewDebtKind({
+    reviewFixState: reviewFixRoutingState,
+    reviewNextSafeAction,
+    missingGate,
+    hasSecurity
+  });
+  const hasBlockingReviewFollowUp = reviewDebtKind !== null && isBlockingReviewNextSafeAction({
+    action: reviewNextSafeAction ?? (reviewDebtKind === "remediation" ? buildReviewDebtFallbackAction(phaseNumber) : null),
     missingGate,
     hasSecurity
   });
@@ -25304,10 +25542,11 @@ async function evaluatePhaseQualityGates(args) {
     reviewableFiles,
     codeReviewEnabled: reviewSettings.enabled,
     requiresCodeReview,
-    gatesSatisfied: missingGate === null && !hasBlockingReviewFollowUp,
+    gatesSatisfied: missingGate === null && reviewDebtKind === null && !hasBlockingReviewFollowUp,
     missingGate,
     warnings,
-    reviewNextSafeAction
+    reviewNextSafeAction,
+    reviewDebtKind
   };
 }
 function formatPhaseQualityGateDebtReason(args) {
@@ -25321,15 +25560,10 @@ function formatPhaseQualityGateDebtReason(args) {
   if (args.missingGate === "security") {
     return `SECURITY evidence is missing for ${reviewableFileCount} reviewable file(s).`;
   }
-  const reviewFollowUpCommand = savedReviewFollowUpCommandName({
-    reviewNextSafeAction: args.reviewNextSafeAction,
-    missingGate: args.missingGate,
-    hasSecurity: args.hasSecurity
-  });
-  if (reviewFollowUpCommand === "code-review-fix") {
+  if (args.reviewDebtKind === "remediation") {
     return `Saved review remediation debt remains for ${reviewableFileCount} reviewable file(s).`;
   }
-  if (reviewFollowUpCommand !== null) {
+  if (args.reviewDebtKind === "follow-up") {
     return `Saved review follow-up remains for ${reviewableFileCount} reviewable file(s).`;
   }
   return null;
@@ -25353,12 +25587,15 @@ function buildPhaseQualityGateNextAction(args) {
       return `Run ${reviewNextSafeAction}.`;
     }
   }
+  if (args.evaluation.reviewDebtKind === "remediation" && isImplementedCommand(args.implementedCommandNames, "code-review-fix")) {
+    return `Run /blu-code-review-fix ${phaseNumber} to continue resolving saved review remediation debt.`;
+  }
   if (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) {
     return null;
   }
   return null;
 }
-var REVIEWABLE_EXTENSIONS, REVIEWABLE_FILENAMES, REVIEWABLE_ROOT_PREFIXES, PATH_TOKEN_PATTERN;
+var REVIEWABLE_EXTENSIONS, REVIEWABLE_FILENAMES, REVIEWABLE_ROOT_PREFIXES, PATH_TOKEN_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN;
 var init_quality_gates = __esm({
   "src/mcp/tools/quality-gates.ts"() {
     "use strict";
@@ -25440,6 +25677,8 @@ var init_quality_gates = __esm({
       "config/"
     ];
     PATH_TOKEN_PATTERN = /\/?[A-Za-z0-9._~@$+%-]+(?:\/[A-Za-z0-9._~@$+%-]+)+|\/?[A-Za-z0-9._~@$+%-]+\.[A-Za-z0-9]+/g;
+    VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
+    CANONICAL_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
   }
 });
 
@@ -26316,7 +26555,7 @@ function implementedBlockingUatNextSafeAction(uatNextSafeAction, implementedComm
     return null;
   }
   const uatNextCommand = uatNextSafeAction.match(/\/blu-[a-z0-9-]+/i)?.[0] ?? null;
-  if (uatNextCommand === null || uatNextCommand === blueprintDirectCommand("progress") || !implementedCommands.has(uatNextCommand)) {
+  if (uatNextCommand === null || !BLOCKING_UAT_REPAIR_COMMANDS.has(uatNextCommand) || uatNextCommand === blueprintDirectCommand("progress") || !implementedCommands.has(uatNextCommand)) {
     return null;
   }
   return uatNextSafeAction;
@@ -27704,7 +27943,7 @@ async function blueprintStateSync(args = {}) {
     statePath: toRepoRelativePath(projectRoot, statePath)
   };
 }
-var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise, stateToolDefinitions;
+var PAUSE_WORK_CONTRACT, PAUSE_CURRENT_STATE_HEADING, PAUSE_COMPLETED_WORK_HEADING, PAUSE_REMAINING_WORK_HEADING, PAUSE_DECISIONS_HEADING, PAUSE_BLOCKERS_HEADING, PAUSE_HUMAN_ACTIONS_HEADING, PAUSE_MODIFIED_FILES_HEADING, PAUSE_BLUEPRINT_SNAPSHOT_HEADING, PAUSE_NEXT_ACTION_HEADING, PAUSE_CONTEXT_NOTES_HEADING, DEFAULT_STATE, PAUSE_HANDOFF_REPORT_PATH, PAUSE_WORK_COMMAND, RESUME_WORK_COMMAND, PAUSE_HANDOFF_BLOCKER_PREFIX, PATCH_PHASE_OVERRIDE_COMMANDS, PATCH_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, STORED_PHASE_SCOPED_ROUTING_OVERRIDE_COMMANDS, BLOCKING_UAT_REPAIR_COMMANDS, stateUpdateInputSchema, stateLoadInputSchema, pauseHandoffGetInputSchema, pauseHandoffWriteInputSchema, stateSyncInputSchema, implementedCommandNamesPromise, stateToolDefinitions;
 var init_state = __esm({
   "src/mcp/tools/state.ts"() {
     "use strict";
@@ -27764,6 +28003,11 @@ var init_state = __esm({
       blueprintDirectCommand("execute-phase"),
       blueprintDirectCommand("validate-phase"),
       blueprintDirectCommand("verify-work"),
+      blueprintDirectCommand("add-tests")
+    ]);
+    BLOCKING_UAT_REPAIR_COMMANDS = /* @__PURE__ */ new Set([
+      blueprintDirectCommand("verify-work"),
+      blueprintDirectCommand("audit-fix"),
       blueprintDirectCommand("add-tests")
     ]);
     stateUpdateInputSchema = {
@@ -43639,7 +43883,7 @@ function validateCodeReviewArtifactRenderedShape(content) {
     {}
   );
   for (const item of findingItems) {
-    const canonicalFinding = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN);
+    const canonicalFinding = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN2);
     if (!canonicalFinding) {
       issues.push(
         `Review artifact finding must use the canonical MCP-rendered shape [severity][disposition] \`F-XX\` \`file:line\` - Evidence: ... Impact: ... Fix/verification: ...: ${item}`
@@ -49282,7 +49526,7 @@ async function blueprintCodebaseArtifactWrite(args) {
     warnings
   };
 }
-var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
+var import__2, execFileAsync, BLUEPRINT_DIR, BLUEPRINT_STATE_PATH, BLUEPRINT_CONFIG_PATH, BLUEPRINT_PHASES_PATH, BLUEPRINT_REPORTS_PATH, BLUEPRINT_CODEBASE_PATH, BLUEPRINT_BACKLOG_PATH, BLUEPRINT_TODOS_PATH, BLUEPRINT_NOTES_PATH, BLUEPRINT_BACKLOG_INDEX_PATH, BLUEPRINT_TODO_INDEX_PATH, BLUEPRINT_NOTES_INDEX_PATH, SUPPORTED_BOOTSTRAP_ARTIFACTS, CORE_PROJECT_ARTIFACTS, CODEBASE_ARTIFACTS, SCAFFOLD_GENERATED_MARKER, BOOTSTRAP_STARTER_CONTEXT_MARKER, OPERATIONAL_ONLY_BLUEPRINT_ARTIFACTS, CODEBASE_ARTIFACT_CONTRACT_IDS, SUPPORTED_SCAFFOLD_ARTIFACTS, SCAFFOLD_PHASE_ARTIFACT_PATTERN, SCAFFOLD_ARTIFACT_PATH_GUIDANCE, DURABLE_REQUIREMENT_ID_PATTERN, BOOTSTRAP_SOURCE_DIRECTORIES, BOOTSTRAP_MANIFEST_FILES, BOOTSTRAP_LOCKFILES, BOOTSTRAP_STARTER_DIRECTORIES, BOOTSTRAP_CONFIGURATION_FILE_PATTERNS, BOOTSTRAP_IMPLEMENTATION_FILE_EXTENSIONS, BOOTSTRAP_DOCUMENTATION_FILE_EXTENSIONS, BOOTSTRAP_IGNORED_ROOT_ENTRIES, BOOTSTRAP_IGNORED_SCAN_DIRECTORIES, BOOTSTRAP_PLACEHOLDER_SIGNALS, CAPTURE_INDEX_TARGETS, CAPTURE_INDEX_CONFIG, BOOTSTRAP_REQUIREMENT_SCOPE_ORDER, REQUIRED_RESEARCH_SECTIONS, RESEARCH_CONFIDENCE_VALUES, RESEARCH_SECTION_VALIDATIONS, RESEARCH_TEMPLATE_PLACEHOLDER_SIGNALS, BOOTSTRAP_PROJECT_CONTRACT, PLAN_CONTRACT, REQUIRED_PLAN_SECTIONS, PLAN_PLACEHOLDER_SIGNALS, PLAN_TEMPLATE_PLACEHOLDER_LIST_ITEMS, MIN_SCAFFOLD_PLACEHOLDER_SIGNAL_MATCHES, ARTIFACT_RENDERERS, artifactScaffoldInputSchema, artifactListInputSchema, artifactMutateIndexInputSchema, artifactValidateInputSchema, artifactSummaryDigestInputSchema, artifactContractReadInputSchema, auditFixRuntimeInputSchema, artifactReportWriteInputSchema, artifactReportAuthoringContextInputSchema, artifactReportValidateModelInputSchema, artifactCodebaseWriteInputSchema, CODEBASE_SECTION_TITLES, MILESTONE_REPORT_PREFIXES, RESEARCH_ISO_DATE_PATTERN, RESEARCH_EXTERNAL_URL_OR_DOI_REFERENCE_PATTERN, RESEARCH_STRUCTURED_DOI_PATTERN, RESEARCH_STRUCTURED_COMMAND_REFERENCE_PATTERN, PLAN_TASK_ABSOLUTE_PATH_ROOTS, implementedCommandNamesPromise3, VALIDATION_SCAFFOLD_PLACEHOLDER_PATTERNS, ROADMAP_PHASE_DETAIL_STATUSES, UNSUPPORTED_DISCUSS_MODE_CLAIM_PATTERNS, UNSUPPORTED_MODE_POSITIVE_CLAIM_PATTERN, UNSUPPORTED_MODE_NEGATION_PATTERN, RAW_HANDOFF_PACKET_LABEL_PATTERNS, REQUIRED_VERIFICATION_SECTIONS, VERIFICATION_PLACEHOLDER_BODIES, VALID_VERIFICATION_COVERAGE_STATES, VALID_VERIFICATION_MANUAL_COVERAGE_STATES, VALID_VERIFICATION_GAP_CLASSES, VERIFICATION_REPAIR_COMMANDS, REQUIRED_UAT_SECTIONS, UAT_PLACEHOLDER_BODIES, VALID_UAT_TEST_RESULTS, VALID_UAT_STRUCTURED_GAP_STATUSES, VALID_UAT_STRUCTURED_GAP_SEVERITIES, UAT_NEXT_ACTION_COMMANDS, REVIEW_ARTIFACT_SEVERITIES, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, SCOPE_REVIEWED_INLINE_PATH_PATTERN, SCOPE_REVIEWED_PATH_PATTERN, BOOTSTRAP_ARTIFACT_IDS_BY_PATH, BOOTSTRAP_REPAIR, MILESTONE_CLOSEOUT_COMMANDS, PHASE_SCOPED_ADD_TESTS_SYNCED_COMMANDS, artifactToolDefinitions;
 var init_artifacts = __esm({
   "src/mcp/tools/artifacts.ts"() {
     "use strict";
@@ -49858,7 +50102,7 @@ var init_artifacts = __esm({
       "low",
       "unknown"
     ];
-    CANONICAL_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`F-[A-Z0-9][A-Z0-9._-]*`\s+`[^`]+:\d+(?:-\d+)?`\s+-\s+Evidence:\s+\S.*?\s+Impact:\s+\S.*?\s+Fix\/verification:\s+\S.*$/i;
+    CANONICAL_CODE_REVIEW_FINDING_PATTERN2 = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`F-[A-Z0-9][A-Z0-9._-]*`\s+`[^`]+:\d+(?:-\d+)?`\s+-\s+Evidence:\s+\S.*?\s+Impact:\s+\S.*?\s+Fix\/verification:\s+\S.*$/i;
     SCOPE_REVIEWED_INLINE_PATH_PATTERN = /(?:^|[\s(])`?(((?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?)|(?:[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+))`?(?=$|[\s),.;:!?])/g;
     SCOPE_REVIEWED_PATH_PATTERN = /^(?:(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+(?:\.[A-Za-z0-9._-]+)?|[A-Za-z0-9._-]*\.[A-Za-z0-9._-]+|[A-Za-z0-9._-]+)$/;
     BOOTSTRAP_ARTIFACT_IDS_BY_PATH = {
@@ -50095,7 +50339,7 @@ function renderBulletList3(items, fallback = "none") {
 function formatReviewTargetId(prefix, index) {
   return `${prefix}-${String(index + 1).padStart(2, "0")}`;
 }
-function extractVisibleReviewTargetId(value) {
+function extractVisibleReviewTargetId2(value) {
   const trimmed = value.trim();
   const startMatch = trimmed.match(
     /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
@@ -50103,10 +50347,10 @@ function extractVisibleReviewTargetId(value) {
   if (startMatch) {
     return startMatch[1].toUpperCase();
   }
-  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN);
+  const inlineMatch = trimmed.match(VISIBLE_REVIEW_TARGET_ID_PATTERN2);
   return inlineMatch ? inlineMatch[1].toUpperCase() : null;
 }
-function stripVisibleReviewTargetId(value) {
+function stripVisibleReviewTargetId2(value) {
   return value.replace(/^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i, "").trim();
 }
 function buildLegacyReviewTargetId(prefix, sourceSection, value) {
@@ -50117,7 +50361,7 @@ function sanitizeMarkdownScalar(value) {
   return value.replace(/\r\n|\r|\n/g, " ").replace(/\s+/g, " ").trim();
 }
 function renderIdentifiedBulletList(items, prefix, fallback = "none") {
-  const lines = items.map((item) => stripVisibleReviewTargetId(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
+  const lines = items.map((item) => stripVisibleReviewTargetId2(item.trim())).filter((item) => item.length > 0 && !isPlaceholderReviewListItem(item));
   if (lines.length === 0) {
     return `- ${fallback}`;
   }
@@ -51383,7 +51627,7 @@ function parseThreatRowsFromPlanContent(content, sourcePlan) {
       });
       continue;
     }
-    const bullets = collectListItems(section);
+    const bullets = collectListItems2(section);
     bullets.forEach((item, index) => {
       const rawMatch = item.match(/^`?([^`:\-]+?)`?\s*[:\-]\s*(.+)$/);
       if (rawMatch && isThreatIdSentinel(rawMatch[1])) {
@@ -51464,7 +51708,7 @@ function parseThreatFlagsFromSummaryContent(content, sourceSummary) {
       });
       continue;
     }
-    for (const item of collectListItems(section)) {
+    for (const item of collectListItems2(section)) {
       if (isPlaceholderReviewListItem(item)) {
         continue;
       }
@@ -52167,7 +52411,7 @@ async function pathExists3(targetPath) {
 function countMarkdownSections(content) {
   return [...content.matchAll(/^##?\s+.+$/gm)].length;
 }
-function collectListItems(block) {
+function collectListItems2(block) {
   return block.split("\n").map((line) => line.trim()).flatMap((line) => {
     const checklistMatch = line.match(/^[-*]\s+\[(?: |x|X)\]\s+(.+)$/);
     if (checklistMatch) {
@@ -52200,31 +52444,31 @@ function extractMarkdownSectionRawItems(content, headingPattern) {
     }
     entries.push({
       heading: headingMatch[2].trim(),
-      items: collectListItems(sectionLines.join("\n"))
+      items: collectListItems2(sectionLines.join("\n"))
     });
   }
   return entries;
 }
-function extractMarkdownSectionItems(content, headingPattern) {
+function extractMarkdownSectionItems2(content, headingPattern) {
   return [
     ...new Set(
       extractMarkdownSectionRawItems(content, headingPattern).flatMap((entry) => entry.items)
     )
   ];
 }
-function normalizeReviewListItem(item) {
+function normalizeReviewListItem2(item) {
   return normalizeFindingSummary(item).replace(/^`+|`+$/g, "").replace(/^[\s"'“”‘’()[\]{}<>]+|[\s"'“”‘’()[\]{}<>.,;:!?]+$/g, "").trim().toLowerCase();
 }
 function hasGlobPattern(candidate) {
   return /[*?[\]{}]/.test(candidate);
 }
 function isPlaceholderReviewListItem(item) {
-  const normalized = normalizeReviewListItem(item);
+  const normalized = normalizeReviewListItem2(item);
   return normalized.length === 0 || normalized === "none" || normalized === "n/a" || normalized === "na" || normalized === "not applicable" || normalized === "no finding" || normalized === "no findings" || normalized === "no follow up" || normalized === "no follow ups" || normalized === "no follow-up" || normalized === "no follow-ups";
 }
 function collectSubstantiveReviewItems(content, headingPattern) {
   return uniqueOrderedStrings(
-    extractMarkdownSectionItems(content, headingPattern).map(stripVisibleReviewTargetId).filter((item) => !isPlaceholderReviewListItem(item))
+    extractMarkdownSectionItems2(content, headingPattern).map(stripVisibleReviewTargetId2).filter((item) => !isPlaceholderReviewListItem(item))
   );
 }
 function extractMarkdownSectionContent(content, headingPattern) {
@@ -52315,7 +52559,7 @@ function extractMarkdownSectionEntries(content, headingPattern) {
       }
       sectionLines.push(lines[innerIndex]);
     }
-    const items = [...new Set(collectListItems(sectionLines.join("\n")))];
+    const items = [...new Set(collectListItems2(sectionLines.join("\n")))];
     if (items.length > 0) {
       entries.push({
         heading: headingMatch[2].trim(),
@@ -52358,18 +52602,6 @@ function normalizeFindingSummary(item) {
     /^severity\s*[:\-]\s*(?:critical|high|medium|low|unknown)\s*[:\-]?\s*/i,
     ""
   ).trim();
-}
-function extractReviewFixTargetId(item) {
-  return extractVisibleReviewTargetId(item);
-}
-function normalizeReviewFixFindingSummary(item) {
-  const match = item.match(
-    /^`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?(?:\s*[-:]\s*|\s+)/i
-  );
-  if (!match) {
-    return normalizeFindingSummary(item);
-  }
-  return item.slice((match.index ?? 0) + match[0].length).trim();
 }
 function buildReviewFinding(args) {
   const parsedLocation = args.location ? parseCodeReviewLocation(args.location) : null;
@@ -52414,7 +52646,7 @@ function classificationForFindingDisposition(disposition) {
   return null;
 }
 function classifyFollowUpTarget(summary) {
-  const normalized = normalizeReviewListItem(summary);
+  const normalized = normalizeReviewListItem2(summary);
   if (normalized.length === 0 || isPlaceholderReviewListItem(summary)) {
     return "no-op";
   }
@@ -52436,8 +52668,8 @@ function isDefaultReviewFixClassification(classification) {
   return classification === "fixable";
 }
 function parseCodeReviewFindingEntry(item, sourceSection, index) {
-  const visibleId = extractVisibleReviewTargetId(item);
-  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN2);
+  const visibleId = extractVisibleReviewTargetId2(item);
+  const canonical = item.match(CANONICAL_CODE_REVIEW_FINDING_PATTERN3);
   if (canonical) {
     const [, severity2, disposition, canonicalId, location, evidence, impact, recommendation] = canonical;
     const normalizedDisposition = disposition.toLowerCase();
@@ -52482,7 +52714,7 @@ function parseCodeReviewFindingEntry(item, sourceSection, index) {
       defaultEligible: isDefaultReviewFixClassification(classification2 ?? "routing-note")
     });
   }
-  const stripped = stripVisibleReviewTargetId(item);
+  const stripped = stripVisibleReviewTargetId2(item);
   const locationMatch = [...stripped.matchAll(/`([^`]+)`/g)][0]?.[1] ?? null;
   const recommendationMatch = stripped.match(/Fix\/verification:\s*(.+)$/i);
   const summary = sanitizeMarkdownScalar(recommendationMatch?.[1] ?? normalizeFindingSummary(stripped));
@@ -52508,8 +52740,8 @@ function parseCodeReviewFollowUpTargets(content) {
   const targets = [];
   for (const entry of extractMarkdownSectionRawItems(content, /^Follow-?Ups$/i)) {
     for (const item of entry.items) {
-      const visibleId = extractVisibleReviewTargetId(item);
-      const summary = stripVisibleReviewTargetId(item);
+      const visibleId = extractVisibleReviewTargetId2(item);
+      const summary = stripVisibleReviewTargetId2(item);
       const classification = classifyFollowUpTarget(summary);
       const placeholderOnly = isPlaceholderReviewListItem(summary);
       const stableId = visibleId === null ? buildLegacyReviewTargetId("FU", entry.heading, item) : null;
@@ -52549,6 +52781,155 @@ function parseCodeReviewFollowUpTargets(content) {
 function parseCodeReviewFindings(content) {
   const findings = extractMarkdownSectionRawItems(content, /^Findings$/i).flatMap(
     (entry) => entry.items.filter((item) => !isPlaceholderReviewListItem(item)).map((item, index) => parseCodeReviewFindingEntry(item, entry.heading, index))
+  );
+  const severityCounts = emptySeverityCounts();
+  findings.forEach((finding) => {
+    severityCounts[finding.severity] += 1;
+  });
+  const followUps = parseCodeReviewFollowUpTargets(content);
+  return {
+    findings,
+    severityCounts,
+    followUps: followUps.followUps,
+    followUpTargets: followUps.targets
+  };
+}
+function findRightmostLabeledSegmentStart(value, label) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matches = [...value.matchAll(new RegExp(`(?:^|\\s)(${escaped})`, "gi"))];
+  const last = matches.at(-1);
+  if (!last || last.index === void 0) {
+    return null;
+  }
+  return last.index + last[0].length - last[1].length;
+}
+function extractLeadingJsonStringLiteral(value) {
+  if (!value.startsWith('"')) {
+    return null;
+  }
+  let escaped = false;
+  for (let index = 1; index < value.length; index += 1) {
+    const character = value[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (character === "\\") {
+      escaped = true;
+      continue;
+    }
+    if (character === '"') {
+      const literal2 = value.slice(0, index + 1);
+      let parsed;
+      try {
+        parsed = JSON.parse(literal2);
+      } catch {
+        return null;
+      }
+      if (typeof parsed !== "string") {
+        return null;
+      }
+      return {
+        parsed,
+        remainder: value.slice(index + 1)
+      };
+    }
+  }
+  return null;
+}
+function parseCanonicalReviewFixFindingBody(body) {
+  const matches = [...body.matchAll(/(?:^|\s)(Evidence:)/gi)];
+  for (const match of matches) {
+    if (match.index === void 0) {
+      continue;
+    }
+    const evidenceStart = match.index + match[0].length - match[1].length;
+    const summary = sanitizeMarkdownScalar(body.slice(0, evidenceStart).trim());
+    const quotedEvidence = extractLeadingJsonStringLiteral(
+      body.slice(evidenceStart + "Evidence:".length).trimStart()
+    );
+    if (!quotedEvidence) {
+      continue;
+    }
+    const dispositionMatch = quotedEvidence.remainder.match(/^\s+Disposition:\s*(.+)$/i);
+    if (!dispositionMatch) {
+      continue;
+    }
+    return {
+      summary: summary.length > 0 ? summary : sanitizeMarkdownScalar(body),
+      evidence: sanitizeMarkdownScalar(quotedEvidence.parsed)
+    };
+  }
+  return null;
+}
+function parseReviewFixFindingBody(body) {
+  const canonical = parseCanonicalReviewFixFindingBody(body);
+  if (canonical) {
+    return canonical;
+  }
+  const dispositionStart = findRightmostLabeledSegmentStart(body, "Disposition:");
+  if (dispositionStart === null) {
+    return {
+      summary: sanitizeMarkdownScalar(body),
+      evidence: null
+    };
+  }
+  const beforeDisposition = body.slice(0, dispositionStart).trim();
+  const evidenceStart = findRightmostLabeledSegmentStart(beforeDisposition, "Evidence:");
+  if (evidenceStart === null) {
+    return {
+      summary: sanitizeMarkdownScalar(body),
+      evidence: null
+    };
+  }
+  const summary = sanitizeMarkdownScalar(beforeDisposition.slice(0, evidenceStart).trim());
+  const evidence = sanitizeMarkdownScalar(
+    beforeDisposition.slice(evidenceStart + "Evidence:".length).trim()
+  );
+  return {
+    summary: summary.length > 0 ? summary : sanitizeMarkdownScalar(body),
+    evidence: evidence.length > 0 ? evidence : null
+  };
+}
+function parseReviewFixFindingEntry(item, sourceSection) {
+  const visibleId = extractVisibleReviewTargetId2(item);
+  const stableId = visibleId === null ? buildLegacyReviewTargetId("F", sourceSection, item) : null;
+  const canonical = item.match(
+    /^\[(critical|high|medium|low|unknown)\]\[([a-z0-9-]+)\]\s+`([^`]+)`\s*-\s*(.+)$/i
+  );
+  if (canonical) {
+    const [, severity, , canonicalId, body] = canonical;
+    const parsedBody2 = parseReviewFixFindingBody(body);
+    return buildReviewFinding({
+      id: canonicalId.toUpperCase(),
+      visibleId: canonicalId.toUpperCase(),
+      stableId: null,
+      legacyDerived: false,
+      severity: severity.toLowerCase(),
+      summary: parsedBody2.summary,
+      sourceSection,
+      evidence: parsedBody2.evidence
+    });
+  }
+  const stripped = stripVisibleReviewTargetId2(item);
+  const parsedBody = parseReviewFixFindingBody(stripped);
+  return buildReviewFinding({
+    id: visibleId ?? stableId,
+    visibleId,
+    stableId,
+    legacyDerived: visibleId === null,
+    severity: inferFindingSeverity(sourceSection, item),
+    summary: parsedBody.summary,
+    sourceSection,
+    evidence: parsedBody.evidence
+  });
+}
+function parseReviewFixFindings(content) {
+  const findings = extractMarkdownSectionRawItems(
+    content,
+    /^(findings addressed|findings)$/i
+  ).flatMap(
+    (entry) => entry.items.filter((item) => !isPlaceholderReviewListItem(item)).map((item) => parseReviewFixFindingEntry(item, entry.heading))
   );
   const severityCounts = emptySeverityCounts();
   findings.forEach((finding) => {
@@ -52750,6 +53131,9 @@ function parseFindingsFromArtifact(content, artifact) {
   if (artifact === "code-review") {
     return parseCodeReviewFindings(content);
   }
+  if (artifact === "review-fix") {
+    return parseReviewFixFindings(content);
+  }
   const entries = extractMarkdownSectionEntries(content, resolveFindingsHeadingPattern(artifact));
   const findings = [];
   const seenFindingKeys = /* @__PURE__ */ new Set();
@@ -52760,9 +53144,8 @@ function parseFindingsFromArtifact(content, artifact) {
       if (isPlaceholderReviewListItem(item)) {
         continue;
       }
-      const reviewFixTargetId = artifact === "review-fix" ? extractReviewFixTargetId(item) : null;
-      const summary = reviewFixTargetId ? normalizeReviewFixFindingSummary(item) : normalizeFindingSummary(item);
-      const findingKey = reviewFixTargetId ?? summary;
+      const summary = normalizeFindingSummary(item);
+      const findingKey = summary;
       if (summary.length === 0 || seenFindingKeys.has(findingKey)) {
         continue;
       }
@@ -52770,9 +53153,7 @@ function parseFindingsFromArtifact(content, artifact) {
       seenFindingKeys.add(findingKey);
       severityCounts[severity] += 1;
       findings.push(buildReviewFinding({
-        id: reviewFixTargetId ?? `F-${String(findings.length + 1).padStart(2, "0")}`,
-        visibleId: reviewFixTargetId,
-        legacyDerived: reviewFixTargetId === null,
+        id: `F-${String(findings.length + 1).padStart(2, "0")}`,
         severity,
         summary,
         sourceSection: entry.heading
@@ -53142,7 +53523,8 @@ function renderReviewFixModelContent(model, located, authoringContext) {
     const target = targetById.get(row.findingId);
     const severity = target?.severity ?? "unknown";
     const summary = target?.summary ?? "Saved review target summary unavailable.";
-    return `- [${severity}][${row.status}] \`${row.findingId}\` - ${summary} Evidence: ${row.evidence} Disposition: ${row.disposition}`;
+    const evidence = JSON.stringify(sanitizeMarkdownScalar(row.evidence));
+    return `- [${severity}][${row.status}] \`${row.findingId}\` - ${summary} Evidence: ${evidence} Disposition: ${row.disposition}`;
   });
   return normalizeTextContent3(`# Phase ${located.phasePrefix}: ${located.phaseName ?? `Phase ${located.phasePrefix}`} - Review Fix
 
@@ -56939,7 +57321,7 @@ async function blueprintReviewLoadFindings(args) {
     ] : located.warnings
   };
 }
-var import__3, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN, CANONICAL_CODE_REVIEW_FINDING_PATTERN2, LEGACY_CODE_REVIEW_FINDING_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise4, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
+var import__3, REVIEW_ARTIFACT_SUFFIXES, numericBlueprintInputSchema2, reviewRecordInputSchema, reviewScopeInputSchema, reviewLoadFindingsInputSchema, reviewValidateModelInputSchema, reviewAuthoringContextInputSchema, CODE_REVIEW_MODEL_IDENTITY_KEYS, SECURITY_MODEL_IDENTITY_KEYS, PEER_REVIEW_MODEL_IDENTITY_KEYS, CODE_REVIEW_LOCATION_PATTERN, VISIBLE_REVIEW_TARGET_ID_PATTERN2, CANONICAL_CODE_REVIEW_FINDING_PATTERN3, LEGACY_CODE_REVIEW_FINDING_PATTERN, CODE_REVIEW_NEXT_ACTION_BUILDERS, REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE, implementedCommandNamesPromise4, PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS, REVIEW_SCOPE_CONFIRMATION_THRESHOLDS, reviewToolDefinitions;
 var init_review = __esm({
   "src/mcp/tools/review.ts"() {
     "use strict";
@@ -57057,8 +57439,8 @@ var init_review = __esm({
       "summaryPaths"
     ]);
     CODE_REVIEW_LOCATION_PATTERN = /^((?:[A-Za-z0-9._-]+\/)*[A-Za-z0-9._-]+):(\d+)(?:-(\d+))?$/;
-    VISIBLE_REVIEW_TARGET_ID_PATTERN = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
-    CANONICAL_CODE_REVIEW_FINDING_PATTERN2 = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
+    VISIBLE_REVIEW_TARGET_ID_PATTERN2 = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
+    CANONICAL_CODE_REVIEW_FINDING_PATTERN3 = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
     LEGACY_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
     CODE_REVIEW_NEXT_ACTION_BUILDERS = [
       (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
