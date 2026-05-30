@@ -105,45 +105,26 @@ test("execute-phase skill bundle points the command at execute-specific referenc
   assert.match(skillFile, /externalServicePreflight/i);
 });
 
-test("execute-phase command docs point at the rich runtime contract and keep the important invariants concise", async () => {
-  const docsFile = await readRepoFile("docs/commands/execute-phase.md");
-
-  assert.match(docsFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docsFile, /## Shared Runtime Contract/);
-  assert.match(
-    docsFile,
-    /skills\/blueprint-phase-execution\/references\/execute-phase-runtime-contract\.md/
-  );
-  assertMatchesAll(docsFile, [
-    /blueprint_phase_execution_targets/i,
-    /gapClosurePlans/,
-    /common metadata and[\s\S]*target-selection authority[\s\S]*default runs[\s\S]*`--wave`[\s\S]*`--gaps-only`/i,
-    /lowerWavePendingPlans/,
-    /externalServicePreflight/,
-    /Pre-persistence gates/i,
-    /Post-execution checks/i,
-    /Verifier handoff/i,
-    /does not persist reports/i,
-    /## Summary Persistence Contract/,
-    /blueprint_phase_summary_authoring_context/,
-    /blueprint_phase_summary_validate_model/,
-    /Markdown-first/i,
-    /explicit `Status`/,
-    /Do not pass summary filenames, phase slugs, phase directories/i,
-    /`COMPLETED` is the only summary status that closes execution debt/i,
-    /authoring template is a safe `PARTIAL` carry-forward seed/i,
-    /warning-only Markdown shape[\s\S]*does not require another repair loop/i,
-    /downgrade to `PARTIAL` or `BLOCKED`[\s\S]*Readiness[\s\S]*Completion State[\s\S]*Next Safe Action[\s\S]*Gap \/ Repair Routes[\s\S]*Follow-Ups/i,
-    /base: "synced"/
+test("execute-phase runtime-owned sources keep the important invariants concise", async () => {
+  const [runtimeContract, contractResource] = await Promise.all([
+    readRepoFile("skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"),
+    buildBlueprintCommandRuntimeContractResource("execute-phase")
   ]);
-  assert.doesNotMatch(
-    docsFile,
-    /gapClosurePlans` from `blueprint_phase_plan_index` is the source of truth[\s\S]*`--gaps-only`/i
+
+  assert.equal(contractResource.spec?.executionProfile, "long-running-mutation");
+  assert.equal(
+    contractResource.skillInputs.commandSpecific.includes(
+      "skills/blueprint-phase-execution/references/execute-phase-runtime-contract.md"
+    ),
+    true
   );
-  assert.doesNotMatch(
-    docsFile,
-    /Pre-persistence gates:[\s\S]*selected plan index, summary index[\s\S]*before any summary write/i
-  );
+  assert.match(runtimeContract, /blueprint_phase_execution_targets/i);
+  assert.match(runtimeContract, /selection helper for default runs, `--wave`, and `--gaps-only`/i);
+  assert.match(runtimeContract, /externalServicePreflight/);
+  assert.match(runtimeContract, /Do not persist execute-phase reports/i);
+  assert.match(runtimeContract, /phase_summary_authoring_context/);
+  assert.match(runtimeContract, /phase_summary_validate_model/);
+  assert.match(runtimeContract, /base: "synced"/);
 });
 
 test("execute-phase runtime contract carries the rich execution sequencing and carry-forward rules", async () => {

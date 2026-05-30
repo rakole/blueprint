@@ -3,92 +3,79 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { AUDIT_FIX_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 
 const repoRoot = process.cwd();
 
-test("audit-fix docs and catalog metadata promote the remediation slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder, auditFixDoc, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/audit-fix.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("audit-fix runtime metadata, manifest, and local contract stay source-owned", async () => {
+  const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("audit-fix"),
+    readFile(path.join(repoRoot, "commands/blu-audit-fix.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/audit-fix-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands["audit-fix"];
 
+  assert.equal(entry.specPath, AUDIT_FIX_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...AUDIT_FIX_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, AUDIT_FIX_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.writes, [...AUDIT_FIX_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, AUDIT_FIX_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...AUDIT_FIX_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-audit-fix.toml",
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /--source <review\|security\|verification\|uat\|all>/);
+  assert.match(commandFile, /--severity <medium\|high\|all>/);
+  assert.match(commandFile, /--max <N>/);
+  assert.match(commandFile, /--dry-run/);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
+  assert.match(commandFile, /`ask_user`/);
+  assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /tracker-eligible/i);
+  assert.match(commandFile, /blueprint-fixer` as planned-only inventory/i);
+  assert.match(skillFile, /Execution profile for `audit-fix`: `long-running-mutation`/);
   assert.match(
-    catalogMarkdown,
-    /\| `audit-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `\.blueprint\/reports\/audit-fix-<phase>\.md; optional \.blueprint\/todos\/TODO\.md; repo code changes when not dry-running; \.blueprint\/STATE\.md` \| `High: bounded remediation plus report\/state updates\.` \|/
+    referenceFile,
+    /classification table before mutation[\s\S]*`auto-fixable`, `manual-only`, or `skip`/i
+  );
+  assert.match(referenceFile, /auditFixContext \{source, severity, maxAttempts,\s+dryRun, scopeFiles\}/i);
+  assert.match(
+    referenceFile,
+    /`status`, `readiness`,[\s\S]*`nextSafeAction`/i
   );
   assert.match(
-    implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
-  );
-  assert.match(auditFixDoc, /--source <review\|security\|verification\|uat\|all>/);
-  assert.match(auditFixDoc, /--severity <medium\|high\|all>/);
-  assert.match(auditFixDoc, /--max N/);
-  assert.match(auditFixDoc, /--dry-run/);
-  assert.match(auditFixDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(auditFixDoc, /## Shared Runtime Contract/);
-  assert.match(auditFixDoc, /ask_user/);
-  assert.match(auditFixDoc, /## In-Flight Progress Contract/);
-  assert.match(
-    auditFixDoc,
-    /skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md/
-  );
-  assert.match(auditFixDoc, /classification table before mutation/i);
-  assert.match(auditFixDoc, /`auto-fixable`, `manual-only`, or `skip`/);
-  assert.match(auditFixDoc, /auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/i);
-  assert.match(
-    auditFixDoc,
-    /`status`, `readiness`, `completionState`, `remediationSummary`, `summaryEvidence`, `classification`, `changesApplied`, `verification`, `pendingPlans`, `dependencyPlans`, `manualOrDeferredWork`, `gapRoutes`, `followUpFixes`, `evidence`, `commitTraceability`, `todoCapture`, and `nextSafeAction`/i
+    referenceFile,
+    /repair the model[\s\S]*`contract\.modelContract\.schemaPath`, the narrowed `taskSchema`/i
   );
   assert.match(
-    auditFixDoc,
-    /repair the structured model against the canonical `report\.audit-fix` contract, the narrowed `taskSchema`, `repairSummary`, and returned diagnostics by exact `path`, `code`, `repair`, `allowedValues`, `missing`, and `argsPatch`/i
-  );
-  assert.match(auditFixDoc, /Browser-only, web-search-only, shell-only, or generic agents are not substitutes/i);
-  assert.match(auditFixDoc, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
-  assert.match(auditFixDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/i);
-  assert.match(auditFixDoc, /report overwrite confirmation/i);
-  assert.match(auditFixDoc, /verification progress, early-stop status, report status/i);
-  assert.match(auditFixDoc, /## Tracker Eligibility/);
-  assert.match(auditFixDoc, /tracker-eligible/i);
-  assert.match(auditFixDoc, /session-local coordination only and must be paired with visible `write_todos`/i);
-  assert.match(runtimeReference, /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*Long-running-mutation profile for bounded audit-driven remediation/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*`update_topic` and `write_todos` for non-trivial audit-fix runs/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*report overwrite or todo capture explicit/i);
-  assert.match(runtimeReference, /`audit-fix`[\s\S]*verification progress, report status, and early-stop state explicit/i);
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*load `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/i
+    referenceFile,
+    /No browser\/web\/search-only or generic agent was used as a substitute/i
   );
   assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for bounded saved-evidence remediation/i
   );
   assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*pass `auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}` through the report tool flow/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /--source, --severity, --max, --dry-run, mutation confirmation, report overwrite, optional todo capture, active stage, and early-stop state explicit/i
   );
   assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*author only the model fields `status`, `readiness`, `completionState`, `remediationSummary`/i
-  );
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*preserve the single-agent no-subagent fallback that processes one finding at a time with carry-forward compression/i
-  );
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*reject browser\/web-search\/shell-only or generic agents as substitutes/i
-  );
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*repair invalid models by exact diagnostic `path`, `code`, `repair`, `allowedValues`, `missing`, `argsPatch`, and `repairSummary` guidance/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /repair invalid diagnostics by exact path, code, repair, allowedValues, missing, argsPatch, and repairSummary guidance/i
   );
 });
 

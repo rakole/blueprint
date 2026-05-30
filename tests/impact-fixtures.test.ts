@@ -51,12 +51,11 @@ const requiredScenarioIds = [
   "diff-file",
   "description-only",
   "command-manifest-change",
-  "command-doc-change",
+  "runtime-metadata-change",
   "mcp-tool-change",
   "artifact-contract-change",
   "skill-change",
   "agent-change",
-  "runtime-reference-change",
   "extension-manifest-change",
   "hook-change",
   "docs-only-change",
@@ -82,12 +81,11 @@ const executableScopeScenarioIds = [
 ] as const;
 const executableSurfaceScenarioIds = [
   "command-manifest-change",
-  "command-doc-change",
+  "runtime-metadata-change",
   "mcp-tool-change",
   "artifact-contract-change",
   "skill-change",
   "agent-change",
-  "runtime-reference-change",
   "extension-manifest-change",
   "hook-change",
   "docs-only-change",
@@ -244,7 +242,7 @@ function contractContext(): Record<string, unknown> {
           status: "implemented",
           implemented: true,
           manifestPath: "commands/blu-example.toml",
-          specPath: "docs/commands/example.md",
+          specPath: "src/mcp/command-runtime-metadata.ts#example",
           skillPath: "skills/blueprint-example/SKILL.md",
           primarySkill: "blueprint-example",
           requiredTools: ["blueprint_example_tool"],
@@ -683,11 +681,19 @@ test("impact fixture surface scenarios produce expected obligations, context cov
       context: contractContext()
     },
     {
-      id: "command-doc-change",
-      mutate: (repoPath) => touchScenarioPath(repoPath, "docs/commands/example.md"),
-      expectedFiles: ["docs/commands/example.md"],
-      expectedSurfaces: [["docs/commands/example.md", "command-doc"]],
-      expectedObligationCategories: ["contract-review", "docs", "tests"],
+      id: "runtime-metadata-change",
+      mutate: (repoPath) =>
+        appendRepoFile(
+          repoPath,
+          "src/mcp/command-runtime-metadata.ts",
+          "\nexport const runtimeMetadataFixtureMutation = true;\n"
+        ),
+      expectedFiles: ["src/mcp/command-runtime-metadata.ts"],
+      expectedSurfaces: [["src/mcp/command-runtime-metadata.ts", "command-catalog"]],
+      expectedObligationCategories: ["build", "contract-review", "docs", "tests"],
+      expectedUnknownCategories: ["obligation"],
+      expectedWarningCategories: ["dist-coverage"],
+      expectedFindings: ["build.dist-coverage"],
       context: contractContext()
     },
     {
@@ -730,14 +736,6 @@ test("impact fixture surface scenarios produce expected obligations, context cov
       expectedFiles: ["agents/blueprint-reviewer.md"],
       expectedSurfaces: [["agents/blueprint-reviewer.md", "agent"]],
       expectedObligationCategories: ["contract-review", "tests"]
-    },
-    {
-      id: "runtime-reference-change",
-      mutate: (repoPath) => touchScenarioPath(repoPath, "docs/RUNTIME-REFERENCE.md"),
-      expectedFiles: ["docs/RUNTIME-REFERENCE.md"],
-      expectedSurfaces: [["docs/RUNTIME-REFERENCE.md", "runtime-reference"]],
-      expectedObligationCategories: ["contract-review", "docs", "tests"],
-      context: contractContext()
     },
     {
       id: "extension-manifest-change",

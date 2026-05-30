@@ -453,7 +453,7 @@ function createStructuredPlanModel(
     filesModified: ["src/mcp/tools/phase.ts"],
     readFirst: [
       "src/mcp/tools/phase.ts",
-      "docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md"
+      "src/mcp/artifact-contracts/schemas/phase.plan.model.schema.json"
     ],
     autonomous: true,
     goal: "Persist structured phase plan models through the existing MCP plan writer.",

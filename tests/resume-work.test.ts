@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
   blueprintPauseHandoffGet,
   blueprintPauseHandoffWrite,
@@ -179,7 +180,7 @@ ${noExternalServicesSection}
 }
 
 test("resume-work spec metadata references the governance handoff contract and registered tools", async () => {
-  const [manifestDoc, referenceDoc, catalogDoc, runtimeContract] = await Promise.all([
+  const [manifestDoc, referenceDoc, catalog, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-resume-work.toml"), "utf8"),
     readFile(
       path.join(
@@ -188,7 +189,7 @@ test("resume-work spec metadata references the governance handoff contract and r
       ),
       "utf8"
     ),
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
+    blueprintCommandCatalog(),
     buildBlueprintCommandRuntimeContractResource("resume-work")
   ]);
 
@@ -222,9 +223,15 @@ test("resume-work spec metadata references the governance handoff contract and r
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
+  const catalogEntry = catalog.commands["resume-work"];
+  assert.equal(catalogEntry.declaredStatus, "implemented");
+  assert.equal(catalogEntry.status, "implemented");
+  assert.equal(catalogEntry.primarySkill, "blueprint-governance");
+  assert.equal(catalogEntry.specPath, "src/mcp/command-runtime-metadata.ts#resume-work");
+  assert.deepEqual(runtimeContract.spec?.writes, [".blueprint/STATE.md"]);
   assert.match(
-    catalogDoc,
-    /\| `resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented` \| `\.blueprint\/STATE\.md` \| `Low: restores state from the canonical pause handoff and updates the next safe action\.` \|/
+    catalogEntry.risk,
+    /restores state from the canonical pause handoff and updates the next safe action/i
   );
 
   for (const toolName of [
@@ -255,7 +262,7 @@ test("pause and resume state flow surfaces /blu-resume-work while the handoff is
     decisions: ["Keep the handoff as the single source of pause context."],
     blockers: ["Waiting for the next implementation session to continue."],
     humanActionsPending: ["Choose when to resume the saved session."],
-    modifiedFiles: ["src/mcp/tools/state.ts", "docs/commands/resume-work.md"],
+    modifiedFiles: ["src/mcp/tools/state.ts", "commands/blu-resume-work.toml"],
     contextNotes: "The next session should restore the pause handoff first, then continue from the saved phase context.",
     nextAction: "Start by restoring the saved handoff and then continue with /blu-resume-work."
   });

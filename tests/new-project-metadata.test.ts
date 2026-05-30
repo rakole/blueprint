@@ -21,9 +21,8 @@ const newProjectRuntimeInputBundle = [
 ];
 
 test("new-project manifest stays thin while delegating runtime depth to the bootstrap skill package", async () => {
-  const [commandFile, commandSpecFile, skillFile, guardrailsRef, runtimeContract] = await Promise.all([
+  const [commandFile, skillFile, guardrailsRef, runtimeContract] = await Promise.all([
     readFile(path.join(repoRoot, "commands/blu-new-project.toml"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/new-project.md"), "utf8"),
     readFile(path.join(repoRoot, "skills/blueprint-bootstrap/SKILL.md"), "utf8"),
     readFile(
       path.join(repoRoot, "skills/blueprint-bootstrap/references/runtime-guardrails.md"),
@@ -49,11 +48,9 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.match(commandFile, /browser, web-search, or shell-only helpers/i);
   assert.match(commandFile, /project instruction files such as `CLAUDE\.md` or `AGENTS\.md`/);
   assert.match(commandFile, /invented auto-advance chaining|slash-command self-invocation/i);
-  assert.match(commandFile, /Do not require `docs\/commands\/new-project\.md`/);
   assert.match(commandFile, /`--auto`/);
   assert.match(commandFile, /required `bootstrapSeed` field shape/i);
   assert.match(commandFile, /bootstrap-runtime-contract\.md` as the source of truth/i);
-  assert.match(commandSpecFile, /full required `bootstrapSeed` field shape lives in `skills\/blueprint-bootstrap\/references\/bootstrap-runtime-contract\.md`/);
   assert.doesNotMatch(commandFile, /mcp_blueprint_blueprint_/);
   assert.doesNotMatch(commandFile, /Never use shell output, hidden tool panes, or collapsed subagent results/i);
   assert.doesNotMatch(commandFile, /Follow this flow exactly:/i);
@@ -106,18 +103,12 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
 
 test("new-project remains implemented from runtime-owned metadata when docs are unavailable", async (t) => {
   const realReadFile = fs.readFile.bind(fs);
-  const bundledDocsRoot = path.join(repoRoot, "docs");
 
   t.mock.method(fs, "readFile", async (filePath, options) => {
     const normalizedPath =
       filePath instanceof URL ? fileURLToPath(filePath) : path.resolve(String(filePath));
-    const docsRelativePath = path.relative(bundledDocsRoot, normalizedPath);
 
-    if (
-      docsRelativePath !== "" &&
-      !docsRelativePath.startsWith("..") &&
-      !path.isAbsolute(docsRelativePath)
-    ) {
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;

@@ -92,9 +92,17 @@ function catalogDocsPath(value: unknown): string | null {
     value instanceof URL ? value.pathname : path.resolve(String(value));
   const relativePath = path.relative(repoRoot, normalized).split(path.sep).join("/");
 
-  return relativePath === "docs/COMMAND-CATALOG.md" ||
-    relativePath === "docs/RUNTIME-REFERENCE.md" ||
-    relativePath.startsWith("docs/commands/")
+  return /^docs\/.+\.md$/.test(relativePath) ? relativePath : null;
+}
+
+function controlPlaneDocsPath(value: unknown): string | null {
+  const normalized =
+    value instanceof URL ? value.pathname : path.resolve(String(value));
+  const relativePath = path.relative(repoRoot, normalized).split(path.sep).join("/");
+
+  return /^(docs\/COMMAND-CATALOG\.md|docs\/RUNTIME-REFERENCE\.md|docs\/MCP-TOOLS\.md|docs\/commands\/.+)$/u.test(
+    relativePath
+  )
     ? relativePath
     : null;
 }
@@ -300,7 +308,7 @@ test("impact MCP tools are registered and satisfy the implemented command substr
   assert.equal(entry.manifestPath, "commands/blu-impact.toml");
   assert.equal(entry.skillPath, "skills/blueprint-impact/SKILL.md");
   assert.equal(entry.specPath, IMPACT_RUNTIME_METADATA.sourceId);
-  assert.notEqual(entry.specPath, "docs/commands/impact.md");
+  assert.equal(entry.specPath?.startsWith("docs/"), false);
   assert.equal(entry.requiredToolsSatisfied, true);
   assert.deepEqual(IMPACT_RUNTIME_METADATA.requiredTools, [...IMPACT_TOOL_NAMES]);
   assert.deepEqual(entry.requiredTools, [...IMPACT_TOOL_NAMES]);
@@ -644,7 +652,10 @@ test("impact context load derives impact command assets from runtime-owned metad
   assert.ok(context.commandAssets.impact);
   assert.equal(context.commandAssets.impact.specPath, IMPACT_RUNTIME_METADATA.sourceId);
   assert.ok(context.commandAssets.specPaths.includes(IMPACT_RUNTIME_METADATA.sourceId));
-  assert.equal(context.commandAssets.specPaths.includes("docs/commands/impact.md"), false);
+  assert.equal(
+    context.commandAssets.specPaths.some((specPath) => specPath.startsWith("docs/")),
+    false
+  );
 });
 
 test("impact context load avoids command docs while preserving runtime catalog awareness", async (t) => {
@@ -692,7 +703,7 @@ test("impact context load avoids command docs while preserving runtime catalog a
   assert.ok(context.commandAssets.specPaths.includes(IMPACT_RUNTIME_METADATA.sourceId));
   assert.equal(
     context.commandAssets.specPaths.some((specPath) =>
-      specPath.startsWith("docs/commands/")
+      specPath.startsWith("docs/")
     ),
     false
   );
@@ -805,7 +816,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
   const first = await blueprintImpactAnalyze({
     cwd: repoRoot,
     changedFiles: ["src/app.ts", "commands/blu-impact.toml"],
-    files: ["docs/commands/impact.md"],
+    files: ["docs/overview.md"],
     config: normalizationConfig,
     scope: {
       files: ["package.json", "src/app.ts"],
@@ -818,7 +829,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
     config: normalizationConfig,
     scope: {
       changedFiles: ["commands/blu-impact.toml"],
-      files: ["docs/commands/impact.md", "src/app.ts"]
+      files: ["docs/overview.md", "src/app.ts"]
     }
   });
 
@@ -827,7 +838,7 @@ test("impact analyze normalizes all file input shapes with mismatch union warnin
     first.surfaces.map((surface) => surface.path),
     [
       "commands/blu-impact.toml",
-      "docs/commands/impact.md",
+      "docs/overview.md",
       "package.json",
       "src/app.ts",
       "tests/impact-tools.test.ts"
@@ -844,10 +855,9 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
     changedFiles: [
       "secrets/prod.token",
       ".env.local",
-      "docs/COMMAND-CATALOG.md",
-      "docs/RUNTIME-REFERENCE.md",
       "commands/blu-impact.toml",
-      "docs/commands/impact.md",
+      "docs/overview.md",
+      "src/mcp/command-runtime-metadata.ts",
       "src/mcp/server.ts",
       "src/mcp/tools/impact.ts",
       "src/mcp/command-resources.ts",
@@ -858,7 +868,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
       "hooks/hooks.json",
       "src/hooks/read-before-edit.ts",
       "tests/impact-tools.test.ts",
-      "docs/MCP-TOOLS.md",
+      "docs/runtime-guide.md",
       "package.json",
       "package-lock.json",
       "tsconfig.json",
@@ -880,21 +890,14 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
     "config",
     "repo-root"
   ]);
-  assert.deepEqual(surfaceFor(analysis, "docs/COMMAND-CATALOG.md").surfaces, [
-    "command-catalog",
-    "docs"
-  ]);
-  assert.deepEqual(surfaceFor(analysis, "docs/RUNTIME-REFERENCE.md").surfaces, [
-    "runtime-reference",
-    "docs"
-  ]);
   assert.deepEqual(surfaceFor(analysis, "commands/blu-impact.toml").surfaces, [
     "command-manifest",
     "config"
   ]);
-  assert.deepEqual(surfaceFor(analysis, "docs/commands/impact.md").surfaces, [
-    "command-doc",
-    "docs"
+  assert.deepEqual(surfaceFor(analysis, "docs/overview.md").surfaces, ["docs"]);
+  assert.deepEqual(surfaceFor(analysis, "src/mcp/command-runtime-metadata.ts").surfaces, [
+    "command-catalog",
+    "source"
   ]);
   assert.deepEqual(surfaceFor(analysis, "src/mcp/server.ts").surfaces, [
     "mcp-server",
@@ -936,7 +939,7 @@ test("impact analyze classifies the surface matrix overlaps deterministically", 
   assert.deepEqual(surfaceFor(analysis, "tests/impact-tools.test.ts").surfaces, [
     "test"
   ]);
-  assert.deepEqual(surfaceFor(analysis, "docs/MCP-TOOLS.md").surfaces, ["docs"]);
+  assert.deepEqual(surfaceFor(analysis, "docs/runtime-guide.md").surfaces, ["docs"]);
   assert.deepEqual(surfaceFor(analysis, "package.json").surfaces, [
     "package-runtime",
     "config",
@@ -1063,56 +1066,26 @@ test("impact analyze checks implemented command substrate when runtime metadata 
         status: "repairing",
         implemented: false,
         manifestPath: "commands/blu-custom-command.toml",
-        specPath: "docs/commands/custom-command.md",
+        specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
         skillPath: "skills/blueprint-custom/SKILL.md",
         primarySkill: "blueprint-custom",
         requiredTools: [],
         requiredToolsSatisfied: true,
         blockedBy: [
-          "Missing command spec: docs/commands/custom-command.md"
+          "Missing command spec: src/mcp/command-runtime-metadata.ts#custom-command"
         ]
       }
     })
   });
 
   assert.equal(analysis.status, "BLOCK");
-  assert.equal(findingByCheck(analysis, "contract.command.spec")?.status, "BLOCK");
-});
-
-test("impact analyze blocks implemented command substrate when runtime reference drifts", async () => {
-  const analysis = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["docs/RUNTIME-REFERENCE.md"],
-    config: lowNoiseConfig(),
-    context: minimalPhase6Context({
-      "spec-phase": {
-        declaredStatus: "implemented",
-        status: "repairing",
-        implemented: false,
-        manifestPath: "commands/blu-spec-phase.toml",
-        specPath: "src/mcp/command-runtime-metadata.ts#spec-phase",
-        skillPath: "skills/blueprint-phase-discovery/SKILL.md",
-        primarySkill: "blueprint-phase-discovery",
-        requiredTools: [],
-        requiredToolsSatisfied: true,
-        blockedBy: [
-          "Missing runtime reference row: docs/RUNTIME-REFERENCE.md#spec-phase"
-        ]
-      }
-    })
-  });
-
-  const finding = findingByCheck(analysis, "contract.command.runtime-reference");
-
-  assert.equal(analysis.status, "BLOCK");
-  assert.equal(finding?.status, "BLOCK");
-  assert.equal(finding?.impactedFiles.includes("docs/RUNTIME-REFERENCE.md#spec-phase"), true);
+  assert.equal(findingByCheck(analysis, "contract.command.spec"), undefined);
 });
 
 test("impact analyze raises WARN for obligations without conflating risk and confidence", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["docs/commands/impact.md"],
+    changedFiles: ["commands/blu-impact.toml"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({})
   });
@@ -1122,6 +1095,53 @@ test("impact analyze raises WARN for obligations without conflating risk and con
   assert.equal(analysis.report.scoring.status, "WARN");
   assert.ok(analysis.report.requiredTests.length > 0);
   assertHasObligation(analysis, "Command metadata tests must cover command contract changes");
+});
+
+test("impact analyze treats runtime metadata as the command source of truth without reviving docs", async () => {
+  const runtimeMetadata = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["src/mcp/command-runtime-metadata.ts"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({})
+  });
+  const docsOnly = await blueprintImpactAnalyze({
+    cwd: repoRoot,
+    changedFiles: ["docs/overview.md"],
+    config: lowNoiseConfig(),
+    context: minimalPhase6Context({})
+  });
+
+  assert.equal(runtimeMetadata.status, "BLOCK");
+  assertHasObligation(runtimeMetadata, "Command contract review required");
+  assertHasObligation(runtimeMetadata, "Command-facing guidance should be reviewed");
+  assertHasObligation(
+    runtimeMetadata,
+    "Command metadata tests must cover command contract changes"
+  );
+  assertHasObligation(runtimeMetadata, "Runtime source changes require generated dist review");
+  assert.equal(findingByCheck(runtimeMetadata, "build.dist-coverage")?.status, "WARN");
+  assert.equal(
+    runtimeMetadata.surfaces.some(
+      (surface) =>
+        surface.path === "src/mcp/command-runtime-metadata.ts" &&
+        surface.surfaces.includes("command-catalog")
+    ),
+    true
+  );
+
+  assert.equal(docsOnly.status, "PASS");
+  assert.equal(obligationTitles(docsOnly).includes("Command contract review required"), false);
+  assert.equal(
+    obligationTitles(docsOnly).includes("Runtime source changes require generated dist review"),
+    false
+  );
+  assert.equal(
+    docsOnly.surfaces.some(
+      (surface) =>
+        surface.path === "docs/overview.md" && surface.surfaces.includes("command-catalog")
+    ),
+    false
+  );
 });
 
 test("impact analyze keeps description-only scope low-confidence and non-PASS", async () => {
@@ -1277,6 +1297,66 @@ test("impact analyze strips CODEOWNERS inline comments from owner tokens", async
     const match = analysis.ownership.matches.find((entry) => entry.path === "src/app.ts");
 
     assert.deepEqual(match?.owners, ["@team"]);
+  } finally {
+    await rm(repoPath, { recursive: true, force: true });
+  }
+});
+
+test("impact analyze treats docs/CODEOWNERS as CODEOWNERS without reviving control-plane docs reads", async (t) => {
+  const repoPath = await createTempRepo();
+  const realAccess = fs.access.bind(fs);
+  const realReadFile = fs.readFile.bind(fs);
+  const controlPlaneDocTouches: string[] = [];
+
+  t.mock.method(fs, "access", async (filePath, mode) => {
+    const docsPath = controlPlaneDocsPath(filePath);
+
+    if (docsPath) {
+      controlPlaneDocTouches.push(`access:${docsPath}`);
+    }
+
+    return realAccess(
+      filePath as Parameters<typeof fs.access>[0],
+      mode as Parameters<typeof fs.access>[1]
+    );
+  });
+
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const docsPath = controlPlaneDocsPath(filePath);
+
+    if (docsPath) {
+      controlPlaneDocTouches.push(`readFile:${docsPath}`);
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  try {
+    await writeRepoFile(repoPath, "docs/CODEOWNERS", "src/* @docs/team\n");
+
+    const analysis = await blueprintImpactAnalyze({
+      cwd: repoPath,
+      changedFiles: ["src/app.ts"],
+      config: {
+        ownership: {
+          sources: ["docs/CODEOWNERS"],
+          fallbackReviewers: []
+        },
+        dependencyGraph: {
+          sources: []
+        }
+      }
+    });
+    const match = analysis.ownership.matches.find((entry) => entry.path === "src/app.ts");
+
+    assert.equal(analysis.ownership.codeownersPath, "docs/CODEOWNERS");
+    assert.deepEqual(analysis.ownership.metadataPaths, []);
+    assert.deepEqual(match?.owners, ["@docs/team"]);
+    assert.equal(match?.matchedRules[0]?.source, "codeowners");
+    assert.deepEqual(controlPlaneDocTouches, []);
   } finally {
     await rm(repoPath, { recursive: true, force: true });
   }
@@ -1823,7 +1903,7 @@ test("impact analyze skips secret-like source import scanning without leaking im
 test("impact analyze blocks implemented command substrate gaps from injected catalog context", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["docs/commands/custom-command.md"],
+    changedFiles: ["commands/blu-custom-command.toml"],
     config: lowNoiseConfig(),
     context: minimalPhase6Context({
       "custom-command": {
@@ -1831,7 +1911,7 @@ test("impact analyze blocks implemented command substrate gaps from injected cat
         status: "repairing",
         implemented: false,
         manifestPath: null,
-        specPath: "docs/commands/custom-command.md",
+        specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
         skillPath: null,
         primarySkill: "blueprint-custom",
         requiredTools: ["blueprint_missing_tool"],
@@ -1863,7 +1943,7 @@ test("impact analyze blocks implemented command substrate gaps from injected cat
 test("impact analyze consumes registeredImpactTools runtime context for required tool gaps", async () => {
   const analysis = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["docs/commands/custom-command.md"],
+    changedFiles: ["commands/blu-custom-command.toml"],
     config: lowNoiseConfig(),
     context: {
       catalog: {
@@ -1873,7 +1953,7 @@ test("impact analyze consumes registeredImpactTools runtime context for required
             status: "implemented",
             implemented: true,
             manifestPath: "commands/blu-custom-command.toml",
-            specPath: "docs/commands/custom-command.md",
+            specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
             skillPath: "skills/blueprint-custom/SKILL.md",
             primarySkill: "blueprint-custom",
             requiredTools: ["blueprint_missing_runtime_tool"],
@@ -1911,7 +1991,7 @@ test("impact analyze keeps planned impact missing manifest and skill expected", 
         status: "blocked",
         implemented: false,
         manifestPath: null,
-        specPath: "docs/commands/impact.md",
+        specPath: IMPACT_RUNTIME_METADATA.sourceId,
         skillPath: null,
         requiredTools: [...IMPACT_TOOL_NAMES],
         requiredToolsSatisfied: true,
@@ -1983,7 +2063,7 @@ test("impact analyze requires runtime context for command manifest surfaces", as
             status: "implemented",
             implemented: true,
             manifestPath: "commands/blu-custom-command.toml",
-            specPath: "docs/commands/custom-command.md",
+            specPath: "src/mcp/command-runtime-metadata.ts#custom-command",
             skillPath: "skills/blueprint-custom/SKILL.md",
             primarySkill: "blueprint-custom",
             requiredTools: ["blueprint_custom_tool"],
@@ -2017,15 +2097,9 @@ test("impact analyze blocks router planned-command exposure review but not benig
     config: lowNoiseConfig(),
     context
   });
-  const guardrailDoc = await blueprintImpactAnalyze({
+  const genericDoc = await blueprintImpactAnalyze({
     cwd: repoRoot,
-    changedFiles: ["docs/commands/impact.md"],
-    config: lowNoiseConfig(),
-    context
-  });
-  const rootRouterDoc = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["docs/commands/root-router.md"],
+    changedFiles: ["docs/overview.md"],
     config: lowNoiseConfig(),
     context
   });
@@ -2036,10 +2110,9 @@ test("impact analyze blocks router planned-command exposure review but not benig
   );
   assert.equal(findingByCheck(router, "contract.planned-command-exposure")?.status, "BLOCK");
   assert.equal(
-    findingByCheck(rootRouterDoc, "contract.planned-command-exposure")?.status,
-    "BLOCK"
+    findingByCheck(genericDoc, "contract.planned-command-exposure"),
+    undefined
   );
-  assert.equal(findingByCheck(guardrailDoc, "contract.planned-command-exposure"), undefined);
 });
 
 test("impact analyze creates command review, docs, and metadata-test obligations", async () => {
@@ -2051,22 +2124,7 @@ test("impact analyze creates command review, docs, and metadata-test obligations
   });
 
   assertHasObligation(analysis, "Command contract review required");
-  assertHasObligation(analysis, "Command documentation and runtime reference must be reviewed");
-  assertHasObligation(
-    analysis,
-    "Command metadata tests must cover command contract changes"
-  );
-});
-
-test("impact analyze creates docs and tests obligations for runtime reference changes", async () => {
-  const analysis = await blueprintImpactAnalyze({
-    cwd: repoRoot,
-    changedFiles: ["docs/RUNTIME-REFERENCE.md"],
-    config: lowNoiseConfig(),
-    context: minimalPhase6Context({})
-  });
-
-  assertHasObligation(analysis, "Command documentation and runtime reference must be reviewed");
+  assertHasObligation(analysis, "Command-facing guidance should be reviewed");
   assertHasObligation(
     analysis,
     "Command metadata tests must cover command contract changes"
@@ -2274,11 +2332,9 @@ test("impact analyze creates security, deployment, release, and test obligations
 test("impact self-analysis produces release-readiness coverage for the implemented workflow", async () => {
   const implementationFiles = [
     "commands/blu-impact.toml",
-    "docs/COMMAND-CATALOG.md",
-    "docs/commands/impact.md",
-    "docs/MCP-TOOLS.md",
-    "docs/RUNTIME-REFERENCE.md",
-    "docs/ARTIFACT-SCHEMA.md",
+    "docs/runtime-guide.md",
+    "docs/overview.md",
+    "docs/artifact-guide.md",
     "skills/blueprint-impact/SKILL.md",
     "skills/blueprint-impact/references/impact-runtime-contract.md",
     "src/mcp/server.ts",
@@ -2466,7 +2522,7 @@ No warning findings were detected because the report did not include WARN findin
 
 ## Contract And Compatibility Impact
 
-No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, extension, or runtime-reference surfaces produced contract signals.
+No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, or extension surfaces produced contract signals.
 
 ## Database, Config, Infra, And Deployment Impact
 
@@ -3027,7 +3083,7 @@ test("impact report writer reuses canonical bundles for reordered report arrays"
       cwd: repoPath,
       changedFiles: [
         "commands/blu-impact.toml",
-        "docs/commands/impact.md",
+        "docs/overview.md",
         "src/mcp/tools/impact.ts"
       ],
       config: lowNoiseConfig()

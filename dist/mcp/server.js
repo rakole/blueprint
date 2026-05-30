@@ -20440,7 +20440,7 @@ var init_artifact_contracts = __esm({
         dependsOn: [],
         requirements: ["PLAN-01"],
         filesModified: ["src/mcp/artifact-contracts/index.ts"],
-        readFirst: ["docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md"],
+        readFirst: ["src/mcp/artifact-contracts/index.ts"],
         autonomous: true,
         goal: "Add a registry-owned model contract without changing write-tool behavior.",
         scope: ["Define metadata for structured phase plan authoring."],
@@ -20477,9 +20477,9 @@ var init_artifact_contracts = __esm({
         ],
         evidenceCoverage: [
           {
-            artifact: "docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md",
+            artifact: "src/mcp/artifact-contracts/index.ts",
             status: "used",
-            rationale: "The plan document defines the required model contract fields."
+            rationale: "The contract registry is the current source of truth for the required model contract fields."
           }
         ],
         fileSurfaceCoverage: [
@@ -60869,8 +60869,6 @@ function areaForSurface(surface) {
   if ([
     "command-catalog",
     "command-manifest",
-    "command-doc",
-    "runtime-reference",
     "mcp-server",
     "mcp-tool",
     "mcp-resource",
@@ -60922,21 +60920,21 @@ function classifyImpactFile(filePath) {
   if (basename === ".env" || basename.startsWith(".env.")) {
     addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
   }
-  if (normalizedPath === "docs/COMMAND-CATALOG.md") {
-    addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
-    addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
-  }
-  if (normalizedPath === "docs/RUNTIME-REFERENCE.md") {
-    addSurfaceRule(rules, "runtime-reference", "Runtime reference contract documentation changed.");
-    addSurfaceRule(rules, "docs", "Runtime reference is a documentation surface.");
-  }
   if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
     addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
     addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
   }
-  if (hasPathSegment(normalizedPath, "docs/commands")) {
-    addSurfaceRule(rules, "command-doc", "Command specification documentation changed.");
-    addSurfaceRule(rules, "docs", "Command specifications are documentation surfaces.");
+  if (normalizedPath === "src/mcp/command-runtime-metadata.ts") {
+    addSurfaceRule(
+      rules,
+      "command-catalog",
+      "Runtime-owned command metadata source changed."
+    );
+    addSurfaceRule(
+      rules,
+      "source",
+      "Runtime-owned command metadata is TypeScript source."
+    );
   }
   if (normalizedPath === "src/mcp/server.ts") {
     addSurfaceRule(rules, "mcp-server", "MCP server registration surface changed.");
@@ -61285,8 +61283,6 @@ function highAssuranceSurfacePresent(surfaces) {
         "env-config",
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-server",
         "mcp-tool",
         "mcp-resource",
@@ -61613,8 +61609,6 @@ function isContractLikeSurface(record2) {
     (surface) => [
       "command-catalog",
       "command-manifest",
-      "command-doc",
-      "runtime-reference",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -62841,8 +62835,6 @@ function contextRequiresCatalog(surfaces) {
       (name) => [
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-resource"
       ].includes(name)
     )
@@ -62854,8 +62846,6 @@ function contextRequiresRuntime(surfaces) {
       (name) => [
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-server",
         "mcp-tool",
         "mcp-resource",
@@ -63025,9 +63015,6 @@ function pathFromBlockedBy(blockedBy, prefix) {
 function expectedCommandManifestPath(commandName) {
   return commandName === "blu" ? "commands/blu.toml" : `commands/blu-${commandName}.toml`;
 }
-function expectedCommandSpecPath(commandName) {
-  return commandName === "blu" ? "docs/commands/blu.md" : `docs/commands/${commandName}.md`;
-}
 function expectedSkillPath(entry) {
   const primarySkill = stringValue(entry.primarySkill);
   return primarySkill ? `skills/${primarySkill}/SKILL.md` : null;
@@ -63036,16 +63023,9 @@ function stripPathFragment(filePath) {
   const hashIndex = filePath.indexOf("#");
   return hashIndex >= 0 ? filePath.slice(0, hashIndex) : filePath;
 }
-function extractRuntimeReferencePaths(text) {
-  return [...text.matchAll(/docs\/RUNTIME-REFERENCE\.md(?:#[A-Za-z0-9._-]+)?/gu)].map((match) => match[0]);
-}
 function collectCommandSubstratePaths(commandName, entry) {
   const blockedBy = extractBlockedBy(entry);
   const candidates = [
-    stringValue(entry.specPath),
-    pathFromBlockedBy(blockedBy, "Missing command spec: "),
-    pathFromBlockedBy(blockedBy, "Missing locked command spec: "),
-    expectedCommandSpecPath(commandName),
     stringValue(entry.manifestPath),
     pathFromBlockedBy(blockedBy, "Missing command manifest: "),
     expectedCommandManifestPath(commandName),
@@ -63059,7 +63039,7 @@ function collectCommandSubstratePaths(commandName, entry) {
   }));
 }
 function commandSubstrateInScope(scopedFiles, commandName, entry) {
-  if (scopedFiles.has("src/mcp/command-runtime-metadata.ts") || scopedFiles.has("docs/COMMAND-CATALOG.md") || scopedFiles.has(RUNTIME_REFERENCE_DOC_PATH) || scopedFiles.has("src/mcp/tools/project.ts")) {
+  if (scopedFiles.has("src/mcp/command-runtime-metadata.ts") || scopedFiles.has("src/mcp/tools/project.ts")) {
     return true;
   }
   return collectCommandSubstratePaths(commandName, entry).some(
@@ -63092,11 +63072,9 @@ function addCommandSubstrateFinding(findings, evidence, commandName, entry, asse
     }
   });
   const titleByAsset = {
-    spec: "Implemented command missing command spec",
     manifest: "Implemented command missing command manifest",
     skill: "Implemented command missing primary skill",
-    "required-tools": "Implemented command missing required MCP tool",
-    "runtime-reference": "Implemented command runtime reference drift"
+    "required-tools": "Implemented command missing required MCP tool"
   };
   findings.push({
     id: `finding.contract.command-substrate.${sanitizeIdentifier(commandName)}.${asset}`,
@@ -63129,7 +63107,6 @@ function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, e
       continue;
     }
     const blockedBy = extractBlockedBy(entry);
-    const specPath = stringValue(entry.specPath) ?? pathFromBlockedBy(blockedBy, "Missing command spec: ") ?? expectedCommandSpecPath(commandName);
     const manifestPath = stringValue(entry.manifestPath) ?? pathFromBlockedBy(blockedBy, "Missing command manifest: ") ?? expectedCommandManifestPath(commandName);
     const skillPath = stringValue(entry.skillPath) ?? pathFromBlockedBy(blockedBy, "Missing primary skill: ") ?? expectedSkillPath(entry);
     const missingRequiredToolsFromBlockedBy = uniqueSorted2(
@@ -63141,22 +63118,6 @@ function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, e
       ...missingRequiredToolsFromRuntime,
       ...entry.requiredToolsSatisfied === false && missingRequiredToolsFromBlockedBy.length === 0 && missingRequiredToolsFromRuntime.length === 0 ? ["unknown-required-tool"] : []
     ]);
-    if (blockedBy.some(
-      (item) => item.startsWith("Missing command spec: ") || item.startsWith("Missing locked command spec: ")
-    )) {
-      addCommandSubstrateFinding(
-        findings,
-        evidence,
-        commandName,
-        entry,
-        "spec",
-        [specPath],
-        [
-          `Restore ${specPath} before ${commandName} can remain declared implemented.`,
-          "Keep the command out of runnable routing until the catalog substrate is complete."
-        ]
-      );
-    }
     if (!stringValue(entry.manifestPath) || blockedBy.some((item) => item.startsWith("Missing command manifest: "))) {
       addCommandSubstrateFinding(
         findings,
@@ -63200,31 +63161,6 @@ function analyzeImplementedCommandSubstrate(files, catalog, runtime, findings, e
         { missingRequiredTools }
       );
     }
-    const runtimeReferenceBlockers = blockedBy.filter(
-      (item) => item.startsWith("Missing runtime reference row: ") || item.startsWith("Runtime reference ")
-    );
-    if (runtimeReferenceBlockers.length > 0) {
-      addCommandSubstrateFinding(
-        findings,
-        evidence,
-        commandName,
-        entry,
-        "runtime-reference",
-        uniqueSorted2([
-          RUNTIME_REFERENCE_DOC_PATH,
-          ...runtimeReferenceBlockers.flatMap(
-            (item) => extractRuntimeReferencePaths(item).filter(
-              (filePath) => stripPathFragment(filePath) === RUNTIME_REFERENCE_DOC_PATH
-            )
-          )
-        ]),
-        [
-          `Restore the ${RUNTIME_REFERENCE_DOC_PATH} row for ${commandName} before it can remain declared implemented.`,
-          "Keep the command out of runnable routing until the locked runtime-reference substrate is complete."
-        ],
-        { runtimeReferenceBlockers }
-      );
-    }
   }
 }
 function nonImplementedCommandsFromContext(catalog, commandAssets) {
@@ -63234,7 +63170,7 @@ function nonImplementedCommandsFromContext(catalog, commandAssets) {
   return commandAssets ? extractStringArray(commandAssets.nonRoutableCommands) : [];
 }
 function isRouterHelpProgressNextSurface(filePath) {
-  return /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) || /^docs\/commands\/(?:root-router|help|progress|next)\.md$/u.test(filePath) || filePath === "src/mcp/command-resources.ts" || filePath === "src/mcp/tools/project.ts";
+  return /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) || filePath === "src/mcp/command-resources.ts" || filePath === "src/mcp/tools/project.ts";
 }
 function analyzePlannedCommandExposure(files, catalog, commandAssets, findings, evidence) {
   const routerFiles = files.filter(isRouterHelpProgressNextSurface);
@@ -63303,10 +63239,9 @@ function filesWithAnySurface(surfaces, surfaceNames) {
 function addSurfaceObligations(surfaces, obligations, evidence) {
   const commandFiles = filesWithAnySurface(surfaces, [
     "command-catalog",
-    "command-manifest",
-    "command-doc",
-    "runtime-reference"
+    "command-manifest"
   ]);
+  const runtimeCatalogFiles = filesWithAnySurface(surfaces, ["command-catalog"]);
   const mcpFiles = filesWithAnySurface(surfaces, ["mcp-server", "mcp-tool", "mcp-resource"]);
   const artifactFiles = filesWithAnySurface(surfaces, ["artifact-contract"]);
   const skillAgentFiles = filesWithAnySurface(surfaces, ["skill", "agent"]);
@@ -63322,19 +63257,19 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     title: "Command contract review required",
     severity: "HIGH",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
-      "Review command manifest, command documentation, catalog status, and routing expectations together."
+      "Review command manifests, runtime metadata, catalog status, and routing expectations together."
     ]
   });
   addObligation(obligations, evidence, {
     category: "docs",
-    title: "Command documentation and runtime reference must be reviewed",
+    title: "Command-facing guidance should be reviewed",
     severity: "MEDIUM",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
-      "Verify command docs, MCP tool docs, and runtime reference remain aligned with the changed command surface."
+      "Verify any user-facing command guidance remains aligned with the changed command surface."
     ]
   });
   addObligation(obligations, evidence, {
@@ -63342,7 +63277,7 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     title: "Command metadata tests must cover command contract changes",
     severity: "MEDIUM",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
       "Add or update command catalog, routing, and metadata regression tests for the changed command surface."
     ]
@@ -63354,7 +63289,7 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     impactedFiles: mcpFiles,
     sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: [
-      "Update docs/MCP-TOOLS.md and runtime-reference notes for changed MCP tools or resources."
+      "Review user-facing MCP tool and resource guidance for changed runtime surfaces."
     ]
   });
   addObligation(obligations, evidence, {
@@ -63371,8 +63306,8 @@ function addSurfaceObligations(surfaces, obligations, evidence) {
     category: "build",
     title: "Runtime source changes require generated dist review",
     severity: "HIGH",
-    impactedFiles: mcpFiles,
-    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    impactedFiles: uniqueSorted2([...runtimeCatalogFiles, ...mcpFiles]),
+    sourceSurfaces: ["command-catalog", "mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
     evidenceKind: "build"
   });
@@ -63495,6 +63430,7 @@ function isRuntimeSourceOrExtensionSurface(surface) {
   }
   return surface.surfaces.some(
     (name) => [
+      "command-catalog",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -63506,9 +63442,10 @@ function isRuntimeSourceOrExtensionSurface(surface) {
 }
 async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns, obligations, evidence, warnings) {
   const runtimeOrExtensionFiles = surfaces.filter(isRuntimeSourceOrExtensionSurface).map((surface) => surface.path).sort();
-  const mcpOrExtensionFiles = surfaces.filter(
+  const compiledRuntimeOrExtensionFiles = surfaces.filter(
     (surface) => surface.surfaces.some(
       (name) => [
+        "command-catalog",
         "mcp-server",
         "mcp-tool",
         "mcp-resource",
@@ -63523,7 +63460,7 @@ async function addBuildAndDistFindings(projectRoot, surfaces, findings, unknowns
   const hookRuntimeBundleFiles = distFiles.filter((filePath) => /^dist\/hooks\/[^/]+\.js$/u.test(filePath)).sort();
   const hasRuntimeOrExtension = runtimeOrExtensionFiles.length > 0;
   const hasDistFiles = distFiles.length > 0;
-  const missingMcpRuntimeBundleCoverage = mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
+  const missingMcpRuntimeBundleCoverage = compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage = hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage = hasRuntimeOrExtension && !missingMcpRuntimeBundleCoverage && !missingHookRuntimeBundleCoverage;
   if (hasRuntimeOrExtension && !await pathExists6(path12.join(projectRoot, "dist/mcp/server.js"))) {
@@ -65995,7 +65932,7 @@ function renderContractImpact(report) {
     (obligation) => obligation.category === "contract-review" || obligation.category === "docs"
   );
   if (contractSignals.length === 0 && contractObligations.length === 0) {
-    return "No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, extension, or runtime-reference surfaces produced contract signals.";
+    return "No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, or extension surfaces produced contract signals.";
   }
   return [
     renderFindings(contractSignals, "No contract findings were detected because contract checks did not produce findings."),
@@ -66340,7 +66277,7 @@ async function blueprintImpactOutputRender(args = {}) {
     warnings: parsed.warnings
   };
 }
-var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, RUNTIME_REFERENCE_DOC_PATH, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync4, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
+var import__4, IMPACT_TOOL_NAMES, PROJECT_RUNTIME_TOOL_NAMES, IMPACT_SCHEMA_VERSION, IMPACT_REPORT_SCHEMA_VERSION, OWNERSHIP_SCHEMA_VERSION, DEPENDENCY_GRAPH_SCHEMA_VERSION, IMPACT_PROJECT_CONFIG_PATH, IMPACT_REPORT_ROOT, IMPACT_GLOBAL_DEFAULTS_BASENAME, GIT_COMMAND_TIMEOUT_MS2, CODEOWNERS_CANDIDATES, PACKAGE_JSON_SOURCE, PACKAGE_LOCK_SOURCE, TS_IMPORT_SCAN_SOURCE, CUSTOM_GRAPH_SOURCE, BOUNDED_SOURCE_ROOTS, KNOWN_IMPACT_CONFIG_TOP_LEVEL_KEYS, BUILT_IN_BASE_BRANCHES, execFileAsync4, IMPACT_SURFACE_PRIORITY, SOURCE_FILE_EXTENSIONS, CONFIG_FILE_EXTENSIONS, DOC_FILE_EXTENSIONS, TEST_FILE_PATTERNS, GENERATED_FILE_PATTERNS, SECRET_PATH_PATTERN, IMPACT_REPORT_REQUIRED_HEADINGS, IMPACT_OPTIONAL_BUNDLE_FILES, IMPACT_REQUIRED_BUNDLE_FILES, IMPACT_ALLOWED_BUNDLE_FILES, NON_PATH_SCOPE_SOURCES, nonEmptyStringSchema, impactModeSchema, impactIdSchema, outputModeSchema, configVerbositySchema, impactConfigGetInputSchema, impactScopeResolveInputSchema, impactContextLoadInputSchema, impactAnalyzeInputSchema, impactReportWriteInputSchema, impactOutputRenderInputSchema, stringArraySchema, partialImpactConfigSchema, impactConfigSchema, impactScopeSeedSchema, ownershipMetadataSchema, dependencyGraphMetadataSchema, impactToolDefinitions;
 var init_impact = __esm({
   "src/mcp/tools/impact.ts"() {
     "use strict";
@@ -66376,7 +66313,6 @@ var init_impact = __esm({
     IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
     IMPACT_REPORT_ROOT = ".blueprint/impact";
     IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
-    RUNTIME_REFERENCE_DOC_PATH = "docs/RUNTIME-REFERENCE.md";
     GIT_COMMAND_TIMEOUT_MS2 = 15e3;
     CODEOWNERS_CANDIDATES = [
       "CODEOWNERS",
@@ -66404,25 +66340,23 @@ var init_impact = __esm({
       "env-config": 2,
       "command-catalog": 3,
       "command-manifest": 4,
-      "command-doc": 5,
-      "runtime-reference": 6,
-      "mcp-server": 7,
-      "mcp-tool": 8,
-      "mcp-resource": 9,
-      "artifact-contract": 10,
-      skill: 11,
-      agent: 12,
-      "extension-manifest": 13,
-      hook: 14,
-      "package-runtime": 15,
-      "build-config": 16,
-      test: 17,
-      docs: 18,
-      generated: 19,
-      config: 20,
-      source: 21,
-      "repo-root": 22,
-      unknown: 23
+      "mcp-server": 5,
+      "mcp-tool": 6,
+      "mcp-resource": 7,
+      "artifact-contract": 8,
+      skill: 9,
+      agent: 10,
+      "extension-manifest": 11,
+      hook: 12,
+      "package-runtime": 13,
+      "build-config": 14,
+      test: 15,
+      docs: 16,
+      generated: 17,
+      config: 18,
+      source: 19,
+      "repo-root": 20,
+      unknown: 21
     };
     SOURCE_FILE_EXTENSIONS = /* @__PURE__ */ new Set([
       ".cjs",
@@ -67474,231 +67408,15 @@ function buildBootstrapStatus(diagnostics) {
     recommendedNextAction: diagnostics.brownfield.recommendedNextAction
   };
 }
-function extractMarkdownSection7(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(
-    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
-  );
-  return match?.[1] ?? "";
-}
-function parseRequiredTools(markdown) {
-  const section = extractMarkdownSection7(markdown, "Required MCP Tools");
-  return [...section.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
-}
-function parseOptionalAgents(markdown, primarySkill) {
-  const section = extractMarkdownSection7(markdown, "Skills And Subagents");
-  const values = [...section.matchAll(/`([a-z0-9-]+)`/g)].map((match) => match[1]);
-  return values.filter((value) => value !== primarySkill);
-}
-function parseCatalogRow(cells) {
-  if (cells.length < 7) {
-    return null;
-  }
-  const commandName = cells[0].replaceAll("`", "");
-  const wave = Number.parseInt(cells[1], 10);
-  const family = cells[2].replaceAll("`", "");
-  const primarySkill = cells[3].replaceAll("`", "");
-  const declaredStatus = cells[4].replaceAll("`", "");
-  const risk = cells[6].replaceAll("`", "");
-  if (!commandName || Number.isNaN(wave) || !["planned", "implemented", "blocked", "repairing"].includes(declaredStatus)) {
-    return null;
-  }
-  return {
-    commandName,
-    wave,
-    family,
-    primarySkill,
-    declaredStatus,
-    risk
-  };
-}
-function commandRequiresLockedDocSubstrates(commandName) {
-  return commandName === "spec-phase";
-}
-function parseMarkdownTableCell(line) {
-  return line.trim().split("|").slice(1, -1).map((cell) => cell.trim());
-}
-function parseSpecDocField(markdown, fieldName) {
-  const escapedFieldName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(new RegExp(`\\| ${escapedFieldName} \\| (.+?) \\|`));
-  return match?.[1]?.replaceAll("`", "").trim() ?? null;
-}
-function parseSpecDocPrimarySkill(markdown) {
-  return markdown.match(/- Primary skill:\s*`([^`]+)`/)?.[1] ?? null;
-}
-function parseRuntimeReferenceInlineList(cell) {
-  const normalized = cell.replaceAll("<br>", "\n").replace(/`/g, "").trim();
-  if (normalized.length === 0 || normalized.toLowerCase() === "none") {
-    return [];
-  }
-  return normalized.split(/\n|;\s+/).map((entry) => entry.trim()).filter((entry) => entry.length > 0 && entry.toLowerCase() !== "none");
-}
-function parseRuntimeReferenceRow(markdown, commandName) {
-  let currentWave = null;
-  for (const line of markdown.split("\n")) {
-    const waveMatch = line.match(/^### Wave ([0-9]+):/);
-    if (waveMatch) {
-      currentWave = Number.parseInt(waveMatch[1], 10);
-      continue;
-    }
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("| `") || trimmed.startsWith("|---")) {
-      continue;
-    }
-    const cells = parseMarkdownTableCell(trimmed);
-    if (cells.length < 8 || cells[0].replaceAll("`", "") !== commandName) {
-      continue;
-    }
-    return {
-      wave: currentWave,
-      commandSpecPath: cells[1].replaceAll("`", "") || null,
-      primarySkill: cells[2].replaceAll("`", "") || null,
-      exactMcpDestination: parseRuntimeReferenceInlineList(cells[3]),
-      optionalAgents: parseRuntimeReferenceInlineList(cells[4]),
-      hookInvolvement: parseRuntimeReferenceInlineList(cells[5]),
-      evidenceState: parseRuntimeReferenceInlineList(cells[7])
-    };
-  }
-  return null;
-}
-function arraysEqual(left, right) {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-function pushMismatch(blockedBy, label, expected, actual) {
-  if (expected === actual) {
-    return;
-  }
-  blockedBy.push(`${label} mismatch: expected ${String(expected)} but found ${String(actual)}`);
-}
-async function readOptionalBundledFile(relativePath) {
-  try {
-    return await fs10.readFile(bundledUrl(relativePath), "utf8");
-  } catch {
-    return null;
-  }
-}
-async function validateLockedDocSubstrates(parsedRow, runtimeMetadata, catalogRowSource) {
-  if (!commandRequiresLockedDocSubstrates(runtimeMetadata.commandName)) {
-    return [];
-  }
-  const blockedBy = [];
-  if (catalogRowSource !== "docs") {
-    blockedBy.push(`Missing command catalog row: ${COMMAND_CATALOG_DOC_PATH}#${runtimeMetadata.commandName}`);
-    return blockedBy;
-  }
-  const expectedCatalog = runtimeMetadata.catalog;
-  pushMismatch(blockedBy, "Command catalog wave", expectedCatalog.wave, parsedRow.wave);
-  pushMismatch(blockedBy, "Command catalog family", expectedCatalog.family, parsedRow.family);
-  pushMismatch(
-    blockedBy,
-    "Command catalog primary skill",
-    expectedCatalog.primarySkill,
-    parsedRow.primarySkill
-  );
-  pushMismatch(
-    blockedBy,
-    "Command catalog declared status",
-    expectedCatalog.declaredStatus,
-    parsedRow.declaredStatus
-  );
-  pushMismatch(blockedBy, "Command catalog risk", expectedCatalog.risk, parsedRow.risk);
-  const commandSpecMarkdown = await readOptionalBundledFile(SPEC_PHASE_COMMAND_DOC_PATH);
-  if (!commandSpecMarkdown) {
-    blockedBy.push(`Missing locked command spec: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
-  } else {
-    pushMismatch(
-      blockedBy,
-      "Command spec wave",
-      String(runtimeMetadata.catalog.wave),
-      parseSpecDocField(commandSpecMarkdown, "Wave")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec family",
-      runtimeMetadata.catalog.family,
-      parseSpecDocField(commandSpecMarkdown, "Family")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec execution profile",
-      runtimeMetadata.spec.executionProfile,
-      parseSpecDocField(commandSpecMarkdown, "Execution profile")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec root-routable",
-      runtimeMetadata.spec.rootRoutable ? "Yes" : "No",
-      parseSpecDocField(commandSpecMarkdown, "Root-routable")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec primary skill",
-      runtimeMetadata.catalog.primarySkill,
-      parseSpecDocPrimarySkill(commandSpecMarkdown)
-    );
-    const commandSpecTools = parseRequiredTools(commandSpecMarkdown);
-    if (!arraysEqual(commandSpecTools, runtimeMetadata.requiredTools)) {
-      blockedBy.push(`Command spec required tools mismatch: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
-    }
-  }
-  const runtimeReferenceMarkdown = await readOptionalBundledFile(RUNTIME_REFERENCE_DOC_PATH2);
-  const runtimeReferenceRow = runtimeReferenceMarkdown ? parseRuntimeReferenceRow(runtimeReferenceMarkdown, runtimeMetadata.commandName) : null;
-  if (!runtimeReferenceRow) {
-    blockedBy.push(`Missing runtime reference row: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
-  } else {
-    pushMismatch(
-      blockedBy,
-      "Runtime reference wave",
-      runtimeMetadata.catalog.wave,
-      runtimeReferenceRow.wave
-    );
-    pushMismatch(
-      blockedBy,
-      "Runtime reference command spec path",
-      runtimeMetadata.sourceId,
-      runtimeReferenceRow.commandSpecPath
-    );
-    pushMismatch(
-      blockedBy,
-      "Runtime reference primary skill",
-      runtimeMetadata.runtimeReference.primarySkill,
-      runtimeReferenceRow.primarySkill
-    );
-    if (!arraysEqual(runtimeReferenceRow.exactMcpDestination, runtimeMetadata.requiredTools)) {
-      blockedBy.push(`Runtime reference MCP destination mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
-    }
-    if (!arraysEqual(runtimeReferenceRow.optionalAgents, runtimeMetadata.optionalAgents)) {
-      blockedBy.push(`Runtime reference optional agents mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
-    }
-    if (!arraysEqual(runtimeReferenceRow.hookInvolvement, runtimeMetadata.runtimeReference.hookInvolvement)) {
-      blockedBy.push(`Runtime reference hook involvement mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
-    }
-    if (!arraysEqual(runtimeReferenceRow.evidenceState, runtimeMetadata.runtimeReference.evidenceState)) {
-      blockedBy.push(`Runtime reference evidence state mismatch: ${RUNTIME_REFERENCE_DOC_PATH2}#${runtimeMetadata.commandName}`);
-    }
-  }
-  return blockedBy;
-}
-async function buildCommandCatalogEntry(parsedRow, options = {}) {
-  const catalogRowSource = options.catalogRowSource ?? "docs";
+async function buildCommandCatalogEntry(parsedRow) {
   const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
   const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
-  const specPath = runtimeMetadata?.sourceId ?? `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
+  const specPath = runtimeMetadata?.sourceId ?? null;
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists7(bundledUrl(manifestPath));
-  let specExists = runtimeMetadata ? true : await pathExists7(specUrl);
   const missingRuntimeInputs = [];
-  let specMarkdown = "";
-  if (specExists && specUrl) {
-    try {
-      specMarkdown = await fs10.readFile(specUrl, "utf8");
-    } catch {
-      specExists = false;
-    }
-  }
-  const requiredTools = runtimeMetadata ? [...runtimeMetadata.requiredTools] : parseRequiredTools(specMarkdown);
-  const optionalAgents = runtimeMetadata ? [...runtimeMetadata.optionalAgents] : parseOptionalAgents(specMarkdown, catalogFacts.primarySkill);
+  const requiredTools = runtimeMetadata ? [...runtimeMetadata.requiredTools] : [];
+  const optionalAgents = runtimeMetadata ? [...runtimeMetadata.optionalAgents] : [];
   const availableOptionalAgents = [];
   const blockedBy = [];
   const skillResolution = await resolveBlueprintSkillPath(
@@ -67706,19 +67424,11 @@ async function buildCommandCatalogEntry(parsedRow, options = {}) {
     async (skillPath) => pathExists7(bundledUrl(skillPath))
   );
   const skillExists = skillResolution.resolvedPath !== null;
-  if (!specExists) {
-    blockedBy.push(`Missing command spec: ${specPath}`);
-  }
   if (!manifestExists) {
     blockedBy.push(`Missing command manifest: ${manifestPath}`);
   }
   if (!skillExists) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
-  }
-  if (runtimeMetadata) {
-    blockedBy.push(
-      ...await validateLockedDocSubstrates(parsedRow, runtimeMetadata, catalogRowSource)
-    );
   }
   for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
     if (!await pathExists7(bundledUrl(inputPath))) {
@@ -67729,9 +67439,6 @@ async function buildCommandCatalogEntry(parsedRow, options = {}) {
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
-  const lockedDocsSatisfied = !runtimeMetadata ? true : !commandRequiresLockedDocSubstrates(runtimeMetadata.commandName) || !blockedBy.some(
-    (blocker) => blocker.startsWith("Missing command catalog row:") || blocker.startsWith("Command catalog ") || blocker.startsWith("Missing locked command spec:") || blocker.startsWith("Command spec ") || blocker.startsWith("Missing runtime reference row:") || blocker.startsWith("Runtime reference ")
-  );
   for (const toolName of missingTools) {
     blockedBy.push(`Missing required MCP tool: ${toolName}`);
   }
@@ -67745,7 +67452,7 @@ async function buildCommandCatalogEntry(parsedRow, options = {}) {
     })
   );
   let status = catalogFacts.declaredStatus;
-  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied && lockedDocsSatisfied)) {
+  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -67771,7 +67478,7 @@ async function buildCommandCatalogEntry(parsedRow, options = {}) {
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
     skillPath: skillResolution.resolvedPath,
-    specPath: specExists && runtimeInputsSatisfied && lockedDocsSatisfied ? specPath : null,
+    specPath: manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied ? specPath : null,
     requiredTools,
     requiredToolsSatisfied,
     optionalAgents,
@@ -67790,7 +67497,7 @@ function runtimeOwnedMetadataToParsedRow(metadata) {
 }
 async function addRuntimeOwnedCommandCatalogEntry(result, metadata) {
   const parsedRow = runtimeOwnedMetadataToParsedRow(metadata);
-  const entry = await buildCommandCatalogEntry(parsedRow, { catalogRowSource: "runtime" });
+  const entry = await buildCommandCatalogEntry(parsedRow);
   const waveKey = String(parsedRow.wave);
   result.commands[parsedRow.commandName] = entry;
   result.waves[waveKey] ??= [];
@@ -67893,37 +67600,8 @@ async function blueprintRuntimeOwnedCommandCatalog() {
   }
   return result;
 }
-async function readBundledCommandCatalog() {
-  const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
-  try {
-    const markdown = await fs10.readFile(commandCatalogPath, "utf8");
-    const commands = {};
-    const waves = {};
-    const aliases = {};
-    for (const line of markdown.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("| `")) {
-        continue;
-      }
-      const cells = trimmed.split("|").slice(1, -1).map((cell) => cell.trim());
-      const parsedRow = parseCatalogRow(cells);
-      if (!parsedRow) {
-        continue;
-      }
-      const entry = await buildCommandCatalogEntry(parsedRow);
-      commands[parsedRow.commandName] = entry;
-      const waveKey = String(parsedRow.wave);
-      waves[waveKey] ??= [];
-      waves[waveKey].push(parsedRow.commandName);
-      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
-    }
-    return Object.keys(commands).length > 0 ? addMissingRuntimeOwnedCommandCatalogEntries({ commands, waves, aliases }) : await buildRuntimeOwnedFallbackCommandCatalog();
-  } catch {
-    return buildRuntimeOwnedFallbackCommandCatalog();
-  }
-}
 async function blueprintCommandCatalog() {
-  return readBundledCommandCatalog();
+  return buildRuntimeOwnedFallbackCommandCatalog();
 }
 async function blueprintProjectInit(args = {}) {
   const projectRoot = await ensureRepoRoot(args.cwd);
@@ -68134,7 +67812,7 @@ async function blueprintProjectStatus(args = {}) {
     }
   };
 }
-var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, COMMAND_SPEC_PREFIX, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, COMMAND_CATALOG_DOC_PATH, RUNTIME_REFERENCE_DOC_PATH2, SPEC_PHASE_COMMAND_DOC_PATH, projectToolDefinitions;
+var commandCatalogInputSchema, projectInitInputSchema, projectStatusInputSchema, DOCLESS_FALLBACK_CATALOG_ROWS, PROJECT_TOOL_NAMES, AVAILABLE_TOOL_NAMES, MIN_SUBSTANTIVE_WORDS, GENERIC_TEXT_PATTERN, projectToolDefinitions;
 var init_project = __esm({
   "src/mcp/tools/project.ts"() {
     "use strict";
@@ -68199,7 +67877,6 @@ var init_project = __esm({
     projectStatusInputSchema = {
       cwd: string2().optional()
     };
-    COMMAND_SPEC_PREFIX = "docs/commands";
     DOCLESS_FALLBACK_CATALOG_ROWS = [
       {
         commandName: "do",
@@ -68228,9 +67905,6 @@ var init_project = __esm({
     ]);
     MIN_SUBSTANTIVE_WORDS = 6;
     GENERIC_TEXT_PATTERN = /^(?:tbd|todo|n\/a|na|none|unknown|placeholder|to be decided|to be determined)$/i;
-    COMMAND_CATALOG_DOC_PATH = "docs/COMMAND-CATALOG.md";
-    RUNTIME_REFERENCE_DOC_PATH2 = "docs/RUNTIME-REFERENCE.md";
-    SPEC_PHASE_COMMAND_DOC_PATH = "docs/commands/spec-phase.md";
     projectToolDefinitions = [
       {
         name: "blueprint_command_catalog",
@@ -78325,102 +77999,6 @@ async function readBundledFile(relativePath) {
     return null;
   }
 }
-function extractMarkdownSection8(markdown, heading) {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(
-    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
-  );
-  return match?.[1]?.trim() ?? "";
-}
-function collapseMarkdownText(markdown) {
-  const normalized = markdown.replace(/`/g, "").replace(/\[(.*?)\]\([^)]+\)/g, "$1").replace(/\s+/g, " ").trim();
-  return normalized.length > 0 ? normalized : null;
-}
-function parseRequiredTools2(markdown) {
-  return [...markdown.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
-}
-function parseBulletSection3(markdown) {
-  return markdown.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("- ")).map((line) => line.slice(2).trim()).filter((line) => line.length > 0 && line.toLowerCase() !== "none");
-}
-function parseOptionalSubagents(markdown) {
-  const section = extractMarkdownSection8(markdown, "Skills And Subagents");
-  const match = section.match(/- Optional subagents:\s*(.+)/);
-  if (!match || /\bnone\b/i.test(match[1])) {
-    return [];
-  }
-  return [...match[1].matchAll(/`([a-z0-9-]+)`/g)].map((result) => result[1]);
-}
-function parsePrimarySkill(markdown) {
-  const section = extractMarkdownSection8(markdown, "Skills And Subagents");
-  const match = section.match(/- Primary skill:\s*`([^`]+)`/);
-  return match?.[1] ?? null;
-}
-function parseCommandSpec(markdown, specPath) {
-  const headingMatch = markdown.match(/^#\s+(.+)$/m);
-  const waveMatch = markdown.match(/\| Wave \| `([^`]+)` \|/);
-  const familyMatch = markdown.match(/\| Family \| `([^`]+)` \|/);
-  const executionProfileMatch = markdown.match(/\| Execution profile \| `([^`]+)` \|/);
-  const rootRoutableMatch = markdown.match(/\| Root-routable \| (.+?) \|/);
-  return {
-    path: specPath,
-    title: headingMatch?.[1]?.trim() ?? null,
-    wave: waveMatch ? Number.parseInt(waveMatch[1], 10) : null,
-    family: familyMatch?.[1] ?? null,
-    executionProfile: executionProfileMatch?.[1] ?? null,
-    rootRoutable: rootRoutableMatch ? rootRoutableMatch[1].trim().toLowerCase().startsWith("yes") : null,
-    purpose: collapseMarkdownText(extractMarkdownSection8(markdown, "Purpose")),
-    requiredTools: parseRequiredTools2(extractMarkdownSection8(markdown, "Required MCP Tools")),
-    primarySkill: parsePrimarySkill(markdown),
-    optionalSubagents: parseOptionalSubagents(markdown),
-    reads: parseBulletSection3(extractMarkdownSection8(markdown, "Blueprint And Global State Reads")),
-    writes: parseBulletSection3(
-      extractMarkdownSection8(markdown, "Blueprint And Global State Writes")
-    )
-  };
-}
-function parseInlineList(cell) {
-  const normalized = cell.replaceAll("<br>", "\n").replace(/`/g, "").trim();
-  if (normalized.length === 0 || normalized.toLowerCase() === "none") {
-    return [];
-  }
-  return normalized.split(/\n|;\s+/).map((entry) => entry.trim()).filter((entry) => entry.length > 0 && entry.toLowerCase() !== "none");
-}
-function parseRuntimeReferenceRows(markdown) {
-  const rows = /* @__PURE__ */ new Map();
-  let currentWaveTitle = null;
-  let currentWaveNumber = null;
-  for (const line of markdown.split("\n")) {
-    const waveHeaderMatch = line.match(/^### Wave ([0-9]+):\s+(.+)$/);
-    if (waveHeaderMatch) {
-      currentWaveNumber = Number.parseInt(waveHeaderMatch[1], 10);
-      currentWaveTitle = waveHeaderMatch[2].trim();
-      continue;
-    }
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("| `") || trimmed.startsWith("|---")) {
-      continue;
-    }
-    const cells = trimmed.split("|").slice(1, -1).map((cell) => cell.trim());
-    if (cells.length < 8) {
-      continue;
-    }
-    const command = cells[0].replaceAll("`", "");
-    rows.set(command, {
-      path: "docs/RUNTIME-REFERENCE.md",
-      wave: currentWaveNumber,
-      waveTitle: currentWaveTitle,
-      command,
-      commandSpecPath: cells[1].replaceAll("`", "") || null,
-      primarySkill: cells[2].replaceAll("`", "") || null,
-      exactMcpDestination: parseInlineList(cells[3]),
-      optionalAgents: parseInlineList(cells[4]),
-      hookInvolvement: parseInlineList(cells[5]),
-      contractNotes: collapseMarkdownText(cells[6]),
-      evidenceState: parseInlineList(cells[7])
-    });
-  }
-  return rows;
-}
 function buildCommandRuntimeContractUri(commandName) {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
@@ -78446,14 +78024,6 @@ function runtimeOwnedMetadataToRuntimeReferenceRow(metadata) {
     evidenceState: [...metadata.runtimeReference.evidenceState]
   };
 }
-async function readBlueprintRuntimeReferenceRows(readRelativePath = readBundledFile) {
-  const runtimeReferenceMarkdown = await readRelativePath("docs/RUNTIME-REFERENCE.md");
-  const rows = runtimeReferenceMarkdown ? parseRuntimeReferenceRows(runtimeReferenceMarkdown) : /* @__PURE__ */ new Map();
-  for (const metadata of listRuntimeOwnedCommandMetadata()) {
-    rows.set(metadata.commandName, runtimeOwnedMetadataToRuntimeReferenceRow(metadata));
-  }
-  return rows;
-}
 function runtimeOwnedMetadataToCommandSpec(metadata) {
   return {
     path: metadata.spec.path,
@@ -78470,70 +78040,44 @@ function runtimeOwnedMetadataToCommandSpec(metadata) {
     writes: [...metadata.spec.writes]
   };
 }
-async function readBundledCommandSpec(entry, readRelativePath = readBundledFile) {
-  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
-  if (runtimeMetadata) {
-    return runtimeOwnedMetadataToCommandSpec(runtimeMetadata);
-  }
-  if (!entry.specPath) {
+function getImplementedRuntimeOwnedContractMetadata(commandName, entry) {
+  if (!entry || !isExposedRuntimeContractCatalogEntry(entry)) {
     return null;
   }
-  const specMarkdown = await readRelativePath(entry.specPath);
-  return specMarkdown ? parseCommandSpec(specMarkdown, entry.specPath) : null;
+  return getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ?? getRuntimeOwnedCommandMetadata(commandName) ?? null;
 }
 async function buildBlueprintCommandCatalogResource() {
   return blueprintCommandCatalog();
 }
 async function listBlueprintCommandRuntimeContractCommands() {
   const catalog = await blueprintCommandCatalog();
-  const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
-  const commands = await Promise.all(
-    Object.entries(catalog.commands).map(async ([commandName, entry]) => {
-      if (!isExposedRuntimeContractCatalogEntry(entry)) {
-        return null;
-      }
-      const spec = await readBundledCommandSpec(entry);
-      return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
-    })
-  );
-  return commands.filter((commandName) => commandName !== null).sort();
+  return Object.entries(catalog.commands).filter(
+    ([commandName, entry]) => getImplementedRuntimeOwnedContractMetadata(commandName, entry) !== null
+  ).map(([commandName]) => commandName).sort();
 }
 async function buildBlueprintCommandRuntimeContractResource(commandName, options = {}) {
   const readRelativePath = options.readRelativePath ?? readBundledFile;
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands[commandName];
+  const runtimeMetadata = getImplementedRuntimeOwnedContractMetadata(commandName, entry);
   if (!entry) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
   }
-  if (!isExposedRuntimeContractCatalogEntry(entry)) {
+  if (!runtimeMetadata) {
     throw new Error(buildNonImplementedRuntimeContractErrorMessage(commandName));
   }
-  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ?? getRuntimeOwnedCommandMetadata(commandName);
-  const [spec, runtimeReference] = runtimeMetadata ? [
-    runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
-    runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata)
-  ] : await Promise.all([
-    readBundledCommandSpec(entry, readRelativePath),
-    readBlueprintRuntimeReferenceRows(readRelativePath).then((rows) => rows.get(commandName))
-  ]);
   const skillInputs = await loadBlueprintSkillInputs(
     entry.primarySkill,
     entry.command,
     readRelativePath,
     entry.skillPath
   );
-  if (!spec || !entry.specPath) {
-    throw new Error(`Missing locked command spec for Blueprint command: ${commandName}`);
-  }
-  if (!runtimeReference) {
-    throw new Error(`Missing runtime reference row for Blueprint command: ${commandName}`);
-  }
   return {
     command: commandName,
     uri: buildCommandRuntimeContractUri(commandName),
     catalog: entry,
-    spec,
-    runtimeReference,
+    spec: runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
+    runtimeReference: runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata),
     skillInputs
   };
 }

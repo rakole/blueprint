@@ -26,11 +26,7 @@ function makeBundledDocsUnavailable(t: TestContext): string[] {
   fs.readFile = (async (...args: Parameters<typeof fs.readFile>) => {
     const relativePath = bundledRelativePath(args[0]);
 
-    if (
-      relativePath === "docs/COMMAND-CATALOG.md" ||
-      relativePath === "docs/RUNTIME-REFERENCE.md" ||
-      /^docs\/commands\/.+\.md$/.test(relativePath ?? "")
-    ) {
+    if ((relativePath ?? "").startsWith("docs/")) {
       attemptedDocs.push(relativePath);
       const error = new Error("ENOENT");
       (error as NodeJS.ErrnoException).code = "ENOENT";
@@ -48,11 +44,7 @@ function makeBundledDocsUnavailable(t: TestContext): string[] {
 }
 
 function isDisallowedDocsRead(relativePath: string): boolean {
-  if (relativePath === "docs/RUNTIME-REFERENCE.md") {
-    return true;
-  }
-
-  return /^docs\/commands\/.+\.md$/.test(relativePath);
+  return relativePath.startsWith("docs/");
 }
 
 test("phase-execution runtime contracts do not read bundled docs command specs or runtime reference rows", async (t) => {

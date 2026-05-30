@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
@@ -88,74 +89,63 @@ function extractDistinctFollowUpCommands(markdown: string, command: string): str
   return referencedCommands.filter((entry) => `/blu-${entry}` !== selfRoute);
 }
 
-test("shared effectiveness-spine metadata stays aligned between the template and runtime reference", async () => {
-  const [templateDoc, runtimeRefDoc] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/_template.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("shared effectiveness-spine metadata stays aligned across runtime-owned command surfaces", async () => {
+  const [
+    nextContract,
+    fastContract,
+    quickContract,
+    cleanupContract,
+    discoveryProfile,
+    executeManifest
+  ] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("next"),
+    buildBlueprintCommandRuntimeContractResource("fast"),
+    buildBlueprintCommandRuntimeContractResource("quick"),
+    buildBlueprintCommandRuntimeContractResource("cleanup"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-discovery/references/long-running-phase-discovery-profile.md"
+      ),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "commands/blu-execute-phase.toml"), "utf8")
   ]);
 
-  const templateProfiles = extractBacktickedValues(
-    templateDoc,
-    /^\| Execution profile \| (.+) \|$/m,
-    "command template execution profile"
-  );
-  const runtimeProfiles = extractBacktickedValues(
-    runtimeRefDoc,
-    /^- Execution profiles: (.+)$/m,
-    "runtime reference execution profiles"
-  );
-  assert.deepEqual(templateProfiles, runtimeProfiles, "Execution profile vocabulary drifted");
+  const runtimeProfiles = [
+    nextContract.spec?.executionProfile,
+    fastContract.spec?.executionProfile,
+    quickContract.spec?.executionProfile,
+    cleanupContract.spec?.executionProfile
+  ];
+  assert.deepEqual(runtimeProfiles, executionProfileValues, "Execution profile vocabulary drifted");
 
-  const templateStages = extractBacktickedValues(
-    templateDoc,
-    /^- Stage vocabulary: (.+)$/m,
-    "command template stage vocabulary"
+  const executeStages = extractBacktickedValues(
+    executeManifest,
+    /(`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`)/,
+    "execute-phase stage vocabulary"
   );
-  const runtimeStages = extractBacktickedValues(
-    runtimeRefDoc,
-    /^- Stage vocabulary: (.+)$/m,
-    "runtime reference stage vocabulary"
-  );
-  assert.deepEqual(templateStages, runtimeStages, "Stage vocabulary drifted");
+  assert.deepEqual(executeStages, stageValues, "Stage vocabulary drifted");
+  for (const stage of stageValues) {
+    assert.match(discoveryProfile, new RegExp(`\`${stage}\``));
+  }
 
-  const templateStatusFields = extractCommaSeparatedValues(
-    templateDoc,
-    /^- In-flight status fields: (.+)$/m,
-    "command template in-flight status fields"
-  );
-  const runtimeStatusFields = extractCommaSeparatedValues(
-    runtimeRefDoc,
-    /^- In-flight status fields: (.+)$/m,
-    "runtime reference in-flight status fields"
-  );
-  assert.deepEqual(
-    templateStatusFields,
-    runtimeStatusFields,
-    "In-flight status fields drifted"
-  );
-
-  assert.deepEqual(templateProfiles, [
-    "router",
-    "interactive-read",
-    "long-running-mutation",
-    "high-risk-maintenance"
-  ]);
-  assert.deepEqual(templateStages, [
-    "Resolve",
-    "Read",
-    "Decide",
-    "Execute",
-    "Persist",
-    "Validate",
-    "Route"
-  ]);
-  assert.deepEqual(templateStatusFields, [
+  const executeStatusFields = extractCommaSeparatedValues(
+    executeManifest,
+    /(resolved scope, active stage, pending gate, execution mode, and next safe action)/i,
+    "execute-phase in-flight status fields"
+  ).map((value) => value.replace(/^and\s+/, ""));
+  assert.deepEqual(executeStatusFields, [
     "resolved scope",
     "active stage",
     "pending gate",
     "execution mode",
     "next safe action"
   ]);
+  for (const field of executeStatusFields) {
+    assert.match(discoveryProfile, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+
 });
 
 test("capture confirmation gates stay explicit across the shipped capture family", async () => {

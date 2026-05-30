@@ -3,63 +3,76 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
-const root = process.cwd();
-const read = (path: string) => readFileSync(join(root, path), "utf8");
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 
-test("Blueprint docs reject repo-root CONTEXT.md as managed state", () => {
-  const schema = read("docs/ARTIFACT-SCHEMA.md");
-  const mcpTools = read("docs/MCP-TOOLS.md");
+const root = process.cwd();
+const read = (filePath: string) => readFileSync(join(root, filePath), "utf8");
+
+test("Blueprint runtime keeps phase context under .blueprint instead of repo-root CONTEXT.md", () => {
+  const projectToolSource = read("src/mcp/tools/project.ts");
   const mapManifest = read("commands/blu-map-codebase.toml");
   const newProjectManifest = read("commands/blu-new-project.toml");
+  const contextContract = readArtifactContract("phase.context");
 
-  for (const content of [schema, mcpTools, mapManifest, newProjectManifest]) {
-    assert.match(content, /(repo-root|repository-root) `CONTEXT\.md`/);
+  for (const content of [projectToolSource, mapManifest, newProjectManifest]) {
+    assert.match(content, /(repo-root|repository-root)[\s\S]*CONTEXT\.md/);
   }
 
-  assert.match(schema, /\.blueprint\/codebase\/\*\.md/);
-  assert.match(schema, /\.blueprint\/phases\/<phase>\/<XX>-CONTEXT\.md/);
+  assert.equal(
+    contextContract.canonicalFilePattern,
+    ".blueprint/phases/<phase-slug>/XX-CONTEXT.md"
+  );
+  assert.match(contextContract.notes.join("\n"), /phase-scoped and MCP-owned/i);
+  assert.equal(contextContract.requiredHeadings.includes("Canonical References"), true);
 });
 
-test("phase context ownership is discuss-only across docs, manifests, and skills", () => {
+test("phase context ownership stays discuss-led and runtime-contract scoped", async () => {
+  const [discussContract, researchContract, planContract] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("discuss-phase"),
+    buildBlueprintCommandRuntimeContractResource("research-phase"),
+    buildBlueprintCommandRuntimeContractResource("plan-phase")
+  ]);
   const files = [
-    "docs/MCP-TOOLS.md",
-    "docs/commands/discuss-phase.md",
-    "docs/commands/research-phase.md",
-    "docs/commands/plan-phase.md",
     "commands/blu-discuss-phase.toml",
     "commands/blu-research-phase.toml",
     "commands/blu-plan-phase.toml",
     "skills/blueprint-phase-discovery/SKILL.md",
     "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
-    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md",
-  ];
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ] as const;
 
   for (const file of files) {
     const content = read(file);
-    assert.match(content, /\/blu-discuss-phase/);
-    assert.match(content, /XX-CONTEXT\.md/);
+    assert.match(content, /\/blu-discuss-phase|XX-CONTEXT\.md/);
   }
 
-  assert.match(read("docs/MCP-TOOLS.md"), /must not repair, overwrite, or synthesize context/);
   assert.match(read("commands/blu-research-phase.toml"), /Treat phase context as read-only/);
   assert.match(read("commands/blu-plan-phase.toml"), /Treat phase context as read-only/);
+  assert.deepEqual(discussContract.skillInputs.shared, []);
+  assert.equal(
+    discussContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.deepEqual(researchContract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
+  ]);
+  assert.deepEqual(planContract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ]);
 });
 
-test("validation repair loops stop on repeated identical diagnostics", () => {
+test("discovery and planning repair loops stop on repeated identical diagnostics", () => {
   const files = [
-    "docs/MCP-TOOLS.md",
-    "docs/commands/discuss-phase.md",
-    "docs/commands/research-phase.md",
-    "docs/commands/plan-phase.md",
     "commands/blu-discuss-phase.toml",
     "commands/blu-research-phase.toml",
     "commands/blu-plan-phase.toml",
     "skills/blueprint-phase-discovery/SKILL.md",
     "skills/blueprint-phase-discovery/references/discuss-phase-runtime-contract.md",
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md",
-    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md",
-  ];
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"
+  ] as const;
 
   for (const file of files) {
     const content = read(file);

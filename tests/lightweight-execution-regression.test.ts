@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
@@ -10,23 +12,19 @@ async function readRepoFile(relativePath: string): Promise<string> {
 }
 
 test("lightweight execution keeps quick as the only long-running visible-progress path", async () => {
-  const [quickToml, quickDoc, executionSkill, quickRuntimeContract, runtimeReference] = await Promise.all([
+  const [quickToml, executionSkill, quickRuntimeContract] = await Promise.all([
     readRepoFile("commands/blu-quick.toml"),
-    readRepoFile("docs/commands/quick.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
-    readRepoFile("skills/blueprint-phase-execution/references/quick-runtime-contract.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    readRepoFile("skills/blueprint-phase-execution/references/quick-runtime-contract.md")
   ]);
+  const quickMetadata = getRuntimeOwnedCommandMetadata("quick");
+
+  assert.ok(quickMetadata);
 
   assert.match(quickToml, /Execution profile: `long-running-mutation`/);
   assert.match(quickToml, /`update_topic` tool to keep the active stage visible and `write_todos`/);
   assert.match(quickToml, /tracker-eligible/i);
   assert.match(quickToml, /quick-run-latest/);
-
-  assert.match(quickDoc, /In-flight posture for non-trivial runs: keeps the resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(quickDoc, /Use `update_topic` to surface the active stage and `write_todos`/);
-  assert.match(quickDoc, /Branchy quick work is tracker-eligible/i);
-  assert.match(quickDoc, /Persist the durable quick-run report/i);
 
   assert.match(executionSkill, /references\/quick-runtime-contract\.md/);
   assert.match(executionSkill, /references\/long-running-execution-profile\.md/);
@@ -34,20 +32,30 @@ test("lightweight execution keeps quick as the only long-running visible-progres
   assert.match(quickRuntimeContract, /quick-run-latest/);
   assert.match(quickRuntimeContract, /\/blu-plan-phase/);
   assert.match(quickRuntimeContract, /\/blu-execute-phase/);
-
-  assert.match(runtimeReference, /`quick`[\s\S]*Long-running-mutation profile for non-trivial bounded quick runs/i);
-  assert.match(runtimeReference, /`quick`[\s\S]*tracker-eligible session-local coordination paired with visible todos/i);
-  assert.match(runtimeReference, /`quick`[\s\S]*persist a durable `quick-run-latest` report/i);
+  assert.equal(quickMetadata.spec.executionProfile, "long-running-mutation");
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /Long-running-mutation profile for non-trivial bounded quick runs/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /tracker-eligible session-local coordination paired with visible todos/i
+  );
+  assert.match(
+    quickMetadata.runtimeReference.contractNotes,
+    /persist durable quick-run evidence[\s\S]*canonical quick-run-latest report name/i
+  );
 });
 
 test("lightweight execution keeps fast on the trivial inline path instead of merging quick's progress layer", async () => {
-  const [fastToml, fastDoc, executionSkill, fastRuntimeContract, runtimeReference] = await Promise.all([
+  const [fastToml, executionSkill, fastRuntimeContract] = await Promise.all([
     readRepoFile("commands/blu-fast.toml"),
-    readRepoFile("docs/commands/fast.md"),
     readRepoFile("skills/blueprint-phase-execution/SKILL.md"),
-    readRepoFile("skills/blueprint-phase-execution/references/fast-runtime-contract.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
+    readRepoFile("skills/blueprint-phase-execution/references/fast-runtime-contract.md")
   ]);
+  const fastMetadata = getRuntimeOwnedCommandMetadata("fast");
+
+  assert.ok(fastMetadata);
 
   assert.match(fastToml, /Execution profile: `interactive-read`/);
   assert.match(fastToml, /Do not use\s+`update_topic`, `write_todos`, or task tracker tools for `\/blu-fast`\./);
@@ -57,19 +65,23 @@ test("lightweight execution keeps fast on the trivial inline path instead of mer
   assert.doesNotMatch(fastToml, /quick-run-latest/);
   assert.doesNotMatch(fastToml, /tracker-eligible/i);
 
-  assert.match(fastDoc, /does not adopt tracker-backed branching or the long-running progress layer used by `quick` and lifecycle execution/i);
-  assert.match(fastDoc, /Do not use `update_topic`, `write_todos`, or tracker tools to make a trivial run look long-running\./);
-  assert.match(fastDoc, /In-flight posture: none beyond a concise inline summary or reroute/i);
-  assert.match(fastDoc, /Does not create quick-run reports, phase artifacts, or subagent side effects\./);
-
   assert.match(executionSkill, /references\/fast-runtime-contract\.md/);
   assert.match(fastRuntimeContract, /Do not use `update_topic`, `write_todos`, or tracker tools/i);
   assert.match(fastRuntimeContract, /Do not create quick-run reports, phase summaries, phase artifacts/i);
   assert.match(fastRuntimeContract, /no-subagent execution path/i);
-
-  assert.match(runtimeReference, /`fast`[\s\S]*Interactive-read profile for trivial inline execution/i);
-  assert.match(runtimeReference, /`fast`[\s\S]*explicitly exclude tracker-backed branching plus `update_topic` or `write_todos` long-running visibility/i);
-  assert.match(runtimeReference, /`fast`[\s\S]*refuse to add report-backed or subagent depth/i);
+  assert.equal(fastMetadata.spec.executionProfile, "interactive-read");
+  assert.match(
+    fastMetadata.runtimeReference.contractNotes,
+    /Interactive-read profile for trivial inline execution/i
+  );
+  assert.match(
+    fastMetadata.runtimeReference.contractNotes,
+    /explicitly exclude tracker-backed branching plus update_topic or write_todos long-running visibility/i
+  );
+  assert.match(
+    fastMetadata.runtimeReference.contractNotes,
+    /refuse report-backed or subagent depth/i
+  );
 });
 
 test("lightweight execution keeps debug investigative with its own report and follow-up gate", async () => {

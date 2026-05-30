@@ -1,168 +1,111 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const repoRoot = process.cwd();
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  getRuntimeOwnedCommandMetadata,
+  listRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
-async function readRepoFile(relativePath: string): Promise<string> {
-  return readFile(path.join(repoRoot, relativePath), "utf8");
+function isControlPlaneDocPath(value: string): boolean {
+  return /^docs\//.test(value);
 }
 
-test("control-plane docs describe the shipped lifecycle runtime and active closeout state", async () => {
-  const [agents, readme, gemini, handoff, memory, runtimeReference, hooks] =
-    await Promise.all([
-      readRepoFile("AGENTS.md"),
-      readRepoFile("README.md"),
-      readRepoFile("GEMINI.md"),
-      readRepoFile("docs/HANDOFF.md"),
-      readRepoFile("MEMORY.md"),
-      readRepoFile("docs/RUNTIME-REFERENCE.md"),
-      readRepoFile("docs/HOOKS-POLICIES.md")
-    ]);
+test("runtime catalog keeps shipped lifecycle, roadmap-admin, and maintenance commands source-owned", async () => {
+  const catalog = await blueprintCommandCatalog();
 
-  assert.doesNotMatch(agents, /No Gemini extension runtime has been implemented yet/);
-  assert.doesNotMatch(handoff, /No runtime code or Gemini extension scaffolding has been created yet/);
-  assert.match(agents, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/);
-  assert.match(agents, /Phase 3 discovery shipped on 2026-04-11 and is under active repair/);
-  assert.match(
-    agents,
-    /`execute-phase` are now implemented on top of the plan and summary MCP substrates|`plan-phase` and `execute-phase` are now implemented|`plan-phase`, `execute-phase`, and `validate-phase` are now implemented/
-  );
-  assert.match(readme, /Wave 0 shipped commands/);
-  assert.match(readme, /Phase 3 discovery commands are shipped/);
-  assert.match(readme, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
-  assert.match(readme, /shipped lifecycle slice also includes `\/blu-plan-phase`, `\/blu-execute-phase`, `\/blu-validate-phase`, `\/blu-verify-work`, and the read-only next-step router `\/blu-next`/i);
-  assert.match(gemini, /Runtime Operator Guide/);
-  assert.match(gemini, /runtime guidance for the host agent/);
-  assert.doesNotMatch(gemini, /Checkpoint Status/);
-  assert.doesNotMatch(gemini, /Phase 2\.1 drift recovery/);
-  assert.match(gemini, /\/blu-execute-phase/);
-  assert.match(gemini, /\/blu-map-codebase/);
-  assert.match(handoff, /Phase 2\.1 drift recovery and Phase 2\.2 future-contract drift repair both completed on 2026-04-11/i);
-  assert.match(handoff, /Phase 3 discovery shipped the same day and remains in parity closeout/i);
-  assert.match(
-    memory,
-    /Current milestone: post-shipment lifecycle and roadmap-admin closeout/i
-  );
-  assert.match(runtimeReference, /Checkpoint: Phase 2\.2 future-contract drift repair/);
-  assert.match(runtimeReference, /State: closed on 2026-04-11/);
-  assert.match(runtimeReference, /repairs discovery parity gaps/i);
-  assert.match(
-    runtimeReference,
-    /Wave 2 roadmap administration, Wave 3 capture plus lightweight execution, Wave 4 docs and review, and the shipped Wave 5 maintenance surfaces including `new-workspace`, `cleanup`, and `update` all remain locked to their documented command contracts/i
-  );
-  assert.match(
-    runtimeReference,
-    /The implemented Blueprint runtime now uses dedicated plan index\/read\/write MCP tools/i
-  );
-  assert.match(
-    runtimeReference,
-    /Execution now honors normalized parallelization, worktree, and branching config through dedicated plan read and summary persistence tools/i
-  );
-  assert.doesNotMatch(hooks, /No hook code ships/);
-  assert.match(hooks, /Blueprint now ships three advisory hooks/);
+  for (const commandName of [
+    "map-codebase",
+    "next",
+    "execute-phase",
+    "insert-phase",
+    "remove-phase",
+    "audit-milestone",
+    "complete-milestone",
+    "milestone-summary",
+    "new-milestone",
+    "pause-work",
+    "resume-work",
+    "plan-milestone-gaps",
+    "new-workspace",
+    "remove-workspace",
+    "workstreams",
+    "update",
+    "cleanup",
+    "reapply-patches"
+  ]) {
+    const entry = catalog.commands[commandName];
+
+    assert.equal(entry.declaredStatus, "implemented");
+    assert.equal(entry.status, "implemented");
+    assert.equal(entry.implemented, true);
+    assert.ok(entry.specPath);
+    assert.equal(isControlPlaneDocPath(entry.specPath ?? ""), false);
+  }
+
+  const doEntry = catalog.commands.do;
+
+  assert.equal(getRuntimeOwnedCommandMetadata("do"), null);
+  assert.equal(doEntry.declaredStatus, "planned");
+  assert.equal(doEntry.status, "repairing");
+  assert.equal(doEntry.implemented, false);
+  assert.equal(doEntry.manifestPath, null);
+  assert.equal(doEntry.specPath, null);
+  assert.match(doEntry.blockedBy.join("\n"), /Missing command manifest: commands\/blu-do\.toml/);
 });
 
-test("drift-repair docs capture the status vocabulary and the repaired future-command ownership metadata", async () => {
-  const [agents, catalog, artifactSchema, runtimeReference, skills, progress, readme, bluCommand, bluHelp] = await Promise.all([
-    readRepoFile("AGENTS.md"),
-    readRepoFile("docs/COMMAND-CATALOG.md"),
-    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md"),
-    readRepoFile("docs/SKILLS-AND-AGENTS.md"),
-    readRepoFile("PROGRESS.md"),
-    readRepoFile("README.md"),
-    readRepoFile("commands/blu.toml"),
-    readRepoFile("commands/blu-help.toml")
-  ]);
+test("runtime-contract resources stay implemented when control-plane docs are unavailable", async (t) => {
+  const realReadFile = fs.readFile.bind(fs);
 
-  assert.match(catalog, /\| Command \| Wave \| Family \| Primary Skill \| Status \| Key Writes \| Risk \|/);
-  assert.match(catalog, /`map-codebase` \| 0 \| `Foundation` \| `blueprint-map` \| `implemented`/);
-  assert.match(catalog, /`next` \| 1 \| `Core Lifecycle` \| `blueprint-router` \| `implemented`/);
-  assert.match(catalog, /`execute-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-execution` \| `implemented`/);
-  assert.match(catalog, /`insert-phase` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`remove-phase` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`audit-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`complete-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`milestone-summary` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`new-milestone` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(catalog, /`do` \| 3 \| `Capture And Lightweight Execution` \| `blueprint-router` \| `planned`/);
-  assert.match(catalog, /`pause-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
-  assert.match(catalog, /`resume-work` \| 1 \| `Core Lifecycle` \| `blueprint-governance` \| `implemented`/);
-  assert.match(catalog, /`plan-milestone-gaps` \| 2 \| `Roadmap And Milestone` \| `blueprint-roadmap-admin` \| `implemented`/);
-  assert.match(progress, /\| 1 \| `do` \| .* \| `planned` \| 3 \| `Capture And Lightweight Execution` \| Low \|/);
-  assert.match(
-    progress,
-    /docs keep its control-plane status at `planned`, while the live runtime remains `repairing` until the dedicated manifest lands/i
-  );
-  assert.match(readme, /## Commands Not Public Yet/);
-  assert.match(readme, /\/blu-do/);
-  assert.match(
-    readme,
-    /control-plane docs keep it `planned`, but the live runtime keeps it non-routable until the dedicated manifest is shipped/i
-  );
-  assert.match(
-    readme,
-    /The active implementation lives in the repo runtime surfaces below\. This list is representative rather than exhaustive:/i
-  );
-  assert.match(readme, /\/blu-workstreams/);
-  assert.match(readme, /\/blu-update/);
-  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-workstreams/);
-  assert.doesNotMatch(readme, /## Commands Not Public Yet[\s\S]*\/blu-update/);
-  assert.match(catalog, /STRUCTURE\.md/);
-  assert.match(artifactSchema, /`STRUCTURE\.md`/);
-  assert.match(artifactSchema, /`reports\/milestone-complete-<milestone>\.md`/);
-  assert.match(artifactSchema, /`reports\/milestone-summary-<milestone>\.md`/);
-  assert.match(artifactSchema, /`reports\/pause-work-latest\.md`/);
-  assert.match(skills, /`blueprint-router` .* `next`, `do`/);
-  assert.match(skills, /`blueprint-governance` .* `pause-work`, `resume-work`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `insert-phase`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `plan-milestone-gaps`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `audit-milestone`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `complete-milestone`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `milestone-summary`/);
-  assert.match(skills, /`blueprint-roadmap-admin` .* `new-milestone`/);
-  assert.match(skills, /`blueprint-phase-execution` .* `execute-phase`, `quick`, `fast`/);
-  assert.match(agents, /`implemented`: manifest, primary skill, and required MCP tools are all present/);
-  assert.match(
-    agents,
-    /Control-plane docs such as `docs\/COMMAND-CATALOG\.md`, `PROGRESS\.md`, and[\s\S]*command specs record the declared status/i
-  );
-  assert.match(
-    agents,
-    /`new-workspace`, `remove-workspace`, `workstreams`, `update`, `cleanup`, and `reapply-patches`/
-  );
-  assert.match(
-    agents,
-    /`\/blu-new-workspace`, `\/blu-remove-workspace`, `\/blu-workstreams`, `\/blu-update`, `\/blu-cleanup`, and `\/blu-reapply-patches`/
-  );
-  assert.match(
-    bluCommand,
-    /If the user asks for a blocked command, explain the missing substrate using `status` and `blockedBy`\./
-  );
-  assert.match(
-    bluHelp,
-    /Explain blocked commands as blocked; do not present them as runnable\./
-  );
-  assert.match(
-    runtimeReference,
-    /Control-plane docs may keep a future command declared `planned` while `blueprint_command_catalog` still derives a non-routable runtime status such as `repairing` or `blocked`/i
-  );
+  t.mock.method(fs, "readFile", async (filePath, options) => {
+    const normalizedPath =
+      filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
+
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
+      const error = new Error("simulated control-plane docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
+    }
+
+    return realReadFile(
+      filePath as Parameters<typeof fs.readFile>[0],
+      options as Parameters<typeof fs.readFile>[1]
+    );
+  });
+
+  for (const commandName of ["help", "code-review-fix", "audit-fix"]) {
+    const contract = await buildBlueprintCommandRuntimeContractResource(commandName);
+
+    assert.equal(contract.catalog.status, "implemented");
+    assert.equal(contract.catalog.implemented, true);
+    assert.ok(contract.spec?.path);
+    assert.ok(contract.runtimeReference?.path);
+    assert.equal(isControlPlaneDocPath(contract.spec?.path ?? ""), false);
+    assert.equal(isControlPlaneDocPath(contract.runtimeReference?.path ?? ""), false);
+    assert.equal(
+      contract.skillInputs.effective.some((input) => isControlPlaneDocPath(input)),
+      false
+    );
+  }
 });
 
-test("runtime docs keep .planning and hook control out of Blueprint runtime ownership", async () => {
-  const [agents, memory, artifactSchema, hooks, mcpTools] = await Promise.all([
-    readRepoFile("AGENTS.md"),
-    readRepoFile("MEMORY.md"),
-    readRepoFile("docs/ARTIFACT-SCHEMA.md"),
-    readRepoFile("docs/HOOKS-POLICIES.md"),
-    readRepoFile("docs/MCP-TOOLS.md")
-  ]);
+test("artifact contracts keep report inventory and context ownership runtime-owned", () => {
+  const contextContract = readArtifactContract("phase.context");
+  const pauseWork = readArtifactContract("report.pause-work");
+  const milestoneComplete = readArtifactContract("report.milestone-complete");
+  const milestoneSummary = readArtifactContract("report.milestone-summary");
 
-  assert.match(agents, /it is not Blueprint runtime state/);
-  assert.match(memory, /implementation bookkeeping for the Blueprint build-out/);
-  assert.match(artifactSchema, /repo-level `hooks\.\*` keys/);
-  assert.match(hooks, /Repo config must not enable or disable hooks/);
-  assert.match(mcpTools, /Tools must not write into the installed extension directory/);
+  assert.equal(contextContract.canonicalFilePattern, ".blueprint/phases/<phase-slug>/XX-CONTEXT.md");
+  assert.match(contextContract.notes.join("\n"), /phase-scoped and MCP-owned/i);
+  assert.equal(pauseWork.canonicalFilePattern, ".blueprint/reports/pause-work-latest.md");
+  assert.equal(milestoneComplete.canonicalFilePattern, ".blueprint/reports/milestone-complete-<milestone>.md");
+  assert.equal(milestoneSummary.canonicalFilePattern, ".blueprint/reports/milestone-summary-<milestone>.md");
+  assert.equal(
+    listRuntimeOwnedCommandMetadata().every((metadata) => !isControlPlaneDocPath(metadata.sourceId)),
+    true
+  );
 });

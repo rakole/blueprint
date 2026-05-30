@@ -1416,7 +1416,7 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
     dependsOn: [],
     requirements: ["PLAN-01"],
     filesModified: ["src/mcp/artifact-contracts/index.ts"],
-    readFirst: ["docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md"],
+    readFirst: ["src/mcp/artifact-contracts/index.ts"],
     autonomous: true,
     goal: "Add a registry-owned model contract without changing write-tool behavior.",
     scope: ["Define metadata for structured phase plan authoring."],
@@ -1453,9 +1453,9 @@ const PHASE_PLAN_MODEL_CONTRACT: ArtifactModelContract = {
     ],
     evidenceCoverage: [
       {
-        artifact: "docs/build/STRUCTURED-ARTIFACT-MODEL-PLAN.md",
+        artifact: "src/mcp/artifact-contracts/index.ts",
         status: "used",
-        rationale: "The plan document defines the required model contract fields."
+        rationale: "The contract registry is the current source of truth for the required model contract fields."
       }
     ],
     fileSurfaceCoverage: [

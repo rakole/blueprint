@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 import { Ajv2020 } from "ajv/dist/2020.js";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { CODE_REVIEW_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 import {
@@ -47,15 +48,10 @@ function isBundledPath(value: unknown, relativePath: string): boolean {
 }
 
 function makeBundledDocsUnavailable(t: TestContext): void {
-  const unavailableDocs = [
-    "docs/COMMAND-CATALOG.md",
-    "docs/RUNTIME-REFERENCE.md",
-    "docs/commands/code-review.md"
-  ];
   const originalReadFile = fs.readFile;
 
   fs.readFile = (async (...args: Parameters<typeof fs.readFile>) => {
-    if (unavailableDocs.some((relativePath) => isBundledPath(args[0], relativePath))) {
+    if (typeof args[0] !== "number" && isBundledPath(args[0], "docs")) {
       const error = new Error("ENOENT");
       (error as NodeJS.ErrnoException).code = "ENOENT";
       throw error;
@@ -787,33 +783,48 @@ Exercise code-review follow-up routing.
   assert.match(state.derivedStatus.nextAction, /\/blu-code-review-fix 5/);
 });
 
-test("code-review docs and catalog metadata promote the review scope slice to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown, commandDoc] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/code-review.md"), "utf8")
+test("code-review runtime metadata, manifest, and skill contract stay aligned", async () => {
+  const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("code-review"),
+    readFile(path.join(repoRoot, "commands/blu-code-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/code-review-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands["code-review"];
 
+  assert.equal(entry.specPath, CODE_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...CODE_REVIEW_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, CODE_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.writes, [...CODE_REVIEW_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, CODE_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...CODE_REVIEW_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-code-review.toml",
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    catalogMarkdown,
-    /\| `code-review` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW\.md` \| `Low: review artifact generation only\.` \|/
+    commandFile,
+    /resolved phase, scope source, file count, selected review depth, pending gate, execution mode/i
   );
-  assert.match(
-    skillsMarkdown,
-    /\| `blueprint-reviewer` \| `implemented` \| Produce bounded code review findings from a resolved Blueprint scope \|/
-  );
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
-  assert.match(
-    commandDoc,
-    /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/
-  );
-  assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
-  assert.match(commandDoc, /## Depth And Output Quality Contract/);
-  assert.match(commandDoc, /## Subagent And Fallback Contract/);
-  assert.match(commandDoc, /shared review posture from the runtime contract/i);
-  assert.match(commandDoc, /`update_topic` tool and keep a compact review checklist with `write_todos`/);
+  assert.match(commandFile, /skills\/blueprint-review\/references\/code-review-runtime-contract\.md/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_review_scope/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_review_validate_model/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_review_record/);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/);
+  assert.match(skillFile, /Execution profile for `code-review`: `long-running-mutation`/);
+  assert.match(commandFile, /`quick`, `standard`, and `deep` depth semantics/i);
+  assert.match(commandFile, /code-review-fix` visible as the secondary queued follow-up/i);
+  assert.match(referenceFile, /Do not replace the missing subagent with browser\/web\/search-only analysis/i);
 });
 
 test("blueprint_review_scope merges summary and plan evidence when no explicit scope is provided", async (t) => {

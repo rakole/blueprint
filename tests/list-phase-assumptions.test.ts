@@ -13,10 +13,7 @@ import {
 } from "../src/mcp/runtime-vocabulary.js";
 
 const repoRoot = process.cwd();
-const commandCatalogDocPath = path.join(repoRoot, "docs/COMMAND-CATALOG.md");
 const manifestPath = path.join(repoRoot, "commands/blu-list-phase-assumptions.toml");
-const commandDocPath = path.join(repoRoot, "docs/commands/list-phase-assumptions.md");
-const runtimeReferencePath = path.join(repoRoot, "docs/RUNTIME-REFERENCE.md");
 const discoverableSkillPath = path.join(
   repoRoot,
   "skills/blueprint-phase-discovery/SKILL.md"
@@ -100,14 +97,14 @@ test("list-phase-assumptions manifest preserves the read-only assumptions review
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
   assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
-    false
+    contract.skillInputs.effective.includes(
+      "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
+    ),
+    true
   );
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
-    false
-  );
-  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-discovery/references/list-phase-assumptions-runtime-contract.md"
+  ]);
 });
 
 test("list-phase-assumptions runtime contract preserves the locked five assumption areas", async () => {
@@ -134,24 +131,17 @@ test("list-phase-assumptions runtime contract includes effective config for opti
 });
 
 test("list-phase-assumptions remains implemented in the live command catalog", async () => {
-  const [catalogDoc, catalog, manifestExists, commandDocExists, skillExists, skillResolution] =
+  const [catalog, manifestExists, skillExists, skillResolution] =
     await Promise.all([
-    readFile(commandCatalogDocPath, "utf8"),
     blueprintCommandCatalog(),
     pathExists("commands/blu-list-phase-assumptions.toml"),
-    pathExists("docs/commands/list-phase-assumptions.md"),
     pathExists("skills/blueprint-phase-discovery/SKILL.md"),
     resolveBlueprintSkillPath("blueprint-phase-discovery", pathExists)
   ]);
   const entry = catalog.commands["list-phase-assumptions"];
 
   assert.equal(manifestExists, true);
-  assert.equal(commandDocExists, true);
   assert.equal(skillExists, true);
-  assert.match(
-    catalogDoc,
-    /\| `list-phase-assumptions` \| 2 \| `Roadmap And Milestone` \| `blueprint-phase-discovery` \| `implemented` \| `none` \| `Low: read-only analysis\.` \|/
-  );
   assert.equal(entry.declaredStatus, "implemented");
   assert.equal(entry.status, "implemented");
   assert.equal(entry.implemented, true);
@@ -183,20 +173,28 @@ test("list-phase-assumptions runtime metadata keeps effective config in the read
 });
 
 test("list-phase-assumptions docs and runtime reference align to the interactive-read discovery contract", async () => {
-  const [commandDoc, runtimeReference] = await Promise.all([
-    readFile(commandDocPath, "utf8"),
-    readFile(runtimeReferencePath, "utf8")
-  ]);
-
-  assert.match(commandDoc, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /shared interactive-read classification/i);
-  assert.match(commandDoc, /waiting state plainly/i);
-  assert.match(commandDoc, /In-flight posture: none beyond an inline read-only summary/i);
-  assert.match(commandDoc, /No durable artifact writes are planned\./);
-  assert.equal(await pathExists(path.relative(repoRoot, discoverableSkillPath)), true);
-  assert.match(
-    runtimeReference,
-    /`list-phase-assumptions`[\s\S]*Interactive-read profile for read-only pre-planning synthesis[\s\S]*waiting state[\s\S]*next safe implemented follow-up/i
+  const metadata = getRuntimeOwnedCommandMetadata("list-phase-assumptions");
+  const contract = await buildBlueprintCommandRuntimeContractResource(
+    "list-phase-assumptions"
   );
+
+  assert.ok(metadata);
+  assert.equal(metadata.spec.executionProfile, "interactive-read");
+  assert.equal(metadata.spec.rootRoutable, true);
+  assert.match(metadata.spec.purpose, /pre-planning assumptions/i);
+  assert.deepEqual(metadata.spec.writes, []);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /interactive-read profile for read-only pre-planning synthesis/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /waiting state/i);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /next safe implemented follow-up/i
+  );
+  assert.equal(await pathExists(path.relative(repoRoot, discoverableSkillPath)), true);
+  assert.equal(contract.spec?.executionProfile, "interactive-read");
+  assert.deepEqual(contract.spec?.writes, []);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 });

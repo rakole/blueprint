@@ -1,14 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, lstat, readFile, readlink, readdir } from "node:fs/promises";
+import { access, lstat, readFile, readlink } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
 import { blueprintToolNames } from "../src/mcp/server.js";
-import {
-  blueprintDirectCommand
-} from "../src/mcp/command-paths.js";
 import {
   blueprintDiscoverableSkillPath,
   blueprintRuntimeToolFqn,
@@ -119,13 +116,6 @@ async function assertGitTracksPath(relativePath: string): Promise<void> {
       `${relativePath} must be tracked because Git-installed Blueprint extension hosts do not build runtime entrypoints before launching them.`
     );
   }
-}
-
-async function activeCommandDocs(): Promise<string[]> {
-  return (await readdir(path.join(repoRoot, "docs/commands")))
-    .filter((entry) => entry.endsWith(".md"))
-    .map((entry) => `docs/commands/${entry}`)
-    .sort();
 }
 
 async function implementedSkillNames(): Promise<string[]> {
@@ -378,18 +368,17 @@ test("shipped direct commands no longer include deprecated compatibility manifes
   }
 });
 
-test("active docs and runtime prompts do not mention colon-form direct commands", async () => {
+test("runtime-required prompts and manifests do not mention colon-form direct commands", async () => {
   const hosts = await shippedExtensionHosts(repoRoot);
   const paths = [
     "README.md",
     "AGENTS.md",
     "MEMORY.md",
     "commands/blu.toml",
-    "docs/ARCHITECTURE.md",
-    "docs/DECISIONS.md",
+    "src/mcp/command-runtime-metadata.ts",
     "skills/blueprint-router/SKILL.md",
     ...hosts.map((host) => host.contextFile),
-    ...(await activeCommandDocs())
+    ...(await repairedPromptContracts()).map((contract) => contract.manifestPath)
   ];
 
   for (const relativePath of paths) {

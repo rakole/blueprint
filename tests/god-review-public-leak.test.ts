@@ -51,10 +51,9 @@ const HIDDEN_GOD_REVIEW_PATTERNS = [
 ] as const;
 
 const PUBLIC_DOCUMENT_PATHS = [
-  "docs/commands/code-review.md",
-  "docs/commands/code-review-fix.md",
-  "docs/COMMAND-CATALOG.md",
-  "docs/RUNTIME-REFERENCE.md"
+  "skills/blueprint-review/SKILL.md",
+  "skills/blueprint-review/references/code-review-runtime-contract.md",
+  "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
 ] as const;
 
 const PUBLIC_ROUTER_GUIDANCE_PATHS = [
@@ -74,7 +73,7 @@ function assertNoHiddenGodReviewLeak(label: string, text: string): void {
   }
 }
 
-test("public code-review docs and router guidance do not expose hidden god-review mode", async () => {
+test("public review-family manifests, skills, and router guidance do not expose hidden god-review mode", async () => {
   for (const relativePath of [
     ...PUBLIC_DOCUMENT_PATHS,
     ...PUBLIC_ROUTER_GUIDANCE_PATHS

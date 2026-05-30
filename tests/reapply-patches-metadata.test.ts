@@ -6,6 +6,9 @@ import path from "node:path";
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import { workspaceToolDefinitions } from "../src/mcp/tools/workspace.js";
 
 const repoRoot = process.cwd();
 
@@ -39,31 +42,23 @@ test("reapply-patches manifest references the maintenance skill, patch MCP tools
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("reapply-patches docs, runtime resource, and maintenance skill align to the shipped patch-replay contract", async () => {
-  const [commandDoc, runtimeContract, skillDoc, mcpToolsDoc, artifactSchemaDoc] =
+test("reapply-patches local runtime contract, runtime resource, and maintenance skill align to the shipped patch-replay contract", async () => {
+  const [runtimeReference, runtimeContract, skillDoc, workspaceSource] =
     await Promise.all([
-      readRepoFile("docs/commands/reapply-patches.md"),
+      readRepoFile("skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md"),
       buildBlueprintCommandRuntimeContractResource("reapply-patches"),
       readRepoFile("skills/blueprint-maintenance/SKILL.md"),
-      readRepoFile("docs/MCP-TOOLS.md"),
-      readRepoFile("docs/ARTIFACT-SCHEMA.md")
+      readRepoFile("src/mcp/tools/workspace.ts")
     ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
-  assert.match(
-    commandDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    commandDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(commandDoc, /~\/.<host>\/blueprint\/patches\//);
-  assert.match(commandDoc, /reapply-patches-confirmation/);
-  assert.match(commandDoc, /dirty-working-tree/);
-  assert.match(commandDoc, /compatibility-mismatch/);
-  assert.match(commandDoc, /installed-extension-target/);
-  assert.match(commandDoc, /preflight -> preview -> confirm -> replay -> record/);
+  assert.match(runtimeReference, /Stage Mapping/);
+  assert.match(runtimeReference, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
+  assert.match(runtimeReference, /~\/.<host>\/blueprint\/patches\//);
+  assert.match(runtimeReference, /reapply-patches-confirmation/);
+  assert.match(runtimeReference, /dirty tree/i);
+  assert.match(runtimeReference, /compatibility mismatch/i);
+  assert.match(runtimeReference, /installed-extension target/i);
+  assert.match(runtimeReference, /preflight -> preview -> confirm -> replay -> record/);
 
   assert.match(skillDoc, /\/blu-reapply-patches/);
   assert.match(skillDoc, /blueprint_patch_list/);
@@ -86,39 +81,33 @@ test("reapply-patches docs, runtime resource, and maintenance skill align to the
     false
   );
 
-  assert.match(mcpToolsDoc, /`blueprint_patch_list`/);
-  assert.match(mcpToolsDoc, /`blueprint_patch_reapply`/);
-  assert.match(mcpToolsDoc, /`blueprint_patch_record`/);
-  assert.match(
-    mcpToolsDoc,
-    /`reapply-patches` uses `blueprint_patch_list`, `blueprint_patch_reapply`, and `blueprint_patch_record`/
-  );
-
-  assert.match(artifactSchemaDoc, /### `patches\/index\.json`/);
-  assert.match(artifactSchemaDoc, /### `patches\/<patch-id>\.json`/);
-  assert.match(artifactSchemaDoc, /### `patches\/<patch-id>\.audit\.ndjson`/);
+  assert.match(workspaceSource, /function patchIndexPath\(registryPath: string\)[\s\S]*"index\.json"/);
+  assert.match(workspaceSource, /function patchManifestPath\(registryPath: string, patchId: string\)[\s\S]*`\$\{patchId\}\.json`/);
+  assert.match(workspaceSource, /function patchAuditPath\(registryPath: string, patchId: string\)[\s\S]*`\$\{patchId\}\.audit\.ndjson`/);
 });
 
 test("repo-facing status docs treat reapply-patches as a shipped command", async () => {
-  const [architectureFile, handoffFile, progressFile, memoryFile, catalogFile, readmeFile, geminiFile] =
+  const [progressFile, memoryFile, catalog, readmeFile, geminiFile] =
     await Promise.all([
-      readRepoFile("docs/ARCHITECTURE.md"),
-      readRepoFile("docs/HANDOFF.md"),
       readRepoFile("PROGRESS.md"),
       readRepoFile("MEMORY.md"),
-      readRepoFile("docs/COMMAND-CATALOG.md"),
+      blueprintCommandCatalog(),
       readRepoFile("README.md"),
       readRepoFile("GEMINI.md")
     ]);
+  const entry = catalog.commands["reapply-patches"];
+  const metadata = getRuntimeOwnedCommandMetadata("reapply-patches");
+  const workspaceTools = workspaceToolDefinitions.map((definition) => definition.name);
 
-  assert.match(
-    architectureFile,
-    /shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
-  );
-  assert.match(
-    handoffFile,
-    /shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
-  );
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 5);
+  assert.equal(metadata.catalog.family, "Workspace And Maintenance");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
+  assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /reapply-patches-runtime-contract\.md/);
+  assert.match(metadata.runtimeReference.contractNotes, /dry-run the exact replay set/i);
   assert.match(
     progressFile,
     /\| [0-9]+ \| `reapply-patches` \| ✅ \| `implemented` \| 5 \| `Workspace And Maintenance` \| High \|/
@@ -128,7 +117,17 @@ test("repo-facing status docs treat reapply-patches as a shipped command", async
     /\| [0-9]+ \| `reapply-patches` \| ❌ \| `planned` \| 5 \| `Workspace And Maintenance` \| High \|/
   );
   assert.match(memoryFile, /`reapply-patches` shipped on 2026-04-22/);
-  assert.match(catalogFile, /\| `reapply-patches` \| 5 \| `Workspace And Maintenance` \| `blueprint-maintenance` \| `implemented` \|/);
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, metadata?.sourceId);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_patch_list",
+    "blueprint_patch_reapply",
+    "blueprint_patch_record"
+  ]);
+  assert.ok(workspaceTools.includes("blueprint_patch_list"));
+  assert.ok(workspaceTools.includes("blueprint_patch_reapply"));
+  assert.ok(workspaceTools.includes("blueprint_patch_record"));
   assert.match(readmeFile, /`\/blu-reapply-patches`/);
   assert.match(geminiFile, /`\/blu-reapply-patches`/);
 });

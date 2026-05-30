@@ -3,44 +3,100 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 
-test("add-tests docs and runtime summaries mark the test-generation slice as shipped", async () => {
-  const [commandDoc, catalogMarkdown, readme, gemini, memory] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
+test("add-tests runtime-owned contract and manifests mark the test-generation slice as shipped", async () => {
+  const [manifest, skillFile, runtimeContract, readme, gemini] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-add-tests.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+      ),
+      "utf8"
+    ),
     readFile(path.join(repoRoot, "README.md"), "utf8"),
-    readFile(path.join(repoRoot, "GEMINI.md"), "utf8"),
-    readFile(path.join(repoRoot, "MEMORY.md"), "utf8")
+    readFile(path.join(repoRoot, "GEMINI.md"), "utf8")
   ]);
+  const metadata = getRuntimeOwnedCommandMetadata("add-tests");
+  const contract = await buildBlueprintCommandRuntimeContractResource("add-tests");
 
-  assert.match(commandDoc, /Blueprint ships it as an evidence-backed test-generation command/i);
-  assert.match(commandDoc, /Primary skill: `blueprint-phase-validation`/);
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 4);
+  assert.equal(metadata.catalog.family, "Quality And Shipping");
+  assert.equal(metadata.catalog.primarySkill, "blueprint-phase-validation");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#add-tests");
+  assert.deepEqual(metadata.requiredInputPaths, [
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+  ]);
   assert.match(
-    commandDoc,
+    metadata.spec.purpose,
+    /evidence and persists validation plus report artifacts through MCP tools/i
+  );
+  assert.deepEqual(metadata.spec.writes, [
+    "repo test files",
+    "phase XX-VERIFICATION.md",
+    ".blueprint/reports/add-tests-<phase>.md",
+    ".blueprint/STATE.md"
+  ]);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /evidence-backed test generation/i
+  );
+
+  assert.match(manifest, /Use the `blueprint-phase-validation` skill/);
+  assert.match(
+    manifest,
     /skills\/blueprint-phase-validation\/references\/add-tests-runtime-contract\.md/
   );
-  assert.match(commandDoc, /blueprint_artifact_contract_read/);
-  assert.match(commandDoc, /blueprint_config_get/);
-  assert.match(commandDoc, /blueprint_phase_validation_authoring_context/);
-  assert.match(commandDoc, /blueprint_phase_validation_render/);
-  assert.match(commandDoc, /readyToWrite: true/i);
-  assert.match(commandDoc, /artifactId: "report\.add-tests"/);
-  assert.match(commandDoc, /author the durable report as structured `report\.add-tests` JSON/i);
-  assert.match(commandDoc, /classification table and approved test plan/i);
-  assert.match(commandDoc, /blueprint_phase_validation_write/);
-  assert.match(commandDoc, /blueprint_artifact_report_validate_model/);
-  assert.match(commandDoc, /blueprint_artifact_report_write/);
-  assert.match(commandDoc, /add-tests-<phase>\.md/);
+  assert.match(manifest, /blueprint_artifact_contract_read/);
+  assert.match(manifest, /blueprint_config_get/);
+  assert.match(manifest, /blueprint_phase_validation_authoring_context/);
+  assert.match(manifest, /blueprint_phase_validation_render/);
+  assert.match(manifest, /readyToWrite: true/i);
+  assert.match(manifest, /artifactId: "report\.add-tests"/);
   assert.match(
-    catalogMarkdown,
-    /\| `add-tests` \| 4 \| `Quality And Shipping` \| `blueprint-phase-validation` \| `implemented` \|/
+    manifest,
+    /Author the durable (?:outcome )?report as structured `report\.add-tests` JSON/i
   );
+  assert.match(manifest, /classification/i);
+  assert.match(manifest, /test plan/i);
+  assert.match(manifest, /blueprint_phase_validation_write/);
+  assert.match(manifest, /blueprint_artifact_report_validate_model/);
+  assert.match(manifest, /blueprint_artifact_report_write/);
+  assert.match(manifest, /add-tests-<phase>/);
+
+  assert.match(skillFile, /Execution profile for `validate-phase`, `verify-work`, and the long-running parts of `add-tests`: `long-running-mutation`/);
+  assert.match(skillFile, /`blueprint_artifact_report_authoring_context`/);
+  assert.match(skillFile, /`blueprint_artifact_report_validate_model`/);
+  assert.match(skillFile, /`blueprint_artifact_report_write`/);
+
+  assert.match(runtimeContract, /report\.add-tests/);
+  assert.match(runtimeContract, /classification/i);
+  assert.match(runtimeContract, /approved test plan/i);
+  assert.match(runtimeContract, /blueprint_artifact_report_validate_model/);
+  assert.match(runtimeContract, /blueprint_artifact_report_write/);
+
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.deepEqual(contract.skillInputs.shared, []);
+  assert.deepEqual(contract.skillInputs.commandSpecific, [
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+  ]);
+  assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+
   assert.match(readme, /\/blu-add-tests/);
   assert.match(gemini, /\/blu-add-tests/);
-  assert.match(memory, /`add-tests` shipped on 2026-04-13/);
 });
 
 test("add-tests is exposed as an implemented validation follow-up command", async () => {

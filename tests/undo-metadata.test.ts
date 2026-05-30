@@ -7,7 +7,9 @@ import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { validateReportArtifactContent } from "../src/mcp/tools/artifacts.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 
@@ -79,27 +81,22 @@ test("maintenance skill captures undo visibility, report persistence, and destru
   assert.match(skillFile, /overwrite `undo-latest`[\s\S]*actual outcome, blockers, and stale-evidence fallout/i);
 });
 
-test("undo docs and runtime resource expose the destructive gate, waiting state, and next safe action contract", async () => {
-  const [commandDoc, runtimeContract] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/undo.md"), "utf8"),
+test("undo local runtime contract and runtime resource expose the destructive gate, waiting state, and next safe action contract", async () => {
+  const [runtimeReference, runtimeContract] = await Promise.all([
+    readFile(
+      path.join(repoRoot, "skills/blueprint-maintenance/references/undo-runtime-contract.md"),
+      "utf8"
+    ),
     buildBlueprintCommandRuntimeContractResource("undo")
   ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
-  assert.match(
-    commandDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    commandDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(commandDoc, /`dirty-working-tree`, `detached-head`, `merge-in-progress`, or `missing-revert-target`/);
-  assert.match(commandDoc, /undo-confirmation/);
-  assert.match(commandDoc, /report-overwrite-confirmation/);
-  assert.match(commandDoc, /`blueprint_artifact_contract_read` -> `\{artifactId, contract\}`/);
-  assert.match(commandDoc, /contract\.authoringTemplate/);
-  assert.match(commandDoc, /next safe action/i);
+  assert.match(runtimeReference, /Stage Mapping[\s\S]*Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
+  assert.match(runtimeReference, /Dirty tree, detached HEAD, in-progress merge, or missing target is a hard stop/i);
+  assert.match(runtimeReference, /undo-confirmation/);
+  assert.match(runtimeReference, /report-overwrite-confirmation/);
+  assert.match(runtimeReference, /`mcp_blueprint_blueprint_artifact_contract_read`/);
+  assert.match(runtimeReference, /report\.undo/);
+  assert.match(runtimeReference, /next safe action/i);
 
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /undo-runtime-contract\.md/);
@@ -287,25 +284,35 @@ test("undo canonical report contract requires populated contract-backed revert e
 test("repo-facing status docs treat undo as a shipped command", async () => {
   const [
     agentsFile,
-    handoffFile,
-    architectureFile,
     readmeFile,
     geminiFile,
     progressFile,
-    memoryFile
+    memoryFile,
+    catalog
   ] = await Promise.all([
     readFile(path.join(repoRoot, "AGENTS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/HANDOFF.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/ARCHITECTURE.md"), "utf8"),
     readFile(path.join(repoRoot, "README.md"), "utf8"),
     readFile(path.join(repoRoot, "GEMINI.md"), "utf8"),
     readFile(path.join(repoRoot, "PROGRESS.md"), "utf8"),
-    readFile(path.join(repoRoot, "MEMORY.md"), "utf8")
+    readFile(path.join(repoRoot, "MEMORY.md"), "utf8"),
+    blueprintCommandCatalog()
   ]);
+  const metadata = getRuntimeOwnedCommandMetadata("undo");
+  const entry = catalog.commands.undo;
 
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 4);
+  assert.equal(metadata.catalog.family, "Quality And Shipping");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
+  assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /undo-runtime-contract\.md/);
+  assert.match(metadata.runtimeReference.contractNotes, /hard-stop on dirty or unsafe git state/i);
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, metadata.sourceId);
   assert.match(agentsFile, /`undo`/i);
-  assert.match(handoffFile, /shipped Wave 4 maintenance commands `pr-branch`, `ship`, and `undo`/i);
-  assert.match(architectureFile, /shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`/i);
   assert.match(readmeFile, /`\/blu-undo`/);
   assert.match(geminiFile, /`\/blu-undo`/);
   assert.match(

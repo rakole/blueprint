@@ -177,72 +177,68 @@ test("new-milestone runtime-owned metadata aligns to the interactive-read carry-
   );
 });
 
-test("new-milestone docs keep requirementTransitions as starter-seed evidence only", async () => {
-  const newMilestoneDoc = await readFile(
-    path.join(repoRoot, "docs/commands/new-milestone.md"),
-    "utf8"
-  );
+test("new-milestone manifest and roadmap-admin skill keep requirementTransitions as starter-seed evidence only", async () => {
+  const [commandFile, skillFile] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-new-milestone.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"), "utf8")
+  ]);
 
-  assert.match(newMilestoneDoc, /requirementTransitions/);
+  assert.match(skillFile, /requirementTransitionHints/);
   assert.match(
-    newMilestoneDoc,
+    skillFile,
     /starter-seed evidence[\s\S]*do not become a competing `?\.blueprint\/REQUIREMENTS\.md`? write path/i
   );
   assert.match(
-    newMilestoneDoc,
-    /`decision` values `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`/
+    skillFile,
+    /`carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`/
   );
-  assert.match(newMilestoneDoc, /sourceRefs/);
-  assert.match(newMilestoneDoc, /rationale/);
-  assert.match(newMilestoneDoc, /uncertainty explicitly/i);
-  assert.match(newMilestoneDoc, /Safe default: stop without writing/);
-  assert.match(newMilestoneDoc, /New Milestone First-Phase Handoff Packet/);
-  assert.match(newMilestoneDoc, /openForDiscuss/);
-  assert.match(newMilestoneDoc, /riskWatchlist/);
-  assert.match(newMilestoneDoc, /deferredNotDoingNow/);
-  assert.match(newMilestoneDoc, /canonicalReferences/);
-  assert.match(newMilestoneDoc, /routeReceipt/);
-  assert.match(newMilestoneDoc, /12-18 bullets/i);
-  assert.match(newMilestoneDoc, /starter-only seed material/i);
-  assert.match(newMilestoneDoc, /openForDiscuss.*confidence plus consequence/is);
-  assert.match(newMilestoneDoc, /unverified claims as assumptions/i);
-  assert.match(newMilestoneDoc, /named in-flight receipt/i);
-  assert.match(newMilestoneDoc, /firstPhaseNumber/);
-  assert.match(newMilestoneDoc, /firstContextPath/);
-  assert.match(newMilestoneDoc, /deletedPhaseDirectories: \[\]/);
-  assert.match(newMilestoneDoc, /renamedPhaseDirectories: \[\]/);
-  assert.match(newMilestoneDoc, /firstPhaseTarget/);
-  assert.match(newMilestoneDoc, /scaffoldPathStatuses/);
-  assert.match(newMilestoneDoc, /stateUpdated/);
-  assert.match(newMilestoneDoc, /safeRetry/);
-  assert.match(newMilestoneDoc, /nextAction/);
-  assert.match(newMilestoneDoc, /command response receipt only/i);
-  assert.match(newMilestoneDoc, /does not create `?\.blueprint\/receipts`?, `?\.blueprint\/runs`?/i);
-  assert.match(newMilestoneDoc, /Mutation not attempted/);
-  assert.match(newMilestoneDoc, /Roadmap mutation succeeded, scaffold failed/);
-  assert.match(newMilestoneDoc, /Scaffold succeeded, state update failed/);
-  assert.match(newMilestoneDoc, /Same preview and same returned files on retry/);
-  assert.match(newMilestoneDoc, /Same confirmation token but changed params or files/);
-  assert.match(newMilestoneDoc, /Summary missing/);
-  assert.match(newMilestoneDoc, /Reset ambiguity/);
-  assert.match(newMilestoneDoc, /Starter overwrite blocked/);
-  assert.match(newMilestoneDoc, /Stale first-phase number/);
-  assert.match(newMilestoneDoc, /Directory conflict/);
-  assert.match(newMilestoneDoc, /State mismatch/);
-  assert.match(newMilestoneDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
-  assert.match(newMilestoneDoc, /Does not route directly to `\/blu-plan-phase` or `\/blu-execute-phase`/);
+  assert.match(skillFile, /sourceRefs/);
+  assert.match(skillFile, /rationale/);
+  assert.match(skillFile, /label unverified claims as assumptions/i);
+  assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /New Milestone First-Phase Handoff Packet/);
+  assert.match(commandFile, /openForDiscuss/);
+  assert.match(commandFile, /riskWatchlist/);
+  assert.match(commandFile, /deferredNotDoingNow/);
+  assert.match(commandFile, /canonicalReferences/);
+  assert.match(commandFile, /routeReceipt/);
+  assert.match(commandFile, /12-18 bullets/i);
+  assert.match(commandFile, /starter-only seed material|starter-only seed/i);
+  assert.match(commandFile, /openForDiscuss.*confidence plus consequence/is);
+  assert.match(commandFile, /unverified claims as assumptions/i);
+  assert.match(commandFile, /named in-flight receipt/i);
+  assert.match(commandFile, /firstPhaseNumber/);
+  assert.match(commandFile, /firstContextPath/);
+  assert.match(commandFile, /deletedPhaseDirectories: \[\]/);
+  assert.match(commandFile, /renamedPhaseDirectories: \[\]/);
+  assert.match(commandFile, /firstPhaseTarget/);
+  assert.match(commandFile, /scaffoldPathStatuses/);
+  assert.match(commandFile, /stateUpdated/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /nextAction/);
+  assert.match(skillFile, /return command-specific completion receipts in the response only/i);
+  assert.match(skillFile, /Do not create `\.blueprint\/receipts`, `\.blueprint\/runs`/i);
+  assert.match(skillFile, /mutation not attempted/i);
+  assert.match(skillFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(skillFile, /scaffold success plus state-update failure/i);
+  assert.match(skillFile, /same preview plus same returned files reuse/i);
+  assert.match(skillFile, /stale same-token param or file changes/i);
+  assert.match(skillFile, /missing-milestone-summary/);
+  assert.match(skillFile, /reset ambiguity/i);
+  assert.match(skillFile, /starter overwrite blockers?/i);
+  assert.match(skillFile, /stale first-phase numbers?/i);
+  assert.match(skillFile, /directory conflicts?/i);
+  assert.match(skillFile, /state mismatch/i);
+  assert.match(commandFile, /point to `\/blu-progress`/i);
+  assert.match(skillFile, /follow-up routing stays inside the implemented Blueprint surface/i);
 });
 
-test("new-milestone runtime docs expose scaffold first-phase receipt fields", async () => {
-  const mcpTools = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
-  const artifactSchema = await readFile(
-    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
-    "utf8"
-  );
+test("new-milestone runtime metadata exposes scaffold first-phase receipt fields", async () => {
+  const [commandFile, skillFile, contract] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-new-milestone.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-roadmap-admin/SKILL.md"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("new-milestone")
+  ]);
 
   for (const field of [
     "highestBasePhaseNumber",
@@ -253,16 +249,15 @@ test("new-milestone runtime docs expose scaffold first-phase receipt fields", as
     "deletedPhaseDirectories",
     "renamedPhaseDirectories"
   ]) {
-    assert.match(mcpTools, new RegExp(field));
-    assert.match(runtimeReference, new RegExp(field));
+    assert.match(commandFile, new RegExp(field));
+    assert.match(skillFile, new RegExp(field));
   }
 
-  assert.match(mcpTools, /stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block/i);
-  assert.match(artifactSchema, /stale previews, conflicting first-phase directories, or ambiguous first-phase directories/i);
-  assert.match(artifactSchema, /deletedPhaseDirectories: \[\]/);
-  assert.match(artifactSchema, /renamedPhaseDirectories: \[\]/);
-  assert.match(artifactSchema, /New Milestone First-Phase Handoff Packet/);
-  assert.match(artifactSchema, /starter-only material for `\/blu-discuss-phase`/);
-  assert.match(artifactSchema, /not a new typed `\.blueprint\/` write surface/i);
-  assert.match(artifactSchema, /do not create a separate schema field or durable artifact class/i);
+  assert.match(
+    skillFile,
+    /stale previews, conflicting first-phase directories, ambiguous first-phase directories, and missing first context paths block/i
+  );
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /firstPhaseNumber/);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /deletedPhaseDirectories/);
+  assert.match(contract.runtimeReference?.contractNotes ?? "", /renamedPhaseDirectories/);
 });

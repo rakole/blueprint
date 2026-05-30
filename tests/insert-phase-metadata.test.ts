@@ -197,44 +197,52 @@ test("insert-phase runtime-owned metadata uses numeric after anchors and phasePr
   );
 });
 
-test("insert-phase docs keep requirement traceability in the declared write surface", async () => {
-  const insertPhaseDoc = await readFile(
-    path.join(repoRoot, "docs/commands/insert-phase.md"),
-    "utf8"
-  );
+test("insert-phase manifest and runtime contract keep requirement traceability in the declared write surface", async () => {
+  const [commandFile, contract] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-insert-phase.toml"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md"
+      ),
+      "utf8"
+    )
+  ]);
 
-  assert.match(insertPhaseDoc, /## Blueprint And Global State Writes[\s\S]*`?\.blueprint\/REQUIREMENTS\.md`?/);
-  assert.match(insertPhaseDoc, /Maps the confirmed requirement rows in `\.blueprint\/REQUIREMENTS\.md`/);
-  assert.match(insertPhaseDoc, /must also not already be mapped to another roadmap phase/);
+  assert.match(contract, /Capture the durable requirement IDs declared in `\.blueprint\/REQUIREMENTS\.md`/);
   assert.match(
-    insertPhaseDoc,
-    /must not be `none yet` or placeholder values, and must not already be mapped to another roadmap phase/
+    contract,
+    /Treat requirement IDs that are already mapped to another roadmap phase as[\s\S]*invalid for insertion/i
   );
-  assert.match(insertPhaseDoc, /Safe default: stop without writing/);
-  assert.match(insertPhaseDoc, /compact starter handoff block/i);
-  assert.match(insertPhaseDoc, /roadmap evolution note summary/i);
-  assert.match(insertPhaseDoc, /open risks plus dependency questions/i);
-  assert.match(insertPhaseDoc, /named in-flight receipt/i);
-  assert.match(insertPhaseDoc, /command response receipt only/i);
-  assert.match(insertPhaseDoc, /requirementMappingStatus/);
-  assert.match(insertPhaseDoc, /requirementsPath/);
-  assert.match(insertPhaseDoc, /contextScaffoldPath/);
-  assert.match(insertPhaseDoc, /stateRoute/);
-  assert.match(insertPhaseDoc, /safeRetry/);
-  assert.match(insertPhaseDoc, /Mutation not attempted/);
-  assert.match(insertPhaseDoc, /Roadmap mutation succeeded, scaffold failed/);
-  assert.match(insertPhaseDoc, /Scaffold succeeded, state update failed/);
-  assert.match(insertPhaseDoc, /Same preview and same returned files on retry/);
-  assert.match(insertPhaseDoc, /Same confirmation token but changed params or files/);
-  assert.match(insertPhaseDoc, /Invalid anchor \(non-integer\)/);
-  assert.match(insertPhaseDoc, /Declared-ID failure/);
-  assert.match(insertPhaseDoc, /Already-mapped IDs/);
-  assert.match(insertPhaseDoc, /Conflicting decimal directory/);
-  assert.match(insertPhaseDoc, /Dependency-review warning/);
-  assert.match(insertPhaseDoc, /stop without writing\. When a safe route is needed, point to `\/blu-progress`/i);
   assert.match(
-    insertPhaseDoc,
-    /do not (?:route|jump) directly to `\/blu-plan-phase` or `\/blu-execute-phase`/i
+    contract,
+    /must not be `none yet` or[\s\S]*placeholders, and must not already be mapped to another roadmap phase/
+  );
+  assert.match(commandFile, /Safe default: stop without writing/);
+  assert.match(commandFile, /compact starter handoff block/i);
+  assert.match(commandFile, /roadmap evolution note summary/i);
+  assert.match(commandFile, /open risks and dependency questions/i);
+  assert.match(commandFile, /Treat the approved `phase-insert-confirmation` gate as a named in-flight receipt/);
+  assert.match(commandFile, /completion receipt/i);
+  assert.match(commandFile, /requirementMappingStatus/);
+  assert.match(commandFile, /requirementsPath/);
+  assert.match(commandFile, /contextScaffoldPath/);
+  assert.match(commandFile, /stateRoute/);
+  assert.match(commandFile, /safeRetry/);
+  assert.match(commandFile, /mutation not attempted/i);
+  assert.match(commandFile, /roadmap mutation plus scaffold failure/i);
+  assert.match(commandFile, /scaffold success plus state-update failure/i);
+  assert.match(commandFile, /same preview plus the same returned files/i);
+  assert.match(commandFile, /changed params or files/i);
+  assert.match(commandFile, /invalid-insertion-anchor/);
+  assert.match(commandFile, /declared-ID failures?/i);
+  assert.match(commandFile, /already-mapped IDs/i);
+  assert.match(commandFile, /conflicting-decimal-directory/);
+  assert.match(commandFile, /dependency-review warnings?/i);
+  assert.match(commandFile, /point to `\/blu-progress`/i);
+  assert.match(
+    contract,
+    /do not route directly to `\/blu-plan-phase`[\s\S]*`\/blu-execute-phase`/i
   );
 });
 

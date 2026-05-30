@@ -119,7 +119,6 @@ test("plan-phase skill is compact and delegates detailed behavior to the runtime
     "/blu-plan-phase",
     "input_bundles:",
     "plan-phase-runtime-contract.md",
-    "docs under `docs/commands/` as user-facing documentation",
     "blueprint_phase_plan_readiness",
     "existing saved plans plus omitted `planId` require an explicit `add`,",
     "expectedReadSet",
@@ -134,6 +133,10 @@ test("plan-phase skill is compact and delegates detailed behavior to the runtime
     "read-only `read_file` on supplied paths",
     "must not write files or call MCP persistence"
   ]);
+  assert.match(
+    skillFile,
+    /Treat .* as user-facing documentation, not runtime prompt\s+authority/i
+  );
 
   for (const tool of planPhaseTools) {
     assert.match(skillFile, new RegExp(tool));
@@ -270,55 +273,49 @@ test("plan-phase runtime metadata owns the migrated catalog and runtime-referenc
   );
 });
 
-test("plan-phase docs and MCP notes are user-facing and aligned to the runtime contract", async () => {
-  const [commandDoc, mcpToolsDoc, runtimeReferenceDoc] = await Promise.all([
-    readRepoFile("docs/commands/plan-phase.md"),
-    readRepoFile("docs/MCP-TOOLS.md"),
-    readRepoFile("docs/RUNTIME-REFERENCE.md")
-  ]);
+test("plan-phase runtime resources align catalog, tool notes, and routed contract guidance", async () => {
+  const metadata = getRuntimeOwnedCommandMetadata("plan-phase");
+  const contract = await buildBlueprintCommandRuntimeContractResource("plan-phase");
 
-  assertIncludesAll(commandDoc, [
-    "This page is user-facing documentation",
-    "The runtime prompt authority is the\ncommand manifest",
-    "blueprint_phase_plan_readiness",
-    "expectedReadSet",
-    "blueprint_phase_plan_validate_model` remains available for dry-run previews",
-    "Final\ncompletion still depends on `blueprint_phase_plan_validate`",
-    "Downstream Execution Handoff"
-  ]);
-  assert.doesNotMatch(commandDoc, /Validate the structured model through `blueprint_phase_plan_validate_model`, then persist/);
-  assert.doesNotMatch(commandDoc, /Re-read `blueprint_phase_plan_authoring_context` immediately before each model validation\/write/);
+  assert.ok(metadata);
+  assert.equal(contract.catalog.specPath, metadata.sourceId);
+  assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.path, metadata.sourceId);
+  assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [...planPhaseTools]);
+  assert.deepEqual(contract.skillInputs.commandSpecific, metadata.requiredInputPaths);
 
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_phase_plan_readiness/i);
+  assert.match(metadata.runtimeReference.contractNotes, /expectedReadSet/i);
+  assert.match(metadata.runtimeReference.contractNotes, /completionReady/i);
+  assert.match(metadata.runtimeReference.contractNotes, /incrementalCheckpoint/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_phase_plan_validate/i);
   assert.match(
-    mcpToolsDoc,
-    /`plan-phase` uses `blueprint_phase_plan_readiness` as the preferred compact read-only read packet/i
+    metadata.runtimeReference.contractNotes,
+    /existing saved plans plus omitted planId require an add\/revise\/replace decision/i
   );
-  assert.match(mcpToolsDoc, /expectedReadSet` from the readiness `readSet`/i);
-  assert.match(mcpToolsDoc, /completionReady/);
-  assert.match(mcpToolsDoc, /incrementalCheckpoint/);
-  assert.match(mcpToolsDoc, /blueprint_phase_plan_validate` before treating planning as complete/i);
-  assert.match(mcpToolsDoc, /requires an explicit add\/revise\/replace decision when saved plans exist and `planId` is omitted/i);
-  assert.match(mcpToolsDoc, /lets explicit additive intent select a new slot without an overwrite gate/i);
-  assert.match(mcpToolsDoc, /always confirms revise, replace, overwrite, or saved-plan-set replacement/i);
-
-  assert.match(runtimeReferenceDoc, /src\/mcp\/command-runtime-metadata\.ts#plan-phase/);
-  assert.match(runtimeReferenceDoc, /blueprint_phase_plan_readiness/);
-  assert.match(runtimeReferenceDoc, /server-checked `expectedReadSet`/);
-  assert.match(runtimeReferenceDoc, /existing saved plans plus omitted `planId` require an explicit add\/revise\/replace decision/);
-  assert.match(runtimeReferenceDoc, /explicit additive new plan ids may proceed without an overwrite gate/);
-  assert.match(runtimeReferenceDoc, /never infer completion from `blueprint_phase_plan_write\.validation\.valid`, `completionReady`, or `incrementalCheckpoint` alone/);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /explicit additive new plan ids may proceed without an overwrite gate/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /never infer final completion from blueprint_phase_plan_write\.validation\.valid, completionReady, or incrementalCheckpoint alone/i
+  );
+  assert.doesNotMatch(
+    metadata.runtimeReference.contractNotes,
+    /Re-read blueprint_phase_plan_authoring_context immediately before each model validation\/write/i
+  );
 });
 
 test("plan-phase metadata surfaces keep optional spec evidence and trace semantics aligned", async () => {
   const metadata = getRuntimeOwnedCommandMetadata("plan-phase");
-  const [commandFile, skillFile, commandDoc, runtimeContract, mcpToolsDoc, runtimeReferenceDoc] =
+  const contract = await buildBlueprintCommandRuntimeContractResource("plan-phase");
+  const [commandFile, skillFile, runtimeContract] =
     await Promise.all([
       readRepoFile("commands/blu-plan-phase.toml"),
       readRepoFile("skills/blueprint-phase-planning/SKILL.md"),
-      readRepoFile("docs/commands/plan-phase.md"),
-      readRepoFile("skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md"),
-      readRepoFile("docs/MCP-TOOLS.md"),
-      readRepoFile("docs/RUNTIME-REFERENCE.md")
+      readRepoFile("skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md")
     ]);
 
   assertMatchesAll(commandFile, [
@@ -329,24 +326,15 @@ test("plan-phase metadata surfaces keep optional spec evidence and trace semanti
     /optional\s+XX-SPEC\.md\s+when present/i,
     /missing\s+XX-SPEC\.md\s+as nonblocking/i
   ]);
-  assertMatchesAll(commandDoc, [
-    /optional\s+XX-SPEC\.md/i,
-    /phase\.artifacts\.spec exists/i,
-    /nonblocking/i
-  ]);
   assertMatchesAll(runtimeContract, [
     /Planning Investigation Trace/i,
     /missing\s+XX-SPEC\.md\s+as nonblocking/i,
     /phase\.artifacts\.spec exists[\s\S]*readiness read set[\s\S]*evidenceCoverage/i
   ]);
-  assertMatchesAll(mcpToolsDoc, [
-    /blueprint_phase_plan_readiness[\s\S]*optional\s+XX-SPEC\.md/i,
-    /blueprint_phase_plan_readiness[\s\S]*read-set/i
-  ]);
-  assertMatchesAll(runtimeReferenceDoc, [
-    /plan-phase[\s\S]*optional\s+XX-SPEC\.md/i,
-    /plan-phase[\s\S]*Planning Investigation Trace/i,
-    /plan-phase[\s\S]*readiness read set[\s\S]*evidenceCoverage/i
+  assertMatchesAll(contract.runtimeReference?.contractNotes ?? "", [
+    /optional\s+XX-SPEC\.md/i,
+    /Planning Investigation Trace/i,
+    /readiness read set[\s\S]*evidenceCoverage/i
   ]);
   assert.match(
     metadata.spec.reads.join("\n"),

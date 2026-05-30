@@ -236,7 +236,6 @@ const projectStatusInputSchema = {
   cwd: z.string().optional()
 };
 
-const COMMAND_SPEC_PREFIX = "docs/commands";
 const DOCLESS_FALLBACK_CATALOG_ROWS = [
   {
     commandName: "do",
@@ -887,308 +886,21 @@ type ParsedCatalogRow = {
   risk: string;
 };
 
-type CatalogRowSource = "docs" | "runtime";
-
-type BuildCommandCatalogEntryOptions = {
-  catalogRowSource?: CatalogRowSource;
-};
-
-const COMMAND_CATALOG_DOC_PATH = "docs/COMMAND-CATALOG.md";
-const RUNTIME_REFERENCE_DOC_PATH = "docs/RUNTIME-REFERENCE.md";
-const SPEC_PHASE_COMMAND_DOC_PATH = "docs/commands/spec-phase.md";
-
-function parseCatalogRow(cells: string[]): ParsedCatalogRow | null {
-  if (cells.length < 7) {
-    return null;
-  }
-
-  const commandName = cells[0].replaceAll("`", "");
-  const wave = Number.parseInt(cells[1], 10);
-  const family = cells[2].replaceAll("`", "");
-  const primarySkill = cells[3].replaceAll("`", "");
-  const declaredStatus = cells[4].replaceAll("`", "") as CommandStatus;
-  const risk = cells[6].replaceAll("`", "");
-
-  if (
-    !commandName ||
-    Number.isNaN(wave) ||
-    !["planned", "implemented", "blocked", "repairing"].includes(declaredStatus)
-  ) {
-    return null;
-  }
-
-  return {
-    commandName,
-    wave,
-    family,
-    primarySkill,
-    declaredStatus,
-    risk
-  };
-}
-
-function commandRequiresLockedDocSubstrates(commandName: string): boolean {
-  return commandName === "spec-phase";
-}
-
-function parseMarkdownTableCell(line: string): string[] {
-  return line
-    .trim()
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim());
-}
-
-function parseSpecDocField(markdown: string, fieldName: string): string | null {
-  const escapedFieldName = fieldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(new RegExp(`\\| ${escapedFieldName} \\| (.+?) \\|`));
-
-  return match?.[1]?.replaceAll("`", "").trim() ?? null;
-}
-
-function parseSpecDocPrimarySkill(markdown: string): string | null {
-  return markdown.match(/- Primary skill:\s*`([^`]+)`/)?.[1] ?? null;
-}
-
-function parseRuntimeReferenceInlineList(cell: string): string[] {
-  const normalized = cell
-    .replaceAll("<br>", "\n")
-    .replace(/`/g, "")
-    .trim();
-
-  if (normalized.length === 0 || normalized.toLowerCase() === "none") {
-    return [];
-  }
-
-  return normalized
-    .split(/\n|;\s+/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0 && entry.toLowerCase() !== "none");
-}
-
-type ParsedRuntimeReferenceRow = {
-  wave: number | null;
-  commandSpecPath: string | null;
-  primarySkill: string | null;
-  exactMcpDestination: string[];
-  optionalAgents: string[];
-  hookInvolvement: string[];
-  evidenceState: string[];
-};
-
-function parseRuntimeReferenceRow(
-  markdown: string,
-  commandName: string
-): ParsedRuntimeReferenceRow | null {
-  let currentWave: number | null = null;
-
-  for (const line of markdown.split("\n")) {
-    const waveMatch = line.match(/^### Wave ([0-9]+):/);
-
-    if (waveMatch) {
-      currentWave = Number.parseInt(waveMatch[1], 10);
-      continue;
-    }
-
-    const trimmed = line.trim();
-
-    if (!trimmed.startsWith("| `") || trimmed.startsWith("|---")) {
-      continue;
-    }
-
-    const cells = parseMarkdownTableCell(trimmed);
-
-    if (cells.length < 8 || cells[0].replaceAll("`", "") !== commandName) {
-      continue;
-    }
-
-    return {
-      wave: currentWave,
-      commandSpecPath: cells[1].replaceAll("`", "") || null,
-      primarySkill: cells[2].replaceAll("`", "") || null,
-      exactMcpDestination: parseRuntimeReferenceInlineList(cells[3]),
-      optionalAgents: parseRuntimeReferenceInlineList(cells[4]),
-      hookInvolvement: parseRuntimeReferenceInlineList(cells[5]),
-      evidenceState: parseRuntimeReferenceInlineList(cells[7])
-    };
-  }
-
-  return null;
-}
-
-function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function pushMismatch(blockedBy: string[], label: string, expected: unknown, actual: unknown): void {
-  if (expected === actual) {
-    return;
-  }
-
-  blockedBy.push(`${label} mismatch: expected ${String(expected)} but found ${String(actual)}`);
-}
-
-async function readOptionalBundledFile(relativePath: string): Promise<string | null> {
-  try {
-    return await fs.readFile(bundledUrl(relativePath), "utf8");
-  } catch {
-    return null;
-  }
-}
-
-async function validateLockedDocSubstrates(
-  parsedRow: ParsedCatalogRow,
-  runtimeMetadata: RuntimeOwnedCommandMetadata,
-  catalogRowSource: CatalogRowSource
-): Promise<string[]> {
-  if (!commandRequiresLockedDocSubstrates(runtimeMetadata.commandName)) {
-    return [];
-  }
-
-  const blockedBy: string[] = [];
-
-  if (catalogRowSource !== "docs") {
-    blockedBy.push(`Missing command catalog row: ${COMMAND_CATALOG_DOC_PATH}#${runtimeMetadata.commandName}`);
-    return blockedBy;
-  }
-
-  const expectedCatalog = runtimeMetadata.catalog;
-
-  pushMismatch(blockedBy, "Command catalog wave", expectedCatalog.wave, parsedRow.wave);
-  pushMismatch(blockedBy, "Command catalog family", expectedCatalog.family, parsedRow.family);
-  pushMismatch(
-    blockedBy,
-    "Command catalog primary skill",
-    expectedCatalog.primarySkill,
-    parsedRow.primarySkill
-  );
-  pushMismatch(
-    blockedBy,
-    "Command catalog declared status",
-    expectedCatalog.declaredStatus,
-    parsedRow.declaredStatus
-  );
-  pushMismatch(blockedBy, "Command catalog risk", expectedCatalog.risk, parsedRow.risk);
-
-  const commandSpecMarkdown = await readOptionalBundledFile(SPEC_PHASE_COMMAND_DOC_PATH);
-
-  if (!commandSpecMarkdown) {
-    blockedBy.push(`Missing locked command spec: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
-  } else {
-    pushMismatch(
-      blockedBy,
-      "Command spec wave",
-      String(runtimeMetadata.catalog.wave),
-      parseSpecDocField(commandSpecMarkdown, "Wave")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec family",
-      runtimeMetadata.catalog.family,
-      parseSpecDocField(commandSpecMarkdown, "Family")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec execution profile",
-      runtimeMetadata.spec.executionProfile,
-      parseSpecDocField(commandSpecMarkdown, "Execution profile")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec root-routable",
-      runtimeMetadata.spec.rootRoutable ? "Yes" : "No",
-      parseSpecDocField(commandSpecMarkdown, "Root-routable")
-    );
-    pushMismatch(
-      blockedBy,
-      "Command spec primary skill",
-      runtimeMetadata.catalog.primarySkill,
-      parseSpecDocPrimarySkill(commandSpecMarkdown)
-    );
-
-    const commandSpecTools = parseRequiredTools(commandSpecMarkdown);
-
-    if (!arraysEqual(commandSpecTools, runtimeMetadata.requiredTools)) {
-      blockedBy.push(`Command spec required tools mismatch: ${SPEC_PHASE_COMMAND_DOC_PATH}`);
-    }
-  }
-
-  const runtimeReferenceMarkdown = await readOptionalBundledFile(RUNTIME_REFERENCE_DOC_PATH);
-  const runtimeReferenceRow = runtimeReferenceMarkdown
-    ? parseRuntimeReferenceRow(runtimeReferenceMarkdown, runtimeMetadata.commandName)
-    : null;
-
-  if (!runtimeReferenceRow) {
-    blockedBy.push(`Missing runtime reference row: ${RUNTIME_REFERENCE_DOC_PATH}#${runtimeMetadata.commandName}`);
-  } else {
-    pushMismatch(
-      blockedBy,
-      "Runtime reference wave",
-      runtimeMetadata.catalog.wave,
-      runtimeReferenceRow.wave
-    );
-    pushMismatch(
-      blockedBy,
-      "Runtime reference command spec path",
-      runtimeMetadata.sourceId,
-      runtimeReferenceRow.commandSpecPath
-    );
-    pushMismatch(
-      blockedBy,
-      "Runtime reference primary skill",
-      runtimeMetadata.runtimeReference.primarySkill,
-      runtimeReferenceRow.primarySkill
-    );
-
-    if (!arraysEqual(runtimeReferenceRow.exactMcpDestination, runtimeMetadata.requiredTools)) {
-      blockedBy.push(`Runtime reference MCP destination mismatch: ${RUNTIME_REFERENCE_DOC_PATH}#${runtimeMetadata.commandName}`);
-    }
-
-    if (!arraysEqual(runtimeReferenceRow.optionalAgents, runtimeMetadata.optionalAgents)) {
-      blockedBy.push(`Runtime reference optional agents mismatch: ${RUNTIME_REFERENCE_DOC_PATH}#${runtimeMetadata.commandName}`);
-    }
-
-    if (!arraysEqual(runtimeReferenceRow.hookInvolvement, runtimeMetadata.runtimeReference.hookInvolvement)) {
-      blockedBy.push(`Runtime reference hook involvement mismatch: ${RUNTIME_REFERENCE_DOC_PATH}#${runtimeMetadata.commandName}`);
-    }
-
-    if (!arraysEqual(runtimeReferenceRow.evidenceState, runtimeMetadata.runtimeReference.evidenceState)) {
-      blockedBy.push(`Runtime reference evidence state mismatch: ${RUNTIME_REFERENCE_DOC_PATH}#${runtimeMetadata.commandName}`);
-    }
-  }
-
-  return blockedBy;
-}
-
 async function buildCommandCatalogEntry(
-  parsedRow: ParsedCatalogRow,
-  options: BuildCommandCatalogEntryOptions = {}
+  parsedRow: ParsedCatalogRow
 ): Promise<CommandCatalogEntry> {
-  const catalogRowSource = options.catalogRowSource ?? "docs";
   const runtimeMetadata = getRuntimeOwnedCommandMetadata(parsedRow.commandName);
   const catalogFacts = runtimeMetadata?.catalog ?? parsedRow;
-  const specPath = runtimeMetadata?.sourceId ?? `${COMMAND_SPEC_PREFIX}/${parsedRow.commandName}.md`;
+  const specPath = runtimeMetadata?.sourceId ?? null;
   const manifestPath = blueprintPrimaryManifestPath(parsedRow.commandName);
-  const specUrl = runtimeMetadata ? null : bundledUrl(specPath);
   const manifestExists = await pathExists(bundledUrl(manifestPath));
-  let specExists = runtimeMetadata ? true : await pathExists(specUrl!);
   const missingRuntimeInputs: string[] = [];
-  let specMarkdown = "";
-
-  if (specExists && specUrl) {
-    try {
-      specMarkdown = await fs.readFile(specUrl, "utf8");
-    } catch {
-      specExists = false;
-    }
-  }
-
   const requiredTools = runtimeMetadata
     ? [...runtimeMetadata.requiredTools]
-    : parseRequiredTools(specMarkdown);
+    : [];
   const optionalAgents = runtimeMetadata
     ? [...runtimeMetadata.optionalAgents]
-    : parseOptionalAgents(specMarkdown, catalogFacts.primarySkill);
+    : [];
   const availableOptionalAgents: string[] = [];
   const blockedBy: string[] = [];
   const skillResolution = await resolveBlueprintSkillPath(catalogFacts.primarySkill, async (skillPath) =>
@@ -1196,22 +908,12 @@ async function buildCommandCatalogEntry(
   );
   const skillExists = skillResolution.resolvedPath !== null;
 
-  if (!specExists) {
-    blockedBy.push(`Missing command spec: ${specPath}`);
-  }
-
   if (!manifestExists) {
     blockedBy.push(`Missing command manifest: ${manifestPath}`);
   }
 
   if (!skillExists) {
     blockedBy.push(`Missing primary skill: ${skillResolution.canonicalPath}`);
-  }
-
-  if (runtimeMetadata) {
-    blockedBy.push(
-      ...(await validateLockedDocSubstrates(parsedRow, runtimeMetadata, catalogRowSource))
-    );
   }
 
   for (const inputPath of runtimeMetadata?.requiredInputPaths ?? []) {
@@ -1224,18 +926,6 @@ async function buildCommandCatalogEntry(
   const missingTools = requiredTools.filter((toolName) => !AVAILABLE_TOOL_NAMES.has(toolName));
   const requiredToolsSatisfied = missingTools.length === 0;
   const runtimeInputsSatisfied = missingRuntimeInputs.length === 0;
-  const lockedDocsSatisfied = !runtimeMetadata
-    ? true
-    : !commandRequiresLockedDocSubstrates(runtimeMetadata.commandName) ||
-      !blockedBy.some(
-        (blocker) =>
-          blocker.startsWith("Missing command catalog row:") ||
-          blocker.startsWith("Command catalog ") ||
-          blocker.startsWith("Missing locked command spec:") ||
-          blocker.startsWith("Command spec ") ||
-          blocker.startsWith("Missing runtime reference row:") ||
-          blocker.startsWith("Runtime reference ")
-      );
 
   for (const toolName of missingTools) {
     blockedBy.push(`Missing required MCP tool: ${toolName}`);
@@ -1253,7 +943,7 @@ async function buildCommandCatalogEntry(
 
   let status = catalogFacts.declaredStatus;
 
-  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied && lockedDocsSatisfied)) {
+  if (!(manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied)) {
     if (manifestExists || skillExists) {
       status = "repairing";
     } else if (blockedBy.length > 0) {
@@ -1280,7 +970,9 @@ async function buildCommandCatalogEntry(
     blockedBy,
     manifestPath: manifestExists ? manifestPath : null,
     skillPath: skillResolution.resolvedPath,
-    specPath: specExists && runtimeInputsSatisfied && lockedDocsSatisfied ? specPath : null,
+    specPath: manifestExists && skillExists && runtimeInputsSatisfied && requiredToolsSatisfied
+      ? specPath
+      : null,
     requiredTools,
     requiredToolsSatisfied,
     optionalAgents,
@@ -1306,7 +998,7 @@ async function addRuntimeOwnedCommandCatalogEntry(
   metadata: RuntimeOwnedCommandMetadata
 ): Promise<void> {
   const parsedRow = runtimeOwnedMetadataToParsedRow(metadata);
-  const entry = await buildCommandCatalogEntry(parsedRow, { catalogRowSource: "runtime" });
+  const entry = await buildCommandCatalogEntry(parsedRow);
   const waveKey = String(parsedRow.wave);
 
   result.commands[parsedRow.commandName] = entry;
@@ -1440,53 +1132,8 @@ export async function blueprintRuntimeOwnedCommandCatalog(): Promise<CommandCata
   return result;
 }
 
-async function readBundledCommandCatalog(): Promise<CommandCatalogResult> {
-  const commandCatalogPath = bundledUrl("docs/COMMAND-CATALOG.md");
-
-  try {
-    const markdown = await fs.readFile(commandCatalogPath, "utf8");
-    const commands: Record<string, CommandCatalogEntry> = {};
-    const waves: Record<string, string[]> = {};
-    const aliases: Record<string, string[]> = {};
-
-    for (const line of markdown.split("\n")) {
-      const trimmed = line.trim();
-
-      if (!trimmed.startsWith("| `")) {
-        continue;
-      }
-
-      const cells = trimmed
-        .split("|")
-        .slice(1, -1)
-        .map((cell) => cell.trim());
-
-      const parsedRow = parseCatalogRow(cells);
-
-      if (!parsedRow) {
-        continue;
-      }
-
-      const entry = await buildCommandCatalogEntry(parsedRow);
-
-      commands[parsedRow.commandName] = entry;
-
-      const waveKey = String(parsedRow.wave);
-      waves[waveKey] ??= [];
-      waves[waveKey].push(parsedRow.commandName);
-      aliases[parsedRow.commandName] = blueprintDirectCommandAliases(parsedRow.commandName);
-    }
-
-    return Object.keys(commands).length > 0
-      ? addMissingRuntimeOwnedCommandCatalogEntries({ commands, waves, aliases })
-      : await buildRuntimeOwnedFallbackCommandCatalog();
-  } catch {
-    return buildRuntimeOwnedFallbackCommandCatalog();
-  }
-}
-
 export async function blueprintCommandCatalog(): Promise<CommandCatalogResult> {
-  return readBundledCommandCatalog();
+  return buildRuntimeOwnedFallbackCommandCatalog();
 }
 
 export async function blueprintProjectInit(

@@ -159,11 +159,6 @@ test("ui-phase command references registered tools and single-artifact UI handli
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
     "utf8"
   );
-  const docFile = await readFile(path.join(repoRoot, "docs/commands/ui-phase.md"), "utf8");
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
   const runtimeContract = await readFile(
     path.join(
       repoRoot,
@@ -284,60 +279,38 @@ test("ui-phase command references registered tools and single-artifact UI handli
     "skills/blueprint-phase-discovery/references/ui-phase-runtime-contract.md"
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
-    false
-  );
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
-    false
-  );
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
-    false
-  );
 
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
+  assert.equal(metadata.spec.executionProfile, "long-running-mutation");
   assert.match(
-    docFile,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+    metadata.runtimeReference.contractNotes,
+    /Long-running-mutation profile for bounded UI-contract drafting/i
   );
   assert.match(
-    docFile,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
+    metadata.runtimeReference.contractNotes,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i
   );
-  assert.match(docFile, /## Behavior Stages/);
-  assert.match(docFile, /ui-phase-runtime-contract\.md/);
-  assert.match(docFile, /contract-versus-skip posture/i);
-  assert.match(docFile, /`workflow\.ui_safety_gate` rationale requirements/i);
-  assert.match(docFile, /skipRationale/);
-  assert.match(docFile, /progressive/i);
-  assert.match(docFile, /checker revision gate/i);
-  assert.match(docFile, /## UI Quality Contract/);
-  assert.match(docFile, /saved context or research/i);
-  assert.match(docFile, /six dimensions/i);
-  assert.match(docFile, /no-subagent fallback/i);
-  assert.match(docFile, /browser-only, web-search-only, shell-only, or generic agents/i);
-  assert.match(docFile, /retry through MCP once/i);
-  assert.match(docFile, /\/blu-plan-phase <phase>/);
-  assert.match(docFile, /\/blu-progress/);
-
-  const uiRuntimeRow = runtimeReference
-    .split("\n")
-    .find((line) => line.startsWith("| `ui-phase` |"));
-  assert.ok(uiRuntimeRow, "runtime reference should include the ui-phase row");
-  assert.match(uiRuntimeRow, /Long-running-mutation profile for bounded UI-contract drafting/i);
-  assert.match(uiRuntimeRow, /resolved scope, active stage, pending gate, execution mode, and next safe action visible/i);
-  assert.match(uiRuntimeRow, /contract-versus-skip posture/i);
-  assert.match(uiRuntimeRow, /`workflow\.ui_safety_gate` rationale confirmation/);
-  assert.match(uiRuntimeRow, /progressive disclosure/i);
-  assert.match(uiRuntimeRow, /blueprint_phase_ui_skip_write/i);
-  assert.match(uiRuntimeRow, /checker-requested revision/i);
-  assert.match(uiRuntimeRow, /ui-phase-runtime-contract\.md/i);
-  assert.match(uiRuntimeRow, /read actual saved context and research bodies/i);
-  assert.match(uiRuntimeRow, /no-subagent section-by-section fallback/i);
-  assert.match(uiRuntimeRow, /browser\/web-search\/shell-only or generic substitute agents/i);
-  assert.match(uiRuntimeRow, /repair invalid writes/i);
+  assert.match(metadata.runtimeReference.contractNotes, /contract-versus-skip posture/i);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /workflow\.ui_safety_gate rationale confirmation/
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /progressive disclosure/i);
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_phase_ui_skip_write/i);
+  assert.match(metadata.runtimeReference.contractNotes, /checker-requested revision/i);
+  assert.match(metadata.runtimeReference.contractNotes, /ui-phase-runtime-contract\.md/i);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /read actual saved context and research bodies/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /no-subagent section-by-section fallback/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /browser\/web-search\/shell-only or generic substitute agents/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /repair invalid writes/i);
   assert.match(runtimeContract, /## Visible UI Progress/);
   assert.match(
     runtimeContract,

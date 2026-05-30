@@ -6,6 +6,8 @@ import path from "node:path";
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
 
@@ -82,31 +84,26 @@ test("maintenance skill captures cleanup visibility, report persistence, and pro
   assert.match(skillFile, /before filesystem mutation begins/i);
 });
 
-test("cleanup docs and runtime resource expose the protected-scope visibility and waiting-state contract", async () => {
-  const [commandDoc, runtimeContract] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/cleanup.md"), "utf8"),
+test("cleanup local runtime contract and runtime resource expose the protected-scope visibility and waiting-state contract", async () => {
+  const [runtimeReference, runtimeContract] = await Promise.all([
+    readFile(
+      path.join(repoRoot, "skills/blueprint-maintenance/references/cleanup-runtime-contract.md"),
+      "utf8"
+    ),
     buildBlueprintCommandRuntimeContractResource("cleanup")
   ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
   assert.match(
-    commandDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
+    runtimeReference,
+    /Stage Mapping[\s\S]*Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/
   );
-  assert.match(
-    commandDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(commandDoc, /`dirty-working-tree`, `missing-phase-root`, or `inconsistent-phase-layout`/);
-  assert.match(commandDoc, /cleanup-confirmation/);
-  assert.match(commandDoc, /archive-destination-confirmation/);
-  assert.match(commandDoc, /report-overwrite-confirmation/);
-  assert.match(commandDoc, /Gemini CLI's built-in `ask_user` interaction tool/i);
-  assert.match(commandDoc, /`ask_user` is a Gemini CLI interaction surface, not Blueprint MCP persistence/i);
-  assert.match(commandDoc, /if `ask_user` is unavailable, stop honestly with `cleanup-confirmation` still visible/i);
-  assert.match(commandDoc, /stop honestly with that named pending gate still visible when `ask_user` is unavailable/i);
-  assert.match(commandDoc, /protected exclusions/i);
-  assert.match(commandDoc, /next safe action/i);
+  assert.match(runtimeReference, /Dirty tree, missing phase root, or inconsistent phase layout is a hard stop/);
+  assert.match(runtimeReference, /cleanup-confirmation/);
+  assert.match(runtimeReference, /archive-destination-confirmation/);
+  assert.match(runtimeReference, /report-overwrite-confirmation/);
+  assert.match(runtimeReference, /Require destructive confirmation and surface `cleanup-confirmation`/i);
+  assert.match(runtimeReference, /current phase, active roadmap references, evidence-incomplete directories, and final kept directories/i);
+  assert.match(runtimeReference, /manual cleanup follow-up/i);
 
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /cleanup-runtime-contract\.md/);
@@ -127,25 +124,38 @@ test("cleanup docs and runtime resource expose the protected-scope visibility an
 test("repo-facing status docs treat cleanup as a shipped command", async () => {
   const [
     agentsFile,
-    handoffFile,
-    architectureFile,
     readmeFile,
     geminiFile,
     progressFile,
-    memoryFile
+    memoryFile,
+    catalog
   ] = await Promise.all([
     readFile(path.join(repoRoot, "AGENTS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/HANDOFF.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/ARCHITECTURE.md"), "utf8"),
     readFile(path.join(repoRoot, "README.md"), "utf8"),
     readFile(path.join(repoRoot, "GEMINI.md"), "utf8"),
     readFile(path.join(repoRoot, "PROGRESS.md"), "utf8"),
-    readFile(path.join(repoRoot, "MEMORY.md"), "utf8")
+    readFile(path.join(repoRoot, "MEMORY.md"), "utf8"),
+    blueprintCommandCatalog()
   ]);
+  const metadata = getRuntimeOwnedCommandMetadata("cleanup");
+  const entry = catalog.commands.cleanup;
 
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 5);
+  assert.equal(metadata.catalog.family, "Workspace And Maintenance");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
+  assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /cleanup-runtime-contract\.md/);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /protect the current phase and active roadmap references/i
+  );
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, metadata.sourceId);
   assert.match(agentsFile, /`cleanup`/i);
-  assert.match(handoffFile, /shipped Wave 5 cleanup command `cleanup`/i);
-  assert.match(architectureFile, /shipped Wave 5 maintenance command, `cleanup`/i);
   assert.match(readmeFile, /`\/blu-cleanup`/);
   assert.match(geminiFile, /`\/blu-cleanup`/);
   assert.match(

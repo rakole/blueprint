@@ -6,6 +6,9 @@ import path from "node:path";
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import { workspaceToolDefinitions } from "../src/mcp/tools/workspace.js";
 
 const repoRoot = process.cwd();
 
@@ -42,27 +45,20 @@ test("new-workspace manifest references the maintenance skill, workspace MCP too
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("new-workspace docs, runtime resource, and maintenance skill align to the shipped high-risk workspace contract", async () => {
-  const [commandDoc, runtimeContract, skillDoc] = await Promise.all([
-    readRepoFile("docs/commands/new-workspace.md"),
+test("new-workspace runtime resource, local contract, and maintenance skill align to the shipped high-risk workspace contract", async () => {
+  const [runtimeContract, skillDoc, runtimeReference] = await Promise.all([
     buildBlueprintCommandRuntimeContractResource("new-workspace"),
-    readRepoFile("skills/blueprint-maintenance/SKILL.md")
+    readRepoFile("skills/blueprint-maintenance/SKILL.md"),
+    readRepoFile("skills/blueprint-maintenance/references/new-workspace-runtime-contract.md")
   ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `high-risk-maintenance` \|/);
-  assert.match(
-    commandDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/
-  );
-  assert.match(
-    commandDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(commandDoc, /<workspace>\/\.blueprint-workspace\.json/);
-  assert.match(commandDoc, /~\/.<host>\/blueprint\/workspaces\.json/);
-  assert.match(commandDoc, /new-workspace-confirmation/);
-  assert.match(commandDoc, /dirty-working-tree/);
-  assert.match(commandDoc, /transactional/i);
+  assert.match(runtimeReference, /Stage Mapping/);
+  assert.match(runtimeReference, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
+  assert.match(runtimeReference, /manifest path/i);
+  assert.match(runtimeReference, /registry path/i);
+  assert.match(runtimeReference, /new-workspace-confirmation/);
+  assert.match(runtimeReference, /Dirty working tree, invalid source repo, malformed registry, target conflict, or unsafe strategy is a hard stop/);
+  assert.match(runtimeReference, /host-global registry mutation/i);
 
   assert.match(skillDoc, /\/blu-new-workspace/);
   assert.match(skillDoc, /blueprint_workspace_registry_get/);
@@ -90,23 +86,27 @@ test("new-workspace docs, runtime resource, and maintenance skill align to the s
 });
 
 test("repo-facing status docs treat new-workspace as a shipped Wave 5 command", async () => {
-  const [architectureFile, handoffFile, progressFile, memoryFile, catalogFile, mcpToolsFile] =
+  const [progressFile, memoryFile, catalog] =
     await Promise.all([
-      readRepoFile("docs/ARCHITECTURE.md"),
-      readRepoFile("docs/HANDOFF.md"),
       readRepoFile("PROGRESS.md"),
       readRepoFile("MEMORY.md"),
-      readRepoFile("docs/COMMAND-CATALOG.md"),
-      readRepoFile("docs/MCP-TOOLS.md")
+      blueprintCommandCatalog()
     ]);
+  const entry = catalog.commands["new-workspace"];
+  const metadata = getRuntimeOwnedCommandMetadata("new-workspace");
+  const workspaceTools = workspaceToolDefinitions.map((definition) => definition.name);
 
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 5);
+  assert.equal(metadata.catalog.family, "Workspace And Maintenance");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
+  assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /new-workspace-runtime-contract\.md/);
   assert.match(
-    architectureFile,
-    /shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
-  );
-  assert.match(
-    handoffFile,
-    /shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+    metadata.runtimeReference.contractNotes,
+    /derive workspace root from config or explicit input/i
   );
   assert.match(
     progressFile,
@@ -117,8 +117,14 @@ test("repo-facing status docs treat new-workspace as a shipped Wave 5 command", 
     /\| [0-9]+ \| `new-workspace` \| ❌ \| `planned` \| 5 \| `Workspace And Maintenance` \| High \|/
   );
   assert.match(memoryFile, /`new-workspace` shipped on 2026-04-22/);
-  assert.match(catalogFile, /\| `new-workspace` \| 5 \| `Workspace And Maintenance` \| `blueprint-maintenance` \| `implemented` \|/);
-  assert.match(mcpToolsFile, /### Workspace/);
-  assert.match(mcpToolsFile, /`blueprint_workspace_registry_get`/);
-  assert.match(mcpToolsFile, /`blueprint_workspace_create`/);
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, metadata?.sourceId);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_config_get",
+    "blueprint_workspace_registry_get",
+    "blueprint_workspace_create"
+  ]);
+  assert.ok(workspaceTools.includes("blueprint_workspace_registry_get"));
+  assert.ok(workspaceTools.includes("blueprint_workspace_create"));
 });

@@ -553,10 +553,6 @@ test("discuss-phase command references only registered phase-discovery tool name
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
     "utf8"
   );
-  const docFile = await readFile(
-    path.join(repoRoot, "docs/commands/discuss-phase.md"),
-    "utf8"
-  );
   const discussReference = await readFile(
     path.join(
       repoRoot,
@@ -566,10 +562,6 @@ test("discuss-phase command references only registered phase-discovery tool name
   );
   const researcherAgent = await readFile(
     path.join(repoRoot, "agents/blueprint-researcher.md"),
-    "utf8"
-  );
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
     "utf8"
   );
   const requiredTools = [
@@ -738,42 +730,32 @@ test("discuss-phase command references only registered phase-discovery tool name
     sharedProfilePath
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/research-phase.md"),
-    false
-  );
-  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
-    false
-  );
 
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, new RegExp(sharedProfilePath));
-  assert.match(docFile, new RegExp(runtimeContractPath));
-  assert.match(docFile, /Writes only declared `\.blueprint\/` phase artifacts, checkpoints, and `STATE\.md`/);
-  assert.match(docFile, /without inferring a direct `\/blu-plan-phase` handoff/i);
-  assert.doesNotMatch(docFile, /may also mutate code or git state/i);
-
-  const discussRuntimeRow = runtimeReference
-    .split("\n")
-    .find((line) => line.startsWith("| `discuss-phase` |"));
-  assert.ok(discussRuntimeRow, "runtime reference should include the discuss-phase row");
-  assert.match(discussRuntimeRow, new RegExp(sharedProfilePath));
-  assert.match(discussRuntimeRow, new RegExp(runtimeContractPath));
-  assert.match(discussRuntimeRow, /phase-local spec[\s\S]*phase\.artifacts\.spec/i);
-  assert.match(discussRuntimeRow, /Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria[\s\S]*locked WHAT\/WHY/i);
-  assert.match(discussRuntimeRow, /missing spec nonblocking/i);
-  assert.match(discussRuntimeRow, /spec contradictions[\s\S]*\/blu-spec-phase <phase>/i);
+  assert.equal(metadata.spec.executionProfile, "long-running-mutation");
+  assert.match(metadata.runtimeReference.contractNotes, new RegExp(sharedProfilePath));
+  assert.match(metadata.runtimeReference.contractNotes, new RegExp(runtimeContractPath));
   assert.match(
-    discussRuntimeRow,
-    /`phase\.context` model contract as context schema authority[\s\S]*`phase\.discussion-log` `contract\.authoringTemplate` as discussion-log authority/i
+    metadata.runtimeReference.contractNotes,
+    /phase-local spec[\s\S]*phase\.artifacts\.spec/i
   );
-  assert.match(discussRuntimeRow, /`blueprint_state_load`/);
-  assert.match(discussRuntimeRow, /lightweight gray-area memo mode/i);
-  assert.match(discussRuntimeRow, /single-agent fallback/i);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /Goal, Requirements, Boundaries, Constraints, and Acceptance Criteria[\s\S]*locked WHAT\/WHY/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /missing spec nonblocking/i);
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /spec contradictions[\s\S]*\/blu-spec-phase <phase>/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /phase\.context\.modelContract[\s\S]*freehand-artifact authoring templates as schema authority/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /blueprint_state_load/);
+  assert.match(metadata.runtimeReference.contractNotes, /lightweight gray-area memo mode/i);
+  assert.match(metadata.runtimeReference.contractNotes, /single-agent fallback/i);
   assert.doesNotMatch(
-    discussRuntimeRow,
+    metadata.runtimeReference.contractNotes,
     /use Gemini-native `update_topic` and `write_todos`[\s\S]*helpers are unavailable/i
   );
 
@@ -1154,7 +1136,7 @@ test("state warning preservation surfaces only non-empty routing-relevant warnin
 test("allowlist remains stable", () => {
   const commandFile = readRepoText(discussCommandPath);
   const contract = readRepoText(discussRuntimeContractPath);
-  const docFile = readRepoText("docs/commands/discuss-phase.md");
+  const skillFile = readRepoText("skills/blueprint-phase-discovery/SKILL.md");
   const metadata = getRuntimeOwnedCommandMetadata("discuss-phase");
   const runtimeToolCalls = [...commandFile.matchAll(/mcp_blueprint_blueprint_[a-z_]+/g)]
     .map(([tool]) => tool)
@@ -1179,7 +1161,7 @@ test("allowlist remains stable", () => {
     metadata.requiredTools.map((toolName) => blueprintRuntimeToolFqn(toolName)).sort()
   );
 
-  for (const text of [commandFile, contract, docFile]) {
+  for (const text of [commandFile, contract, skillFile]) {
     for (const bannedToken of [
       "AskUserQuestion",
       ".planning",

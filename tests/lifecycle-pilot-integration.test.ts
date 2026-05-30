@@ -1226,7 +1226,7 @@ test("artifact report writes report blocking input issues and contract-gate mode
     taskSummary: ["Completed a focused quick run."],
     changedSurfaces: [
       {
-        surface: "docs/commands/quick.md",
+        surface: "commands/blu-quick.toml",
         change: "Confirmed quick-run reporting behavior.",
         rationale: "The lifecycle pilot exercised the quick report gate."
       }

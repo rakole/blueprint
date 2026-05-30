@@ -178,11 +178,7 @@ function catalogDocsPath(value: unknown): string | null {
     value instanceof URL ? value.pathname : path.resolve(String(value));
   const relativePath = path.relative(process.cwd(), normalized).split(path.sep).join("/");
 
-  return relativePath === "docs/COMMAND-CATALOG.md" ||
-    relativePath === "docs/RUNTIME-REFERENCE.md" ||
-    relativePath.startsWith("docs/commands/")
-    ? relativePath
-    : null;
+  return /^docs\/.+\.md$/.test(relativePath) ? relativePath : null;
 }
 
 function bundledRelativePath(value: unknown): string | null {
@@ -728,28 +724,18 @@ test("spec-phase is implemented and runtime-contract discoverable only after its
   ]);
 });
 
-test("spec-phase stays non-implemented when locked docs drift", async (t) => {
+test("spec-phase stays implemented and docless when docs drift or disappear", async (t) => {
   const realReadFile = fs.readFile.bind(fs);
+  const attemptedDocs = new Set<string>();
 
   t.mock.method(fs, "readFile", async (filePath, options) => {
     const relativePath = bundledRelativePath(filePath);
 
-    if (relativePath === "docs/commands/spec-phase.md") {
-      const error = new Error("simulated spec command doc absence") as NodeJS.ErrnoException;
+    if (relativePath?.startsWith("docs/")) {
+      attemptedDocs.add(relativePath);
+      const error = new Error("simulated docs drift") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;
-    }
-
-    if (relativePath === "docs/RUNTIME-REFERENCE.md") {
-      const original = await realReadFile(
-        filePath as Parameters<typeof fs.readFile>[0],
-        options as Parameters<typeof fs.readFile>[1]
-      );
-
-      return String(original)
-        .split("\n")
-        .filter((line) => !line.startsWith("| `spec-phase` |"))
-        .join("\n");
     }
 
     return realReadFile(
@@ -763,43 +749,42 @@ test("spec-phase stays non-implemented when locked docs drift", async (t) => {
 
   assert.ok(entry);
   assert.equal(entry.declaredStatus, "implemented");
-  assert.equal(entry.status, "repairing");
-  assert.equal(entry.implemented, false);
-  assert.equal(entry.specPath, null);
-  assert.match(
-    entry.blockedBy.join("\n"),
-    /Missing locked command spec: docs\/commands\/spec-phase\.md/
-  );
-  assert.match(
-    entry.blockedBy.join("\n"),
-    /Missing runtime reference row: docs\/RUNTIME-REFERENCE\.md#spec-phase/
-  );
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.blockedBy, []);
 
   const advertisedCommands = await listBlueprintCommandRuntimeContractCommands();
+  const contract = await buildBlueprintCommandRuntimeContractResource("spec-phase");
 
-  assert.equal(advertisedCommands.includes("spec-phase"), false);
-  await assert.rejects(
-    buildBlueprintCommandRuntimeContractResource("spec-phase"),
-    /Blueprint runtime-contract resources are available only for implemented commands: spec-phase/
+  assert.equal(advertisedCommands.includes("spec-phase"), true);
+  assert.equal(contract.catalog.status, "implemented");
+  assert.equal(contract.catalog.specPath, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.path, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.runtimeReference?.path, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    contract.runtimeReference?.commandSpecPath,
+    SPEC_PHASE_RUNTIME_METADATA.sourceId
   );
+  assert.equal(
+    contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+  assert.deepEqual([...attemptedDocs], []);
 });
 
-test("spec-phase stays non-implemented when the command catalog row drifts", async (t) => {
+test("spec-phase stays implemented without consulting control-plane docs", async (t) => {
   const realReadFile = fs.readFile.bind(fs);
+  const controlPlaneDocReads: string[] = [];
 
   t.mock.method(fs, "readFile", async (filePath, options) => {
     const relativePath = bundledRelativePath(filePath);
 
-    if (relativePath === "docs/COMMAND-CATALOG.md") {
-      const original = await realReadFile(
-        filePath as Parameters<typeof fs.readFile>[0],
-        options as Parameters<typeof fs.readFile>[1]
-      );
-
-      return String(original).replace(
-        "| `spec-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `implemented` |",
-        "| `spec-phase` | 1 | `Core Lifecycle` | `blueprint-phase-discovery` | `planned` |"
-      );
+    if (relativePath && /^docs\/.+\.md$/.test(relativePath)) {
+      controlPlaneDocReads.push(relativePath);
+      const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
+      error.code = "ENOENT";
+      throw error;
     }
 
     return realReadFile(
@@ -812,12 +797,12 @@ test("spec-phase stays non-implemented when the command catalog row drifts", asy
   const entry = catalog.commands["spec-phase"];
 
   assert.ok(entry);
-  assert.equal(entry.status, "repairing");
-  assert.equal(entry.implemented, false);
-  assert.match(
-    entry.blockedBy.join("\n"),
-    /Command catalog declared status mismatch: expected implemented but found planned/
-  );
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, SPEC_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.blockedBy, []);
+  assert.deepEqual(controlPlaneDocReads, []);
 });
 
 test("command path helpers centralize canonical, alias, and manifest forms", () => {
@@ -1204,11 +1189,7 @@ test("map-codebase runtime contract builds from metadata when docs are unavailab
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
-    if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
-      normalizedPath.includes("/docs/commands/")
-    ) {
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;
@@ -1372,10 +1353,9 @@ test("docless fallback preserves planned do without exposing a runtime contract"
     entry.blockedBy.join("\n"),
     /Missing command manifest: commands\/blu-do\.toml/
   );
-  assert.doesNotMatch(entry.blockedBy.join("\n"), /docs\/commands\/do\.md/);
-  assert.deepEqual(
-    docsTouches.filter((touch) => touch.endsWith("docs/commands/do.md")),
-    []
+  assert.equal(
+    docsTouches.some((touch) => /^.+docs\/.+\.md$/.test(touch)),
+    false
   );
   assert.deepEqual(catalog.aliases.do, blueprintDirectCommandAliases("do"));
   assert.ok(catalog.waves["3"].includes("do"));
@@ -1548,10 +1528,7 @@ test("plan-phase runtime contract resource survives missing command docs", async
   const readWithPlanPhaseDocsUnavailable = async (
     relativePath: string
   ): Promise<string | null> => {
-    if (
-      relativePath === "docs/commands/plan-phase.md" ||
-      relativePath === "docs/RUNTIME-REFERENCE.md"
-    ) {
+    if (/^docs\/.+\.md$/.test(relativePath)) {
       return null;
     }
 
@@ -1847,133 +1824,53 @@ test("code-review-fix is implemented once manifest, review skill, and findings t
   assert.deepEqual(entry.blockedBy, []);
 });
 
-test("review-fix inventory docs stay aligned with the shipped Blueprint runtime", async () => {
-  const [
-    artifactSchema,
-    skillsAndAgents,
-    runtimeReference,
-    commandCatalogDoc,
-    migrationDoc
-  ] = await Promise.all([
-    readRelativePath("docs/ARTIFACT-SCHEMA.md"),
-    readRelativePath("docs/SKILLS-AND-AGENTS.md"),
-    readRelativePath("docs/RUNTIME-REFERENCE.md"),
-    readRelativePath("docs/COMMAND-CATALOG.md"),
-    readRelativePath("docs/GSD-RUNTIME-MIGRATION.md")
+test("review-fix runtime resources stay aligned with live metadata and local contracts", async () => {
+  const [codeReviewFixContract, auditFixContract] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("code-review-fix"),
+    buildBlueprintCommandRuntimeContractResource("audit-fix")
   ]);
-
-  assert.ok(artifactSchema);
-  assert.ok(skillsAndAgents);
-  assert.ok(runtimeReference);
-  assert.ok(commandCatalogDoc);
-  assert.ok(migrationDoc);
-
-  assert.match(
-    artifactSchema,
-    /### `XX-REVIEW-FIX\.md`[\s\S]*\*\*Status:\*\* COMPLETED\|PARTIAL\|BLOCKED[\s\S]*\*\*Readiness:\*\* ready-for-validation\|not-ready-for-validation\|blocked[\s\S]*\*\*Completion State:\*\* complete\|pending\|blocked[\s\S]*## Remediation Summary[\s\S]*## Findings Addressed[\s\S]*## Changes Made[\s\S]*## Verification[\s\S]*## Dependency Plans[\s\S]*## Manual \/ Deferred Work[\s\S]*## Gap \/ Repair Routes[\s\S]*## Follow-Ups[\s\S]*## Evidence[\s\S]*## Next Safe Action/
+  const reviewFixRuntimeContract = await readRelativePath(
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
   );
-  assert.match(
-    artifactSchema,
-    /`## Findings Addressed` is the locked heading for remediation scope/
-  );
-  assert.match(
-    artifactSchema,
-    /### `reports\/audit-fix-<phase>\.md`[\s\S]*## Evidence Used[\s\S]*## Fix Scope[\s\S]*## Changes Applied[\s\S]*## Remaining Gaps[\s\S]*## Next Safe Action/
-  );
-  assert.match(
-    artifactSchema,
-    /do not route through `blueprint_review_record`/
+  const auditFixRuntimeContract = await readRelativePath(
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md"
   );
 
-  assert.match(
-    skillsAndAgents,
-    /\| `blueprint-fixer` \| `planned` \| Apply targeted fixes from review output \|/
+  assert.ok(reviewFixRuntimeContract);
+  assert.ok(auditFixRuntimeContract);
+  assert.deepEqual(codeReviewFixContract.skillInputs.effective, [
+    "commands/blu-code-review-fix.toml",
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+  ]);
+  assert.deepEqual(auditFixContract.skillInputs.effective, [
+    "commands/blu-audit-fix.toml",
+    "skills/blueprint-review/references/audit-fix-runtime-contract.md"
+  ]);
+  assert.equal(
+    codeReviewFixContract.skillInputs.effective.some((input) => /^docs\//.test(input)),
+    false
   );
-  assert.match(
-    skillsAndAgents,
-    /The planned `blueprint-fixer` remains future inventory only\./
+  assert.equal(
+    auditFixContract.skillInputs.effective.some((input) => /^docs\//.test(input)),
+    false
   );
+  assert.match(reviewFixRuntimeContract, /camelCase keys/);
+  assert.match(reviewFixRuntimeContract, /locked-marker keys/);
   assert.match(
-    skillsAndAgents,
-    /`code-review-fix` may use `blueprint-reviewer`\./
-  );
-  assert.match(
-    skillsAndAgents,
-    /`audit-fix` may use `blueprint-reviewer` for read-only saved-evidence classification and `blueprint-verifier` for bounded post-fix verification/
-  );
-  assert.match(
-    skillsAndAgents,
-    /single-agent fallback from `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/
-  );
-  assert.match(
-    skillsAndAgents,
-    /browser\/web-search\/shell-only or generic agents are not substitutes, and planned-only `blueprint-fixer` remains non-routable/
-  );
-  assert.doesNotMatch(
-    skillsAndAgents,
-    /`code-review-fix` and `audit-fix` use `blueprint-fixer`\./
-  );
-
-  assert.match(
-    commandCatalogDoc,
-    /\| `code-review-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW-FIX\.md; code changes for selected findings; \.blueprint\/STATE\.md` \| `High: selected findings can trigger bounded repo remediation plus review-fix\/state updates\.` \|/
-  );
-  assert.doesNotMatch(commandCatalogDoc, /optional iteration loop/);
-
-  assert.match(
-    runtimeReference,
-    /\| `code-review-fix` \| `src\/mcp\/command-runtime-metadata\.ts#code-review-fix` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
-  );
-  assert.match(runtimeReference, /author only the schema's camelCase JSON fields/);
-  assert.match(runtimeReference, /forbid rendered-heading or locked-marker JSON keys/);
-  assert.match(
-    runtimeReference,
-    /No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./
+    reviewFixRuntimeContract,
+    /Treat `--auto` as bounded finding selection, not permission for hidden commits,?[\s\S]*branch creation, a fixer agent, or iterative re-review\./
   );
   assert.match(
-    runtimeReference,
-    /\| `audit-fix` \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_config_get`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
+    auditFixRuntimeContract,
+    /Do not create `XX-REVIEW-FIX\.md` from this command\./
   );
   assert.match(
-    runtimeReference,
-    /The planned `blueprint-fixer` remains unshipped and is not an active required runtime path\./
+    auditFixRuntimeContract,
+    /Produce a classification table before mutation[\s\S]*`auto-fixable`, `manual-only`, or `skip`/
   );
   assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*load `skills\/blueprint-review\/references\/audit-fix-runtime-contract\.md`/
-  );
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*classify from saved evidence selected by `--source` into `auto-fixable`, `manual-only`, and `skip` rows before mutation/
-  );
-  assert.match(
-    runtimeReference,
-    /`audit-fix`[\s\S]*auditFixContext \{source, severity, maxAttempts, dryRun, scopeFiles\}/
-  );
-
-  assert.match(
-    migrationDoc,
-    /`code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo` are currently shipped in this wave\./
-  );
-  assert.match(
-    migrationDoc,
-    /\| `code-review-fix` \| `commands\/gsd\/code-review-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/code-review-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_config_get`<br>`blueprint_review_load_findings`<br>`blueprint_review_authoring_context`<br>`blueprint_review_validate_model`<br>`blueprint_review_record`<br>`blueprint_state_update` \| `blueprint-reviewer` \|/
-  );
-  assert.match(
-    migrationDoc,
-    /do not claim the planned `blueprint-fixer`, per-fix commits, or an implicit auto re-review loop as shipped Blueprint behavior\./
-  );
-  assert.match(
-    migrationDoc,
-    /\| `audit-fix` \| `commands\/gsd\/audit-fix\.md` \| GSD has an upstream workflow file \| `docs\/commands\/audit-fix\.md` \| `blueprint-review` \| `blueprint_phase_locate`<br>`blueprint_artifact_list`<br>`blueprint_review_scope`<br>`blueprint_artifact_contract_read`<br>`blueprint_config_get`<br>`blueprint_artifact_report_authoring_context`<br>`blueprint_artifact_report_validate_model`<br>`blueprint_artifact_report_write`<br>`blueprint_artifact_mutate_index`<br>`blueprint_state_update` \| `blueprint-reviewer`<br>`blueprint-verifier` \|/
-  );
-  assert.match(
-    migrationDoc,
-    /Do not claim the planned `blueprint-fixer` as an implemented runtime path or active dependency\./
-  );
-  assert.doesNotMatch(
-    migrationDoc,
-    /High-risk planned flows such as `quick`, `code-review-fix`, `audit-fix`, `ship`, `undo`/
+    auditFixRuntimeContract,
+    /auditFixContext \{source, severity, maxAttempts,\s*dryRun, scopeFiles\}/
   );
 });
 
@@ -2205,11 +2102,7 @@ test("docs-update runtime contract builds from metadata and local skill inputs w
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
-    if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
-      normalizedPath.includes("/docs/commands/")
-    ) {
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;

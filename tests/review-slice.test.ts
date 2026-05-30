@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { REVIEW_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
@@ -101,7 +103,7 @@ objective: "Finalize the saved plan set before execution."
 depends_on: []
 requirements: ["REV-01"]
 files_modified: ["src/mcp/tools/project.ts"]
-read_first: ["docs/commands/plan-phase.md"]
+read_first: ["commands/blu-plan-phase.toml"]
 acceptance_criteria: ["npm test -- tests/review-slice.test.ts exits 0"]
 autonomous: true
 ---
@@ -122,7 +124,7 @@ Capture cross-CLI peer review for the saved plan.
 
 #### Read First
 
-- docs/commands/review.md
+- commands/blu-review.toml
 
 #### Action
 
@@ -152,7 +154,7 @@ ${noExternalServicesSection}
 
 | Artifact | Status | Rationale |
 |----------|--------|-----------|
-| docs/commands/review.md | used | The command spec defines the peer review persistence route. |
+| commands/blu-review.toml | used | The command manifest defines the peer review persistence route. |
 
 ## File / Surface Coverage
 
@@ -235,47 +237,53 @@ function validPeerReviewModel(patch: Record<string, unknown> = {}): Record<strin
   };
 }
 
-test("review docs and catalog metadata promote the peer-review slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder, commandDoc, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/review.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("review runtime metadata, manifest, and local contract stay source-owned", async () => {
+  const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("review"),
+    readFile(path.join(repoRoot, "commands/blu-review.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/review-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands.review;
 
+  assert.equal(entry.specPath, REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...REVIEW_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, REVIEW_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.writes, [...REVIEW_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...REVIEW_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-review.toml",
+    "skills/blueprint-review/references/review-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    catalogMarkdown,
-    /\| `review` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEWS\.md` \| `Medium: external reviewer orchestration without default repo mutation\.` \|/
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
+  assert.match(commandFile, /reviewer availability/i);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /`reviewer-availability`/i);
+  assert.match(commandFile, /partial fan-out results/i);
+  assert.match(skillFile, /Execution profile for `review`: `long-running-mutation`/);
+  assert.match(referenceFile, /reviewer availability is honest/i);
+  assert.match(referenceFile, /disagreements are preserved/i);
+  assert.match(referenceFile, /Keep `\/blu-review <phase>` as the next safe action/i);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for saved-plan peer review/i
   );
   assert.match(
-    implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
-  );
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
-  assert.match(
-    commandDoc,
-    /requested reviewer set, reviewer availability, disagreement posture, pending gate, execution mode, artifact status, and next safe action/i
-  );
-  assert.match(commandDoc, /`update_topic` tool and keep a compact peer-review checklist with `write_todos`/i);
-  assert.match(commandDoc, /`reviewer-availability`/i);
-  assert.match(commandDoc, /next-step guidance stays on `\/blu-review <phase>`/i);
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*Long-running-mutation profile for phase-plan peer review/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*`update_topic` and `write_todos` for non-trivial review runs/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*reviewer availability, partial reviewer coverage, disagreement posture, and artifact reuse or revision status explicit/i
-  );
-  assert.match(
-    runtimeReference,
-    /`review`[\s\S]*`reviewer-availability` waiting state/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /requested reviewers, available and unavailable reviewers, reviewer-availability gates, overwrite confirmation, disagreement posture, execution mode, active stage, and next safe action explicit/i
   );
 });
 

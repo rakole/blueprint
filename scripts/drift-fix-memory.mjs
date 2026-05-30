@@ -9,7 +9,7 @@ import process from "node:process";
 
 const DEFAULT_NAMESPACE = "wave-2-closeout";
 const DEFAULT_PLAN_DOC =
-  "docs/build/WAVE-2-PARALLEL-CLOSEOUT-PLAN.md";
+  "MEMORY.md";
 const DEFAULT_ROOT =
   process.env.BLUEPRINT_DRIFT_MEMORY_ROOT ??
   path.join(

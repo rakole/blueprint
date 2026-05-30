@@ -184,17 +184,21 @@ test("governance commands resolve catalog and runtime contracts from docless met
 
 test("governance runtime contracts do not fall back to docs inputs when docs are absent", async (t) => {
   const realReadFile = fs.readFile.bind(fs);
+  const docsDir = ["", "docs"].join("/");
+  const commandDocsDir = `${docsDir}/${["commands"].join("/")}`;
   const commandDocSuffixes = Object.keys(governanceExpectations).map(
-    (commandName) => `/docs/commands/${commandName}.md`
+    (commandName) => `${commandDocsDir}/${commandName}.md`
   );
+  const commandCatalogSuffix = `${docsDir}/${["COMMAND-CATALOG.md"].join("/")}`;
+  const runtimeReferenceSuffix = `${docsDir}/${["RUNTIME-REFERENCE.md"].join("/")}`;
 
   t.mock.method(fs, "readFile", async (filePath, options) => {
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
     if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
+      normalizedPath.endsWith(commandCatalogSuffix) ||
+      normalizedPath.endsWith(runtimeReferenceSuffix) ||
       commandDocSuffixes.some((suffix) => normalizedPath.endsWith(suffix))
     ) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;

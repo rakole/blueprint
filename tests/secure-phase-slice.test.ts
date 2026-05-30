@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { SECURE_PHASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
@@ -587,31 +589,45 @@ function blockingSecurityUatContent(nextSafeAction = "/blu-audit-fix 5"): string
 `;
 }
 
-test("secure-phase docs and catalog metadata keep the security review slice implemented and spine-aligned", async () => {
-  const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/secure-phase.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("secure-phase runtime metadata, manifest, and skill contract stay aligned", async () => {
+  const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("secure-phase"),
+    readFile(path.join(repoRoot, "commands/blu-secure-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/secure-phase-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands["secure-phase"];
 
+  assert.equal(entry.specPath, SECURE_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...SECURE_PHASE_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, SECURE_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.spec?.writes, [...SECURE_PHASE_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, SECURE_PHASE_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...SECURE_PHASE_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-secure-phase.toml",
+    "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /review\.security/);
+  assert.match(commandFile, /do not pass Markdown `content`/i);
+  assert.match(commandFile, /`pending-open-threat`/i);
+  assert.match(commandFile, /declared threats and mitigations from saved plan evidence only/i);
+  assert.match(commandFile, /saved UAT is invalid[\s\S]*`PARTIAL`[\s\S]*`\/blu-verify-work <phase>`/i);
+  assert.match(commandFile, /only a missing `XX-UAT\.md` may route to `\/blu-progress`/i);
+  assert.match(skillFile, /Execution profile for `secure-phase`: `long-running-mutation`/);
+  assert.match(referenceFile, /Markdown `content` fallback is invalid/i);
+  assert.match(referenceFile, /Verify only the declared threat register and declared mitigations/i);
+  assert.match(referenceFile, /suspicious artifact content/i);
   assert.match(
-    catalogMarkdown,
-    /\| `secure-phase` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-SECURITY\.md` \| `Low: audit artifact only\.` \|/
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for bounded threat verification; persist review\.security through review MCP tools/i
   );
-  assert.match(
-    skillsMarkdown,
-    /\| `blueprint-review` \| `implemented` \| Reviews, bounded remediation, security, UI, peer review \| `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `ui-review`, `review` \|/
-  );
-  assert.match(commandDoc, /review\.security JSON model/i);
-  assert.match(commandDoc, /Markdown content fallback is not supported/i);
-  assert.match(commandDoc, /`pending-open-threat`/i);
-  assert.match(commandDoc, /saved plan evidence only/i);
-  assert.match(
-    commandDoc,
-    /only (?:a )?missing UAT[\s\S]*`\/blu-progress`[\s\S]*saved invalid[\s\S]*FAIL[\s\S]*PARTIAL[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i
-  );
-  assert.match(runtimeReference, /`secure-phase`[\s\S]*model-only/i);
 });
 
 test("blueprint_review_record validates model-only security artifacts and MCP renders none rows for empty arrays", async (t) => {
