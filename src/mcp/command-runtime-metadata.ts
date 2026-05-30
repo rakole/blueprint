@@ -82,6 +82,12 @@ const NEW_PROJECT_REQUIRED_TOOLS = [
   "blueprint_artifact_validate"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const NEW_PROJECT_REQUIRED_INPUT_PATHS = [
+  "skills/blueprint-bootstrap/references/questioning.md",
+  "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md",
+  "skills/blueprint-bootstrap/references/runtime-guardrails.md"
+] as const;
+
 export const NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID =
   "src/mcp/command-runtime-metadata.ts#new-project";
 
@@ -98,6 +104,7 @@ export const NEW_PROJECT_RUNTIME_METADATA = {
   },
   requiredTools: NEW_PROJECT_REQUIRED_TOOLS,
   optionalAgents: NEW_PROJECT_OPTIONAL_AGENTS,
+  requiredInputPaths: NEW_PROJECT_REQUIRED_INPUT_PATHS,
   spec: {
     path: NEW_PROJECT_RUNTIME_METADATA_SOURCE_ID,
     title: "`/blu-new-project`",
