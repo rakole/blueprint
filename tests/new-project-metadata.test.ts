@@ -78,6 +78,10 @@ test("new-project manifest stays thin while delegating runtime depth to the boot
   assert.deepEqual(runtimeContract.skillInputs.shared, []);
   assert.deepEqual(runtimeContract.skillInputs.commandSpecific, newProjectRuntimeInputBundle);
   assert.deepEqual(runtimeContract.skillInputs.effective, newProjectRuntimeInputBundle);
+  assert.deepEqual(
+    NEW_PROJECT_RUNTIME_METADATA.requiredInputPaths,
+    newProjectRuntimeInputBundle
+  );
   assert.equal(
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
@@ -140,6 +144,45 @@ test("new-project remains implemented from runtime-owned metadata when docs are 
   assert.equal(
     contract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
+  );
+});
+
+test("new-project is not implemented when a bundled bootstrap runtime input is missing", async (t) => {
+  const runtimeInputPath = NEW_PROJECT_RUNTIME_METADATA.requiredInputPaths?.[1];
+  const originalAccess = fs.access;
+
+  assert.ok(runtimeInputPath);
+
+  fs.access = (async (...args: Parameters<typeof fs.access>) => {
+    const normalizedPath =
+      args[0] instanceof URL ? fileURLToPath(args[0]) : path.resolve(String(args[0]));
+
+    if (normalizedPath.endsWith(runtimeInputPath)) {
+      const error = new Error("ENOENT");
+      (error as NodeJS.ErrnoException).code = "ENOENT";
+      throw error;
+    }
+
+    return originalAccess(...args);
+  }) as typeof fs.access;
+  t.after(() => {
+    fs.access = originalAccess;
+  });
+
+  const catalog = await blueprintCommandCatalog();
+  const entry = catalog.commands["new-project"];
+
+  assert.equal(entry.declaredStatus, "implemented");
+  assert.equal(entry.status, "repairing");
+  assert.equal(entry.implemented, false);
+  assert.equal(entry.specPath, null);
+  assert.match(
+    entry.blockedBy.join("\n"),
+    /Missing runtime input: skills\/blueprint-bootstrap\/references\/bootstrap-runtime-contract\.md/
+  );
+  await assert.rejects(
+    () => buildBlueprintCommandRuntimeContractResource("new-project"),
+    /Blueprint runtime-contract resources are available only for implemented commands: new-project/
   );
 });
 

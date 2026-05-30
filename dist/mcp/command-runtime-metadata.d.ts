@@ -48,6 +48,7 @@ export declare const NEW_PROJECT_RUNTIME_METADATA: {
     };
     readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
     readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+    readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/questioning.md", "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md", "skills/blueprint-bootstrap/references/runtime-guardrails.md"];
     readonly spec: {
         readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
         readonly title: "`/blu-new-project`";
@@ -1876,6 +1877,7 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
         };
         readonly requiredTools: readonly ["blueprint_project_init", "blueprint_project_status", "blueprint_config_get", "blueprint_config_set", "blueprint_state_update", "blueprint_artifact_contract_read", "blueprint_artifact_validate"];
         readonly optionalAgents: readonly ["blueprint-project-researcher", "blueprint-roadmapper"];
+        readonly requiredInputPaths: readonly ["skills/blueprint-bootstrap/references/questioning.md", "skills/blueprint-bootstrap/references/bootstrap-runtime-contract.md", "skills/blueprint-bootstrap/references/runtime-guardrails.md"];
         readonly spec: {
             readonly path: "src/mcp/command-runtime-metadata.ts#new-project";
             readonly title: "`/blu-new-project`";
