@@ -202,11 +202,7 @@ test("impact remains implemented from runtime-owned metadata when docs are unava
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
-    if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
-      normalizedPath.includes("/docs/commands/")
-    ) {
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;

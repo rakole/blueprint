@@ -75,38 +75,50 @@ test("source-owned config behavior keeps effectiveness-spine defaults and enum g
 });
 
 test("artifact schema documents workflow.subagents as workflow policy rather than host agent availability", async () => {
-  const artifactSchema = await readFile(
-    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
-    "utf8"
-  );
+  const [settingsCommand, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-governance/references/settings-runtime-contract.md"
+      ),
+      "utf8"
+    )
+  ]);
 
-  assert.match(artifactSchema, /"subagents": true/);
+  assert.match(settingsCommand, /`workflow\.subagents`/);
   assert.match(
-    artifactSchema,
-    /`workflow\.subagents` is the global optional-subagent workflow policy for Blueprint command orchestration/i
+    settingsReference,
+    /`workflow\.subagents` persists at `workflow\.subagents` in `\.blueprint\/config\.json`[\s\S]*defaults\.json/i
   );
   assert.match(
-    artifactSchema,
-    /it does not install host agents, change agent catalog availability, or widen routing/i
+    settingsReference,
+    /does not hide agent entries, change agent catalog visibility, or change implemented-command routing/i
   );
 });
 
 test("artifact schema documents workflow.no_uat as UAT optionality rather than command removal", async () => {
-  const artifactSchema = await readFile(
-    path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"),
-    "utf8"
-  );
+  const [settingsCommand, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-governance/references/settings-runtime-contract.md"
+      ),
+      "utf8"
+    )
+  ]);
 
-  assert.match(artifactSchema, /"no_uat": false/);
-  assert.match(artifactSchema, /`workflow\.no_uat` defaults to `false`/);
-  assert.match(artifactSchema, /missing `XX-UAT\.md` evidence is not lifecycle-blocking/i);
-  assert.match(artifactSchema, /`\/blu-verify-work` remains manually runnable/i);
-  assert.match(artifactSchema, /quality gates still block completion/i);
+  assert.match(settingsCommand, /`workflow\.no_uat`/);
+  assert.match(settingsReference, /`workflow\.no_uat` defaults to `false`/);
+  assert.match(settingsReference, /Setting it to `true` makes missing UAT evidence optional for lifecycle routing and phase closeout after PASS verification/i);
+  assert.match(settingsReference, /`\/blu-verify-work` remains explicitly runnable/i);
+  assert.match(settingsReference, /quality gates still block completion/i);
 });
 
 test("settings docs describe workflow.subagents as fallback policy rather than visibility or routing control", async () => {
-  const [settingsDoc, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
+  const [settingsCommand, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -116,21 +128,20 @@ test("settings docs describe workflow.subagents as fallback policy rather than v
     )
   ]);
 
-  for (const markdown of [settingsDoc, settingsReference]) {
-    assert.match(
-      markdown,
-      /workflow\.subagents.*disables optional Blueprint subagent invocation/i
-    );
-    assert.match(markdown, /no-subagent fallback/i);
-    assert.match(markdown, /does not hide agent entries/i);
-    assert.match(markdown, /does not .*change agent catalog visibility/i);
-    assert.match(markdown, /does not .*implemented-command routing/i);
-  }
+  assert.match(settingsCommand, /`workflow\.subagents`/);
+  assert.match(
+    settingsReference,
+    /workflow\.subagents.*disables optional Blueprint subagent invocation/i
+  );
+  assert.match(settingsReference, /no-subagent fallback/i);
+  assert.match(settingsReference, /does not hide agent entries/i);
+  assert.match(settingsReference, /does not .*change agent catalog visibility/i);
+  assert.match(settingsReference, /does not .*implemented-command routing/i);
 });
 
 test("settings docs describe workflow.no_uat as lifecycle optionality with manual UAT preserved", async () => {
-  const [settingsDoc, settingsReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
+  const [settingsCommand, settingsReference] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
     readFile(
       path.join(
         repoRoot,
@@ -140,10 +151,12 @@ test("settings docs describe workflow.no_uat as lifecycle optionality with manua
     )
   ]);
 
-  for (const markdown of [settingsDoc, settingsReference]) {
-    assert.match(markdown, /workflow\.no_uat.*defaults to `false`/i);
-    assert.match(markdown, /missing UAT evidence optional/i);
-    assert.match(markdown, /\/blu-verify-work.*explicitly runnable|\/blu-verify-work.*manually runnable/i);
-    assert.match(markdown, /quality gates still block completion/i);
-  }
+  assert.match(settingsCommand, /`workflow\.no_uat`/);
+  assert.match(settingsReference, /workflow\.no_uat.*defaults to `false`/i);
+  assert.match(settingsReference, /missing UAT evidence optional/i);
+  assert.match(
+    settingsReference,
+    /\/blu-verify-work.*explicitly runnable|\/blu-verify-work.*manually runnable/i
+  );
+  assert.match(settingsReference, /quality gates still block completion/i);
 });

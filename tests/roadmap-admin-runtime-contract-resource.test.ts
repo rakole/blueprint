@@ -85,7 +85,7 @@ test("roadmap-admin implemented commands stay docless when docs are unavailable"
     assert.doesNotMatch(JSON.stringify(contract), /docs\//);
   }
 
-  assert.ok(attemptedDocs.has("docs/COMMAND-CATALOG.md"));
+  assert.deepEqual([...attemptedDocs], []);
 });
 
 test("new-milestone runtime resource keeps config-gated roadmapper inputs docless", async () => {

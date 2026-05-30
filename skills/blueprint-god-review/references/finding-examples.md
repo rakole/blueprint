@@ -91,8 +91,8 @@ Confidence: high
 Disposition: accepted-risk
 Fix Eligibility: ineligible
 Files/Evidence:
-- `docs/decisions/review-retention.md` says private audit reports are retained
-  for traceability after temporary state cleanup.
+- The review-retention decision says private audit reports are retained for
+  traceability after temporary state cleanup.
 - `src/runtime/cleanup.ts:144` deletes only session JSON and human state.
 Impact: retained reports may include internal file paths, but this is the
 documented retention policy for private review runs.

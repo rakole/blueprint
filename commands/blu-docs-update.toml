@@ -15,7 +15,7 @@ Follow this flow exactly:
 3. Resolve the documentation scope from the user's request before editing anything:
    - If the user named one or more doc files, keep the write scope to those files.
    - If the user passed `--verify-only`, stay read-only for repo docs and prepare only the verification report.
-   - If the user did not name a scope, default to a narrow pass on `README.md` plus closely related top-level repo docs. Do not fan out into `.blueprint/`, `docs/commands/`, or large internal doc sweeps unless the user clearly asked for that breadth.
+   - If the user did not name a scope, default to a narrow pass on `README.md` plus closely related top-level repo docs. Do not fan out into `.blueprint/`, command-spec docs, or large internal doc sweeps unless the user clearly asked for that breadth.
    - If the resolved pass would broaden into a repo-wide or multi-directory doc sweep, require explicit confirmation before mutating those docs unless the user already approved that breadth or passed `--force`.
 4. Build a compact evidence digest through `mcp_blueprint_blueprint_artifact_summary_digest`. Use explicit repo-relative `artifactPaths`, `docFiles`, `sourceFiles`, or `testFiles` so the digest is grounded in the selected documentation scope, the current codebase bundle when it exists, and any relevant Blueprint project artifacts. Treat the returned `inputsUsed` list as the authoritative digest scope.
 5. Keep repo truth explicit: the selected repo docs, source files, tests, and saved Blueprint artifacts are the primary evidence baseline for the run.

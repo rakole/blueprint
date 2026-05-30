@@ -1097,31 +1097,37 @@ test("artifact contract registry exposes canonical contract ids and templates", 
 
 test("bootstrap PROJECT.md docs stay aligned with the runtime Markdown contract", async () => {
   const projectContract = readArtifactContract("bootstrap.project");
-  const artifactSchemaDoc = await readFile(
-    new URL("../docs/ARTIFACT-SCHEMA.md", import.meta.url),
-    "utf8"
-  );
-  const mcpToolsDoc = await readFile(new URL("../docs/MCP-TOOLS.md", import.meta.url), "utf8");
-  const commandDoc = await readFile(
-    new URL("../docs/commands/new-project.md", import.meta.url),
-    "utf8"
+  const projectContractFromTool = await blueprintArtifactContractRead({
+    artifactId: "bootstrap.project"
+  });
+  const bootstrapContracts = listArtifactContracts().filter((contract) =>
+    contract.id.startsWith("bootstrap.")
   );
 
-  const projectSection = artifactSchemaDoc.match(
-    /### `PROJECT\.md`[\s\S]*?(?=### `REQUIREMENTS\.md`)/
-  )?.[0];
-
-  assert.ok(projectSection, "ARTIFACT-SCHEMA.md must document PROJECT.md");
   assert.equal(projectContract.modelContract, undefined);
+  assert.equal(projectContractFromTool.contract.modelContract, undefined);
+  assert.equal(projectContract.ownerTool, "blueprint_project_init");
+  assert.equal(projectContract.pathOwner, projectContract.ownerTool);
+  assert.equal(projectContract.canonicalFilePattern, ".blueprint/PROJECT.md");
+  assert.ok(
+    bootstrapContracts.some((contract) => contract.id === "bootstrap.project"),
+    "bootstrap.project should stay listed in the runtime contract registry"
+  );
   for (const heading of projectContract.requiredHeadings) {
-    assert.match(projectSection, new RegExp(`- \`${heading}\``));
+    assert.match(projectContract.scaffoldTemplate, new RegExp(`## ${heading}`));
   }
-  assert.match(projectSection, /Markdown artifact contract/i);
-  assert.match(projectSection, /does not expose a `modelContract`/);
-  assert.match(mcpToolsDoc, /bootstrap contracts such as `bootstrap\.project` are not schema-first/i);
-  assert.match(mcpToolsDoc, /`diagnostics` gives structured repair metadata/i);
-  assert.match(commandDoc, /`bootstrap\.project` is Markdown-contract-backed/i);
-  assert.match(commandDoc, /recoverable seed\/preflight invalid/i);
+  assert.deepEqual(
+    projectContractFromTool.contract.requiredHeadings,
+    projectContract.requiredHeadings
+  );
+  assert.ok(
+    projectContract.notes.some((note) => /scope posture/i.test(note)),
+    "bootstrap.project should keep its bootstrap scope-posture guidance"
+  );
+  assert.ok(
+    projectContract.notes.some((note) => /Validation expects substantive content/i.test(note)),
+    "bootstrap.project should keep substantive validation guidance in the runtime contract"
+  );
 });
 
 test("canonical lifecycle contracts allow additional top-level headings without breaking validation", () => {

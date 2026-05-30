@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  getRuntimeOwnedCommandMetadata
+} from "../src/mcp/command-runtime-metadata.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
 
 const repoRoot = process.cwd();
@@ -78,39 +82,77 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.doesNotMatch(routerSkill, /## Required Inputs/);
 });
 
-test("router pilot runtime reference rows keep the waiting-state contract aligned", async () => {
-  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+test("router pilot runtime-owned metadata keeps the waiting-state contract aligned", async () => {
+  const [helpMetadata, progressMetadata, nextMetadata] = [
+    getRuntimeOwnedCommandMetadata("help"),
+    getRuntimeOwnedCommandMetadata("progress"),
+    getRuntimeOwnedCommandMetadata("next")
+  ];
+  const [helpContract, progressContract, nextContract] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("help"),
+    buildBlueprintCommandRuntimeContractResource("progress"),
+    buildBlueprintCommandRuntimeContractResource("next")
+  ]);
 
+  assert.ok(helpMetadata);
+  assert.equal(helpMetadata.sourceId, "src/mcp/command-runtime-metadata.ts#help");
+  assert.equal(helpMetadata.catalog.primarySkill, "blueprint-router");
+  assert.deepEqual(helpMetadata.requiredTools, [
+    "blueprint_command_catalog",
+    "blueprint_project_status"
+  ]);
   assert.match(
-    runtimeReference,
-    /\| `\/blu` \| `commands\/blu\.toml` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status`<br>`blueprint_config_get` \|/
+    helpMetadata.runtimeReference.contractNotes,
+    /report the waiting state from project status/i
   );
+  assert.match(helpMetadata.runtimeReference.contractNotes, /never present planned or blocked commands as runnable/i);
+  assert.deepEqual(helpMetadata.requiredInputPaths, [
+    "commands/blu-help.toml"
+  ]);
+  assert.deepEqual(helpContract.skillInputs.effective, ["commands/blu-help.toml"]);
+  assert.equal(helpContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
+
+  assert.ok(progressMetadata);
+  assert.equal(progressMetadata.sourceId, "src/mcp/command-runtime-metadata.ts#progress");
+  assert.equal(progressMetadata.catalog.primarySkill, "blueprint-router");
+  assert.deepEqual(progressMetadata.requiredTools, [
+    "blueprint_project_status",
+    "blueprint_config_get",
+    "blueprint_state_load",
+    "blueprint_artifact_list",
+    "blueprint_command_catalog"
+  ]);
   assert.match(
-    runtimeReference,
-    /Host-native root router; when routing is blocked or incomplete, explain the missing prerequisite or blocked-command reason and keep recommendations inside the implemented command surface only\./
+    progressMetadata.runtimeReference.contractNotes,
+    /preserve read-only next-step guidance/i
   );
+  assert.match(progressMetadata.runtimeReference.contractNotes, /pending gates/i);
+  assert.deepEqual(progressMetadata.requiredInputPaths, [
+    "commands/blu-progress.toml"
+  ]);
+  assert.deepEqual(progressContract.skillInputs.effective, ["commands/blu-progress.toml"]);
+  assert.equal(
+    progressContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
+    false
+  );
+
+  assert.ok(nextMetadata);
+  assert.equal(nextMetadata.sourceId, "src/mcp/command-runtime-metadata.ts#next");
+  assert.equal(nextMetadata.catalog.primarySkill, "blueprint-router");
+  assert.deepEqual(nextMetadata.requiredTools, [
+    "blueprint_project_status",
+    "blueprint_state_load",
+    "blueprint_artifact_list",
+    "blueprint_command_catalog"
+  ]);
   assert.match(
-    runtimeReference,
-    /\| `help` \| `src\/mcp\/command-runtime-metadata\.ts#help` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
+    nextMetadata.runtimeReference.contractNotes,
+    /report waiting state and the next safe follow-up explicitly/i
   );
-  assert.match(
-    runtimeReference,
-    /Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable\./
-  );
-  assert.match(
-    runtimeReference,
-    /\| `progress` \| `src\/mcp\/command-runtime-metadata\.ts#progress` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_config_get`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
-  );
-  assert.match(
-    runtimeReference,
-    /Router profile; preserve read-only next-step guidance while surfacing active profile, branching mode, blockers, pending gates, and config warnings from normalized config, and keep recommendations inside the implemented runtime surface\./
-  );
-  assert.match(
-    runtimeReference,
-    /\| `next` \| `src\/mcp\/command-runtime-metadata\.ts#next` \| `blueprint-router` \| `blueprint_project_status`<br>`blueprint_state_load`<br>`blueprint_artifact_list`<br>`blueprint_command_catalog` \|/
-  );
-  assert.match(
-    runtimeReference,
-    /Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing\./
-  );
+  assert.match(nextMetadata.runtimeReference.contractNotes, /never hide destructive behavior behind implicit routing/i);
+  assert.deepEqual(nextMetadata.requiredInputPaths, [
+    "commands/blu-next.toml"
+  ]);
+  assert.deepEqual(nextContract.skillInputs.effective, ["commands/blu-next.toml"]);
+  assert.equal(nextContract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
 });

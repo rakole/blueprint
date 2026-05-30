@@ -12,7 +12,7 @@ const repoRoot = process.cwd();
 
 test("help manifest and runtime reference stay aligned on router profile and waiting-state guidance", async () => {
   const commandFile = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
-  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("help");
   const manifestTools = [
     ...new Set(
       [...commandFile.matchAll(/mcp_blueprint_blueprint_[a-z0-9_]+/g)].map((match) => match[0])
@@ -42,25 +42,26 @@ test("help manifest and runtime reference stay aligned on router profile and wai
   );
 
   assert.match(
-    runtimeReference,
-    /\| `help` \| `src\/mcp\/command-runtime-metadata\.ts#help` \| `blueprint-router` \| `blueprint_command_catalog`<br>`blueprint_project_status` \|/
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /report the waiting state from project status/i
   );
   assert.match(
-    runtimeReference,
-    /Router profile; report the waiting state from project status, keep the next safe action explicit, and never present planned or blocked commands as runnable\./
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /keep the next safe action explicit/i
   );
   assert.match(
-    runtimeReference,
+    runtimeContract.runtimeReference?.contractNotes ?? "",
     /Recommend `?\/blu-spec-phase <phase>`? only after `?blueprint_command_catalog`? proves it implemented/i
   );
   assert.match(
-    runtimeReference,
+    runtimeContract.runtimeReference?.contractNotes ?? "",
     /do not treat missing `?XX-SPEC\.md`? alone as a normal lifecycle blocker/i
   );
-  assert.match(
-    runtimeReference,
-    /\| `help` [^\n]+ \| `locked`; `source-owned`; `needs-behavior-audit` \|/
-  );
+  assert.deepEqual(runtimeContract.runtimeReference?.evidenceState, [
+    "locked",
+    "source-owned",
+    "needs-behavior-audit"
+  ]);
 });
 
 test("help runtime contract is source-owned and uses only the command manifest as active input", async () => {
@@ -111,11 +112,7 @@ test("help remains implemented when docs-backed command specs are unavailable", 
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
-    if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
-      normalizedPath.endsWith("/docs/commands/help.md")
-    ) {
+    if (/\/docs\/.+\.md$/.test(normalizedPath)) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;

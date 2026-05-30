@@ -74,149 +74,6 @@ async function readBundledFile(relativePath: string): Promise<string | null> {
   }
 }
 
-function extractMarkdownSection(markdown: string, heading: string): string {
-  const escapedHeading = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = markdown.match(
-    new RegExp(`(?:^|\\n)## ${escapedHeading}\\s*\\n([\\s\\S]*?)(?=\\n## |$)`)
-  );
-
-  return match?.[1]?.trim() ?? "";
-}
-
-function collapseMarkdownText(markdown: string): string | null {
-  const normalized = markdown
-    .replace(/`/g, "")
-    .replace(/\[(.*?)\]\([^)]+\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return normalized.length > 0 ? normalized : null;
-}
-
-function parseRequiredTools(markdown: string): string[] {
-  return [...markdown.matchAll(/`(blueprint_[a-z0-9_]+)`/g)].map((match) => match[1]);
-}
-
-function parseBulletSection(markdown: string): string[] {
-  return markdown
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("- "))
-    .map((line) => line.slice(2).trim())
-    .filter((line) => line.length > 0 && line.toLowerCase() !== "none");
-}
-
-function parseOptionalSubagents(markdown: string): string[] {
-  const section = extractMarkdownSection(markdown, "Skills And Subagents");
-  const match = section.match(/- Optional subagents:\s*(.+)/);
-
-  if (!match || /\bnone\b/i.test(match[1])) {
-    return [];
-  }
-
-  return [...match[1].matchAll(/`([a-z0-9-]+)`/g)].map((result) => result[1]);
-}
-
-function parsePrimarySkill(markdown: string): string | null {
-  const section = extractMarkdownSection(markdown, "Skills And Subagents");
-  const match = section.match(/- Primary skill:\s*`([^`]+)`/);
-  return match?.[1] ?? null;
-}
-
-function parseCommandSpec(markdown: string, specPath: string): BlueprintCommandSpecResource {
-  const headingMatch = markdown.match(/^#\s+(.+)$/m);
-  const waveMatch = markdown.match(/\| Wave \| `([^`]+)` \|/);
-  const familyMatch = markdown.match(/\| Family \| `([^`]+)` \|/);
-  const executionProfileMatch = markdown.match(/\| Execution profile \| `([^`]+)` \|/);
-  const rootRoutableMatch = markdown.match(/\| Root-routable \| (.+?) \|/);
-
-  return {
-    path: specPath,
-    title: headingMatch?.[1]?.trim() ?? null,
-    wave: waveMatch ? Number.parseInt(waveMatch[1], 10) : null,
-    family: familyMatch?.[1] ?? null,
-    executionProfile: executionProfileMatch?.[1] ?? null,
-    rootRoutable: rootRoutableMatch
-      ? rootRoutableMatch[1].trim().toLowerCase().startsWith("yes")
-      : null,
-    purpose: collapseMarkdownText(extractMarkdownSection(markdown, "Purpose")),
-    requiredTools: parseRequiredTools(extractMarkdownSection(markdown, "Required MCP Tools")),
-    primarySkill: parsePrimarySkill(markdown),
-    optionalSubagents: parseOptionalSubagents(markdown),
-    reads: parseBulletSection(extractMarkdownSection(markdown, "Blueprint And Global State Reads")),
-    writes: parseBulletSection(
-      extractMarkdownSection(markdown, "Blueprint And Global State Writes")
-    )
-  };
-}
-
-function parseInlineList(cell: string): string[] {
-  const normalized = cell
-    .replaceAll("<br>", "\n")
-    .replace(/`/g, "")
-    .trim();
-
-  if (normalized.length === 0 || normalized.toLowerCase() === "none") {
-    return [];
-  }
-
-  return normalized
-    .split(/\n|;\s+/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0 && entry.toLowerCase() !== "none");
-}
-
-function parseRuntimeReferenceRows(
-  markdown: string
-): Map<string, BlueprintRuntimeReferenceRowResource> {
-  const rows = new Map<string, BlueprintRuntimeReferenceRowResource>();
-  let currentWaveTitle: string | null = null;
-  let currentWaveNumber: number | null = null;
-
-  for (const line of markdown.split("\n")) {
-    const waveHeaderMatch = line.match(/^### Wave ([0-9]+):\s+(.+)$/);
-
-    if (waveHeaderMatch) {
-      currentWaveNumber = Number.parseInt(waveHeaderMatch[1], 10);
-      currentWaveTitle = waveHeaderMatch[2].trim();
-      continue;
-    }
-
-    const trimmed = line.trim();
-
-    if (!trimmed.startsWith("| `") || trimmed.startsWith("|---")) {
-      continue;
-    }
-
-    const cells = trimmed
-      .split("|")
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-
-    if (cells.length < 8) {
-      continue;
-    }
-
-    const command = cells[0].replaceAll("`", "");
-
-    rows.set(command, {
-      path: "docs/RUNTIME-REFERENCE.md",
-      wave: currentWaveNumber,
-      waveTitle: currentWaveTitle,
-      command,
-      commandSpecPath: cells[1].replaceAll("`", "") || null,
-      primarySkill: cells[2].replaceAll("`", "") || null,
-      exactMcpDestination: parseInlineList(cells[3]),
-      optionalAgents: parseInlineList(cells[4]),
-      hookInvolvement: parseInlineList(cells[5]),
-      contractNotes: collapseMarkdownText(cells[6]),
-      evidenceState: parseInlineList(cells[7])
-    });
-  }
-
-  return rows;
-}
-
 function buildCommandRuntimeContractUri(commandName: string): string {
   return `blueprint://commands/${encodeURIComponent(commandName)}/runtime-contract`;
 }
@@ -250,23 +107,6 @@ function runtimeOwnedMetadataToRuntimeReferenceRow(
   };
 }
 
-async function readBlueprintRuntimeReferenceRows(
-  readRelativePath: RelativePathReader = readBundledFile
-): Promise<
-  Map<string, BlueprintRuntimeReferenceRowResource>
-> {
-  const runtimeReferenceMarkdown = await readRelativePath("docs/RUNTIME-REFERENCE.md");
-  const rows = runtimeReferenceMarkdown
-    ? parseRuntimeReferenceRows(runtimeReferenceMarkdown)
-    : new Map<string, BlueprintRuntimeReferenceRowResource>();
-
-  for (const metadata of listRuntimeOwnedCommandMetadata()) {
-    rows.set(metadata.commandName, runtimeOwnedMetadataToRuntimeReferenceRow(metadata));
-  }
-
-  return rows;
-}
-
 function runtimeOwnedMetadataToCommandSpec(
   metadata: RuntimeOwnedCommandMetadata
 ): BlueprintCommandSpecResource {
@@ -286,23 +126,19 @@ function runtimeOwnedMetadataToCommandSpec(
   };
 }
 
-async function readBundledCommandSpec(
-  entry: CommandCatalogEntry,
-  readRelativePath: RelativePathReader = readBundledFile
-): Promise<BlueprintCommandSpecResource | null> {
-  const runtimeMetadata = getRuntimeOwnedCommandMetadataBySourceId(entry.specPath);
-
-  if (runtimeMetadata) {
-    return runtimeOwnedMetadataToCommandSpec(runtimeMetadata);
-  }
-
-  if (!entry.specPath) {
+function getImplementedRuntimeOwnedContractMetadata(
+  commandName: string,
+  entry: CommandCatalogEntry | undefined
+): RuntimeOwnedCommandMetadata | null {
+  if (!entry || !isExposedRuntimeContractCatalogEntry(entry)) {
     return null;
   }
 
-  const specMarkdown = await readRelativePath(entry.specPath);
-
-  return specMarkdown ? parseCommandSpec(specMarkdown, entry.specPath) : null;
+  return (
+    getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ??
+    getRuntimeOwnedCommandMetadata(commandName) ??
+    null
+  );
 }
 
 export async function buildBlueprintCommandCatalogResource(): Promise<CommandCatalogResult> {
@@ -311,21 +147,11 @@ export async function buildBlueprintCommandCatalogResource(): Promise<CommandCat
 
 export async function listBlueprintCommandRuntimeContractCommands(): Promise<string[]> {
   const catalog = await blueprintCommandCatalog();
-  const runtimeReferenceRows = await readBlueprintRuntimeReferenceRows();
-  const commands = await Promise.all(
-    Object.entries(catalog.commands).map(async ([commandName, entry]) => {
-      if (!isExposedRuntimeContractCatalogEntry(entry)) {
-        return null;
-      }
-
-      const spec = await readBundledCommandSpec(entry);
-
-      return spec && runtimeReferenceRows.has(commandName) ? commandName : null;
-    })
-  );
-
-  return commands
-    .filter((commandName): commandName is string => commandName !== null)
+  return Object.entries(catalog.commands)
+    .filter(([commandName, entry]) =>
+      getImplementedRuntimeOwnedContractMetadata(commandName, entry) !== null
+    )
+    .map(([commandName]) => commandName)
     .sort();
 }
 
@@ -336,27 +162,16 @@ export async function buildBlueprintCommandRuntimeContractResource(
   const readRelativePath = options.readRelativePath ?? readBundledFile;
   const catalog = await blueprintCommandCatalog();
   const entry = catalog.commands[commandName];
+  const runtimeMetadata = getImplementedRuntimeOwnedContractMetadata(commandName, entry);
 
   if (!entry) {
     throw new Error(`Unknown Blueprint command: ${commandName}`);
   }
 
-  if (!isExposedRuntimeContractCatalogEntry(entry)) {
+  if (!runtimeMetadata) {
     throw new Error(buildNonImplementedRuntimeContractErrorMessage(commandName));
   }
 
-  const runtimeMetadata =
-    getRuntimeOwnedCommandMetadataBySourceId(entry.specPath) ??
-    getRuntimeOwnedCommandMetadata(commandName);
-  const [spec, runtimeReference] = runtimeMetadata
-    ? [
-        runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
-        runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata)
-      ]
-    : await Promise.all([
-        readBundledCommandSpec(entry, readRelativePath),
-        readBlueprintRuntimeReferenceRows(readRelativePath).then((rows) => rows.get(commandName))
-      ]);
   const skillInputs = await loadBlueprintSkillInputs(
     entry.primarySkill,
     entry.command,
@@ -364,20 +179,12 @@ export async function buildBlueprintCommandRuntimeContractResource(
     entry.skillPath
   );
 
-  if (!spec || !entry.specPath) {
-    throw new Error(`Missing locked command spec for Blueprint command: ${commandName}`);
-  }
-
-  if (!runtimeReference) {
-    throw new Error(`Missing runtime reference row for Blueprint command: ${commandName}`);
-  }
-
   return {
     command: commandName,
     uri: buildCommandRuntimeContractUri(commandName),
     catalog: entry,
-    spec,
-    runtimeReference,
+    spec: runtimeOwnedMetadataToCommandSpec(runtimeMetadata),
+    runtimeReference: runtimeOwnedMetadataToRuntimeReferenceRow(runtimeMetadata),
     skillInputs
   };
 }

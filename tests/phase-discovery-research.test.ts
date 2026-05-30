@@ -47,10 +47,7 @@ const RESEARCH_PHASE_ACTIVE_SURFACE_BASELINE_BYTES = {
 
 const RESEARCH_PHASE_INVENTORY_SURFACE_BASELINE_BYTES = {
   // Inventory-only surfaces are not part of the effective research skill bundle.
-  "agents/blueprint-researcher.md": 21770,
-  "docs/commands/research-phase.md": 21721,
-  "docs/MCP-TOOLS.md": 92831,
-  "docs/RUNTIME-REFERENCE.md": 84570
+  "agents/blueprint-researcher.md": 21770
 } as const;
 
 function byteLength(content: string): number {
@@ -109,12 +106,7 @@ async function readResearchSurfaceSizes(): Promise<ResearchSurfaceSizes> {
   ] = byteLength(metadata.runtimeReference.contractNotes);
 
   const inventoryOnly: Record<string, number> = {};
-  for (const filePath of [
-    "agents/blueprint-researcher.md",
-    "docs/commands/research-phase.md",
-    "docs/MCP-TOOLS.md",
-    "docs/RUNTIME-REFERENCE.md"
-  ]) {
+  for (const filePath of ["agents/blueprint-researcher.md"]) {
     inventoryOnly[filePath] = byteLength(
       await readFile(path.join(repoRoot, filePath), "utf8")
     );
@@ -521,15 +513,6 @@ test("research-phase command references only registered tool names and safe rout
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const docFile = await readFile(
-    path.join(repoRoot, "docs/commands/research-phase.md"),
-    "utf8"
-  );
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
-  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
     "utf8"
@@ -601,93 +584,6 @@ test("research-phase command references only registered tool names and safe rout
   assert.doesNotMatch(commandFile, /update_topic|write_todos/);
   assert.doesNotMatch(commandFile, /Source-Support Self-Check|Claim Support Ledger|Source Register|Recommendation Handoff/);
   assert.doesNotMatch(commandFile, /skills\/blueprint-phase-discovery\.md|agents\/blueprint-researcher\.md/);
-  assert.ok(docFile.includes("`blueprint_artifact_contract_read` -> `{artifactId, contract}`"));
-  assert.ok(docFile.includes("contract.authoringTemplate"));
-  assert.ok(docFile.includes("contract.freehandPolicy"));
-  assert.match(docFile, /extra top-level headings/i);
-  assert.match(docFile, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(docFile, /active command's inputs/i);
-  assert.match(docFile, /research\.external_sources/i);
-  assert.match(docFile, /workflowPosture\.research\.externalSources/i);
-  assert.match(docFile, /default to reuse unless the user chooses `view` or `update`/i);
-  assert.match(docFile, /Choosing `update` is the overwrite gate/i);
-  assert.match(docFile, /MCP validation does not require either marker/i);
-  assert.match(docFile, /official docs or explicitly supplied external references/i);
-  assert.match(docFile, /investigation trace/i);
-  assert.match(docFile, /navigation evidence packet/i);
-  assert.match(docFile, /repository evidence ladder/i);
-  assert.match(docFile, /per-strand search notes/i);
-  assert.match(docFile, /remote code-search results as discovery hints/i);
-  assert.match(docFile, /planning handoff/i);
-  assert.match(docFile, /parent-owned research strand ledger/i);
-  assert.match(docFile, /researchLedger/i);
-  assert.match(docFile, /not child-agent transcripts/i);
-  assert.match(docFile, /safe research checkpoints resume by default/i);
-  assert.match(docFile, /guarded MCP delete path|guarded delete/i);
-  assert.match(docFile, /state sync, refreshed state load, or command-catalog routing fails/i);
-  assert.match(docFile, /dependency\/tool evaluation/i);
-  assert.match(docFile, /supply-chain-aware/i);
-  assert.match(docFile, /unchecked\/deferred|unchecked/i);
-  assert.match(docFile, /failed\/noisy\/no-hit or limited searches|failed or limited searches/i);
-  assert.match(docFile, /If the context read returns `found: false`, stop and route back to `\/blu-discuss-phase <phase>`/i);
-  assert.match(docFile, /Invalid existing research must go through repair/i);
-  assert.match(docFile, /use the runtime contract's single-agent topic-strand fallback/i);
-  assert.match(
-    docFile,
-    /call `blueprint_state_update` with `base: "synced"`[\s\S]*`blueprint_state_load`/i
-  );
-  assert.match(docFile, /patch\.currentPhase/i);
-  assert.doesNotMatch(docFile, /update_topic|write_todos/);
-
-  assert.match(runtimeReference, /\| `research-phase` \|[\s\S]*?blueprint_phase_checkpoint_get[\s\S]*?blueprint_phase_checkpoint_put[\s\S]*?blueprint_phase_checkpoint_delete/);
-  const researchRuntimeRow = runtimeReference
-    .split("\n")
-    .find((line) => line.startsWith("| `research-phase` |"));
-  assert.ok(researchRuntimeRow, "runtime reference should include the research-phase row");
-  assert.match(researchRuntimeRow, /phase-local spec[\s\S]*phase\.artifacts\.spec[\s\S]*missing spec as nonblocking/i);
-  assert.match(researchRuntimeRow, /research strands and dependency\/tool choices[\s\S]*spec requirements or constraints/i);
-  assert.match(researchRuntimeRow, /spec path and requirement labels[\s\S]*Recommendation Handoff/i);
-  assert.match(researchRuntimeRow, /stale context[\s\S]*\/blu-discuss-phase <phase>/i);
-  assert.match(researchRuntimeRow, /stale or wrong spec[\s\S]*\/blu-spec-phase <phase>/i);
-  assertAllMatch("runtime reference row", runtimeReference, [
-    /research-phase-runtime-contract\.md/i,
-    /blueprint_phase_context\.phaseSelection[\s\S]*phase_context\.phase/i,
-    /blueprint_phase_locate` is fallback-only recovery/i,
-    /Independent read-only calls[\s\S]*one tool-call turn/i,
-    /phase\.research|contract\.authoringTemplate/i,
-    /implemented-command routing/i,
-    /checkpoint/i,
-    /parent/i,
-    /sidecar/i
-  ]);
-  assert.match(
-    mcpToolsDoc,
-    /`research-phase` uses `blueprint_phase_context` as the first selected-phase read[\s\S]*fallback-only recovery[\s\S]*research status, discovery artifact read\/scaffold\/write tools/i
-  );
-  assert.match(
-    mcpToolsDoc,
-    /Independent read-only calls[\s\S]*same model response\/tool-call turn[\s\S]*user confirmations, writes, validation repair, state update, post-write refreshed state load, command-catalog proof, and checkpoint deletion stay sequenced/i
-  );
-  assert.match(mcpToolsDoc, /research-phase-runtime-contract\.md/);
-  assert.match(mcpToolsDoc, /workflowPosture\.research\.externalSources/);
-  assert.match(mcpToolsDoc, /off`\/`ask`\/`auto`/i);
-  assert.match(mcpToolsDoc, /runtime-contract guidance rather than an MCP validation gate/i);
-  assert.match(mcpToolsDoc, /initial assessment/i);
-  assert.match(mcpToolsDoc, /navigation evidence packet/i);
-  assert.match(mcpToolsDoc, /planning handoffs/i);
-  assert.match(mcpToolsDoc, /parent-owned research strand ledger/i);
-  assert.match(mcpToolsDoc, /researchLedger/i);
-  assert.match(mcpToolsDoc, /child-agent transcripts/i);
-  assert.match(mcpToolsDoc, /guarded delete/i);
-  assert.match(mcpToolsDoc, /dependency\/tool choices/i);
-  assert.match(mcpToolsDoc, /supply-chain evidence/i);
-  assert.match(mcpToolsDoc, /repository search discipline/i);
-  assert.match(mcpToolsDoc, /bounded `blueprint-researcher` findings/i);
-  assert.match(mcpToolsDoc, /single-agent topic-strand fallback/i);
-  assert.match(mcpToolsDoc, /reject browser\/web-search\/shell-only or generic agents/i);
-  assert.match(mcpToolsDoc, /stop on missing `XX-CONTEXT\.md`/i);
-  assert.match(mcpToolsDoc, /force repair when existing research is invalid/i);
-  assert.match(mcpToolsDoc, /sync `STATE\.md` even on valid non-writing reuse paths/i);
 
   assertAllMatch("shared discovery skill", skillFile, [
     /Execution profile for `\/blu-research-phase`: `long-running-mutation`/,
@@ -725,15 +621,7 @@ test("research-phase command references only registered tool names and safe rout
     "skills/blueprint-phase-discovery/references/research-phase-runtime-contract.md"
   ]);
   assert.equal(contract.skillInputs.effective.some((input) => input.startsWith("docs/")), false);
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/discuss-phase.md"),
-    false
-  );
-  assert.equal(contract.skillInputs.effective.includes("docs/commands/ui-phase.md"), false);
-  assert.equal(
-    contract.skillInputs.effective.includes("docs/commands/list-phase-assumptions.md"),
-    false
-  );
+  assert.equal(metadata.spec.executionProfile, "long-running-mutation");
   assert.match(
     contract.spec?.reads?.join(" ") ?? "",
     /Phase selection starts with blueprint_phase_context\.phaseSelection[\s\S]*number[\s\S]*prefix[\s\S]*name[\s\S]*directory[\s\S]*phase_context\.phase\.artifacts inventory[\s\S]*blueprint_phase_locate stays fallback-only recovery/i
@@ -746,6 +634,20 @@ test("research-phase command references only registered tool names and safe rout
     contract.runtimeReference?.contractNotes ?? "",
     /Independent read-only calls with known args may share one tool-call turn[\s\S]*checkpoint deletion stay sequenced/i
   );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /phase-local spec[\s\S]*phase\.artifacts\.spec[\s\S]*missing spec as nonblocking/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /research strands and dependency\/tool choices[\s\S]*spec requirements or constraints/i
+  );
+  assert.match(
+    metadata.runtimeReference.contractNotes,
+    /spec path and requirement labels[\s\S]*Recommendation Handoff/i
+  );
+  assert.match(metadata.runtimeReference.contractNotes, /stale context[\s\S]*\/blu-discuss-phase <phase>/i);
+  assert.match(metadata.runtimeReference.contractNotes, /stale or wrong spec[\s\S]*\/blu-spec-phase <phase>/i);
   assert.match(
     runtimeContract,
     /`blueprint_phase_context`: call this first as the selected-phase read[\s\S]*selected-phase authority/i
@@ -961,10 +863,6 @@ test("research-phase spec evidence stays context-gated and nonblocking across ru
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const docFile = await readFile(
-    path.join(repoRoot, "docs/commands/research-phase.md"),
-    "utf8"
-  );
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
     "utf8"
@@ -976,7 +874,6 @@ test("research-phase spec evidence stays context-gated and nonblocking across ru
     ),
     "utf8"
   );
-  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
   const metadata = getRuntimeOwnedCommandMetadata("research-phase");
   const contract = await buildBlueprintCommandRuntimeContractResource("research-phase");
 
@@ -1014,12 +911,6 @@ test("research-phase spec evidence stays context-gated and nonblocking across ru
       expectation: "should tell the command to read spec only after usable context is confirmed and only when the spec artifact exists"
     },
     {
-      surfaceName: "command doc",
-      content: docFile,
-      pattern: /After usable context is confirmed[\s\S]*`blueprint_phase_artifact_read`[\s\S]*`artifact: \"spec\"`[\s\S]*phase\.artifacts\.spec[\s\S]*Missing spec is nonblocking/i,
-      expectation: "should document the optional spec read path and nonblocking missing-spec behavior"
-    },
-    {
       surfaceName: "shared discovery skill",
       content: skillFile,
       pattern: /\/blu-research-phase[\s\S]*usable context[\s\S]*`artifact: "spec"`[\s\S]*phase\.artifacts\.spec[\s\S]*nonblocking/i,
@@ -1030,12 +921,6 @@ test("research-phase spec evidence stays context-gated and nonblocking across ru
       content: runtimeContract,
       pattern: /usable context[\s\S]*`blueprint_phase_artifact_read`[\s\S]*`artifact: "spec"`[\s\S]*phase\.artifacts\.spec[\s\S]*Missing spec is nonblocking/i,
       expectation: "should define the optional spec read only after usable context is confirmed"
-    },
-    {
-      surfaceName: "MCP tools doc",
-      content: mcpToolsDoc,
-      pattern: /research-phase[\s\S]*optional spec[\s\S]*phase\.artifacts\.spec[\s\S]*Missing spec is nonblocking/i,
-      expectation: "should describe spec as optional research evidence instead of a readiness blocker"
     }
   ]);
 
@@ -1047,10 +932,6 @@ test("research-phase spec contradictions and planner-critical traceability stay 
     path.join(repoRoot, "commands/blu-research-phase.toml"),
     "utf8"
   );
-  const docFile = await readFile(
-    path.join(repoRoot, "docs/commands/research-phase.md"),
-    "utf8"
-  );
   const runtimeContract = await readFile(
     path.join(
       repoRoot,
@@ -1058,7 +939,6 @@ test("research-phase spec contradictions and planner-critical traceability stay 
     ),
     "utf8"
   );
-  const mcpToolsDoc = await readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8");
   const metadata = getRuntimeOwnedCommandMetadata("research-phase");
 
   assert.ok(metadata);
@@ -1083,22 +963,10 @@ test("research-phase spec contradictions and planner-critical traceability stay 
       expectation: "should explain contradiction routing plus compact spec-driven planner handoff traceability"
     },
     {
-      surfaceName: "command doc",
-      content: docFile,
-      pattern: /If spec and context contradict[\s\S]*context is stale relative to spec[\s\S]*\/blu-discuss-phase <phase>[\s\S]*spec is stale or wrong[\s\S]*\/blu-spec-phase <phase>[\s\S]*dependency\/tool[\s\S]*(?:spec requirement|spec constraint)[\s\S]*Recommendation Handoff[\s\S]*spec path[\s\S]*requirement labels/i,
-      expectation: "should document both contradiction routes and spec-aware planner handoff details"
-    },
-    {
       surfaceName: "research runtime contract",
       content: runtimeContract,
       pattern: /If spec and context contradict[\s\S]*context is stale relative to spec[\s\S]*\/blu-discuss-phase <phase>[\s\S]*spec is stale or wrong[\s\S]*\/blu-spec-phase <phase>[\s\S]*research strands[\s\S]*spec requirements or constraints[\s\S]*dependency\/tool[\s\S]*(?:spec requirement|spec constraint)[\s\S]*Recommendation Handoff[\s\S]*spec path[\s\S]*requirement labels/i,
       expectation: "should keep spec contradiction routing and spec-based traceability in the rich runtime contract"
-    },
-    {
-      surfaceName: "MCP tools doc",
-      content: mcpToolsDoc,
-      pattern: /research-phase[\s\S]*spec\/context contradictions[\s\S]*\/blu-discuss-phase[\s\S]*\/blu-spec-phase[\s\S]*dependency\/tool[\s\S]*(?:spec requirement|spec constraint)[\s\S]*Recommendation Handoff[\s\S]*spec path/i,
-      expectation: "should summarize spec contradiction routing and spec-aware planner-critical evidence in the tool docs"
     }
   ]);
 
@@ -1106,10 +974,6 @@ test("research-phase spec contradictions and planner-critical traceability stay 
 });
 
 test("research-phase spec integration keeps write ownership limited to research, checkpoints, and state", async () => {
-  const docFile = await readFile(
-    path.join(repoRoot, "docs/commands/research-phase.md"),
-    "utf8"
-  );
   const skillFile = await readFile(
     path.join(repoRoot, "skills/blueprint-phase-discovery/SKILL.md"),
     "utf8"
@@ -1135,12 +999,6 @@ test("research-phase spec integration keeps write ownership limited to research,
   );
 
   const failures = collectMatchFailures([
-    {
-      surfaceName: "command doc",
-      content: docFile,
-      pattern: /owns `XX-RESEARCH\.md` only[\s\S]*must not rewrite `XX-CONTEXT\.md`/i,
-      expectation: "should keep research ownership limited to RESEARCH.md instead of context rewrites"
-    },
     {
       surfaceName: "shared discovery skill",
       content: skillFile,

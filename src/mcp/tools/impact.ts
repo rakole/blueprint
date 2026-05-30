@@ -213,8 +213,6 @@ type ImpactSurface =
   | "env-config"
   | "command-catalog"
   | "command-manifest"
-  | "command-doc"
-  | "runtime-reference"
   | "mcp-server"
   | "mcp-tool"
   | "mcp-resource"
@@ -619,7 +617,6 @@ const DEPENDENCY_GRAPH_SCHEMA_VERSION = "blueprint.impact.dependency-graph.v1";
 const IMPACT_PROJECT_CONFIG_PATH = ".blueprint/impact/config.json";
 const IMPACT_REPORT_ROOT = ".blueprint/impact";
 const IMPACT_GLOBAL_DEFAULTS_BASENAME = "impact.defaults.json";
-const RUNTIME_REFERENCE_DOC_PATH = "docs/RUNTIME-REFERENCE.md";
 const GIT_COMMAND_TIMEOUT_MS = 15_000;
 const CODEOWNERS_CANDIDATES = [
   "CODEOWNERS",
@@ -647,25 +644,23 @@ const IMPACT_SURFACE_PRIORITY: Record<ImpactSurface, number> = {
   "env-config": 2,
   "command-catalog": 3,
   "command-manifest": 4,
-  "command-doc": 5,
-  "runtime-reference": 6,
-  "mcp-server": 7,
-  "mcp-tool": 8,
-  "mcp-resource": 9,
-  "artifact-contract": 10,
-  skill: 11,
-  agent: 12,
-  "extension-manifest": 13,
-  hook: 14,
-  "package-runtime": 15,
-  "build-config": 16,
-  test: 17,
-  docs: 18,
-  generated: 19,
-  config: 20,
-  source: 21,
-  "repo-root": 22,
-  unknown: 23
+  "mcp-server": 5,
+  "mcp-tool": 6,
+  "mcp-resource": 7,
+  "artifact-contract": 8,
+  skill: 9,
+  agent: 10,
+  "extension-manifest": 11,
+  hook: 12,
+  "package-runtime": 13,
+  "build-config": 14,
+  test: 15,
+  docs: 16,
+  generated: 17,
+  config: 18,
+  source: 19,
+  "repo-root": 20,
+  unknown: 21
 };
 const SOURCE_FILE_EXTENSIONS = new Set([
   ".cjs",
@@ -1104,8 +1099,6 @@ function areaForSurface(surface: ImpactSurface): string {
     [
       "command-catalog",
       "command-manifest",
-      "command-doc",
-      "runtime-reference",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -1170,24 +1163,22 @@ function classifyImpactFile(filePath: string): ImpactSurfaceRecord {
     addSurfaceRule(rules, "env-config", "Environment file path matched .env*.");
   }
 
-  if (normalizedPath === "docs/COMMAND-CATALOG.md") {
-    addSurfaceRule(rules, "command-catalog", "Command catalog documentation changed.");
-    addSurfaceRule(rules, "docs", "Command catalog is a documentation surface.");
-  }
-
-  if (normalizedPath === "docs/RUNTIME-REFERENCE.md") {
-    addSurfaceRule(rules, "runtime-reference", "Runtime reference contract documentation changed.");
-    addSurfaceRule(rules, "docs", "Runtime reference is a documentation surface.");
-  }
-
   if (/^commands\/[^/]+\.toml$/u.test(normalizedPath)) {
     addSurfaceRule(rules, "command-manifest", "Command manifest TOML changed.");
     addSurfaceRule(rules, "config", "Command manifests are TOML configuration.");
   }
 
-  if (hasPathSegment(normalizedPath, "docs/commands")) {
-    addSurfaceRule(rules, "command-doc", "Command specification documentation changed.");
-    addSurfaceRule(rules, "docs", "Command specifications are documentation surfaces.");
+  if (normalizedPath === "src/mcp/command-runtime-metadata.ts") {
+    addSurfaceRule(
+      rules,
+      "command-catalog",
+      "Runtime-owned command metadata source changed."
+    );
+    addSurfaceRule(
+      rules,
+      "source",
+      "Runtime-owned command metadata is TypeScript source."
+    );
   }
 
   if (normalizedPath === "src/mcp/server.ts") {
@@ -1653,8 +1644,6 @@ function highAssuranceSurfacePresent(surfaces: ImpactSurfaceRecord[]): boolean {
         "env-config",
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-server",
         "mcp-tool",
         "mcp-resource",
@@ -2118,8 +2107,6 @@ function isContractLikeSurface(record: ImpactSurfaceRecord): boolean {
     [
       "command-catalog",
       "command-manifest",
-      "command-doc",
-      "runtime-reference",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -3812,8 +3799,6 @@ function contextRequiresCatalog(surfaces: ImpactSurfaceRecord[]): boolean {
       [
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-resource"
       ].includes(name)
     )
@@ -3826,8 +3811,6 @@ function contextRequiresRuntime(surfaces: ImpactSurfaceRecord[]): boolean {
       [
         "command-catalog",
         "command-manifest",
-        "command-doc",
-        "runtime-reference",
         "mcp-server",
         "mcp-tool",
         "mcp-resource",
@@ -4070,10 +4053,6 @@ function expectedCommandManifestPath(commandName: string): string {
   return commandName === "blu" ? "commands/blu.toml" : `commands/blu-${commandName}.toml`;
 }
 
-function expectedCommandSpecPath(commandName: string): string {
-  return commandName === "blu" ? "docs/commands/blu.md" : `docs/commands/${commandName}.md`;
-}
-
 function expectedSkillPath(entry: CommandCatalogEntryLike): string | null {
   const primarySkill = stringValue(entry.primarySkill);
 
@@ -4086,21 +4065,12 @@ function stripPathFragment(filePath: string): string {
   return hashIndex >= 0 ? filePath.slice(0, hashIndex) : filePath;
 }
 
-function extractRuntimeReferencePaths(text: string): string[] {
-  return [...text.matchAll(/docs\/RUNTIME-REFERENCE\.md(?:#[A-Za-z0-9._-]+)?/gu)]
-    .map((match) => match[0]);
-}
-
 function collectCommandSubstratePaths(
   commandName: string,
   entry: CommandCatalogEntryLike
 ): string[] {
   const blockedBy = extractBlockedBy(entry);
   const candidates = [
-    stringValue(entry.specPath),
-    pathFromBlockedBy(blockedBy, "Missing command spec: "),
-    pathFromBlockedBy(blockedBy, "Missing locked command spec: "),
-    expectedCommandSpecPath(commandName),
     stringValue(entry.manifestPath),
     pathFromBlockedBy(blockedBy, "Missing command manifest: "),
     expectedCommandManifestPath(commandName),
@@ -4123,8 +4093,6 @@ function commandSubstrateInScope(
 ): boolean {
   if (
     scopedFiles.has("src/mcp/command-runtime-metadata.ts") ||
-    scopedFiles.has("docs/COMMAND-CATALOG.md") ||
-    scopedFiles.has(RUNTIME_REFERENCE_DOC_PATH) ||
     scopedFiles.has("src/mcp/tools/project.ts")
   ) {
     return true;
@@ -4151,7 +4119,7 @@ function addCommandSubstrateFinding(
   evidence: ImpactEvidenceRecord[],
   commandName: string,
   entry: CommandCatalogEntryLike,
-  asset: "spec" | "manifest" | "skill" | "required-tools" | "runtime-reference",
+  asset: "manifest" | "skill" | "required-tools",
   impactedFiles: string[],
   requiredActions: string[],
   extraData: Record<string, unknown> = {}
@@ -4174,11 +4142,9 @@ function addCommandSubstrateFinding(
     }
   });
   const titleByAsset = {
-    spec: "Implemented command missing command spec",
     manifest: "Implemented command missing command manifest",
     skill: "Implemented command missing primary skill",
-    "required-tools": "Implemented command missing required MCP tool",
-    "runtime-reference": "Implemented command runtime reference drift"
+    "required-tools": "Implemented command missing required MCP tool"
   } as const;
 
   findings.push({
@@ -4224,10 +4190,6 @@ function analyzeImplementedCommandSubstrate(
     }
 
     const blockedBy = extractBlockedBy(entry);
-    const specPath =
-      stringValue(entry.specPath) ??
-      pathFromBlockedBy(blockedBy, "Missing command spec: ") ??
-      expectedCommandSpecPath(commandName);
     const manifestPath =
       stringValue(entry.manifestPath) ??
       pathFromBlockedBy(blockedBy, "Missing command manifest: ") ??
@@ -4254,26 +4216,6 @@ function analyzeImplementedCommandSubstrate(
         ? ["unknown-required-tool"]
         : [])
     ]);
-
-    if (
-      blockedBy.some((item) =>
-        item.startsWith("Missing command spec: ") ||
-        item.startsWith("Missing locked command spec: ")
-      )
-    ) {
-      addCommandSubstrateFinding(
-        findings,
-        evidence,
-        commandName,
-        entry,
-        "spec",
-        [specPath],
-        [
-          `Restore ${specPath} before ${commandName} can remain declared implemented.`,
-          "Keep the command out of runnable routing until the catalog substrate is complete."
-        ]
-      );
-    }
 
     if (
       !stringValue(entry.manifestPath) ||
@@ -4323,34 +4265,6 @@ function analyzeImplementedCommandSubstrate(
         { missingRequiredTools }
       );
     }
-
-    const runtimeReferenceBlockers = blockedBy.filter((item) =>
-      item.startsWith("Missing runtime reference row: ") ||
-      item.startsWith("Runtime reference ")
-    );
-
-    if (runtimeReferenceBlockers.length > 0) {
-      addCommandSubstrateFinding(
-        findings,
-        evidence,
-        commandName,
-        entry,
-        "runtime-reference",
-        uniqueSorted([
-          RUNTIME_REFERENCE_DOC_PATH,
-          ...runtimeReferenceBlockers.flatMap((item) =>
-            extractRuntimeReferencePaths(item).filter((filePath) =>
-              stripPathFragment(filePath) === RUNTIME_REFERENCE_DOC_PATH
-            )
-          )
-        ]),
-        [
-          `Restore the ${RUNTIME_REFERENCE_DOC_PATH} row for ${commandName} before it can remain declared implemented.`,
-          "Keep the command out of runnable routing until the locked runtime-reference substrate is complete."
-        ],
-        { runtimeReferenceBlockers }
-      );
-    }
   }
 }
 
@@ -4371,7 +4285,6 @@ function nonImplementedCommandsFromContext(
 function isRouterHelpProgressNextSurface(filePath: string): boolean {
   return (
     /^(?:commands\/blu(?:-(?:help|progress|next))?\.toml)$/u.test(filePath) ||
-    /^docs\/commands\/(?:root-router|help|progress|next)\.md$/u.test(filePath) ||
     filePath === "src/mcp/command-resources.ts" ||
     filePath === "src/mcp/tools/project.ts"
   );
@@ -4485,10 +4398,9 @@ function addSurfaceObligations(
 ): void {
   const commandFiles = filesWithAnySurface(surfaces, [
     "command-catalog",
-    "command-manifest",
-    "command-doc",
-    "runtime-reference"
+    "command-manifest"
   ]);
+  const runtimeCatalogFiles = filesWithAnySurface(surfaces, ["command-catalog"]);
   const mcpFiles = filesWithAnySurface(surfaces, ["mcp-server", "mcp-tool", "mcp-resource"]);
   const artifactFiles = filesWithAnySurface(surfaces, ["artifact-contract"]);
   const skillAgentFiles = filesWithAnySurface(surfaces, ["skill", "agent"]);
@@ -4505,19 +4417,19 @@ function addSurfaceObligations(
     title: "Command contract review required",
     severity: "HIGH",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
-      "Review command manifest, command documentation, catalog status, and routing expectations together."
+      "Review command manifests, runtime metadata, catalog status, and routing expectations together."
     ]
   });
   addObligation(obligations, evidence, {
     category: "docs",
-    title: "Command documentation and runtime reference must be reviewed",
+    title: "Command-facing guidance should be reviewed",
     severity: "MEDIUM",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
-      "Verify command docs, MCP tool docs, and runtime reference remain aligned with the changed command surface."
+      "Verify any user-facing command guidance remains aligned with the changed command surface."
     ]
   });
   addObligation(obligations, evidence, {
@@ -4525,7 +4437,7 @@ function addSurfaceObligations(
     title: "Command metadata tests must cover command contract changes",
     severity: "MEDIUM",
     impactedFiles: commandFiles,
-    sourceSurfaces: ["command-catalog", "command-manifest", "command-doc"],
+    sourceSurfaces: ["command-catalog", "command-manifest"],
     requiredActions: [
       "Add or update command catalog, routing, and metadata regression tests for the changed command surface."
     ]
@@ -4538,7 +4450,7 @@ function addSurfaceObligations(
     impactedFiles: mcpFiles,
     sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: [
-      "Update docs/MCP-TOOLS.md and runtime-reference notes for changed MCP tools or resources."
+      "Review user-facing MCP tool and resource guidance for changed runtime surfaces."
     ]
   });
   addObligation(obligations, evidence, {
@@ -4555,8 +4467,8 @@ function addSurfaceObligations(
     category: "build",
     title: "Runtime source changes require generated dist review",
     severity: "HIGH",
-    impactedFiles: mcpFiles,
-    sourceSurfaces: ["mcp-server", "mcp-tool", "mcp-resource"],
+    impactedFiles: uniqueSorted([...runtimeCatalogFiles, ...mcpFiles]),
+    sourceSurfaces: ["command-catalog", "mcp-server", "mcp-tool", "mcp-resource"],
     requiredActions: ["Run the build and verify dist output provenance for runtime source changes."],
     evidenceKind: "build"
   });
@@ -4691,6 +4603,7 @@ function isRuntimeSourceOrExtensionSurface(surface: ImpactSurfaceRecord): boolea
 
   return surface.surfaces.some((name) =>
     [
+      "command-catalog",
       "mcp-server",
       "mcp-tool",
       "mcp-resource",
@@ -4714,10 +4627,11 @@ async function addBuildAndDistFindings(
     .filter(isRuntimeSourceOrExtensionSurface)
     .map((surface) => surface.path)
     .sort();
-  const mcpOrExtensionFiles = surfaces
+  const compiledRuntimeOrExtensionFiles = surfaces
     .filter((surface) =>
       surface.surfaces.some((name) =>
         [
+          "command-catalog",
           "mcp-server",
           "mcp-tool",
           "mcp-resource",
@@ -4745,7 +4659,7 @@ async function addBuildAndDistFindings(
   const hasRuntimeOrExtension = runtimeOrExtensionFiles.length > 0;
   const hasDistFiles = distFiles.length > 0;
   const missingMcpRuntimeBundleCoverage =
-    mcpOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
+    compiledRuntimeOrExtensionFiles.length > 0 && mcpRuntimeBundleFiles.length === 0;
   const missingHookRuntimeBundleCoverage =
     hookRuntimeFiles.length > 0 && hookRuntimeBundleFiles.length === 0;
   const hasRuntimeDistBundleCoverage =
@@ -7958,7 +7872,7 @@ function renderContractImpact(report: ParsedImpactReport): string {
   );
 
   if (contractSignals.length === 0 && contractObligations.length === 0) {
-    return "No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, extension, or runtime-reference surfaces produced contract signals.";
+    return "No contract or compatibility impact was detected because no command, MCP, artifact-contract, skill, agent, or extension surfaces produced contract signals.";
   }
 
   return [

@@ -4,6 +4,9 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintArtifactList } from "../src/mcp/tools/artifacts.js";
 import {
@@ -744,28 +747,36 @@ function buildVerificationArtifact(options: {
 `;
 }
 
-test("phase validation docs and catalog metadata promote validate-phase and verify-work to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8")
+test("phase validation runtime metadata and skill wiring promote validate-phase and verify-work to implemented", async () => {
+  const [catalog, skillFile, validateMetadata, verifyMetadata] = await Promise.all([
+    blueprintCommandCatalog(),
+    readFile(path.join(repoRoot, "skills/blueprint-phase-validation/SKILL.md"), "utf8"),
+    Promise.resolve(getRuntimeOwnedCommandMetadata("validate-phase")),
+    Promise.resolve(getRuntimeOwnedCommandMetadata("verify-work"))
   ]);
 
-  assert.match(
-    catalogMarkdown,
-    /\| `validate-phase` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-VERIFICATION\.md; \.blueprint\/ROADMAP\.md when workflow\.no_uat completion evidence closes; \.blueprint\/STATE\.md` \| `Low: writes summary-aware verification evidence and updates follow-up state\.` \|/
-  );
-  assert.match(
-    catalogMarkdown,
-    /\| `verify-work` \| 1 \| `Core Lifecycle` \| `blueprint-phase-validation` \| `implemented` \| `phase XX-UAT\.md; \.blueprint\/ROADMAP\.md when completion evidence closes; \.blueprint\/STATE\.md; optional explicit follow-up fix capture` \| `Medium: writes resumable UAT artifacts, can close or reopen roadmap completion, and records follow-up state\.` \|/
-  );
-  assert.match(
-    skillsMarkdown,
-    /\| `blueprint-phase-validation` \| `implemented` \| Verification, UAT, tests, and gap closure \| `validate-phase`, `verify-work`, `add-tests` \|/
-  );
-  assert.match(
-    skillsMarkdown,
-    /\| `blueprint-verifier` \| `implemented` \| Verify execution results and UAT evidence \|/
-  );
+  assert.ok(validateMetadata);
+  assert.ok(verifyMetadata);
+  assert.equal(catalog.commands["validate-phase"]?.status, "implemented");
+  assert.equal(catalog.commands["verify-work"]?.status, "implemented");
+  assert.equal(validateMetadata.catalog.primarySkill, "blueprint-phase-validation");
+  assert.deepEqual(validateMetadata.spec.writes, [
+    "phase XX-VERIFICATION.md",
+    ".blueprint/ROADMAP.md when workflow.no_uat completion evidence closes",
+    ".blueprint/STATE.md"
+  ]);
+  assert.equal(verifyMetadata.catalog.primarySkill, "blueprint-phase-validation");
+  assert.deepEqual(verifyMetadata.spec.writes, [
+    "phase XX-UAT.md",
+    ".blueprint/ROADMAP.md",
+    ".blueprint/STATE.md"
+  ]);
+  assert.match(skillFile, /name: blueprint-phase-validation/);
+  assert.match(skillFile, /input_bundles:/);
+  assert.match(skillFile, /"\/blu-validate-phase":/);
+  assert.match(skillFile, /"\/blu-verify-work":/);
+  assert.match(skillFile, /"\/blu-add-tests":/);
+  assert.match(skillFile, /blueprint-verifier/);
 });
 
 test("validate-phase and verify-work manifests reference registered validation tools and safe routing text", async () => {
@@ -1555,73 +1566,119 @@ test("verify-work refuses to persist UAT when the verification artifact is valid
   );
 });
 
-test("validate-phase and verify-work command docs keep the validation skill and MCP contracts explicit", async () => {
-  const [validateDoc, verifyDoc] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/verify-work.md"), "utf8")
+test("validate-phase and verify-work runtime-owned sources keep the validation skill and MCP contracts explicit", async () => {
+  const [
+    validateManifest,
+    verifyManifest,
+    validateRuntimeContract,
+    verifyRuntimeContract,
+    validateContract,
+    verifyContract
+  ] = await Promise.all([
+    readFile(path.join(repoRoot, "commands/blu-validate-phase.toml"), "utf8"),
+    readFile(path.join(repoRoot, "commands/blu-verify-work.toml"), "utf8"),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    buildBlueprintCommandRuntimeContractResource("validate-phase"),
+    buildBlueprintCommandRuntimeContractResource("verify-work")
   ]);
 
-  assert.match(validateDoc, /Primary skill: `blueprint-phase-validation`/);
-  assert.match(validateDoc, /`blueprint-verifier`/);
-  assert.match(validateDoc, /blueprint_phase_locate/);
-  assert.match(validateDoc, /blueprint_phase_summary_index/);
-  assert.match(validateDoc, /blueprint_phase_summary_read/);
-  assert.match(validateDoc, /blueprint_phase_validation_read/);
-  assert.match(validateDoc, /blueprint_phase_validation_authoring_context/);
-  assert.match(validateDoc, /blueprint_phase_validation_validate_model/);
-  assert.match(validateDoc, /blueprint_phase_validation_write/);
-  assert.match(validateDoc, /blueprint_config_get/);
-  assert.match(validateDoc, /blueprint_artifact_validate/);
-  assert.match(validateDoc, /blueprint_state_update/);
-  assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
-  assert.match(validateDoc, /pre-write routing shorthand from `skills\/blueprint-phase-validation\/references\/validate-phase-runtime-contract\.md`/i);
-  assert.match(validateDoc, /narrowed task schema plus route diagnostics/i);
-  assert.doesNotMatch(validateDoc, /if gateState == PASS/i);
-  assert.doesNotMatch(validateDoc, /else if explicit deferred-test or test-generation gaps remain/i);
-  assert.match(validateDoc, /phase XX-VERIFICATION\.md/);
-  assert.match(validateDoc, /Direct `validate-phase` happy-path fixture\./);
-  assert.match(verifyDoc, /Primary skill: `blueprint-phase-validation`/);
-  assert.match(verifyDoc, /`blueprint-verifier`/);
-  assert.match(verifyDoc, /blueprint_phase_locate/);
-  assert.match(verifyDoc, /blueprint_phase_summary_index/);
-  assert.match(verifyDoc, /blueprint_phase_summary_read/);
-  assert.match(verifyDoc, /blueprint_phase_validation_read/);
-  assert.match(verifyDoc, /blueprint_phase_validation_authoring_context/);
-  assert.match(verifyDoc, /blueprint_phase_validation_validate_model/);
-  assert.match(verifyDoc, /blueprint_phase_validation_render/);
-  assert.match(verifyDoc, /blueprint_phase_validation_write/);
-  assert.match(verifyDoc, /blueprint_config_get/);
-  assert.match(verifyDoc, /blueprint_state_update/);
-  assert.match(verifyDoc, /phase XX-UAT\.md/);
-  assert.match(verifyDoc, /Direct `verify-work` happy-path fixture\./);
+  assert.equal(validateContract.spec?.primarySkill, "blueprint-phase-validation");
+  assert.deepEqual(validateContract.spec?.optionalSubagents, ["blueprint-verifier"]);
+  assert.match(validateManifest, /blueprint_phase_locate/);
+  assert.match(validateManifest, /blueprint_phase_summary_index/);
+  assert.match(validateManifest, /blueprint_phase_summary_read/);
+  assert.match(validateManifest, /blueprint_phase_validation_read/);
+  assert.match(validateManifest, /blueprint_phase_validation_authoring_context/);
+  assert.match(validateManifest, /blueprint_phase_validation_validate_model/);
+  assert.match(validateManifest, /blueprint_phase_validation_write/);
+  assert.match(validateManifest, /blueprint_config_get/);
+  assert.match(validateManifest, /blueprint_artifact_validate/);
+  assert.match(validateManifest, /blueprint_state_update/);
+  assert.match(
+    validateRuntimeContract,
+    /model validation[\s\S]*status: "valid"[\s\S]*blueprint_phase_validation_write/i
+  );
+  assert.match(validateRuntimeContract, /pre-write routing shorthand/i);
+  assert.match(validateContract.spec?.writes.join("\n") ?? "", /phase XX-VERIFICATION\.md/);
+
+  assert.equal(verifyContract.spec?.primarySkill, "blueprint-phase-validation");
+  assert.deepEqual(verifyContract.spec?.optionalSubagents, ["blueprint-verifier"]);
+  assert.match(verifyManifest, /blueprint_phase_locate/);
+  assert.match(verifyManifest, /blueprint_phase_summary_index/);
+  assert.match(verifyManifest, /blueprint_phase_summary_read/);
+  assert.match(verifyManifest, /blueprint_phase_validation_read/);
+  assert.match(verifyManifest, /blueprint_phase_validation_authoring_context/);
+  assert.match(verifyManifest, /blueprint_phase_validation_validate_model/);
+  assert.match(verifyManifest, /blueprint_phase_validation_render/);
+  assert.match(verifyManifest, /blueprint_phase_validation_write/);
+  assert.match(verifyManifest, /blueprint_config_get/);
+  assert.match(verifyManifest, /blueprint_state_update/);
+  assert.match(verifyContract.spec?.writes.join("\n") ?? "", /phase XX-UAT\.md/);
 });
 
-test("validation contract docs keep the published verification schema aligned with the runtime contract", async () => {
-  const [artifactSchema, addTestsDoc, validateDoc] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/add-tests.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/validate-phase.md"), "utf8")
+test("validation runtime contracts keep the published verification schema aligned with artifact-contract APIs", async () => {
+  const [verificationContract, addTestsRuntimeContract, validateRuntimeContract] = await Promise.all([
+    Promise.resolve(readArtifactContract("phase.verification")),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/add-tests-runtime-contract.md"
+      ),
+      "utf8"
+    ),
+    readFile(
+      path.join(
+        repoRoot,
+        "skills/blueprint-phase-validation/references/validate-phase-runtime-contract.md"
+      ),
+      "utf8"
+    )
   ]);
 
-  assert.match(artifactSchema, /### `XX-VERIFICATION\.md`/);
-  assert.match(artifactSchema, /\*\*Coverage:\*\*/);
-  assert.match(artifactSchema, /\*\*Gate State:\*\*/);
-  assert.match(artifactSchema, /\*\*Sign-off:\*\*/);
-  assert.match(artifactSchema, /## Validation Summary/);
-  assert.match(artifactSchema, /## Requirement \/ Task Coverage/);
-  assert.match(artifactSchema, /## Evidence Reviewed/);
-  assert.match(artifactSchema, /## Test Infrastructure \/ Evidence Metadata/);
-  assert.match(artifactSchema, /## Manual-Only or Deferred Coverage/);
-  assert.match(artifactSchema, /## Gate State/);
-  assert.match(artifactSchema, /## Gap Classification/);
-  assert.match(artifactSchema, /should route the next safe action to `\/blu-verify-work <phase>`[\s\S]*`workflow\.no_uat=false`/i);
-  assert.match(artifactSchema, /when `workflow\.no_uat=true`, the PASS route is `\/blu-progress`/i);
-
-  assert.match(addTestsDoc, /blueprint_artifact_contract_read/);
-  assert.match(addTestsDoc, /blueprint_phase_validation_render/);
-  assert.match(addTestsDoc, /call `blueprint_phase_validation_write` only when the render result has `readyToWrite: true`/i);
-  assert.match(validateDoc, /blueprint_artifact_contract_read/);
-  assert.match(validateDoc, /blueprint_phase_validation_validate_model/);
-  assert.match(validateDoc, /call `blueprint_phase_validation_write` only when the model validation result has `status: "valid"`/i);
+  assert.deepEqual(verificationContract.lockedMarkers, [
+    "**Coverage:**",
+    "**Gate State:**",
+    "**Sign-off:**"
+  ]);
+  assert.deepEqual(verificationContract.requiredHeadings, [
+    "Validation Summary",
+    "Requirement / Task Coverage",
+    "Evidence Reviewed",
+    "Test Infrastructure / Evidence Metadata",
+    "Manual-Only or Deferred Coverage",
+    "Gate State",
+    "Gap Classification",
+    "Gaps Found",
+    "Suggested Repairs",
+    "Next Safe Action"
+  ]);
+  assert.match(
+    verificationContract.notes.join("\n"),
+    /saved execution summaries[\s\S]*manual or deferred coverage[\s\S]*gap classification/i
+  );
+  assert.match(addTestsRuntimeContract, /blueprint_artifact_contract_read/);
+  assert.match(addTestsRuntimeContract, /blueprint_phase_validation_render/);
+  assert.match(
+    addTestsRuntimeContract,
+    /blueprint_phase_validation_render[\s\S]*readyToWrite[\s\S]*blueprint_phase_validation_write/i
+  );
+  assert.match(validateRuntimeContract, /blueprint_artifact_contract_read/);
+  assert.match(validateRuntimeContract, /blueprint_phase_validation_validate_model/);
+  assert.match(
+    validateRuntimeContract,
+    /model validation[\s\S]*status: "valid"[\s\S]*blueprint_phase_validation_write/i
+  );
 });

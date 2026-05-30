@@ -4,12 +4,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { PLAN_PHASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtimeContractPath =
   "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md";
 const skillPath = "skills/blueprint-phase-planning/SKILL.md";
 const manifestPath = "commands/blu-plan-phase.toml";
-const commandSpecPath = "docs/commands/plan-phase.md";
 const plannerAgentPath = "agents/blueprint-planner.md";
 const checkerAgentPath = "agents/blueprint-checker.md";
 
@@ -250,11 +252,11 @@ test("planning contract strengthens no-subagent fallback", () => {
   ]);
 });
 
-test("runtime contract owns Wave 3 planning checks while prompt surfaces stay thin", () => {
+test("runtime contract owns Wave 3 planning checks while prompt surfaces stay thin", async () => {
   const skill = readRepoText(skillPath);
   const manifest = readRepoText(manifestPath);
-  const commandSpec = readRepoText(commandSpecPath);
   const runtimeContract = readRepoText(runtimeContractPath);
+  const commandResource = await buildBlueprintCommandRuntimeContractResource("plan-phase");
 
   assertIncludesAll(runtimeContract, [
     "Planning Investigation Trace",
@@ -275,12 +277,24 @@ test("runtime contract owns Wave 3 planning checks while prompt surfaces stay th
     "Downstream Execution Handoff",
   ]);
 
-  assertIncludesAll(commandSpec, [
-    "user-facing documentation",
-    "Downstream Execution Handoff",
-    "expectedReadSet",
-    "Final\ncompletion still depends on `blueprint_phase_plan_validate`",
+  assert.equal(commandResource.spec?.path, PLAN_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(commandResource.runtimeReference?.path, PLAN_PHASE_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    commandResource.runtimeReference?.commandSpecPath,
+    PLAN_PHASE_RUNTIME_METADATA.sourceId
+  );
+  assertIncludesAll(commandResource.skillInputs.commandSpecific.join("\n"), [
+    "skills/blueprint-phase-planning/references/plan-phase-runtime-contract.md",
   ]);
+  assert.match(
+    commandResource.runtimeReference?.contractNotes ?? "",
+    /state-aware routing to implemented follow-ups/i
+  );
+  assert.match(commandResource.runtimeReference?.contractNotes ?? "", /expectedReadSet/i);
+  assert.match(
+    commandResource.runtimeReference?.contractNotes ?? "",
+    /blueprint_phase_plan_validate/i
+  );
 
   assert.ok(manifest.length < 9000, `expected thin command manifest, got ${manifest.length} bytes`);
   assert.ok(skill.length < 9000, `expected compact primary skill, got ${skill.length} bytes`);

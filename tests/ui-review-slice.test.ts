@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { UI_REVIEW_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { readArtifactContract } from "../src/mcp/artifact-contracts/index.js";
 import {
@@ -380,71 +382,54 @@ function validUiReviewModel(patch: Record<string, unknown> = {}): Record<string,
   };
 }
 
-test("ui-review docs and catalog metadata promote the UI audit slice to implemented", async () => {
-  const [catalogMarkdown, skillsMarkdown, commandDoc, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/SKILLS-AND-AGENTS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/ui-review.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("ui-review runtime metadata, manifest, and local contract stay source-owned", async () => {
+  const [catalog, contract, commandFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("ui-review"),
+    readFile(path.join(repoRoot, "commands/blu-ui-review.toml"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/ui-review-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands["ui-review"];
 
+  assert.equal(entry.specPath, UI_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...UI_REVIEW_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, UI_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
+  assert.deepEqual(contract.spec?.writes, [...UI_REVIEW_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, UI_REVIEW_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...UI_REVIEW_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-ui-review.toml",
+    "skills/blueprint-review/references/ui-review-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    catalogMarkdown,
-    /\| `ui-review` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-UI-REVIEW\.md` \| `Low: review artifact only\.` \|/
+    commandFile,
+    /saved execution and UI-spec coverage, active stage, pending gate, execution mode/i
+  );
+  assert.match(commandFile, /created, reused, or revised/i);
+  assert.match(commandFile, /overall score out of 24/i);
+  assert.match(commandFile, /Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_review_authoring_context/);
+  assert.match(commandFile, /mcp_blueprint_blueprint_review_validate_model/);
+  assert.match(referenceFile, /actual frontend surface/i);
+  assert.match(referenceFile, /no-subagent fallback/i);
+  assert.match(referenceFile, /browser-only, web-search-only, shell-only, or generic helpers/i);
+  assert.match(referenceFile, /retry through `blueprint_review_validate_model` and[\s\S]*`blueprint_review_record`/i);
+  assert.match(referenceFile, /1\/4[\s\S]*4\/4/i);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for phase-scoped UI audit/i
   );
   assert.match(
-    skillsMarkdown,
-    /\| `blueprint-ui-auditor` \| `implemented` \| Perform retroactive six-pillar UI audits \|/
-  );
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
-  assert.match(
-    commandDoc,
-    /saved execution and UI-spec coverage, pending gate, execution mode, whether the existing `XX-UI-REVIEW\.md` artifact is being created, reused, or revised, overall score or main findings\/pass signals, and next safe action/i
-  );
-  assert.match(commandDoc, /`update_topic` tool and keep a compact UI-review checklist with `write_todos`/i);
-  assert.match(commandDoc, /actual frontend surface under review/i);
-  assert.match(commandDoc, /created, reused, or revised/i);
-  assert.match(commandDoc, /ui-review-runtime-contract\.md/);
-  assert.match(commandDoc, /`blueprint_artifact_contract_read` ->/);
-  assert.match(commandDoc, /contract\.modelContract\.schemaPath/);
-  assert.match(commandDoc, /`blueprint_review_authoring_context` ->/);
-  assert.match(commandDoc, /`blueprint_review_validate_model` ->/);
-  assert.match(commandDoc, /overall score out of 24/i);
-  assert.match(commandDoc, /Copywriting, Visual Hierarchy, Color, Typography, Spacing, and Experience Design/);
-  assert.match(commandDoc, /no-subagent fallback/i);
-  assert.match(commandDoc, /browser-only, web-search-only, shell-only, or generic helpers/i);
-  assert.match(commandDoc, /retry once through MCP/i);
-  assert.match(
-    commandDoc,
-    /only missing UAT[\s\S]*UI-review[\s\S]*`\/blu-progress`[\s\S]*saved invalid[\s\S]*FAIL[\s\S]*PARTIAL[\s\S]*saved implemented repair action[\s\S]*`\/blu-verify-work <phase>`/i
-  );
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*Long-running-mutation profile for phase-scoped UI audit/i
-  );
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*`blueprint_artifact_contract_read`[\s\S]*`blueprint_review_record`/i
-  );
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*`update_topic` and `write_todos` for non-trivial ui-review runs/i
-  );
-  assert.match(runtimeReference, /ui-review-runtime-contract\.md/i);
-  assert.match(runtimeReference, /scored six-pillar evidence with overall `\/24`/i);
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*saved `XX-UI-SPEC\.md` coverage and the actual frontend surface explicit/i
-  );
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*inline versus capability-gated `blueprint-ui-auditor`-assisted analysis/i
-  );
-  assert.match(
-    runtimeReference,
-    /`ui-review`[\s\S]*artifact create\/reuse\/revise status plus findings-or-pass posture explicit/i
+    contract.runtimeReference?.contractNotes ?? "",
+    /saved execution evidence, UI-spec coverage, visual-evidence limits, overwrite confirmation, inline versus blueprint-ui-auditor execution mode, scored findings posture, active stage, and next safe action explicit/i
   );
 });
 

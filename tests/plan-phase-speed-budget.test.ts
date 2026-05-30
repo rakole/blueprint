@@ -35,12 +35,6 @@ const promptSurfaces: PromptSurface[] = [
     activeRuntime: true
   },
   {
-    id: "command-docs",
-    filePath: "docs/commands/plan-phase.md",
-    baselineBytes: 16430,
-    activeRuntime: false
-  },
-  {
     id: "planner-agent",
     filePath: "agents/blueprint-planner.md",
     baselineBytes: 10073,

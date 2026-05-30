@@ -3,44 +3,46 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { SECURE_PHASE_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
+
 const repoRoot = process.cwd();
 
 async function readRepoFile(relativePath: string): Promise<string> {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("security planning docs describe the shared MCP-first hardening model", async () => {
-  const [research, decisions, architecture, mcpTools, hooks, implementationOrder, memory] =
+test("security runtime source, hooks, and memory describe the shared hardening model", async () => {
+  const [securitySource, writeGuardHook, readBeforeEditHook, maintenanceSkill, memory] =
     await Promise.all([
-      readRepoFile("docs/research/bring-security-to-blueprint.md"),
-      readRepoFile("docs/DECISIONS.md"),
-      readRepoFile("docs/ARCHITECTURE.md"),
-      readRepoFile("docs/MCP-TOOLS.md"),
-      readRepoFile("docs/HOOKS-POLICIES.md"),
-      readRepoFile("docs/IMPLEMENTATION-ORDER.md"),
+      readRepoFile("src/shared/security.ts"),
+      readRepoFile("src/hooks/blueprint-write-guard.ts"),
+      readRepoFile("src/hooks/read-before-edit.ts"),
+      readRepoFile("skills/blueprint-maintenance/SKILL.md"),
       readRepoFile("MEMORY.md")
     ]);
 
-  assert.match(research, /active implementation roadmap/i);
-  assert.match(research, /src\/shared\/security\.ts/);
-  assert.doesNotMatch(research, /that command is still `planned`|that command is still planned/i);
-  assert.match(decisions, /`BP-030` Shared security boundary/);
-  assert.match(decisions, /`BP-033` Maintenance integrity preflights/);
-  assert.match(architecture, /shared security layer/i);
-  assert.match(mcpTools, /absolute-path misuse.*symlink escapes/i);
-  assert.match(hooks, /shared prompt-boundary detectors/i);
-  assert.match(implementationOrder, /## Security Hardening Overlay/);
+  assert.match(securitySource, /ensurePathWithinRootSync/);
+  assert.match(securitySource, /safeJsonParseObject/);
+  assert.match(securitySource, /prompt-injection/);
+  assert.match(securitySource, /unsafe-display/);
+  assert.match(writeGuardHook, /analyzePromptBoundaryText/);
+  assert.match(
+    writeGuardHook,
+    /prompt injection, hidden control text, or instruction override text/i
+  );
+  assert.match(readBeforeEditHook, /read the file before editing it so the existing content stays intact/i);
+  assert.match(maintenanceSkill, /Shared rule for all maintenance flows/);
   assert.match(memory, /shared runtime hardening now lives under `src\/shared\/security\.ts`/i);
 });
 
-test("maintenance and security review docs reflect the tightened hardening guidance", async () => {
-  const [maintenanceSkill, reviewSkill, securePhaseDoc, shipDoc, cleanupDoc] =
+test("maintenance and security runtime assets reflect the tightened hardening guidance", async () => {
+  const [maintenanceSkill, reviewSkill, securePhaseManifest, shipReference, cleanupReference] =
     await Promise.all([
       readRepoFile("skills/blueprint-maintenance/SKILL.md"),
       readRepoFile("skills/blueprint-review/SKILL.md"),
-      readRepoFile("docs/commands/secure-phase.md"),
-      readRepoFile("docs/commands/ship.md"),
-      readRepoFile("docs/commands/cleanup.md")
+      readRepoFile("commands/blu-secure-phase.toml"),
+      readRepoFile("skills/blueprint-maintenance/references/ship-runtime-contract.md"),
+      readRepoFile("skills/blueprint-maintenance/references/cleanup-runtime-contract.md")
     ]);
 
   assert.match(maintenanceSkill, /Shared rule for all maintenance flows/);
@@ -53,23 +55,19 @@ test("maintenance and security review docs reflect the tightened hardening guida
     reviewSkill,
     /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
   );
-  assert.match(securePhaseDoc, /parses? the saved phase threat model/i);
-  assert.match(securePhaseDoc, /builds? a threat register/i);
-  assert.match(securePhaseDoc, /ask_user/i);
-  assert.match(securePhaseDoc, /verify open threats or explicitly accept them/i);
+  assert.equal(SECURE_PHASE_RUNTIME_METADATA.sourceId, "src/mcp/command-runtime-metadata.ts#secure-phase");
+  assert.match(securePhaseManifest, /parse the saved phase threat model/i);
+  assert.match(securePhaseManifest, /build the bounded threat register/i);
+  assert.match(securePhaseManifest, /`ask_user`/i);
+  assert.match(securePhaseManifest, /verify those threats or explicitly accept them/i);
   assert.match(
-    securePhaseDoc,
-    /Local secure-phase routing stays scoped to the security lifecycle/i
-  );
-  assert.match(
-    securePhaseDoc,
+    securePhaseManifest,
     /Repo-wide derived progress\/state may still surface saved[\s\S]*`\/blu-code-review-fix <phase>` after[\s\S]*`\/blu-secure-phase` itself must not emit that action\./
   );
-  assert.match(securePhaseDoc, /In-Flight Progress Contract/i);
-  assert.match(securePhaseDoc, /threat-register coverage/i);
-  assert.match(securePhaseDoc, /blocks? advancement while any threat remains open/i);
-  assert.match(securePhaseDoc, /bounded to the declared threats and mitigations/i);
-  assert.match(securePhaseDoc, /suspicious artifact content/i);
-  assert.match(shipDoc, /resolved scope, source branch, base branch, and report-before-mutate path/i);
-  assert.match(cleanupDoc, /resolved phase-directory set, protected exclusions, and final archive destination/i);
+  assert.match(securePhaseManifest, /threat-register coverage/i);
+  assert.match(securePhaseManifest, /do not emit next-step routing when any threat remains open/i);
+  assert.match(shipReference, /source branch, base branch/i);
+  assert.match(shipReference, /Persist the approved plan before remote mutation/i);
+  assert.match(cleanupReference, /protected exclusions/i);
+  assert.match(cleanupReference, /archive destination/i);
 });

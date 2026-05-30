@@ -6,6 +6,9 @@ import path from "node:path";
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
+import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
+import { workspaceToolDefinitions } from "../src/mcp/tools/workspace.js";
 
 const repoRoot = process.cwd();
 
@@ -34,28 +37,20 @@ test("workstreams manifest references the maintenance skill, workstream MCP tool
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("workstreams docs, runtime resource, and maintenance skill align to the shipped interactive workstream contract", async () => {
-  const [commandDoc, runtimeContract, skillDoc] = await Promise.all([
-    readRepoFile("docs/commands/workstreams.md"),
+test("workstreams local runtime contract, runtime resource, and maintenance skill align to the shipped interactive workstream contract", async () => {
+  const [runtimeReference, runtimeContract, skillDoc] = await Promise.all([
+    readRepoFile("skills/blueprint-maintenance/references/workstreams-runtime-contract.md"),
     buildBlueprintCommandRuntimeContractResource("workstreams"),
     readRepoFile("skills/blueprint-maintenance/SKILL.md")
   ]);
 
-  assert.match(commandDoc, /\| Execution profile \| `interactive-read` \|/);
-  assert.match(
-    commandDoc,
-    /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Persist`, `Route`/
-  );
-  assert.match(
-    commandDoc,
-    /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/
-  );
-  assert.match(commandDoc, /`ask_user`/);
-  assert.match(commandDoc, /\.blueprint\/workstreams\/WORKSTREAMS\.md/);
-  assert.match(commandDoc, /\.blueprint\/workstreams\/<slug>\/state\.json/);
-  assert.match(commandDoc, /workstream-switch-confirmation/);
-  assert.match(commandDoc, /missing-resume-snapshot/);
-  assert.match(commandDoc, /corrupt-workstream-index/);
+  assert.match(runtimeReference, /Stage Mapping/);
+  assert.match(runtimeReference, /Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
+  assert.match(runtimeReference, /\.blueprint\/workstreams\//);
+  assert.match(runtimeReference, /`WORKSTREAMS\.md` regeneration and per-stream `state\.json` writes/);
+  assert.match(runtimeReference, /workstream-switch-confirmation/);
+  assert.match(runtimeReference, /missing-resume-snapshot/);
+  assert.match(runtimeReference, /corrupt-workstream-index/);
 
   assert.match(skillDoc, /\/blu-workstreams/);
   assert.match(skillDoc, /blueprint_workstream_list/);
@@ -85,23 +80,27 @@ test("workstreams docs, runtime resource, and maintenance skill align to the shi
 });
 
 test("repo-facing status docs treat workstreams as a shipped Wave 5 command", async () => {
-  const [architectureFile, handoffFile, progressFile, memoryFile, catalogFile, mcpToolsFile] =
+  const [progressFile, memoryFile, catalog] =
     await Promise.all([
-      readRepoFile("docs/ARCHITECTURE.md"),
-      readRepoFile("docs/HANDOFF.md"),
       readRepoFile("PROGRESS.md"),
       readRepoFile("MEMORY.md"),
-      readRepoFile("docs/COMMAND-CATALOG.md"),
-      readRepoFile("docs/MCP-TOOLS.md")
+      blueprintCommandCatalog()
     ]);
+  const entry = catalog.commands["workstreams"];
+  const metadata = getRuntimeOwnedCommandMetadata("workstreams");
+  const workspaceTools = workspaceToolDefinitions.map((definition) => definition.name);
 
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 5);
+  assert.equal(metadata.catalog.family, "Workspace And Maintenance");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "interactive-read");
+  assert.equal(metadata.runtimeReference.waveTitle, "Workspace And Maintenance");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /workstreams-runtime-contract\.md/);
   assert.match(
-    architectureFile,
-    /shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
-  );
-  assert.match(
-    handoffFile,
-    /shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`/i
+    metadata.runtimeReference.contractNotes,
+    /switch\/archive confirmation gates before mutation/i
   );
   assert.match(
     progressFile,
@@ -112,10 +111,14 @@ test("repo-facing status docs treat workstreams as a shipped Wave 5 command", as
     /\| [0-9]+ \| `workstreams` \| ❌ \| `planned` \| 5 \| `Workspace And Maintenance` \| Medium \|/
   );
   assert.match(memoryFile, /`workstreams` shipped on 2026-04-23/);
-  assert.match(
-    catalogFile,
-    /\| `workstreams` \| 5 \| `Workspace And Maintenance` \| `blueprint-maintenance` \| `implemented` \|/
-  );
-  assert.match(mcpToolsFile, /`blueprint_workstream_list`/);
-  assert.match(mcpToolsFile, /`blueprint_workstream_mutate`/);
+  assert.equal(entry.status, "implemented");
+  assert.equal(entry.implemented, true);
+  assert.equal(entry.specPath, metadata?.sourceId);
+  assert.deepEqual(entry.requiredTools, [
+    "blueprint_workstream_list",
+    "blueprint_workstream_mutate",
+    "blueprint_state_update"
+  ]);
+  assert.ok(workspaceTools.includes("blueprint_workstream_list"));
+  assert.ok(workspaceTools.includes("blueprint_workstream_mutate"));
 });

@@ -45,33 +45,29 @@ test("next command manifest preserves safe fallback and routing guarantees", asy
   assert.match(raw, /Never rely on slash-command chaining, hidden aliases, or implicit destructive behavior/);
 });
 
-test("next runtime reference preserves waiting-state and fallback alignment", async () => {
-  const runtimeReference = await readFile(
-    path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"),
-    "utf8"
-  );
-
+test("next runtime metadata preserves waiting-state and fallback alignment", () => {
+  assert.equal(NEXT_RUNTIME_METADATA.runtimeReference.path, NEXT_RUNTIME_METADATA.sourceId);
   assert.match(
-    runtimeReference,
-    /`next`[\s\S]*report waiting state and the next safe follow-up explicitly/i
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /report waiting state and the next safe follow-up explicitly/i
   );
   assert.match(
-    runtimeReference,
-    /\|\s*`next`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#next`\s*\|/
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /never hide destructive behavior behind implicit routing/i
   );
-  assert.match(runtimeReference, /never hide destructive behavior behind implicit routing\./);
   assert.match(
-    runtimeReference,
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
     /Recommend `?\/blu-spec-phase <phase>`? only after `?blueprint_command_catalog`? proves it implemented/i
   );
   assert.match(
-    runtimeReference,
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
     /do not treat missing `?XX-SPEC\.md`? alone as a normal lifecycle blocker/i
   );
-  assert.match(
-    runtimeReference,
-    /\| `next` [^\n]+ \| `locked`; `source-owned`; `needs-behavior-audit` \|/
-  );
+  assert.deepEqual(NEXT_RUNTIME_METADATA.runtimeReference.evidenceState, [
+    "locked",
+    "source-owned",
+    "needs-behavior-audit"
+  ]);
 });
 
 test("next is exposed as an implemented router command with no blockers", async () => {
@@ -129,11 +125,7 @@ test("next remains implemented when docs-backed command specs are unavailable", 
     const normalizedPath =
       filePath instanceof URL ? filePath.pathname : path.resolve(String(filePath));
 
-    if (
-      normalizedPath.endsWith("/docs/COMMAND-CATALOG.md") ||
-      normalizedPath.endsWith("/docs/RUNTIME-REFERENCE.md") ||
-      normalizedPath.endsWith("/docs/commands/next.md")
-    ) {
+    if (normalizedPath.includes("/docs/")) {
       const error = new Error("simulated docs absence") as NodeJS.ErrnoException;
       error.code = "ENOENT";
       throw error;

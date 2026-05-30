@@ -65,11 +65,7 @@ function makeBundledDocsUnavailable(t: TestContext): string[] {
   fs.readFile = (async (...args: Parameters<typeof fs.readFile>) => {
     const relativePath = bundledRelativePath(args[0]);
 
-    if (
-      relativePath === "docs/COMMAND-CATALOG.md" ||
-      relativePath === "docs/RUNTIME-REFERENCE.md" ||
-      /^docs\/commands\/.+\.md$/.test(relativePath ?? "")
-    ) {
+    if ((relativePath ?? "").startsWith("docs/")) {
       attemptedDocs.push(relativePath);
       const error = new Error("ENOENT");
       (error as NodeJS.ErrnoException).code = "ENOENT";
@@ -114,8 +110,5 @@ test("review-family runtime contract resources do not read bundled docs at build
     }
   }
 
-  assert.deepEqual(
-    attemptedDocs.filter((relativePath) => relativePath !== "docs/COMMAND-CATALOG.md"),
-    []
-  );
+  assert.deepEqual(attemptedDocs, []);
 });

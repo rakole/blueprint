@@ -15,6 +15,12 @@ import { constants as fsConstants } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import {
+  HEALTH_RUNTIME_METADATA,
+  HELP_RUNTIME_METADATA,
+  PROGRESS_RUNTIME_METADATA
+} from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import {
   CODEBASE_ARTIFACTS,
@@ -3618,24 +3624,35 @@ test("help progress and health command files reference registered MCP tool names
 
 test("progress keeps the shared router waiting-state contract aligned", async () => {
   const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
-  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("progress");
 
   assert.match(progressCommand, /Execution profile: router\./);
   assert.match(progressCommand, /missing artifact, partial repo repair, verification debt, or blocked substrate/i);
   assert.match(progressCommand, /waiting state/i);
   assert.match(progressCommand, /next safe action/i);
-  assert.match(
-    runtimeReference,
-    /\|\s*`progress`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#progress`\s*\|/
+  assert.equal(runtimeContract.catalog.specPath, PROGRESS_RUNTIME_METADATA.sourceId);
+  assert.equal(runtimeContract.spec?.path, PROGRESS_RUNTIME_METADATA.sourceId);
+  assert.equal(runtimeContract.runtimeReference?.path, PROGRESS_RUNTIME_METADATA.sourceId);
+  assert.equal(
+    runtimeContract.runtimeReference?.commandSpecPath,
+    PROGRESS_RUNTIME_METADATA.sourceId
   );
-  assert.match(runtimeReference, /blockers, pending gates, and config warnings/i);
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /blockers, pending gates, and config warnings/i
+  );
 });
 
 test("root router and help/progress assets keep implemented-only waiting-state guidance explicit", async () => {
   const rootRouterCommand = await readFile(path.join(repoRoot, "commands/blu.toml"), "utf8");
   const helpCommand = await readFile(path.join(repoRoot, "commands/blu-help.toml"), "utf8");
   const progressCommand = await readFile(path.join(repoRoot, "commands/blu-progress.toml"), "utf8");
-  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+  const [helpRuntimeContract, progressRuntimeContract, healthRuntimeContract] =
+    await Promise.all([
+      buildBlueprintCommandRuntimeContractResource("help"),
+      buildBlueprintCommandRuntimeContractResource("progress"),
+      buildBlueprintCommandRuntimeContractResource("health")
+    ]);
 
   assert.match(
     rootRouterCommand,
@@ -3683,14 +3700,20 @@ test("root router and help/progress assets keep implemented-only waiting-state g
   );
   assert.match(progressCommand, /waiting state/i);
   assert.match(progressCommand, /next safe action/i);
-  assert.match(runtimeReference, /\|\s*`\/blu`\s*\|\s*`commands\/blu\.toml`\s*\|/);
+  assert.equal(helpRuntimeContract.catalog.specPath, HELP_RUNTIME_METADATA.sourceId);
+  assert.equal(progressRuntimeContract.catalog.specPath, PROGRESS_RUNTIME_METADATA.sourceId);
+  assert.equal(healthRuntimeContract.catalog.specPath, HEALTH_RUNTIME_METADATA.sourceId);
   assert.match(
-    runtimeReference,
-    /\|\s*`help`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#help`\s*\|/
+    helpRuntimeContract.runtimeReference?.contractNotes ?? "",
+    /Do not treat missing XX-SPEC\.md alone as a normal lifecycle blocker/i
   );
   assert.match(
-    runtimeReference,
-    /\|\s*`progress`\s*\|\s*`src\/mcp\/command-runtime-metadata\.ts#progress`\s*\|/
+    progressRuntimeContract.runtimeReference?.contractNotes ?? "",
+    /Do not treat missing XX-SPEC\.md alone as a normal lifecycle blocker/i
+  );
+  assert.match(
+    healthRuntimeContract.runtimeReference?.contractNotes ?? "",
+    /route follow-ups only to implemented commands/i
   );
 });
 

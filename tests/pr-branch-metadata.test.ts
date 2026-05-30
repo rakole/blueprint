@@ -9,6 +9,7 @@ import {
 import {
   buildBlueprintCommandRuntimeContractResource
 } from "../src/mcp/command-resources.js";
+import { getRuntimeOwnedCommandMetadata } from "../src/mcp/command-runtime-metadata.js";
 import {
   validateReportArtifactContent
 } from "../src/mcp/tools/artifacts.js";
@@ -107,27 +108,28 @@ test("pr-branch runtime contract locks commit classification, fallback, and repo
   assert.match(runtimeContract, /retained file\/commit counts/i);
 });
 
-test("pr-branch docs and runtime reference expose the richer review-branch contract", async () => {
-  const [docFile, mcpToolsFile, artifactSchema, runtimeContract] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/commands/pr-branch.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/MCP-TOOLS.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8"),
+test("pr-branch local runtime contract, runtime resource, and artifact contract expose the richer review-branch contract", async () => {
+  const [runtimeReference, artifactContract, runtimeContract] = await Promise.all([
+    readFile(
+      path.join(repoRoot, "skills/blueprint-maintenance/references/pr-branch-runtime-contract.md"),
+      "utf8"
+    ),
+    Promise.resolve(readArtifactContract("report.pr-branch")),
     buildBlueprintCommandRuntimeContractResource("pr-branch")
   ]);
 
-  assert.match(docFile, /\| Execution profile \| `high-risk-maintenance` \|/);
-  assert.match(docFile, /Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
-  assert.match(docFile, /In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action/);
-  assert.match(docFile, /pr-branch-runtime-contract\.md/);
-  assert.match(docFile, /report-backed pre-mutation posture/i);
-  assert.match(docFile, /blueprint_artifact_contract_read/);
-  assert.match(docFile, /contract\.authoringTemplate/);
-  assert.match(docFile, /Commit Classification And Replay Contract/);
-  assert.match(docFile, /`code-only`, `blueprint-only`, `mixed`, or `empty-after-filter`/);
-  assert.match(docFile, /zero excluded `?\.blueprint\/\*\*`? entries/i);
-  assert.match(docFile, /No-subagent fallback is canonical/i);
-  assert.match(docFile, /`clean-working-tree`/);
-  assert.match(docFile, /report overwrite confirmation/i);
+  assert.match(runtimeReference, /Stage Mapping/);
+  assert.match(runtimeReference, /report\.pr-branch/);
+  assert.match(runtimeReference, /contract\.authoringTemplate/);
+  assert.match(runtimeReference, /commit classification ledger/i);
+  assert.match(
+    runtimeReference,
+    /`code-only`[\s\S]*`blueprint-only`[\s\S]*`mixed`[\s\S]*`empty-after-filter`/
+  );
+  assert.match(runtimeReference, /zero entries when `\.blueprint\/\*\*` was excluded/i);
+  assert.match(runtimeReference, /No-subagent fallback is the canonical behavior/i);
+  assert.match(runtimeReference, /`clean-working-tree`/);
+  assert.match(runtimeReference, /report-overwrite-confirmation/);
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /pr-branch-runtime-contract\.md/);
   assert.match(runtimeContract.runtimeReference?.contractNotes ?? "", /clean tree and review-branch confirmation/i);
@@ -140,11 +142,9 @@ test("pr-branch docs and runtime reference expose the richer review-branch contr
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),
     false
   );
-  assert.match(mcpToolsFile, /`pr-branch` uses `blueprint_project_status`, `blueprint_config_get`, `blueprint_artifact_summary_digest`, `blueprint_artifact_contract_read`, and `blueprint_artifact_report_write`/);
-  assert.match(mcpToolsFile, /forbid browser\/web-search\/shell-only or generic agents as substitutes/i);
-  assert.match(artifactSchema, /### `reports\/pr-branch-latest\.md`/);
-  assert.match(artifactSchema, /commit classification ledger/i);
-  assert.match(artifactSchema, /Exact persistence template/i);
+  assert.match(artifactContract.canonicalFilePattern, /\.blueprint\/reports\/pr-branch-latest\.md/);
+  assert.match(artifactContract.notes.join("\n"), /commit classification ledger/i);
+  assert.match(artifactContract.authoringTemplate, /Commit \| Subject \| Classification \| Action/);
 });
 
 test("pr-branch canonical report contract requires a populated replay ledger", () => {
@@ -215,19 +215,25 @@ test("pr-branch canonical report contract requires a populated replay ledger", (
 });
 
 test("repo-facing status docs treat pr-branch as a shipped command", async () => {
-  const [agentsFile, handoffFile, architectureFile, readmeFile, geminiFile, progressFile] =
+  const [agentsFile, readmeFile, geminiFile, progressFile] =
     await Promise.all([
       readFile(path.join(repoRoot, "AGENTS.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/HANDOFF.md"), "utf8"),
-      readFile(path.join(repoRoot, "docs/ARCHITECTURE.md"), "utf8"),
       readFile(path.join(repoRoot, "README.md"), "utf8"),
       readFile(path.join(repoRoot, "GEMINI.md"), "utf8"),
       readFile(path.join(repoRoot, "PROGRESS.md"), "utf8")
     ]);
+  const metadata = getRuntimeOwnedCommandMetadata("pr-branch");
 
+  assert.ok(metadata);
+  assert.equal(metadata.catalog.wave, 4);
+  assert.equal(metadata.catalog.family, "Quality And Shipping");
+  assert.equal(metadata.catalog.declaredStatus, "implemented");
+  assert.equal(metadata.spec.executionProfile, "high-risk-maintenance");
+  assert.equal(metadata.runtimeReference.waveTitle, "Quality And Shipping");
+  assert.match(metadata.runtimeReference.contractNotes, /Docless manifest\+skill-owned runtime/i);
+  assert.match(metadata.runtimeReference.contractNotes, /pr-branch-runtime-contract\.md/);
+  assert.match(metadata.runtimeReference.contractNotes, /clean tree and review-branch confirmation/i);
   assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);
-  assert.match(handoffFile, /shipped Wave 4 maintenance commands `pr-branch`, `ship`, and `undo`/i);
-  assert.match(architectureFile, /shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`/i);
   assert.match(readmeFile, /The review-branch command `\/blu-pr-branch` is now shipped/i);
   assert.match(geminiFile, /`\/blu-pr-branch`/);
   assert.match(

@@ -151,7 +151,7 @@ type ImpactScopeResolveResult = {
     confidence: ImpactConfidence;
     warnings: string[];
 };
-type ImpactSurface = "secret-sensitive" | "env-config" | "command-catalog" | "command-manifest" | "command-doc" | "runtime-reference" | "mcp-server" | "mcp-tool" | "mcp-resource" | "artifact-contract" | "skill" | "agent" | "extension-manifest" | "hook" | "package-runtime" | "build-config" | "test" | "docs" | "generated" | "config" | "source" | "repo-root" | "unknown";
+type ImpactSurface = "secret-sensitive" | "env-config" | "command-catalog" | "command-manifest" | "mcp-server" | "mcp-tool" | "mcp-resource" | "artifact-contract" | "skill" | "agent" | "extension-manifest" | "hook" | "package-runtime" | "build-config" | "test" | "docs" | "generated" | "config" | "source" | "repo-root" | "unknown";
 type ImpactSurfaceRecord = {
     path: string;
     surfaces: ImpactSurface[];

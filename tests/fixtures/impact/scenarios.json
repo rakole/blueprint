@@ -110,16 +110,16 @@
       "requiredObligationCategories": ["contract-review", "docs", "tests"]
     },
     {
-      "id": "command-doc-change",
+      "id": "runtime-metadata-change",
       "group": "surface",
       "scopeMode": "working-tree",
       "expectedScopeKind": "working-tree",
       "writeExpectation": "none",
       "requiresContext": true,
       "rerunExpectation": "none",
-      "requiredWarningCategories": [],
-      "requiredUnknownCategories": [],
-      "requiredObligationCategories": ["contract-review", "docs", "tests"]
+      "requiredWarningCategories": ["dist-coverage"],
+      "requiredUnknownCategories": ["obligation"],
+      "requiredObligationCategories": ["build", "contract-review", "docs", "tests"]
     },
     {
       "id": "mcp-tool-change",
@@ -168,18 +168,6 @@
       "requiredWarningCategories": [],
       "requiredUnknownCategories": [],
       "requiredObligationCategories": ["contract-review", "tests"]
-    },
-    {
-      "id": "runtime-reference-change",
-      "group": "surface",
-      "scopeMode": "working-tree",
-      "expectedScopeKind": "working-tree",
-      "writeExpectation": "none",
-      "requiresContext": true,
-      "rerunExpectation": "none",
-      "requiredWarningCategories": [],
-      "requiredUnknownCategories": [],
-      "requiredObligationCategories": ["contract-review", "docs", "tests"]
     },
     {
       "id": "extension-manifest-change",

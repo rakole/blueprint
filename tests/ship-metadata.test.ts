@@ -44,24 +44,23 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
   assert.match(commandFile, /Do not present planned-only commands as runnable/i);
 });
 
-test("ship doc, maintenance skill, and runtime resource capture ship visibility, tracker eligibility, and remote fallback safety", async () => {
-  const docFile = await readFile(path.join(repoRoot, "docs/commands/ship.md"), "utf8");
-  const skillFile = await readFile(
-    path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"),
-    "utf8"
-  );
-  const runtimeContract = await buildBlueprintCommandRuntimeContractResource("ship");
+test("ship local runtime contract, maintenance skill, and runtime resource capture ship visibility, tracker eligibility, and remote fallback safety", async () => {
+  const [runtimeReference, skillFile, runtimeContract] = await Promise.all([
+    readFile(
+      path.join(repoRoot, "skills/blueprint-maintenance/references/ship-runtime-contract.md"),
+      "utf8"
+    ),
+    readFile(path.join(repoRoot, "skills/blueprint-maintenance/SKILL.md"), "utf8"),
+    buildBlueprintCommandRuntimeContractResource("ship")
+  ]);
 
-  assert.match(docFile, /Execution profile \| `high-risk-maintenance`/);
-  assert.match(docFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`/);
-  assert.match(docFile, /resolved scope, active stage, pending gate, execution mode, next safe action/i);
-  assert.match(docFile, /`update_topic` tool/i);
-  assert.match(docFile, /`write_todos`/);
-  assert.match(docFile, /tracker-eligible/i);
-  assert.match(docFile, /session-local coordination only and must be paired with visible `write_todos`/i);
-  assert.match(docFile, /When tracker support is unavailable, keep the same shipping flow linear/i);
-  assert.match(docFile, /`blueprint_artifact_contract_read` -> `\{artifactId, contract\}`/);
-  assert.match(docFile, /contract\.authoringTemplate/);
+  assert.match(runtimeReference, /Stage Mapping[\s\S]*Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
+  assert.match(runtimeReference, /Resolve the shipping scope explicitly/i);
+  assert.match(runtimeReference, /next safe action/i);
+  assert.match(runtimeReference, /`update_topic`, `write_todos`, and tracker state are session-local only/);
+  assert.match(runtimeReference, /If `gh` is missing, unauthenticated, or declined, skip PR creation and preserve manual fallback guidance/);
+  assert.match(runtimeReference, /`mcp_blueprint_blueprint_artifact_contract_read`/);
+  assert.match(runtimeReference, /report\.ship/);
 
   assert.match(skillFile, /status: implemented/);
   assert.match(skillFile, /\/blu-ship/);

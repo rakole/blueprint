@@ -7,6 +7,18 @@ import path from "node:path";
 
 const repoRoot = process.cwd();
 
+function stripIncidentalNodeWarnings(stderr: string): string {
+  return stderr
+    .split(/\r?\n/)
+    .filter(
+      (line) =>
+        !/\[DEP0205\] DeprecationWarning: `module\.register\(\)` is deprecated\./.test(line.trim()) &&
+        line.trim() !== "(Use `node --trace-deprecation ...` to show where the warning was created)"
+    )
+    .join("\n")
+    .trim();
+}
+
 async function runHook(scriptRelativePath: string, input: unknown): Promise<{ stdout: string; stderr: string; code: number }> {
   return await new Promise((resolve, reject) => {
     const child = spawn(
@@ -32,7 +44,7 @@ async function runHook(scriptRelativePath: string, input: unknown): Promise<{ st
     });
     child.on("error", reject);
     child.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? -1 });
+      resolve({ stdout, stderr: stripIncidentalNodeWarnings(stderr), code: code ?? -1 });
     });
     child.stdin.end(`${JSON.stringify(input)}\n`);
   });

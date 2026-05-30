@@ -40,8 +40,8 @@ and Downstream Execution Handoff.
   `blueprint_phase_plan_readiness` into runtime FQNs before calling.
 - Treat Blueprint skills as loaded guidance, not callable tools.
 - Never run `/blu-*` in the shell.
-- Treat docs under `docs/commands/` as user-facing documentation, not runtime
-  prompt authority.
+- Treat command-spec docs as user-facing documentation, not runtime prompt
+  authority.
 
 ## Command Inputs
 

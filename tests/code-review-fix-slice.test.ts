@@ -6,6 +6,8 @@ import path from "node:path";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
 
+import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
+import { CODE_REVIEW_FIX_RUNTIME_METADATA } from "../src/mcp/command-runtime-metadata.js";
 import { blueprintToolNames } from "../src/mcp/server.js";
 import { blueprintPhaseSummaryWrite } from "../src/mcp/tools/phase.js";
 import { blueprintCommandCatalog } from "../src/mcp/tools/project.js";
@@ -392,34 +394,56 @@ ${noExternalServicesSection}
   );
 }
 
-test("code-review-fix docs and catalog metadata promote the review-remediation slice to implemented", async () => {
-  const [catalogMarkdown, implementationOrder, commandDoc, runtimeReference] = await Promise.all([
-    readFile(path.join(repoRoot, "docs/COMMAND-CATALOG.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/IMPLEMENTATION-ORDER.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/commands/code-review-fix.md"), "utf8"),
-    readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8")
+test("code-review-fix runtime metadata, manifest, and skill contract stay aligned", async () => {
+  const [catalog, contract, commandFile, skillFile, referenceFile] = await Promise.all([
+    blueprintCommandCatalog(),
+    buildBlueprintCommandRuntimeContractResource("code-review-fix"),
+    readFile(path.join(repoRoot, "commands/blu-code-review-fix.toml"), "utf8"),
+    readFile(path.join(repoRoot, "skills/blueprint-review/SKILL.md"), "utf8"),
+    readFile(
+      path.join(repoRoot, "skills/blueprint-review/references/code-review-fix-runtime-contract.md"),
+      "utf8"
+    )
   ]);
+  const entry = catalog.commands["code-review-fix"];
 
+  assert.equal(entry.specPath, CODE_REVIEW_FIX_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(entry.requiredTools, [...CODE_REVIEW_FIX_RUNTIME_METADATA.requiredTools]);
+  assert.equal(contract.catalog.specPath, CODE_REVIEW_FIX_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.spec?.writes, [...CODE_REVIEW_FIX_RUNTIME_METADATA.spec.writes]);
+  assert.equal(contract.runtimeReference?.path, CODE_REVIEW_FIX_RUNTIME_METADATA.sourceId);
+  assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
+    ...CODE_REVIEW_FIX_RUNTIME_METADATA.requiredTools
+  ]);
+  assert.deepEqual(contract.skillInputs.effective, [
+    "commands/blu-code-review-fix.toml",
+    "skills/blueprint-review/references/code-review-fix-runtime-contract.md"
+  ]);
+  assert.match(commandFile, /Execution profile: `long-running-mutation`/);
   assert.match(
-    catalogMarkdown,
-    /\| `code-review-fix` \| 4 \| `Quality And Shipping` \| `blueprint-review` \| `implemented` \| `phase XX-REVIEW-FIX\.md; code changes for selected findings; \.blueprint\/STATE\.md` \| `High: selected findings can trigger bounded repo remediation plus review-fix\/state updates\.` \|/
+    commandFile,
+    /resolved scope, active stage, pending gate, execution mode, and next safe action/i
+  );
+  assert.match(commandFile, /selected finding ids/i);
+  assert.match(commandFile, /bounded `--auto`/);
+  assert.match(commandFile, /`update_topic` tool/);
+  assert.match(commandFile, /`write_todos`/);
+  assert.match(commandFile, /No auto-fixer behavior is shipped/i);
+  assert.match(skillFile, /Execution profile for `code-review-fix`: `long-running-mutation`/);
+  assert.match(referenceFile, /explicit finding-selection confirmation/i);
+  assert.match(referenceFile, /saved `follow-up` findings only/i);
+  assert.match(referenceFile, /Attempt one selected finding at a time/i);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Long-running-mutation profile for bounded saved-finding remediation/i
   );
   assert.match(
-    implementationOrder,
-    /Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`\./
+    contract.runtimeReference?.contractNotes ?? "",
+    /default unscoped remediation to saved follow-up findings/i
   );
-  assert.match(commandDoc, /\| Execution profile \| `long-running-mutation` \|/);
-  assert.match(commandDoc, /## Shared Runtime Contract/);
-  assert.match(commandDoc, /## In-Flight Progress Contract/);
   assert.match(
-    commandDoc,
-    /resolved scope, selected finding ids, selected-finding mode \(`explicit`, `--all`, or bounded `--auto`\), active stage, pending gate, execution mode, remediation progress, verification progress, deferred findings, artifact status, and next safe action/i
-  );
-  assert.match(commandDoc, /`update_topic` tool and keep a compact remediation checklist with `write_todos`/);
-  assert.match(commandDoc, /auto-fixer behavior/i);
-  assert.match(
-    runtimeReference,
-    /`code-review-fix`[\s\S]*Long-running-mutation profile for bounded review remediation[\s\S]*explicit finding-selection gate[\s\S]*No auto-fixer behavior, implicit commits or branches, or hidden iterative re-review loops are shipped\./i
+    contract.runtimeReference?.contractNotes ?? "",
+    /author only the review\.review-fix schema's camelCase JSON fields/i
   );
 });
 
