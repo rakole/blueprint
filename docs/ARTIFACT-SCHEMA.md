@@ -1168,12 +1168,13 @@ Contract notes:
 ### `reports/milestone-summary-<milestone>.md`
 
 Purpose:
-- durable summary report for `/blu-milestone-summary`
+- durable consolidated milestone spec for `/blu-milestone-summary`
 - carry-forward input for `/blu-new-milestone`
 
 Minimum locked sections:
-- milestone identifier and scope summary
+- milestone identifier and milestone overview
 - source reports used
+- milestone evidence ledger and phase outcomes
 - shipped outcomes and deferred follow-ups
 - recommended carry-forward context
 
@@ -1181,6 +1182,7 @@ Contract notes:
 - `milestone-summary` owns this report and writes it through `blueprint_artifact_report_write`.
 - `new-milestone` treats this report as the default carry-forward seed and only switches to a fresh reset after an explicit user choice.
 - Replacing an existing milestone summary requires explicit confirmation.
+- The report should serve as the canonical milestone dossier, so milestone-level claims should stay grounded in saved roadmap, audit, completion, and key phase evidence.
 - The report should stay project-local in `.blueprint/reports/`.
 
 ### `reports/audit-fix-<phase>.md`

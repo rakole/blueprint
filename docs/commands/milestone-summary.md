@@ -10,14 +10,14 @@
 
 - Stage vocabulary: `Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, `Route`
 - In-flight status fields: resolved scope, active stage, pending gate, execution mode, next safe action
-- `milestone-summary` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded summary report pass, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
+- `milestone-summary` uses the shared interactive-read classification only to keep the command metadata aligned; it performs one bounded consolidated milestone spec pass, keeps persistence on MCP-owned Blueprint artifacts, and does not adopt tracker-backed branching or the long-running progress layer used by mutation-heavy commands.
 - Keep the waiting state explicit as `missing-milestone-audit`, `missing-milestone-complete`, or `milestone-summary-overwrite-confirmation` when the command is blocked before writing.
 
 
 ## Purpose
 
 
-`milestone-summary` is Blueprint's command for generate a comprehensive project summary from milestone artifacts for team onboarding and review. In Blueprint it stays host-native, builds the final summary from saved roadmap and closeout evidence, writes a durable summary report for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
+`milestone-summary` is Blueprint's command for generate the canonical consolidated milestone spec from milestone artifacts for archival review and carry-forward planning. In Blueprint it stays host-native, builds the final consolidated spec from saved roadmap and closeout evidence, writes a durable milestone dossier for onboarding or carry-forward planning, and routes the repo to the next safe milestone-start action without pulling in later-wave documentation agents.
 
 
 ## Command Path And Examples
@@ -33,14 +33,14 @@
 
 - Matching `milestone-audit-<milestone>.md` and `milestone-complete-<milestone>.md` reports should already exist in `.blueprint/reports/`.
 - Replacing an existing milestone summary report requires explicit overwrite confirmation.
-- Read the canonical `report.milestone-summary` contract before drafting or revising the report.
+- Read the canonical `report.milestone-summary` contract before drafting or revising the consolidated milestone spec.
 
 
 ## Outputs
 
 
-- User-facing result: a concise completion summary that surfaces the source reports and evidence used, plus the next safe implemented action when applicable.
-- Repo side effects: Writes a durable summary report in `.blueprint/reports/` and updates `.blueprint/STATE.md`.
+- User-facing result: a concise completion summary that surfaces the source reports and milestone evidence used, plus the next safe implemented action when applicable.
+- Repo side effects: Writes a durable consolidated milestone spec in `.blueprint/reports/` and updates `.blueprint/STATE.md`.
 - In-flight posture: none beyond a concise inline summary or overwrite confirmation gate; `milestone-summary` does not expose the long-running progress layer.
 
 
@@ -72,8 +72,8 @@
 
 ## Digest And Report Contract
 
-- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned `contract.authoringTemplate` when the contract provides one.
-- Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope.
+- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final consolidated spec body to the returned `contract.authoringTemplate` when the contract provides one.
+- Pass only repo-relative `artifactPaths` into `blueprint_artifact_summary_digest`, and treat returned `inputsUsed` as the authoritative digest scope. Include milestone phase summary, validation, or UAT artifacts when milestone-level claims need them.
 - Pass only the bare report name `milestone-summary-<milestone>` into `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Do not pass `.blueprint/reports/...`; the returned `path` is authoritative.
 
 
@@ -134,8 +134,8 @@
 ## Acceptance Criteria
 
 
-- Keeps milestone summarization grounded in saved roadmap, audit, and completion evidence.
-- Produces a durable report for milestone-level operations.
+- Keeps milestone summarization grounded in saved roadmap, audit, completion, and milestone-level evidence.
+- Produces a single durable consolidated milestone spec for archival and carry-forward operations.
 - Requires explicit confirmation before overwriting an existing milestone summary report.
 - Does not depend on any later-wave docs agent.
 - Returns `/blu-new-milestone` as the next safe implemented follow-up.

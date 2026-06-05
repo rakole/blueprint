@@ -229,11 +229,11 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 
 ### `milestone-summary`
 
-1. Read the roadmap first and inspect `.blueprint/reports/` through `blueprint_artifact_list` so the summary stays grounded in the matching milestone audit and completion reports.
+1. Read the roadmap first and inspect `.blueprint/reports/` through `blueprint_artifact_list` so the consolidated milestone spec stays grounded in the matching milestone audit and completion reports.
 2. Fail fast when either the audit report or completion report is missing. Route the user to `/blu-audit-milestone` or `/blu-complete-milestone` instead of fabricating missing inputs.
-3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final summary body to the returned `contract.authoringTemplate` when the contract provides one.
-4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence.
-5. Persist the summary report project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
+3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before drafting or revising the report, and normalize the final consolidated spec body to the returned `contract.authoringTemplate` when the contract provides one.
+4. Use `blueprint_artifact_summary_digest` with explicit roadmap-plus-report inputs to build the milestone summary from durable evidence, and include key milestone phase summary, validation, or UAT artifacts when milestone-level claims need them.
+5. Persist the consolidated milestone spec project-local in `.blueprint/reports/` through `blueprint_artifact_report_write`. Use the exact `blueprint_roadmap_read.milestone` value as `<milestone>` and let `blueprint_artifact_report_write` own normalization. Pass a bare report name and rely on the returned `path` instead of hand-building the report filename.
 6. Require explicit overwrite confirmation before replacing an existing milestone summary report, and prefer `ask_user` for that confirmation gate.
 7. Keep the flow skill-led. Do not pull in `blueprint-doc-writer` or any later-wave docs agent for this Wave 2 summary step.
 8. Update `STATE.md` through `blueprint_state_update` so `/blu-milestone-summary` is the active command and the next safe implemented follow-up is `/blu-new-milestone`.
@@ -241,9 +241,9 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 
 ### `new-milestone`
 
-1. Read the roadmap first and derive the next milestone starter context from the saved milestone summary through `blueprint_artifact_summary_digest`.
+1. Read the roadmap first and derive the next milestone starter context from the saved consolidated milestone spec through `blueprint_artifact_summary_digest`.
 2. Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
-3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before generating carry-forward seeds, and normalize any summary-derived seed text to the returned authoring template when the contract provides one.
+3. Read `report.milestone-summary` through `blueprint_artifact_contract_read` before generating carry-forward seeds, and normalize any consolidated-spec-derived seed text to the returned authoring template when the contract provides one.
 4. Treat carry-forward as the default mode. Only switch to a fresh reset when the user explicitly asks for it, and prefer `ask_user` when the choice is not already explicit.
 5. Preview the exact source scope before mutation: the source milestone summary path, digest `inputsUsed`, warnings, carry-forward or reset mode, proposed milestone name, starter-doc overwrite set, first whole-number phase target, affected starter paths, overwrite risk, and `Safe default: stop without writing`.
 6. Before any optional delegation, build a typed `Roadmapper Packet` from digest-backed evidence only. The packet must include `digestScope`, `carryForwardFacts`, `requirementTransitionHints`, `firstPhasePreview`, `parentOwnedResponsibilities`, `forbiddenActions`, and `stopConditions`.
@@ -283,7 +283,7 @@ Load `skills/blueprint-roadmap-admin/references/insert-phase-runtime-contract.md
 - For `plan-milestone-gaps`, show the grouped gap-closure phases compactly, call out any deferred optional gaps, and end with the first safe implemented follow-up.
 - For `audit-milestone`, call out the original milestone intent, the evidence that confirms or weakens it, grouped gap sections, any traceability repair notes, and the next safe implemented action.
 - For `complete-milestone`, report the milestone resolved, the audit readiness, audit report, and evidence used, whether the completion report was created or replaced, and the next safe implemented action.
-- For `milestone-summary`, report the milestone resolved, the source reports and evidence used, whether the summary report was created or replaced, and the next safe implemented action.
+- For `milestone-summary`, report the milestone resolved, the source reports and evidence used, whether the consolidated milestone spec was created or replaced, and the next safe implemented action.
 - For `new-milestone`, report the new milestone name, whether the flow used carry-forward or explicit reset, the first new phase scaffolded, the compact `New Milestone First-Phase Handoff Packet`, and the next safe implemented action.
 - For `add-phase`, include the compact starter handoff block before the route instruction: returned phase number and title, declared requirement IDs, confirmed objective, success criteria, source refs, and open items for discuss-phase.
 - For `insert-phase`, include the compact starter handoff block before the route instruction: decimal phase number and title, anchor phase, declared requirement IDs, no-renumbering and dependency-review note, roadmap evolution note summary, and open risks plus dependency questions.

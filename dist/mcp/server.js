@@ -15240,7 +15240,7 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-milestone-summary`",
         executionProfile: "interactive-read",
         rootRoutable: true,
-        purpose: "`milestone-summary` builds a durable milestone summary from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.",
+        purpose: "`milestone-summary` builds a durable consolidated milestone spec from saved roadmap, audit, and completion evidence and routes toward the next milestone-start action.",
         reads: [
           "blueprint_roadmap_read -> {roadmap, milestone, phases}",
           "blueprint_artifact_list -> {artifacts, reports, missing}",
@@ -15260,7 +15260,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: MILESTONE_SUMMARY_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit and completion evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone summarization: use saved audit, completion, and milestone-level evidence, read report.milestone-summary before drafting, prefer ask_user for overwrite confirmation, keep the waiting state explicit as missing-milestone-audit, missing-milestone-complete, or milestone-summary-overwrite-confirmation, write milestone-summary-<milestone>.md as the canonical consolidated milestone spec, and route to /blu-new-milestone without pulling in later-wave docs agents or adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -15282,7 +15282,7 @@ var init_command_runtime_metadata = __esm({
         title: "`/blu-new-milestone`",
         executionProfile: "interactive-read",
         rootRoutable: true,
-        purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved milestone summary, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.",
+        purpose: "`new-milestone` starts a new milestone cycle by deriving carry-forward context from the saved consolidated milestone spec, scaffolding starter docs and the first phase context, and preserving historical phase artifacts.",
         reads: [
           "blueprint_roadmap_read -> {roadmap, milestone, phases}",
           "blueprint_artifact_contract_read -> report.milestone-summary and phase.context contracts",
@@ -15306,7 +15306,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEW_MILESTONE_REQUIRED_TOOLS,
         optionalAgents: ROADMAP_ADMIN_ROADMAPPER_OPTIONAL_AGENTS,
         hookInvolvement: ROADMAP_ADMIN_HOOKS,
-        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved milestone summary as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, build a typed Roadmapper Packet from digestScope plus carryForwardFacts plus requirementTransitionHints plus a relative firstPhasePreview only, keep parentOwnedResponsibilities with the parent for digest reads, evidence-scope construction, final milestone naming, final phase numbering and paths, confirmation gates, MCP writes, final response, and routing, forbid MCP writes, hand-editing .blueprint/, final phase.context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter, pass only that packet to blueprint-roadmapper instead of raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes, require the same typed result shape in every mode with roadmapperMode plus provisionalOrderedProposals plus coverageNotes plus blockers plus warnings plus assumptions plus confidence plus relativeFirstPhaseRecommendation, use roadmapperMode values used, skipped-disabled, skipped-unnecessary, or unavailable-fallback, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, treat blueprint_artifact_scaffold receipt fields highestBasePhaseNumber, firstPhaseNumber, firstPhasePrefix, firstPhaseDir, firstContextPath, deletedPhaseDirectories, and renamedPhaseDirectories as authoritative, update state only after scaffold succeeds and the first context path exists, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
+        contractNotes: "Interactive-read profile for bounded milestone restart: use the saved consolidated milestone spec as durable carry-forward input, read blueprint_config_get with scope: effective before any optional blueprint-roadmapper decision, read report.milestone-summary before seeding, preview the exact carry-forward source scope plus first-phase target plus starter-doc overwrite set before mutation, build a typed Roadmapper Packet from digestScope plus carryForwardFacts plus requirementTransitionHints plus a relative firstPhasePreview only, keep parentOwnedResponsibilities with the parent for digest reads, evidence-scope construction, final milestone naming, final phase numbering and paths, confirmation gates, MCP writes, final response, and routing, forbid MCP writes, hand-editing .blueprint/, final phase.context authoring, confirmation-gate overrides, and any web, browser, or shell access not granted in the roadmapper frontmatter, pass only that packet to blueprint-roadmapper instead of raw reports, chat history, unrestricted files, web search results, browser-only findings, or shell-only substitutes, require the same typed result shape in every mode with roadmapperMode plus provisionalOrderedProposals plus coverageNotes plus blockers plus warnings plus assumptions plus confidence plus relativeFirstPhaseRecommendation, use roadmapperMode values used, skipped-disabled, skipped-unnecessary, or unavailable-fallback, read phase.context before scaffolding the first carried-forward phase, prefer ask_user for reset-versus-carry-forward and overwrite confirmations, keep the waiting state explicit as missing-milestone-summary, carry-forward-confirmation, or starter-doc-overwrite-confirmation, preserve historical phase artifacts, treat blueprint_artifact_scaffold receipt fields highestBasePhaseNumber, firstPhaseNumber, firstPhasePrefix, firstPhaseDir, firstContextPath, deletedPhaseDirectories, and renamedPhaseDirectories as authoritative, update state only after scaffold succeeds and the first context path exists, and route to /blu-discuss-phase <first phase> without adopting long-running progress tools.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -19641,20 +19641,29 @@ function renderMilestoneCompleteTemplate(context) {
 - /blu-milestone-summary`;
 }
 function renderMilestoneSummaryTemplate(context) {
-  return `# Milestone ${milestone(context)} - Summary
+  return `# Milestone ${milestone(context)} - Consolidated Spec
 
-**Sources Reviewed:** <saved audit report, completion report, and roadmap evidence>
-**Evidence Ledger:** <audit, completion, roadmap, carry-forward evidence ledger>
-**Carry-Forward Context:** <seed context for /blu-new-milestone>
+**Sources Reviewed:** <saved audit report, completion report, roadmap evidence, and key phase artifacts>
+**Evidence Ledger:** <audit, completion, roadmap, validation, UAT, and carry-forward evidence ledger>
+**Carry-Forward Context:** <high-confidence seed context for /blu-new-milestone>
 
-## Scope Summary
+## Milestone Overview
 
-- Concise milestone scope and outcome summary grounded in saved reports.
+- Milestone objective and final outcome.
+- Overall delivery status and milestone closeout posture.
+
+## Scope Baseline
+
+- Original roadmap intent for this milestone.
+- Included phases and notable scope boundaries.
+- Explicit out-of-scope or deferred scope.
 
 ## Source Reports Used
 
 - <saved milestone audit report path>
 - <saved milestone completion report path>
+- <saved roadmap evidence path>
+- <key phase artifact path or none>
 
 ## Milestone Evidence Ledger
 
@@ -19663,19 +19672,53 @@ function renderMilestoneSummaryTemplate(context) {
 | Audit report | <audit report evidence> | PASS|GAP|BLOCKED | <what the audit report proves> |
 | Completion report | <completion report evidence> | PASS|GAP|BLOCKED | <what the completion report proves> |
 | Roadmap context | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation coverage | <validation evidence or none> | PASS|GAP|BLOCKED | <what validation proves or misses> |
+| UAT coverage | <uat evidence or none> | PASS|GAP|BLOCKED | <what UAT proves or misses> |
 | Carry-forward context | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the carry-forward evidence proves> |
+
+## Phase-by-Phase Outcomes
+
+| Phase | Goal | Outcome | Evidence | Notes |
+|------|------|---------|----------|-------|
+| <phase> | <goal> | complete|partial|blocked | <artifact or report path> | <important result or caveat> |
+
+## Requirements And Coverage
+
+| Requirement / Theme | Status | Evidence | Gaps / Notes |
+|---------------------|--------|----------|--------------|
+| <requirement or theme> | met|partial|deferred|blocked | <evidence> | <notes> |
+
+## Key Decisions
+
+- <decision, rationale, and consequence>
+- <decision, rationale, and consequence>
 
 ## Shipped Outcomes
 
 - <major delivered outcome>
+- <major delivered outcome>
 
 ## Deferred Follow-Ups
 
-- <deferred item or none>
+- <deferred item, reason, and recommended landing zone>
+- none
+
+## Risks And Watch Items
+
+- <residual risk or operational watch item>
+- none
 
 ## Recommended Carry-Forward Context
 
 - <context that should seed the next milestone>
+- <context that should not be carried forward>
+- <open question or assumption to re-validate>
+
+## Appendix: Artifact Index
+
+- <important phase spec / plan / summary / validation / uat path>
+- <important review or docs artifact path>
+- none
 
 ## Next Safe Action
 
@@ -22888,13 +22931,14 @@ var init_artifact_contracts = __esm({
         scope: "report",
         ownerTool: "blueprint_artifact_report_write",
         pathOwner: "blueprint_artifact_report_write",
-        canonicalName: "Milestone Summary Report",
+        canonicalName: "Milestone Consolidated Spec",
         canonicalFilePattern: ".blueprint/reports/milestone-summary-<milestone>.md",
         freehandPolicy: "additional-top-level-headings",
         requiredHeadings: [
-          "Scope Summary",
+          "Milestone Overview",
           "Source Reports Used",
           "Milestone Evidence Ledger",
+          "Phase-by-Phase Outcomes",
           "Shipped Outcomes",
           "Deferred Follow-Ups",
           "Recommended Carry-Forward Context",
@@ -22903,19 +22947,27 @@ var init_artifact_contracts = __esm({
         lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
         placeholderSignals: [
           "<milestone>",
-          "<saved audit report, completion report, and roadmap evidence>",
-          "<audit, completion, roadmap, carry-forward evidence ledger>",
-          "<seed context for /blu-new-milestone>",
+          "<saved audit report, completion report, roadmap evidence, and key phase artifacts>",
+          "<audit, completion, roadmap, validation, UAT, and carry-forward evidence ledger>",
+          "<high-confidence seed context for /blu-new-milestone>",
           "<saved milestone audit report path>",
           "<saved milestone completion report path>",
+          "<saved roadmap evidence path>",
+          "<key phase artifact path or none>",
           "<audit report evidence>",
           "<completion report evidence>",
           "<roadmap evidence>",
-          "<carry-forward evidence>"
+          "<validation evidence or none>",
+          "<uat evidence or none>",
+          "<carry-forward evidence>",
+          "<artifact or report path>",
+          "<requirement or theme>",
+          "<decision, rationale, and consequence>",
+          "<residual risk or operational watch item>"
         ],
         notes: [
           "New-milestone uses this report as the default carry-forward seed.",
-          "The summary contract captures the saved milestone sources, evidence ledger, and next milestone handoff context."
+          "The summary contract captures the canonical milestone spec, evidence ledger, and next milestone handoff context."
         ],
         renderScaffoldTemplate: renderMilestoneSummaryTemplate,
         renderAuthoringTemplate: renderMilestoneSummaryTemplate
@@ -44216,6 +44268,7 @@ function validateReportArtifactContent(content, reportName2) {
   }
   if (contractId === "report.milestone-summary") {
     const issues = [];
+    const phaseOutcomes = extractMarkdownSection5(content, "Phase-by-Phase Outcomes");
     issues.push(
       ...validateMilestoneReportReferences(content, "Report artifact", "Source Reports Used", [
         "milestone-audit",
@@ -44230,6 +44283,11 @@ function validateReportArtifactContent(content, reportName2) {
         { label: "Carry-forward context", pattern: /Carry-forward context/i }
       ])
     );
+    if (!/\|\s*Phase\s*\|\s*Goal\s*\|\s*Outcome\s*\|\s*Evidence\s*\|\s*Notes\s*\|/i.test(phaseOutcomes)) {
+      issues.push(
+        "Report artifact section Phase-by-Phase Outcomes must include the canonical table header."
+      );
+    }
     return {
       valid: issues.length === 0,
       issues,
