@@ -314,24 +314,36 @@ function milestoneCompleteReportContent(): string {
 }
 
 function milestoneSummaryReportContent(): string {
-  return `# Milestone v2 - Summary
+  return `# Milestone v2 - Consolidated Spec
 
-**Sources Reviewed:** .blueprint/reports/milestone-audit-v2.md, .blueprint/reports/milestone-complete-v2.md
-**Evidence Ledger:** audit, completion, roadmap, carry-forward evidence ledger
+**Sources Reviewed:** .blueprint/reports/milestone-audit-v2.md, .blueprint/reports/milestone-complete-v2.md, .blueprint/ROADMAP.md, .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+**Evidence Ledger:** audit, completion, roadmap, validation, UAT, carry-forward evidence ledger
 **Carry-Forward Context:** Preserve the closeout evidence trail when seeding the next milestone.
 
 ## Framing Notes
 
 - This section is intentionally generic.
 
-## Scope Summary
+## Milestone Overview
 
 - Milestone v2 closed the loop on the release-readiness evidence chain.
+
+## Scope Baseline
+
+- Release-readiness closeout remained the final milestone scope.
 
 ## Source Reports Used
 
 - .blueprint/reports/milestone-audit-v2.md
 - .blueprint/reports/milestone-complete-v2.md
+- .blueprint/ROADMAP.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+
+## Phase-by-Phase Outcomes
+
+| Phase | Goal | Outcome | Evidence | Notes |
+|------|------|---------|----------|-------|
+| Phase 4: Release Readiness | Close milestone validation evidence and prepare for audit. | complete | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | The final milestone phase completed with saved evidence. |
 
 ## Shipped Outcomes
 
@@ -352,7 +364,17 @@ function milestoneSummaryReportContent(): string {
 | Audit report | .blueprint/reports/milestone-audit-v2.md | PASS | The audit report captures the closeout verdict. |
 | Completion report | .blueprint/reports/milestone-complete-v2.md | PASS | The completion report records the final decision. |
 | Roadmap context | .blueprint/ROADMAP.md | PASS | The milestone scope remains traceable to the roadmap. |
+| Validation coverage | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | Validation coverage is saved for the milestone closeout. |
+| UAT coverage | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | UAT coverage is saved for the milestone closeout. |
 | Carry-forward context | .blueprint/reports/milestone-summary-v2.md | PASS | The summary can seed the next milestone. |
+
+## Risks And Watch Items
+
+- none
+
+## Appendix: Artifact Index
+
+- .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
 
 ## Next Safe Action
 
@@ -1214,7 +1236,7 @@ test("artifact summary digest preserves milestone closeout evidence beyond the f
     summarySummary,
     /\*\*Sources Reviewed:\*\* .*milestone-audit-v2\.md, .*milestone-complete-v2\.md/
   );
-  assert.match(summarySummary, /Scope Summary: Milestone v2 closed the loop/);
+  assert.match(summarySummary, /Phase-by-Phase Outcomes: Phase: Outcome: Goal - Evidence; Phase 4: Release Readiness: complete:/);
   assert.match(summarySummary, /Milestone Evidence Ledger: Audit report: PASS/);
   assert.match(summarySummary, /Recommended Carry-Forward Context: Preserve the closeout evidence trail/);
 });

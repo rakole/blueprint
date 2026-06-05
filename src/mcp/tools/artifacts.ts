@@ -8230,6 +8230,7 @@ export function validateReportArtifactContent(
 
   if (contractId === "report.milestone-summary") {
     const issues: string[] = [];
+    const phaseOutcomes = extractMarkdownSection(content, "Phase-by-Phase Outcomes");
 
     issues.push(
       ...validateMilestoneReportReferences(content, "Report artifact", "Source Reports Used", [
@@ -8245,6 +8246,11 @@ export function validateReportArtifactContent(
         { label: "Carry-forward context", pattern: /Carry-forward context/i }
       ])
     );
+    if (!/\|\s*Phase\s*\|\s*Goal\s*\|\s*Outcome\s*\|\s*Evidence\s*\|\s*Notes\s*\|/i.test(phaseOutcomes)) {
+      issues.push(
+        "Report artifact section Phase-by-Phase Outcomes must include the canonical table header."
+      );
+    }
 
     return {
       valid: issues.length === 0,

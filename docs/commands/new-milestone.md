@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`new-milestone` is Blueprint's command for starting a new milestone cycle. In Blueprint it stays host-native, defaults to carry-forward from the saved milestone summary, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, seeds the first starter context, and routes to `/blu-discuss-phase <first phase>` instead of any planned-only follow-up.
+`new-milestone` is Blueprint's command for starting a new milestone cycle. In Blueprint it stays host-native, defaults to carry-forward from the saved consolidated milestone spec, rewrites the starter milestone docs through the existing scaffold flow, preserves historical phase artifacts, seeds the first starter context, and routes to `/blu-discuss-phase <first phase>` instead of any planned-only follow-up.
 
 
 ## Command Path And Examples
@@ -42,7 +42,7 @@
 - Do not write final implementation decisions for unresolved first-phase gray areas. Use `openForDiscuss` with confidence plus consequence instead.
 - Do not infer codebase facts not present in the digest or refreshed repo evidence. Mark unverified claims as assumptions.
 - Preserve deferred material as `deferredNotDoingNow`, `riskWatchlist`, or `openForDiscuss`; do not collapse it into `none`.
-- Read the canonical `report.milestone-summary` contract before building carry-forward seed text, and read `phase.context` before scaffolding the first context artifact for the next milestone.
+- Read the canonical `report.milestone-summary` contract before building carry-forward seed text from the consolidated milestone spec, and read `phase.context` before scaffolding the first context artifact for the next milestone.
 
 
 ## Outputs
@@ -85,7 +85,7 @@
 
 ## Carry-Forward Contract
 
-- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any summary-derived seed text to the returned `authoringTemplate` when the contract provides one.
+- Read `report.milestone-summary` through `blueprint_artifact_contract_read` before deriving carry-forward seed text, and normalize any consolidated-spec-derived seed text to the returned `authoringTemplate` when the contract provides one.
 - Read `blueprint_config_get` with `scope: "effective"` before any optional `blueprint-roadmapper` decision so roadmapper use stays config-gated.
 - Treat the confirmation review as a named in-flight receipt. `carry-forward-confirmation` binds the approved summary path, `inputsUsed`, mode, proposed milestone name, first phase preview, and starter-doc scope to the later scaffold and state-update arguments. `starter-doc-overwrite-confirmation` binds the approved overwrite set and overwrite risk to the later scaffold call.
 - Build `requirementTransitions` only as starter-seed evidence for the next milestone. The carry-forward packet may include rows with `decision` values `carry`, `modify`, `defer`, `retire`, `new`, `self-derived`, or `uncertain`, but those rows do not become a competing `.blueprint/REQUIREMENTS.md` write path on their own.

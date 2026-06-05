@@ -2653,20 +2653,29 @@ function renderMilestoneCompleteTemplate(context?: ArtifactTemplateContext): str
 }
 
 function renderMilestoneSummaryTemplate(context?: ArtifactTemplateContext): string {
-  return `# Milestone ${milestone(context)} - Summary
+  return `# Milestone ${milestone(context)} - Consolidated Spec
 
-**Sources Reviewed:** <saved audit report, completion report, and roadmap evidence>
-**Evidence Ledger:** <audit, completion, roadmap, carry-forward evidence ledger>
-**Carry-Forward Context:** <seed context for /blu-new-milestone>
+**Sources Reviewed:** <saved audit report, completion report, roadmap evidence, and key phase artifacts>
+**Evidence Ledger:** <audit, completion, roadmap, validation, UAT, and carry-forward evidence ledger>
+**Carry-Forward Context:** <high-confidence seed context for /blu-new-milestone>
 
-## Scope Summary
+## Milestone Overview
 
-- Concise milestone scope and outcome summary grounded in saved reports.
+- Milestone objective and final outcome.
+- Overall delivery status and milestone closeout posture.
+
+## Scope Baseline
+
+- Original roadmap intent for this milestone.
+- Included phases and notable scope boundaries.
+- Explicit out-of-scope or deferred scope.
 
 ## Source Reports Used
 
 - <saved milestone audit report path>
 - <saved milestone completion report path>
+- <saved roadmap evidence path>
+- <key phase artifact path or none>
 
 ## Milestone Evidence Ledger
 
@@ -2675,19 +2684,53 @@ function renderMilestoneSummaryTemplate(context?: ArtifactTemplateContext): stri
 | Audit report | <audit report evidence> | PASS|GAP|BLOCKED | <what the audit report proves> |
 | Completion report | <completion report evidence> | PASS|GAP|BLOCKED | <what the completion report proves> |
 | Roadmap context | <roadmap evidence> | PASS|GAP|BLOCKED | <what the roadmap evidence proves> |
+| Validation coverage | <validation evidence or none> | PASS|GAP|BLOCKED | <what validation proves or misses> |
+| UAT coverage | <uat evidence or none> | PASS|GAP|BLOCKED | <what UAT proves or misses> |
 | Carry-forward context | <carry-forward evidence> | PASS|GAP|BLOCKED | <what the carry-forward evidence proves> |
+
+## Phase-by-Phase Outcomes
+
+| Phase | Goal | Outcome | Evidence | Notes |
+|------|------|---------|----------|-------|
+| <phase> | <goal> | complete|partial|blocked | <artifact or report path> | <important result or caveat> |
+
+## Requirements And Coverage
+
+| Requirement / Theme | Status | Evidence | Gaps / Notes |
+|---------------------|--------|----------|--------------|
+| <requirement or theme> | met|partial|deferred|blocked | <evidence> | <notes> |
+
+## Key Decisions
+
+- <decision, rationale, and consequence>
+- <decision, rationale, and consequence>
 
 ## Shipped Outcomes
 
 - <major delivered outcome>
+- <major delivered outcome>
 
 ## Deferred Follow-Ups
 
-- <deferred item or none>
+- <deferred item, reason, and recommended landing zone>
+- none
+
+## Risks And Watch Items
+
+- <residual risk or operational watch item>
+- none
 
 ## Recommended Carry-Forward Context
 
 - <context that should seed the next milestone>
+- <context that should not be carried forward>
+- <open question or assumption to re-validate>
+
+## Appendix: Artifact Index
+
+- <important phase spec / plan / summary / validation / uat path>
+- <important review or docs artifact path>
+- none
 
 ## Next Safe Action
 
@@ -5042,13 +5085,14 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     scope: "report",
     ownerTool: "blueprint_artifact_report_write",
     pathOwner: "blueprint_artifact_report_write",
-    canonicalName: "Milestone Summary Report",
+    canonicalName: "Milestone Consolidated Spec",
     canonicalFilePattern: ".blueprint/reports/milestone-summary-<milestone>.md",
     freehandPolicy: "additional-top-level-headings",
     requiredHeadings: [
-      "Scope Summary",
+      "Milestone Overview",
       "Source Reports Used",
       "Milestone Evidence Ledger",
+      "Phase-by-Phase Outcomes",
       "Shipped Outcomes",
       "Deferred Follow-Ups",
       "Recommended Carry-Forward Context",
@@ -5057,19 +5101,27 @@ const ARTIFACT_CONTRACTS: Record<ArtifactContractId, ArtifactContractDefinition>
     lockedMarkers: ["**Sources Reviewed:**", "**Evidence Ledger:**", "**Carry-Forward Context:**"],
     placeholderSignals: [
       "<milestone>",
-      "<saved audit report, completion report, and roadmap evidence>",
-      "<audit, completion, roadmap, carry-forward evidence ledger>",
-      "<seed context for /blu-new-milestone>",
+      "<saved audit report, completion report, roadmap evidence, and key phase artifacts>",
+      "<audit, completion, roadmap, validation, UAT, and carry-forward evidence ledger>",
+      "<high-confidence seed context for /blu-new-milestone>",
       "<saved milestone audit report path>",
       "<saved milestone completion report path>",
+      "<saved roadmap evidence path>",
+      "<key phase artifact path or none>",
       "<audit report evidence>",
       "<completion report evidence>",
       "<roadmap evidence>",
-      "<carry-forward evidence>"
+      "<validation evidence or none>",
+      "<uat evidence or none>",
+      "<carry-forward evidence>",
+      "<artifact or report path>",
+      "<requirement or theme>",
+      "<decision, rationale, and consequence>",
+      "<residual risk or operational watch item>"
     ],
     notes: [
       "New-milestone uses this report as the default carry-forward seed.",
-      "The summary contract captures the saved milestone sources, evidence ledger, and next milestone handoff context."
+      "The summary contract captures the canonical milestone spec, evidence ledger, and next milestone handoff context."
     ],
     renderScaffoldTemplate: renderMilestoneSummaryTemplate,
     renderAuthoringTemplate: renderMilestoneSummaryTemplate

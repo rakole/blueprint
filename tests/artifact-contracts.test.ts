@@ -891,9 +891,10 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(milestoneCompleteContract.authoringTemplate, /\*\*Decision:\*\* READY_TO_CLOSE\|FOLLOW_UP\|BLOCKED/);
   assert.match(milestoneCompleteContract.authoringTemplate, /<saved milestone audit report path>/);
   assert.deepEqual(milestoneSummaryContract.requiredHeadings, [
-    "Scope Summary",
+    "Milestone Overview",
     "Source Reports Used",
     "Milestone Evidence Ledger",
+    "Phase-by-Phase Outcomes",
     "Shipped Outcomes",
     "Deferred Follow-Ups",
     "Recommended Carry-Forward Context",
@@ -907,8 +908,9 @@ test("artifact contract registry exposes canonical contract ids and templates", 
   assert.match(milestoneSummaryContract.authoringTemplate, /## Milestone Evidence Ledger/);
   assert.match(
     milestoneSummaryContract.authoringTemplate,
-    /<saved audit report, completion report, and roadmap evidence>/
+    /<saved audit report, completion report, roadmap evidence, and key phase artifacts>/
   );
+  assert.match(milestoneSummaryContract.authoringTemplate, /## Phase-by-Phase Outcomes/);
   assert.match(milestoneSummaryContract.authoringTemplate, /\/blu-new-milestone/);
   assert.match(uatAuthoringTemplate, /\*\*Resume State:\*\* RESUMED\|NEW\|CONTINUED/);
   assert.match(uatAuthoringTemplate, /\*\*Checkpoint:\*\* <current checkpoint label or none>/);
@@ -2020,20 +2022,29 @@ test("review and report contracts validate canonical sections while keeping extr
 
 - /blu-milestone-summary v2
 `;
-  const milestoneSummaryReport = `# Milestone v2 - Summary
+  const milestoneSummaryReport = `# Milestone v2 - Consolidated Spec
 
-**Sources Reviewed:** .blueprint/reports/milestone-audit-v2.md, .blueprint/reports/milestone-complete-v2.md, roadmap evidence
-**Evidence Ledger:** audit, completion, roadmap, carry-forward
+**Sources Reviewed:** .blueprint/reports/milestone-audit-v2.md, .blueprint/reports/milestone-complete-v2.md, .blueprint/ROADMAP.md, .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+**Evidence Ledger:** audit, completion, roadmap, validation, UAT, carry-forward
 **Carry-Forward Context:** seed for /blu-new-milestone
 
-## Scope Summary
+## Milestone Overview
 
 - Milestone v2 closed with saved audit and completion evidence.
+- Delivery posture is ready for carry-forward planning.
+
+## Scope Baseline
+
+- Close the release-readiness evidence chain.
+- Include the release-readiness phase and closeout reports.
+- Defer any new implementation scope.
 
 ## Source Reports Used
 
 - .blueprint/reports/milestone-audit-v2.md
 - .blueprint/reports/milestone-complete-v2.md
+- .blueprint/ROADMAP.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
 
 ## Milestone Evidence Ledger
 
@@ -2042,31 +2053,63 @@ test("review and report contracts validate canonical sections while keeping extr
 | Audit report | .blueprint/reports/milestone-audit-v2.md | PASS | The audit report exists and supports closeout. |
 | Completion report | .blueprint/reports/milestone-complete-v2.md | PASS | The completion report exists and supports handoff. |
 | Roadmap context | .blueprint/ROADMAP.md | PASS | The roadmap context is still aligned. |
+| Validation coverage | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | PASS | Validation coverage is saved for the final milestone phase. |
+| UAT coverage | .blueprint/phases/04-release-readiness/04-UAT.md | PASS | UAT coverage is saved for the final milestone phase. |
 | Carry-forward context | .blueprint/phases/04-release-readiness/04-01-SUMMARY.md | PASS | The carry-forward context can seed the next milestone. |
+
+## Phase-by-Phase Outcomes
+
+| Phase | Goal | Outcome | Evidence | Notes |
+|------|------|---------|----------|-------|
+| Phase 4: Release Readiness | Close milestone validation evidence and prepare for audit. | complete | .blueprint/phases/04-release-readiness/04-VERIFICATION.md | Release-readiness evidence is complete and supports closeout. |
+
+## Requirements And Coverage
+
+| Requirement / Theme | Status | Evidence | Gaps / Notes |
+|---------------------|--------|----------|--------------|
+| MILESTONE-01 | met | .blueprint/reports/milestone-audit-v2.md | Requirement coverage stayed aligned through closeout. |
+
+## Key Decisions
+
+- Preserve audit and completion reports as the canonical closeout evidence chain.
+- Use the saved milestone summary report as the next milestone carry-forward seed.
 
 ## Shipped Outcomes
 
 - Milestone closeout artifacts were saved for carry-forward planning.
+- Release-readiness validation and UAT evidence now anchor milestone closeout.
 
 ## Deferred Follow-Ups
+
+- none
+
+## Risks And Watch Items
 
 - none
 
 ## Recommended Carry-Forward Context
 
 - Use the audit and completion reports to seed the next milestone.
+- Preserve the release-readiness evidence chain when seeding follow-up work.
+- Re-validate any assumptions before widening milestone scope.
+
+## Appendix: Artifact Index
+
+- .blueprint/phases/04-release-readiness/04-01-SUMMARY.md
+- .blueprint/phases/04-release-readiness/04-VERIFICATION.md
+- .blueprint/phases/04-release-readiness/04-UAT.md
 
 ## Next Safe Action
 
 - /blu-new-milestone
 `;
-  const thinMilestoneSummaryReport = `# Milestone v2 - Summary
+  const thinMilestoneSummaryReport = `# Milestone v2 - Consolidated Spec
 
 **Sources Reviewed:** .blueprint/reports/milestone-audit-v2.md
-**Evidence Ledger:** audit, completion, roadmap, carry-forward
+**Evidence Ledger:** audit, completion, roadmap, validation, UAT, carry-forward
 **Carry-Forward Context:** seed for /blu-new-milestone
 
-## Scope Summary
+## Milestone Overview
 
 - Milestone v2 is done.
 
@@ -2079,6 +2122,10 @@ test("review and report contracts validate canonical sections while keeping extr
 | Dimension | Evidence | Status | Notes |
 |-----------|----------|--------|-------|
 | Audit report | .blueprint/reports/milestone-audit-v2.md | PASS | The audit report exists. |
+
+## Phase-by-Phase Outcomes
+
+- none
 
 ## Shipped Outcomes
 
@@ -2370,6 +2417,7 @@ test("review and report contracts validate canonical sections while keeping extr
   assert.equal(thinMilestoneSummaryValidation.valid, false);
   assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /Source Reports Used/);
   assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /Milestone Evidence Ledger/);
+  assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /Phase-by-Phase Outcomes/);
   assert.match(thinMilestoneSummaryValidation.issues.join("\n"), /must reference milestone-complete/i);
   assert.equal(customReportValidation.valid, true, customReportValidation.issues.join("\n"));
 });
