@@ -38,9 +38,10 @@ Follow this flow exactly:
 15. End with a concise summary covering the resolved phase, scope source, depth, whether the artifact was created, reused, or revised, the main findings or pass signals, any explicit follow-ups, and the next logical implemented Blueprint action.
 
 Next-action rules:
-- If the phase does not yet have `XX-SECURITY.md`, use `/blu-secure-phase <phase>` as the primary `nextSafeAction`.
-- If the phase does not yet have `XX-SECURITY.md` and concrete follow-up fixes remain, keep `/blu-secure-phase <phase>` as the primary next action and mention `/blu-code-review-fix <phase>` as the secondary queued recommendation.
-- Otherwise if meaningful follow-up fixes remain, prefer `/blu-code-review-fix <phase>`.
+- If effective config has `workflow.code_review=false`, never make `/blu-secure-phase <phase>` mandatory through code-review routing, even when `workflow.secure_phase=true`.
+- If effective config has `workflow.code_review=true`, `workflow.secure_phase=true`, and the phase does not yet have `XX-SECURITY.md`, use `/blu-secure-phase <phase>` as the primary `nextSafeAction`.
+- If effective config has `workflow.code_review=true`, `workflow.secure_phase=true`, the phase does not yet have `XX-SECURITY.md`, and concrete follow-up fixes remain, keep `/blu-secure-phase <phase>` as the primary next action and mention `/blu-code-review-fix <phase>` as the secondary queued recommendation.
+- If meaningful follow-up fixes remain and either `workflow.code_review=true` with `workflow.secure_phase=false` or security already exists, prefer `/blu-code-review-fix <phase>`.
 - Otherwise prefer `/blu-progress`.
 
 Response requirements:
@@ -56,6 +57,6 @@ Response requirements:
 - If explicit files were supplied, review only that explicit file set even when the phase contains a broader saved scope.
 - Never widen explicit `--files` scope behind the user's back.
 - `evidenceCoverage` should include only exact known evidence artifacts that materially shaped the review; MCP renders known but omitted artifacts as not reviewed.
-- Recommend `/blu-code-review-fix` only when the review actually leaves concrete follow-up findings to address. When security still routes first, keep `code-review-fix` visible as the secondary queued follow-up instead of hiding it.
+- Recommend `/blu-code-review-fix` only when the review actually leaves concrete follow-up findings to address. When security still routes first, keep `code-review-fix` visible as the secondary queued follow-up instead of hiding it. Keep `/blu-secure-phase` manually runnable even when config-gated routing prefers another implemented next step.
 - Use `ask_user` for overwrite confirmation and any scope confirmation triggered by `blueprint_review_scope.confirmationRecommended`.
 """

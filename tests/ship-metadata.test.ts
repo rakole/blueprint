@@ -27,6 +27,13 @@ test("ship manifest references the maintenance skill, report tool, and explicit 
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_contract_read/);
   assert.match(commandFile, /mcp_blueprint_blueprint_artifact_report_write/);
   assert.match(commandFile, /mcp_blueprint_blueprint_state_update/);
+  assert.match(commandFile, /`workflow\.secure_phase` defaults to `false`/);
+  assert.match(commandFile, /`\/blu-secure-phase` remains manually runnable and implemented/i);
+  assert.match(commandFile, /`workflow\.code_review=false`/);
+  assert.match(commandFile, /never make security evidence mandatory regardless of `workflow\.secure_phase`/);
+  assert.match(commandFile, /`workflow\.code_review=true` and `workflow\.secure_phase=false`/);
+  assert.match(commandFile, /review evidence may still be mandatory while security evidence is not/);
+  assert.match(commandFile, /require code-review evidence first and secure-phase or security evidence after that before ready shipping/);
   assert.match(commandFile, /Execution profile: `high-risk-maintenance`/);
   assert.match(commandFile, /`Resolve`, `Read`, `Decide`, `Execute`, `Persist`, `Validate`, and `Route`/);
   assert.match(commandFile, /resolved scope, active stage, pending gate, execution mode, and next safe action/i);
@@ -56,6 +63,13 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
 
   assert.match(runtimeReference, /Stage Mapping[\s\S]*Resolve[\s\S]*Read[\s\S]*Decide[\s\S]*Execute[\s\S]*Persist[\s\S]*Validate[\s\S]*Route/);
   assert.match(runtimeReference, /Resolve the shipping scope explicitly/i);
+  assert.match(runtimeReference, /Treat effective `workflow\.code_review` and `workflow\.secure_phase` as the shipping gate authority/i);
+  assert.match(runtimeReference, /`workflow\.code_review=false`/);
+  assert.match(runtimeReference, /security evidence is never mandatory regardless of `workflow\.secure_phase`/);
+  assert.match(runtimeReference, /`workflow\.code_review=true` and `workflow\.secure_phase=false`/);
+  assert.match(runtimeReference, /review evidence may still be mandatory while security evidence is not/);
+  assert.match(runtimeReference, /require code-review evidence first and secure-phase or security evidence after that before ready shipping/);
+  assert.match(runtimeReference, /Missing config-required review or security evidence blocks ready shipping/i);
   assert.match(runtimeReference, /next safe action/i);
   assert.match(runtimeReference, /`update_topic`, `write_todos`, and tracker state are session-local only/);
   assert.match(runtimeReference, /If `gh` is missing, unauthenticated, or declined, skip PR creation and preserve manual fallback guidance/);
@@ -78,9 +92,17 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(skillFile, /session-local coordination only/i);
   assert.match(skillFile, /dirty working tree/i);
   assert.match(skillFile, /optional push, and optional PR creation are separate steps/i);
+  assert.match(skillFile, /`workflow\.secure_phase` defaults to `false`/);
+  assert.match(skillFile, /`\/blu-secure-phase` remains manually runnable and implemented/i);
+  assert.match(skillFile, /`workflow\.code_review=false`/);
+  assert.match(skillFile, /security evidence is never mandatory regardless of `workflow\.secure_phase`/);
+  assert.match(skillFile, /`workflow\.code_review=true` and `workflow\.secure_phase=false`/);
+  assert.match(skillFile, /review evidence may still be mandatory while security evidence is not/);
+  assert.match(skillFile, /require code-review evidence first and secure-phase or security evidence before ready shipping/);
   assert.match(skillFile, /ship-latest/);
   assert.match(skillFile, /missing or unauthenticated/i);
-  assert.match(skillFile, /overwrite `ship-latest`[\s\S]*actual outcomes, fallback notes, and post-mutation evidence/i);
+  assert.match(skillFile, /overwrite `ship-latest`/i);
+  assert.match(skillFile, /actual outcomes, fallback notes, post-mutation evidence, and the config-aware gate posture/i);
 
   assert.equal(runtimeContract.runtimeReference?.path, runtimeContract.catalog.specPath);
   assert.deepEqual(
@@ -91,6 +113,26 @@ test("ship local runtime contract, maintenance skill, and runtime resource captu
   assert.match(
     runtimeContract.runtimeReference?.contractNotes ?? "",
     /local prep, push, and PR creation as separate approved steps/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false[\s\S]*security evidence is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true and workflow\.secure_phase=false[\s\S]*review evidence may be mandatory while security evidence is not/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true and workflow\.secure_phase=true[\s\S]*require code-review evidence first/i
+  );
+  assert.match(
+    runtimeContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
   );
   assert.equal(
     runtimeContract.skillInputs.effective.some((input) => input.startsWith("docs/")),

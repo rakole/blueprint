@@ -134,9 +134,11 @@ type CodeReviewAuthoringContext = {
         source: ReviewModeSource;
     };
     hasSecurityArtifact: boolean;
+    securePhaseEnabled: boolean;
     knownEvidenceArtifacts: string[];
     allowedNextActions: string[];
     preferredNextSafeAction: string | null;
+    noFindingPreferredNextSafeAction: string | null;
     secondaryNextSafeAction: string | null;
     schemaPath: string;
     baseSchema: Record<string, unknown>;

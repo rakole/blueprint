@@ -1,4 +1,4 @@
-description = "Review and update normalized Blueprint repo settings, including the review toggle and default review depth, with an optional save-to-defaults step."
+description = "Review and update normalized Blueprint repo settings, including the review toggle, secure-phase requirement toggle, and default review depth, with an optional save-to-defaults step."
 prompt = """
 You are the `/blu-settings` command for Blueprint.
 
@@ -18,6 +18,7 @@ Follow this flow exactly:
    - `workflow.ui_phase`
    - `workflow.ui_safety_gate`
    - `workflow.code_review`
+   - `workflow.secure_phase`
    - `workflow.code_review_depth`
    - `planning.commit_docs`
    - `git.branching_strategy`
@@ -39,6 +40,12 @@ Follow this flow exactly:
 7. After project-local changes are applied, offer an explicit opt-in to save the resolved settings to `~/.<host>/blueprint/defaults.json`. Use `mcp_blueprint_blueprint_config_set` with `scope: "defaults"` only when the user clearly confirms that saved-defaults write. Treat the returned `configPath` as authoritative instead of guessing the save target.
 8. Never write or reintroduce removed repo keys such as `workflow.use_workspaces`, `workflow.use_workstreams`, or `hooks.*`.
 9. If the user asks for a broad reset, confirm it before calling `mcp_blueprint_blueprint_config_set`.
+
+Workflow gating requirements:
+- `workflow.secure_phase` defaults to `false`.
+- Treat `workflow.secure_phase` as a workflow-routing and lifecycle-gate requirement only when `workflow.code_review` is `true`.
+- If `workflow.code_review` is `false`, never mandate secure-phase from routing or gates regardless of `workflow.secure_phase`.
+- Never hide or remove manual `/blu-secure-phase`; explicit invocation remains valid even when `workflow.secure_phase` is `false`.
 
 Response requirements:
 - Summarize which project settings changed and whether saved defaults were also updated.

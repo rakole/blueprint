@@ -36,7 +36,13 @@ test("security runtime source, hooks, and memory describe the shared hardening m
 });
 
 test("maintenance and security runtime assets reflect the tightened hardening guidance", async () => {
-  const [maintenanceSkill, reviewSkill, securePhaseManifest, shipReference, cleanupReference] =
+  const [
+    maintenanceSkill,
+    reviewSkill,
+    securePhaseManifest,
+    shipReference,
+    cleanupReference
+  ] =
     await Promise.all([
       readRepoFile("skills/blueprint-maintenance/SKILL.md"),
       readRepoFile("skills/blueprint-review/SKILL.md"),

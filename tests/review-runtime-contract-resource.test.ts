@@ -112,3 +112,48 @@ test("review-family runtime contract resources do not read bundled docs at build
 
   assert.deepEqual(attemptedDocs, []);
 });
+
+test("review-family runtime resources preserve config-gated secure-phase routing semantics", async () => {
+  const [codeReviewContract, securePhaseContract] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("code-review"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase")
+  ]);
+
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /must never make \/blu-secure-phase <phase> mandatory/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase=true/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /security is still missing/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase <phase>/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase=false/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /code-review-fix/i
+  );
+  assert.match(
+    codeReviewContract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step\./i
+  );
+  assert.equal(securePhaseContract.catalog.command, "/blu-secure-phase");
+  assert.equal(securePhaseContract.catalog.implemented, true);
+  assert.equal(securePhaseContract.catalog.status, "implemented");
+  assert.equal(securePhaseContract.spec?.rootRoutable, true);
+  assert.equal(securePhaseContract.spec?.executionProfile, "long-running-mutation");
+});

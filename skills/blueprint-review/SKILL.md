@@ -176,12 +176,19 @@ artifacts, and optional review agents when the command contract allows them.
    `reviewMode.source` as `scopeSource`. Use `scopeSource: "explicit-files"`
    only when the user supplied explicit file arguments. Do not pass Markdown
    `content` for code-review, and do not hand-edit `.blueprint/`.
-16. Keep next-step guidance inside implemented Blueprint commands only. Prefer
-   `/blu-secure-phase <phase>` when the phase still lacks a security artifact.
-   When concrete follow-up fixes also remain, keep `/blu-code-review-fix
-   <phase>` visible as the secondary queued recommendation. Otherwise prefer
-   `/blu-code-review-fix <phase>` when concrete follow-up fixes remain, and
-   `/blu-progress` when they do not.
+16. Keep next-step guidance inside implemented Blueprint commands only. When
+   effective config has `workflow.code_review=false`, code-review routing must
+   never make `/blu-secure-phase <phase>` mandatory, even when
+   `workflow.secure_phase=true`. When effective config has
+   `workflow.code_review=true`, `workflow.secure_phase=true`, and the phase
+   still lacks a security artifact, prefer `/blu-secure-phase <phase>`. When
+   concrete follow-up fixes also remain, keep `/blu-code-review-fix <phase>`
+   visible as the secondary queued recommendation. When
+   `workflow.code_review=true` and `workflow.secure_phase=false`, prefer
+   `/blu-code-review-fix <phase>` for concrete follow-up findings and
+   otherwise route to `/blu-progress` or another implemented validation-safe
+   or progress-safe action. Keep `/blu-secure-phase` manually runnable even
+   when it is not the preferred routed next step.
 
 ### `code-review-fix`
 

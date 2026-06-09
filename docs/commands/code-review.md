@@ -93,7 +93,10 @@
 - The authored model must use only `verdict`, `reviewSummary`, `positiveSignals`, `findings`, `evidenceCoverage`, `followUps`, and `nextSafeAction`. Runtime-owned depth, scope source, scope reviewed, evidence inventory rendering, severity counts, paths, and Markdown are computed by MCP.
 - `evidenceCoverage` must be an object keyed only by exact known evidence artifact paths from authoring context. Include entries only for saved evidence that materially shaped the review; MCP renders known but omitted evidence as not reviewed.
 - Structured `model` writes must not include MCP-owned identity keys such as `phase`, `artifact`, path, `content`, `depth`, `scopeSource`, or rendered section fields.
-- When the phase still lacks `XX-SECURITY.md` and concrete follow-up fixes also remain, keep `/blu-secure-phase <phase>` as the primary next step while surfacing `/blu-code-review-fix <phase>` as the secondary queued recommendation. After security exists, saved non-pass review debt must still route to `/blu-code-review-fix <phase>` instead of advancing as though the follow-up disappeared.
+- When effective config has `workflow.code_review=false`, code-review routing must never make `/blu-secure-phase <phase>` mandatory, even when `workflow.secure_phase=true`.
+- When effective config has `workflow.code_review=true` and `workflow.secure_phase=true` and the phase still lacks `XX-SECURITY.md`, keep `/blu-secure-phase <phase>` as the primary next step. If concrete follow-up fixes also remain, surface `/blu-code-review-fix <phase>` as the secondary queued recommendation.
+- When effective config has `workflow.code_review=true` and `workflow.secure_phase=false`, prefer `/blu-code-review-fix <phase>` for concrete follow-up findings; otherwise route to `/blu-progress` or another implemented validation-safe or progress-safe action instead of forcing security first.
+- Keep `/blu-secure-phase` manually runnable even when code-review routing does not choose it as the primary next action. After security exists, saved non-pass review debt must still route to `/blu-code-review-fix <phase>` instead of advancing as though the follow-up disappeared.
 
 ## Subagent And Fallback Contract
 

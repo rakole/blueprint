@@ -5,7 +5,11 @@ import path from "node:path";
 
 import { buildBlueprintCommandRuntimeContractResource } from "../src/mcp/command-resources.js";
 import {
+  NEXT_RUNTIME_METADATA,
+  SHIP_RUNTIME_METADATA,
+  VERIFY_WORK_RUNTIME_METADATA,
   MAP_CODEBASE_RUNTIME_METADATA,
+  SECURE_PHASE_RUNTIME_METADATA,
   SPEC_PHASE_RUNTIME_METADATA,
   listRuntimeOwnedCommandMetadata
 } from "../src/mcp/command-runtime-metadata.js";
@@ -90,10 +94,12 @@ test("runtime catalog exposes source-owned spec paths for metadata-backed comman
 });
 
 test("runtime resources keep command-specific inputs anchored to manifests and skill references", async () => {
-  const [planPhase, impact, docsUpdate] = await Promise.all([
+  const [planPhase, impact, docsUpdate, codeReview, securePhase] = await Promise.all([
     buildBlueprintCommandRuntimeContractResource("plan-phase"),
     buildBlueprintCommandRuntimeContractResource("impact"),
-    buildBlueprintCommandRuntimeContractResource("docs-update")
+    buildBlueprintCommandRuntimeContractResource("docs-update"),
+    buildBlueprintCommandRuntimeContractResource("code-review"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase")
   ]);
 
   assert.deepEqual(planPhase.skillInputs.commandSpecific, [
@@ -107,4 +113,145 @@ test("runtime resources keep command-specific inputs anchored to manifests and s
     "commands/blu-docs-update.toml",
     "skills/blueprint-docs/references/docs-update-runtime-contract.md"
   ]);
+  assert.deepEqual(codeReview.skillInputs.commandSpecific, [
+    "commands/blu-code-review.toml",
+    "skills/blueprint-review/references/code-review-runtime-contract.md"
+  ]);
+  assert.deepEqual(securePhase.skillInputs.commandSpecific, [
+    "commands/blu-secure-phase.toml",
+    "skills/blueprint-review/references/secure-phase-runtime-contract.md"
+  ]);
+});
+
+test("code-review and secure-phase runtime contracts lock the Wave 4 config-gated routing semantics", async () => {
+  const [codeReview, securePhase, settingsDoc] = await Promise.all([
+    buildBlueprintCommandRuntimeContractResource("code-review"),
+    buildBlueprintCommandRuntimeContractResource("secure-phase"),
+    readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8")
+  ]);
+
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /must never make \/blu-secure-phase <phase> mandatory/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase=true/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /security is still missing/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase <phase>/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase=false/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /code-review-fix/i
+  );
+  assert.match(
+    codeReview.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step\./i
+  );
+  assert.equal(securePhase.catalog.command, "/blu-secure-phase");
+  assert.equal(securePhase.catalog.implemented, true);
+  assert.equal(securePhase.catalog.status, "implemented");
+  assert.match(
+    settingsDoc,
+    /required workflow-routing and lifecycle-gate step only when `workflow\.code_review` is `true`/i
+  );
+});
+
+test("runtime reference rows mirror secure-phase workflow routing metadata", async () => {
+  const runtimeReference = await readFile(path.join(repoRoot, "docs/RUNTIME-REFERENCE.md"), "utf8");
+
+  const expectedRows = [
+    {
+      command: "next",
+      metadata: NEXT_RUNTIME_METADATA,
+      required: [
+        /blueprint_project_status/,
+        /blueprint_config_get/,
+        /blueprint_state_load/,
+        /blueprint_artifact_list/,
+        /blueprint_command_catalog/,
+        /workflow\.code_review=false[\s\S]*never make `?\/blu-secure-phase <phase>`? mandatory/i,
+        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*do not require secure-phase/i,
+        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*\/blu-code-review <phase>[\s\S]*\/blu-secure-phase <phase>/i
+      ]
+    },
+    {
+      command: "verify-work",
+      metadata: VERIFY_WORK_RUNTIME_METADATA,
+      required: [
+        /workflow\.code_review=false[\s\S]*secure-phase is never mandatory/i,
+        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*secure-phase is not required/i,
+        /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*code-review first[\s\S]*secure-phase after review exists/i,
+        /\/blu-secure-phase`? remains manually runnable and implemented/i
+      ]
+    },
+    {
+      command: "secure-phase",
+      metadata: SECURE_PHASE_RUNTIME_METADATA,
+      required: [
+        /src\/mcp\/command-runtime-metadata\.ts#secure-phase/,
+        /source-owned and docs-free runtime metadata/i,
+        /implemented and manually runnable/i,
+        /workflow\.secure_phase`? defaults false/i,
+        /workflow\.code_review=false`? secure-phase is never mandatory/i
+      ]
+    },
+    {
+      command: "ship",
+      metadata: SHIP_RUNTIME_METADATA,
+      required: [
+        /workflow\.secure_phase`? defaults false/i,
+        /workflow\.code_review=false`?[\s\S]*security evidence is never mandatory/i,
+        /workflow\.code_review=true`?[\s\S]*workflow\.secure_phase=false`?[\s\S]*review evidence may be mandatory while security evidence is not/i,
+        /workflow\.code_review=true`?[\s\S]*workflow\.secure_phase=true`?[\s\S]*code-review evidence first/i,
+        /\/blu-secure-phase`? remains manually runnable and implemented/i,
+        /runtime-owned/
+      ]
+    }
+  ];
+
+  for (const { command, metadata, required } of expectedRows) {
+    const row = runtimeReference
+      .split("\n")
+      .find((line) => line.startsWith(`| \`${command}\``));
+
+    assert.ok(row, `Missing runtime reference row for ${command}`);
+    const cells = row
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    const hookCell = cells[5]?.replace(/`/g, "");
+    const expectedHooks = metadata.runtimeReference.hookInvolvement.length > 0
+      ? metadata.runtimeReference.hookInvolvement.join("; ")
+      : "none";
+
+    assert.match(row, new RegExp(metadata.sourceId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.equal(hookCell, expectedHooks, `${command} hook involvement should match metadata`);
+
+    for (const tool of metadata.requiredTools) {
+      assert.match(row, new RegExp(tool));
+    }
+
+    for (const pattern of required) {
+      assert.match(row, pattern);
+    }
+
+    for (const state of metadata.runtimeReference.evidenceState) {
+      assert.match(row, new RegExp(state));
+    }
+  }
 });

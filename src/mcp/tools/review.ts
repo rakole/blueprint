@@ -200,9 +200,11 @@ type CodeReviewAuthoringContext = {
     source: ReviewModeSource;
   };
   hasSecurityArtifact: boolean;
+  securePhaseEnabled: boolean;
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
   preferredNextSafeAction: string | null;
+  noFindingPreferredNextSafeAction: string | null;
   secondaryNextSafeAction: string | null;
   schemaPath: string;
   baseSchema: Record<string, unknown>;
@@ -856,14 +858,14 @@ const CANONICAL_CODE_REVIEW_FINDING_PATTERN =
   /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
 const LEGACY_CODE_REVIEW_FINDING_PATTERN =
   /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
-const CODE_REVIEW_NEXT_ACTION_BUILDERS = [
-  (phaseNumber: string) => `/blu-code-review-fix ${phaseNumber}`,
-  (phaseNumber: string) => `/blu-secure-phase ${phaseNumber}`,
-  (phaseNumber: string) => `/blu-verify-work ${phaseNumber}`,
-  (phaseNumber: string) => `/blu-add-tests ${phaseNumber}`,
-  (phaseNumber: string) => `/blu-validate-phase ${phaseNumber}`,
-  () => "/blu-progress"
-] as const;
+const CODE_REVIEW_NEXT_ACTION_BUILDERS = {
+  fix: (phaseNumber: string) => `/blu-code-review-fix ${phaseNumber}`,
+  secure: (phaseNumber: string) => `/blu-secure-phase ${phaseNumber}`,
+  verifyWork: (phaseNumber: string) => `/blu-verify-work ${phaseNumber}`,
+  addTests: (phaseNumber: string) => `/blu-add-tests ${phaseNumber}`,
+  validatePhase: (phaseNumber: string) => `/blu-validate-phase ${phaseNumber}`,
+  progress: () => "/blu-progress"
+} as const;
 const REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE =
   "Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record.";
 
@@ -1173,14 +1175,25 @@ function inferCodeReviewSecondaryNextSafeAction(
   allowedNextActions: string[],
   preferredNextSafeAction: string | null
 ): string | null {
+  const nonFixAction =
+    allowedNextActions.find((action) => action === "/blu-progress") ??
+    allowedNextActions.find(
+      (action) =>
+        !/\/blu-code-review-fix\b/i.test(action) && !/\/blu-secure-phase\b/i.test(action)
+    ) ??
+    null;
   const repairAction =
     allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? null;
 
-  if (!repairAction || repairAction === preferredNextSafeAction) {
-    return null;
+  if (preferredNextSafeAction && /\/blu-code-review-fix\b/i.test(preferredNextSafeAction)) {
+    return nonFixAction && nonFixAction !== preferredNextSafeAction ? nonFixAction : null;
   }
 
-  return repairAction;
+  if (repairAction && repairAction !== preferredNextSafeAction) {
+    return repairAction;
+  }
+
+  return nonFixAction && nonFixAction !== preferredNextSafeAction ? nonFixAction : null;
 }
 
 async function getImplementedCommandNames(): Promise<Set<string> | null> {
@@ -1257,10 +1270,32 @@ async function validateImplementedNextSafeAction(
   return [];
 }
 
-async function buildAllowedCodeReviewNextActions(phaseNumber: string): Promise<string[]> {
-  const candidates = CODE_REVIEW_NEXT_ACTION_BUILDERS.map((buildAction) =>
-    buildAction(phaseNumber)
+function inferNoFindingCodeReviewNextSafeAction(allowedNextActions: string[]): string | null {
+  return (
+    allowedNextActions.find((action) => action === "/blu-progress") ??
+    allowedNextActions.find(
+      (action) =>
+        !/\/blu-code-review-fix\b/i.test(action) && !/\/blu-secure-phase\b/i.test(action)
+    ) ??
+    allowedNextActions[0] ??
+    null
   );
+}
+
+async function buildAllowedCodeReviewNextActions(args: {
+  phaseNumber: string;
+  includeSecurePhase: boolean;
+}): Promise<string[]> {
+  const candidates = [
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.fix(args.phaseNumber),
+    ...(args.includeSecurePhase
+      ? [CODE_REVIEW_NEXT_ACTION_BUILDERS.secure(args.phaseNumber)]
+      : []),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.verifyWork(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.addTests(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.validatePhase(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.progress()
+  ];
   const implementedCommands = await getImplementedCommandNames();
 
   if (implementedCommands === null || implementedCommands.size === 0) {
@@ -1316,6 +1351,7 @@ function buildCodeReviewTaskSchema(args: {
   knownEvidenceArtifacts: string[];
   allowedNextActions: string[];
   preferredNextSafeAction: string | null;
+  noFindingPreferredNextSafeAction: string | null;
   secondaryNextSafeAction: string | null;
 }): Record<string, unknown> {
   const schema = cloneJsonObject(args.baseSchema);
@@ -1354,6 +1390,7 @@ function buildCodeReviewTaskSchema(args: {
 
   schema["x-blueprint-runtimeContext"] = {
     preferredNextSafeAction: args.preferredNextSafeAction,
+    noFindingPreferredNextSafeAction: args.noFindingPreferredNextSafeAction,
     secondaryNextSafeAction: args.secondaryNextSafeAction,
     allowedNextActions: args.allowedNextActions,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -1368,6 +1405,7 @@ async function buildCodeReviewAuthoringContext(args: {
   files: string[];
   reviewMode: ReviewScopeResult["reviewMode"];
   hasSecurityArtifact: boolean;
+  securePhaseEnabled: boolean;
   knownEvidenceArtifacts: string[];
 }): Promise<CodeReviewAuthoringContext> {
   const modelContract = readArtifactContract("review.code-review").modelContract;
@@ -1379,16 +1417,18 @@ async function buildCodeReviewAuthoringContext(args: {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
 
-  const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
+  const allowedNextActions = await buildAllowedCodeReviewNextActions({
+    phaseNumber: args.phase.phaseNumber,
+    includeSecurePhase: args.securePhaseEnabled && !args.hasSecurityArtifact
+  });
+  const noFindingPreferredNextSafeAction =
+    inferNoFindingCodeReviewNextSafeAction(allowedNextActions);
   const preferredNextSafeAction =
-    args.hasSecurityArtifact
-      ? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ??
-        allowedNextActions.find((action) => action === "/blu-progress") ??
-        allowedNextActions[0] ??
-        null
-      : allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ??
-        allowedNextActions[0] ??
-        null;
+    args.securePhaseEnabled && !args.hasSecurityArtifact
+      ? allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ??
+        noFindingPreferredNextSafeAction
+      : allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ??
+        noFindingPreferredNextSafeAction;
   const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
     allowedNextActions,
     preferredNextSafeAction
@@ -1400,6 +1440,7 @@ async function buildCodeReviewAuthoringContext(args: {
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     allowedNextActions,
     preferredNextSafeAction,
+    noFindingPreferredNextSafeAction,
     secondaryNextSafeAction
   });
 
@@ -1408,9 +1449,11 @@ async function buildCodeReviewAuthoringContext(args: {
     files: [...args.files],
     reviewMode: { ...args.reviewMode },
     hasSecurityArtifact: args.hasSecurityArtifact,
+    securePhaseEnabled: args.securePhaseEnabled,
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
     preferredNextSafeAction,
+    noFindingPreferredNextSafeAction,
     secondaryNextSafeAction,
     schemaPath: modelContract.schemaPath,
     baseSchema,
@@ -4262,15 +4305,19 @@ function classificationForFindingDisposition(
 
 function classifyFollowUpTarget(summary: string): ReviewFixTargetClassification {
   const normalized = normalizeReviewListItem(summary);
+  const mentionsConcreteCodeChange =
+    /\b(?:guard|fix|repair|update|change|handle|sanitize|block|prevent|remove|refactor|invalidate|surface|restore|rewrite|enforce)\b/i.test(summary);
 
   if (normalized.length === 0 || isPlaceholderReviewListItem(summary)) {
     return "no-op";
   }
 
   if (
-    /(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) ||
-    /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) ||
-    /\/blu-add-tests\b/i.test(summary)
+    ((/(?:^|\b)(?:add|extend|write|cover|missing|gap|coverage)(?:\s+(?:a|an))?[\w\s-]{0,80}\btests?\b/i.test(summary) ||
+      /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) ||
+      /\b(?:unit|integration|regression|smoke)\s+tests?\b/i.test(summary) ||
+      /\/blu-add-tests\b/i.test(summary)) &&
+      !mentionsConcreteCodeChange)
   ) {
     return "test-gap";
   }
@@ -4300,6 +4347,14 @@ function isDefaultReviewFixClassification(
   classification: ReviewFixTargetClassification
 ): boolean {
   return classification === "fixable";
+}
+
+function classifyCodeReviewModelFinding(
+  finding: CodeReviewStructuredModel["findings"][number]
+): ReviewFixTargetClassification {
+  return finding.disposition === "follow-up"
+    ? classifyFollowUpTarget(finding.recommendation)
+    : classificationForFindingDisposition(finding.disposition) ?? "routing-note";
 }
 
 function parseCodeReviewFindingEntry(
@@ -7364,6 +7419,9 @@ function addVerdictContradictionDiagnostics(args: {
   const followUpFindings = args.model.findings.filter(
     (finding) => finding.disposition === "follow-up"
   );
+  const fixableFollowUpFindings = followUpFindings.filter(
+    (finding) => classifyCodeReviewModelFinding(finding) === "fixable"
+  );
   const blockedFindings = args.model.findings.filter(
     (finding) => finding.disposition === "blocked"
   );
@@ -7408,14 +7466,18 @@ function addVerdictContradictionDiagnostics(args: {
     );
   }
 
-  if (followUpFindings.length > 0 && nextAction === "/blu-progress") {
+  if (fixableFollowUpFindings.length > 0 && nextAction === "/blu-progress") {
     args.diagnostics.push(
       modelDiagnostic({
         source: "residual",
         path: "model.nextSafeAction",
         code: "residual.next_action_contradiction",
-        message: "Code-review model routes to /blu-progress while follow-up findings remain.",
-        context: { nextSafeAction: nextAction, followUpFindingCount: followUpFindings.length },
+        message: "Code-review model routes to /blu-progress while concrete fixable follow-up findings remain.",
+        context: {
+          nextSafeAction: nextAction,
+          followUpFindingCount: followUpFindings.length,
+          fixableFollowUpFindingCount: fixableFollowUpFindings.length
+        },
         suggestion: "Route to /blu-code-review-fix <phase> or another allowed repair/validation action."
       })
     );
@@ -7454,8 +7516,15 @@ function addVerdictContradictionDiagnostics(args: {
     );
   }
 
+  const requiresSecurePhasePrimary =
+    args.authoringContext.securePhaseEnabled && !args.authoringContext.hasSecurityArtifact;
+  const requiresFindingRepairPrimary =
+    !requiresSecurePhasePrimary &&
+    fixableFollowUpFindings.length > 0 &&
+    args.authoringContext.preferredNextSafeAction !== null;
+
   if (
-    !args.authoringContext.hasSecurityArtifact &&
+    (requiresSecurePhasePrimary || requiresFindingRepairPrimary) &&
     args.authoringContext.preferredNextSafeAction &&
     nextAction !== args.authoringContext.preferredNextSafeAction
   ) {
@@ -7465,10 +7534,18 @@ function addVerdictContradictionDiagnostics(args: {
         path: "model.nextSafeAction",
         code: "residual.next_action_priority",
         message:
-          `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence.`,
+          requiresSecurePhasePrimary
+            ? `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence because workflow.secure_phase is enabled.`
+            : `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction while concrete fixable follow-up findings remain.`,
         context: {
           nextSafeAction: nextAction,
+          securePhaseEnabled: args.authoringContext.securePhaseEnabled,
+          hasSecurityArtifact: args.authoringContext.hasSecurityArtifact,
+          findingCount: args.model.findings.length,
+          fixableFollowUpFindingCount: fixableFollowUpFindings.length,
           preferredNextSafeAction: args.authoringContext.preferredNextSafeAction,
+          noFindingPreferredNextSafeAction:
+            args.authoringContext.noFindingPreferredNextSafeAction,
           secondaryNextSafeAction: args.authoringContext.secondaryNextSafeAction
         },
         suggestion:
@@ -9237,6 +9314,7 @@ function resolveConfiguredReviewDepth(
 
 async function resolveReviewSettings(projectRoot: string, requestedDepth?: ReviewDepth): Promise<{
   allowed: boolean;
+  securePhaseEnabled: boolean;
   depth: ReviewDepth;
   warnings: string[];
 }> {
@@ -9249,6 +9327,7 @@ async function resolveReviewSettings(projectRoot: string, requestedDepth?: Revie
 
     return {
       allowed: config.config.workflow.code_review,
+      securePhaseEnabled: config.config.workflow.secure_phase === true,
       depth:
         requestedDepth ??
         resolveConfiguredReviewDepth(config.config.workflow.code_review_depth, warnings),
@@ -9257,8 +9336,11 @@ async function resolveReviewSettings(projectRoot: string, requestedDepth?: Revie
   } catch {
     return {
       allowed: true,
+      securePhaseEnabled: false,
       depth: requestedDepth ?? "standard",
-      warnings: ["Blueprint review config could not be read; using standard depth."]
+      warnings: [
+        "Blueprint review config could not be read; defaulting workflow.code_review to true, workflow.secure_phase to false, and review depth to standard."
+      ]
     };
   }
 }
@@ -9496,6 +9578,7 @@ export async function blueprintReviewScope(
         files,
         reviewMode,
         hasSecurityArtifact: artifacts.security !== null,
+        securePhaseEnabled: reviewSettings.securePhaseEnabled,
         knownEvidenceArtifacts
       })
     : undefined;

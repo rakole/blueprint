@@ -209,6 +209,7 @@ const HELP_REQUIRED_TOOLS = [
 
 const NEXT_REQUIRED_TOOLS = [
   "blueprint_project_status",
+  "blueprint_config_get",
   "blueprint_state_load",
   "blueprint_artifact_list",
   "blueprint_command_catalog"
@@ -1236,7 +1237,7 @@ export const NEXT_RUNTIME_METADATA = {
     primarySkill: "blueprint-router",
     declaredStatus: "implemented",
     risk:
-      "Low: read-only next-step routing from project status, state, artifacts, and the live command catalog."
+      "Low: read-only next-step routing from project status, effective config, state, artifacts, and the live command catalog."
   },
   requiredTools: NEXT_REQUIRED_TOOLS,
   optionalAgents: [],
@@ -1249,7 +1250,7 @@ export const NEXT_RUNTIME_METADATA = {
     purpose:
       "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.",
     reads: [
-      ".blueprint/ state, artifact inventory, project status, and command catalog through MCP tools."
+      ".blueprint/ effective config, state, artifact inventory, project status, and command catalog through MCP tools."
     ],
     writes: []
   },
@@ -1262,7 +1263,7 @@ export const NEXT_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [],
     contractNotes:
-      "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
+      "Host-native router flow; read effective config so post-UAT routing stays aligned with review and secure-phase gates, report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. When workflow.code_review=false, never make /blu-secure-phase <phase> mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, route to mandatory code review when review evidence is missing but do not require secure-phase; when workflow.code_review=true and workflow.secure_phase=true, route /blu-code-review <phase> before /blu-secure-phase <phase>. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1820,7 +1821,7 @@ export const VERIFY_WORK_RUNTIME_METADATA = {
     optionalAgents: VALIDATION_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate.",
+      "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate. Post-UAT routing is config-gated: workflow.code_review=false means secure-phase is never mandatory regardless of workflow.secure_phase; workflow.code_review=true with workflow.secure_phase=false can make mandatory code review the next gate but not secure-phase; workflow.code_review=true with workflow.secure_phase=true routes code-review first and only routes secure-phase after review exists. /blu-secure-phase remains manually runnable and implemented; this setting controls mandatory post-UAT routing only.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1860,7 +1861,7 @@ export const CODE_REVIEW_RUNTIME_METADATA = {
     optionalAgents: CODE_REVIEW_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When security still routes first, keep code-review-fix visible as the secondary queued follow-up if concrete follow-up fixes remain.",
+      "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, config-gated secure-phase routing posture, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When workflow.code_review=false, code-review routing must never make /blu-secure-phase <phase> mandatory even if workflow.secure_phase=true; when workflow.code_review=true and workflow.secure_phase=true and security is still missing, /blu-secure-phase <phase> is the primary routed next action, with code-review-fix visible as the secondary queued follow-up when concrete follow-up fixes remain; when workflow.code_review=true and workflow.secure_phase=false, route concrete findings to code-review-fix and otherwise prefer progress-safe implemented next actions. /blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -1939,7 +1940,7 @@ export const SECURE_PHASE_RUNTIME_METADATA = {
     optionalAgents: SECURE_PHASE_OPTIONAL_AGENTS,
     hookInvolvement: ["read-before-edit", ".blueprint write guard"],
     contractNotes:
-      "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.",
+      "Long-running-mutation profile for bounded threat verification; workflow.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence. If workflow.code_review=false, secure-phase is never mandatory regardless of workflow.secure_phase. /blu-secure-phase remains manually runnable and implemented. Persist review.security through review MCP tools and route only after open threats are closed or accepted.",
     evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
@@ -2354,7 +2355,7 @@ export const SHIP_RUNTIME_METADATA = {
     optionalAgents: [],
     hookInvolvement: [".blueprint write guard"],
     contractNotes:
-      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
+      "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, and evaluate saved review/security evidence through effective config before ready shipping. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented; write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
     evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
   }
 } as const satisfies RuntimeOwnedCommandMetadata;

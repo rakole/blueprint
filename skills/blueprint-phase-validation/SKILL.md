@@ -144,6 +144,7 @@ Runtime input resolution is structured and command-scoped:
 17. Keep user-reported issues and structured gaps in the same artifact as first-class UAT evidence. Keep follow-up fixes explicit in the same artifact or in a clearly signposted state update, and confirm any follow-up-fix capture before persisting it.
 18. Run `blueprint_artifact_validate` after the write and before `STATE.md` is updated.
 19. Update `STATE.md` with the UAT result and the next safe implemented action.
+20. Before choosing the next safe action after UAT, read effective config and keep the post-UAT routing matrix explicit: when `workflow.code_review=false`, secure-phase is never mandatory regardless of `workflow.secure_phase`; when `workflow.code_review=true` and `workflow.secure_phase=false`, route to mandatory code review when review evidence is missing but do not require secure-phase; when both toggles are `true`, route to `/blu-code-review <phase>` first and require `/blu-secure-phase <phase>` only after review evidence exists. Keep `/blu-secure-phase` manually runnable even when config-gated post-UAT routing prefers another implemented next step.
 
 ### `add-tests`
 

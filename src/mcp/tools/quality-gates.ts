@@ -63,7 +63,10 @@ export type PhaseQualityGateEvaluation = {
   hasSecurity: boolean;
   reviewableFiles: string[];
   codeReviewEnabled: boolean;
+  securePhaseEnabled: boolean;
   requiresCodeReview: boolean;
+  requiresSecurePhase: boolean;
+  requiresQualityGate: boolean;
   gatesSatisfied: boolean;
   missingGate: PhaseQualityGateMissingGate;
   warnings: string[];
@@ -82,7 +85,8 @@ export type PhaseQualityGateRoutingArgs = {
     | "hasSecurity"
     | "reviewNextSafeAction"
     | "reviewDebtKind"
-  >;
+  > &
+    Partial<Pick<PhaseQualityGateEvaluation, "requiresQualityGate" | "requiresSecurePhase">>;
 };
 
 type NormalizedArtifact = {
@@ -816,11 +820,17 @@ async function reconcileCompletedReviewFixDebt(args: {
 }
 
 function deriveReviewDebtKind(args: {
+  requiresCodeReview: boolean;
   reviewFixState: ReviewFixArtifactRoutingState;
+  reviewVerdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
   reviewNextSafeAction: string | null;
   missingGate: PhaseQualityGateMissingGate;
-  hasSecurity: boolean;
+  requiresSecurePhase: boolean;
 }): "remediation" | "follow-up" | null {
+  if (!args.requiresCodeReview) {
+    return null;
+  }
+
   if (args.reviewFixState.leavesRemediationDebt) {
     return "remediation";
   }
@@ -836,14 +846,21 @@ function deriveReviewDebtKind(args: {
   const reviewFollowUpCommand = savedReviewFollowUpCommandName({
     reviewNextSafeAction: args.reviewNextSafeAction,
     missingGate: args.missingGate,
-    hasSecurity: args.hasSecurity
+    requiresSecurePhase: args.requiresSecurePhase
   });
 
   if (reviewFollowUpCommand === "code-review-fix") {
     return "remediation";
   }
 
-  return reviewFollowUpCommand === null ? null : "follow-up";
+  if (
+    reviewFollowUpCommand !== null &&
+    (args.reviewVerdict === "FOLLOW_UP" || args.reviewVerdict === "BLOCKED")
+  ) {
+    return "follow-up";
+  }
+
+  return null;
 }
 
 function buildReviewDebtFallbackAction(phaseNumber: string): string {
@@ -863,9 +880,13 @@ function isImplementedCommand(commandNames: Set<string>, commandName: string): b
 function isStaleSecurePhaseAction(args: {
   commandName: string | null;
   missingGate: PhaseQualityGateMissingGate;
+  requiresSecurePhase: boolean;
   hasSecurity: boolean;
 }): boolean {
-  return args.commandName === "secure-phase" && args.hasSecurity && args.missingGate !== "security";
+  return (
+    args.commandName === "secure-phase" &&
+    (!args.requiresSecurePhase || (args.hasSecurity && args.missingGate !== "security"))
+  );
 }
 
 function normalizeReviewNextSafeAction(args: {
@@ -873,6 +894,7 @@ function normalizeReviewNextSafeAction(args: {
   phaseNumber: string;
   reviewVerdict: "PASS" | "FOLLOW_UP" | "BLOCKED" | null;
   missingGate: PhaseQualityGateMissingGate;
+  requiresSecurePhase: boolean;
   hasSecurity: boolean;
 }): string | null {
   if (args.action === null) {
@@ -885,6 +907,7 @@ function normalizeReviewNextSafeAction(args: {
     isStaleSecurePhaseAction({
       commandName,
       missingGate: args.missingGate,
+      requiresSecurePhase: args.requiresSecurePhase,
       hasSecurity: args.hasSecurity
     })
   ) {
@@ -898,40 +921,22 @@ function normalizeReviewNextSafeAction(args: {
   return args.action;
 }
 
-function isBlockingReviewNextSafeAction(args: {
-  action: string | null;
-  missingGate: PhaseQualityGateMissingGate;
-  hasSecurity: boolean;
-}): boolean {
-  if (args.action === null) {
-    return false;
-  }
-
-  const commandName = extractCommandName(args.action);
-
-  return (
-    commandName !== null &&
-    commandName !== "progress" &&
-    !isStaleSecurePhaseAction({
-      commandName,
-      missingGate: args.missingGate,
-      hasSecurity: args.hasSecurity
-    })
-  );
-}
-
 function savedReviewFollowUpCommandName(args: {
   reviewNextSafeAction: string | null;
   missingGate: PhaseQualityGateMissingGate;
-  hasSecurity: boolean;
+  requiresSecurePhase: boolean;
 }): string | null {
-  if (args.missingGate !== null || !args.hasSecurity) {
+  if (args.missingGate !== null) {
     return null;
   }
 
   const commandName = extractCommandName(args.reviewNextSafeAction ?? "");
 
   if (commandName === null || commandName === "progress") {
+    return null;
+  }
+
+  if (commandName === "secure-phase" && !args.requiresSecurePhase) {
     return null;
   }
 
@@ -976,8 +981,9 @@ export function isReviewableRepoFile(relativePath: string): boolean {
   );
 }
 
-async function resolveCodeReviewEnabled(projectRoot: string): Promise<{
-  enabled: boolean;
+async function resolveQualityGateSettings(projectRoot: string): Promise<{
+  codeReviewEnabled: boolean;
+  securePhaseEnabled: boolean;
   warnings: string[];
 }> {
   try {
@@ -987,14 +993,16 @@ async function resolveCodeReviewEnabled(projectRoot: string): Promise<{
     });
 
     return {
-      enabled: config.config.workflow.code_review,
+      codeReviewEnabled: config.config.workflow.code_review,
+      securePhaseEnabled: config.config.workflow.secure_phase,
       warnings: [...config.warnings]
     };
   } catch {
     return {
-      enabled: true,
+      codeReviewEnabled: true,
+      securePhaseEnabled: false,
       warnings: [
-        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true."
+        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true and workflow.secure_phase to false."
       ]
     };
   }
@@ -1310,16 +1318,16 @@ export async function evaluatePhaseQualityGates(
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, reviewFixExists, securityExists, reviewSettings] = await Promise.all([
+  const [reviewExists, reviewFixExists, securityExists, qualityGateSettings] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
     artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
-    resolveCodeReviewEnabled(projectRoot)
+    resolveQualityGateSettings(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
   const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
-  warnings.push(...reviewSettings.warnings);
+  warnings.push(...qualityGateSettings.warnings);
 
   const completedSummaries = await collectCompletedSummaries({
     projectRoot,
@@ -1346,11 +1354,14 @@ export async function evaluatePhaseQualityGates(
   const reviewableFiles = evidenceFiles
     .filter(isReviewableRepoFile)
     .sort((left, right) => left.localeCompare(right));
-  const requiresCodeReview = reviewSettings.enabled && reviewableFiles.length > 0;
+  const requiresCodeReview =
+    qualityGateSettings.codeReviewEnabled && reviewableFiles.length > 0;
+  const requiresSecurePhase = requiresCodeReview && qualityGateSettings.securePhaseEnabled;
+  const requiresQualityGate = requiresCodeReview || requiresSecurePhase;
   const missingGate: PhaseQualityGateMissingGate =
     requiresCodeReview && !hasReview
       ? "review"
-      : requiresCodeReview && hasReview && !hasSecurity
+      : requiresSecurePhase && hasReview && !hasSecurity
         ? "security"
         : null;
   const reviewFixRoutingState = hasReviewFix
@@ -1390,23 +1401,17 @@ export async function evaluatePhaseQualityGates(
     phaseNumber,
     reviewVerdict: reviewRoutingState.verdict,
     missingGate,
+    requiresSecurePhase,
     hasSecurity
   });
   const reviewDebtKind = deriveReviewDebtKind({
+    requiresCodeReview,
     reviewFixState: reviewFixRoutingState,
+    reviewVerdict: reviewRoutingState.verdict,
     reviewNextSafeAction,
     missingGate,
-    hasSecurity
+    requiresSecurePhase
   });
-  const hasBlockingReviewFollowUp =
-    reviewDebtKind !== null &&
-    isBlockingReviewNextSafeAction({
-      action:
-        reviewNextSafeAction ??
-        (reviewDebtKind === "remediation" ? buildReviewDebtFallbackAction(phaseNumber) : null),
-      missingGate,
-      hasSecurity
-    });
 
   return {
     reviewPath: hasReview ? reviewPath : null,
@@ -1414,9 +1419,12 @@ export async function evaluatePhaseQualityGates(
     hasReview,
     hasSecurity,
     reviewableFiles,
-    codeReviewEnabled: reviewSettings.enabled,
+    codeReviewEnabled: qualityGateSettings.codeReviewEnabled,
+    securePhaseEnabled: qualityGateSettings.securePhaseEnabled,
     requiresCodeReview,
-    gatesSatisfied: missingGate === null && reviewDebtKind === null && !hasBlockingReviewFollowUp,
+    requiresSecurePhase,
+    requiresQualityGate,
+    gatesSatisfied: missingGate === null && reviewDebtKind === null,
     missingGate,
     warnings,
     reviewNextSafeAction,
@@ -1425,17 +1433,30 @@ export async function evaluatePhaseQualityGates(
 }
 
 export function formatPhaseQualityGateDebtReason(
-  args: Pick<
-    PhaseQualityGateEvaluation,
-    | "requiresCodeReview"
-    | "missingGate"
-    | "reviewableFiles"
-    | "reviewNextSafeAction"
-    | "hasSecurity"
-    | "reviewDebtKind"
-  >
+  args:
+    | Pick<
+        PhaseQualityGateEvaluation,
+        | "requiresCodeReview"
+        | "missingGate"
+        | "reviewableFiles"
+        | "reviewNextSafeAction"
+        | "reviewDebtKind"
+      >
+    | Pick<
+        PhaseQualityGateEvaluation,
+        | "requiresCodeReview"
+        | "requiresQualityGate"
+        | "missingGate"
+        | "reviewableFiles"
+        | "reviewNextSafeAction"
+        | "reviewDebtKind"
+      >
 ): string | null {
-  if (!args.requiresCodeReview) {
+  const requiresQualityGate =
+    ("requiresQualityGate" in args ? args.requiresQualityGate : undefined) ??
+    args.requiresCodeReview;
+
+  if (!requiresQualityGate) {
     return null;
   }
 
@@ -1464,9 +1485,13 @@ export function buildPhaseQualityGateNextAction(
   args: PhaseQualityGateRoutingArgs
 ): string | null {
   const phaseNumber = normalizeBlueprintPhaseRef(args.phaseNumber);
+  const requiresQualityGate =
+    args.evaluation.requiresQualityGate ?? args.evaluation.requiresCodeReview;
+  const requiresSecurePhase =
+    args.evaluation.requiresSecurePhase ?? args.evaluation.missingGate === "security";
 
   if (
-    args.evaluation.requiresCodeReview &&
+    requiresQualityGate &&
     args.evaluation.missingGate === "review" &&
     isImplementedCommand(args.implementedCommandNames, "code-review")
   ) {
@@ -1474,7 +1499,7 @@ export function buildPhaseQualityGateNextAction(
   }
 
   if (
-    args.evaluation.requiresCodeReview &&
+    requiresSecurePhase &&
     args.evaluation.missingGate === "security" &&
     isImplementedCommand(args.implementedCommandNames, "secure-phase")
   ) {
@@ -1492,6 +1517,7 @@ export function buildPhaseQualityGateNextAction(
       !isStaleSecurePhaseAction({
         commandName,
         missingGate: args.evaluation.missingGate,
+        requiresSecurePhase,
         hasSecurity: args.evaluation.hasSecurity
       }) &&
       isImplementedCommand(args.implementedCommandNames, commandName)
@@ -1507,7 +1533,7 @@ export function buildPhaseQualityGateNextAction(
     return `Run /blu-code-review-fix ${phaseNumber} to continue resolving saved review remediation debt.`;
   }
 
-  if (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) {
+  if (args.evaluation.gatesSatisfied || !requiresQualityGate) {
     return null;
   }
 

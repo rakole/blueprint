@@ -4,6 +4,10 @@ This reference is the local runtime contract for `/blu-secure-phase`. It
 preserves the retained GSD secure-phase behavior in Blueprint-native terms:
 MCP owns deterministic state, the command remains thin, the skill orchestrates,
 and the optional security auditor verifies only declared threat mitigations.
+`workflow.secure_phase` is not an availability gate for this command: it
+defaults to `false`, affects shipping or closeout requirements only when
+`workflow.code_review=true`, and must never block a direct manual
+`/blu-secure-phase` run.
 
 ## Visible Security Progress
 
@@ -68,6 +72,9 @@ repair, record rejection, blocked advancement, and completion.
 - Read `mcp_blueprint_blueprint_review_authoring_context` before drafting the
   model. If it returns `status: "invalid"`, stop with the blocker reason instead
   of inventing evidence, coverage, threat ids, or next actions.
+- If effective config is available, use it only to explain later routing or
+  closeout expectations. Do not reject a manual secure-phase run because
+  `workflow.secure_phase=false`.
 - If an existing `XX-SECURITY.md` artifact exists, read it as prior security
   evidence and require explicit overwrite confirmation before replacement.
 
@@ -168,9 +175,10 @@ Call these tools in this order unless the command must stop early:
 6. `mcp_blueprint_blueprint_phase_summary_read`
 7. `mcp_blueprint_blueprint_phase_execution_targets`
 8. `mcp_blueprint_blueprint_artifact_contract_read` for `review.security`
-9. `mcp_blueprint_blueprint_review_authoring_context`
-10. `mcp_blueprint_blueprint_review_validate_model`
-11. `mcp_blueprint_blueprint_review_record`
+9. `mcp_blueprint_blueprint_config_get` with `scope: "effective"`
+10. `mcp_blueprint_blueprint_review_authoring_context`
+11. `mcp_blueprint_blueprint_review_validate_model`
+12. `mcp_blueprint_blueprint_review_record`
 
 ## Input State Model
 

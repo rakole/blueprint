@@ -14489,6 +14489,7 @@ var init_command_runtime_metadata = __esm({
     ];
     NEXT_REQUIRED_TOOLS = [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_state_load",
       "blueprint_artifact_list",
       "blueprint_command_catalog"
@@ -15390,7 +15391,7 @@ var init_command_runtime_metadata = __esm({
         family: "Core Lifecycle",
         primarySkill: "blueprint-router",
         declaredStatus: "implemented",
-        risk: "Low: read-only next-step routing from project status, state, artifacts, and the live command catalog."
+        risk: "Low: read-only next-step routing from project status, effective config, state, artifacts, and the live command catalog."
       },
       requiredTools: NEXT_REQUIRED_TOOLS,
       optionalAgents: [],
@@ -15402,7 +15403,7 @@ var init_command_runtime_metadata = __esm({
         rootRoutable: true,
         purpose: "`next` returns the next safe direct Blueprint command for the current repo state without widening beyond implemented commands.",
         reads: [
-          ".blueprint/ state, artifact inventory, project status, and command catalog through MCP tools."
+          ".blueprint/ effective config, state, artifact inventory, project status, and command catalog through MCP tools."
         ],
         writes: []
       },
@@ -15414,7 +15415,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: NEXT_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [],
-        contractNotes: "Host-native router flow; report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
+        contractNotes: "Host-native router flow; read effective config so post-UAT routing stays aligned with review and secure-phase gates, report waiting state and the next safe follow-up explicitly, and never hide destructive behavior behind implicit routing. This includes /blu-map-codebase for unmapped brownfield or mapping-incomplete and /blu-new-project for mapped-only. When workflow.code_review=false, never make /blu-secure-phase <phase> mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, route to mandatory code review when review evidence is missing but do not require secure-phase; when workflow.code_review=true and workflow.secure_phase=true, route /blu-code-review <phase> before /blu-secure-phase <phase>. Planned or blocked commands are not runnable. Recommend /blu-spec-phase <phase> only after blueprint_command_catalog proves it implemented for spec-first planning, requirements clarification before discuss, ambiguous WHAT/WHY clarification, or stale/contradictory spec refresh; do not treat missing XX-SPEC.md alone as a normal lifecycle blocker.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -15925,7 +15926,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: VERIFY_WORK_REQUIRED_TOOLS,
         optionalAgents: VALIDATION_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate.",
+        contractNotes: "Long-running-mutation profile; keep conversational UAT phase-scoped, summary-aware, and persisted through the validation MCP substrate. Post-UAT routing is config-gated: workflow.code_review=false means secure-phase is never mandatory regardless of workflow.secure_phase; workflow.code_review=true with workflow.secure_phase=false can make mandatory code review the next gate but not secure-phase; workflow.code_review=true with workflow.secure_phase=true routes code-review first and only routes secure-phase after review exists. /blu-secure-phase remains manually runnable and implemented; this setting controls mandatory post-UAT routing only.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -15962,7 +15963,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: CODE_REVIEW_REQUIRED_TOOLS,
         optionalAgents: CODE_REVIEW_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When security still routes first, keep code-review-fix visible as the secondary queued follow-up if concrete follow-up fixes remain.",
+        contractNotes: "Long-running-mutation profile for deterministic phase-scoped review: keep Resolve/Read/Decide/Execute/Validate/Persist/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, use Gemini-native update_topic and write_todos for non-trivial review runs without turning them into persistence, let blueprint_review_scope own review enablement, config-gated secure-phase routing posture, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema, load skills/blueprint-review/references/code-review-runtime-contract.md for model-only JSON authoring, depth semantics, evidence richness, capability-gated reviewer use, no-subagent fallback, and MCP retry/repair behavior, repair invalid models against modelContract.jsonSchema, the narrowed task schema, and returned diagnostics instead of rendered Markdown shape, keep explicit scope or overwrite confirmation when broad scope or existing review evidence needs approval, fail any invalid explicit --files scope instead of silently narrowing it, load saved XX-REVIEW.md findings before overwrite decisions, validate the authored model through blueprint_review_validate_model, and persist the model through blueprint_review_record so MCP renders canonical XX-REVIEW.md without Markdown fallback. When workflow.code_review=false, code-review routing must never make /blu-secure-phase <phase> mandatory even if workflow.secure_phase=true; when workflow.code_review=true and workflow.secure_phase=true and security is still missing, /blu-secure-phase <phase> is the primary routed next action, with code-review-fix visible as the secondary queued follow-up when concrete follow-up fixes remain; when workflow.code_review=true and workflow.secure_phase=false, route concrete findings to code-review-fix and otherwise prefer progress-safe implemented next actions. /blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -16034,7 +16035,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: SECURE_PHASE_REQUIRED_TOOLS,
         optionalAgents: SECURE_PHASE_OPTIONAL_AGENTS,
         hookInvolvement: ["read-before-edit", ".blueprint write guard"],
-        contractNotes: "Long-running-mutation profile for bounded threat verification; persist review.security through review MCP tools and route only after open threats are closed or accepted.",
+        contractNotes: "Long-running-mutation profile for bounded threat verification; workflow.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence. If workflow.code_review=false, secure-phase is never mandatory regardless of workflow.secure_phase. /blu-secure-phase remains manually runnable and implemented. Persist review.security through review MCP tools and route only after open threats are closed or accepted.",
         evidenceState: ["locked", "source-owned", "needs-behavior-audit"]
       }
     };
@@ -16417,7 +16418,7 @@ var init_command_runtime_metadata = __esm({
         exactMcpDestination: SHIP_REQUIRED_TOOLS,
         optionalAgents: [],
         hookInvolvement: [".blueprint write guard"],
-        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
+        contractNotes: "Docless manifest+skill-owned runtime: load skills/blueprint-maintenance/references/ship-runtime-contract.md, keep local prep, push, and PR creation as separate approved steps, and evaluate saved review/security evidence through effective config before ready shipping. workflow.secure_phase defaults false; when workflow.code_review=false, security evidence is never mandatory regardless of workflow.secure_phase; when workflow.code_review=true and workflow.secure_phase=false, review evidence may be mandatory while security evidence is not; when workflow.code_review=true and workflow.secure_phase=true, require code-review evidence first and secure-phase or security evidence before ready shipping. /blu-secure-phase remains manually runnable and implemented; write the approved plan before mutation, overwrite ship-latest after actual outcomes, and keep manual fallback durable when remote tooling is unavailable.",
         evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
       }
     };
@@ -23716,6 +23717,7 @@ function getHardCodedConfig() {
     workflow: {
       research: true,
       plan_check: true,
+      secure_phase: false,
       verifier: true,
       nyquist_validation: true,
       ui_phase: true,
@@ -25182,6 +25184,9 @@ async function reconcileCompletedReviewFixDebt(args) {
   return false;
 }
 function deriveReviewDebtKind(args) {
+  if (!args.requiresCodeReview) {
+    return null;
+  }
   if (args.reviewFixState.leavesRemediationDebt) {
     return "remediation";
   }
@@ -25191,15 +25196,15 @@ function deriveReviewDebtKind(args) {
   const reviewFollowUpCommand = savedReviewFollowUpCommandName({
     reviewNextSafeAction: args.reviewNextSafeAction,
     missingGate: args.missingGate,
-    hasSecurity: args.hasSecurity
+    requiresSecurePhase: args.requiresSecurePhase
   });
   if (reviewFollowUpCommand === "code-review-fix") {
     return "remediation";
   }
-  return reviewFollowUpCommand === null ? null : "follow-up";
-}
-function buildReviewDebtFallbackAction(phaseNumber) {
-  return `/blu-code-review-fix ${phaseNumber}`;
+  if (reviewFollowUpCommand !== null && (args.reviewVerdict === "FOLLOW_UP" || args.reviewVerdict === "BLOCKED")) {
+    return "follow-up";
+  }
+  return null;
 }
 function extractCommandName(action) {
   const match = action.match(/\/blu-([a-z0-9-]+)/i);
@@ -25209,7 +25214,7 @@ function isImplementedCommand(commandNames, commandName) {
   return commandNames.has(commandName) || commandNames.has(`/blu-${commandName}`);
 }
 function isStaleSecurePhaseAction(args) {
-  return args.commandName === "secure-phase" && args.hasSecurity && args.missingGate !== "security";
+  return args.commandName === "secure-phase" && (!args.requiresSecurePhase || args.hasSecurity && args.missingGate !== "security");
 }
 function normalizeReviewNextSafeAction(args) {
   if (args.action === null) {
@@ -25219,6 +25224,7 @@ function normalizeReviewNextSafeAction(args) {
   if (isStaleSecurePhaseAction({
     commandName,
     missingGate: args.missingGate,
+    requiresSecurePhase: args.requiresSecurePhase,
     hasSecurity: args.hasSecurity
   })) {
     if (args.reviewVerdict === "FOLLOW_UP" || args.reviewVerdict === "BLOCKED") {
@@ -25228,23 +25234,15 @@ function normalizeReviewNextSafeAction(args) {
   }
   return args.action;
 }
-function isBlockingReviewNextSafeAction(args) {
-  if (args.action === null) {
-    return false;
-  }
-  const commandName = extractCommandName(args.action);
-  return commandName !== null && commandName !== "progress" && !isStaleSecurePhaseAction({
-    commandName,
-    missingGate: args.missingGate,
-    hasSecurity: args.hasSecurity
-  });
-}
 function savedReviewFollowUpCommandName(args) {
-  if (args.missingGate !== null || !args.hasSecurity) {
+  if (args.missingGate !== null) {
     return null;
   }
   const commandName = extractCommandName(args.reviewNextSafeAction ?? "");
   if (commandName === null || commandName === "progress") {
+    return null;
+  }
+  if (commandName === "secure-phase" && !args.requiresSecurePhase) {
     return null;
   }
   return commandName;
@@ -25267,21 +25265,23 @@ function isReviewableRepoFile(relativePath) {
   }
   return REVIEWABLE_EXTENSIONS.has(extension) || isReviewableConfigPath(normalized) || REVIEWABLE_ROOT_PREFIXES.some((prefix) => normalized.startsWith(prefix)) && extension.length > 0;
 }
-async function resolveCodeReviewEnabled(projectRoot) {
+async function resolveQualityGateSettings(projectRoot) {
   try {
     const config2 = await blueprintConfigGet({
       scope: "effective",
       cwd: projectRoot
     });
     return {
-      enabled: config2.config.workflow.code_review,
+      codeReviewEnabled: config2.config.workflow.code_review,
+      securePhaseEnabled: config2.config.workflow.secure_phase,
       warnings: [...config2.warnings]
     };
   } catch {
     return {
-      enabled: true,
+      codeReviewEnabled: true,
+      securePhaseEnabled: false,
       warnings: [
-        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true."
+        "Blueprint quality-gate config could not be read; defaulting workflow.code_review to true and workflow.secure_phase to false."
       ]
     };
   }
@@ -25515,16 +25515,16 @@ async function evaluatePhaseQualityGates(args) {
     suffix: "-SECURITY.md",
     kind: "security"
   });
-  const [reviewExists, reviewFixExists, securityExists, reviewSettings] = await Promise.all([
+  const [reviewExists, reviewFixExists, securityExists, qualityGateSettings] = await Promise.all([
     artifactExists(projectRoot, reviewPath),
     artifactExists(projectRoot, reviewFixPath),
     artifactExists(projectRoot, securityPath),
-    resolveCodeReviewEnabled(projectRoot)
+    resolveQualityGateSettings(projectRoot)
   ]);
   const hasReview = reviewExists || artifactDeclared(artifacts, reviewPath);
   const hasReviewFix = reviewFixExists || artifactDeclared(artifacts, reviewFixPath);
   const hasSecurity = securityExists || artifactDeclared(artifacts, securityPath);
-  warnings.push(...reviewSettings.warnings);
+  warnings.push(...qualityGateSettings.warnings);
   const completedSummaries = await collectCompletedSummaries({
     projectRoot,
     phasePrefix: phasePrefix2,
@@ -25548,8 +25548,10 @@ async function evaluatePhaseQualityGates(args) {
     (left, right) => left.localeCompare(right)
   );
   const reviewableFiles = evidenceFiles.filter(isReviewableRepoFile).sort((left, right) => left.localeCompare(right));
-  const requiresCodeReview = reviewSettings.enabled && reviewableFiles.length > 0;
-  const missingGate = requiresCodeReview && !hasReview ? "review" : requiresCodeReview && hasReview && !hasSecurity ? "security" : null;
+  const requiresCodeReview = qualityGateSettings.codeReviewEnabled && reviewableFiles.length > 0;
+  const requiresSecurePhase = requiresCodeReview && qualityGateSettings.securePhaseEnabled;
+  const requiresQualityGate = requiresCodeReview || requiresSecurePhase;
+  const missingGate = requiresCodeReview && !hasReview ? "review" : requiresSecurePhase && hasReview && !hasSecurity ? "security" : null;
   const reviewFixRoutingState = hasReviewFix ? await readUsableReviewFixNextSafeAction({
     projectRoot,
     reviewPath,
@@ -25579,18 +25581,16 @@ async function evaluatePhaseQualityGates(args) {
     phaseNumber,
     reviewVerdict: reviewRoutingState.verdict,
     missingGate,
+    requiresSecurePhase,
     hasSecurity
   });
   const reviewDebtKind = deriveReviewDebtKind({
+    requiresCodeReview,
     reviewFixState: reviewFixRoutingState,
+    reviewVerdict: reviewRoutingState.verdict,
     reviewNextSafeAction,
     missingGate,
-    hasSecurity
-  });
-  const hasBlockingReviewFollowUp = reviewDebtKind !== null && isBlockingReviewNextSafeAction({
-    action: reviewNextSafeAction ?? (reviewDebtKind === "remediation" ? buildReviewDebtFallbackAction(phaseNumber) : null),
-    missingGate,
-    hasSecurity
+    requiresSecurePhase
   });
   return {
     reviewPath: hasReview ? reviewPath : null,
@@ -25598,9 +25598,12 @@ async function evaluatePhaseQualityGates(args) {
     hasReview,
     hasSecurity,
     reviewableFiles,
-    codeReviewEnabled: reviewSettings.enabled,
+    codeReviewEnabled: qualityGateSettings.codeReviewEnabled,
+    securePhaseEnabled: qualityGateSettings.securePhaseEnabled,
     requiresCodeReview,
-    gatesSatisfied: missingGate === null && reviewDebtKind === null && !hasBlockingReviewFollowUp,
+    requiresSecurePhase,
+    requiresQualityGate,
+    gatesSatisfied: missingGate === null && reviewDebtKind === null,
     missingGate,
     warnings,
     reviewNextSafeAction,
@@ -25608,7 +25611,8 @@ async function evaluatePhaseQualityGates(args) {
   };
 }
 function formatPhaseQualityGateDebtReason(args) {
-  if (!args.requiresCodeReview) {
+  const requiresQualityGate = ("requiresQualityGate" in args ? args.requiresQualityGate : void 0) ?? args.requiresCodeReview;
+  if (!requiresQualityGate) {
     return null;
   }
   const reviewableFileCount = args.reviewableFiles.length;
@@ -25628,10 +25632,12 @@ function formatPhaseQualityGateDebtReason(args) {
 }
 function buildPhaseQualityGateNextAction(args) {
   const phaseNumber = normalizeBlueprintPhaseRef(args.phaseNumber);
-  if (args.evaluation.requiresCodeReview && args.evaluation.missingGate === "review" && isImplementedCommand(args.implementedCommandNames, "code-review")) {
+  const requiresQualityGate = args.evaluation.requiresQualityGate ?? args.evaluation.requiresCodeReview;
+  const requiresSecurePhase = args.evaluation.requiresSecurePhase ?? args.evaluation.missingGate === "security";
+  if (requiresQualityGate && args.evaluation.missingGate === "review" && isImplementedCommand(args.implementedCommandNames, "code-review")) {
     return `Run /blu-code-review ${phaseNumber} to satisfy the phase code review gate.`;
   }
-  if (args.evaluation.requiresCodeReview && args.evaluation.missingGate === "security" && isImplementedCommand(args.implementedCommandNames, "secure-phase")) {
+  if (requiresSecurePhase && args.evaluation.missingGate === "security" && isImplementedCommand(args.implementedCommandNames, "secure-phase")) {
     return `Run /blu-secure-phase ${phaseNumber} to satisfy the phase security gate.`;
   }
   const reviewNextSafeAction = args.evaluation.reviewNextSafeAction;
@@ -25640,6 +25646,7 @@ function buildPhaseQualityGateNextAction(args) {
     if (commandName !== null && commandName !== "progress" && !isStaleSecurePhaseAction({
       commandName,
       missingGate: args.evaluation.missingGate,
+      requiresSecurePhase,
       hasSecurity: args.evaluation.hasSecurity
     }) && isImplementedCommand(args.implementedCommandNames, commandName)) {
       return `Run ${reviewNextSafeAction}.`;
@@ -25648,7 +25655,7 @@ function buildPhaseQualityGateNextAction(args) {
   if (args.evaluation.reviewDebtKind === "remediation" && isImplementedCommand(args.implementedCommandNames, "code-review-fix")) {
     return `Run /blu-code-review-fix ${phaseNumber} to continue resolving saved review remediation debt.`;
   }
-  if (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) {
+  if (args.evaluation.gatesSatisfied || !requiresQualityGate) {
     return null;
   }
   return null;
@@ -26707,12 +26714,24 @@ function emptyCurrentPhaseQualityGateStatus() {
     hasReview: false,
     hasSecurity: false,
     codeReviewEnabled: true,
+    securePhaseEnabled: false,
     requiresCodeReview: false,
+    requiresSecurePhase: false,
+    requiresQualityGate: false,
     hasReviewableFiles: false,
     reviewableFiles: [],
     qualityGateMissingGate: null,
     qualityGatesSatisfied: true,
     qualityGateNextAction: null
+  };
+}
+function readPhaseQualityGateFlags(evaluation) {
+  const requiresSecurePhase = evaluation.requiresSecurePhase ?? evaluation.missingGate === "security";
+  const requiresQualityGate = evaluation.requiresQualityGate ?? evaluation.requiresCodeReview;
+  return {
+    securePhaseEnabled: evaluation.securePhaseEnabled ?? (requiresSecurePhase || evaluation.hasSecurity),
+    requiresSecurePhase,
+    requiresQualityGate
   };
 }
 function implementedReviewNextSafeAction(reviewNextSafeAction, implementedCommands) {
@@ -26736,6 +26755,7 @@ function implementedBlockingUatNextSafeAction(uatNextSafeAction, implementedComm
   return uatNextSafeAction;
 }
 function resolvePhaseQualityGateNextAction(args) {
+  const gateFlags = readPhaseQualityGateFlags(args.evaluation);
   const missingGateAction = buildPhaseQualityGateNextAction({
     phaseNumber: args.phaseNumber,
     evaluation: args.evaluation,
@@ -26751,7 +26771,7 @@ function resolvePhaseQualityGateNextAction(args) {
   if (args.evaluation.requiresCodeReview && savedReviewRepairAction !== null) {
     return savedReviewRepairAction;
   }
-  if ((args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) && args.hasReviewableUiSpec && !args.hasUiReview && args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
+  if ((args.evaluation.gatesSatisfied || !gateFlags.requiresQualityGate) && args.hasReviewableUiSpec && !args.hasUiReview && args.implementedCommands.has(blueprintDirectCommand("ui-review"))) {
     return `Run ${blueprintDirectCommand("ui-review")} ${normalizeBlueprintPhaseRef(args.phaseNumber)} to audit the shipped UI work before phase closeout`;
   }
   return null;
@@ -27130,7 +27150,8 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasReviewableUiSpec,
     hasUiReview
   });
-  if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+  const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
+  if (qualityGateFlags.requiresQualityGate && !qualityGateEvaluation.gatesSatisfied) {
     const qualityGateWarning = formatPhaseQualityGateWarning({
       subject: `Current phase ${currentPhase2}`,
       evaluation: qualityGateEvaluation
@@ -27179,7 +27200,10 @@ async function inspectCurrentPhaseArtifacts(projectRoot, inspectionPhases, curre
     hasSavedSummaries,
     hasPendingExecution,
     codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
+    securePhaseEnabled: qualityGateFlags.securePhaseEnabled,
     requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
+    requiresSecurePhase: qualityGateFlags.requiresSecurePhase,
+    requiresQualityGate: qualityGateFlags.requiresQualityGate,
     hasReviewableFiles: qualityGateEvaluation.reviewableFiles.length > 0,
     reviewableFiles: qualityGateEvaluation.reviewableFiles,
     qualityGateMissingGate: qualityGateEvaluation.missingGate,
@@ -27316,11 +27340,12 @@ async function inspectMilestoneEvidence(projectRoot, phaseArtifacts, phases, opt
       hasReviewableUiSpec,
       hasUiReview
     });
+    const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
     warnings.push(...qualityGateEvaluation.warnings);
     if (qualityGateEvaluation.reviewableFiles.length > 0) {
       qualityGateReviewableFiles[phase.phaseNumber] = qualityGateEvaluation.reviewableFiles;
     }
-    if (qualityGateEvaluation.requiresCodeReview && qualityGateEvaluation.missingGate !== null) {
+    if (qualityGateFlags.requiresQualityGate && qualityGateEvaluation.missingGate !== null) {
       missingQualityGatePhases.push(phase.phaseNumber);
       qualityGateDebtPhases.push(phase.phaseNumber);
       qualityGateMissingGates[phase.phaseNumber] = qualityGateEvaluation.missingGate;
@@ -27585,7 +27610,7 @@ async function deriveNextAction(args) {
   if (args.phaseArtifacts.hasPlans && args.phaseArtifacts.hasPendingExecution && (args.phaseArtifacts.planSetExecutionReady || args.phaseArtifacts.hasSavedSummaries) && implementedCommands.has(executePhaseCommand)) {
     return `Run ${executePhaseCommand} ${args.currentPhase} to execute the remaining phase plans`;
   }
-  const savedReviewRepairAction = args.phaseArtifacts.requiresCodeReview && args.phaseArtifacts.hasReview && args.phaseArtifacts.hasSecurity ? implementedReviewNextSafeAction(
+  const savedReviewRepairAction = args.phaseArtifacts.requiresCodeReview && args.phaseArtifacts.hasReview && (!args.phaseArtifacts.requiresSecurePhase || args.phaseArtifacts.hasSecurity) ? implementedReviewNextSafeAction(
     args.phaseArtifacts.reviewNextSafeAction,
     implementedCommands
   ) : null;
@@ -31894,14 +31919,15 @@ async function syncRoadmapPhaseCompletion(projectRoot, resolved, options = {}) {
     phaseDir: resolved.phaseDir,
     artifacts: phaseArtifacts
   });
+  const requiresQualityGate = qualityGateEvaluation.requiresQualityGate ?? qualityGateEvaluation.requiresCodeReview;
   validationWarnings.push(...qualityGateEvaluation.warnings);
-  if ((hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+  if ((hasCompleteUat || options.noUat === true && !hasBlockingUat) && requiresQualityGate && !qualityGateEvaluation.gatesSatisfied) {
     const debtReason = formatPhaseQualityGateDebtReason(qualityGateEvaluation);
     validationWarnings.push(
       debtReason === null ? `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because quality-gate closeout evidence is still incomplete for ${qualityGateEvaluation.reviewableFiles.length} reviewable file(s).` : `Phase ${resolved.phaseNumber} remains open in ${BLUEPRINT_DIR}/ROADMAP.md because ${debtReason}`
     );
   }
-  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && qualityGateEvaluation.gatesSatisfied;
+  const completed = summaryIndex.pendingPlans.length === 0 && summaryPaths.length > 0 && hasValidVerification && verificationReadyForUat && (hasCompleteUat || options.noUat === true && !hasBlockingUat) && (!requiresQualityGate || qualityGateEvaluation.gatesSatisfied);
   const rawRoadmap = await fs4.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -32039,6 +32065,7 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
   );
   const workflow = configResult.config.workflow;
   const researchConfig = configResult.config.research;
+  const securePhaseRequired = workflow.code_review && workflow.secure_phase;
   workflowWarnings.push(...configResult.warnings);
   const workflowSummary = summarizeContextPieces(
     [
@@ -32047,6 +32074,7 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
       stateResult.derivedStatus.currentPhase ? `phase: ${stateResult.derivedStatus.currentPhase}` : null,
       workflow.discuss_mode ? `discuss_mode: ${workflow.discuss_mode}` : null,
       workflow.research_before_questions ? "research_before_questions enabled" : "research_before_questions disabled",
+      securePhaseRequired ? "secure_phase required after code review" : workflow.secure_phase ? "secure_phase configured but not required because code_review is disabled" : "secure_phase disabled",
       `external sources: ${researchConfig.external_sources}`,
       stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
     ].filter((piece) => piece !== null),
@@ -32092,6 +32120,8 @@ async function readPhaseContextGrounding(projectRoot, matchedPhase, options = {}
         uiPhase: workflow.ui_phase,
         uiSafetyGate: workflow.ui_safety_gate,
         codeReview: workflow.code_review,
+        securePhase: workflow.secure_phase,
+        securePhaseRequired,
         autoAdvance: workflow.auto_advance,
         researchBeforeQuestions: workflow.research_before_questions,
         discussMode: workflow.discuss_mode,
@@ -50565,11 +50595,17 @@ function hasPlaceholderLanguage(value) {
   return /^(?:todo|tbd)(?:\b|[:\s-])/i.test(normalized) && normalized.length <= 120;
 }
 function inferCodeReviewSecondaryNextSafeAction(allowedNextActions, preferredNextSafeAction) {
+  const nonFixAction = allowedNextActions.find((action) => action === "/blu-progress") ?? allowedNextActions.find(
+    (action) => !/\/blu-code-review-fix\b/i.test(action) && !/\/blu-secure-phase\b/i.test(action)
+  ) ?? null;
   const repairAction = allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? null;
-  if (!repairAction || repairAction === preferredNextSafeAction) {
-    return null;
+  if (preferredNextSafeAction && /\/blu-code-review-fix\b/i.test(preferredNextSafeAction)) {
+    return nonFixAction && nonFixAction !== preferredNextSafeAction ? nonFixAction : null;
   }
-  return repairAction;
+  if (repairAction && repairAction !== preferredNextSafeAction) {
+    return repairAction;
+  }
+  return nonFixAction && nonFixAction !== preferredNextSafeAction ? nonFixAction : null;
 }
 async function getImplementedCommandNames3() {
   if (!implementedCommandNamesPromise4) {
@@ -50623,10 +50659,20 @@ async function validateImplementedNextSafeAction(value, sourceLabel = "Code-revi
   }
   return [];
 }
-async function buildAllowedCodeReviewNextActions(phaseNumber) {
-  const candidates = CODE_REVIEW_NEXT_ACTION_BUILDERS.map(
-    (buildAction) => buildAction(phaseNumber)
-  );
+function inferNoFindingCodeReviewNextSafeAction(allowedNextActions) {
+  return allowedNextActions.find((action) => action === "/blu-progress") ?? allowedNextActions.find(
+    (action) => !/\/blu-code-review-fix\b/i.test(action) && !/\/blu-secure-phase\b/i.test(action)
+  ) ?? allowedNextActions[0] ?? null;
+}
+async function buildAllowedCodeReviewNextActions(args) {
+  const candidates = [
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.fix(args.phaseNumber),
+    ...args.includeSecurePhase ? [CODE_REVIEW_NEXT_ACTION_BUILDERS.secure(args.phaseNumber)] : [],
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.verifyWork(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.addTests(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.validatePhase(args.phaseNumber),
+    CODE_REVIEW_NEXT_ACTION_BUILDERS.progress()
+  ];
   const implementedCommands = await getImplementedCommandNames3();
   if (implementedCommands === null || implementedCommands.size === 0) {
     return candidates;
@@ -50690,6 +50736,7 @@ function buildCodeReviewTaskSchema(args) {
   }
   schema["x-blueprint-runtimeContext"] = {
     preferredNextSafeAction: args.preferredNextSafeAction,
+    noFindingPreferredNextSafeAction: args.noFindingPreferredNextSafeAction,
     secondaryNextSafeAction: args.secondaryNextSafeAction,
     allowedNextActions: args.allowedNextActions,
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
@@ -50705,8 +50752,12 @@ async function buildCodeReviewAuthoringContext(args) {
   if (!modelContract.schemaPath) {
     throw new Error("review.code-review modelContract does not expose a schemaPath.");
   }
-  const allowedNextActions = await buildAllowedCodeReviewNextActions(args.phase.phaseNumber);
-  const preferredNextSafeAction = args.hasSecurityArtifact ? allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? allowedNextActions.find((action) => action === "/blu-progress") ?? allowedNextActions[0] ?? null : allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ?? allowedNextActions[0] ?? null;
+  const allowedNextActions = await buildAllowedCodeReviewNextActions({
+    phaseNumber: args.phase.phaseNumber,
+    includeSecurePhase: args.securePhaseEnabled && !args.hasSecurityArtifact
+  });
+  const noFindingPreferredNextSafeAction = inferNoFindingCodeReviewNextSafeAction(allowedNextActions);
+  const preferredNextSafeAction = args.securePhaseEnabled && !args.hasSecurityArtifact ? allowedNextActions.find((action) => /\/blu-secure-phase\b/i.test(action)) ?? noFindingPreferredNextSafeAction : allowedNextActions.find((action) => /\/blu-code-review-fix\b/i.test(action)) ?? noFindingPreferredNextSafeAction;
   const secondaryNextSafeAction = inferCodeReviewSecondaryNextSafeAction(
     allowedNextActions,
     preferredNextSafeAction
@@ -50718,6 +50769,7 @@ async function buildCodeReviewAuthoringContext(args) {
     knownEvidenceArtifacts: args.knownEvidenceArtifacts,
     allowedNextActions,
     preferredNextSafeAction,
+    noFindingPreferredNextSafeAction,
     secondaryNextSafeAction
   });
   return {
@@ -50725,9 +50777,11 @@ async function buildCodeReviewAuthoringContext(args) {
     files: [...args.files],
     reviewMode: { ...args.reviewMode },
     hasSecurityArtifact: args.hasSecurityArtifact,
+    securePhaseEnabled: args.securePhaseEnabled,
     knownEvidenceArtifacts: [...args.knownEvidenceArtifacts],
     allowedNextActions,
     preferredNextSafeAction,
+    noFindingPreferredNextSafeAction,
     secondaryNextSafeAction,
     schemaPath: modelContract.schemaPath,
     baseSchema,
@@ -52834,10 +52888,11 @@ function classificationForFindingDisposition(disposition) {
 }
 function classifyFollowUpTarget(summary) {
   const normalized = normalizeReviewListItem2(summary);
+  const mentionsConcreteCodeChange = /\b(?:guard|fix|repair|update|change|handle|sanitize|block|prevent|remove|refactor|invalidate|surface|restore|rewrite|enforce)\b/i.test(summary);
   if (normalized.length === 0 || isPlaceholderReviewListItem(summary)) {
     return "no-op";
   }
-  if (/(?:^|\b)(?:add|missing|gap|coverage)(?:\s+(?:a|an))?\s+(?:unit |integration |regression |smoke )?tests?\b/i.test(summary) || /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) || /\/blu-add-tests\b/i.test(summary)) {
+  if ((/(?:^|\b)(?:add|extend|write|cover|missing|gap|coverage)(?:\s+(?:a|an))?[\w\s-]{0,80}\btests?\b/i.test(summary) || /\b(?:test gap|missing test|assertion gap|coverage gap)\b/i.test(summary) || /\b(?:unit|integration|regression|smoke)\s+tests?\b/i.test(summary) || /\/blu-add-tests\b/i.test(summary)) && !mentionsConcreteCodeChange) {
     return "test-gap";
   }
   if (/\b(?:verify|verification|validate|validation|uat|manual qa|smoke check|re-run)\b/i.test(summary) || /\/blu-(?:validate-phase|verify-work)\b/i.test(summary)) {
@@ -52853,6 +52908,9 @@ function classifyFollowUpTarget(summary) {
 }
 function isDefaultReviewFixClassification(classification) {
   return classification === "fixable";
+}
+function classifyCodeReviewModelFinding(finding) {
+  return finding.disposition === "follow-up" ? classifyFollowUpTarget(finding.recommendation) : classificationForFindingDisposition(finding.disposition) ?? "routing-note";
 }
 function parseCodeReviewFindingEntry(item, sourceSection, index) {
   const visibleId = extractVisibleReviewTargetId2(item);
@@ -54982,6 +55040,9 @@ function addVerdictContradictionDiagnostics(args) {
   const followUpFindings = args.model.findings.filter(
     (finding) => finding.disposition === "follow-up"
   );
+  const fixableFollowUpFindings = followUpFindings.filter(
+    (finding) => classifyCodeReviewModelFinding(finding) === "fixable"
+  );
   const blockedFindings = args.model.findings.filter(
     (finding) => finding.disposition === "blocked"
   );
@@ -55022,14 +55083,18 @@ function addVerdictContradictionDiagnostics(args) {
       })
     );
   }
-  if (followUpFindings.length > 0 && nextAction === "/blu-progress") {
+  if (fixableFollowUpFindings.length > 0 && nextAction === "/blu-progress") {
     args.diagnostics.push(
       modelDiagnostic({
         source: "residual",
         path: "model.nextSafeAction",
         code: "residual.next_action_contradiction",
-        message: "Code-review model routes to /blu-progress while follow-up findings remain.",
-        context: { nextSafeAction: nextAction, followUpFindingCount: followUpFindings.length },
+        message: "Code-review model routes to /blu-progress while concrete fixable follow-up findings remain.",
+        context: {
+          nextSafeAction: nextAction,
+          followUpFindingCount: followUpFindings.length,
+          fixableFollowUpFindingCount: fixableFollowUpFindings.length
+        },
         suggestion: "Route to /blu-code-review-fix <phase> or another allowed repair/validation action."
       })
     );
@@ -55062,16 +55127,23 @@ function addVerdictContradictionDiagnostics(args) {
       })
     );
   }
-  if (!args.authoringContext.hasSecurityArtifact && args.authoringContext.preferredNextSafeAction && nextAction !== args.authoringContext.preferredNextSafeAction) {
+  const requiresSecurePhasePrimary = args.authoringContext.securePhaseEnabled && !args.authoringContext.hasSecurityArtifact;
+  const requiresFindingRepairPrimary = !requiresSecurePhasePrimary && fixableFollowUpFindings.length > 0 && args.authoringContext.preferredNextSafeAction !== null;
+  if ((requiresSecurePhasePrimary || requiresFindingRepairPrimary) && args.authoringContext.preferredNextSafeAction && nextAction !== args.authoringContext.preferredNextSafeAction) {
     args.diagnostics.push(
       modelDiagnostic({
         source: "residual",
         path: "model.nextSafeAction",
         code: "residual.next_action_priority",
-        message: `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence.`,
+        message: requiresSecurePhasePrimary ? `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction until the phase has saved SECURITY evidence because workflow.secure_phase is enabled.` : `Code-review model must keep ${args.authoringContext.preferredNextSafeAction} as the primary nextSafeAction while concrete fixable follow-up findings remain.`,
         context: {
           nextSafeAction: nextAction,
+          securePhaseEnabled: args.authoringContext.securePhaseEnabled,
+          hasSecurityArtifact: args.authoringContext.hasSecurityArtifact,
+          findingCount: args.model.findings.length,
+          fixableFollowUpFindingCount: fixableFollowUpFindings.length,
           preferredNextSafeAction: args.authoringContext.preferredNextSafeAction,
+          noFindingPreferredNextSafeAction: args.authoringContext.noFindingPreferredNextSafeAction,
           secondaryNextSafeAction: args.authoringContext.secondaryNextSafeAction
         },
         suggestion: args.authoringContext.secondaryNextSafeAction ? `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction and mention ${args.authoringContext.secondaryNextSafeAction} as secondary follow-up guidance.` : `Use ${args.authoringContext.preferredNextSafeAction} as nextSafeAction.`
@@ -56454,14 +56526,18 @@ async function resolveReviewSettings(projectRoot, requestedDepth) {
     const warnings = [...config2.warnings];
     return {
       allowed: config2.config.workflow.code_review,
+      securePhaseEnabled: config2.config.workflow.secure_phase === true,
       depth: requestedDepth ?? resolveConfiguredReviewDepth(config2.config.workflow.code_review_depth, warnings),
       warnings
     };
   } catch {
     return {
       allowed: true,
+      securePhaseEnabled: false,
       depth: requestedDepth ?? "standard",
-      warnings: ["Blueprint review config could not be read; using standard depth."]
+      warnings: [
+        "Blueprint review config could not be read; defaulting workflow.code_review to true, workflow.secure_phase to false, and review depth to standard."
+      ]
     };
   }
 }
@@ -56658,6 +56734,7 @@ async function blueprintReviewScope(args) {
     files,
     reviewMode,
     hasSecurityArtifact: artifacts.security !== null,
+    securePhaseEnabled: reviewSettings.securePhaseEnabled,
     knownEvidenceArtifacts
   }) : void 0;
   return {
@@ -57629,14 +57706,14 @@ var init_review = __esm({
     VISIBLE_REVIEW_TARGET_ID_PATTERN2 = /`?((?:F|FU)-[A-Z0-9][A-Z0-9._-]*)`?/i;
     CANONICAL_CODE_REVIEW_FINDING_PATTERN3 = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
     LEGACY_CODE_REVIEW_FINDING_PATTERN = /^\[(critical|high|medium|low|unknown)\]\[(follow-up|observation|blocked|accepted-risk)\]\s+`([^`]+)`\s*-\s*Evidence:\s*(.+?)\s+Impact:\s*(.+?)\s+Fix\/verification:\s*(.+)$/i;
-    CODE_REVIEW_NEXT_ACTION_BUILDERS = [
-      (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
-      (phaseNumber) => `/blu-secure-phase ${phaseNumber}`,
-      (phaseNumber) => `/blu-verify-work ${phaseNumber}`,
-      (phaseNumber) => `/blu-add-tests ${phaseNumber}`,
-      (phaseNumber) => `/blu-validate-phase ${phaseNumber}`,
-      () => "/blu-progress"
-    ];
+    CODE_REVIEW_NEXT_ACTION_BUILDERS = {
+      fix: (phaseNumber) => `/blu-code-review-fix ${phaseNumber}`,
+      secure: (phaseNumber) => `/blu-secure-phase ${phaseNumber}`,
+      verifyWork: (phaseNumber) => `/blu-verify-work ${phaseNumber}`,
+      addTests: (phaseNumber) => `/blu-add-tests ${phaseNumber}`,
+      validatePhase: (phaseNumber) => `/blu-validate-phase ${phaseNumber}`,
+      progress: () => "/blu-progress"
+    };
     REVIEW_FIX_TARGET_ID_COORDINATION_MESSAGE = "Pass the same targetIds to blueprint_review_authoring_context, blueprint_review_validate_model, and blueprint_review_record.";
     implementedCommandNamesPromise4 = null;
     PEER_REVIEW_REPO_EVIDENCE_ARTIFACTS = [

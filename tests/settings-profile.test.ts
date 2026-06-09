@@ -123,6 +123,7 @@ test("config_set persists normalized version 2 config for initialized repos", as
   assert.equal((config.planning as Record<string, unknown>).commit_docs, false);
   assert.equal((config.workflow as Record<string, unknown>).verifier, false);
   assert.equal(config.model_profile, "balanced");
+  assert.equal(result.config.workflow.secure_phase, false);
   assert.equal(result.config.workflow.no_uat, false);
   assert.equal(result.config.workflow.subagents, true);
   assert.deepEqual(result.config.ux, {
@@ -138,6 +139,7 @@ test("config_set persists normalized version 2 config for initialized repos", as
   });
   assert.equal("no_uat" in (config.workflow as Record<string, unknown>), false);
   assert.equal("subagents" in (config.workflow as Record<string, unknown>), false);
+  assert.equal("secure_phase" in (config.workflow as Record<string, unknown>), false);
   assert.equal("ux" in config, false);
   assert.equal("orchestration" in config, false);
   assert.equal("research" in config, false);
@@ -259,6 +261,7 @@ test("config_set_profile changes only model_profile without materializing inheri
   });
   assert.equal(effectiveConfig.config.model_profile, "budget");
   assert.equal(effectiveConfig.config.mode, "auto");
+  assert.equal(effectiveConfig.config.workflow.secure_phase, false);
   assert.equal(effectiveConfig.config.workflow.subagents, false);
   assert.equal(effectiveConfig.config.workflow.verifier, true);
   assert.equal("planning" in afterConfig, false);
@@ -353,6 +356,7 @@ test("legacy and minimal config inputs are upgraded to the full schema on write"
   assert.equal((config.planning as Record<string, unknown>).search_gitignored, true);
   assert.equal((config.parallelization as Record<string, unknown>).enabled, false);
   assert.equal(workflow.research, false);
+  assert.equal(result.config.workflow.secure_phase, false);
   assert.equal(result.config.workflow.no_uat, false);
   assert.equal("use_workspaces" in workflow, false);
   assert.equal("use_workstreams" in workflow, false);
@@ -435,6 +439,7 @@ test("config_set project patches do not freeze inherited defaults into project c
   });
   assert.equal(effectiveConfig.config.model_profile, "balanced");
   assert.equal(effectiveConfig.config.mode, "auto");
+  assert.equal(effectiveConfig.config.workflow.secure_phase, false);
   assert.equal(effectiveConfig.config.workflow.subagents, false);
   assert.equal(effectiveConfig.config.workflow.verifier, true);
   assert.equal("planning" in afterConfig, false);
@@ -551,6 +556,38 @@ test("config_get defaults workflow.no_uat to false and project patches can enabl
   assert.equal((savedConfig.workflow as Record<string, unknown>).no_uat, true);
 });
 
+test("config_get defaults workflow.secure_phase to false and project patches can enable it", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const before = await blueprintConfigGet({
+    cwd: repoPath,
+    scope: "effective"
+  });
+
+  assert.equal(before.config.workflow.secure_phase, false);
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        secure_phase: true
+      }
+    }
+  });
+  const savedConfig = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+
+  assert.equal(result.config.workflow.secure_phase, true);
+  assert.deepEqual(result.updatedKeys, ["workflow.secure_phase"]);
+  assert.equal((savedConfig.workflow as Record<string, unknown>).secure_phase, true);
+  assert.equal("no_uat" in (savedConfig.workflow as Record<string, unknown>), false);
+  assert.equal("subagents" in (savedConfig.workflow as Record<string, unknown>), false);
+});
+
 test("config_set ignores invalid workflow.subagents values and warns", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   t.after(async () => {
@@ -591,6 +628,67 @@ test("config_set ignores invalid workflow.no_uat values and warns", async (t) =>
   assert.match(result.warnings.join("\n"), /Ignored invalid config type for workflow\.no_uat/);
 });
 
+test("config_set ignores invalid workflow.secure_phase values and warns", async (t) => {
+  const repoPath = await createRepoFromFixture("initialized-repo");
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        secure_phase: "required"
+      }
+    }
+  });
+  const savedConfig = await readJsonFile<Record<string, unknown>>(
+    path.join(repoPath, ".blueprint/config.json")
+  );
+
+  assert.equal(result.config.workflow.secure_phase, false);
+  assert.equal(result.updatedKeys.includes("workflow.secure_phase"), false);
+  assert.equal("secure_phase" in (savedConfig.workflow as Record<string, unknown>), false);
+  assert.match(
+    result.warnings.join("\n"),
+    /Ignored invalid config type for workflow\.secure_phase/
+  );
+});
+
+test("config_set ignores invalid workflow.secure_phase values without materializing inherited defaults", async (t) => {
+  const repoPath = await createRepoFromFixture("missing-config-repo");
+  const tempRoot = path.dirname(repoPath);
+  const configPath = path.join(repoPath, ".blueprint/config.json");
+  t.after(async () => {
+    await rm(tempRoot, { recursive: true, force: true });
+  });
+
+  await writeInitializedBlueprintArtifacts(repoPath);
+  assert.equal(await pathExists(configPath), false);
+
+  const result = await blueprintConfigSet({
+    cwd: repoPath,
+    patch: {
+      workflow: {
+        secure_phase: "required"
+      }
+    }
+  });
+  const savedConfig = await readJsonFile<Record<string, unknown>>(configPath);
+
+  assert.equal(result.config.workflow.secure_phase, false);
+  assert.equal(result.updatedKeys.includes("workflow.secure_phase"), false);
+  assert.match(
+    result.warnings.join("\n"),
+    /Ignored invalid config type for workflow\.secure_phase/
+  );
+  assert.deepEqual(savedConfig, {
+    version: 2
+  });
+  assert.equal("workflow" in savedConfig, false);
+  assert.equal("secure_phase" in savedConfig, false);
+});
+
 test("defaults-scope writes for effectiveness-spine keys participate in effective precedence until project override", async (t) => {
   const repoPath = await createRepoFromFixture("initialized-repo");
   const tempRoot = path.dirname(repoPath);
@@ -616,7 +714,8 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
         external_sources: "ask"
       },
       workflow: {
-        subagents: false
+        subagents: false,
+        secure_phase: true
       }
     }
   });
@@ -638,6 +737,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(effectiveBeforeProjectOverride.config.research, {
     external_sources: "ask"
   });
+  assert.equal(effectiveBeforeProjectOverride.config.workflow.secure_phase, true);
   assert.equal(effectiveBeforeProjectOverride.config.workflow.subagents, false);
 
   const projectOverride = await blueprintConfigSet({
@@ -654,7 +754,8 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
         external_sources: "auto"
       },
       workflow: {
-        subagents: true
+        subagents: true,
+        secure_phase: false
       }
     }
   });
@@ -670,6 +771,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(projectOverride.config.research, {
     external_sources: "auto"
   });
+  assert.equal(projectOverride.config.workflow.secure_phase, false);
   assert.equal(projectOverride.config.workflow.subagents, true);
 
   const effectiveAfterProjectOverride = await blueprintConfigGet({
@@ -689,6 +791,7 @@ test("defaults-scope writes for effectiveness-spine keys participate in effectiv
   assert.deepEqual(effectiveAfterProjectOverride.config.research, {
     external_sources: "auto"
   });
+  assert.equal(effectiveAfterProjectOverride.config.workflow.secure_phase, false);
   assert.equal(effectiveAfterProjectOverride.config.workflow.subagents, true);
 });
 

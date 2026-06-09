@@ -716,6 +716,8 @@ type PhaseContextResult = {
       uiPhase: boolean;
       uiSafetyGate: boolean;
       codeReview: boolean;
+      securePhase: boolean;
+      securePhaseRequired: boolean;
       autoAdvance: boolean;
       researchBeforeQuestions: boolean;
       discussMode: string;
@@ -2982,12 +2984,15 @@ async function syncRoadmapPhaseCompletion(
     phaseDir: resolved.phaseDir,
     artifacts: phaseArtifacts
   });
+  const requiresQualityGate =
+    (qualityGateEvaluation as { requiresQualityGate?: boolean }).requiresQualityGate ??
+    qualityGateEvaluation.requiresCodeReview;
 
   validationWarnings.push(...qualityGateEvaluation.warnings);
 
   if (
     (hasCompleteUat || (options.noUat === true && !hasBlockingUat)) &&
-    qualityGateEvaluation.requiresCodeReview &&
+    requiresQualityGate &&
     !qualityGateEvaluation.gatesSatisfied
   ) {
     const debtReason = formatPhaseQualityGateDebtReason(qualityGateEvaluation);
@@ -3005,7 +3010,7 @@ async function syncRoadmapPhaseCompletion(
     hasValidVerification &&
     verificationReadyForUat &&
     (hasCompleteUat || (options.noUat === true && !hasBlockingUat)) &&
-    qualityGateEvaluation.gatesSatisfied;
+    (!requiresQualityGate || qualityGateEvaluation.gatesSatisfied);
   const rawRoadmap = await fs.readFile(roadmapPath, "utf8");
   const phaseLineSync = replacePhaseLineCompletionMarker(
     rawRoadmap,
@@ -3218,6 +3223,7 @@ async function readPhaseContextGrounding(
 
   const workflow = configResult.config.workflow;
   const researchConfig = configResult.config.research;
+  const securePhaseRequired = workflow.code_review && workflow.secure_phase;
   workflowWarnings.push(...configResult.warnings);
   const workflowSummary = summarizeContextPieces(
     [
@@ -3234,6 +3240,11 @@ async function readPhaseContextGrounding(
       workflow.research_before_questions
         ? "research_before_questions enabled"
         : "research_before_questions disabled",
+      securePhaseRequired
+        ? "secure_phase required after code review"
+        : workflow.secure_phase
+          ? "secure_phase configured but not required because code_review is disabled"
+          : "secure_phase disabled",
       `external sources: ${researchConfig.external_sources}`,
       stateResult.derivedStatus.nextAction ? `next action: ${stateResult.derivedStatus.nextAction}` : null
     ].filter((piece): piece is string => piece !== null),
@@ -3280,6 +3291,8 @@ async function readPhaseContextGrounding(
         uiPhase: workflow.ui_phase,
         uiSafetyGate: workflow.ui_safety_gate,
         codeReview: workflow.code_review,
+        securePhase: workflow.secure_phase,
+        securePhaseRequired,
         autoAdvance: workflow.auto_advance,
         researchBeforeQuestions: workflow.research_before_questions,
         discussMode: workflow.discuss_mode,

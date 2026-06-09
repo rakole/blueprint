@@ -40,6 +40,10 @@ test("verify-work manifest stays thin while advertising tool-owned writes and ro
   assert.match(commandFile, new RegExp(blueprintRuntimeToolFqn("blueprint_state_update")));
   assert.match(commandFile, /workflow\.verifier/);
   assert.match(commandFile, /workflow\.nyquist_validation/);
+  assert.match(commandFile, /workflow\.code_review=false`, secure-phase is never mandatory regardless of `workflow\.secure_phase`/i);
+  assert.match(commandFile, /workflow\.code_review=true` and `workflow\.secure_phase=false`, route mandatory post-UAT follow-up through code review without making secure-phase mandatory/i);
+  assert.match(commandFile, /when both are `true`, route to `\/blu-code-review <phase>` first and require `\/blu-secure-phase <phase>` only after review evidence exists/i);
+  assert.match(commandFile, /Manual `\/blu-secure-phase` remains implemented and directly runnable even when it is not the mandatory routed next step\./i);
   assert.match(commandFile, /XX-UAT\.md/);
   assert.match(commandFile, /artifact: "uat"/);
   assert.match(commandFile, /\.blueprint\/ROADMAP\.md/);
@@ -74,6 +78,12 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   const runtimeContractPath =
     "skills/blueprint-phase-validation/references/verify-work-runtime-contract.md";
   const requiredInputs = headingSection(skillFile, "Required Inputs");
+  const runtimeContractText = [
+    runtimeContract.runtimeReference?.summary,
+    runtimeContract.runtimeReference?.contractNotes
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join("\n");
 
   assert.ok(metadata);
   assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#verify-work");
@@ -89,6 +99,22 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.deepEqual(runtimeContract.runtimeReference?.exactMcpDestination, [
     ...metadata.requiredTools
   ]);
+  assert.match(
+    runtimeContractText,
+    /workflow\.code_review=false[\s\S]*secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    runtimeContractText,
+    /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*mandatory code review[\s\S]*not secure-phase/i
+  );
+  assert.match(
+    runtimeContractText,
+    /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*code-review first[\s\S]*secure-phase[\s\S]*after review exists/i
+  );
+  assert.match(
+    runtimeContractText,
+    /\/blu-secure-phase remains manually runnable and implemented; this setting controls mandatory post-UAT routing only\./i
+  );
   assert.deepEqual(runtimeContract.skillInputs, {
     skill: "blueprint-phase-validation",
     shared: [],
@@ -112,6 +138,10 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(skillFile, /blueprint_artifact_contract_read/);
   assert.match(skillFile, /workflow\.verifier/);
   assert.match(skillFile, /workflow\.nyquist_validation/);
+  assert.match(skillFile, /workflow\.code_review=false`, secure-phase is never mandatory regardless of `workflow\.secure_phase`/i);
+  assert.match(skillFile, /workflow\.code_review=true` and `workflow\.secure_phase=false`, route to mandatory code review when review evidence is missing but do not require secure-phase/i);
+  assert.match(skillFile, /when both toggles are `true`, route to `\/blu-code-review <phase>` first and require `\/blu-secure-phase <phase>` only after review evidence exists/i);
+  assert.match(skillFile, /Keep `\/blu-secure-phase` manually runnable even when config-gated post-UAT routing prefers another implemented next step\./i);
   assert.match(skillFile, /blueprint_artifact_validate/);
   assert.match(skillFile, /ask_user/);
   assert.match(skillFile, /per-test UAT prompts/i);
@@ -148,6 +178,12 @@ test("verify-work skill scopes required inputs to the active command and keeps d
   assert.match(runtimeContractFile, /Do not expect a public `contract\.authoringTemplate`/);
   assert.match(runtimeContractFile, /blueprint_phase_validation_validate_model/);
   assert.match(runtimeContractFile, /status: "valid"/i);
+  assert.match(runtimeContractFile, /Post-UAT routing must read effective config and stay inside implemented command surfaces:/);
+  assert.match(runtimeContractFile, /when `workflow\.code_review=false`, secure-phase is never mandatory regardless\s+of `workflow\.secure_phase`/i);
+  assert.match(runtimeContractFile, /when `workflow\.code_review=true` and `workflow\.secure_phase=false`, mandatory\s+post-UAT routing may require `\/blu-code-review <phase>` while never making\s+`\/blu-secure-phase <phase>` mandatory/i);
+  assert.match(runtimeContractFile, /when `workflow\.code_review=true` and `workflow\.secure_phase=true`, route to\s+`\/blu-code-review <phase>` first and require `\/blu-secure-phase <phase>` only\s+after saved review evidence exists/i);
+  assert.match(runtimeContractFile, /`\/blu-secure-phase` remains manually runnable and implemented even when this\s+config-gated routing prefers another next action/i);
+  assert.match(runtimeContractFile, /derive the next safe action from\s+saved UAT status, effective config, existing review evidence, and implemented\s+command availability instead of assuming secure-phase is always next/i);
   assert.doesNotMatch(runtimeContractFile, /authoring-template, and structured `modelContract` authority/);
 });
 

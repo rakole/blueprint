@@ -224,6 +224,7 @@ Current normalized schema:
     "ui_safety_gate": true,
     "no_uat": false,
     "code_review": true,
+    "secure_phase": false,
     "code_review_depth": "standard",
     "auto_advance": false,
     "research_before_questions": false,
@@ -286,6 +287,7 @@ Normalization and precedence rules:
 - `workflow.subagents` is the global optional-subagent workflow policy for Blueprint command orchestration. It governs whether commands may use their optional Blueprint subagent paths; it does not install host agents, change agent catalog availability, or widen routing.
 - `workflow.no_uat` defaults to `false`; when `true`, missing `XX-UAT.md` evidence is not lifecycle-blocking after PASS verification, while `/blu-verify-work` remains manually runnable and quality gates still block completion.
 - `workflow.code_review` and `workflow.code_review_depth` are surfaced through `/blu-settings` and consumed by `/blu-code-review`; the review toggle should stay meaningful as a surfaced workflow setting, and the depth value is the default when the review command runs without an explicit `--depth`.
+- `workflow.secure_phase` defaults to `false` and is surfaced through `/blu-settings` as the secure-phase requirement toggle. It controls whether routing and lifecycle gates require `/blu-secure-phase` only when `workflow.code_review` is `true`; if `workflow.code_review` is `false`, secure-phase is never mandated regardless of `workflow.secure_phase`. Manual `/blu-secure-phase` remains explicitly runnable even when the toggle is `false`.
 - `~/.<host>/blueprint/defaults.json` uses the same normalized schema shape for user defaults, but repo-identity fields should be omitted or left `null` when saving defaults.
 - Health and config-write flows are responsible for migrating older minimal Blueprint config files forward to version `2`.
 - Discovery runtime actively uses `workflow.discuss_mode` and `workflow.research_before_questions`. `workflow.auto_advance` remains a reserved compatibility field until a later lifecycle rollout makes it real.

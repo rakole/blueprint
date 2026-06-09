@@ -416,6 +416,8 @@ type PhaseContextResult = {
             uiPhase: boolean;
             uiSafetyGate: boolean;
             codeReview: boolean;
+            securePhase: boolean;
+            securePhaseRequired: boolean;
             autoAdvance: boolean;
             researchBeforeQuestions: boolean;
             discussMode: string;
