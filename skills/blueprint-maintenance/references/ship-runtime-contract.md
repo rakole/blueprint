@@ -8,19 +8,21 @@ This reference is the detailed `/blu-ship` workflow contract. The command manife
 
 - Call `mcp_blueprint_blueprint_project_status` first. Route to `/blu-new-project` when uninitialized and `/blu-health` when partial or unhealthy.
 - Resolve the shipping scope explicitly. If the user names a phase, call `mcp_blueprint_blueprint_phase_locate` and stop when it is missing.
-- Call `mcp_blueprint_blueprint_config_get` with effective scope before deriving base branch, branching strategy, or commit-doc behavior.
+- Call `mcp_blueprint_blueprint_config_get` with effective scope before deriving base branch, branching strategy, or commit-doc behavior. Treat effective `workflow.code_review` and `workflow.secure_phase` as the shipping gate authority: `workflow.secure_phase` defaults to `false`, `/blu-secure-phase` remains manually runnable and implemented either way, and shipping must treat secure-phase only as optional readiness gating layered on top of `workflow.code_review`, not as command existence.
 - Inspect current branch, target base branch, `gh` availability, and whether the run is draft, ready, manual-only, push-only, or PR-creation mode.
 
 ### Read
 
 - Inspect git status before mutation. A dirty working tree or missing base branch is a hard stop.
 - Call `mcp_blueprint_blueprint_artifact_list` for saved verification, UAT, review, security, and latest `pr-branch` evidence.
+- Evaluate saved review and security evidence against the effective config before proposing shipping readiness. If `workflow.code_review=false`, security evidence is never mandatory regardless of `workflow.secure_phase`. If `workflow.code_review=true` and `workflow.secure_phase=false`, review evidence may still be mandatory while security evidence is not. If both are true, require code-review evidence first and secure-phase or security evidence after that before ready shipping.
 - Call `mcp_blueprint_blueprint_artifact_summary_digest` with explicit repo-relative `artifactPaths` and relevant `trackedFiles`. Treat `inputsUsed` as authoritative.
 - Call `mcp_blueprint_blueprint_artifact_contract_read` for `report.ship` before any report persistence.
 
 ### Decide
 
-- Preview selected scope, evidence found or missing, source branch, base branch, draft or ready mode, push and PR steps, fallback behavior, and exact commands.
+- Preview selected scope, evidence found or missing, effective `workflow.code_review` and `workflow.secure_phase` values, source branch, base branch, draft or ready mode, push and PR steps, fallback behavior, and exact commands.
+- Keep draft or ready mode honest against the saved evidence and config gate evaluation. Missing config-required review or security evidence blocks ready shipping even though `/blu-secure-phase` is still manually runnable.
 - Keep local prep, push, and PR creation as separate decisions.
 - Require explicit confirmation before any git push or PR creation and surface the pending gate as `ship-confirmation`.
 - If replacing `ship-latest` needs approval, surface `report-overwrite-confirmation`.
@@ -34,7 +36,7 @@ This reference is the detailed `/blu-ship` workflow contract. The command manife
 ### Persist
 
 - Persist the approved plan before remote mutation through `mcp_blueprint_blueprint_artifact_report_write` with bare `reportName: "ship-latest"`.
-- After approved push or PR attempts finish, overwrite `ship-latest` through the same MCP tool so the report captures actual outcomes and blockers.
+- After approved push or PR attempts finish, overwrite `ship-latest` through the same MCP tool so the report captures actual outcomes, blockers, and the config-aware review or security gate posture.
 - If shipping changes the next safe Blueprint action, call `mcp_blueprint_blueprint_state_update` only after the post-mutation report is written.
 
 ### Validate

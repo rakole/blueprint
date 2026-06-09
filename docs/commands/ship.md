@@ -31,7 +31,8 @@
 
 
 - Verification should already be complete and a target branch strategy should be clear.
-- When `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files, `XX-REVIEW.md` and `XX-SECURITY.md` must both exist before shipping can proceed.
+- When `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files, `XX-REVIEW.md` must exist before shipping can proceed.
+- When `workflow.code_review` is true, saved execution evidence includes reviewable repo/source files, and `workflow.secure_phase=true`, `XX-SECURITY.md` must also exist before shipping can proceed. `workflow.secure_phase` defaults to `false`, and if `workflow.code_review=false` the shipping path must not require security evidence regardless of the secure-phase setting.
 - Effective config should supply the default base-branch and branching behavior when the user does not override them.
 
 
@@ -137,8 +138,9 @@
 - Shipping must separate local preparation, optional push, and optional PR creation so there is no implicit remote mutation chain.
 - If `gh` is missing or unauthenticated, the command should still produce a durable manual PR checklist and draft body.
 - Verification, UAT, review, and security artifacts should be treated as gating evidence, not best-effort suggestions.
-- If post-UAT review/security gates are required but missing, shipping should route to `/blu-code-review <phase>` before review exists, `/blu-secure-phase <phase>` before security exists, or the saved review next safe action when `XX-REVIEW.md` has open findings.
-- When `workflow.code_review` is false, shipping may use the previous verification/UAT-ready behavior without adding review/security prerequisites.
+- If post-UAT review or security gates are required but missing, shipping should route to `/blu-code-review <phase>` before review exists, keep the saved review next safe action when `XX-REVIEW.md` has open findings, and route to `/blu-secure-phase <phase>` only after review exists when `workflow.code_review=true` and `workflow.secure_phase=true` but `XX-SECURITY.md` is still missing.
+- When `workflow.code_review` is false, shipping may use the previous verification/UAT-ready behavior without adding review or security prerequisites.
+- When `workflow.code_review` is true and `workflow.secure_phase=false`, shipping should require review evidence but should not require `XX-SECURITY.md`.
 - Shipping should honor normalized `git.*` and `planning.commit_docs` config rather than re-deriving branch policy from git state alone.
 - Shipping should stop on a dirty working tree or branch mismatch instead of guessing through uncommitted or off-scope repo state.
 - Shipping should make the resolved scope, source branch, base branch, and report-before-mutate path explicit before any push or PR step is confirmed.

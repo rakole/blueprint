@@ -9,7 +9,7 @@
 ## Purpose
 
 
-`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later. The common settings pass includes the review defaults that make `/blu-code-review` meaningful, namely `workflow.code_review` and `workflow.code_review_depth`.
+`settings` is Blueprint's command for configuring workflow toggles and model profile. In Blueprint it should stay host-native, delegate persistence to documented MCP tools, and keep the repo-side contract explicit enough that this command can be implemented in isolation later. The common settings pass includes the review defaults that make `/blu-code-review` and the optional secure-phase requirement meaningful: `workflow.code_review`, `workflow.secure_phase`, and `workflow.code_review_depth`.
 
 
 ## Command Path And Examples
@@ -65,6 +65,9 @@
 - `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
 - Setting `workflow.subagents` to `false` disables optional Blueprint subagent invocation and forces the documented no-subagent fallback paths instead. It does not hide agent entries, change agent catalog visibility, or widen or narrow implemented-command routing.
 - `workflow.no_uat` defaults to `false`. Setting it to `true` makes missing UAT evidence optional for lifecycle routing and phase closeout after PASS verification; `/blu-verify-work` remains explicitly runnable, and quality gates still block completion.
+- `workflow.secure_phase` defaults to `false`. Setting it to `true` makes `/blu-secure-phase` a required workflow-routing and lifecycle-gate step only when `workflow.code_review` is `true`.
+- If `workflow.code_review` is `false`, secure-phase is never mandated by routing or gates regardless of `workflow.secure_phase`.
+- `/blu-secure-phase` remains manually runnable even when `workflow.secure_phase` is `false`; this setting must not hide or remove the command surface.
 
 
 ## Skills And Subagents
@@ -108,7 +111,7 @@
 ## User Prompts And Confirmation Gates
 
 
-- Run a common settings pass for profile, research/plan/verify, Nyquist, UI, the `/blu-code-review` review toggle and depth, commit-docs, branching, and worktree isolation before offering advanced keys.
+- Run a common settings pass for profile, research/plan/verify, Nyquist, UI, the `/blu-code-review` review toggle, the secure-phase requirement toggle, review depth, commit-docs, branching, and worktree isolation before offering advanced keys.
 - Offer an advanced settings pass for gate, safety, UAT optionality, subagent toggle, timeout, template, response-language, and agent-skill fields.
 - Keep the common settings pass stable; do not force the effectiveness-spine keys into that first pass just because runtime support exists now.
 - If the user asks for the effectiveness-spine keys directly, write them through the documented config MCP path instead of inventing a separate persistence flow.
@@ -143,6 +146,7 @@
 - Persists project config as the normalized project override layer so inherited defaults stay inherited until the project explicitly writes an override.
 - Never stores hook enablement in repo config; hook control remains in `hooks/hooks.json`.
 - Keeps `workflow.code_review` and `workflow.code_review_depth` in the normalized config so `/blu-code-review` can read them as real defaults.
+- Keeps `workflow.secure_phase` in the normalized config as an explicit workflow-routing gate toggle that only becomes mandatory when `workflow.code_review=true`, while manual `/blu-secure-phase` remains valid.
 - Keeps `workflow.no_uat` as an explicit lifecycle toggle that bypasses only missing-UAT requirements, not manual `/blu-verify-work` or quality gates.
 - Normalizes and persists `ux.progress_mode`, `ux.structured_confirmations`, `ux.user_checkpoints`, `orchestration.task_tracker`, and `research.external_sources` through the documented config MCP path.
 - Preserves defaults precedence for those keys when older project configs still omit them.

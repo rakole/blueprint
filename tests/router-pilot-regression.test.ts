@@ -24,6 +24,7 @@ test("router pilot surfaces remain implemented-only in the live command catalog"
     ],
     next: [
       "blueprint_project_status",
+      "blueprint_config_get",
       "blueprint_state_load",
       "blueprint_artifact_list",
       "blueprint_command_catalog"
@@ -76,6 +77,19 @@ test("router pilot manifests and docs keep waiting-state reporting explicit", as
   assert.match(routerSkill, /commands\/blu-help\.toml/);
   assert.match(routerSkill, /commands\/blu-progress\.toml/);
   assert.match(routerSkill, /commands\/blu-next\.toml/);
+  assert.match(routerSkill, /\/blu-next[\s\S]*mcp_blueprint_blueprint_config_get/);
+  assert.match(
+    routerSkill,
+    /workflow\.code_review=false[\s\S]*never makes `?\/blu-secure-phase <phase>`? mandatory/i
+  );
+  assert.match(
+    routerSkill,
+    /workflow\.code_review=true[\s\S]*workflow\.secure_phase=false[\s\S]*mandatory code review but not secure-phase/i
+  );
+  assert.match(
+    routerSkill,
+    /workflow\.code_review=true[\s\S]*workflow\.secure_phase=true[\s\S]*\/blu-code-review <phase>[\s\S]*before[\s\S]*\/blu-secure-phase <phase>/i
+  );
   assert.match(routerSkill, /waiting state/i);
   assert.match(routerSkill, /pending gate|missing artifact, approval gate/i);
   assert.match(routerSkill, /next safe action/i);
@@ -141,6 +155,7 @@ test("router pilot runtime-owned metadata keeps the waiting-state contract align
   assert.equal(nextMetadata.catalog.primarySkill, "blueprint-router");
   assert.deepEqual(nextMetadata.requiredTools, [
     "blueprint_project_status",
+    "blueprint_config_get",
     "blueprint_state_load",
     "blueprint_artifact_list",
     "blueprint_command_catalog"

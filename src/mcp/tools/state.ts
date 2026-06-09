@@ -244,7 +244,10 @@ type CurrentPhaseArtifactStatus = {
   hasSavedSummaries: boolean;
   hasPendingExecution: boolean;
   codeReviewEnabled: boolean;
+  securePhaseEnabled: boolean;
   requiresCodeReview: boolean;
+  requiresSecurePhase: boolean;
+  requiresQualityGate: boolean;
   hasReviewableFiles: boolean;
   reviewableFiles: string[];
   qualityGateMissingGate: PhaseQualityGateMissingGate;
@@ -253,6 +256,12 @@ type CurrentPhaseArtifactStatus = {
   researchValid: boolean | null;
   blockers: string[];
   warnings: string[];
+};
+
+type PhaseQualityGateConsumerEvaluation = PhaseQualityGateEvaluation & {
+  securePhaseEnabled?: boolean;
+  requiresSecurePhase?: boolean;
+  requiresQualityGate?: boolean;
 };
 
 type RoadmapPhaseSignal = {
@@ -1563,7 +1572,10 @@ function emptyCurrentPhaseQualityGateStatus(): Pick<
   | "hasReview"
   | "hasSecurity"
   | "codeReviewEnabled"
+  | "securePhaseEnabled"
   | "requiresCodeReview"
+  | "requiresSecurePhase"
+  | "requiresQualityGate"
   | "hasReviewableFiles"
   | "reviewableFiles"
   | "qualityGateMissingGate"
@@ -1575,12 +1587,31 @@ function emptyCurrentPhaseQualityGateStatus(): Pick<
     hasReview: false,
     hasSecurity: false,
     codeReviewEnabled: true,
+    securePhaseEnabled: false,
     requiresCodeReview: false,
+    requiresSecurePhase: false,
+    requiresQualityGate: false,
     hasReviewableFiles: false,
     reviewableFiles: [],
     qualityGateMissingGate: null,
     qualityGatesSatisfied: true,
     qualityGateNextAction: null
+  };
+}
+
+function readPhaseQualityGateFlags(evaluation: PhaseQualityGateConsumerEvaluation): {
+  securePhaseEnabled: boolean;
+  requiresSecurePhase: boolean;
+  requiresQualityGate: boolean;
+} {
+  const requiresSecurePhase = evaluation.requiresSecurePhase ?? evaluation.missingGate === "security";
+  const requiresQualityGate = evaluation.requiresQualityGate ?? evaluation.requiresCodeReview;
+
+  return {
+    securePhaseEnabled:
+      evaluation.securePhaseEnabled ?? (requiresSecurePhase || evaluation.hasSecurity),
+    requiresSecurePhase,
+    requiresQualityGate
   };
 }
 
@@ -1631,11 +1662,12 @@ function implementedBlockingUatNextSafeAction(
 
 function resolvePhaseQualityGateNextAction(args: {
   phaseNumber: string;
-  evaluation: PhaseQualityGateEvaluation;
+  evaluation: PhaseQualityGateConsumerEvaluation;
   implementedCommands: Set<string>;
   hasReviewableUiSpec: boolean;
   hasUiReview: boolean;
 }): string | null {
+  const gateFlags = readPhaseQualityGateFlags(args.evaluation);
   const missingGateAction = buildPhaseQualityGateNextAction({
     phaseNumber: args.phaseNumber,
     evaluation: args.evaluation,
@@ -1656,7 +1688,7 @@ function resolvePhaseQualityGateNextAction(args: {
   }
 
   if (
-    (args.evaluation.gatesSatisfied || !args.evaluation.requiresCodeReview) &&
+    (args.evaluation.gatesSatisfied || !gateFlags.requiresQualityGate) &&
     args.hasReviewableUiSpec &&
     !args.hasUiReview &&
     args.implementedCommands.has(blueprintDirectCommand("ui-review"))
@@ -1670,7 +1702,7 @@ function resolvePhaseQualityGateNextAction(args: {
 function formatPhaseQualityGateWarning(args: {
   subject: string;
   evaluation: Pick<
-    PhaseQualityGateEvaluation,
+    PhaseQualityGateConsumerEvaluation,
     | "missingGate"
     | "reviewableFiles"
     | "requiresCodeReview"
@@ -2119,8 +2151,9 @@ async function inspectCurrentPhaseArtifacts(
     hasReviewableUiSpec,
     hasUiReview
   });
+  const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
 
-  if (qualityGateEvaluation.requiresCodeReview && !qualityGateEvaluation.gatesSatisfied) {
+  if (qualityGateFlags.requiresQualityGate && !qualityGateEvaluation.gatesSatisfied) {
     const qualityGateWarning = formatPhaseQualityGateWarning({
       subject: `Current phase ${currentPhase}`,
       evaluation: qualityGateEvaluation
@@ -2172,7 +2205,10 @@ async function inspectCurrentPhaseArtifacts(
     hasSavedSummaries,
     hasPendingExecution,
     codeReviewEnabled: qualityGateEvaluation.codeReviewEnabled,
+    securePhaseEnabled: qualityGateFlags.securePhaseEnabled,
     requiresCodeReview: qualityGateEvaluation.requiresCodeReview,
+    requiresSecurePhase: qualityGateFlags.requiresSecurePhase,
+    requiresQualityGate: qualityGateFlags.requiresQualityGate,
     hasReviewableFiles: qualityGateEvaluation.reviewableFiles.length > 0,
     reviewableFiles: qualityGateEvaluation.reviewableFiles,
     qualityGateMissingGate: qualityGateEvaluation.missingGate,
@@ -2348,6 +2384,7 @@ async function inspectMilestoneEvidence(
       hasReviewableUiSpec,
       hasUiReview
     });
+    const qualityGateFlags = readPhaseQualityGateFlags(qualityGateEvaluation);
 
     warnings.push(...qualityGateEvaluation.warnings);
 
@@ -2356,7 +2393,7 @@ async function inspectMilestoneEvidence(
     }
 
     if (
-      qualityGateEvaluation.requiresCodeReview &&
+      qualityGateFlags.requiresQualityGate &&
       qualityGateEvaluation.missingGate !== null
     ) {
       missingQualityGatePhases.push(phase.phaseNumber);
@@ -2893,7 +2930,7 @@ async function deriveNextAction(args: {
   const savedReviewRepairAction =
     args.phaseArtifacts.requiresCodeReview &&
     args.phaseArtifacts.hasReview &&
-    args.phaseArtifacts.hasSecurity
+    (!args.phaseArtifacts.requiresSecurePhase || args.phaseArtifacts.hasSecurity)
       ? implementedReviewNextSafeAction(
           args.phaseArtifacts.reviewNextSafeAction,
           implementedCommands

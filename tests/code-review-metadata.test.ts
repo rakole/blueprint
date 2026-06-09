@@ -42,7 +42,22 @@ test("code-review manifest references the review tools, canonical contract, and 
   assert.match(commandFile, /contract\.modelContract\.jsonSchema/);
   assert.match(commandFile, /Do not repair toward rendered Markdown headings or `authoringTemplate`/i);
   assert.match(commandFile, /\/blu-execute-phase/);
-  assert.match(commandFile, /\/blu-secure-phase/);
+  assert.match(
+    commandFile,
+    /If effective config has `workflow\.code_review=true`, `workflow\.secure_phase=true`, and the phase does not yet have `XX-SECURITY\.md`, use `\/blu-secure-phase <phase>` as the primary `nextSafeAction`\./
+  );
+  assert.match(
+    commandFile,
+    /If effective config has `workflow\.code_review=false`, never make `\/blu-secure-phase <phase>` mandatory through code-review routing, even when `workflow\.secure_phase=true`\./
+  );
+  assert.match(
+    commandFile,
+    /When security still routes first, keep `code-review-fix` visible as the secondary queued follow-up instead of hiding it\./
+  );
+  assert.match(
+    commandFile,
+    /Keep `\/blu-secure-phase` manually runnable even when config-gated routing prefers another implemented next step\./
+  );
   assert.match(commandFile, /\/blu-code-review-fix/);
   assert.match(commandFile, /\/blu-progress/);
   assert.match(commandFile, /secondary queued recommendation/i);
@@ -81,7 +96,18 @@ test("blueprint-review skill captures MCP-owned code-review rules", async () => 
   assert.match(skillFile, /XX-REVIEW\.md/);
   assert.match(skillFile, /scopeFiles/);
   assert.match(skillFile, /scopeSource/);
-  assert.match(skillFile, /\/blu-secure-phase <phase>/);
+  assert.match(
+    skillFile,
+    /workflow\.code_review=false`, code-review routing must\s+never make `\/blu-secure-phase <phase>` mandatory, even when\s+`workflow\.secure_phase=true`\./
+  );
+  assert.match(
+    skillFile,
+    /workflow\.code_review=true`, `workflow\.secure_phase=true`, and the phase\s+still lacks a security artifact, prefer `\/blu-secure-phase <phase>`\./
+  );
+  assert.match(
+    skillFile,
+    /Keep `\/blu-secure-phase` manually runnable even\s+when it is not the preferred routed next step\./
+  );
   assert.match(skillFile, /\/blu-code-review-fix <phase>/);
   assert.match(skillFile, /\/blu-progress/);
 });
@@ -135,7 +161,38 @@ test("code-review runtime contract preserves depth semantics, fallback, and repa
   assert.match(runtimeContract, /reviewMode\.source/);
   assert.match(runtimeContract, /renderer preview only/i);
   assert.match(runtimeContract, /contract\.modelContract\.jsonSchema/);
-  assert.match(runtimeContract, /secondary queued follow-up/i);
+  assert.match(
+    runtimeContract,
+    /when effective config has `workflow\.code_review=false`, code-review routing\s+never makes `\/blu-secure-phase <phase>` mandatory even when\s+`workflow\.secure_phase=true`/
+  );
+  assert.match(
+    runtimeContract,
+    /when effective config has `workflow\.code_review=true`,\s+`workflow\.secure_phase=true`, and security is still missing/
+  );
+  assert.match(
+    runtimeContract,
+    /`\/blu-secure-phase <phase>` stays primary/
+  );
+  assert.match(
+    runtimeContract,
+    /when effective config has `workflow\.code_review=true`,\s+`workflow\.secure_phase=true`, security is still missing, and concrete\s+follow-up fixes remain/
+  );
+  assert.match(
+    runtimeContract,
+    /`\/blu-code-review-fix <phase>` remains visible as\s+the secondary queued follow-up/
+  );
+  assert.match(
+    runtimeContract,
+    /`\/blu-secure-phase` remains manually runnable even when code-review does not\s+choose it as the preferred routed follow-up/
+  );
+  assert.match(
+    runtimeContract,
+    /when effective config has `workflow\.code_review=true` and\s+`workflow\.secure_phase=false`, concrete follow-up findings route to\s+`\/blu-code-review-fix <phase>` and otherwise the command routes to\s+`\/blu-progress` or another implemented validation-safe or progress-safe\s+action/
+  );
+  assert.match(
+    runtimeContract,
+    /secondary queued code-review-fix recommendation when security still routes first/i
+  );
   assert.match(runtimeContract, /scoped file:line or\s+line-range location, evidence, impact, and recommendation/i);
 
   assert.match(reviewerAgent, /## Depth-Aware Review Expectations/);
@@ -180,6 +237,26 @@ test("code-review runtime metadata is source-owned and docs-free", async () => {
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
     /Long-running-mutation profile for deterministic phase-scoped review/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /let blueprint_review_scope own review enablement, config-gated secure-phase routing posture, normalized depth defaults, saved evidence inventory, deterministic repo-file scoping, authoring context, and narrowed task schema/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /When workflow\.code_review=false, code-review routing must never make \/blu-secure-phase <phase> mandatory even if workflow\.secure_phase=true/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=true and security is still missing, \/blu-secure-phase <phase> is the primary routed next action/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /when workflow\.code_review=true and workflow\.secure_phase=false, route concrete findings to code-review-fix and otherwise prefer progress-safe implemented next actions/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable even when config-gated routing prefers another implemented next step/i
   );
   assert.match(contract.runtimeReference?.contractNotes ?? "", /modelContract\.jsonSchema/);
   assert.match(contract.runtimeReference?.contractNotes ?? "", /secondary queued follow-up/i);

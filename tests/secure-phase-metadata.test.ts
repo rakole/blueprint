@@ -16,8 +16,12 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
   const contract = await buildBlueprintCommandRuntimeContractResource("secure-phase");
 
   assert.ok(metadata);
+  assert.equal(catalog.commands["secure-phase"].implemented, true);
+  assert.equal(catalog.commands["secure-phase"].status, "implemented");
   assert.equal(metadata.sourceId, "src/mcp/command-runtime-metadata.ts#secure-phase");
   assert.equal(metadata.spec.path, metadata.sourceId);
+  assert.equal(metadata.spec.rootRoutable, true);
+  assert.equal(metadata.spec.executionProfile, "long-running-mutation");
   assert.equal(metadata.runtimeReference.path, metadata.sourceId);
   assert.deepEqual(metadata.requiredInputPaths, [
     "skills/blueprint-review/references/secure-phase-runtime-contract.md"
@@ -30,13 +34,31 @@ test("secure-phase runtime metadata is source-owned and docs-free", async () => 
   assert.deepEqual(catalog.commands["secure-phase"].optionalAgents, [
     ...metadata.optionalAgents
   ]);
+  assert.equal(contract.catalog.command, "/blu-secure-phase");
+  assert.equal(contract.catalog.implemented, true);
+  assert.equal(contract.catalog.status, "implemented");
   assert.equal(contract.catalog.specPath, metadata.sourceId);
   assert.equal(contract.spec?.path, metadata.sourceId);
+  assert.equal(contract.spec?.rootRoutable, true);
+  assert.equal(contract.spec?.executionProfile, "long-running-mutation");
   assert.equal(contract.runtimeReference?.path, metadata.sourceId);
   assert.equal(contract.runtimeReference?.commandSpecPath, metadata.sourceId);
   assert.deepEqual(contract.runtimeReference?.exactMcpDestination, [
     ...metadata.requiredTools
   ]);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false[\s\S]*secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+  assert.ok(metadata.requiredTools.includes("blueprint_config_get"));
   assert.deepEqual(contract.runtimeReference?.optionalAgents, [
     ...metadata.optionalAgents
   ]);
@@ -125,6 +147,10 @@ test("secure-phase manifest references the review tools, agent, and safe routing
   assert.match(
     commandFile,
     /Repo-wide derived progress\/state may still surface saved review remediation debt such as `\/blu-code-review-fix <phase>` after security exists, but `\/blu-secure-phase` itself must not emit that action\./
+  );
+  assert.doesNotMatch(
+    commandFile,
+    /workflow\.secure_phase.*(?:hide|remove|disable).*\/blu-secure-phase/i
   );
   assert.doesNotMatch(commandFile, /skills\/blueprint-review\.md|agents\/blueprint-security-auditor\.md/);
 });

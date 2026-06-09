@@ -33,6 +33,7 @@ type BlueprintConfig = {
     workflow: {
         research: boolean;
         plan_check: boolean;
+        secure_phase: boolean;
         verifier: boolean;
         nyquist_validation: boolean;
         ui_phase: boolean;

@@ -737,6 +737,40 @@ test("phase context phaseSelection matches phase locate for state-derived select
   assert.equal(context.phase?.phaseDir, located.phaseDir);
 });
 
+test("phase context distinguishes configured secure-phase from effective requirement", async (t) => {
+  const repoPath = await createPhaseRepo();
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  await writeFile(
+    path.join(repoPath, ".blueprint/config.json"),
+    JSON.stringify(
+      {
+        version: 2,
+        workflow: {
+          code_review: false,
+          secure_phase: true
+        }
+      },
+      null,
+      2
+    ),
+    "utf8"
+  );
+
+  const context = await blueprintPhaseContext({ cwd: repoPath, phase: "3" });
+
+  assert.equal(context.workflowPosture.workflow.codeReview, false);
+  assert.equal(context.workflowPosture.workflow.securePhase, true);
+  assert.equal(context.workflowPosture.workflow.securePhaseRequired, false);
+  assert.match(
+    context.workflowPosture.summary,
+    /secure_phase configured but not required because code_review is disabled/
+  );
+  assert.doesNotMatch(context.workflowPosture.summary, /secure_phase enabled/);
+});
+
 test("phase context phaseSelection matches phase locate for roadmap-derived selection", async (t) => {
   const repoPath = await createPhaseRepo();
   t.after(async () => {

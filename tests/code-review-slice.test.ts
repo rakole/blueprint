@@ -403,7 +403,7 @@ function createStructuredCodeReviewModel(
       }
     },
     followUps: ["Add a negative-input regression test before shipping."],
-    nextSafeAction: "/blu-secure-phase 5",
+    nextSafeAction: "/blu-code-review-fix 5",
     ...overrides
   };
 }
@@ -411,7 +411,7 @@ function createStructuredCodeReviewModel(
 test("code-review catalog, runtime contract, and next-action validation survive bundled docs being unavailable", async (t) => {
   makeBundledDocsUnavailable(t);
 
-  const repoPath = await createCodeReviewRepo({ withSecurity: true });
+  const repoPath = await createCodeReviewRepo();
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
@@ -453,8 +453,13 @@ test("code-review catalog, runtime contract, and next-action validation survive 
   });
   assert.equal(scoped.status, "ready");
   assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5"));
-  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-secure-phase 5"));
   assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-progress"));
+  assert.equal(
+    scoped.authoringContext.allowedNextActions.includes("/blu-secure-phase 5"),
+    false
+  );
+  assert.equal(scoped.authoringContext.preferredNextSafeAction, "/blu-code-review-fix 5");
+  assert.equal(scoped.authoringContext.secondaryNextSafeAction, "/blu-progress");
 
   const validation = await blueprintReviewValidateModel({
     cwd: repoPath,
@@ -469,6 +474,33 @@ test("code-review catalog, runtime contract, and next-action validation survive 
   assert.equal(validation.status, "valid");
   assert.equal(validation.valid, true);
   assert.equal(validation.diagnosticCounts.total, 0);
+});
+
+test("code-review authoring context keeps secure-phase primary when workflow.secure_phase is enabled", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    files: ["src/feature.ts", "tests/feature.test.ts"],
+    includeAuthoringContext: true
+  });
+
+  assert.equal(scoped.status, "ready");
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-code-review-fix 5"));
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-secure-phase 5"));
+  assert.ok(scoped.authoringContext.allowedNextActions.includes("/blu-progress"));
+  assert.equal(scoped.authoringContext.preferredNextSafeAction, "/blu-secure-phase 5");
+  assert.equal(scoped.authoringContext.secondaryNextSafeAction, "/blu-code-review-fix 5");
 });
 
 test("state load follows the saved code-review next safe action once review evidence exists", async (t) => {
@@ -1157,6 +1189,53 @@ test("blueprint_review_scope honors workflow.code_review and workflow.code_revie
   assert.equal(deepDefault.reviewMode.depth, "deep");
 });
 
+test("code-review disabled config does not expose or mandate secure-phase through scope or validation authoring", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        code_review: false,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const scoped = await blueprintReviewScope({
+    cwd: repoPath,
+    phase: "5",
+    includeAuthoringContext: true
+  });
+
+  assert.equal(scoped.status, "invalid");
+  assert.match(scoped.reason ?? "", /workflow\.code_review is disabled/i);
+  assert.equal(scoped.authoringContext, undefined);
+  assert.equal(scoped.artifacts.security, null);
+
+  const validation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-secure-phase 5"
+    })
+  });
+
+  assert.equal(validation.status, "invalid");
+  assert.ok(
+    validation.diagnostics.some(
+      (diagnostic) =>
+        diagnostic.code === "scope.invalid" &&
+        /workflow\.code_review is disabled/i.test(diagnostic.message)
+    ),
+    validation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+  assert.equal(
+    validation.diagnostics.some((diagnostic) => /\/blu-secure-phase 5/.test(diagnostic.message)),
+    false
+  );
+});
+
 test("blueprint_review_scope surfaces deterministic confirmation metadata for broad, multi-plan, and deep scopes", async (t) => {
   const repoPath = await createCodeReviewRepo({
     summaryChangedFiles: ["src/one.ts", "src/two.ts", "src/three.ts"],
@@ -1740,7 +1819,7 @@ test("blueprint_review_record keeps no-follow-up sentinel unnumbered", async (t)
       verdict: "PASS",
       findings: [],
       followUps: ["none"],
-      nextSafeAction: "/blu-secure-phase 5"
+      nextSafeAction: "/blu-progress"
     }),
     scopeFiles: ["src/feature.ts", "tests/feature.test.ts"],
     scopeSource: "explicit-files"
@@ -2572,8 +2651,146 @@ test("blueprint_review_validate_model rejects blocked reviews that route to prog
   );
 });
 
-test("blueprint_review_validate_model keeps secure-phase primary until security evidence exists", async (t) => {
-  const repoPath = await createCodeReviewRepo();
+test("blueprint_review_validate_model accepts code-review-fix or progress while workflow.secure_phase is disabled", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        secure_phase: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const followUpValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      nextSafeAction: "/blu-code-review-fix 5"
+    })
+  });
+
+  assert.equal(
+    followUpValidation.status,
+    "valid",
+    followUpValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const passValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      verdict: "PASS",
+      findings: [],
+      followUps: ["none"],
+      nextSafeAction: "/blu-progress"
+    })
+  });
+
+  assert.equal(
+    passValidation.status,
+    "valid",
+    passValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+});
+
+test("blueprint_review_validate_model allows non-fix next actions when follow-ups are test-gap, validation-only, or routing-note", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        secure_phase: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const testGapValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "high",
+          disposition: "follow-up",
+          location: "tests/feature.test.ts:1",
+          evidence: "The saved review scope does not cover negative-input behavior.",
+          impact: "The regression could ship without any failing test.",
+          recommendation: "Add a negative-input regression test before shipping."
+        }
+      ],
+      followUps: ["Add a negative-input regression test before shipping."],
+      nextSafeAction: "/blu-add-tests 5"
+    })
+  });
+
+  assert.equal(
+    testGapValidation.status,
+    "valid",
+    testGapValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const validationOnlyValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "medium",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "The review evidence does not show the behavior after the saved summary.",
+          impact: "The team cannot confirm the phase still behaves as intended.",
+          recommendation: "Re-run validation and verify the shipped behavior before proceeding."
+        }
+      ],
+      followUps: ["Re-run validation and verify the shipped behavior before proceeding."],
+      nextSafeAction: "/blu-verify-work 5"
+    })
+  });
+
+  assert.equal(
+    validationOnlyValidation.status,
+    "valid",
+    validationOnlyValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+
+  const routingNoteValidation = await blueprintReviewValidateModel({
+    cwd: repoPath,
+    phase: "5",
+    model: createStructuredCodeReviewModel({
+      findings: [
+        {
+          severity: "low",
+          disposition: "follow-up",
+          location: "src/feature.ts:1",
+          evidence: "The review only needs a routing handoff for the next implemented command.",
+          impact: "The artifact should point to the next workflow step without implying a code fix.",
+          recommendation: "Return to /blu-progress after recording the routing note."
+        }
+      ],
+      followUps: ["Return to /blu-progress after recording the routing note."],
+      nextSafeAction: "/blu-progress"
+    })
+  });
+
+  assert.equal(
+    routingNoteValidation.status,
+    "valid",
+    routingNoteValidation.diagnostics.map((diagnostic) => diagnostic.message).join("\n")
+  );
+});
+
+test("blueprint_review_validate_model keeps secure-phase primary until security evidence exists when workflow.secure_phase is enabled", async (t) => {
+  const repoPath = await createCodeReviewRepo({
+    configPatch: {
+      workflow: {
+        secure_phase: true
+      }
+    }
+  });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });

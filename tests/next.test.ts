@@ -15,6 +15,7 @@ test("next command manifest references only registered read-oriented router tool
   const raw = await readFile(path.join(repoRoot, "commands/blu-next.toml"), "utf8");
   const expectedTools = [
     "blueprint_project_status",
+    "blueprint_config_get",
     "blueprint_state_load",
     "blueprint_artifact_list",
     "blueprint_command_catalog"
@@ -37,6 +38,10 @@ test("next command manifest preserves safe fallback and routing guarantees", asy
     raw,
     /Recommend `?\/blu-spec-phase <phase>`? only when its catalog entry is `implemented: true`/i
   );
+  assert.match(raw, /workflow\.code_review=false.*never make `?\/blu-secure-phase <phase>`? mandatory/i);
+  assert.match(raw, /workflow\.code_review=true.*workflow\.secure_phase=false.*secure-phase is not/i);
+  assert.match(raw, /workflow\.code_review=true.*workflow\.secure_phase=true.*\/blu-code-review <phase>.*before.*\/blu-secure-phase <phase>/i);
+  assert.match(raw, /`?\/blu-secure-phase`? remains implemented and manually runnable/i);
   assert.match(raw, /implemented: true/);
   assert.match(raw, /Do not turn a missing spec alone into a normal lifecycle blocker/i);
   assert.match(raw, /waiting-state reporting/);
@@ -50,6 +55,22 @@ test("next runtime metadata preserves waiting-state and fallback alignment", () 
   assert.match(
     NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
     /report waiting state and the next safe follow-up explicitly/i
+  );
+  assert.match(
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /read effective config so post-UAT routing stays aligned with review and secure-phase gates/i
+  );
+  assert.match(
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /workflow\.code_review=false, never make `?\/blu-secure-phase <phase>`? mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /workflow\.code_review=true and workflow\.secure_phase=false, route to mandatory code review when review evidence is missing but do not require secure-phase/i
+  );
+  assert.match(
+    NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
+    /workflow\.code_review=true and workflow\.secure_phase=true, route `?\/blu-code-review <phase>`? before `?\/blu-secure-phase <phase>`?/i
   );
   assert.match(
     NEXT_RUNTIME_METADATA.runtimeReference.contractNotes,
@@ -93,6 +114,18 @@ test("next runtime contract is source-owned and uses only the command manifest a
   assert.deepEqual(contract.spec?.writes, []);
   assert.equal(contract.runtimeReference?.path, NEXT_RUNTIME_METADATA.sourceId);
   assert.equal(contract.runtimeReference?.commandSpecPath, NEXT_RUNTIME_METADATA.sourceId);
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /read effective config[\s\S]*workflow\.code_review=false[\s\S]*never make \/blu-secure-phase <phase> mandatory/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true and workflow\.secure_phase=false[\s\S]*mandatory code review[\s\S]*do not require secure-phase/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=true and workflow\.secure_phase=true[\s\S]*\/blu-code-review <phase>[\s\S]*before[\s\S]*\/blu-secure-phase <phase>/i
+  );
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
     /\/blu-spec-phase <phase>[\s\S]*blueprint_command_catalog[\s\S]*implemented/i

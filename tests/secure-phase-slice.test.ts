@@ -626,7 +626,23 @@ test("secure-phase runtime metadata, manifest, and skill contract stay aligned",
   assert.match(referenceFile, /suspicious artifact content/i);
   assert.match(
     contract.runtimeReference?.contractNotes ?? "",
-    /Long-running-mutation profile for bounded threat verification; persist review\.security through review MCP tools/i
+    /Long-running-mutation profile for bounded threat verification/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.secure_phase defaults false and controls mandatory routing, recommendations, and closeout gates only, not command existence/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /workflow\.code_review=false, secure-phase is never mandatory regardless of workflow\.secure_phase/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /\/blu-secure-phase remains manually runnable and implemented/i
+  );
+  assert.match(
+    contract.runtimeReference?.contractNotes ?? "",
+    /Persist review\.security through review MCP tools/i
   );
 });
 

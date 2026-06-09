@@ -28,7 +28,10 @@ export type PhaseQualityGateEvaluation = {
     hasSecurity: boolean;
     reviewableFiles: string[];
     codeReviewEnabled: boolean;
+    securePhaseEnabled: boolean;
     requiresCodeReview: boolean;
+    requiresSecurePhase: boolean;
+    requiresQualityGate: boolean;
     gatesSatisfied: boolean;
     missingGate: PhaseQualityGateMissingGate;
     warnings: string[];
@@ -38,9 +41,9 @@ export type PhaseQualityGateEvaluation = {
 export type PhaseQualityGateRoutingArgs = {
     implementedCommandNames: Set<string>;
     phaseNumber: string;
-    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction" | "reviewDebtKind">;
+    evaluation: Pick<PhaseQualityGateEvaluation, "missingGate" | "requiresCodeReview" | "gatesSatisfied" | "hasSecurity" | "reviewNextSafeAction" | "reviewDebtKind"> & Partial<Pick<PhaseQualityGateEvaluation, "requiresQualityGate" | "requiresSecurePhase">>;
 };
 export declare function isReviewableRepoFile(relativePath: string): boolean;
 export declare function evaluatePhaseQualityGates(args: PhaseQualityGateEvaluationArgs): Promise<PhaseQualityGateEvaluation>;
-export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "hasSecurity" | "reviewDebtKind">): string | null;
+export declare function formatPhaseQualityGateDebtReason(args: Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind"> | Pick<PhaseQualityGateEvaluation, "requiresCodeReview" | "requiresQualityGate" | "missingGate" | "reviewableFiles" | "reviewNextSafeAction" | "reviewDebtKind">): string | null;
 export declare function buildPhaseQualityGateNextAction(args: PhaseQualityGateRoutingArgs): string | null;

@@ -47,6 +47,7 @@ type BlueprintConfig = {
   workflow: {
     research: boolean;
     plan_check: boolean;
+    secure_phase: boolean;
     verifier: boolean;
     nyquist_validation: boolean;
     ui_phase: boolean;
@@ -236,6 +237,7 @@ function getHardCodedConfig(): BlueprintConfig {
     workflow: {
       research: true,
       plan_check: true,
+      secure_phase: false,
       verifier: true,
       nyquist_validation: true,
       ui_phase: true,

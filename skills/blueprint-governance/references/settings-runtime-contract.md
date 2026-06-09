@@ -27,6 +27,9 @@ Review and update normalized project-local Blueprint settings, with an optional 
 - `workflow.subagents` persists at `workflow.subagents` in `.blueprint/config.json` and, after explicit opt-in, in `~/.<host>/blueprint/defaults.json`.
 - Setting `workflow.subagents` to `false` disables optional Blueprint subagent invocation and forces the documented no-subagent fallback. It does not hide agent entries, change agent catalog visibility, or change implemented-command routing.
 - `workflow.no_uat` defaults to `false`. Setting it to `true` makes missing UAT evidence optional for lifecycle routing and phase closeout after PASS verification; `/blu-verify-work` remains explicitly runnable, and quality gates still block completion.
+- `workflow.secure_phase` defaults to `false`. Setting it to `true` makes secure-phase a required workflow-routing and lifecycle-gate step only when `workflow.code_review` is `true`.
+- If `workflow.code_review` is `false`, secure-phase is never mandated by routing or gates regardless of `workflow.secure_phase`.
+- Manual `/blu-secure-phase` remains explicitly runnable even when `workflow.secure_phase` is `false`; this setting must not hide or remove the command surface.
 
 ## Effectiveness Spine Settings
 

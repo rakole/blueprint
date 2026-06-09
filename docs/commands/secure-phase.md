@@ -18,7 +18,7 @@
 ## Purpose
 
 
-`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical review.security JSON model contract before drafting, uses the phase plan index, plan reader, summary index/read tools, execution-targets helper, and review authoring context to parse the saved threat model and pending-plan state, builds a threat register, validates the structured model, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan.
+`secure-phase` is Blueprint's command for retroactively verify threat mitigations for a completed phase. Blueprint ships it as a host-native threat-verification command: it reads saved phase evidence, loads the canonical review.security JSON model contract before drafting, uses the phase plan index, plan reader, summary index/read tools, execution-targets helper, and review authoring context to parse the saved threat model and pending-plan state, builds a threat register, validates the structured model, and keeps the audit bounded to the declared threats and mitigations instead of running a generic security scan. The command remains manually runnable even when `workflow.secure_phase=false`; that flag defaults to `false` and only affects whether routing or closeout later requires security evidence when `workflow.code_review=true`.
 
 The detailed behavior lives in `skills/blueprint-review/references/secure-phase-runtime-contract.md`. The command manifest should stay thin enough to point at the `blueprint-review` skill and this local reference while still naming the required MCP tools and visible gates.
 
@@ -35,6 +35,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 
 
 - The target phase must already have executed artifacts.
+- Effective config may be read to explain later closeout expectations, but `workflow.secure_phase=false` must not block a direct `/blu-secure-phase` run.
 
 
 ## Outputs
@@ -68,6 +69,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - `blueprint_phase_summary_read` -> `{phaseFound, found, phaseNumber, phasePrefix, phaseName, phaseDir, planId, path, content, metadata, validation, reason}`
 - `blueprint_phase_execution_targets` -> `{pendingPlanIds, candidatePlanIds, selectedPlanIds, lowerWavePendingPlans, overwriteCandidatePlanIds, overlapPlanIds, blockers, conflicts, warnings}`
 - `blueprint_artifact_contract_read` -> `{artifactId, contract, template, requiredHeadings, modelContract}`
+- `blueprint_config_get` -> `{scope, config, warnings}`
 - `blueprint_review_authoring_context` -> `{status, phase, artifact, authoringContext, reason, warnings}`
 - `blueprint_review_validate_model` -> `{status, diagnostics, diagnosticCounts, repairSummary, normalizedModel, renderPreview, taskSchema}`
 - `blueprint_review_record` -> `{reportPath, counts, followUps}`
@@ -86,6 +88,7 @@ The detailed behavior lives in `skills/blueprint-review/references/secure-phase-
 - Validate the authored JSON through `blueprint_review_validate_model` before persistence. Repair all schema, truth-table, and residual diagnostics together using exact diagnostic `path`, `allowedValues`, and `repairSummary`; rely on those diagnostics to identify stale evidence keys, stale threat ids, uncovered threat flags, or invalid routing states. Do not switch to Markdown fallback.
 - Persist the durable security audit through `blueprint_review_record` with `artifact: "security"` and the same structured `model`; treat the returned `reportPath` as authoritative instead of hand-building `XX-SECURITY.md`. Markdown `content` is invalid for `review.security`.
 - Markdown content fallback is not supported for `/blu-secure-phase`; rejected JSON must be repaired against the schema instead of hand-written as `XX-SECURITY.md`.
+- `workflow.secure_phase` defaults to `false`. It controls routing or closeout requirements only when `workflow.code_review=true`; when `workflow.code_review=false`, secure-phase is never mandated, and when `workflow.code_review=true` plus `workflow.secure_phase=false`, security evidence stays optional for shipping and closeout.
 - Do not compute a next action until all threats are closed or explicitly accepted.
 - Local secure-phase routing stays scoped to the security lifecycle: blocked open threats stay `Blocked: pending-open-threat`; otherwise route to `/blu-validate-phase <phase>`, keep saved invalid/`FAIL`/`PARTIAL`/incomplete UAT on the saved implemented repair action or `/blu-verify-work <phase>`, then route missing UAT to `/blu-verify-work <phase>` unless `workflow.no_uat=true`. When `workflow.no_uat=true`, only a missing UAT can route to `/blu-progress`; saved invalid, `FAIL`, `PARTIAL`, or incomplete UAT still routes to the saved implemented repair action or `/blu-verify-work <phase>`. Repo-wide derived progress/state may still surface saved review remediation debt such as `/blu-code-review-fix <phase>` after security exists, but `/blu-secure-phase` itself must not emit that action.
 

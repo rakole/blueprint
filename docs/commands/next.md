@@ -38,7 +38,7 @@
 
 - User-facing result: a concise completion summary plus the next logical action when applicable.
 - When the repo is waiting on a missing artifact, verification debt, or blocked substrate, include the pending gate and the next safe follow-up command explicitly.
-- After UAT completes, enforce the post-UAT quality gate when `workflow.code_review` is true and saved execution evidence includes reviewable repo/source files.
+- After UAT completes, enforce the post-UAT quality gate when effective config requires it for saved execution evidence with reviewable repo/source files.
 - Repo side effects: No durable artifact writes are planned.
 
 
@@ -126,8 +126,8 @@
 
 
 - Explain exactly which phase artifact is missing and which implemented command creates it.
-- If UAT is complete, `workflow.code_review` is true, and saved execution evidence has reviewable repo/source files, route in order: no `XX-REVIEW.md` -> `/blu-code-review <phase>`; `XX-REVIEW.md` exists and no `XX-SECURITY.md` -> `/blu-secure-phase <phase>`; open review findings -> the saved review next safe action, except that a stale saved `/blu-secure-phase <phase>` from a non-pass review must reroute to `/blu-code-review-fix <phase>` once security exists; gates complete -> normal advancement.
-- If `workflow.code_review` is false, keep the previous post-UAT advancement behavior.
+- If UAT is complete and saved execution evidence has reviewable repo/source files, route in order: when `workflow.code_review=true` and no `XX-REVIEW.md` exists -> `/blu-code-review <phase>`; when `workflow.code_review=true` and `workflow.secure_phase=true`, `XX-REVIEW.md` exists, and no `XX-SECURITY.md` exists -> `/blu-secure-phase <phase>`; once any configured security gate is satisfied or not required, open review findings -> the saved review next safe action; configured gates complete -> normal advancement.
+- If `workflow.code_review` is false, keep the previous post-UAT advancement behavior regardless of `workflow.secure_phase`.
 - On failure, return the safest implemented recovery command instead of mutating project state implicitly.
 
 
@@ -137,7 +137,7 @@
 - Returns guidance, assumptions, or routing output without mutating project artifacts by default.
 - Uses only documented read-oriented MCP queries for inspection and routing.
 - Surfaces waiting state plainly when the repo is blocked, partial, or missing a prerequisite artifact.
-- Surfaces the post-UAT review/security gate before normal advancement when effective config requires it.
+- Surfaces the post-UAT review gate when `workflow.code_review=true`, and surfaces the security gate only after review exists when both `workflow.code_review=true` and `workflow.secure_phase=true`.
 - Never routes to omitted commands or hides destructive behavior behind an implicit step.
 - Always names the next safe follow-up command when one is available.
 

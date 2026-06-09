@@ -28,23 +28,23 @@ This file describes the intended artifact flow through a single Blueprint phase 
 - `code-review` writes `XX-REVIEW.md`.
 - `code-review-fix` writes a review-fix artifact or summary when issues are addressed.
 - `audit-fix` writes `.blueprint/reports/audit-fix-<phase>.md` and may update repo files plus `STATE.md`.
-- `secure-phase` writes `XX-SECURITY.md` through `blueprint_review_record` after reading saved plans, summaries, the canonical `review.security` contract, and any prior security artifact; it blocks next-step routing while declared threats remain open.
+- `secure-phase` writes `XX-SECURITY.md` through `blueprint_review_record` after reading saved plans, summaries, the canonical `review.security` contract, and any prior security artifact; it remains implemented and manually runnable even when config does not require it, and it blocks next-step routing while declared threats remain open.
 - `ui-review` writes `XX-UI-REVIEW.md`.
 - `add-tests` may add code-level tests, update `XX-VERIFICATION.md`, and write a supporting `.blueprint/reports/add-tests-<phase>.md` report.
 - `review` writes `XX-REVIEWS.md`.
 
 ## Post-UAT Quality Gate
 
-When effective config `workflow.code_review` is true and saved execution evidence includes reviewable repo or source files, acceptance evidence does not advance the phase by itself. Acceptance evidence is completed UAT when `workflow.no_uat=false`, or PASS verification when `workflow.no_uat=true`. `/blu-code-review <phase>` and `/blu-secure-phase <phase>` become mandatory before normal phase advancement.
+When saved execution evidence includes reviewable repo or source files, acceptance evidence does not advance the phase by itself only when effective config requires a post-UAT quality gate. Acceptance evidence is completed UAT when `workflow.no_uat=false`, or PASS verification when `workflow.no_uat=true`.
 
 Routing order after acceptance evidence is:
 
-- Acceptance evidence complete, reviewable files present, and no `XX-REVIEW.md`: route to `/blu-code-review <phase>`.
-- `XX-REVIEW.md` exists and no `XX-SECURITY.md`: route to `/blu-secure-phase <phase>`.
-- `XX-REVIEW.md` has open findings: follow the saved review next safe action.
-- Review and security gates complete: advance normally.
+- If `workflow.code_review=true`, acceptance evidence is complete, reviewable files are present, and no `XX-REVIEW.md` exists: route to `/blu-code-review <phase>`.
+- If `workflow.code_review=true`, `workflow.secure_phase=true`, `XX-REVIEW.md` exists, and no `XX-SECURITY.md` exists: route to `/blu-secure-phase <phase>`.
+- Once any configured security gate is satisfied or not required, `XX-REVIEW.md` open findings follow the saved review next safe action.
+- When the configured review and security gates are complete: advance normally.
 
-When `workflow.code_review` is false, or saved execution evidence has no reviewable repo/source files, preserve the previous post-UAT advancement behavior.
+When `workflow.code_review` is false, secure-phase is never mandated regardless of `workflow.secure_phase`. When `workflow.code_review` is true and `workflow.secure_phase` is false, code review may still be mandatory but secure-phase is not. If saved execution evidence has no reviewable repo/source files, preserve the previous post-UAT advancement behavior.
 
 ## Phase Completion Signals
 
@@ -53,7 +53,7 @@ A phase should not be treated as complete just because execution finished. Compl
 - execution summaries exist
 - validation state is known and grounded in saved summaries
 - UAT state is known, resumable, explicitly deferred, or intentionally optional via `workflow.no_uat=true`
-- required review and security gates are complete, or any follow-up is visible in artifacts
+- required review and any configured security gate are complete, or any follow-up is visible in artifacts
 - `STATE.md` names the next action clearly
 
 ## Failure And Pause Paths

@@ -70,6 +70,19 @@ the authority for control flow.
 Checkpoint state for `/blu-verify-work` lives in `XX-UAT.md` itself. Do not use
 the shared phase checkpoint JSON tools for UAT continuation.
 
+Post-UAT routing must read effective config and stay inside implemented command surfaces:
+
+- when `workflow.code_review=false`, secure-phase is never mandatory regardless
+  of `workflow.secure_phase`
+- when `workflow.code_review=true` and `workflow.secure_phase=false`, mandatory
+  post-UAT routing may require `/blu-code-review <phase>` while never making
+  `/blu-secure-phase <phase>` mandatory
+- when `workflow.code_review=true` and `workflow.secure_phase=true`, route to
+  `/blu-code-review <phase>` first and require `/blu-secure-phase <phase>` only
+  after saved review evidence exists
+- `/blu-secure-phase` remains manually runnable and implemented even when this
+  config-gated routing prefers another next action
+
 ## Input State Model
 
 - Missing summaries: stop without writing and route to `/blu-execute-phase
@@ -258,6 +271,10 @@ This fallback must preserve the same output quality bar as the subagent path.
 - If overwrite confirmation is denied, preserve the existing artifact, report
   any newly discovered UAT findings as unsaved findings, and keep the next safe
   action on `/blu-verify-work <phase>` or `/blu-progress` based on implemented
+  routing.
+- When routing after a complete UAT pass, derive the next safe action from
+  saved UAT status, effective config, existing review evidence, and implemented
+  command availability instead of assuming secure-phase is always next.
   availability.
 - If all remaining tests are blocked by external prerequisites, persist a
   `PARTIAL` UAT artifact with blocked counts and reasons instead of claiming

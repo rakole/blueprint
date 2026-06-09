@@ -1685,7 +1685,7 @@ test("newest REVIEW-FIX with non-Blueprint next action suppresses stale REVIEW r
   );
 });
 
-test("saved REVIEW with missing SECURITY routes to secure-phase", async (t) => {
+test("default workflow.secure_phase off does not route saved REVIEW with missing SECURITY to secure-phase", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
       implementedPhase({
@@ -1698,10 +1698,200 @@ test("saved REVIEW with missing SECURITY routes to secure-phase", async (t) => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
   const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
 
-  assert.match(status.nextAction, /\/blu-secure-phase 1/);
-  assert.doesNotMatch(status.nextAction, /\/blu-progress\b/);
+  assert.equal(evaluation.codeReviewEnabled, true);
+  assert.equal(evaluation.requiresCodeReview, true);
+  assert.equal(evaluation.hasReview, true);
+  assert.equal(evaluation.hasSecurity, false);
+  assert.equal(evaluation.missingGate, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review 1/);
+  assert.match(status.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-code-review 1/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+});
+
+test("workflow.code_review false and workflow.secure_phase true keep REVIEW without SECURITY on non-secure routing", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withReview: true,
+        reviewNextSafeAction: "/blu-progress"
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: false,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(evaluation.codeReviewEnabled, false);
+  assert.equal(evaluation.securePhaseEnabled, true);
+  assert.equal(evaluation.requiresCodeReview, false);
+  assert.equal(evaluation.requiresSecurePhase, false);
+  assert.equal(evaluation.requiresQualityGate, false);
+  assert.equal(evaluation.hasReview, true);
+  assert.equal(evaluation.hasSecurity, false);
+  assert.equal(evaluation.missingGate, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.doesNotMatch(status.nextAction, /\/blu-secure-phase 1|\/blu-code-review 1/);
+  assert.match(status.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-secure-phase 1|\/blu-code-review 1/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+});
+
+test("workflow.code_review true and workflow.secure_phase false require review but not secure-phase", async (t) => {
+  const missingReviewRepoPath = await createQualityGateRepo({
+    phases: [implementedPhase()],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: false
+      }
+    }
+  });
+  const reviewedRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withReview: true,
+        reviewNextSafeAction: "/blu-progress"
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: false
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(missingReviewRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(reviewedRepoPath), { recursive: true, force: true });
+  });
+
+  const missingReviewEvaluation = await evaluatePhaseQualityGates({
+    projectRoot: missingReviewRepoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const reviewedEvaluation = await evaluatePhaseQualityGates({
+    projectRoot: reviewedRepoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const missingReviewStatus = await blueprintProjectStatus({ cwd: missingReviewRepoPath });
+  const reviewedStatus = await blueprintProjectStatus({ cwd: reviewedRepoPath });
+  const reviewedState = await blueprintStateLoad({ cwd: reviewedRepoPath });
+
+  assert.equal(missingReviewEvaluation.codeReviewEnabled, true);
+  assert.equal(missingReviewEvaluation.requiresCodeReview, true);
+  assert.equal(missingReviewEvaluation.missingGate, "review");
+  assert.equal(missingReviewEvaluation.gatesSatisfied, false);
+  assert.match(missingReviewStatus.nextAction, /\/blu-code-review 1/);
+  assert.doesNotMatch(missingReviewStatus.nextAction, /\/blu-secure-phase 1/);
+
+  assert.equal(reviewedEvaluation.codeReviewEnabled, true);
+  assert.equal(reviewedEvaluation.requiresCodeReview, true);
+  assert.equal(reviewedEvaluation.hasReview, true);
+  assert.equal(reviewedEvaluation.hasSecurity, false);
+  assert.equal(reviewedEvaluation.missingGate, null);
+  assert.equal(reviewedEvaluation.gatesSatisfied, true);
+  assert.doesNotMatch(reviewedStatus.nextAction, /\/blu-code-review 1/);
+  assert.doesNotMatch(reviewedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.match(reviewedStatus.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+  assert.doesNotMatch(reviewedState.derivedStatus.nextAction, /\/blu-code-review 1/);
+  assert.doesNotMatch(reviewedState.derivedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.match(reviewedState.derivedStatus.nextAction, /\/blu-progress\b|\/blu-audit-milestone v1/);
+});
+
+test("workflow.code_review true and workflow.secure_phase true require review first and secure-phase after review exists", async (t) => {
+  const missingReviewRepoPath = await createQualityGateRepo({
+    phases: [implementedPhase()],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  const reviewedRepoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        withReview: true,
+        reviewNextSafeAction: "/blu-progress"
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(missingReviewRepoPath), { recursive: true, force: true });
+    await rm(path.dirname(reviewedRepoPath), { recursive: true, force: true });
+  });
+
+  const missingReviewEvaluation = await evaluatePhaseQualityGates({
+    projectRoot: missingReviewRepoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const reviewedEvaluation = await evaluatePhaseQualityGates({
+    projectRoot: reviewedRepoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const missingReviewStatus = await blueprintProjectStatus({ cwd: missingReviewRepoPath });
+  const reviewedStatus = await blueprintProjectStatus({ cwd: reviewedRepoPath });
+  const reviewedState = await blueprintStateLoad({ cwd: reviewedRepoPath });
+
+  assert.equal(missingReviewEvaluation.codeReviewEnabled, true);
+  assert.equal(missingReviewEvaluation.requiresCodeReview, true);
+  assert.equal(missingReviewEvaluation.missingGate, "review");
+  assert.equal(missingReviewEvaluation.gatesSatisfied, false);
+  assert.match(missingReviewStatus.nextAction, /\/blu-code-review 1/);
+  assert.doesNotMatch(missingReviewStatus.nextAction, /\/blu-secure-phase 1/);
+
+  assert.equal(reviewedEvaluation.codeReviewEnabled, true);
+  assert.equal(reviewedEvaluation.requiresCodeReview, true);
+  assert.equal(reviewedEvaluation.hasReview, true);
+  assert.equal(reviewedEvaluation.hasSecurity, false);
+  assert.equal(reviewedEvaluation.missingGate, "security");
+  assert.equal(reviewedEvaluation.gatesSatisfied, false);
+  assert.match(reviewedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(reviewedStatus.nextAction, /\/blu-audit-milestone v1/);
+  assert.match(reviewedState.derivedStatus.nextAction, /\/blu-secure-phase 1/);
+  assert.doesNotMatch(reviewedState.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
 });
 
 test("UAT-complete UI phase routes to ui-review after review and security gates are satisfied", async (t) => {
@@ -1818,21 +2008,35 @@ test("explicit UI skip rationale does not route to ui-review", async (t) => {
   assert.doesNotMatch(status.nextAction, /\/blu-ui-review 1/);
 });
 
-test("missing SECURITY outranks saved code-review-fix follow-up", async (t) => {
+test("workflow.code_review true and workflow.secure_phase true routes secure-phase ahead of saved code-review-fix follow-up", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
       implementedPhase({
         withReview: true,
         reviewNextSafeAction: "/blu-code-review-fix 1"
       })
-    ]
+    ],
+    configPatch: {
+      workflow: {
+        code_review: true,
+        secure_phase: true
+      }
+    }
   });
   t.after(async () => {
     await rm(path.dirname(repoPath), { recursive: true, force: true });
   });
 
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
   const status = await blueprintProjectStatus({ cwd: repoPath });
 
+  assert.equal(evaluation.missingGate, "security");
+  assert.equal(evaluation.gatesSatisfied, false);
   assert.match(status.nextAction, /\/blu-secure-phase 1/);
   assert.doesNotMatch(status.nextAction, /\/blu-code-review-fix 1/);
 });
@@ -1874,7 +2078,7 @@ test("completed phase missing REVIEW blocks later phase routing and surfaces the
   assert.doesNotMatch(status.nextAction, /\/blu-discuss-phase 3|\/blu-plan-phase 3/);
 });
 
-test("workflow.code_review false preserves pre-gate milestone routing", async (t) => {
+test("workflow.code_review false and workflow.secure_phase false preserve pre-gate milestone routing", async (t) => {
   const repoPath = await createQualityGateRepo({
     phases: [
       implementedPhase({
@@ -1883,7 +2087,8 @@ test("workflow.code_review false preserves pre-gate milestone routing", async (t
     ],
     configPatch: {
       workflow: {
-        code_review: false
+        code_review: false,
+        secure_phase: false
       }
     }
   });
@@ -1892,9 +2097,49 @@ test("workflow.code_review false preserves pre-gate milestone routing", async (t
   });
 
   const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
 
   assert.match(status.nextAction, /\/blu-audit-milestone v1/);
   assert.doesNotMatch(status.nextAction, /\/blu-code-review|\/blu-secure-phase/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-code-review|\/blu-secure-phase/);
+});
+
+test("workflow.code_review false ignores workflow.secure_phase for milestone closeout routing", async (t) => {
+  const repoPath = await createQualityGateRepo({
+    phases: [
+      implementedPhase({
+        completed: true
+      })
+    ],
+    configPatch: {
+      workflow: {
+        code_review: false,
+        secure_phase: true
+      }
+    }
+  });
+  t.after(async () => {
+    await rm(path.dirname(repoPath), { recursive: true, force: true });
+  });
+
+  const evaluation = await evaluatePhaseQualityGates({
+    projectRoot: repoPath,
+    phaseNumber: "1",
+    phasePrefix: "01",
+    phaseDir: "01-quality-gate"
+  });
+  const status = await blueprintProjectStatus({ cwd: repoPath });
+  const state = await blueprintStateLoad({ cwd: repoPath });
+
+  assert.equal(evaluation.codeReviewEnabled, false);
+  assert.equal(evaluation.requiresCodeReview, false);
+  assert.equal(evaluation.missingGate, null);
+  assert.equal(evaluation.gatesSatisfied, true);
+  assert.match(status.nextAction, /\/blu-audit-milestone v1/);
+  assert.doesNotMatch(status.nextAction, /\/blu-code-review|\/blu-secure-phase/);
+  assert.match(state.derivedStatus.nextAction, /\/blu-audit-milestone v1/);
+  assert.doesNotMatch(state.derivedStatus.nextAction, /\/blu-code-review|\/blu-secure-phase/);
 });
 
 test("completed review and security gates allow routing to the next phase or milestone", async (t) => {

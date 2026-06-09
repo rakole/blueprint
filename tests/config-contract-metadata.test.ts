@@ -160,3 +160,83 @@ test("settings docs describe workflow.no_uat as lifecycle optionality with manua
   );
   assert.match(settingsReference, /quality gates still block completion/i);
 });
+
+test("settings surfaces document workflow.secure_phase as conditional routing only", async () => {
+  const [settingsCommand, settingsDoc, settingsReference, artifactSchema] =
+    await Promise.all([
+      readFile(path.join(repoRoot, "commands/blu-settings.toml"), "utf8"),
+      readFile(path.join(repoRoot, "docs/commands/settings.md"), "utf8"),
+      readFile(
+        path.join(
+          repoRoot,
+          "skills/blueprint-governance/references/settings-runtime-contract.md"
+        ),
+        "utf8"
+      ),
+      readFile(path.join(repoRoot, "docs/ARTIFACT-SCHEMA.md"), "utf8")
+    ]);
+
+  assert.match(settingsCommand, /`workflow\.secure_phase`/);
+  assert.match(settingsCommand, /`workflow\.secure_phase` defaults to `false`/i);
+  assert.match(
+    settingsCommand,
+    /only when `workflow\.code_review` is `true`/i
+  );
+  assert.match(
+    settingsCommand,
+    /never mandate secure-phase from routing or gates regardless of `workflow\.secure_phase`/i
+  );
+  assert.match(
+    settingsCommand,
+    /Never hide or remove manual `\/blu-secure-phase`; explicit invocation remains valid/i
+  );
+
+  assert.match(settingsDoc, /`workflow\.secure_phase` defaults to `false`/i);
+  assert.match(
+    settingsDoc,
+    /required workflow-routing and lifecycle-gate step only when `workflow\.code_review` is `true`/i
+  );
+  assert.match(
+    settingsDoc,
+    /If `workflow\.code_review` is `false`, secure-phase is never mandated by routing or gates regardless of `workflow\.secure_phase`/i
+  );
+  assert.match(
+    settingsDoc,
+    /`\/blu-secure-phase` remains manually runnable even when `workflow\.secure_phase` is `false`/i
+  );
+
+  assert.match(
+    settingsReference,
+    /`workflow\.secure_phase` defaults to `false`/i
+  );
+  assert.match(
+    settingsReference,
+    /required workflow-routing and lifecycle-gate step only when `workflow\.code_review` is `true`/i
+  );
+  assert.match(
+    settingsReference,
+    /If `workflow\.code_review` is `false`, secure-phase is never mandated by routing or gates regardless of `workflow\.secure_phase`/i
+  );
+  assert.match(
+    settingsReference,
+    /Manual `\/blu-secure-phase` remains explicitly runnable even when `workflow\.secure_phase` is `false`/i
+  );
+
+  assert.match(artifactSchema, /"secure_phase": false/);
+  assert.match(
+    artifactSchema,
+    /`workflow\.secure_phase` defaults to `false` and is surfaced through `\/blu-settings` as the secure-phase requirement toggle/i
+  );
+  assert.match(
+    artifactSchema,
+    /routing and lifecycle gates require `\/blu-secure-phase` only when `workflow\.code_review` is `true`/i
+  );
+  assert.match(
+    artifactSchema,
+    /if `workflow\.code_review` is `false`, secure-phase is never mandated regardless of `workflow\.secure_phase`/i
+  );
+  assert.match(
+    artifactSchema,
+    /manual `\/blu-secure-phase` remains explicitly runnable even when the toggle is `false`/i
+  );
+});

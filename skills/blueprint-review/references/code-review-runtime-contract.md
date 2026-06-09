@@ -255,9 +255,23 @@ The review is strong enough to persist only when:
 - uncertainty is stated plainly instead of upgraded into false certainty
 - severity counts match the findings
 - next-step guidance names only implemented Blueprint commands
-- when security still routes first and concrete follow-up fixes remain,
-  `/blu-secure-phase <phase>` stays primary while `/blu-code-review-fix <phase>`
-  remains visible as the secondary queued follow-up
+- when effective config has `workflow.code_review=false`, code-review routing
+  never makes `/blu-secure-phase <phase>` mandatory even when
+  `workflow.secure_phase=true`
+- when effective config has `workflow.code_review=true`,
+  `workflow.secure_phase=true`, and security is still missing,
+  `/blu-secure-phase <phase>` stays primary
+- when effective config has `workflow.code_review=true`,
+  `workflow.secure_phase=true`, security is still missing, and concrete
+  follow-up fixes remain, `/blu-code-review-fix <phase>` remains visible as
+  the secondary queued follow-up
+- when effective config has `workflow.code_review=true` and
+  `workflow.secure_phase=false`, concrete follow-up findings route to
+  `/blu-code-review-fix <phase>` and otherwise the command routes to
+  `/blu-progress` or another implemented validation-safe or progress-safe
+  action
+- `/blu-secure-phase` remains manually runnable even when code-review does not
+  choose it as the preferred routed follow-up
 
 ## Completion Criteria
 
