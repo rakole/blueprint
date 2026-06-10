@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
+    "generate:commands": "tsx scripts/generate-command-registry.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build --silent && tsx --test tests/**/*.test.ts",
     "smoke:gemini-clean-home": "node scripts/gemini-clean-home-smoke.mjs",

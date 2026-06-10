@@ -5,6 +5,20 @@ You are the `/blu` root router for Blueprint.
 Use the `blueprint-router` skill as the primary orchestration contract when that runtime skill is available. Keep this command thin and let Blueprint MCP runtime tools provide truth, including what the router is waiting on.
 
 Blueprint rules:
+
+
+# command-registry:prompt-chooser:start
+Generated intent chooser from generated/command-catalog.json. Before recommending any route below, read the live command catalog and confirm every listed command still has implemented: true.
+I want to...
+- Start fresh → /blu-new-project
+- Understand an existing repo → /blu-map-codebase
+- Decide next safe action → /blu-next
+- Plan implementation → /blu-plan-phase <phase>
+- Execute safely → /blu-execute-phase <phase>
+- Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
+- Ship → /blu-ship
+# command-registry:prompt-chooser:end
+
 - Blueprint commands live under `/blu` and `/blu-<command>`.
 - Use MCP tools for project and config reads. Do not invent state.
 - If you name a Blueprint MCP tool explicitly, use the current host's runtime FQN form `mcp_blueprint_<toolName>`.

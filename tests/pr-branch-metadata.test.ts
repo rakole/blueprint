@@ -234,7 +234,7 @@ test("repo-facing status docs treat pr-branch as a shipped command", async () =>
   assert.match(metadata.runtimeReference.contractNotes, /pr-branch-runtime-contract\.md/);
   assert.match(metadata.runtimeReference.contractNotes, /clean tree and review-branch confirmation/i);
   assert.match(agentsFile, /`pr-branch` are also shipped|`pr-branch`/i);
-  assert.match(readmeFile, /The review-branch command `\/blu-pr-branch` is now shipped/i);
+  assert.match(readmeFile, /`\/blu-pr-branch`: `pr-branch` prepares a clean review branch/i);
   assert.match(geminiFile, /`\/blu-pr-branch`/);
   assert.match(
     progressFile,

@@ -3757,7 +3757,7 @@ test("runtime-facing docs keep host instructions concise while preserving comman
   assert.match(geminiFile, /\/blu-audit-fix/);
   assert.match(geminiFile, /\/blu-ui-review/);
   assert.match(geminiFile, /\/blu-ship/);
-  assert.match(readmeFile, /skills\/blueprint-router\.md/);
+  assert.match(readmeFile, /skills\/blueprint-router\/SKILL\.md/);
   assert.match(readmeFile, /skills\/blueprint-maintenance\/SKILL\.md/);
   assert.doesNotMatch(readmeFile, /## Planned Runtime Layout/);
 });
