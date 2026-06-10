@@ -23,10 +23,11 @@ I want to...
 - Decide next safe action → /blu-next
 - Plan implementation → /blu-plan-phase <phase>
 - Execute safely → /blu-execute-phase <phase>
+- Prepare isolated plan run → /blu-run-plan <phase> <planId>
 - Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
 - Ship → /blu-ship
 
-This chooser is generated from `generated/command-catalog.json`. 54 direct commands are runnable now; 1 retained command is kept out of runnable help until the live catalog marks it implemented.
+This chooser is generated from `generated/command-catalog.json`. 55 direct commands are runnable now; 1 retained command is kept out of runnable help until the live catalog marks it implemented.
 <!-- command-registry:readme-chooser:end -->
 
 ## Current Runtime Layout
@@ -35,7 +36,7 @@ This chooser is generated from `generated/command-catalog.json`. 54 direct comma
 The active command map is generated from `src/mcp/command-runtime-metadata.ts` into `generated/command-catalog.json`. Runtime availability still comes from the live `blueprint_command_catalog` check, so missing manifests, skills, MCP tools, or required runtime inputs downgrade commands before they can be recommended.
 
 - Root router manifest: `commands/blu.toml`
-- Runnable direct command manifests: 54
+- Runnable direct command manifests: 55
 - Non-runnable retained command: 1
 
 Runnable command manifests:
@@ -81,6 +82,7 @@ Runnable command manifests:
 - `commands/blu-resume-work.toml`
 - `commands/blu-review-backlog.toml`
 - `commands/blu-review.toml`
+- `commands/blu-run-plan.toml`
 - `commands/blu-secure-phase.toml`
 - `commands/blu-set-profile.toml`
 - `commands/blu-settings.toml`
@@ -107,6 +109,7 @@ Runtime skill bundles used by runnable commands:
 - `skills/blueprint-phase-execution/SKILL.md`
 - `skills/blueprint-phase-planning/SKILL.md`
 - `skills/blueprint-phase-validation/SKILL.md`
+- `skills/blueprint-plan-run/SKILL.md`
 - `skills/blueprint-review/SKILL.md`
 - `skills/blueprint-roadmap-admin/SKILL.md`
 - `skills/blueprint-router/SKILL.md`
@@ -305,6 +308,10 @@ The runnable command groups below are generated from the same registry as `/blu-
 - `/blu-ship`: `ship` prepares a confirmation-gated shipping run from saved Blueprint evidence and records actual push or PR outcomes.
 - `/blu-ui-review`: `ui-review` audits shipped UI work against saved execution and UI-spec evidence, optionally delegates bounded six-pillar analysis, and persists the UI-review artifact through review MCP tools.
 - `/blu-undo`: `undo` previews a bounded revert, persists a durable undo report, and runs only confirmed safe revert-style git steps.
+
+### Plan Run Harness
+
+- `/blu-run-plan`: `run-plan` previews and prepares one saved phase plan for isolated implementation, then later captures authorized implementation diffs as deterministic PlanRun patch records before summary or PR handoff.
 
 ### Workspace And Maintenance
 

@@ -1,0 +1,267 @@
+import type { ToolDefinition } from "../tool-types.js";
+import { type NumericInput } from "./phase-numbering.js";
+export declare const PLAN_RUN_SCHEMA_VERSION = 1;
+export declare const PLAN_RUNS_ROOT_PATH = ".blueprint/runs";
+export declare const PLAN_RUN_REPORTS_ROOT_PATH = ".blueprint/reports";
+export declare const PLAN_RUN_STATUSES: readonly ["PREPARED", "IMPLEMENTED", "VERIFIED", "PARTIAL", "BLOCKED", "FAILED", "APPROVED", "ROLLED_BACK"];
+declare const PLAN_RUN_RECORDABLE_STATUSES: readonly ["PREPARED", "IMPLEMENTED", "VERIFIED", "PARTIAL", "BLOCKED", "FAILED"];
+declare const PLAN_RUN_VERIFICATION_RESULTS: readonly ["pass", "fail", "blocked", "not-run"];
+declare const PLAN_RUN_REVIEW_VERDICTS: readonly ["APPROVED", "CHANGES_REQUESTED", "BLOCKED"];
+declare const PLAN_RUN_ROLLBACK_STRATEGIES: readonly ["branch-reset", "reverse-patch", "delete-worktree"];
+declare const PLAN_RUN_PREPARE_MODES: readonly ["preview", "prepare"];
+declare const PLAN_RUN_CHANGED_FILE_STATUSES: readonly ["added", "modified", "deleted", "renamed", "unknown"];
+export type PlanRunStatus = (typeof PLAN_RUN_STATUSES)[number];
+export type PlanRunVerificationResult = (typeof PLAN_RUN_VERIFICATION_RESULTS)[number];
+export type PlanRunReviewVerdict = (typeof PLAN_RUN_REVIEW_VERDICTS)[number];
+export type PlanRunRollbackStrategy = (typeof PLAN_RUN_ROLLBACK_STRATEGIES)[number];
+export type PlanRunChangedFileStatus = (typeof PLAN_RUN_CHANGED_FILE_STATUSES)[number];
+export type PlanRunCommandEvidence = {
+    command: string;
+    exitCode: number | null;
+    evidence: string;
+};
+export type PlanRunVerification = {
+    command: string;
+    result: PlanRunVerificationResult;
+    evidence: string;
+};
+export type PlanRunAttempt = {
+    attempt: number;
+    status: PlanRunStatus;
+    startedAt: string;
+    completedAt: string | null;
+    commandsRun: PlanRunCommandEvidence[];
+    notes: string[];
+};
+export type PlanRunIndex = {
+    schemaVersion: typeof PLAN_RUN_SCHEMA_VERSION;
+    phase: string;
+    planId: string;
+    latestRunId: string | null;
+    runs: Array<{
+        runId: string;
+        status: PlanRunStatus;
+        createdAt: string;
+        updatedAt: string;
+        branchName: string | null;
+        worktreePath: string | null;
+        summaryPath: string | null;
+        reviewVerdict: PlanRunReviewVerdict | null;
+    }>;
+};
+export type PlanRunRecord = {
+    schemaVersion: typeof PLAN_RUN_SCHEMA_VERSION;
+    runId: string;
+    phase: string;
+    planId: string;
+    planPath: string;
+    planTitle: string | null;
+    createdAt: string;
+    updatedAt: string;
+    source: {
+        repoRoot: string;
+        baseHead: string;
+        baseBranch: string | null;
+    };
+    worktree: {
+        path: string | null;
+        branchName: string | null;
+        strategy: "worktree" | "same-tree" | "manual";
+    };
+    authorization: {
+        authorizedFiles: string[];
+        authorizedSurfaces: string[];
+        unauthorizedChangedFiles: string[];
+        scopeWarnings: string[];
+    };
+    git: {
+        currentHead: string | null;
+        changedFiles: string[];
+        diffStat: string | null;
+        patchId: string | null;
+    };
+    attempts: PlanRunAttempt[];
+    verification: PlanRunVerification[];
+    review: {
+        verdict: PlanRunReviewVerdict | null;
+        openFindings: number;
+        reviewPath: string | null;
+    };
+    rollback: {
+        rollbackAvailable: boolean;
+        rollbackStrategy: PlanRunRollbackStrategy | null;
+        rollbackPath: string | null;
+        rolledBackAt: string | null;
+    };
+    summaryPath: string | null;
+    nextAction: string;
+    warnings: string[];
+};
+export type PlanRunChangedFile = {
+    path: string;
+    status: PlanRunChangedFileStatus;
+    authorized: boolean;
+};
+type PlanRunCommandInput = {
+    command: string;
+    exitCode: number | null;
+    stdoutTail?: string;
+    stderrTail?: string;
+    durationMs?: number;
+};
+type PlanRunPatchInput = {
+    patchId: string;
+    recorded: boolean;
+    registryPath?: string;
+    patchPath?: string;
+};
+type PlanRunRecordArgs = {
+    cwd?: string;
+    runId: string;
+    phase: NumericInput;
+    planId: NumericInput;
+    status: (typeof PLAN_RUN_RECORDABLE_STATUSES)[number];
+    worktreePath?: string;
+    branchName?: string;
+    baseHead: string;
+    currentHead?: string;
+    changedFiles: string[];
+    unauthorizedChangedFiles?: string[];
+    commandsRun?: PlanRunCommandInput[];
+    verification?: PlanRunVerification[];
+    patch?: PlanRunPatchInput;
+    summaryPath?: string;
+    notes?: string[];
+    warnings?: string[];
+};
+type PlanRunLoadArgs = {
+    cwd?: string;
+    phase: NumericInput;
+    planId: NumericInput;
+    runId?: string;
+};
+type PlanRunDiffArgs = {
+    cwd?: string;
+    phase: NumericInput;
+    planId: NumericInput;
+    runId?: string;
+    includePatch?: boolean;
+    maxPatchBytes?: number;
+};
+type PlanRunPatchRecordArgs = {
+    cwd?: string;
+    phase: NumericInput;
+    planId: NumericInput;
+    runId?: string;
+    maxPatchBytes?: number;
+    commandsRun?: PlanRunCommandInput[];
+    verification?: PlanRunVerification[];
+    notes?: string[];
+    warnings?: string[];
+};
+type PlanRunPrepareArgs = {
+    cwd?: string;
+    phase: NumericInput;
+    planId: NumericInput;
+    runId?: string;
+    mode?: (typeof PLAN_RUN_PREPARE_MODES)[number];
+    branchName?: string;
+    workspaceName?: string;
+    workspacePath?: string;
+};
+type PlanRunRecordResult = {
+    status: "recorded";
+    created: boolean;
+    updated: boolean;
+    indexPath: string;
+    path: string;
+    run: PlanRunRecord;
+    history: PlanRunIndex["runs"];
+    warnings: string[];
+};
+type PlanRunLoadResult = {
+    found: boolean;
+    phase: string;
+    planId: string;
+    runId: string | null;
+    indexPath: string;
+    path: string | null;
+    run: PlanRunRecord | null;
+    history: PlanRunIndex["runs"];
+    latestRunId: string | null;
+    reason: string | null;
+    warnings: string[];
+};
+type PlanRunDiffResult = {
+    status: "ready" | "blocked";
+    runId: string | null;
+    baseHead: string | null;
+    currentHead: string | null;
+    changedFiles: PlanRunChangedFile[];
+    unauthorizedChangedFiles: string[];
+    diffStat: string;
+    patch: string | null;
+    truncated: boolean;
+    warnings: string[];
+};
+type PlanRunPatchRecordResult = {
+    status: "recorded" | "blocked";
+    phase: string;
+    planId: string;
+    runId: string | null;
+    sourceRoot: string | null;
+    diffRoot: string | null;
+    patchId: string | null;
+    baseHead: string | null;
+    currentHead: string | null;
+    changedFiles: PlanRunChangedFile[];
+    unauthorizedChangedFiles: string[];
+    diffStat: string;
+    registryPath: string | null;
+    manifestPath: string | null;
+    patchPath: string | null;
+    auditPath: string | null;
+    recordPath: string | null;
+    indexPath: string | null;
+    blockers: string[];
+    warnings: string[];
+};
+type PlanRunPrepareResult = {
+    status: "preview" | "prepared" | "blocked";
+    mode: (typeof PLAN_RUN_PREPARE_MODES)[number];
+    phase: string;
+    planId: string;
+    runId: string | null;
+    planPath: string | null;
+    planTitle: string | null;
+    branchName: string | null;
+    workspaceName: string | null;
+    workspacePath: string | null;
+    worktreePath: string | null;
+    strategy: "worktree" | "same-tree";
+    baseHead: string | null;
+    currentHead: string | null;
+    authorizedFiles: string[];
+    verificationCommands: string[];
+    recordPath: string | null;
+    indexPath: string | null;
+    blockers: string[];
+    warnings: string[];
+};
+export declare function normalizePlanRunPhase(value: NumericInput): string;
+export declare function normalizePlanRunPlanId(value: NumericInput): string;
+export declare function normalizePlanRunId(value: string): string;
+export declare function assertPlanRunSchemaVersion(value: unknown, label?: string): asserts value is typeof PLAN_RUN_SCHEMA_VERSION;
+export declare function buildPlanRunRootPath(projectRoot: string, phase: NumericInput, planId: NumericInput): string;
+export declare function buildPlanRunIndexPath(projectRoot: string, phase: NumericInput, planId: NumericInput): string;
+export declare function buildPlanRunRecordPath(projectRoot: string, phase: NumericInput, planId: NumericInput, runId: string): string;
+export declare function buildPlanRunDiffPath(projectRoot: string, phase: NumericInput, planId: NumericInput, runId: string): string;
+export declare function buildPlanRunReviewPath(projectRoot: string, phase: NumericInput, planId: NumericInput, runId: string): string;
+export declare function buildPlanRunRollbackPath(projectRoot: string, phase: NumericInput, planId: NumericInput, runId: string): string;
+export declare function blueprintPlanRunRecord(args: PlanRunRecordArgs): Promise<PlanRunRecordResult>;
+export declare function blueprintPlanRunLoad(args: PlanRunLoadArgs): Promise<PlanRunLoadResult>;
+export declare function blueprintPlanRunDiff(args: PlanRunDiffArgs): Promise<PlanRunDiffResult>;
+export declare function blueprintPlanRunPatchRecord(args: PlanRunPatchRecordArgs): Promise<PlanRunPatchRecordResult>;
+export declare function blueprintPlanRunPrepare(args: PlanRunPrepareArgs): Promise<PlanRunPrepareResult>;
+export declare const planRunToolDefinitions: ToolDefinition[];
+export {};

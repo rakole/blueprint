@@ -64,8 +64,8 @@ export declare const updateToolDefinitions: readonly [{
     readonly inputSchema: {
         cwd: z.ZodOptional<z.ZodString>;
         mode: z.ZodOptional<z.ZodEnum<{
-            ask_user: "ask_user";
             manual: "manual";
+            ask_user: "ask_user";
         }>>;
     };
     readonly handler: (args: Record<string, unknown>) => Promise<UpdatePlanResult>;

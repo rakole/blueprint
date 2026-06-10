@@ -128,6 +128,7 @@ const INTENT_CHOOSER: IntentChooserEntry[] = [
   { intent: "Decide next safe action", commands: ["next"] },
   { intent: "Plan implementation", commands: ["plan-phase"] },
   { intent: "Execute safely", commands: ["execute-phase"] },
+  { intent: "Prepare isolated plan run", commands: ["run-plan"] },
   { intent: "Review/fix code", commands: ["code-review", "code-review-fix"] },
   { intent: "Ship", commands: ["ship"] }
 ];
@@ -200,6 +201,10 @@ function sentence(value: string | null): string {
 }
 
 function directCommandPlaceholder(command: GeneratedCommandRegistryEntry): string {
+  if (command.name === "run-plan") {
+    return `${command.command} <phase> <planId>`;
+  }
+
   if (!/phase|milestone|review|ship|undo|workspace|cleanup|patches/.test(command.name)) {
     return command.command;
   }

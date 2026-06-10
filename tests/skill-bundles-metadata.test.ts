@@ -40,6 +40,11 @@ const SKILL_BUNDLES = [
     commands: ["/blu-execute-phase", "/blu-fast", "/blu-quick"]
   },
   {
+    name: "blueprint-plan-run",
+    description: "Single-plan execution harness for isolated Blueprint worktree and branch",
+    commands: ["/blu-run-plan"]
+  },
+  {
     name: "blueprint-phase-validation",
     description: "Verification, UAT, tests, and gap closure",
     commands: ["/blu-validate-phase", "/blu-verify-work"]

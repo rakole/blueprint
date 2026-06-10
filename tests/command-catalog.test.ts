@@ -79,6 +79,7 @@ const IMPLEMENTED_COMMANDS = [
   "remove-phase",
   "plan-phase",
   "execute-phase",
+  "run-plan",
   "fast",
   "quick",
   "debug",

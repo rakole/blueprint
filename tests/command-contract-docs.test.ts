@@ -29,6 +29,7 @@ const REPRESENTATIVE_COMMANDS = [
   "map-codebase",
   "spec-phase",
   "plan-phase",
+  "run-plan",
   "impact",
   "docs-update",
   "pr-branch",
@@ -176,7 +177,7 @@ test("generated command registry keeps public command docs and help surfaces in 
     for (const route of chooserEntry.routes) {
       const commandName = route
         .replace(/^\/blu-/, "")
-        .replace(/\s+<[^>]+>$/u, "");
+        .replace(/(?:\s+<[^>]+>)+$/u, "");
       const command = surfaces.registry.commands.find((entry) => entry.name === commandName);
 
       assert.ok(command, `Generated chooser route should map to a command: ${route}`);

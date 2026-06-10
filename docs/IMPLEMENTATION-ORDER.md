@@ -77,8 +77,9 @@ Shipped in this wave: `note`, `add-todo`, `check-todos`, `add-backlog`, `review-
 
 Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, `review`, `ui-review`, `docs-update`, `add-tests`, `pr-branch`, `ship`, and `undo`.
 
-### Wave 5: Workspace and maintenance
+### Wave 5: Plan run, workspace, and maintenance
 
+- `run-plan`
 - `new-workspace`
 - `remove-workspace`
 - `workstreams`
@@ -86,7 +87,7 @@ Shipped in this wave: `code-review`, `code-review-fix`, `audit-fix`, `secure-pha
 - `update`
 - `reapply-patches`
 
-Shipped in this wave: `new-workspace`, `cleanup`.
+Shipped in this wave: `run-plan`, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, `update`, and `reapply-patches`.
 
 ## Dependency Matrix
 

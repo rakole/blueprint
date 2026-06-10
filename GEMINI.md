@@ -90,6 +90,9 @@ Roadmap and milestone work:
 Quality, impact, and shipping:
 `/blu-docs-update`, `/blu-code-review`, `/blu-code-review-fix`, `/blu-audit-fix`, `/blu-impact`, `/blu-secure-phase`, `/blu-review`, `/blu-ui-review`, `/blu-pr-branch`, `/blu-ship`, `/blu-undo`
 
+Plan run harness:
+`/blu-run-plan`
+
 Workspace and maintenance:
 `/blu-new-workspace`, `/blu-remove-workspace`, `/blu-workstreams`, `/blu-update`, `/blu-cleanup`, `/blu-reapply-patches`
 

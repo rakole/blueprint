@@ -17,10 +17,11 @@ The live runtime currently ships:
 - the shipped Wave 4 review commands, `code-review`, `code-review-fix`, `audit-fix`, `secure-phase`, and `ui-review`
 - the shipped Wave 4 docs command, `docs-update`
 - the shipped Wave 4 maintenance commands, `pr-branch`, `ship`, and `undo`
+- the shipped Wave 5 plan-run harness command, `run-plan`
 - the shipped Wave 5 maintenance commands, `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`
 - the shipped Wave 5 advisory maintenance command, `update`
 
-This includes the shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`, together with the advisory `update` flow.
+This includes the shipped Wave 5 plan-run harness command `run-plan`, the maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches`, together with the advisory `update` flow.
 The shipped Wave 5 maintenance commands, `new-workspace`, `cleanup`, and `update` remain part of the locked maintenance surface.
 The shipped Wave 5 maintenance commands `new-workspace`, `remove-workspace`, `workstreams`, `cleanup`, and `reapply-patches` remain part of that locked maintenance surface.
 The shipped Wave 5 maintenance command, `cleanup`, remains part of that locked maintenance surface.

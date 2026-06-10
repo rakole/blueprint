@@ -166,6 +166,26 @@ test("debug resolves docs-free manifest and command-local runtime-contract input
   assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
 });
 
+test("plan-run resolves docs-free manifest and command-local runtime-contract inputs", async () => {
+  const inputs = await loadBlueprintSkillInputs(
+    "blueprint-plan-run",
+    "/blu-run-plan",
+    readRelativePath
+  );
+
+  assert.equal(inputs.skill, "blueprint-plan-run");
+  assert.deepEqual(inputs.shared, []);
+  assert.deepEqual(inputs.commandSpecific, [
+    "commands/blu-run-plan.toml",
+    "skills/blueprint-plan-run/references/run-plan-runtime-contract.md"
+  ]);
+  assert.deepEqual(inputs.effective, [
+    "commands/blu-run-plan.toml",
+    "skills/blueprint-plan-run/references/run-plan-runtime-contract.md"
+  ]);
+  assert.equal(inputs.effective.some((input) => input.startsWith("docs/")), false);
+});
+
 test("debug runtime inputs stay available when repository docs are unavailable", async () => {
   const inputs = await loadBlueprintSkillInputs(
     "blueprint-debug",
