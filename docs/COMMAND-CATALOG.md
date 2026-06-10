@@ -12,6 +12,7 @@ I want to...
 - Decide next safe action → /blu-next
 - Plan implementation → /blu-plan-phase <phase>
 - Execute safely → /blu-execute-phase <phase>
+- Prepare isolated plan run → /blu-run-plan <phase> <planId>
 - Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
 - Ship → /blu-ship
 
@@ -67,6 +68,7 @@ I want to...
 | `/blu-ship` | 4 | Quality And Shipping | `blueprint-maintenance` | high-risk-maintenance | `.blueprint/reports/ship-latest.md`<br>`.blueprint/STATE.md when routing changes`<br>`approved git remote or PR state` | High: remote and git mutation path. |
 | `/blu-ui-review` | 4 | Quality And Shipping | `blueprint-review` | long-running-mutation | `phase XX-UI-REVIEW.md` | Low: review artifact only. |
 | `/blu-undo` | 4 | Quality And Shipping | `blueprint-maintenance` | high-risk-maintenance | `.blueprint/reports/undo-latest.md`<br>`.blueprint/STATE.md when routing changes`<br>`approved git revert commits` | High: intentionally destructive history-rewrite-adjacent workflow using safe revert-style steps. |
+| `/blu-run-plan` | 5 | Plan Run Harness | `blueprint-plan-run` | long-running-mutation | `prepared worktree and branch through workspace tooling`<br>`.blueprint/runs/<phase>/<planId>/RUNS.json and run record JSON`<br>`host-global patch registry entries for authorized PlanRun implementation diffs` | High: prepares an isolated branch and worktree for real repo mutation and records PlanRun state. |
 | `/blu-cleanup` | 5 | Workspace And Maintenance | `blueprint-maintenance` | high-risk-maintenance | `.blueprint/reports/cleanup-latest.md`<br>`.blueprint/STATE.md when routing changes`<br>`confirmed phase archive destination` | High: confirmation-gated phase-directory archival and removal behavior. |
 | `/blu-new-workspace` | 5 | Workspace And Maintenance | `blueprint-maintenance` | high-risk-maintenance | `workspace manifest under the selected workspace`<br>`~/.<host>/blueprint/workspaces registry` | High: filesystem and git worktree mutation outside the current repo. |
 | `/blu-reapply-patches` | 5 | Workspace And Maintenance | `blueprint-maintenance` | high-risk-maintenance | `approved git patch replay`<br>`~/.<host>/blueprint/patches replay audit` | High: confirmation-gated patch replay across repo files. |

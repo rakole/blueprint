@@ -175,6 +175,7 @@ type WorkspaceCreateArgs = {
   path?: string;
   strategy?: WorkspaceStrategy;
   branch?: string;
+  cleanStatusPathspecs?: readonly string[];
 };
 
 type WorkspaceCreateResult = {
@@ -1313,8 +1314,17 @@ async function gitHeadSha(repoPath: string): Promise<string> {
   return result.stdout;
 }
 
-async function gitWorkingTreeClean(repoPath: string): Promise<boolean> {
-  const result = await runGit(["-C", repoPath, "status", "--short"], {
+async function gitWorkingTreeClean(
+  repoPath: string,
+  pathspecs: readonly string[] = []
+): Promise<boolean> {
+  const args = ["-C", repoPath, "status", "--short"];
+
+  if (pathspecs.length > 0) {
+    args.push("--", ...pathspecs);
+  }
+
+  const result = await runGit(args, {
     allowFailure: true
   });
 
@@ -2767,7 +2777,7 @@ export async function blueprintWorkspaceCreate(
   for (const sourceRepo of sourceRepos) {
     assertNotInstalledExtensionPath(sourceRepo.sourcePath, "Workspace source repo");
 
-    if (!(await gitWorkingTreeClean(sourceRepo.sourcePath))) {
+    if (!(await gitWorkingTreeClean(sourceRepo.sourcePath, args.cleanStatusPathspecs))) {
       throw new Error(
         `Workspace source repo has uncommitted changes and must be clean before workspace creation: ${sourceRepo.sourcePath}`
       );

@@ -98,6 +98,7 @@ type WorkspaceCreateArgs = {
     path?: string;
     strategy?: WorkspaceStrategy;
     branch?: string;
+    cleanStatusPathspecs?: readonly string[];
 };
 type WorkspaceCreateResult = {
     workspacePath: string;

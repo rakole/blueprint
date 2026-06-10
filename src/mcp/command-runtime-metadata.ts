@@ -564,6 +564,22 @@ const QUICK_REQUIRED_TOOLS = [
   "blueprint_state_update"
 ] as const satisfies readonly BlueprintInternalToolName[];
 
+const RUN_PLAN_REQUIRED_TOOLS = [
+  "blueprint_project_status",
+  "blueprint_config_get",
+  "blueprint_phase_locate",
+  "blueprint_phase_plan_read",
+  "blueprint_phase_execution_targets",
+  "blueprint_plan_run_prepare",
+  "blueprint_plan_run_record",
+  "blueprint_plan_run_load",
+  "blueprint_plan_run_diff",
+  "blueprint_plan_run_patch_record",
+  "blueprint_patch_record",
+  "blueprint_phase_summary_write",
+  "blueprint_state_update"
+] as const satisfies readonly BlueprintInternalToolName[];
+
 const DEBUG_REQUIRED_TOOLS = [
   "blueprint_project_status",
   "blueprint_config_get",
@@ -773,6 +789,8 @@ const REAPPLY_PATCHES_SPEC_PATH =
   "skills/blueprint-maintenance/references/reapply-patches-runtime-contract.md";
 const DEBUG_SPEC_PATH =
   "skills/blueprint-debug/references/debug-runtime-contract.md";
+const RUN_PLAN_SPEC_PATH =
+  "skills/blueprint-plan-run/references/run-plan-runtime-contract.md";
 
 const PHASE_DISCOVERY_RESEARCHER_OPTIONAL_AGENTS = blueprintOptionalAgents(
   "blueprint-researcher"
@@ -2932,6 +2950,50 @@ export const QUICK_RUNTIME_METADATA = {
   }
 } as const satisfies RuntimeOwnedCommandMetadata;
 
+export const RUN_PLAN_RUNTIME_METADATA = {
+  commandName: "run-plan",
+  sourceId: runtimeMetadataSourceId("run-plan"),
+  catalog: {
+    wave: 5,
+    family: "Plan Run Harness",
+    primarySkill: "blueprint-plan-run",
+    declaredStatus: "implemented",
+    risk:
+      "High: prepares an isolated branch and worktree for real repo mutation and records PlanRun state."
+  },
+  requiredTools: RUN_PLAN_REQUIRED_TOOLS,
+  optionalAgents: [],
+  requiredInputPaths: [RUN_PLAN_SPEC_PATH],
+  spec: {
+    path: runtimeMetadataSourceId("run-plan"),
+    title: "`/blu-run-plan`",
+    executionProfile: "long-running-mutation",
+    rootRoutable: true,
+    purpose:
+      "`run-plan` previews and prepares one saved phase plan for isolated implementation, then later captures authorized implementation diffs as deterministic PlanRun patch records before summary or PR handoff.",
+    reads: [
+      "project status, effective config, phase resolution, execution targets, selected saved plan, and optional existing PlanRun state through MCP"
+    ],
+    writes: [
+      "prepared worktree and branch through workspace tooling",
+      ".blueprint/runs/<phase>/<planId>/RUNS.json and run record JSON",
+      "host-global patch registry entries for authorized PlanRun implementation diffs"
+    ]
+  },
+  runtimeReference: {
+    path: runtimeMetadataSourceId("run-plan"),
+    waveTitle: "Plan Run Harness",
+    command: "run-plan",
+    primarySkill: "blueprint-plan-run",
+    exactMcpDestination: RUN_PLAN_REQUIRED_TOOLS,
+    optionalAgents: [],
+    hookInvolvement: ["read-before-edit", ".blueprint write guard"],
+    contractNotes:
+      "Long-running-mutation profile for one-plan preparation and later patch capture: load skills/blueprint-plan-run/references/run-plan-runtime-contract.md, read project status plus effective config plus phase execution targets plus the selected plan before mutation, always call blueprint_plan_run_prepare with mode: \"preview\" first, show the exact phase, planId, branchName, workspaceName, planned workspacePath, authorized files, verification commands, blockers, and warnings, require explicit plan-run-prepare-confirmation before mode: \"prepare\", treat returned worktreePath, recordPath, indexPath, and run ids as authoritative after prepare, require blueprint_plan_run_diff before capture, block unauthorizedChangedFiles without calling blueprint_patch_record, call blueprint_plan_run_patch_record only for authorized implementation diffs in the prepared registry-backed worktree, and keep blueprint_phase_summary_write plus blueprint_state_update deferred until a later summary flow.",
+    evidenceState: ["locked", "runtime-owned", "needs-behavior-audit"]
+  }
+} as const satisfies RuntimeOwnedCommandMetadata;
+
 export const DEBUG_RUNTIME_METADATA = {
   commandName: "debug",
   sourceId: runtimeMetadataSourceId("debug"),
@@ -3076,6 +3138,7 @@ export const RUNTIME_OWNED_COMMAND_METADATA = {
   [REVIEW_BACKLOG_RUNTIME_METADATA.commandName]: REVIEW_BACKLOG_RUNTIME_METADATA,
   [EXPLORE_RUNTIME_METADATA.commandName]: EXPLORE_RUNTIME_METADATA,
   [QUICK_RUNTIME_METADATA.commandName]: QUICK_RUNTIME_METADATA,
+  [RUN_PLAN_RUNTIME_METADATA.commandName]: RUN_PLAN_RUNTIME_METADATA,
   [DEBUG_RUNTIME_METADATA.commandName]: DEBUG_RUNTIME_METADATA,
   [FAST_RUNTIME_METADATA.commandName]: FAST_RUNTIME_METADATA
 } as const;

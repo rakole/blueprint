@@ -1797,6 +1797,40 @@ export declare const QUICK_RUNTIME_METADATA: {
         readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
     };
 };
+export declare const RUN_PLAN_RUNTIME_METADATA: {
+    readonly commandName: "run-plan";
+    readonly sourceId: string;
+    readonly catalog: {
+        readonly wave: 5;
+        readonly family: "Plan Run Harness";
+        readonly primarySkill: "blueprint-plan-run";
+        readonly declaredStatus: "implemented";
+        readonly risk: "High: prepares an isolated branch and worktree for real repo mutation and records PlanRun state.";
+    };
+    readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_phase_locate", "blueprint_phase_plan_read", "blueprint_phase_execution_targets", "blueprint_plan_run_prepare", "blueprint_plan_run_record", "blueprint_plan_run_load", "blueprint_plan_run_diff", "blueprint_plan_run_patch_record", "blueprint_patch_record", "blueprint_phase_summary_write", "blueprint_state_update"];
+    readonly optionalAgents: readonly [];
+    readonly requiredInputPaths: readonly ["skills/blueprint-plan-run/references/run-plan-runtime-contract.md"];
+    readonly spec: {
+        readonly path: string;
+        readonly title: "`/blu-run-plan`";
+        readonly executionProfile: "long-running-mutation";
+        readonly rootRoutable: true;
+        readonly purpose: "`run-plan` previews and prepares one saved phase plan for isolated implementation, then later captures authorized implementation diffs as deterministic PlanRun patch records before summary or PR handoff.";
+        readonly reads: readonly ["project status, effective config, phase resolution, execution targets, selected saved plan, and optional existing PlanRun state through MCP"];
+        readonly writes: readonly ["prepared worktree and branch through workspace tooling", ".blueprint/runs/<phase>/<planId>/RUNS.json and run record JSON", "host-global patch registry entries for authorized PlanRun implementation diffs"];
+    };
+    readonly runtimeReference: {
+        readonly path: string;
+        readonly waveTitle: "Plan Run Harness";
+        readonly command: "run-plan";
+        readonly primarySkill: "blueprint-plan-run";
+        readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_phase_locate", "blueprint_phase_plan_read", "blueprint_phase_execution_targets", "blueprint_plan_run_prepare", "blueprint_plan_run_record", "blueprint_plan_run_load", "blueprint_plan_run_diff", "blueprint_plan_run_patch_record", "blueprint_patch_record", "blueprint_phase_summary_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+        readonly contractNotes: "Long-running-mutation profile for one-plan preparation and later patch capture: load skills/blueprint-plan-run/references/run-plan-runtime-contract.md, read project status plus effective config plus phase execution targets plus the selected plan before mutation, always call blueprint_plan_run_prepare with mode: \"preview\" first, show the exact phase, planId, branchName, workspaceName, planned workspacePath, authorized files, verification commands, blockers, and warnings, require explicit plan-run-prepare-confirmation before mode: \"prepare\", treat returned worktreePath, recordPath, indexPath, and run ids as authoritative after prepare, require blueprint_plan_run_diff before capture, block unauthorizedChangedFiles without calling blueprint_patch_record, call blueprint_plan_run_patch_record only for authorized implementation diffs in the prepared registry-backed worktree, and keep blueprint_phase_summary_write plus blueprint_state_update deferred until a later summary flow.";
+        readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+    };
+};
 export declare const DEBUG_RUNTIME_METADATA: {
     readonly commandName: "debug";
     readonly sourceId: string;
@@ -3622,6 +3656,40 @@ export declare const RUNTIME_OWNED_COMMAND_METADATA: {
             readonly optionalAgents: readonly ["blueprint-researcher", "blueprint-planner", "blueprint-executor", "blueprint-verifier"];
             readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard", "workflow advisory"];
             readonly contractNotes: "Long-running-mutation profile for non-trivial bounded quick runs; keep Resolve/Read/Decide/Execute/Persist/Validate/Route narration plus resolved scope, active stage, pending gate, execution mode, and next safe action visible, require explicit opt-in for deeper discuss, research, or validation passes, treat branchy quick work as tracker-eligible session-local coordination paired with visible todos, persist durable quick-run evidence through blueprint_artifact_report_write using the canonical quick-run-latest report name, and do not let quick impersonate saved planning or broad lifecycle execution. The rich command-local contract lives in skills/blueprint-phase-execution/references/quick-runtime-contract.md.";
+            readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
+        };
+    };
+    readonly "run-plan": {
+        readonly commandName: "run-plan";
+        readonly sourceId: string;
+        readonly catalog: {
+            readonly wave: 5;
+            readonly family: "Plan Run Harness";
+            readonly primarySkill: "blueprint-plan-run";
+            readonly declaredStatus: "implemented";
+            readonly risk: "High: prepares an isolated branch and worktree for real repo mutation and records PlanRun state.";
+        };
+        readonly requiredTools: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_phase_locate", "blueprint_phase_plan_read", "blueprint_phase_execution_targets", "blueprint_plan_run_prepare", "blueprint_plan_run_record", "blueprint_plan_run_load", "blueprint_plan_run_diff", "blueprint_plan_run_patch_record", "blueprint_patch_record", "blueprint_phase_summary_write", "blueprint_state_update"];
+        readonly optionalAgents: readonly [];
+        readonly requiredInputPaths: readonly ["skills/blueprint-plan-run/references/run-plan-runtime-contract.md"];
+        readonly spec: {
+            readonly path: string;
+            readonly title: "`/blu-run-plan`";
+            readonly executionProfile: "long-running-mutation";
+            readonly rootRoutable: true;
+            readonly purpose: "`run-plan` previews and prepares one saved phase plan for isolated implementation, then later captures authorized implementation diffs as deterministic PlanRun patch records before summary or PR handoff.";
+            readonly reads: readonly ["project status, effective config, phase resolution, execution targets, selected saved plan, and optional existing PlanRun state through MCP"];
+            readonly writes: readonly ["prepared worktree and branch through workspace tooling", ".blueprint/runs/<phase>/<planId>/RUNS.json and run record JSON", "host-global patch registry entries for authorized PlanRun implementation diffs"];
+        };
+        readonly runtimeReference: {
+            readonly path: string;
+            readonly waveTitle: "Plan Run Harness";
+            readonly command: "run-plan";
+            readonly primarySkill: "blueprint-plan-run";
+            readonly exactMcpDestination: readonly ["blueprint_project_status", "blueprint_config_get", "blueprint_phase_locate", "blueprint_phase_plan_read", "blueprint_phase_execution_targets", "blueprint_plan_run_prepare", "blueprint_plan_run_record", "blueprint_plan_run_load", "blueprint_plan_run_diff", "blueprint_plan_run_patch_record", "blueprint_patch_record", "blueprint_phase_summary_write", "blueprint_state_update"];
+            readonly optionalAgents: readonly [];
+            readonly hookInvolvement: readonly ["read-before-edit", ".blueprint write guard"];
+            readonly contractNotes: "Long-running-mutation profile for one-plan preparation and later patch capture: load skills/blueprint-plan-run/references/run-plan-runtime-contract.md, read project status plus effective config plus phase execution targets plus the selected plan before mutation, always call blueprint_plan_run_prepare with mode: \"preview\" first, show the exact phase, planId, branchName, workspaceName, planned workspacePath, authorized files, verification commands, blockers, and warnings, require explicit plan-run-prepare-confirmation before mode: \"prepare\", treat returned worktreePath, recordPath, indexPath, and run ids as authoritative after prepare, require blueprint_plan_run_diff before capture, block unauthorizedChangedFiles without calling blueprint_patch_record, call blueprint_plan_run_patch_record only for authorized implementation diffs in the prepared registry-backed worktree, and keep blueprint_phase_summary_write plus blueprint_state_update deferred until a later summary flow.";
             readonly evidenceState: readonly ["locked", "runtime-owned", "needs-behavior-audit"];
         };
     };

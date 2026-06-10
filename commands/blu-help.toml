@@ -15,6 +15,7 @@ I want to...
 - Decide next safe action → /blu-next
 - Plan implementation → /blu-plan-phase <phase>
 - Execute safely → /blu-execute-phase <phase>
+- Prepare isolated plan run → /blu-run-plan <phase> <planId>
 - Review/fix code → /blu-code-review <phase>, /blu-code-review-fix <phase>
 - Ship → /blu-ship
 # command-registry:prompt-chooser:end
